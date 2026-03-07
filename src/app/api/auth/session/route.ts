@@ -1,12 +1,9 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { ConvexHttpClient } from 'convex/browser'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { ForbiddenError, UnauthorizedError } from '@/lib/api-errors'
-import { isAuthenticated, getToken } from '@/lib/auth-server'
-import { api } from '../../../../../convex/_generated/api'
 
 // CSRF token header must match a cookie value (double-submit pattern)
 const CSRF_COOKIE = 'cohorts_csrf'
@@ -115,7 +112,7 @@ export const POST = createApiHandler(
     rateLimit: 'standard',
     skipIdempotency: true,
   },
-  async (req) => {
+  async (req, { auth }) => {
     const cookieStore = await cookies()
 
     // Validate CSRF token (double-submit cookie pattern)
@@ -128,70 +125,16 @@ export const POST = createApiHandler(
       { headers: { 'Cache-Control': 'no-store, max-age=0' } }
     )
 
-    // 1. Check authentication using official helper
-    const isAuth = await isAuthenticated()
-    if (!isAuth) {
+    if (!auth.uid) {
       clearSessionCookies(response)
       throw new UnauthorizedError('No active session')
     }
 
-    // 2. Get Convex token
-    const convexToken = await getToken()
-    if (!convexToken) {
-      clearSessionCookies(response)
-      throw new UnauthorizedError('Authentication token unavailable')
-    }
-
-    // 3. Query Convex for user info
-    const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
-    if (!convexUrl) {
-      clearSessionCookies(response)
-      throw new Error('Server configuration error')
-    }
-
-    const convex = new ConvexHttpClient(convexUrl)
-    convex.setAuth(convexToken)
-
-    const user = await convex.query(api.auth.getCurrentUser, {}).catch(() => null) as { id?: string; email?: string | null } | null
-    const email = user?.email ? String(user.email) : null
-
-    if (!email) {
-      clearSessionCookies(response)
-      throw new UnauthorizedError('Session missing email')
-    }
-
-    const normalizedEmail = email.toLowerCase()
-
-    // Get role/status/agencyId from our users table
-    let resolvedRole: string | null = null
-    let resolvedStatus: string | null = null
-    let resolvedAgencyId: string | null = null
-
-    try {
-      const convexUser = await convex.query(api.users.getByEmail, {
-        email: normalizedEmail,
-      }).catch(() => null) as { role?: string | null; status?: string | null; agencyId?: string | null; legacyId?: string | null } | null
-
-      resolvedRole = typeof convexUser?.role === 'string' ? convexUser.role : null
-      resolvedStatus = typeof convexUser?.status === 'string' ? convexUser.status : null
-      resolvedAgencyId = typeof convexUser?.agencyId === 'string' ? convexUser.agencyId : (convexUser?.legacyId ?? null)
-    } catch {
-      // Ignore lookup failures
-    }
-
-    // If record missing, fall back conservatively
-    if (!resolvedRole) {
-      resolvedRole = 'client'
-    }
-
-    if (!resolvedStatus) {
-      resolvedStatus = 'pending'
-    }
-
-    // Use Better Auth user id as fallback for agencyId
-    if (!resolvedAgencyId && user?.id) {
-      resolvedAgencyId = String(user.id)
-    }
+    const resolvedRole = typeof auth.claims?.role === 'string' ? auth.claims.role : 'client'
+    const resolvedStatus = typeof auth.claims?.status === 'string' ? auth.claims.status : 'pending'
+    const resolvedAgencyId = typeof auth.claims?.agencyId === 'string' && auth.claims.agencyId.length > 0
+      ? auth.claims.agencyId
+      : auth.uid
 
     // Set the role/status/agencyId cookies
     response.cookies.set('cohorts_role', resolvedRole, COOKIE_OPTIONS)

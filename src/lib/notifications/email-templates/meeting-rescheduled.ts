@@ -74,7 +74,7 @@ export function meetingRescheduledTemplate(params: MeetingRescheduledTemplatePar
         <strong>Timezone:</strong> ${safeTimezone}<br>
         <strong>Updated by:</strong> ${safeOrganizer}
       </div>
-      ${meetLink ? `<a class="button" href="${meetLink}">Join Updated Meeting</a>` : ''}
+      ${meetLink ? `<a class="button" href="${meetLink}">Open Updated Room</a>` : ''}
       ${inSiteJoinUrl ? `<p class="meta">In-app room: <a href="${inSiteJoinUrl}">${inSiteJoinUrl}</a></p>` : ''}
       <p class="meta">Please update your calendar reminders.</p>
     </div>

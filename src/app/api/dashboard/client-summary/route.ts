@@ -7,7 +7,7 @@ import {
   buildFallbackClientSummary,
   parseClientSummaryResponse,
 } from '@/app/dashboard/utils/client-summary'
-import { GeminiAIService } from '@/services/gemini'
+import { GeminiAIService, resolveGeminiApiKey, resolveGeminiModel } from '@/services/gemini'
 
 const providerSnapshotSchema = z.object({
   providerId: z.string().min(1),
@@ -74,10 +74,10 @@ export const POST = createApiHandler(
 
     const generatedAt = new Date().toISOString()
     const snapshot = body.snapshot
-    const model = process.env.GEMINI_MODEL?.trim() || 'gemini-3-flash-preview'
+    const model = resolveGeminiModel()
 
     try {
-      const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? ''
+      const apiKey = resolveGeminiApiKey()
       if (!apiKey) {
         return {
           summary: buildFallbackClientSummary(snapshot, generatedAt),

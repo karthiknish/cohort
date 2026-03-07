@@ -4,6 +4,7 @@ import { Geist, Geist_Mono, Anybody } from 'next/font/google'
 
 export const dynamic = 'force-dynamic'
 import './globals.css'
+import '@livekit/components-styles'
 import { cn } from '@/lib/utils'
 import { SiteHeader } from '@/components/site/site-header'
 import { SiteFooter } from '@/components/site/site-footer'

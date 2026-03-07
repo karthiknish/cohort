@@ -10,6 +10,7 @@ import {
   updateIntegrationStatus,
   writeMetricsBatch,
 } from '@/lib/ads-admin'
+import { getGoogleAnalyticsIntegration, updateGoogleAnalyticsStatus } from '@/lib/analytics-admin'
 import { createApiHandler } from '@/lib/api-handler'
 import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
 import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
@@ -37,6 +38,32 @@ function getConvexClient(): ConvexHttpClient | null {
   if (!url) return null
   _convexClient = new ConvexHttpClient(url)
   return _convexClient
+}
+
+async function getIntegrationForJob(options: { userId: string; providerId: string; clientId?: string | null }) {
+  if (options.providerId === 'google-analytics') {
+    return await getGoogleAnalyticsIntegration({ userId: options.userId, clientId: options.clientId ?? null })
+  }
+  return await getAdIntegration(options)
+}
+
+async function updateProviderStatus(options: {
+  userId: string
+  providerId: string
+  clientId?: string | null
+  status: 'pending' | 'success' | 'error'
+  message?: string | null
+}) {
+  if (options.providerId === 'google-analytics') {
+    await updateGoogleAnalyticsStatus({
+      userId: options.userId,
+      clientId: options.clientId ?? null,
+      status: options.status,
+      message: options.message ?? null,
+    })
+    return
+  }
+  await updateIntegrationStatus(options)
 }
 
 const processSchema = z.object({
@@ -85,14 +112,14 @@ export const POST = createApiHandler(
         ? job.clientId.trim()
         : null
 
-      const integration = await getAdIntegration({ userId: targetUserId, providerId: job.providerId, clientId })
+      const integration = await getIntegrationForJob({ userId: targetUserId, providerId: job.providerId, clientId })
 
       if (!integration || !integration.accessToken) {
         // Parallelize independent status updates
         await Promise.all([
           failSyncJob({ userId: targetUserId, jobId: job.id, message: 'Integration or access token not found' }),
           // If the integration document was deleted (disconnect), avoid throwing from a status update.
-          integration ? updateIntegrationStatus({
+          integration ? updateProviderStatus({
             userId: targetUserId,
             providerId: job.providerId,
             clientId,
@@ -112,7 +139,7 @@ export const POST = createApiHandler(
           const accountId = integration.accountId
           if (typeof accountId !== 'string' || accountId.trim().length === 0) {
             await failSyncJob({ userId: targetUserId, jobId: job.id, message: 'Google Ads account not configured. Please reconnect your Google Ads integration.' })
-            await updateIntegrationStatus({
+            await updateProviderStatus({
               userId: targetUserId,
               providerId: job.providerId,
               clientId,
@@ -129,7 +156,7 @@ export const POST = createApiHandler(
           if (developerToken.length === 0) {
             const message = 'Google Ads developer token is missing. Set GOOGLE_ADS_DEVELOPER_TOKEN and reconnect Google Ads.'
             await failSyncJob({ userId: targetUserId, jobId: job.id, message })
-            await updateIntegrationStatus({
+            await updateProviderStatus({
               userId: targetUserId,
               providerId: job.providerId,
               clientId,
@@ -291,7 +318,7 @@ export const POST = createApiHandler(
       // Parallelize independent status updates
       await Promise.all([
         completeSyncJob({ userId: targetUserId, jobId: job.id }),
-        updateIntegrationStatus({ userId: targetUserId, providerId: job.providerId, clientId, status: 'success', message: null }),
+        updateProviderStatus({ userId: targetUserId, providerId: job.providerId, clientId, status: 'success', message: null }),
       ])
 
       // Trigger alert evaluation after successful sync if it's for a specific client/workspace
@@ -344,7 +371,7 @@ export const POST = createApiHandler(
           jobFailed = true
         }
         if (userId && providerId) {
-          await updateIntegrationStatus({ userId, providerId, clientId: activeJob?.clientId ?? null, status: 'error', message: message ?? 'Token refresh failed' })
+          await updateProviderStatus({ userId, providerId, clientId: activeJob?.clientId ?? null, status: 'error', message: message ?? 'Token refresh failed' })
         }
         throw new ValidationError(message ?? 'Token refresh failed')
       }
@@ -355,21 +382,21 @@ export const POST = createApiHandler(
         // Parallelize independent error status updates
         await Promise.all([
           failSyncJob({ userId, jobId, message: message ?? 'Unknown error' }),
-          updateIntegrationStatus({ userId, providerId, clientId: activeJob?.clientId ?? null, status: 'error', message: message ?? 'Sync failed' }),
+          updateProviderStatus({ userId, providerId, clientId: activeJob?.clientId ?? null, status: 'error', message: message ?? 'Sync failed' }),
         ])
         jobFailed = true
       } else if (userId && jobId) {
         await failSyncJob({ userId, jobId, message: message ?? 'Unknown error' })
         jobFailed = true
       } else if (userId && providerId) {
-        await updateIntegrationStatus({ userId, providerId, clientId: activeJob?.clientId ?? null, status: 'error', message: message ?? 'Sync failed' })
+        await updateProviderStatus({ userId, providerId, clientId: activeJob?.clientId ?? null, status: 'error', message: message ?? 'Sync failed' })
       }
 
       if (resolvedUserId && activeJob && !jobFailed) {
         // Parallelize independent error status updates
         await Promise.all([
           failSyncJob({ userId: resolvedUserId, jobId: activeJob.id, message: message ?? 'Unknown error' }),
-          updateIntegrationStatus({ userId: resolvedUserId, providerId: activeJob.providerId, clientId: activeJob.clientId ?? null, status: 'error', message: message ?? 'Sync failed' }),
+          updateProviderStatus({ userId: resolvedUserId, providerId: activeJob.providerId, clientId: activeJob.clientId ?? null, status: 'error', message: message ?? 'Sync failed' }),
         ])
         jobFailed = true
       }

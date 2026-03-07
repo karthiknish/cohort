@@ -49,6 +49,7 @@ export function useReadReceipts({
     enabled && workspaceId && userId && channelId
       ? {
           workspaceId: String(workspaceId),
+          channelId: channelType === 'team' && channelId !== 'team-agency' ? channelId : null,
           channelType,
           clientId: clientId ?? undefined,
           projectId: projectId ?? undefined,
@@ -125,6 +126,7 @@ export function useReadReceipts({
       try {
         await markChannelAsRead({
           workspaceId: String(workspaceId),
+          channelId: channelType === 'team' && channelId !== 'team-agency' ? channelId : null,
           channelType,
           clientId: clientId ?? undefined,
           projectId: projectId ?? undefined,
@@ -151,6 +153,7 @@ export function useReadReceipts({
       workspaceId,
       userId,
       channelType,
+      channelId,
       clientId,
       projectId,
       messages,

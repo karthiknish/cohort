@@ -1,8 +1,5 @@
 'use client'
 
-import { Suspense } from 'react'
-
-import { ActivityWidget } from '@/components/activity/activity-widget'
 import { AdInsightsWidget } from '@/components/dashboard/ad-insights-widget'
 import { ComparisonInsights } from '@/components/dashboard/comparison/comparison-insights'
 import { PlatformComparisonSummaryCard } from '@/components/dashboard/platform-comparison-summary-card'
@@ -11,7 +8,6 @@ import { TasksCard } from '@/components/dashboard/tasks-card'
 import { WorkspaceTrendsCard } from '@/components/dashboard/workspace-trends-card'
 import { FadeIn } from '@/components/ui/animate-in'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 
 import type { ClientRecord } from '@/types/clients'
 import type { ClientComparisonSummary, ComparisonInsight, DashboardTaskItem, MetricRecord } from '@/types/dashboard'
@@ -146,14 +142,6 @@ export function DashboardSidebar({
       <FadeIn>
         <TasksCard tasks={filteredUpcomingTasks} loading={tasksLoading} />
       </FadeIn>
-
-      {userRole !== 'client' && (
-        <FadeIn>
-          <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
-            <ActivityWidget />
-          </Suspense>
-        </FadeIn>
-      )}
     </div>
   )
 }

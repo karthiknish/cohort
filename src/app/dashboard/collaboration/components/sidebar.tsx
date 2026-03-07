@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronDown, FileText } from 'lucide-react'
+import { ChevronDown, FileText, Lock, Settings2, Users } from 'lucide-react'
 import { useId, useState } from 'react'
 
 import { Card, CardContent } from '@/components/ui/card'
@@ -17,21 +17,61 @@ interface CollaborationSidebarProps {
   channel: Channel | null
   channelParticipants: ClientTeamMember[]
   sharedFiles: CollaborationAttachment[]
+  canManageMembers?: boolean
+  onManageMembers?: () => void
 }
 
 type CollaborationSidebarContentProps = {
   channel: Channel | null
   channelParticipants: ClientTeamMember[]
   sharedFiles: CollaborationAttachment[]
+  canManageMembers?: boolean
+  onManageMembers?: () => void
 }
 
 function CollaborationSidebarContent({
   channel,
   channelParticipants,
   sharedFiles,
+  canManageMembers = false,
+  onManageMembers,
 }: CollaborationSidebarContentProps) {
   return (
     <div className="flex w-full flex-col gap-8 p-6 text-sm text-muted-foreground bg-muted/5 h-full overflow-y-auto">
+      {channel ? (
+        <div className="rounded-2xl border border-border/70 bg-background/80 p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-foreground">
+                #{channel.name}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.24em] text-muted-foreground/75">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 px-2.5 py-1">
+                  {channel.isCustom ? 'Custom channel' : `${channel.type} channel`}
+                </span>
+                {channel.isCustom ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 px-2.5 py-1">
+                    {channel.visibility === 'private' ? <Lock className="h-3 w-3" /> : <Users className="h-3 w-3" />}
+                    {channel.visibility === 'private' ? 'Private' : 'Public'}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
+            {channel.isCustom && canManageMembers && onManageMembers ? (
+              <Button variant="outline" size="sm" className="shrink-0 gap-2" onClick={onManageMembers}>
+                <Settings2 className="h-4 w-4" />
+                Manage
+              </Button>
+            ) : null}
+          </div>
+
+          {channel.description ? (
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{channel.description}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="space-y-4">
         <div className="flex items-center gap-2 pb-2.5 border-b border-muted/20">
           <div className="h-2 w-2 rounded-full bg-primary/60" />
@@ -100,7 +140,13 @@ function CollaborationSidebarContent({
   )
 }
 
-export function CollaborationSidebar({ channel, channelParticipants, sharedFiles }: CollaborationSidebarProps) {
+export function CollaborationSidebar({
+  channel,
+  channelParticipants,
+  sharedFiles,
+  canManageMembers = false,
+  onManageMembers,
+}: CollaborationSidebarProps) {
   const collapseId = useId()
   const [open, setOpen] = useState(true)
 
@@ -132,6 +178,8 @@ export function CollaborationSidebar({ channel, channelParticipants, sharedFiles
             channel={channel}
             channelParticipants={channelParticipants}
             sharedFiles={sharedFiles}
+            canManageMembers={canManageMembers}
+            onManageMembers={onManageMembers}
           />
         </div>
       </div>
@@ -140,6 +188,8 @@ export function CollaborationSidebar({ channel, channelParticipants, sharedFiles
           channel={channel}
           channelParticipants={channelParticipants}
           sharedFiles={sharedFiles}
+          canManageMembers={canManageMembers}
+          onManageMembers={onManageMembers}
         />
       </div>
     </div>

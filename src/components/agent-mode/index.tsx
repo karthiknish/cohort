@@ -24,6 +24,8 @@ export function AgentMode() {
     isHistoryLoading,
     fetchHistory,
     loadConversation,
+    isConversationLoading,
+    loadingConversationId,
     updateConversationTitle,
     deleteConversation,
     // Error handling
@@ -50,6 +52,8 @@ export function AgentMode() {
         isHistoryLoading={isHistoryLoading}
         onOpenHistory={fetchHistory}
         onSelectConversation={loadConversation}
+        isConversationLoading={isConversationLoading}
+        loadingConversationId={loadingConversationId}
         onUpdateConversationTitle={updateConversationTitle}
         onDeleteConversation={deleteConversation}
         // Error handling

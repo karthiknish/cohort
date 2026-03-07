@@ -147,9 +147,11 @@ export function useTasks({
   const [pendingStatusUpdates, setPendingStatusUpdates] = useState<Set<string>>(new Set())
 
   const convexTasksQuery = useQuery(
-    tasksApi.listByClient,
-    !isPreviewMode && !authLoading && workspaceId && clientId !== undefined
-      ? { workspaceId, clientId: clientId ?? null, limit: 200 }
+    clientId === undefined ? tasksApi.list : tasksApi.listByClient,
+    !isPreviewMode && !authLoading && workspaceId
+      ? clientId === undefined
+        ? { workspaceId, limit: 200 }
+        : { workspaceId, clientId: clientId ?? null, limit: 200 }
       : 'skip'
   )
 
@@ -162,9 +164,9 @@ export function useTasks({
   const loading = useMemo(() => {
     if (isPreviewMode) return false
     if (authLoading) return true
-    if (!userId || !workspaceId || clientId === undefined) return false
+    if (!userId || !workspaceId) return false
     return convexTasksQuery === undefined
-  }, [authLoading, clientId, convexTasksQuery, isPreviewMode, userId, workspaceId])
+  }, [authLoading, convexTasksQuery, isPreviewMode, userId, workspaceId])
 
   useEffect(() => {
     if (isPreviewMode) {
@@ -173,7 +175,7 @@ export function useTasks({
       return
     }
 
-    if (!userId || !workspaceId || clientId === undefined) {
+    if (!userId || !workspaceId) {
       setTasks([])
       setError(null)
       return
@@ -196,7 +198,7 @@ export function useTasks({
 
     setTasks(rows.map(mapConvexTaskToTaskRecord))
     setError(null)
-  }, [clientId, convexTasksQuery, isPreviewMode, userId, workspaceId])
+  }, [convexTasksQuery, isPreviewMode, userId, workspaceId])
 
   const handleLoadMore = useCallback(async () => {
     // Realtime query returns the current dataset; no cursor pagination.

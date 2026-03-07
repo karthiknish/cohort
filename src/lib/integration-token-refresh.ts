@@ -1,4 +1,5 @@
 import { getAdIntegration, updateIntegrationCredentials } from '@/lib/ads-admin'
+import { getGoogleAnalyticsIntegration, updateGoogleAnalyticsCredentials } from '@/lib/analytics-admin'
 import { logger } from '@/lib/logger'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
 import {
@@ -135,7 +136,9 @@ function formatGoogleProviderName(providerId: 'google' | 'google-analytics'): st
 export async function refreshGoogleAccessToken({ userId, clientId, providerId }: RefreshParams): Promise<string> {
   const resolvedProviderId = resolveGoogleProvider(providerId)
   const providerName = formatGoogleProviderName(resolvedProviderId)
-  const integration = await getAdIntegration({ userId, providerId: resolvedProviderId, clientId })
+  const integration = resolvedProviderId === 'google-analytics'
+    ? await getGoogleAnalyticsIntegration({ userId, clientId })
+    : await getAdIntegration({ userId, providerId: resolvedProviderId, clientId })
 
   if (!integration?.refreshToken) {
     throw new IntegrationTokenError(`No ${providerName} refresh token available`, resolvedProviderId, userId)
@@ -229,15 +232,26 @@ export async function refreshGoogleAccessToken({ userId, clientId, providerId }:
 
       const expiresAt = computeExpiry(tokenPayload.expires_in)
 
-      await updateIntegrationCredentials({
-        userId,
-        providerId: resolvedProviderId,
-        clientId,
-        accessToken: tokenPayload.access_token,
-        accessTokenExpiresAt: expiresAt ?? undefined,
-        refreshToken: tokenPayload.refresh_token ?? undefined,
-        idToken: tokenPayload.id_token ?? undefined,
-      })
+      if (resolvedProviderId === 'google-analytics') {
+        await updateGoogleAnalyticsCredentials({
+          userId,
+          clientId,
+          accessToken: tokenPayload.access_token,
+          accessTokenExpiresAt: expiresAt ?? undefined,
+          refreshToken: tokenPayload.refresh_token ?? undefined,
+          idToken: tokenPayload.id_token ?? undefined,
+        })
+      } else {
+        await updateIntegrationCredentials({
+          userId,
+          providerId: resolvedProviderId,
+          clientId,
+          accessToken: tokenPayload.access_token,
+          accessTokenExpiresAt: expiresAt ?? undefined,
+          refreshToken: tokenPayload.refresh_token ?? undefined,
+          idToken: tokenPayload.id_token ?? undefined,
+        })
+      }
 
       logger.info(`[Google Token Refresh] Successfully refreshed token for user ${userId}`, { expiresIn: tokenPayload.expires_in })
 

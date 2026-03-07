@@ -12,10 +12,11 @@ const querySchema = z.object({
 
 export const POST = createApiHandler(
   {
+    auth: 'required',
     querySchema,
     rateLimit: 'standard',
   },
-  async (req, { auth, query }) => {
+  async (_req, { auth, query }) => {
     if (!auth.uid) {
       throw new UnauthorizedError('Authentication required')
     }

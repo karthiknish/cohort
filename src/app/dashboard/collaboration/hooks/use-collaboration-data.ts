@@ -1,10 +1,12 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useQuery } from 'convex/react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
+import { collaborationChannelsApi } from '@/lib/convex-api'
 
 import { collectSharedFiles } from '../utils'
 
@@ -13,6 +15,19 @@ import { useAttachmentsData } from './use-attachments-data'
 import { useChannelsData } from './use-channels-data'
 import { useMessagesData } from './use-messages-data'
 import { useProjectsData } from './use-projects-data'
+
+type CustomChannel = {
+  legacyId: string
+  name: string
+  description: string | null
+  visibility: 'public' | 'private'
+  memberIds: string[]
+  memberSummaries: Array<{
+    id: string
+    name: string
+    role: string | null
+  }>
+}
 
 export function useCollaborationData(): UseCollaborationDataReturn {
   const { user } = useAuth()
@@ -39,6 +54,53 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     isPreviewMode,
   })
 
+  const customChannelsResult = useQuery(
+    collaborationChannelsApi.listAccessible,
+    !isPreviewMode && workspaceId
+      ? {
+          workspaceId: String(workspaceId),
+          channelType: 'team',
+        }
+      : 'skip',
+  ) as
+    | Array<{
+        legacyId?: string
+        name?: string
+        description?: string | null
+        visibility?: 'public' | 'private'
+        memberIds?: string[]
+        memberSummaries?: Array<{ id?: string; name?: string; role?: string | null; email?: string | null }>
+      }>
+    | undefined
+
+  const customChannels = useMemo<CustomChannel[]>(
+    () =>
+      (customChannelsResult ?? [])
+        .filter((channel) => typeof channel?.legacyId === 'string' && typeof channel?.name === 'string')
+        .map((channel): CustomChannel => ({
+          legacyId: String(channel.legacyId),
+          name: String(channel.name),
+          description: typeof channel.description === 'string' ? channel.description : null,
+          visibility: channel.visibility === 'public' ? 'public' : 'private',
+          memberIds: Array.isArray(channel.memberIds)
+            ? channel.memberIds.filter((memberId): memberId is string => typeof memberId === 'string')
+            : [],
+          memberSummaries: Array.isArray(channel.memberSummaries)
+            ? channel.memberSummaries
+                .filter(
+                  (member): member is { id: string; name: string; role?: string | null } =>
+                    typeof member?.id === 'string' && typeof member?.name === 'string',
+                )
+                .map((member) => ({
+                  id: member.id,
+                  name: member.name,
+                  role: typeof member.role === 'string' ? member.role : null,
+                }))
+            : [],
+        })),
+    [customChannelsResult],
+  )
+
   const {
     channels,
     selectedChannel,
@@ -52,6 +114,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
   } = useChannelsData({
     clients,
     projects,
+    customChannels,
     fallbackDisplayName,
     fallbackRole,
   })

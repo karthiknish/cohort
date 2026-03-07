@@ -56,6 +56,10 @@ interface UnifiedInboxProps {
   // Channel message props
   channelMessages: CollaborationMessage[]
   visibleMessages: CollaborationMessage[]
+  messageSearchQuery: string
+  onMessageSearchChange: (value: string) => void
+  searchHighlights: string[]
+  searchingMessages: boolean
   channelParticipants: ChannelParticipant[]
   messagesError: string | null
   isCurrentChannelLoading: boolean
@@ -98,10 +102,15 @@ interface UnifiedInboxProps {
   deepLinkThreadId?: string | null
   // DM props
   dmMessages: DirectMessage[]
+  dmVisibleMessages: DirectMessage[]
   dmIsLoadingMessages: boolean
   dmIsLoadingMore: boolean
   dmHasMoreMessages: boolean
   dmLoadMoreMessages: () => void
+  dmMessageSearchQuery: string
+  onDmMessageSearchChange: (value: string) => void
+  dmSearchHighlights: string[]
+  dmSearchingMessages: boolean
   dmSendMessage: (content: string, attachments?: CollaborationAttachment[]) => Promise<void>
   dmIsSending: boolean
   dmToggleReaction: (messageLegacyId: string, emoji: string) => Promise<void>
@@ -109,6 +118,8 @@ interface UnifiedInboxProps {
   dmEditMessage?: (messageLegacyId: string, newContent: string) => Promise<void>
   dmArchiveConversation: (archived: boolean) => Promise<void>
   dmMuteConversation: (muted: boolean) => Promise<void>
+  canManageSelectedChannel?: boolean
+  onManageSelectedChannel?: () => void
 }
 
 const SOURCE_ICONS: Record<string, React.ReactNode> = {
@@ -134,7 +145,12 @@ export function UnifiedInbox({
   isLoadingChannels,
   isLoadingDMs,
   channelMessages,
+  visibleMessages,
   channelParticipants,
+  messageSearchQuery,
+  onMessageSearchChange,
+  searchHighlights,
+  searchingMessages,
   isCurrentChannelLoading,
   onLoadMore,
   canLoadMore,
@@ -172,10 +188,15 @@ export function UnifiedInbox({
   deepLinkMessageId,
   deepLinkThreadId,
   dmMessages,
+  dmVisibleMessages,
   dmIsLoadingMessages,
   dmIsLoadingMore,
   dmHasMoreMessages,
   dmLoadMoreMessages,
+  dmMessageSearchQuery,
+  onDmMessageSearchChange,
+  dmSearchHighlights,
+  dmSearchingMessages,
   dmSendMessage,
   dmIsSending,
   dmToggleReaction,
@@ -183,6 +204,8 @@ export function UnifiedInbox({
   dmEditMessage,
   dmArchiveConversation,
   dmMuteConversation,
+  canManageSelectedChannel = false,
+  onManageSelectedChannel,
 }: UnifiedInboxProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
@@ -292,10 +315,14 @@ export function UnifiedInbox({
   const channelCount = channels.length
   const dmCount = dmConversations.length
   const isLoading = isLoadingChannels || isLoadingDMs
+  const isChannelSearchActive = messageSearchQuery.trim().length > 0
+  const isDmSearchActive = dmMessageSearchQuery.trim().length > 0
   const topLevelChannelMessages = useMemo(
     () => channelMessages.filter((message) => !message?.parentMessageId),
     [channelMessages],
   )
+  const channelMessagesForPane = isChannelSearchActive ? visibleMessages : topLevelChannelMessages
+  const dmMessagesForPane = isDmSearchActive ? dmVisibleMessages : dmMessages
 
   const typingIndicatorText = useMemo(() => {
     if (!selectedChannel || typingParticipants.length === 0) {
@@ -488,13 +515,16 @@ export function UnifiedInbox({
             participantCount: channelParticipants.length,
             messageCount: channelMessages.length,
           }}
-          messages={topLevelChannelMessages.map(collaborationToUnifiedMessage)}
+          messages={channelMessagesForPane.map(collaborationToUnifiedMessage)}
           currentUserId={currentUserId}
           currentUserRole={currentUserRole}
-          isLoading={isCurrentChannelLoading}
-          isLoadingMore={loadingMore}
-          hasMore={canLoadMore}
+          isLoading={isCurrentChannelLoading || (isChannelSearchActive && searchingMessages)}
+          isLoadingMore={!isChannelSearchActive && loadingMore}
+          hasMore={!isChannelSearchActive && canLoadMore}
           onLoadMore={selectedChannel ? () => onLoadMore(selectedChannel.id) : () => {}}
+          messageSearchQuery={messageSearchQuery}
+          onMessageSearchChange={onMessageSearchChange}
+          messageSearchHighlights={searchHighlights}
           messageInput={messageInput}
           onMessageInputChange={onMessageInputChange}
           onSendMessage={async () => { await onSendMessage() }}
@@ -536,7 +566,7 @@ export function UnifiedInbox({
             onArchive: dmArchiveConversation,
             onMute: dmMuteConversation,
           }}
-          messages={dmMessages.map((msg) => ({
+          messages={dmMessagesForPane.map((msg) => ({
             id: msg.legacyId,
             senderId: msg.senderId,
             senderName: msg.senderName,
@@ -557,10 +587,13 @@ export function UnifiedInbox({
             sharedTo: msg.sharedTo ?? undefined,
           }))}
           currentUserId={currentUserId}
-          isLoading={dmIsLoadingMessages}
-          isLoadingMore={dmIsLoadingMore}
-          hasMore={dmHasMoreMessages}
+          isLoading={dmIsLoadingMessages || (isDmSearchActive && dmSearchingMessages)}
+          isLoadingMore={!isDmSearchActive && dmIsLoadingMore}
+          hasMore={!isDmSearchActive && dmHasMoreMessages}
           onLoadMore={dmLoadMoreMessages}
+          messageSearchQuery={dmMessageSearchQuery}
+          onMessageSearchChange={onDmMessageSearchChange}
+          messageSearchHighlights={dmSearchHighlights}
           messageInput={dmMessageInput}
           onMessageInputChange={setActiveDmMessageInput}
           onSendMessage={handleSendDirectMessage}
@@ -599,6 +632,8 @@ export function UnifiedInbox({
           channel={selectedChannel}
           channelParticipants={channelParticipants}
           sharedFiles={sharedFiles}
+          canManageMembers={canManageSelectedChannel}
+          onManageMembers={onManageSelectedChannel}
         />
       )}
     </div>

@@ -2,6 +2,8 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import { apiFetch } from '@/lib/api-client'
+
 type SyncGoogleAnalyticsParams = {
   periodDays: number
   clientId?: string | null
@@ -13,27 +15,19 @@ type SyncGoogleAnalyticsResponse = {
   error?: string
 }
 
-async function syncGoogleAnalytics(params: SyncGoogleAnalyticsParams): Promise<SyncGoogleAnalyticsResponse> {
+export async function syncGoogleAnalytics(params: SyncGoogleAnalyticsParams): Promise<SyncGoogleAnalyticsResponse> {
   const searchParams = new URLSearchParams({ days: String(params.periodDays) })
   if (params.clientId) {
     searchParams.set('clientId', params.clientId)
   }
   
   const url = `/api/analytics/google-analytics/sync?${searchParams.toString()}`
-  
-  const response = await fetch(url, {
+
+  return await apiFetch<SyncGoogleAnalyticsResponse>(url, {
     method: 'POST',
     credentials: 'same-origin',
+    body: JSON.stringify({}),
   })
-  
-  const payload = await response.json().catch(() => ({})) as SyncGoogleAnalyticsResponse
-  
-  if (!response.ok) {
-    const message = typeof payload?.error === 'string' ? payload.error : 'Failed to sync Google Analytics'
-    throw new Error(message)
-  }
-  
-  return payload
 }
 
 /**

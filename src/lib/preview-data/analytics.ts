@@ -1,14 +1,23 @@
 import type {
+    PreviewAlgorithmicInsight,
     PreviewAnalyticsMetric,
     PreviewProviderInsight,
-    PreviewAlgorithmicInsight,
 } from './types'
 import { isoDaysAgo } from './utils'
 
 export function getPreviewAnalyticsMetrics(): PreviewAnalyticsMetric[] {
-    const providers = ['google', 'facebook', 'linkedin']
+    const providers = ['google-analytics', 'google', 'facebook', 'linkedin']
 
     const baseData: Record<string, Array<{ spend: number; impressions: number; clicks: number; conversions: number; revenue: number }>> = {
+        'google-analytics': [
+            { spend: 0, impressions: 4200, clicks: 5100, conversions: 160, revenue: 8200 },
+            { spend: 0, impressions: 4550, clicks: 5450, conversions: 171, revenue: 8700 },
+            { spend: 0, impressions: 3980, clicks: 4760, conversions: 149, revenue: 7600 },
+            { spend: 0, impressions: 4820, clicks: 5900, conversions: 188, revenue: 9400 },
+            { spend: 0, impressions: 4680, clicks: 5620, conversions: 179, revenue: 9100 },
+            { spend: 0, impressions: 5060, clicks: 6180, conversions: 201, revenue: 10350 },
+            { spend: 0, impressions: 4910, clicks: 6010, conversions: 194, revenue: 9950 },
+        ],
         google: [
             { spend: 850, impressions: 125000, clicks: 2800, conversions: 95, revenue: 9500 },
             { spend: 920, impressions: 132000, clicks: 3100, conversions: 108, revenue: 10800 },
@@ -41,12 +50,14 @@ export function getPreviewAnalyticsMetrics(): PreviewAnalyticsMetric[] {
     const records: PreviewAnalyticsMetric[] = []
 
     providers.forEach((provider) => {
-        const providerData = baseData[provider]!
+        const providerData = baseData[provider]
+        if (!providerData) return
         providerData.forEach((day, idx) => {
+            const [date = isoDaysAgo(6 - idx)] = isoDaysAgo(6 - idx).split('T')
             const metric: PreviewAnalyticsMetric = {
                 id: `preview-analytics-${provider}-${idx}`,
                 providerId: provider,
-                date: isoDaysAgo(6 - idx).split('T')[0]!,
+                date,
                 spend: day.spend,
                 impressions: day.impressions,
                 clicks: day.clicks,
@@ -103,6 +114,10 @@ export function getPreviewAnalyticsInsights(): {
 } {
     const insights: PreviewProviderInsight[] = [
         {
+            providerId: 'google-analytics',
+            summary: 'Google Analytics shows healthy acquisition quality this period: users are generating repeat sessions, conversion efficiency is stable, and revenue is concentrated on a few standout days. Review the traffic sources and landing pages tied to your peak session and revenue days to scale what is already working.',
+        },
+        {
             providerId: 'google',
             summary: 'Google Ads is performing exceptionally well with a 12.5x ROAS. Your search campaigns are driving high-intent traffic with a 3.5% conversion rate. Consider increasing budget allocation to capture more market share during peak hours.',
         },
@@ -117,6 +132,27 @@ export function getPreviewAnalyticsInsights(): {
     ]
 
     const algorithmic: PreviewAlgorithmicInsight[] = [
+        {
+            providerId: 'google-analytics',
+            suggestions: [
+                {
+                    type: 'efficiency',
+                    level: 'success',
+                    title: 'Strong session quality',
+                    message: 'Users are generating multiple sessions and sustaining a healthy conversion rate for the selected period.',
+                    suggestion: 'Use your peak-conversion days as a benchmark when reviewing acquisition sources and landing pages.',
+                    score: 88,
+                },
+                {
+                    type: 'audience',
+                    level: 'info',
+                    title: 'Revenue clusters on a few days',
+                    message: 'Revenue is concentrated on a small number of standout days, suggesting a few high-value campaigns or pages are doing most of the work.',
+                    suggestion: 'Identify the top-performing traffic sources and experiences behind those days and replicate them.',
+                    score: 80,
+                },
+            ],
+        },
         {
             providerId: 'google',
             suggestions: [

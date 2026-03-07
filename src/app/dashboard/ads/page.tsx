@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, Suspense, lazy } from 'react'
+import { useCallback, useEffect, useRef, Suspense, lazy } from 'react'
 
 import { extractErrorCode, logError } from '@/lib/convex-errors'
 import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
@@ -105,6 +105,7 @@ export default function AdsPage() {
     initializingGoogle,
     initializingMeta,
     initializingTikTok,
+    googleNeedsAccountSelection,
     metaNeedsAccountSelection,
     tiktokNeedsAccountSelection,
     googleAccountOptions,
@@ -143,6 +144,20 @@ export default function AdsPage() {
     !hasAnyAdIntegration &&
     !isAuthError(metricError) &&
     !isAuthError(loadMoreError)
+
+  const scrollToSetupAlerts = useCallback(() => {
+    document.getElementById('ads-setup-alerts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  const openGoogleCampaignSetup = useCallback(() => {
+    setGoogleSetupDialogOpen(true)
+
+    if (loadingGoogleAccountOptions || googleAccountOptions.length > 0) {
+      return
+    }
+
+    void reloadGoogleAccountOptions()
+  }, [googleAccountOptions.length, loadingGoogleAccountOptions, reloadGoogleAccountOptions, setGoogleSetupDialogOpen])
 
   // Surface notable errors as toasts once
   useEffect(() => {
@@ -193,21 +208,23 @@ export default function AdsPage() {
       {!isPreviewMode && (
         <>
           <FadeIn>
-            <SetupAlerts
-              metaSetupMessage={metaSetupMessage}
-              metaNeedsAccountSelection={metaNeedsAccountSelection}
-              initializingMeta={initializingMeta}
-              onInitializeMeta={() => void initializeMetaIntegration(undefined, selectedMetaAccountId || null)}
-              metaAccountOptions={metaAccountOptions}
-              selectedMetaAccountId={selectedMetaAccountId}
-              onMetaAccountSelectionChange={setSelectedMetaAccountId}
-              loadingMetaAccountOptions={loadingMetaAccountOptions}
-              onReloadMetaAccountOptions={() => void reloadMetaAccountOptions()}
-              tiktokSetupMessage={tiktokSetupMessage}
-              tiktokNeedsAccountSelection={tiktokNeedsAccountSelection}
-              initializingTikTok={initializingTikTok}
-              onInitializeTikTok={() => void initializeTikTokIntegration()}
-            />
+            <div id="ads-setup-alerts">
+              <SetupAlerts
+                metaSetupMessage={metaSetupMessage}
+                metaNeedsAccountSelection={metaNeedsAccountSelection}
+                initializingMeta={initializingMeta}
+                onInitializeMeta={() => void initializeMetaIntegration(undefined, selectedMetaAccountId || null)}
+                metaAccountOptions={metaAccountOptions}
+                selectedMetaAccountId={selectedMetaAccountId}
+                onMetaAccountSelectionChange={setSelectedMetaAccountId}
+                loadingMetaAccountOptions={loadingMetaAccountOptions}
+                onReloadMetaAccountOptions={() => void reloadMetaAccountOptions()}
+                tiktokSetupMessage={tiktokSetupMessage}
+                tiktokNeedsAccountSelection={tiktokNeedsAccountSelection}
+                initializingTikTok={initializingTikTok}
+                onInitializeTikTok={() => void initializeTikTokIntegration()}
+              />
+            </div>
           </FadeIn>
 
           <FadeIn>
@@ -256,9 +273,40 @@ export default function AdsPage() {
                         key={platform.id}
                         providerId={platform.id}
                         providerName={platform.name}
-                        isConnected={connectedProviders[platform.id]!}
+                        isConnected={Boolean(connectedProviders[platform.id])}
                         dateRange={dateRange}
                         onRefresh={handleManualRefresh}
+                        setupRequired={
+                          (platform.id === 'google' && googleNeedsAccountSelection) ||
+                          (platform.id === 'facebook' && metaNeedsAccountSelection) ||
+                          (platform.id === 'tiktok' && tiktokNeedsAccountSelection)
+                        }
+                        setupTitle={
+                          platform.id === 'google'
+                            ? 'Select a Google Ads account'
+                            : platform.id === 'facebook'
+                              ? 'Select a Meta ad account'
+                              : platform.id === 'tiktok'
+                                ? 'Finish TikTok account setup'
+                                : undefined
+                        }
+                        setupDescription={
+                          platform.id === 'google'
+                            ? 'Choose the Google Ads account you want to manage before loading campaign data.'
+                            : platform.id === 'facebook'
+                              ? 'Choose the Meta ad account you want to manage before loading campaign data.'
+                              : platform.id === 'tiktok'
+                                ? 'Complete TikTok setup so the default ad account is assigned before loading campaign data.'
+                                : undefined
+                        }
+                        setupActionLabel={platform.id === 'google' ? 'Select account' : 'Finish setup'}
+                        onSetupAction={
+                          platform.id === 'google'
+                            ? openGoogleCampaignSetup
+                            : platform.id === 'facebook' || platform.id === 'tiktok'
+                              ? scrollToSetupAlerts
+                              : undefined
+                        }
                       />
                     ))}
                 </div>

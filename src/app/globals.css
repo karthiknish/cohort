@@ -375,6 +375,69 @@ h6 {
   }
 }
 
+.meeting-room-livekit-theme {
+  --lk-bg: var(--background);
+  --lk-bg2: var(--popover);
+  --lk-bg3: color-mix(in srgb, var(--muted) 78%, var(--card) 22%);
+  --lk-bg4: color-mix(in srgb, var(--primary) 10%, var(--card) 90%);
+  --lk-bg5: color-mix(in srgb, var(--primary) 14%, var(--card) 86%);
+  --lk-fg: var(--foreground);
+  --lk-fg2: var(--muted-foreground);
+  --lk-fg3: color-mix(in srgb, var(--muted-foreground) 72%, transparent);
+  --lk-border-color: var(--border);
+  --lk-control-bg: var(--card);
+  --lk-control-fg: var(--foreground);
+  --lk-control-hover-bg: color-mix(in srgb, var(--muted) 78%, var(--card) 22%);
+  --lk-control-active-bg: color-mix(in srgb, var(--primary) 14%, var(--card) 86%);
+  --lk-control-active-hover-bg: color-mix(in srgb, var(--primary) 20%, var(--card) 80%);
+  --lk-accent-bg: var(--primary);
+  --lk-accent2: color-mix(in srgb, var(--primary) 90%, white 10%);
+  --lk-accent3: color-mix(in srgb, var(--primary) 82%, white 18%);
+  --lk-accent4: color-mix(in srgb, var(--primary) 72%, white 28%);
+  --lk-accent-fg: var(--primary-foreground);
+  --lk-box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.meeting-room-livekit-theme .lk-device-menu,
+.meeting-room-livekit-theme .lk-settings-menu-modal {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  border-color: var(--border);
+}
+
+.meeting-room-livekit-theme .lk-device-menu-heading {
+  color: var(--muted-foreground);
+}
+
+.meeting-room-livekit-theme .lk-control-bar {
+  padding: 0;
+  border-top: 0;
+  max-height: none;
+}
+
+.meeting-room-livekit-theme .lk-media-device-select li > .lk-button,
+.meeting-room-livekit-theme .lk-media-device-select li > .lk-start-audio-button,
+.meeting-room-livekit-theme .lk-media-device-select li > .lk-chat-toggle,
+.meeting-room-livekit-theme .lk-media-device-select li > .lk-disconnect-button {
+  color: var(--foreground);
+  background-color: transparent;
+}
+
+.meeting-room-livekit-theme .lk-media-device-select li:not([data-lk-active=true]) > .lk-button:not(:disabled):hover,
+.meeting-room-livekit-theme .lk-media-device-select li:not([data-lk-active=true]) > .lk-start-audio-button:not(:disabled):hover,
+.meeting-room-livekit-theme .lk-media-device-select li:not([data-lk-active=true]) > .lk-chat-toggle:not(:disabled):hover,
+.meeting-room-livekit-theme .lk-media-device-select li:not([data-lk-active=true]) > .lk-disconnect-button:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--muted) 78%, var(--card) 22%);
+}
+
+.meeting-room-livekit-theme .lk-media-device-select [data-lk-active=true] > .lk-button,
+.meeting-room-livekit-theme .lk-media-device-select [data-lk-active=true] > .lk-start-audio-button,
+.meeting-room-livekit-theme .lk-media-device-select [data-lk-active=true] > .lk-chat-toggle,
+.meeting-room-livekit-theme .lk-media-device-select [data-lk-active=true] > .lk-disconnect-button {
+  color: var(--primary-foreground);
+  background-color: var(--primary);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

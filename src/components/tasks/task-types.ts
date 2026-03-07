@@ -1,5 +1,6 @@
-import { Clock, CirclePlay, Eye, CheckCircle2, Circle, Archive } from 'lucide-react'
-import { TaskStatus, TaskPriority, TaskRecord, RecurrenceRule } from '@/types/tasks'
+import { CirclePlay, Eye, CheckCircle2, Circle, Archive } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import type { TaskStatus, TaskPriority, TaskRecord, RecurrenceRule } from '@/types/tasks'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep as sleepLib } from '@/lib/retry-utils'
 
@@ -23,27 +24,49 @@ export const SORT_OPTIONS: { value: SortField; label: string }[] = [
 ]
 
 export const statusColors: Record<TaskStatus, string> = {
-  todo: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-900/40 dark:text-slate-400 dark:border-slate-800',
-  'in-progress': 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50',
-  review: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/50',
-  completed: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50',
-  archived: 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800/50',
+  todo: 'border-slate-300/80 bg-slate-200/95 text-slate-700 shadow-sm',
+  'in-progress': 'border-sky-200/90 bg-sky-100/95 text-sky-700 shadow-sm',
+  review: 'border-amber-200/90 bg-amber-100/95 text-amber-700 shadow-sm',
+  completed: 'border-emerald-200/90 bg-emerald-100/95 text-emerald-700 shadow-sm',
+  archived: 'border-slate-200/90 bg-slate-100/95 text-slate-500 shadow-sm',
 }
 
 export const statusLaneColors: Record<TaskStatus, string> = {
-  todo: 'bg-slate-500 dark:bg-slate-400',
-  'in-progress': 'bg-blue-500 dark:bg-blue-400',
-  review: 'bg-amber-500 dark:bg-amber-400',
-  completed: 'bg-emerald-500 dark:bg-emerald-400',
-  archived: 'bg-gray-500 dark:bg-gray-400',
+  todo: 'bg-slate-500',
+  'in-progress': 'bg-blue-500',
+  review: 'bg-amber-500',
+  completed: 'bg-emerald-500',
+  archived: 'bg-gray-500',
 }
 
 export const priorityColors: Record<TaskPriority, string> = {
-  low: 'text-emerald-600 bg-emerald-50 border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50',
-  medium: 'text-blue-600 bg-blue-50 border-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/50',
-  high: 'text-orange-600 bg-orange-50 border-orange-100 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900/50',
-  urgent: 'text-red-600 bg-red-50 border-red-100 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50',
+  low: 'border-emerald-200/90 bg-emerald-100/95 text-emerald-700 shadow-sm',
+  medium: 'border-blue-200/90 bg-blue-100/95 text-blue-700 shadow-sm',
+  high: 'border-orange-200/90 bg-orange-100/95 text-orange-700 shadow-sm',
+  urgent: 'border-red-200/90 bg-red-100/95 text-red-700 shadow-sm',
 }
+
+export const taskPillColors = {
+  count: 'border-slate-200/90 bg-white text-slate-700 shadow-sm',
+  client: 'border-slate-200/90 bg-slate-100/95 text-slate-700 shadow-sm',
+  neutral: 'border-slate-200/90 bg-slate-100/95 text-slate-700 shadow-sm',
+  subtask: 'border-violet-200/90 bg-violet-100/95 text-violet-700 shadow-sm',
+  comments: 'border-sky-200/90 bg-sky-100/95 text-sky-700 shadow-sm',
+  attachments: 'border-slate-200/90 bg-slate-100/95 text-slate-700 shadow-sm',
+  time: 'border-fuchsia-200/90 bg-fuchsia-100/95 text-fuchsia-700 shadow-sm',
+  recurring: 'border-emerald-200/90 bg-emerald-100/95 text-emerald-700 shadow-sm',
+  shared: 'border-indigo-200/90 bg-indigo-100/95 text-indigo-700 shadow-sm',
+  tag: 'border-slate-200/90 bg-white text-slate-600 shadow-sm',
+  dueSoon: 'border-amber-200/90 bg-amber-100/95 text-amber-700 shadow-sm',
+  overdue: 'border-red-200/90 bg-red-100/95 text-red-700 shadow-sm',
+} as const
+
+export const taskInfoPanelClasses = {
+  base: 'rounded-[1.15rem] border border-slate-200/80 bg-slate-50/95 px-3.5 py-3 shadow-sm',
+  icon: 'flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/90 text-slate-600 shadow-sm',
+  label: 'text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500',
+  value: 'text-sm font-semibold leading-tight text-slate-900',
+} as const
 
 export const STATUS_ICONS: Record<TaskStatus, typeof Circle> = {
   todo: Circle,
@@ -77,6 +100,13 @@ export type TaskListResponse = {
   nextCursor?: string | null
 }
 
+export type TaskParticipant = {
+  id?: string
+  name: string
+  role?: string
+  email?: string
+}
+
 export type ProjectFilter = {
   id: string | null
   name: string | null
@@ -85,7 +115,7 @@ export type ProjectFilter = {
 export type SummaryCardConfig = {
   status: TaskStatus
   label: string
-  icon: typeof Clock
+  icon: LucideIcon
   iconClass: string
 }
 
@@ -101,9 +131,44 @@ export const buildInitialFormState = (client?: { id: string | null; name: string
   tags: '',
 })
 
+function parseTaskDateValue(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (match) {
+    const year = Number(match[1])
+    const month = Number(match[2]) - 1
+    const day = Number(match[3])
+    const date = new Date(year, month, day)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function startOfLocalDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
+export function isFutureTaskDueDate(date: Date, now: Date = new Date()): boolean {
+  return startOfLocalDay(date).getTime() >= startOfLocalDay(now).getTime()
+}
+
+export function isTaskDueDateDisabled(date: Date): boolean {
+  return !isFutureTaskDueDate(date)
+}
+
+export function isFutureTaskDueDateValue(value: string | null | undefined, now: Date = new Date()): boolean {
+  if (!value) return true
+
+  const date = parseTaskDateValue(value)
+  if (!date) return false
+
+  return isFutureTaskDueDate(date, now)
+}
+
 // Convert ClientTeamMember[] to MentionableUser[] for MentionInput
 export function teamMembersToMentionable(
-  members: Array<{ id?: string; name: string; role?: string }>
+  members: TaskParticipant[]
 ): Array<{ id: string; name: string; role?: string }> {
   return members.map((m, idx) => ({
     id: m.id ?? `member-${idx}`,
@@ -119,11 +184,12 @@ export function teamMembersToMentionable(
 export function parseMentionNames(value: string): string[] {
   const mentionRegex = /@\[([^\]]+)\]/g
   const names: string[] = []
-  let match: RegExpExecArray | null
+  let match = mentionRegex.exec(value)
 
-  while ((match = mentionRegex.exec(value)) !== null) {
+  while (match !== null) {
     const name = match[1]?.trim()
     if (name) names.push(name)
+    match = mentionRegex.exec(value)
   }
 
   // If no @[...] mentions found, fall back to comma-separated parsing
@@ -163,7 +229,7 @@ export function formatDate(value: string | null | undefined): string {
   if (!value) return 'No due date'
 
   const date = new Date(value)
-  if (isNaN(date.getTime())) return value
+  if (Number.isNaN(date.getTime())) return value
 
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())

@@ -87,8 +87,8 @@ export function MeetingScheduleCard({
         </CardTitle>
         <CardDescription>
           {editingMeeting
-            ? 'Update time, attendees, and details. Branded reschedule emails are sent automatically.'
-            : 'Creates a Calendar invite, sends branded emails, and stores transcript-ready metadata.'}
+            ? 'Update time, attendees, and details. Calendar invites and room access stay in sync automatically.'
+            : 'Creates a Cohorts room, sends Google Calendar invites, and keeps transcript-ready meeting records.'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -96,7 +96,7 @@ export function MeetingScheduleCard({
           <Alert className="mb-4">
             <AlertTitle>Google Workspace required</AlertTitle>
             <AlertDescription>
-              Connect Google Workspace to create or reschedule calendar-backed meetings.
+              Connect Google Workspace to create or update calendar-backed meeting invites.
             </AlertDescription>
           </Alert>
         )}
@@ -227,7 +227,7 @@ export function MeetingScheduleCard({
                     : 'Scheduling...'
                   : editingMeeting
                     ? 'Save Reschedule'
-                    : 'Schedule with Google Meet'}
+                    : 'Schedule room'}
               </Button>
               {editingMeeting && (
                 <Button

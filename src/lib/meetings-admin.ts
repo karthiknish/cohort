@@ -101,6 +101,7 @@ export type CreateMeetingInput = {
   endTimeMs: number
   timezone: string
   meetLink?: string | null
+  roomName?: string | null
   calendarEventId?: string | null
   attendeeEmails: string[]
   clientId?: string | null
@@ -119,6 +120,7 @@ export type MeetingRecord = {
   endTimeMs: number
   timezone: string
   meetLink: string | null
+  roomName: string | null
   calendarEventId: string | null
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
   attendeeEmails: string[]
@@ -128,9 +130,13 @@ export type MeetingRecord = {
   transcriptText: string | null
   transcriptUpdatedAtMs: number | null
   transcriptSource: string | null
+  transcriptProcessingState?: 'idle' | 'processing' | 'failed' | null
+  transcriptProcessingError?: string | null
   notesSummary: string | null
   notesUpdatedAtMs: number | null
   notesModel: string | null
+  notesProcessingState?: 'idle' | 'processing' | 'failed' | null
+  notesProcessingError?: string | null
 }
 
 export async function createMeetingRecord(options: CreateMeetingInput) {
@@ -149,6 +155,7 @@ export async function createMeetingRecord(options: CreateMeetingInput) {
     endTimeMs: options.endTimeMs,
     timezone: options.timezone,
     meetLink: options.meetLink ?? null,
+    roomName: options.roomName ?? null,
     calendarEventId: options.calendarEventId ?? null,
     attendeeEmails: options.attendeeEmails,
     clientId: options.clientId ?? null,
@@ -178,6 +185,48 @@ export async function getMeetingRecord(options: {
   return { workspaceId, meeting }
 }
 
+export async function getMeetingRecordByCalendarEventId(options: {
+  userId: string
+  calendarEventId: string
+  workspaceId?: string
+  userEmail?: string | null
+}): Promise<{ workspaceId: string; meeting: MeetingRecord }> {
+  const workspaceId = options.workspaceId ?? (await resolveWorkspaceIdForUser(options.userId))
+  const convex = getConvexClientForUser(options.userId, options.userEmail ?? null, null)
+
+  if (!convex) {
+    throw new Error('Convex admin client is not configured')
+  }
+
+  const meeting = (await executeQuery(convex, 'meetings:getByCalendarEventId', {
+    workspaceId,
+    calendarEventId: options.calendarEventId,
+  })) as MeetingRecord
+
+  return { workspaceId, meeting }
+}
+
+export async function getMeetingRecordByRoomName(options: {
+  userId: string
+  roomName: string
+  workspaceId?: string
+  userEmail?: string | null
+}): Promise<{ workspaceId: string; meeting: MeetingRecord }> {
+  const workspaceId = options.workspaceId ?? (await resolveWorkspaceIdForUser(options.userId))
+  const convex = getConvexClientForUser(options.userId, options.userEmail ?? null, null)
+
+  if (!convex) {
+    throw new Error('Convex admin client is not configured')
+  }
+
+  const meeting = (await executeQuery(convex, 'meetings:getByRoomName', {
+    workspaceId,
+    roomName: options.roomName,
+  })) as MeetingRecord
+
+  return { workspaceId, meeting }
+}
+
 export async function updateMeetingRecord(options: {
   userId: string
   legacyId: string
@@ -190,6 +239,7 @@ export async function updateMeetingRecord(options: {
   timezone?: string
   attendeeEmails?: string[]
   meetLink?: string | null
+  roomName?: string | null
   status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
 }): Promise<{ workspaceId: string; meeting: MeetingRecord }> {
   const workspaceId = options.workspaceId ?? (await resolveWorkspaceIdForUser(options.userId))
@@ -209,7 +259,64 @@ export async function updateMeetingRecord(options: {
     timezone: options.timezone,
     attendeeEmails: options.attendeeEmails,
     meetLink: options.meetLink,
+    roomName: options.roomName,
     status: options.status,
+  })) as MeetingRecord
+
+  return { workspaceId, meeting }
+}
+
+export async function setMeetingProcessingState(options: {
+  userId: string
+  legacyId: string
+  workspaceId?: string
+  userEmail?: string | null
+  status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
+  transcriptProcessingState?: 'idle' | 'processing' | 'failed'
+  transcriptProcessingError?: string | null
+  notesProcessingState?: 'idle' | 'processing' | 'failed'
+  notesProcessingError?: string | null
+}): Promise<{ workspaceId: string; meeting: MeetingRecord }> {
+  const workspaceId = options.workspaceId ?? (await resolveWorkspaceIdForUser(options.userId))
+  const convex = getConvexClientForUser(options.userId, options.userEmail ?? null, null)
+
+  if (!convex) {
+    throw new Error('Convex admin client is not configured')
+  }
+
+  const meeting = (await executeMutation(convex, 'meetings:setProcessingState', {
+    workspaceId,
+    legacyId: options.legacyId,
+    status: options.status,
+    transcriptProcessingState: options.transcriptProcessingState,
+    transcriptProcessingError: options.transcriptProcessingError,
+    notesProcessingState: options.notesProcessingState,
+    notesProcessingError: options.notesProcessingError,
+  })) as MeetingRecord
+
+  return { workspaceId, meeting }
+}
+
+export async function ensureMeetingNativeRoom(options: {
+  userId: string
+  legacyId: string
+  roomName: string
+  meetLink: string | null
+  workspaceId?: string
+  userEmail?: string | null
+}): Promise<{ workspaceId: string; meeting: MeetingRecord }> {
+  const workspaceId = options.workspaceId ?? (await resolveWorkspaceIdForUser(options.userId))
+  const convex = getConvexClientForUser(options.userId, options.userEmail ?? null, null)
+
+  if (!convex) {
+    throw new Error('Convex admin client is not configured')
+  }
+
+  const meeting = (await executeMutation(convex, 'meetings:ensureNativeRoom', {
+    workspaceId,
+    legacyId: options.legacyId,
+    roomName: options.roomName,
+    meetLink: options.meetLink,
   })) as MeetingRecord
 
   return { workspaceId, meeting }

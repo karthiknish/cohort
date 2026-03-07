@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useAction, useMutation } from 'convex/react'
+import { useAction, useConvex, useMutation } from 'convex/react'
 import { api } from '../../../../../convex/_generated/api'
 import { LoaderCircle, Plus, Sparkles, X } from 'lucide-react'
 
@@ -67,6 +67,7 @@ export function FeatureFormDialog({
 }: FeatureFormDialogProps) {
   const { toast } = useToast()
   useAuth()
+  const convex = useConvex()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false)
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
@@ -85,7 +86,10 @@ export function FeatureFormDialog({
 
   const generateFeatureAi = useAction(api.adminFeaturesAi.generate)
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
-  const getPublicUrl = useMutation(filesApi.getPublicUrl)
+  const getPublicUrl = useCallback(
+    (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
+    [convex]
+  )
 
   const isEditing = !!feature
 

@@ -34,10 +34,11 @@ type ProjectRow = {
   status?: string
 }
 
+const EMPTY_TEAM_MEMBERS: TeamMember[] = []
 
 export function useMentionData() {
   const { user } = useAuth()
-  const { selectedClient, clients: contextClients } = useClientContext()
+  const { clients: contextClients } = useClientContext()
 
   // Use clients from context (already fetched by ClientProvider)
   const clients = useMemo(
@@ -53,7 +54,6 @@ export function useMentionData() {
       ? 'skip'
       : {
           workspaceId,
-          clientId: selectedClient?.id,
           limit: 100,
         }
   ) as ProjectRow[] | undefined
@@ -72,6 +72,17 @@ export function useMentionData() {
 
   const teamLoading = Boolean(workspaceId) && teamMembers === undefined
 
+  const allUsersRealtime = useQuery(
+    usersApi.listAllUsers,
+    workspaceId
+      ? {
+          limit: 500,
+        }
+      : 'skip',
+  ) as TeamMember[] | undefined
+
+  const allUsersLoading = Boolean(workspaceId) && allUsersRealtime === undefined
+
   const projects = useMemo(() => {
     const rows = Array.isArray(projectsRealtime) ? projectsRealtime : []
     return rows.map((row) => ({
@@ -80,12 +91,28 @@ export function useMentionData() {
       status: typeof row.status === 'string' ? row.status : undefined,
     }))
   }, [projectsRealtime])
-  const users = useMemo(() => teamMembers ?? [], [teamMembers])
+  const users = useMemo(() => {
+    const merged = new Map<string, TeamMember>()
+
+    for (const member of teamMembers ?? EMPTY_TEAM_MEMBERS) {
+      if (!member?.id) continue
+      merged.set(member.id, member)
+    }
+
+    for (const member of allUsersRealtime ?? EMPTY_TEAM_MEMBERS) {
+      if (!member?.id) continue
+      if (!merged.has(member.id)) {
+        merged.set(member.id, member)
+      }
+    }
+
+    return Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [allUsersRealtime, teamMembers])
 
   // For now, treat teams as empty - could fetch actual team data if needed
   const teams: Team[] = useMemo(() => [], [])
 
-  const isLoading = projectsLoading || teamLoading
+  const isLoading = projectsLoading || teamLoading || allUsersLoading
 
   // Get all items as MentionItem array for quick access
   const allItems = useMemo((): MentionItem[] => {

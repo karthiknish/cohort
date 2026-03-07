@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAction, useConvexAuth, useMutation, useQuery } from 'convex/react'
 import { SiGoogleads, SiMeta, SiLinkedin, SiTiktok } from 'react-icons/si'
 
@@ -138,6 +139,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     startMetaOauth,
     startTikTokOauth,
   } = useAuth()
+  const router = useRouter()
   const { selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
@@ -674,6 +676,18 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     if (providerId === PROVIDER_IDS.FACEBOOK) setMetaSetupMessage(null)
     if (providerId === PROVIDER_IDS.TIKTOK) setTiktokSetupMessage(null)
 
+    if (convexAuthLoading || !isAuthenticated || !user) {
+      const message = ERROR_MESSAGES.SIGN_IN_REQUIRED
+      setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
+      toast({
+        variant: 'destructive',
+        title: TOAST_TITLES.CONNECTION_FAILED,
+        description: message,
+      })
+      router.push('/')
+      return
+    }
+
     setConnectingProvider(providerId)
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
 
@@ -739,7 +753,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setConnectingProvider(null)
     }
-  }, [selectedClientId, startGoogleOauth, startMetaOauth, startTikTokOauth, toast])
+  }, [convexAuthLoading, isAuthenticated, router, selectedClientId, startGoogleOauth, startMetaOauth, startTikTokOauth, toast, user])
 
   const handleDisconnect = useCallback(async (providerId: string, options?: DisconnectOptions) => {
     const providerName = formatProviderName(providerId)

@@ -1,12 +1,11 @@
 import { action } from './_generated/server'
+import { internal } from './_generated/api'
 import { v } from 'convex/values'
-import type { FunctionReference } from 'convex/server'
 
 import { appendMetaAuthParams, calculateMetaAdsInsights, coerceNumber, META_API_BASE } from '@/services/integrations/meta-ads'
 import type { MetaInsightsResponse, MetaInsightsRow } from '@/services/integrations/meta-ads'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
 import { Errors, withErrorHandling } from './errors'
-import { getAdIntegrationInternal } from './adsIntegrations'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -40,12 +39,6 @@ type SeriesRow = {
   reach: number | null
 }
 
-type AdIntegrationForInsights = {
-  accessToken: string | null
-  accountId: string | null
-  currency: string | null
-}
-
 type CampaignInsightsResult = {
   providerId: 'facebook'
   campaignId: string
@@ -63,13 +56,6 @@ type CampaignInsightsResult = {
   insights: ReturnType<typeof calculateMetaAdsInsights>
   currency: string
 }
-
-const getAdIntegrationInternalRef = getAdIntegrationInternal as unknown as FunctionReference<
-  'query',
-  'internal',
-  { workspaceId: string; providerId: string; clientId?: string | null },
-  AdIntegrationForInsights
->
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : null
@@ -101,7 +87,7 @@ export const getCampaignInsights = action({
 
     const clientId = normalizeClientId(args.clientId ?? null)
 
-    const integration = await ctx.runQuery(getAdIntegrationInternalRef, {
+    const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
       clientId,

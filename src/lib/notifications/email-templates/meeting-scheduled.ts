@@ -60,7 +60,7 @@ export function meetingScheduledTemplate(params: MeetingScheduledTemplateParams)
         <strong>Timezone:</strong> ${safeTimezone}<br>
         <strong>Organizer:</strong> ${safeOrganizer}
       </div>
-      ${meetLink ? `<a class="button" href="${meetLink}">Join Meeting</a>` : ''}
+      ${meetLink ? `<a class="button" href="${meetLink}">Open Meeting Room</a>` : ''}
       ${inSiteJoinUrl ? `<p class="meta">Prefer joining in-app? Use your workspace meeting room: <a href="${inSiteJoinUrl}">${inSiteJoinUrl}</a></p>` : ''}
       <p class="meta">This notification was sent by Cohorts Meetings.</p>
     </div>

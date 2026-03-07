@@ -140,6 +140,7 @@ export function useRealtimeMessages({
   const channelType = selectedChannel?.type ?? null
   const channelClientId = selectedChannel?.clientId ?? null
   const channelProjectId = selectedChannel?.projectId ?? null
+  const channelScopeId = selectedChannel?.isCustom ? selectedChannel.id : null
 
   const convexEnabled =
     !isPreviewMode &&
@@ -152,6 +153,7 @@ export function useRealtimeMessages({
     convexEnabled
       ? {
           workspaceId: String(workspaceId),
+          channelId: channelScopeId,
           channelType: String(channelType),
           clientId: channelType === 'client' ? (channelClientId ?? null) : null,
           projectId: channelType === 'project' ? (channelProjectId ?? null) : null,
@@ -259,7 +261,7 @@ export function useRealtimeMessages({
       setLoadingChannelId(null)
       setMessagesError(null)
     }
-  }, [channelClientId, channelId, channelProjectId, channelType, convexEnabled, currentUserId, isPreviewMode, setLoadingChannelId, setMessagesByChannel, setMessagesError, setNextCursorByChannel])
+  }, [channelClientId, channelId, channelProjectId, channelScopeId, channelType, convexEnabled, currentUserId, isPreviewMode, setLoadingChannelId, setMessagesByChannel, setMessagesError, setNextCursorByChannel])
 }
 
 interface UseRealtimeTypingOptions {

@@ -36,13 +36,14 @@ import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
 import type { TaskPriority, TaskRecord } from '@/types/tasks'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
-import { useMutation } from 'convex/react'
+import { useConvex, useMutation } from 'convex/react'
 import { filesApi, tasksApi } from '@/lib/convex-api'
 import {
   buildPendingTaskAttachments,
   type PendingTaskAttachment,
   uploadTaskAttachment,
 } from '@/services/task-attachments'
+import { isFutureTaskDueDateValue, isTaskDueDateDisabled } from './task-types'
 
 interface TaskCreationModalProps {
   isOpen: boolean
@@ -67,10 +68,13 @@ export function TaskCreationModal({
   const { toast } = useToast()
   const { taskDefaults, contextInfo } = useSmartDefaults()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const convex = useConvex()
+  const defaultDueDate = taskDefaults.dueDate && isFutureTaskDueDateValue(taskDefaults.dueDate)
+    ? taskDefaults.dueDate
+    : ''
 
   const createTask = useMutation(tasksApi.createTask)
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
-  const getPublicUrl = useMutation(filesApi.getPublicUrl)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pendingAttachments, setPendingAttachments] = useState<PendingTaskAttachment[]>([])
@@ -80,7 +84,7 @@ export function TaskCreationModal({
     title: initialData?.title || '',
     description: initialData?.description || '',
     priority: taskDefaults.priority || 'medium',
-    dueDate: taskDefaults.dueDate || '',
+    dueDate: defaultDueDate,
     assignedTo: taskDefaults.assignedTo || [],
     projectId: initialData?.projectId || taskDefaults.projectId || '',
     projectName: initialData?.projectName || taskDefaults.projectName || '',
@@ -89,6 +93,11 @@ export function TaskCreationModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.title.trim()) return
+
+    if (formData.dueDate && !isFutureTaskDueDateValue(formData.dueDate)) {
+      setError('Due date must be today or later.')
+      return
+    }
 
     if (!user?.id) {
       setError('You must be signed in to create tasks.')
@@ -126,7 +135,7 @@ export function TaskCreationModal({
                 userId: user.id,
                 file: attachment.file,
                 generateUploadUrl,
-                getPublicUrl,
+                getPublicUrl: (args) => convex.query(filesApi.getPublicUrl, args),
               })
             )
           )
@@ -194,7 +203,7 @@ export function TaskCreationModal({
           title: '',
           description: '',
           priority: taskDefaults.priority || 'medium',
-          dueDate: taskDefaults.dueDate || '',
+          dueDate: defaultDueDate,
           assignedTo: taskDefaults.assignedTo || [],
           projectId: taskDefaults.projectId || '',
           projectName: taskDefaults.projectName || '',
@@ -321,6 +330,7 @@ export function TaskCreationModal({
                   <Calendar
                     mode="single"
                     selected={getSelectedDate()}
+                    disabled={isTaskDueDateDisabled}
                     onSelect={handleDateSelect}
                     initialFocus
                   />

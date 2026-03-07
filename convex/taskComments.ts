@@ -18,6 +18,7 @@ const mention = v.object({
 
 const taskCommentValidator = v.object({
   _id: v.id('taskComments'),
+  _creationTime: v.number(),
   workspaceId: v.string(),
   taskLegacyId: v.string(),
   legacyId: v.string(),

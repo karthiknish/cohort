@@ -1,4 +1,16 @@
-import { AIAnalysis, CampaignMetrics } from '@/types'
+import type { AIAnalysis, CampaignMetrics } from '@/types'
+
+export const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview'
+
+export function resolveGeminiApiKey(): string {
+  const processEnv = typeof process !== 'undefined' ? process.env : undefined
+  return (processEnv?.GEMINI_API_KEY || processEnv?.GOOGLE_API_KEY || processEnv?.NEXT_PUBLIC_GEMINI_API_KEY || '').trim()
+}
+
+export function resolveGeminiModel(): string {
+  const processEnv = typeof process !== 'undefined' ? process.env : undefined
+  return processEnv?.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL
+}
 
 export interface GeminiPrompt {
   type: 'performance' | 'recommendations' | 'summary' | 'forecast'
@@ -17,8 +29,8 @@ export class GeminiAIService {
   private baseUrl: string
 
   constructor(apiKey: string) {
-    this.apiKey = apiKey
-    this.model = this.resolveModel()
+    this.apiKey = apiKey.trim()
+    this.model = resolveGeminiModel()
     this.baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`
   }
 
@@ -60,8 +72,21 @@ export class GeminiAIService {
       return text
     } catch (error) {
       console.error('Gemini API error:', error)
+
+      if (error instanceof Error) {
+        throw error
+      }
+
       throw new Error('Failed to generate content with Gemini AI')
     }
+  }
+
+  getModel(): string {
+    return this.model
+  }
+
+  isConfigured(): boolean {
+    return Boolean(this.resolveApiKey())
   }
 
   private extractTextFromResponse(payload: unknown): string | null {
@@ -116,11 +141,7 @@ export class GeminiAIService {
       return this.apiKey
     }
 
-    const processEnv = typeof process !== 'undefined' ? process.env : undefined
-    const candidate =
-      processEnv?.GEMINI_API_KEY ||
-      processEnv?.GOOGLE_API_KEY ||
-      processEnv?.NEXT_PUBLIC_GEMINI_API_KEY
+    const candidate = resolveGeminiApiKey()
 
     if (candidate) {
       this.apiKey = candidate
@@ -129,17 +150,6 @@ export class GeminiAIService {
 
     return ''
   }
-
-  private resolveModel(): string {
-    const processEnv = typeof process !== 'undefined' ? process.env : undefined
-    const model = processEnv?.GEMINI_MODEL?.trim()
-    if (model) {
-      return model
-    }
-
-    return 'gemini-3-flash-preview'
-  }
-
   async analyzePerformance(context: GeminiPrompt['context']): Promise<AIAnalysis> {
     const prompt = this.buildPerformancePrompt(context)
     

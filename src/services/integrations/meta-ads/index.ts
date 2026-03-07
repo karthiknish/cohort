@@ -76,8 +76,12 @@ export {
   createMetaAdCreative,
   createMetaAd,
   deleteMetaAdCreative,
+  recreateMetaAdCreativeForEdit,
+  updateMetaAd,
   updateMetaAdCreative,
   fetchMetaPageActors,
+  mergeMetaDestinationSpec,
+  normalizeMetaObjectTypeForCreate,
   uploadMediaToMeta,
 } from './creatives'
 export type {
@@ -86,6 +90,8 @@ export type {
   DeleteAdCreativeOptions,
   FetchMetaPageActorsOptions,
   MetaPageActor,
+  RecreateMetaAdCreativeOptions,
+  UpdateAdOptions,
   UpdateAdCreativeOptions,
   UploadMediaOptions,
 } from './creatives'

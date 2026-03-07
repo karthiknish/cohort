@@ -3,27 +3,29 @@
 import { Info } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatCurrency, cn } from '@/lib/utils'
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { formatCurrency } from '@/lib/utils'
 
 interface AnalyticsMetricCardsProps {
-    mer: number
-    aov: number
-    rpc: number
-    roi: number
+    avgUsersPerDay: number
+    avgSessionsPerDay: number
+    revenuePerSession: number
+    sessionsPerUser: number
+    conversionRate: number
     isLoading: boolean
 }
 
 export function AnalyticsMetricCards({
-    mer,
-    aov,
-    rpc,
-    roi,
+    avgUsersPerDay,
+    avgSessionsPerDay,
+    revenuePerSession,
+    sessionsPerUser,
+    conversionRate,
     isLoading,
 }: AnalyticsMetricCardsProps) {
     return (
@@ -31,14 +33,14 @@ export function AnalyticsMetricCards({
             <Card className="border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
                     <div className="flex items-center gap-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Blended ROAS (MER)</CardTitle>
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Avg users / day</CardTitle>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger>
                                     <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p className="text-xs">Marketing Efficiency Ratio: Total Revenue / Total Spend</p>
+                                    <p className="text-xs">Average daily users across the selected date range</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -48,7 +50,7 @@ export function AnalyticsMetricCards({
                     {isLoading ? (
                         <Skeleton className="h-7 w-16 rounded-lg" />
                     ) : (
-                        <div className="text-xl font-bold tracking-tight text-foreground">{mer.toFixed(2)}x</div>
+                        <div className="text-xl font-bold tracking-tight text-foreground">{avgUsersPerDay.toFixed(1)}</div>
                     )}
                 </CardContent>
             </Card>
@@ -56,14 +58,14 @@ export function AnalyticsMetricCards({
             <Card className="border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
                     <div className="flex items-center gap-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Avg. Order Value (AOV)</CardTitle>
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Avg sessions / day</CardTitle>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger>
                                     <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p className="text-xs">Average revenue generated per conversion</p>
+                                    <p className="text-xs">Average daily session volume for the selected range</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -73,7 +75,7 @@ export function AnalyticsMetricCards({
                     {isLoading ? (
                         <Skeleton className="h-7 w-20 rounded-lg" />
                     ) : (
-                        <div className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(aov)}</div>
+                        <div className="text-xl font-bold tracking-tight text-foreground">{avgSessionsPerDay.toFixed(1)}</div>
                     )}
                 </CardContent>
             </Card>
@@ -81,14 +83,14 @@ export function AnalyticsMetricCards({
             <Card className="border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
                     <div className="flex items-center gap-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Revenue Per Click (RPC)</CardTitle>
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Revenue / session</CardTitle>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger>
                                     <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p className="text-xs">Average revenue generated for every click</p>
+                                    <p className="text-xs">Average revenue generated for each session</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -98,7 +100,7 @@ export function AnalyticsMetricCards({
                     {isLoading ? (
                         <Skeleton className="h-7 w-16 rounded-lg" />
                     ) : (
-                        <div className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(rpc)}</div>
+                        <div className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(revenuePerSession)}</div>
                     )}
                 </CardContent>
             </Card>
@@ -106,14 +108,14 @@ export function AnalyticsMetricCards({
             <Card className="border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
                     <div className="flex items-center gap-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Return on Investment (ROI)</CardTitle>
+                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Sessions / user</CardTitle>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger>
                                     <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p className="text-xs">Percentage of profit relative to spend: ((Rev - Spend) / Spend) * 100</p>
+                                    <p className="text-xs">Average number of sessions generated by each user</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -121,14 +123,15 @@ export function AnalyticsMetricCards({
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (
-                        <Skeleton className="h-7 w-16 rounded-lg" />
+                        <>
+                            <Skeleton className="h-7 w-16 rounded-lg" />
+                            <Skeleton className="mt-2 h-4 w-20 rounded-lg" />
+                        </>
                     ) : (
-                        <div className={cn(
-                            "text-xl font-bold tracking-tight",
-                            roi >= 0 ? "text-emerald-500" : "text-red-500"
-                        )}>
-                            {roi > 0 ? '+' : ''}{roi.toFixed(1)}%
-                        </div>
+                        <>
+                            <div className="text-xl font-bold tracking-tight text-foreground">{sessionsPerUser.toFixed(2)}x</div>
+                            <div className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/60">Conv rate {conversionRate.toFixed(1)}%</div>
+                        </>
                     )}
                 </CardContent>
             </Card>

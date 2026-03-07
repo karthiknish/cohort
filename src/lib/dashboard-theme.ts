@@ -104,7 +104,7 @@ export const PAGE_TITLES: Record<string, { title: string; description: string }>
   },
   meetings: {
     title: 'Meetings',
-    description: 'Schedule client calls, manage Meet invites, and review concise AI notes.',
+    description: 'Run native meeting rooms, send Google Calendar invites, and keep AI notes synced.',
   },
   collaboration: {
     title: 'Team collaboration',

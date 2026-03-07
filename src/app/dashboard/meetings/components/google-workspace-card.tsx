@@ -22,7 +22,7 @@ export function GoogleWorkspaceCard(props: GoogleWorkspaceCardProps) {
           Google Workspace
         </CardTitle>
         <CardDescription>
-          Connect a Google account to automatically create Calendar events and Google Meet links.
+          Connect a Google account to create Calendar invites for native Cohorts meeting rooms.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-3">

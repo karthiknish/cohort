@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { ConvexHttpClient } from 'convex/browser'
 
 import { createApiHandler } from '@/lib/api-handler'
-import { UnauthorizedError, NotFoundError, ValidationError } from '@/lib/api-errors'
+import { UnauthorizedError, NotFoundError } from '@/lib/api-errors'
 import { api } from '../../../../../convex/_generated/api'
 
 const DEFAULT_USER_ROLE = 'client'
@@ -22,7 +22,7 @@ const bodySchema = z.object({}).strict()
 
 async function fetchConvexTokenFromRequest(req: Request): Promise<string | null> {
   try {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const siteUrl = new URL(req.url).origin
     const response = await fetch(`${siteUrl}/api/auth/convex/token`, {
       method: 'GET',
       headers: {
@@ -49,6 +49,12 @@ export const POST = createApiHandler(
       throw new UnauthorizedError('Not authenticated')
     }
 
+    const fallbackRole = typeof auth.claims?.role === 'string' ? auth.claims.role : DEFAULT_USER_ROLE
+    const fallbackStatus = typeof auth.claims?.status === 'string' ? auth.claims.status : DEFAULT_USER_STATUS
+    const fallbackAgencyId = typeof auth.claims?.agencyId === 'string' && auth.claims.agencyId.length > 0
+      ? auth.claims.agencyId
+      : auth.uid
+
     const convexToken = await withTimeout(
       fetchConvexTokenFromRequest(req),
       5000,
@@ -56,7 +62,13 @@ export const POST = createApiHandler(
     )
 
     if (!convexToken) {
-      throw new UnauthorizedError('No Convex token')
+      return {
+        ok: true,
+        role: fallbackRole,
+        status: fallbackStatus,
+        agencyId: fallbackAgencyId,
+        created: false,
+      }
     }
 
     const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL
@@ -71,18 +83,24 @@ export const POST = createApiHandler(
       convex.query(api.auth.getCurrentUser, {}),
       10000,
       'getCurrentUser'
-    )
+    ) as { id?: string; _id?: string; email?: string | null; name?: string | null } | null
 
     if (!currentUser) {
       throw new NotFoundError('User not found in Convex auth tables')
     }
 
-    const email = currentUser.email
-    const name = currentUser.name || email || 'User'
-    const legacyId = currentUser._id as unknown as string
+    const email = currentUser.email ?? auth.email
+    const name = currentUser.name ?? auth.name ?? email ?? 'User'
+    const legacyId = (currentUser._id ?? currentUser.id ?? auth.uid) as string
 
     if (!email) {
-      throw new ValidationError('User email missing')
+      return {
+        ok: true,
+        role: fallbackRole,
+        status: fallbackStatus,
+        agencyId: fallbackAgencyId,
+        created: false,
+      }
     }
 
     const existingUser = await withTimeout(
@@ -91,9 +109,9 @@ export const POST = createApiHandler(
       'getByLegacyIdSafe'
     )
 
-    const role = existingUser?.role ?? DEFAULT_USER_ROLE
-    const status = existingUser?.status ?? DEFAULT_USER_STATUS
-    const agencyId = existingUser?.agencyId ?? legacyId
+    const role = existingUser?.role ?? fallbackRole
+    const status = existingUser?.status ?? fallbackStatus
+    const agencyId = existingUser?.agencyId ?? fallbackAgencyId
 
     const bootstrapResult = await withTimeout(
       convex.mutation(api.users.bootstrapUpsert, {

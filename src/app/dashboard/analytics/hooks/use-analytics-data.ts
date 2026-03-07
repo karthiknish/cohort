@@ -1,13 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useQuery, useAction, useConvexAuth } from 'convex/react'
+import { useAction, useConvexAuth, useQuery } from 'convex/react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
-import { onDashboardRefresh } from '@/lib/refresh-bus'
 import { adsMetricsApi, analyticsInsightsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
-import type { MetricRecord, ProviderInsight, AlgorithmicInsight } from './types'
+import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
+import { buildProviderIdsKey, normalizeProviderIds } from '../lib/insight-utils'
+import type { AlgorithmicInsight, MetricRecord, ProviderInsight } from './types'
 
 export interface UseAnalyticsDataReturn {
   metricsData: MetricRecord[]
@@ -26,25 +26,41 @@ export interface UseAnalyticsDataReturn {
   mutateInsights: () => Promise<unknown>
 }
 
+type UseAnalyticsDataOptions = {
+  providerIds?: string[]
+  includeInsights?: boolean
+}
+
+function matchesProvider(providerId: string, providerIds?: string[]) {
+  if (!providerIds || providerIds.length === 0) return true
+  return providerIds.includes(providerId)
+}
+
 export function useAnalyticsData(
-  token: string | null,
+  _token: string | null,
   periodDays: number,
   clientId: string | null,
   isPreviewMode: boolean,
-  workspaceId?: string | null
+  workspaceId?: string | null,
+  options?: UseAnalyticsDataOptions
 ): UseAnalyticsDataReturn {
+  const includeInsights = options?.includeInsights ?? true
+  const providerIdsKey = buildProviderIdsKey(options?.providerIds)
+  const providerIds = useMemo(() => normalizeProviderIds(providerIdsKey ? providerIdsKey.split('|') : undefined), [providerIdsKey])
+
   // State for insights from Convex action
   const [insights, setInsights] = useState<ProviderInsight[]>([])
   const [algorithmic, setAlgorithmic] = useState<AlgorithmicInsight[]>([])
   const [insightsLoading, setInsightsLoading] = useState(false)
   const [insightsRefreshing, setInsightsRefreshing] = useState(false)
   const [insightsError, setInsightsError] = useState<Error | undefined>(undefined)
+  const hasFetchedInsightsRef = useRef(false)
 
   // If in preview mode, return preview data immediately
   const previewMetrics = useMemo(() => {
     if (!isPreviewMode) return null
     return getPreviewAnalyticsMetrics() as MetricRecord[]
-  }, [isPreviewMode, clientId])
+  }, [isPreviewMode])
   
   const previewInsights = useMemo(() => {
     if (!isPreviewMode) return null
@@ -62,20 +78,21 @@ export function useAnalyticsData(
       : {
           workspaceId,
           clientId: clientId ?? null,
+          providerIds,
           limit: 500,
         }
   ) as { metrics: MetricRecord[] } | undefined
 
-  const [metricsLoadingMore, setMetricsLoadingMore] = useState(false)
+  const metricsLoadingMore = false
 
   // Convex action for generating insights
   const generateInsights = useAction(analyticsInsightsApi.generateInsights)
 
   // Function to fetch insights
   const fetchInsights = useCallback(async () => {
-    if (isPreviewMode || !workspaceId) return
+    if (isPreviewMode || !workspaceId || !includeInsights) return
 
-    const isInitialLoad = insights.length === 0 && algorithmic.length === 0
+    const isInitialLoad = !hasFetchedInsightsRef.current
     if (isInitialLoad) {
       setInsightsLoading(true)
     } else {
@@ -88,9 +105,11 @@ export function useAnalyticsData(
         workspaceId,
         clientId: clientId ?? undefined,
         periodDays,
+        providerIds,
       })
       setInsights(result.insights as ProviderInsight[])
       setAlgorithmic(result.algorithmic as AlgorithmicInsight[])
+      hasFetchedInsightsRef.current = true
     } catch (error) {
       logError(error, 'useAnalyticsData:fetchInsights')
       console.error('[useAnalyticsData] Failed to generate insights:', error)
@@ -99,25 +118,14 @@ export function useAnalyticsData(
       setInsightsLoading(false)
       setInsightsRefreshing(false)
     }
-  }, [isPreviewMode, workspaceId, clientId, periodDays, generateInsights, insights.length, algorithmic.length])
+  }, [clientId, generateInsights, includeInsights, isPreviewMode, periodDays, providerIds, workspaceId])
 
   // Fetch insights on mount and when dependencies change
   useEffect(() => {
-    if (!isPreviewMode && workspaceId) {
-      fetchInsights()
-    }
-  }, [isPreviewMode, workspaceId, clientId, periodDays]) // Don't include fetchInsights to avoid infinite loop
-
-  // Global refresh integration: when the dashboard refresh button is used, or when
-  // tasks/projects mutate elsewhere, revalidate Analytics data automatically.
-  useEffect(() => {
-    if (isPreviewMode) return
-    const unsubscribe = onDashboardRefresh(() => {
-      // Convex queries auto-refresh, but insights need to be refetched
+    if (!isPreviewMode && workspaceId && includeInsights) {
       void fetchInsights()
-    })
-    return unsubscribe
-  }, [isPreviewMode, fetchInsights])
+    }
+  }, [fetchInsights, includeInsights, isPreviewMode, workspaceId])
 
   // Pagination is no longer needed since Convex returns all metrics up to limit
   // The loadMoreMetrics function is kept for API compatibility but is now a no-op
@@ -142,8 +150,8 @@ export function useAnalyticsData(
       metricsLoading: false,
       metricsRefreshing: false,
       mutateMetrics: async () => undefined,
-      insights: previewInsights.insights as ProviderInsight[],
-      algorithmic: previewInsights.algorithmic as AlgorithmicInsight[],
+      insights: (previewInsights.insights as ProviderInsight[]).filter((entry) => matchesProvider(entry.providerId, providerIds)),
+      algorithmic: (previewInsights.algorithmic as AlgorithmicInsight[]).filter((entry) => matchesProvider(entry.providerId, providerIds) || entry.providerId === 'global'),
       insightsError: undefined,
       insightsLoading: false,
       insightsRefreshing: false,

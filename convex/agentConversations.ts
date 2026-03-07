@@ -119,7 +119,24 @@ export const get = workspaceQuery({
       )
       .unique()
 
-    return { conversation: row ?? null }
+    if (!row) {
+      return { conversation: null }
+    }
+
+    return {
+      conversation: {
+        _id: row._id,
+        workspaceId: row.workspaceId,
+        legacyId: row.legacyId,
+        userId: row.userId,
+        title: row.title,
+        startedAt: row.startedAt,
+        lastMessageAt: row.lastMessageAt,
+        messageCount: row.messageCount,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      },
+    }
   },
 })
 

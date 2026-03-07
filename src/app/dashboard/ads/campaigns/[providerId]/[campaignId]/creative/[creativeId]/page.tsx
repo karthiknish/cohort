@@ -262,7 +262,11 @@ export default function CreativeDetailPage() {
     })
       .then((creatives) => {
         const normalizedCreatives = Array.isArray(creatives) ? (creatives as Creative[]) : []
-        const match = normalizedCreatives.find((c) => c.creativeId === params.creativeId)
+        const match = normalizedCreatives.find((c) => (
+          c.creativeId === params.creativeId
+          || c.adId === params.creativeId
+          || c.platformCreativeId === params.creativeId
+        ))
 
         if (!match) {
           throw new Error('Creative not found')
@@ -327,7 +331,8 @@ export default function CreativeDetailPage() {
       .then((response) => {
         const record = response && typeof response === 'object' ? (response as { metrics?: unknown }) : null
         const allMetrics = Array.isArray(record?.metrics) ? (record.metrics as NormalizedAdMetric[]) : []
-        const filtered = allMetrics.filter((m) => m.adId === params.creativeId)
+        const metricTargetId = creative?.adId ?? params.creativeId
+        const filtered = allMetrics.filter((m) => m.adId === metricTargetId)
         setCreativeMetrics(filtered)
       })
       .catch((error) => {
@@ -338,7 +343,7 @@ export default function CreativeDetailPage() {
       .finally(() => {
         setMetricsLoading(false)
       })
-  }, [days, isPreviewMode, listAdMetrics, params.providerId, params.campaignId, params.creativeId, selectedClientId, creative?.adGroupId, workspaceId])
+  }, [days, isPreviewMode, listAdMetrics, params.providerId, params.campaignId, params.creativeId, selectedClientId, creative?.adGroupId, creative?.adId, workspaceId])
 
   useEffect(() => {
     const frameId = requestAnimationFrame(() => {
@@ -619,16 +624,27 @@ export default function CreativeDetailPage() {
       workspaceId,
       providerId: params.providerId,
       clientId: selectedClientId ?? null,
-      creativeId: params.creativeId,
+      creativeId: creative.platformCreativeId ?? creative.creativeId,
+      adId: creative.adId ?? creative.creativeId,
+      name: creative.name,
       title: normalizedHeadlines[0],
       body: normalizedDescriptions[0],
       callToActionType: normalizedCta || undefined,
       linkUrl: normalizedLandingPage || undefined,
+      objectType: creative.objectType,
+      imageUrl: creative.imageUrl,
+      imageHash: creative.imageHash,
+      videoId: creative.videoId,
+      pageId: creative.pageId,
+      instagramActorId: creative.instagramActorId,
+      assetFeedSpec: creative.assetFeedSpec,
+      destinationSpec: creative.destinationSpec,
     })
-      .then(() => {
+      .then((result) => {
         if (creative) {
           setCreative({
             ...creative,
+            platformCreativeId: (result as { creativeId?: string } | undefined)?.creativeId ?? creative.platformCreativeId,
             headlines: normalizedHeadlines,
             descriptions: normalizedDescriptions,
             callToAction: normalizedCta,

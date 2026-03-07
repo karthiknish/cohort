@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAction } from 'convex/react'
-import { Pause, Play, Trash2, DollarSign, RefreshCw, TrendingUp } from 'lucide-react'
+import { CircleAlert, Pause, Play, Trash2, DollarSign, RefreshCw, TrendingUp } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
 
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/components/ui/use-toast'
+import { EmptyState } from '@/components/ui/empty-state'
 import {
   Tooltip,
   TooltipContent,
@@ -82,10 +83,15 @@ type Props = {
   isConnected: boolean
   dateRange: DateRange
   onRefresh?: () => void
+  setupRequired?: boolean
+  setupTitle?: string
+  setupDescription?: string
+  setupActionLabel?: string
+  onSetupAction?: () => void
 }
 
 function toIsoDateOnly(date: Date): string {
-  return date.toISOString().split('T')[0]!
+  return date.toISOString().split('T')[0] ?? ''
 }
 
 function formatRelativeDate(date: Date): string {
@@ -113,28 +119,32 @@ function formatCampaignDateRange(startTime?: string, stopTime?: string): string 
   if (!hasStart && !hasStop) return 'Always running'
 
   if (hasStart && !hasStop) {
-    if (start! > now) {
-      return `Starts ${formatRelativeDate(start!)}`
+    const validStart = start as Date
+    if (validStart > now) {
+      return `Starts ${formatRelativeDate(validStart)}`
     }
-    return `Since ${formatRelativeDate(start!)}`
+    return `Since ${formatRelativeDate(validStart)}`
   }
 
   if (!hasStart && hasStop) {
-    if (stop! > now) {
-      return `Until ${formatRelativeDate(stop!)}`
+    const validStop = stop as Date
+    if (validStop > now) {
+      return `Until ${formatRelativeDate(validStop)}`
     }
-    return `Ended ${formatRelativeDate(stop!)}`
+    return `Ended ${formatRelativeDate(validStop)}`
   }
 
   // Both dates present
-  const startStr = start!.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  const endStr = stop!.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const validStart = start as Date
+  const validStop = stop as Date
+  const startStr = validStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const endStr = validStop.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 
-  if (start! > now) {
+  if (validStart > now) {
     return `${startStr} - ${endStr}`
   }
-  if (stop! < now) {
-    return `Ended ${formatRelativeDate(stop!)}`
+  if (validStop < now) {
+    return `Ended ${formatRelativeDate(validStop)}`
   }
   return `${startStr} - ${endStr}`
 }
@@ -162,7 +172,18 @@ function isActive(status: string) {
 // COMPONENT
 // =============================================================================
 
-export function CampaignManagementCard({ providerId, providerName, isConnected, dateRange, onRefresh }: Props) {
+export function CampaignManagementCard({
+  providerId,
+  providerName,
+  isConnected,
+  dateRange,
+  onRefresh,
+  setupRequired = false,
+  setupTitle,
+  setupDescription,
+  setupActionLabel,
+  onSetupAction,
+}: Props) {
   const { selectedClientId } = useClientContext()
   const { user } = useAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
@@ -205,7 +226,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
   )
 
   const fetchCampaigns = useCallback(async () => {
-    if (!isConnected) return
+    if (!isConnected || setupRequired) return
 
     setLoading(true)
     if (!workspaceId) {
@@ -232,10 +253,10 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
       .finally(() => {
         setLoading(false)
       })
-  }, [isConnected, listCampaigns, providerId, selectedClientId, workspaceId])
+  }, [isConnected, listCampaigns, providerId, selectedClientId, setupRequired, workspaceId])
 
   const fetchGroups = useCallback(async () => {
-    if (!isConnected || providerId !== 'linkedin') return
+    if (!isConnected || setupRequired || providerId !== 'linkedin') return
     setGroupsLoading(true)
 
     if (!workspaceId) {
@@ -258,11 +279,11 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
       .finally(() => {
         setGroupsLoading(false)
       })
-  }, [isConnected, listCampaignGroups, providerId, selectedClientId, workspaceId])
+  }, [isConnected, listCampaignGroups, providerId, selectedClientId, setupRequired, workspaceId])
 
   // Auto-load campaigns on mount when connected
   useEffect(() => {
-    if (!isConnected) return
+    if (!isConnected || setupRequired) return
 
     const frameId = requestAnimationFrame(() => {
       void fetchCampaigns()
@@ -274,7 +295,7 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [fetchCampaigns, fetchGroups, isConnected, providerId])
+  }, [fetchCampaigns, fetchGroups, isConnected, providerId, setupRequired])
 
   const openInsightsPage = useCallback(
     (campaignOrGroupId: string, name: string) => {
@@ -764,6 +785,37 @@ export function CampaignManagementCard({ providerId, providerName, isConnected, 
           <CardTitle className="text-lg">Campaign Management</CardTitle>
           <CardDescription>Connect {providerName} to manage campaigns</CardDescription>
         </CardHeader>
+      </Card>
+    )
+  }
+
+  if (setupRequired) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Campaign Management</CardTitle>
+          <CardDescription>Finish {providerName} setup before loading campaigns</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <EmptyState
+            icon={CircleAlert}
+            variant="default"
+            title={setupTitle ?? `Complete ${providerName} setup`}
+            description={
+              setupDescription ??
+              `Finish the remaining ${providerName} configuration step before loading campaigns and controls.`
+            }
+            action={
+              onSetupAction
+                ? {
+                    label: setupActionLabel ?? 'Complete setup',
+                    onClick: onSetupAction,
+                  }
+                : undefined
+            }
+            className="py-10"
+          />
+        </CardContent>
       </Card>
     )
   }

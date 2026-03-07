@@ -4,13 +4,16 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAction, useMutation } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
+import { useClientContext } from '@/contexts/client-context'
+import { useNavigationContext } from '@/contexts/navigation-context'
+import type { AgentError } from '@/lib/agent-errors'
 import { agentApi } from '@/lib/convex-api'
-import { AgentError, AgentValidationError, parseAgentError, ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
+import { AgentValidationError, parseAgentError, ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
 
 
 
 export interface AgentMessageMetadata {
-  action?: 'navigate' | 'execute' | 'response'
+  action?: 'navigate' | 'execute' | 'clarify' | 'response'
   operation?: string
   success?: boolean
   data?: Record<string, unknown>
@@ -45,6 +48,28 @@ type StoredAgentMessage = {
   executeResult: Record<string, unknown> | null
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+function parseStoredExecuteResultData(executeResult: Record<string, unknown> | null): Record<string, unknown> | undefined {
+  if (!executeResult) return undefined
+
+  const directData = asRecord(executeResult.data)
+  if (directData) return directData
+
+  const dataJson = typeof executeResult.dataJson === 'string' ? executeResult.dataJson : null
+  if (!dataJson) return undefined
+
+  try {
+    return asRecord(JSON.parse(dataJson)) ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
 export type ConnectionStatus = 'connected' | 'retrying' | 'disconnected'
 
 export interface UseAgentModeReturn {
@@ -73,6 +98,10 @@ export interface UseAgentModeReturn {
   fetchHistory: () => Promise<void>
   /** Load a previous conversation into the chat */
   loadConversation: (conversationId: string) => Promise<void>
+  /** Whether a previous conversation is being loaded */
+  isConversationLoading: boolean
+  /** Which previous conversation is currently loading */
+  loadingConversationId: string | null
 
   /** Update a conversation title */
   updateConversationTitle: (conversationId: string, title: string) => Promise<void>
@@ -153,8 +182,18 @@ export function useAgentMode(): UseAgentModeReturn {
   const pathname = usePathname()
   const router = useRouter()
   const { user } = useAuth()
+  const { selectedClientId } = useClientContext()
+  const { navigationState } = useNavigationContext()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
-  const activeContext = useMemo(() => deriveActiveContextFromPath(pathname), [pathname])
+  const activeContext = useMemo(() => {
+    const pathContext = deriveActiveContextFromPath(pathname)
+
+    return {
+      activeProposalId: pathContext.activeProposalId,
+      activeProjectId: pathContext.activeProjectId ?? navigationState.projectId ?? undefined,
+      activeClientId: pathContext.activeClientId ?? selectedClientId ?? undefined,
+    }
+  }, [navigationState.projectId, pathname, selectedClientId])
 
   const sendMessage = useAction(agentApi.sendMessage)
   const listConversations = useAction(agentApi.listConversations)
@@ -169,6 +208,8 @@ export function useAgentMode(): UseAgentModeReturn {
 
   const [history, setHistory] = useState<AgentConversationSummary[]>([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
+  const [isConversationLoading, setIsConversationLoading] = useState(false)
+  const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null)
 
   // Error handling state
   const [error, setError] = useState<AgentError | null>(null)
@@ -332,16 +373,24 @@ export function useAgentMode(): UseAgentModeReturn {
       if (responseData?.action === 'navigate' && responseData?.route) {
         status = 'success'
         metadata.success = true
+        const route = responseData.route
         addMessage('agent', responseData.message || 'Navigating...', responseData.route, status, metadata)
         setTimeout(() => {
-          router.push(responseData.route!)
+          router.push(route)
           setOpen(false)
         }, 800)
       } else if (responseData?.action === 'execute' && responseData?.executeResult) {
         status = responseData.executeResult.success ? 'success' : 'error'
         metadata.success = responseData.executeResult.success
         metadata.data = responseData.executeResult.data
-        addMessage('agent', responseData.message || 'Action completed', responseData.route, status, metadata)
+        const executeRoute =
+          typeof responseData.route === 'string' && responseData.route.length > 0
+            ? responseData.route
+            : typeof responseData.executeResult.data?.route === 'string' && responseData.executeResult.data.route.length > 0
+              ? responseData.executeResult.data.route
+              : null
+
+        addMessage('agent', responseData.message || 'Action completed', executeRoute, status, metadata)
       } else {
         addMessage('agent', responseData?.message || 'I didn\'t quite understand that.', responseData?.route, 'info', metadata)
       }
@@ -400,6 +449,8 @@ export function useAgentMode(): UseAgentModeReturn {
   const loadConversation = useCallback(async (targetConversationId: string) => {
     if (!targetConversationId) return
 
+    setLoadingConversationId(targetConversationId)
+    setIsConversationLoading(true)
     setIsProcessing(true)
     clearError()
 
@@ -433,7 +484,7 @@ export function useAgentMode(): UseAgentModeReturn {
             : null
 
         const normalizedAction: AgentMessageMetadata['action'] | undefined =
-          action === 'navigate' || action === 'execute' ? action : action ? 'response' : undefined
+          action === 'navigate' || action === 'execute' || action === 'clarify' ? action : action ? 'response' : undefined
 
         const status: AgentMessage['status'] =
           normalizedAction === 'execute' && executionSuccess !== null
@@ -455,7 +506,7 @@ export function useAgentMode(): UseAgentModeReturn {
                   action: normalizedAction,
                   operation: operation ?? undefined,
                   success: executionSuccess ?? undefined,
-                  data: executeResult ? ((executeResult.data as Record<string, unknown> | undefined) ?? undefined) : undefined,
+                  data: parseStoredExecuteResultData(executeResult),
                 }
               : undefined,
         }
@@ -468,6 +519,8 @@ export function useAgentMode(): UseAgentModeReturn {
       const agentError = parseAgentError(err, null)
       handleError(agentError)
     } finally {
+      setLoadingConversationId(null)
+      setIsConversationLoading(false)
       setIsProcessing(false)
     }
   }, [clearError, getConversation, handleError, workspaceId])
@@ -523,6 +576,8 @@ export function useAgentMode(): UseAgentModeReturn {
     isHistoryLoading,
     fetchHistory,
     loadConversation,
+    isConversationLoading,
+    loadingConversationId,
     updateConversationTitle,
     deleteConversation,
     // Error handling

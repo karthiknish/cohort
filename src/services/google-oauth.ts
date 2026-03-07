@@ -1,5 +1,6 @@
 import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
 import { persistIntegrationTokens, enqueueSyncJob, getAdIntegration } from '@/lib/ads-admin'
+import { getGoogleAnalyticsIntegration, persistGoogleAnalyticsTokens } from '@/lib/analytics-admin'
 
 // =============================================================================
 // GOOGLE OAUTH CONFIGURATION
@@ -470,15 +471,13 @@ export async function completeGoogleAnalyticsOAuthFlow(options: {
     throw new GoogleOAuthError('No access token received from Google Analytics OAuth')
   }
 
-  const existingIntegration = await getAdIntegration({
+  const existingIntegration = await getGoogleAnalyticsIntegration({
     userId,
-    providerId: 'google-analytics',
     clientId: integrationClientId ?? null,
   })
 
-  await persistIntegrationTokens({
+  await persistGoogleAnalyticsTokens({
     userId,
-    providerId: 'google-analytics',
     clientId: integrationClientId ?? null,
     accessToken: tokenResponse.access_token,
     idToken: tokenResponse.id_token ?? null,

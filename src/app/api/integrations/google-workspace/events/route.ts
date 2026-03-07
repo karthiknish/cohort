@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { createApiHandler } from '@/lib/api-handler'
 import { BadRequestError, UnauthorizedError } from '@/lib/api-errors'
 import { saveMeetingNotes, saveMeetingTranscript } from '@/lib/meetings-admin'
-import { GeminiAIService } from '@/services/gemini'
+import { GeminiAIService, resolveGeminiApiKey } from '@/services/gemini'
 
 const webhookSchema = z.unknown()
 
@@ -349,7 +349,7 @@ function getMissingFields(payload: NormalizedTranscriptWebhookPayload): string[]
 }
 
 async function generateConciseMeetingNotes(transcriptText: string): Promise<{ summary: string; model: string } | null> {
-  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? ''
+  const apiKey = resolveGeminiApiKey()
   if (!apiKey) return null
 
   const gemini = new GeminiAIService(apiKey)
@@ -367,7 +367,7 @@ async function generateConciseMeetingNotes(transcriptText: string): Promise<{ su
   ].join('\n')
 
   const summary = await gemini.generateContent(prompt)
-  const model = process.env.GEMINI_MODEL?.trim() || 'gemini-3-flash-preview'
+  const model = gemini.getModel()
 
   return {
     summary,

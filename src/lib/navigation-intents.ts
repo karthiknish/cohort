@@ -76,7 +76,7 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
   {
     route: '/dashboard/meetings',
     name: 'Meetings',
-    description: 'Schedule meetings, manage Google Meet invites, and review AI meeting notes',
+    description: 'Schedule native meeting rooms, manage Calendar invites, and review AI meeting notes',
     keywords: ['meetings', 'meeting', 'calendar', 'google meet', 'invite', 'invites', 'transcript', 'notes', 'call', 'calls'],
     aliases: ['meeting scheduler', 'schedule call', 'meeting notes', 'meeting hub', 'google workspace meetings'],
     actions: ['schedule meeting', 'start meeting', 'join call', 'review transcript', 'read meeting notes'],
@@ -107,8 +107,8 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
     route: '/dashboard/collaboration',
     name: 'Collaboration',
     description: 'Team chat, messaging, and communication hub',
-    keywords: ['collaboration', 'chat', 'messages', 'message', 'team', 'communication', 'discuss', 'conversation', 'talk', 'threads'],
-    aliases: ['team chat', 'collaboration hub', 'messaging', 'communicate', 'discussions', 'chat room'],
+    keywords: ['collaboration', 'chat', 'messages', 'message', 'team', 'communication', 'discuss', 'conversation', 'talk', 'threads', 'dm', 'direct message', 'channel'],
+    aliases: ['team chat', 'collaboration hub', 'messaging', 'communicate', 'discussions', 'chat room', 'project discussion', 'client thread', 'team channel'],
     actions: ['send message', 'chat with team', 'check messages', 'start conversation'],
   },
   

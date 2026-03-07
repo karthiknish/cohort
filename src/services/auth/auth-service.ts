@@ -18,7 +18,7 @@ import {
   NetworkTimeoutError,
   RateLimitError,
 } from '@/lib/api-errors'
-import { parseAuthError, isNetworkError, isRetryableError } from './error-utils'
+import { parseAuthError, isNetworkError } from './error-utils'
 
 function normalizeRole(value: unknown): AuthRole {
   return value === 'admin' || value === 'team' || value === 'client' ? value : 'client'
@@ -38,6 +38,89 @@ export class AuthService {
   private initialAuthResolved = false
   private readonly initialAuthPromise: Promise<void>
   private resolveInitialAuth!: () => void
+
+  private extractSessionPayload(result: unknown): { user?: Record<string, unknown> | null } | null {
+    if (!result || typeof result !== 'object' || !('data' in result)) {
+      return null
+    }
+
+    const data = (result as { data?: unknown }).data
+    if (!data || typeof data !== 'object') {
+      return null
+    }
+
+    return data as { user?: Record<string, unknown> | null }
+  }
+
+  private setResolvedUser(user: AuthUser | null): void {
+    this.currentUser = user
+    this.notifyListeners(user)
+  }
+
+  private async resolveSessionUser(options?: { disableCookieCache?: boolean }): Promise<AuthUser | null> {
+    const sessionResult = await authClient.getSession({
+      query: options?.disableCookieCache ? { disableCookieCache: true } : undefined,
+    }).catch((err) => {
+      console.error('[AuthService] getSession error:', err)
+      return null
+    })
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[AuthService] getSession result:', {
+        hasResult: Boolean(sessionResult),
+        hasData: Boolean(sessionResult && typeof sessionResult === 'object' && 'data' in sessionResult),
+        disableCookieCache: Boolean(options?.disableCookieCache),
+        result: sessionResult,
+      })
+    }
+
+    const session = this.extractSessionPayload(sessionResult)
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[AuthService] Parsed session:', {
+        hasSession: Boolean(session),
+        hasUser: Boolean(session?.user),
+        userEmail: session?.user?.email,
+        disableCookieCache: Boolean(options?.disableCookieCache),
+      })
+    }
+
+    return session?.user
+      ? this.mapBetterAuthUser(session.user)
+      : null
+  }
+
+  private async ensureFreshSession(): Promise<AuthUser> {
+    const freshUser = await this.resolveSessionUser({ disableCookieCache: true })
+
+    if (!freshUser) {
+      this.setResolvedUser(null)
+      throw new SessionExpiredError('Your session has expired. Please sign in again.')
+    }
+
+    this.setResolvedUser(freshUser)
+    return freshUser
+  }
+
+  private async fetchGoogleWorkspaceOauthUrl(search: string): Promise<Response> {
+    return await fetch(`/api/integrations/google-workspace/oauth/url${search}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+  }
+
+  private async fetchGoogleOauthUrl(search: string): Promise<Response> {
+    return await fetch(`/api/integrations/google/oauth/url${search}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    })
+  }
 
   private constructor() {
     this.initialAuthPromise = new Promise((resolve) => {
@@ -62,38 +145,8 @@ export class AuthService {
 
   private async initSession() {
     try {
-      const sessionResult = await authClient.getSession().catch((err) => {
-        console.error('[AuthService] getSession error:', err)
-        return null
-      })
-      
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[AuthService] getSession result:', {
-          hasResult: Boolean(sessionResult),
-          hasData: Boolean(sessionResult && typeof sessionResult === 'object' && 'data' in sessionResult),
-          result: sessionResult,
-        })
-      }
-      
-      const session =
-        sessionResult && typeof sessionResult === 'object' && 'data' in sessionResult
-          ? ((sessionResult as { data?: { user?: Record<string, unknown> | null } | null }).data ?? null)
-          : null
-
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[AuthService] Parsed session:', {
-          hasSession: Boolean(session),
-          hasUser: Boolean(session?.user),
-          userEmail: session?.user?.email,
-        })
-      }
-
-      const nextUser = session?.user
-        ? this.mapBetterAuthUser(session.user)
-        : null
-      
-      this.currentUser = nextUser
-      this.notifyListeners(nextUser)
+      const nextUser = await this.resolveSessionUser({ disableCookieCache: true })
+      this.setResolvedUser(nextUser)
     } finally {
       if (!this.initialAuthResolved) {
         this.initialAuthResolved = true
@@ -145,7 +198,9 @@ export class AuthService {
   }
 
   private notifyListeners(user: AuthUser | null): void {
-    this.authStateListeners.forEach((listener) => listener(user))
+    this.authStateListeners.forEach((listener) => {
+      listener(user)
+    })
   }
 
   private validateEmail(email: string): void {
@@ -346,18 +401,19 @@ export class AuthService {
       throw new ValidationError('Invalid redirect URL')
     }
 
+    await this.ensureFreshSession()
+
     const params = new URLSearchParams()
     if (redirect) params.set('redirect', redirect)
     if (clientId) params.set('clientId', clientId)
     const search = params.toString() ? `?${params.toString()}` : ''
 
-    const response = await fetch(`/api/integrations/google/oauth/url${search}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'same-origin',
-    })
+    let response = await this.fetchGoogleOauthUrl(search)
+
+    if (response.status === 401) {
+      await this.ensureFreshSession().catch(() => null)
+      response = await this.fetchGoogleOauthUrl(search)
+    }
 
     const payload = (await response.json().catch(() => ({}))) as unknown
 
@@ -365,6 +421,9 @@ export class AuthService {
       const record = payload as { success: boolean; data?: unknown; error?: unknown }
       if (!record.success) {
         const message = typeof record.error === 'string' ? record.error : 'Failed to start Google OAuth'
+        if (response.status === 401) {
+          throw new SessionExpiredError(message)
+        }
         throw new BadRequestError(message)
       }
 
@@ -379,6 +438,9 @@ export class AuthService {
     if (!response.ok) {
       const record = payload as { error?: unknown }
       const message = typeof record?.error === 'string' ? record.error : 'Failed to start Google OAuth'
+      if (response.status === 401) {
+        throw new SessionExpiredError(message)
+      }
       throw new BadRequestError(message)
     }
 
@@ -387,23 +449,84 @@ export class AuthService {
     throw new ServiceUnavailableError('Google OAuth did not return a URL')
   }
 
-  async startMetaOauth(redirect?: string, clientId?: string | null): Promise<{ url: string }> {
+  async startGoogleWorkspaceOauth(redirect?: string): Promise<{ url: string }> {
     if (redirect && !isValidRedirectUrl(redirect)) {
       throw new ValidationError('Invalid redirect URL')
     }
 
     const params = new URLSearchParams()
     if (redirect) params.set('redirect', redirect)
+    const search = params.toString() ? `?${params.toString()}` : ''
+
+    await this.ensureFreshSession()
+
+    let response = await this.fetchGoogleWorkspaceOauthUrl(search)
+
+    if (response.status === 401) {
+      await this.ensureFreshSession().catch(() => null)
+      response = await this.fetchGoogleWorkspaceOauthUrl(search)
+    }
+
+    const payload = (await response.json().catch(() => ({}))) as unknown
+
+    if (payload && typeof payload === 'object' && 'success' in payload) {
+      const record = payload as { success: boolean; data?: unknown; error?: unknown }
+      if (!record.success) {
+        const message = typeof record.error === 'string' ? record.error : 'Failed to start Google Workspace OAuth'
+        if (response.status === 401) {
+          throw new SessionExpiredError(message)
+        }
+        throw new BadRequestError(message)
+      }
+
+      const data = record.data as { url?: unknown } | undefined
+      if (typeof data?.url === 'string' && data.url.length > 0) {
+        return { url: data.url }
+      }
+
+      throw new ServiceUnavailableError('Google Workspace OAuth did not return a URL')
+    }
+
+    if (!response.ok) {
+      const record = payload as { error?: unknown }
+      const message = typeof record?.error === 'string' ? record.error : 'Failed to start Google Workspace OAuth'
+      if (response.status === 401) {
+        throw new SessionExpiredError(message)
+      }
+      throw new BadRequestError(message)
+    }
+
+    const legacy = payload as { url?: unknown }
+    if (typeof legacy?.url === 'string' && legacy.url.length > 0) return { url: legacy.url }
+    throw new ServiceUnavailableError('Google Workspace OAuth did not return a URL')
+  }
+
+  async startMetaOauth(redirect?: string, clientId?: string | null): Promise<{ url: string }> {
+    if (redirect && !isValidRedirectUrl(redirect)) {
+      throw new ValidationError('Invalid redirect URL')
+    }
+
+    await this.ensureFreshSession()
+
+    const params = new URLSearchParams()
+    if (redirect) params.set('redirect', redirect)
     if (clientId) params.set('clientId', clientId)
     const search = params.toString() ? `?${params.toString()}` : ''
 
-    const response = await fetch(`/api/integrations/meta/oauth/url${search}`, {
+    const fetchMetaOauthUrl = async () => await fetch(`/api/integrations/meta/oauth/url${search}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'same-origin',
+      credentials: 'include',
     })
+
+    let response = await fetchMetaOauthUrl()
+
+    if (response.status === 401) {
+      await this.ensureFreshSession().catch(() => null)
+      response = await fetchMetaOauthUrl()
+    }
 
     const payload = (await response.json().catch(() => ({}))) as unknown
 
@@ -411,6 +534,9 @@ export class AuthService {
       const record = payload as { success: boolean; data?: unknown; error?: unknown }
       if (!record.success) {
         const message = typeof record.error === 'string' ? record.error : 'Failed to start Meta OAuth'
+        if (response.status === 401) {
+          throw new SessionExpiredError(message)
+        }
         throw new BadRequestError(message)
       }
 
@@ -425,6 +551,9 @@ export class AuthService {
     if (!response.ok) {
       const record = payload as { error?: unknown }
       const message = typeof record?.error === 'string' ? record.error : 'Failed to start Meta OAuth'
+      if (response.status === 401) {
+        throw new SessionExpiredError(message)
+      }
       throw new BadRequestError(message)
     }
 

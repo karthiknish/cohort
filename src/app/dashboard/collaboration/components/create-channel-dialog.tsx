@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { Plus, Hash, Users, Building2, LoaderCircle } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { Hash, LoaderCircle, Lock, Plus, Users } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -11,10 +14,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -22,104 +23,82 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
-import { cn } from '@/lib/utils'
-import type { CollaborationChannelType } from '@/types/collaboration'
-import type { ClientTeamMember } from '@/types/clients'
 
-interface ClientOption {
+type WorkspaceMemberOption = {
   id: string
   name: string
+  email?: string
+  role?: string
 }
 
-interface ProjectOption {
-  id: string
+type CreateChannelPayload = {
   name: string
+  description?: string
+  visibility: 'public' | 'private'
+  memberIds: string[]
 }
+
+const EMPTY_TEAM_MEMBERS: WorkspaceMemberOption[] = []
 
 interface CreateChannelDialogProps {
   workspaceId: string | null
   userId: string | null
-  clients?: ClientOption[]
-  projects?: ProjectOption[]
-  teamMembers?: ClientTeamMember[]
-  onCreate?: (channel: {
-    type: CollaborationChannelType
-    name: string
-    description?: string
-    clientId?: string | null
-    projectId?: string | null
-    memberIds?: string[]
-  }) => void
+  teamMembers?: WorkspaceMemberOption[]
+  onCreate?: (channel: CreateChannelPayload) => Promise<void> | void
   trigger?: React.ReactNode
 }
 
-/**
- * Dialog for creating a new collaboration channel
- */
+function sortMembers(members: WorkspaceMemberOption[]) {
+  return [...members].sort((a, b) => a.name.localeCompare(b.name))
+}
+
 export function CreateChannelDialog({
   workspaceId,
   userId,
-  clients = [],
-  projects = [],
-  teamMembers = [],
+  teamMembers = EMPTY_TEAM_MEMBERS,
   onCreate,
   trigger,
 }: CreateChannelDialogProps) {
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
-  const [channelType, setChannelType] = useState<CollaborationChannelType>('team')
   const [channelName, setChannelName] = useState('')
   const [description, setDescription] = useState('')
-  const [selectedClientId, setSelectedClientId] = useState<string>('')
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('')
+  const [visibility, setVisibility] = useState<'public' | 'private'>('private')
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([])
-  const [isPrivate, setIsPrivate] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
 
-  const selectedClient = clients.find((c) => c.id === selectedClientId)
-  const selectedProject = projects.find((p) => p.id === selectedProjectId)
+  const sortedMembers = useMemo(() => sortMembers(teamMembers), [teamMembers])
+
+  const resetForm = useCallback(() => {
+    setChannelName('')
+    setDescription('')
+    setVisibility('private')
+    setSelectedMemberIds([])
+  }, [])
+
+  const handleMemberToggle = useCallback((memberId: string) => {
+    setSelectedMemberIds((prev) =>
+      prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId],
+    )
+  }, [])
 
   const handleCreate = useCallback(async () => {
     if (!workspaceId || !userId) {
       toast({
         title: 'Authentication required',
-        description: 'You must be signed in to create a channel.',
+        description: 'You must be signed in to create channels.',
         variant: 'destructive',
       })
       return
     }
 
-    // Validate inputs
-    if (channelType === 'team' && !channelName.trim()) {
+    const normalizedName = channelName.replace(/\s+/g, ' ').trim()
+    if (normalizedName.length < 2) {
       toast({
         title: 'Channel name required',
-        description: 'Please enter a name for your team channel.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (channelType === 'client' && !selectedClientId) {
-      toast({
-        title: 'Client required',
-        description: 'Please select a client for this channel.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (channelType === 'project' && !selectedProjectId) {
-      toast({
-        title: 'Project required',
-        description: 'Please select a project for this channel.',
+        description: 'Use at least 2 characters for the channel name.',
         variant: 'destructive',
       })
       return
@@ -127,305 +106,173 @@ export function CreateChannelDialog({
 
     setIsCreating(true)
 
-    // Determine channel name based on type
-    let finalChannelName = channelName.trim()
-    if (channelType === 'client' && selectedClient) {
-      finalChannelName = selectedClient.name
-    } else if (channelType === 'project' && selectedProject) {
-      finalChannelName = selectedProject.name
-    }
-
-    const newChannel = {
-      type: channelType,
-      name: finalChannelName,
-      description: description.trim() || undefined,
-      clientId: channelType === 'client' ? selectedClientId : null,
-      projectId: channelType === 'project' ? selectedProjectId : null,
-      memberIds: selectedMemberIds.length > 0 ? selectedMemberIds : undefined,
-    }
-
-    await Promise.resolve(onCreate?.(newChannel))
+    await Promise.resolve(
+      onCreate?.({
+        name: normalizedName,
+        description: description.trim() || undefined,
+        visibility,
+        memberIds: selectedMemberIds,
+      }),
+    )
       .then(() => {
         toast({
           title: 'Channel created',
-          description: `"${finalChannelName}" has been created successfully.`,
+          description: `#${normalizedName} is ready for collaboration.`,
         })
-
-        // Reset form
-        setChannelType('team')
-        setChannelName('')
-        setDescription('')
-        setSelectedClientId('')
-        setSelectedProjectId('')
-        setSelectedMemberIds([])
-        setIsPrivate(false)
+        resetForm()
         setOpen(false)
-      })
-      .catch((error) => {
-        console.error('Failed to create channel:', error)
-        toast({
-          title: 'Failed to create channel',
-          description: 'An error occurred while creating the channel.',
-          variant: 'destructive',
-        })
-      })
-      .finally(() => {
         setIsCreating(false)
       })
-  }, [
-    workspaceId,
-    userId,
-    channelType,
-    channelName,
-    description,
-    selectedClientId,
-    selectedProjectId,
-    selectedMemberIds,
-    onCreate,
-    toast,
-    selectedClient,
-    selectedProject,
-  ])
-
-  const handleMemberToggle = useCallback((memberId: string) => {
-    setSelectedMemberIds((prev) =>
-      prev.includes(memberId)
-        ? prev.filter((id) => id !== memberId)
-        : [...prev, memberId]
-    )
-  }, [])
+      .catch((error) => {
+        console.error('Failed to create collaboration channel', error)
+        toast({
+          title: 'Channel creation failed',
+          description: 'The channel could not be created. Try again.',
+          variant: 'destructive',
+        })
+        setIsCreating(false)
+      })
+  }, [channelName, description, onCreate, resetForm, selectedMemberIds, toast, userId, visibility, workspaceId])
 
   const defaultTrigger = (
     <DialogTrigger asChild>
-      <Button size="sm" className="gap-2">
+      <Button className="gap-2">
         <Plus className="h-4 w-4" />
-        New Channel
+        Create channel
       </Button>
     </DialogTrigger>
   )
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (!nextOpen && !isCreating) {
+          resetForm()
+        }
+      }}
+    >
       {trigger || defaultTrigger}
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Hash className="h-5 w-5" />
-            Create New Channel
+            Create collaboration channel
           </DialogTitle>
           <DialogDescription>
-            Create a new space for team collaboration, client communication, or project discussions.
+            Create an admin-managed room for internal coordination. Client and project channels remain automatic.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={channelType} onValueChange={(v) => setChannelType(v as CollaborationChannelType)} className="py-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="team" className="gap-2">
-              <Users className="h-4 w-4" />
-              Team
-            </TabsTrigger>
-            <TabsTrigger value="client" className="gap-2">
-              <Building2 className="h-4 w-4" />
-              Client
-            </TabsTrigger>
-            <TabsTrigger value="project" className="gap-2">
-              <Hash className="h-4 w-4" />
-              Project
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="team" className="space-y-4 mt-4">
+        <div className="grid gap-6 py-4 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="team-name">Channel Name *</Label>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">#</span>
+              <Label htmlFor="channel-name">Channel name</Label>
+              <div className="relative">
+                <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  id="team-name"
-                  placeholder="e.g., general, engineering, marketing"
+                  id="channel-name"
                   value={channelName}
-                  onChange={(e) => setChannelName(e.target.value)}
+                  onChange={(event) => setChannelName(event.target.value)}
+                  className="pl-9"
+                  placeholder="leadership, launch-war-room, finance"
                   maxLength={50}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="team-description">Description (optional)</Label>
+              <Label htmlFor="channel-description">Description</Label>
               <Textarea
-                id="team-description"
-                placeholder="What is this channel about?"
+                id="channel-description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-                maxLength={200}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="What should this channel be used for?"
+                rows={4}
+                maxLength={220}
               />
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="team-private"
-                checked={isPrivate}
-                onCheckedChange={(checked) => setIsPrivate(checked as boolean)}
-              />
-              <Label htmlFor="team-private" className="text-sm font-normal cursor-pointer">
-                Private channel (only invited members can access)
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="channel-visibility">Access</Label>
+              <Select value={visibility} onValueChange={(value) => setVisibility(value as 'public' | 'private')}>
+                <SelectTrigger id="channel-visibility">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4" />
+                      Private
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="public">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Public to team
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Private channels are limited to admins and selected members. Public channels are visible to the workspace team.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Add people</p>
+                <p className="text-xs text-muted-foreground">Select who should be explicitly included.</p>
+              </div>
+              <span className="rounded-full bg-background px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                {selectedMemberIds.length} selected
+              </span>
             </div>
 
-            {teamMembers.length > 0 && (
-              <div className="space-y-2">
-                <Label>Add Members (optional)</Label>
-                <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
-                  {teamMembers.map((member, index) => {
-                    const memberId = member.id || `member-${index}`
-                    return (
-                      <div key={memberId} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`member-${memberId}`}
-                          checked={selectedMemberIds.includes(memberId)}
-                          onCheckedChange={() => handleMemberToggle(memberId)}
-                        />
-                        <Label
-                          htmlFor={`member-${memberId}`}
-                          className="text-sm font-normal cursor-pointer flex-1"
-                        >
-                          {member.name}
-                          {member.role && (
-                            <span className="text-xs text-muted-foreground ml-2">
-                              {member.role}
-                            </span>
-                          )}
-                        </Label>
-                      </div>
-                    )
-                  })}
-                </div>
+            {sortedMembers.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border/70 bg-background/70 px-4 py-6 text-sm text-muted-foreground">
+                No workspace members available.
+              </div>
+            ) : (
+              <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                {sortedMembers.map((member) => {
+                  const checked = selectedMemberIds.includes(member.id)
+                  const checkboxId = `create-channel-member-${member.id}`
+                  return (
+                    <div
+                      key={member.id}
+                      className="flex cursor-pointer items-start gap-3 rounded-xl border border-transparent bg-background/80 px-3 py-3 transition-colors hover:border-border hover:bg-background"
+                    >
+                      <Checkbox
+                        id={checkboxId}
+                        checked={checked}
+                        onCheckedChange={() => handleMemberToggle(member.id)}
+                        className="mt-0.5"
+                      />
+                      <Label htmlFor={checkboxId} className="min-w-0 cursor-pointer">
+                        <p className="truncate text-sm font-medium text-foreground">{member.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {[member.role, member.email].filter(Boolean).join(' • ') || 'Workspace member'}
+                        </p>
+                      </Label>
+                    </div>
+                  )
+                })}
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="client" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="client-select">Select Client *</Label>
-              <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                <SelectTrigger id="client-select">
-                  <SelectValue placeholder="Choose a client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                  {clients.length === 0 && (
-                    <div className="p-2 text-sm text-muted-foreground text-center">
-                      No clients available
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedClient && (
-              <>
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-sm">
-                    Creating a channel for <strong>{selectedClient.name}</strong>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    All team members with access to this client will be able to see this channel.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="client-description">Description (optional)</Label>
-                  <Textarea
-                    id="client-description"
-                    placeholder="Add a description for this client channel..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={2}
-                    maxLength={200}
-                  />
-                </div>
-              </>
-            )}
-          </TabsContent>
-
-          <TabsContent value="project" className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="project-select">Select Project *</Label>
-              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                <SelectTrigger id="project-select">
-                  <SelectValue placeholder="Choose a project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                  {projects.length === 0 && (
-                    <div className="p-2 text-sm text-muted-foreground text-center">
-                      No projects available
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedProject && (
-              <>
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-sm">
-                    Creating a channel for <strong>{selectedProject.name}</strong>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    All team members assigned to this project will be able to see this channel.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="project-description">Description (optional)</Label>
-                  <Textarea
-                    id="project-description"
-                    placeholder="Add a description for this project channel..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={2}
-                    maxLength={200}
-                  />
-                </div>
-              </>
-            )}
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
 
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isCreating}
-          >
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={isCreating}>
             Cancel
           </Button>
-          <Button
-            type="button"
-            onClick={handleCreate}
-            disabled={isCreating || (channelType === 'client' && !selectedClientId) || (channelType === 'project' && !selectedProjectId) || (channelType === 'team' && !channelName.trim())}
-          >
-            {isCreating ? (
-              <>
-                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <Plus className="mr-2 h-4 w-4" />
-                Create Channel
-              </>
-            )}
+          <Button onClick={() => void handleCreate()} disabled={isCreating}>
+            {isCreating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            Create channel
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -433,18 +280,17 @@ export function CreateChannelDialog({
   )
 }
 
-/**
- * Quick create button for channels
- */
 export function QuickCreateChannelButton(props: Omit<CreateChannelDialogProps, 'trigger'>) {
   return (
     <CreateChannelDialog
       {...props}
       trigger={
-        <Button size="icon" variant="ghost" className="h-8 w-8">
-          <Plus className="h-4 w-4" />
-          <span className="sr-only">Create channel</span>
-        </Button>
+        <DialogTrigger asChild>
+          <Button size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create channel
+          </Button>
+        </DialogTrigger>
       }
     />
   )

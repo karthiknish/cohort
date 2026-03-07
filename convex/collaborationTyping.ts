@@ -54,7 +54,7 @@ export const setTyping = workspaceMutation({
     ok: v.literal(true),
   }),
   handler: async (ctx, args) => {
-    const currentUserId = typeof ctx?.user?._id === 'string' ? ctx.user._id : null
+    const currentUserId = typeof ctx?.legacyId === 'string' ? ctx.legacyId : null
     if (!currentUserId) {
       throw Errors.auth.unauthorized()
     }

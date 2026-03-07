@@ -1,8 +1,9 @@
 "use node"
 
-import { action } from './_generated/server'
 import { v } from 'convex/values'
+
 import { api } from './_generated/api'
+import { action } from './_generated/server'
 
 import { geminiAI } from '../src/services/gemini'
 import { formatCurrency } from '../src/lib/utils'
@@ -43,6 +44,10 @@ interface ProviderSummary {
   dayCount: number
 }
 
+function isGoogleAnalyticsProvider(providerId: string) {
+  return providerId === 'google-analytics'
+}
+
 function toISO(value: number | null | undefined): string | null {
   if (value == null || !Number.isFinite(value)) return null
   return new Date(value).toISOString()
@@ -69,7 +74,8 @@ function summarizeByProvider(records: MetricRecord[], periodDays: number): Provi
       })
     }
 
-    const summary = map.get(metric.providerId)!
+    const summary = map.get(metric.providerId)
+    if (!summary) return
     summary.totalSpend += metric.spend
     summary.totalRevenue += metric.revenue ?? 0
     summary.totalClicks += metric.clicks
@@ -112,6 +118,93 @@ Include:
 Keep it under 120 words.`
 }
 
+function buildGoogleAnalyticsPrompt(summary: ProviderSummary) {
+  const totalUsers = summary.totalImpressions
+  const totalSessions = summary.totalClicks
+  const revenuePerSession = totalSessions > 0 ? summary.totalRevenue / totalSessions : 0
+  const sessionsPerUser = totalUsers > 0 ? totalSessions / totalUsers : 0
+
+  return `You are an expert web analytics strategist. Provide a concise, actionable summary for a Google Analytics property.
+
+Property: Google Analytics
+Period: ${summary.period}
+Total Users: ${totalUsers}
+Total Sessions: ${totalSessions}
+Total Conversions: ${summary.totalConversions}
+Total Revenue: ${summary.totalRevenue.toFixed(2)}
+Conversion Rate: ${summary.averageConvRate.toFixed(2)}%
+Revenue Per Session: ${revenuePerSession.toFixed(2)}
+Sessions Per User: ${sessionsPerUser.toFixed(2)}
+
+Include:
+- Overall traffic quality assessment
+- What looks healthy or weak
+- One concrete optimization idea for acquisition or landing-page performance
+Keep it under 120 words.`
+}
+
+function buildGoogleAnalyticsFallback(summary: ProviderSummary) {
+  const totalUsers = summary.totalImpressions
+  const totalSessions = summary.totalClicks
+  const revenuePerSession = totalSessions > 0 ? summary.totalRevenue / totalSessions : 0
+  return `Google Analytics recorded ${totalUsers.toLocaleString()} users, ${totalSessions.toLocaleString()} sessions, ${summary.totalConversions.toLocaleString()} conversions, and ${formatCurrency(summary.totalRevenue)} in revenue. Conversion rate was ${summary.averageConvRate.toFixed(2)}% with ${formatCurrency(revenuePerSession)} revenue per session.`
+}
+
+function generateGoogleAnalyticsSuggestions(summary: ProviderSummary): AlgorithmicInsight[] {
+  const users = summary.totalImpressions
+  const sessions = summary.totalClicks
+  const conversions = summary.totalConversions
+  const revenue = summary.totalRevenue
+  const conversionRate = summary.averageConvRate
+  const sessionsPerUser = users > 0 ? sessions / users : 0
+  const revenuePerSession = sessions > 0 ? revenue / sessions : 0
+
+  const suggestions: AlgorithmicInsight[] = []
+
+  suggestions.push({
+    id: `ga-conversion-${summary.period}`,
+    type: 'trend',
+    level: conversionRate >= 4 ? 'success' : conversionRate >= 2 ? 'info' : 'warning',
+    category: 'Conversion Quality',
+    title: conversionRate >= 4 ? 'Healthy conversion efficiency' : conversionRate >= 2 ? 'Stable conversion efficiency' : 'Conversion efficiency can improve',
+    message: `The property converted ${conversionRate.toFixed(2)}% of sessions into conversions over ${summary.period}.`,
+    suggestion: conversionRate >= 4
+      ? 'Use the top-performing landing pages and channels from this period as your baseline for future experiments.'
+      : 'Review your landing pages and acquisition sources to identify where sessions are dropping before conversion.',
+    score: Math.max(35, Math.min(95, Math.round(conversionRate * 18))),
+  })
+
+  suggestions.push({
+    id: `ga-engagement-${summary.period}`,
+    type: 'audience',
+    level: sessionsPerUser >= 1.4 ? 'success' : sessionsPerUser >= 1.1 ? 'info' : 'warning',
+    category: 'Engagement Depth',
+    title: sessionsPerUser >= 1.4 ? 'Users are returning' : sessionsPerUser >= 1.1 ? 'Engagement is steady' : 'Engagement depth is shallow',
+    message: `Sessions per user is ${sessionsPerUser.toFixed(2)}x across ${users.toLocaleString()} users.`,
+    suggestion: sessionsPerUser >= 1.4
+      ? 'Double down on the channels and content journeys that are bringing users back for multiple sessions.'
+      : 'Audit the first-session experience and key navigation paths to encourage more repeat sessions.',
+    score: Math.max(30, Math.min(92, Math.round(sessionsPerUser * 55))),
+  })
+
+  if (sessions > 0 && (revenue > 0 || conversions > 0)) {
+    suggestions.push({
+      id: `ga-value-${summary.period}`,
+      type: 'efficiency',
+      level: revenuePerSession >= 3 ? 'success' : revenuePerSession >= 1 ? 'info' : 'warning',
+      category: 'Session Value',
+      title: revenuePerSession >= 3 ? 'Sessions are monetizing well' : revenuePerSession >= 1 ? 'Sessions are generating value' : 'Session value is low',
+      message: `Revenue per session is ${formatCurrency(revenuePerSession)} with ${conversions.toLocaleString()} recorded conversions.`,
+      suggestion: revenuePerSession >= 3
+        ? 'Use this period as a benchmark and isolate the acquisition sources behind your highest-value sessions.'
+        : 'Break out sessions by source or landing page to identify where low-value traffic is entering the funnel.',
+      score: Math.max(28, Math.min(96, Math.round(revenuePerSession * 18))),
+    })
+  }
+
+  return suggestions
+}
+
 function buildComparisonPrompt(google: EnrichedMetricsSummary, meta: EnrichedMetricsSummary) {
   return `You are an expert marketing analyst. Compare the performance of Google Ads and Meta (Facebook) Ads based on the following data.
 
@@ -135,11 +228,15 @@ Provide a concise comparison highlighting which platform is performing better an
 async function generateAllInsights(summaries: ProviderSummary[]) {
   const insights = [] as Array<{ providerId: string; summary: string }>
   const algorithmic = [] as Array<{ providerId: string; suggestions: AlgorithmicInsight[] }>
-  const enrichedSummaries = summaries.map(s => enrichSummaryWithMetrics(s as AdMetricsSummary))
+  const adSummaries = summaries.filter((summary) => !isGoogleAnalyticsProvider(summary.providerId))
+  const enrichedSummaries = adSummaries.map((summary) => enrichSummaryWithMetrics(summary as AdMetricsSummary))
 
   // 1. Generate Algorithmic Insights
-  enrichedSummaries.forEach(summary => {
-    const suggestions = calculateAlgorithmicInsights(summary)
+  summaries.forEach((summary) => {
+    const suggestions = isGoogleAnalyticsProvider(summary.providerId)
+      ? generateGoogleAnalyticsSuggestions(summary)
+      : calculateAlgorithmicInsights(summary as AdMetricsSummary)
+
     if (suggestions.length > 0) {
       algorithmic.push({
         providerId: summary.providerId,
@@ -182,8 +279,11 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
   }
 
   // 2. Generate AI Insights
-  for (const summary of enrichedSummaries) {
-    const prompt = buildInsightPrompt(summary)
+  for (const summary of summaries) {
+    const prompt = isGoogleAnalyticsProvider(summary.providerId)
+      ? buildGoogleAnalyticsPrompt(summary)
+      : buildInsightPrompt(enrichSummaryWithMetrics(summary as AdMetricsSummary))
+
     try {
       const content = await geminiAI.generateContent(prompt)
       insights.push({ providerId: summary.providerId, summary: content })
@@ -191,7 +291,9 @@ async function generateAllInsights(summaries: ProviderSummary[]) {
       console.error('[analyticsInsights] gemini failed', error)
       insights.push({
         providerId: summary.providerId,
-        summary: `Unable to generate AI insight. Spend ${formatCurrency(summary.totalSpend)}, revenue ${formatCurrency(summary.totalRevenue)}, ROAS ${summary.averageRoaS.toFixed(2)}x.`,
+        summary: isGoogleAnalyticsProvider(summary.providerId)
+          ? buildGoogleAnalyticsFallback(summary)
+          : `Unable to generate AI insight. Spend ${formatCurrency(summary.totalSpend)}, revenue ${formatCurrency(summary.totalRevenue)}, ROAS ${summary.averageRoaS.toFixed(2)}x.`,
       })
     }
   }
@@ -249,6 +351,7 @@ export const generateInsights = action({
     workspaceId: v.string(),
     clientId: v.optional(v.string()),
     periodDays: v.optional(v.number()),
+    providerIds: v.optional(v.array(v.string())),
   },
   returns: v.object({
     insights: v.array(v.object({
@@ -269,6 +372,7 @@ export const generateInsights = action({
       const metrics = await ctx.runQuery(api.adsMetrics.listMetrics, {
         workspaceId: args.workspaceId,
         clientId: args.clientId ?? null,
+        providerIds: args.providerIds,
         limit: 150,
       })
 

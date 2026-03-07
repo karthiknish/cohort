@@ -1,12 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { X } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/use-toast'
 
 import { UnifiedInbox } from './unified-inbox'
 import { NewDMDialog } from './new-dm-dialog'
@@ -14,21 +16,48 @@ import { useCollaborationData } from '../hooks'
 import { useDirectMessages } from '../hooks/use-direct-messages'
 import { CollaborationSkeleton } from './collaboration-skeleton'
 import { isFeatureEnabled } from '@/lib/features'
+import { collaborationChannelsApi, usersApi } from '@/lib/convex-api'
 
 import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
 import { useAuth } from '@/contexts/auth-context'
+import { CreateChannelDialog } from './create-channel-dialog'
+import { ChannelMembersDialog } from './channel-members-dialog'
 
 export function CollaborationDashboard() {
+  const { toast } = useToast()
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const [isNewDMDialogOpen, setIsNewDMDialogOpen] = useState(false)
+  const [isManageMembersDialogOpen, setIsManageMembersDialogOpen] = useState(false)
   
   const { user } = useAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const currentUserId = user?.id ?? null
   const currentUserName = user?.name?.trim() || user?.email?.trim() || 'You'
   const currentUserRole = user?.role ?? null
+  const isAdmin = currentUserRole === 'admin'
+
+  const allUsersResult = useQuery(
+    usersApi.listAllUsers,
+    isAdmin ? { limit: 500 } : 'skip',
+  ) as Array<{ id?: string; name?: string; email?: string; role?: string }> | undefined
+
+  const workspaceMembersResult = useQuery(
+    usersApi.listWorkspaceMembers,
+    workspaceId && !isAdmin
+      ? {
+          workspaceId,
+          limit: 200,
+        }
+      : 'skip',
+  ) as Array<{ id?: string; name?: string; email?: string; role?: string }> | undefined
+
+  const availableUsersResult = isAdmin ? allUsersResult : workspaceMembersResult
+
+  const createChannel = useMutation(collaborationChannelsApi.create)
+  const updateChannelMembers = useMutation(collaborationChannelsApi.updateMembers)
+  const removeChannel = useMutation(collaborationChannelsApi.remove)
   
   const collab = useCollaborationData()
   const dm = useDirectMessages({
@@ -42,6 +71,17 @@ export function CollaborationDashboard() {
   const collabChannels = collab.channels
   const collabSelectedChannelId = collab.selectedChannel?.id ?? null
   const selectCollabChannel = collab.selectChannel
+  const selectedCustomChannel = collab.selectedChannel?.isCustom ? collab.selectedChannel : null
+  const workspaceMembers = (availableUsersResult ?? [])
+    .filter((member): member is { id: string; name: string; email?: string; role?: string } =>
+      typeof member?.id === 'string' && typeof member?.name === 'string',
+    )
+    .map((member) => ({
+      id: member.id,
+      name: member.name,
+      email: typeof member.email === 'string' ? member.email : undefined,
+      role: typeof member.role === 'string' ? member.role : undefined,
+    }))
 
   const requestedProjectId = searchParams.get('projectId')
   const requestedProjectName = searchParams.get('projectName')
@@ -158,6 +198,91 @@ export function CollaborationDashboard() {
     }
   }, [collab, dm])
 
+  const handleCreateChannel = useCallback(
+    async (channel: {
+      name: string
+      description?: string
+      visibility: 'public' | 'private'
+      memberIds: string[]
+    }) => {
+      if (!workspaceId) {
+        throw new Error('Workspace unavailable')
+      }
+
+      const created = (await createChannel({
+        workspaceId,
+        name: channel.name,
+        description: channel.description ?? null,
+        visibility: channel.visibility,
+        memberIds: channel.memberIds,
+      })) as { legacyId?: string }
+
+      if (typeof created?.legacyId === 'string') {
+        selectCollabChannel(created.legacyId)
+      }
+    },
+    [createChannel, selectCollabChannel, workspaceId],
+  )
+
+  const handleSaveChannelMembers = useCallback(
+    async (payload: { memberIds: string[]; visibility: 'public' | 'private' }) => {
+      if (!workspaceId || !selectedCustomChannel) {
+        return
+      }
+
+      try {
+        await updateChannelMembers({
+          workspaceId,
+          legacyId: selectedCustomChannel.id,
+          memberIds: payload.memberIds,
+          visibility: payload.visibility,
+        })
+
+        toast({
+          title: 'Channel updated',
+          description: `Access for #${selectedCustomChannel.name} has been updated.`,
+        })
+      } catch (error) {
+        console.error('Failed to update channel members', error)
+        toast({
+          title: 'Update failed',
+          description: 'Could not update the channel membership.',
+          variant: 'destructive',
+        })
+        throw error
+      }
+    },
+    [selectedCustomChannel, toast, updateChannelMembers, workspaceId],
+  )
+
+  const handleDeleteChannel = useCallback(async () => {
+    if (!workspaceId || !selectedCustomChannel) {
+      return
+    }
+
+    try {
+      await removeChannel({
+        workspaceId,
+        legacyId: selectedCustomChannel.id,
+      })
+
+      setIsManageMembersDialogOpen(false)
+      selectCollabChannel('team-agency')
+      toast({
+        title: 'Channel deleted',
+        description: `#${selectedCustomChannel.name} has been removed from collaboration.`,
+      })
+    } catch (error) {
+      console.error('Failed to delete channel', error)
+      toast({
+        title: 'Delete failed',
+        description: 'Could not delete the channel.',
+        variant: 'destructive',
+      })
+      throw error
+    }
+  }, [removeChannel, selectCollabChannel, selectedCustomChannel, toast, workspaceId])
+
   if (collab.isBootstrapping) {
     return <CollaborationSkeleton />
   }
@@ -171,6 +296,16 @@ export function CollaborationDashboard() {
             {PAGE_TITLES.collaboration?.description ?? 'Coordinate with teammates and clients in dedicated workspaces.'}
           </p>
         </div>
+        {isAdmin ? (
+          <div className="flex items-center gap-3">
+            <CreateChannelDialog
+              workspaceId={workspaceId}
+              userId={currentUserId}
+              teamMembers={workspaceMembers}
+              onCreate={handleCreateChannel}
+            />
+          </div>
+        ) : null}
       </div>
 
       {isFeatureEnabled('BIDIRECTIONAL_NAV') && (requestedProjectId || requestedProjectName) && (
@@ -215,6 +350,10 @@ export function CollaborationDashboard() {
             isLoadingDMs={dm.isLoadingConversations}
             channelMessages={collab.channelMessages}
             visibleMessages={collab.visibleMessages}
+            messageSearchQuery={collab.messageSearchQuery}
+            onMessageSearchChange={collab.setMessageSearchQuery}
+            searchHighlights={collab.searchHighlights}
+            searchingMessages={collab.searchingMessages}
             channelParticipants={collab.channelParticipants}
             messagesError={collab.messagesError}
             isCurrentChannelLoading={collab.isCurrentChannelLoading}
@@ -256,10 +395,15 @@ export function CollaborationDashboard() {
             deepLinkMessageId={requestedMessageId}
             deepLinkThreadId={requestedThreadId}
             dmMessages={dm.messages}
+            dmVisibleMessages={dm.visibleMessages}
             dmIsLoadingMessages={dm.isLoadingMessages}
             dmIsLoadingMore={dm.isLoadingMore}
             dmHasMoreMessages={dm.hasMoreMessages}
             dmLoadMoreMessages={dm.loadMoreMessages}
+            dmMessageSearchQuery={dm.messageSearchQuery}
+            onDmMessageSearchChange={dm.setMessageSearchQuery}
+            dmSearchHighlights={dm.searchHighlights}
+            dmSearchingMessages={dm.searchingMessages}
             dmSendMessage={dm.sendMessage}
             dmIsSending={dm.isSending}
             dmToggleReaction={dm.toggleReaction}
@@ -267,6 +411,10 @@ export function CollaborationDashboard() {
             dmEditMessage={dm.editMessage}
             dmArchiveConversation={dm.archiveConversation}
             dmMuteConversation={dm.muteConversation}
+            canManageSelectedChannel={Boolean(isAdmin && selectedCustomChannel)}
+            onManageSelectedChannel={
+              isAdmin && selectedCustomChannel ? () => setIsManageMembersDialogOpen(true) : undefined
+            }
           />
 
           <NewDMDialog
@@ -279,6 +427,15 @@ export function CollaborationDashboard() {
           />
         </CardContent>
       </Card>
+
+      <ChannelMembersDialog
+        open={isManageMembersDialogOpen}
+        onOpenChange={setIsManageMembersDialogOpen}
+        channel={selectedCustomChannel}
+        teamMembers={workspaceMembers}
+        onSave={handleSaveChannelMembers}
+        onDelete={handleDeleteChannel}
+      />
     </div>
   )
 }

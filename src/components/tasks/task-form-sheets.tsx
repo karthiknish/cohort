@@ -33,8 +33,7 @@ import {
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { TaskPriority, TaskStatus } from '@/types/tasks'
-import type { ClientTeamMember } from '@/types/clients'
-import { TaskFormState, teamMembersToMentionable } from './task-types'
+import { isTaskDueDateDisabled, TaskFormState, TaskParticipant, teamMembersToMentionable } from './task-types'
 import { TaskCommentsPanel } from './task-comments'
 import { PendingAttachmentsList } from '@/app/dashboard/collaboration/components/message-composer'
 import type { PendingTaskAttachment } from '@/services/task-attachments'
@@ -47,7 +46,7 @@ export type CreateTaskSheetProps = {
   creating: boolean
   createError: string | null
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
-  participants: ClientTeamMember[]
+  participants: TaskParticipant[]
   pendingAttachments: PendingTaskAttachment[]
   onAddAttachments: (files: FileList | null) => void
   onRemoveAttachment: (attachmentId: string) => void
@@ -155,7 +154,7 @@ export function CreateTaskSheet({
                   setFormState((prev) => ({ ...prev, assignedTo: value }))
                 }
                 users={mentionableUsers}
-                placeholder="Type @ to assign team members"
+                placeholder="Type @ to assign teammates or admins"
                 disabled={creating}
                 allowMultiple
               />
@@ -199,6 +198,7 @@ export function CreateTaskSheet({
                     <Calendar
                       mode="single"
                       selected={formState.dueDate ? parseISO(formState.dueDate) : undefined}
+                      disabled={isTaskDueDateDisabled}
                       onSelect={(date: Date | undefined) =>
                         setFormState((prev) => ({
                           ...prev,
@@ -294,7 +294,7 @@ export type EditTaskSheetProps = {
   currentUserId: string | null
   currentUserName: string | null
   currentUserRole: string | null
-  participants: ClientTeamMember[]
+  participants: TaskParticipant[]
 }
 
 export function EditTaskSheet({
@@ -398,7 +398,7 @@ export function EditTaskSheet({
                   setFormState((prev) => ({ ...prev, assignedTo: value }))
                 }
                 users={mentionableUsers}
-                placeholder="Type @ to assign team members"
+                placeholder="Type @ to assign teammates or admins"
                 disabled={updating}
                 allowMultiple
               />
@@ -428,6 +428,7 @@ export function EditTaskSheet({
                   <Calendar
                     mode="single"
                     selected={formState.dueDate ? parseISO(formState.dueDate) : undefined}
+                    disabled={isTaskDueDateDisabled}
                     onSelect={(date: Date | undefined) =>
                       setFormState((prev) => ({
                         ...prev,

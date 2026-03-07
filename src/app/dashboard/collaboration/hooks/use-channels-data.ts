@@ -7,9 +7,23 @@ import type { ProjectRecord } from '@/types/projects'
 import { aggregateTeamMembers, normalizeTeamMembers } from '../utils'
 import type { Channel } from '../types'
 
+type CustomChannel = {
+  legacyId: string
+  name: string
+  description?: string | null
+  visibility?: 'public' | 'private'
+  memberIds?: string[]
+  memberSummaries?: Array<{
+    id: string
+    name: string
+    role?: string | null
+  }>
+}
+
 interface UseChannelsDataOptions {
   clients: ClientRecord[]
   projects: ProjectRecord[]
+  customChannels: CustomChannel[]
   fallbackDisplayName: string
   fallbackRole: string
 }
@@ -17,6 +31,7 @@ interface UseChannelsDataOptions {
 export function useChannelsData({
   clients,
   projects,
+  customChannels,
   fallbackDisplayName,
   fallbackRole,
 }: UseChannelsDataOptions) {
@@ -58,8 +73,27 @@ export function useChannelsData({
       }
     })
 
-    return [teamChannel, ...clientChannels, ...projectChannels]
-  }, [aggregatedTeamMembers, clients, projects])
+    const customTeamChannels = customChannels.map<Channel>((channel) => ({
+      id: channel.legacyId,
+      name: channel.name,
+      type: 'team',
+      clientId: null,
+      projectId: null,
+      description: channel.description ?? null,
+      visibility: channel.visibility ?? 'private',
+      memberIds: Array.isArray(channel.memberIds) ? channel.memberIds : [],
+      isCustom: true,
+      teamMembers: Array.isArray(channel.memberSummaries) && channel.memberSummaries.length > 0
+        ? channel.memberSummaries.map((member) => ({
+            id: member.id,
+            name: member.name,
+            role: member.role?.trim() || 'Contributor',
+          }))
+        : aggregatedTeamMembers,
+    }))
+
+    return [teamChannel, ...customTeamChannels, ...clientChannels, ...projectChannels]
+  }, [aggregatedTeamMembers, clients, customChannels, projects])
 
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')

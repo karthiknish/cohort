@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { useQuery } from 'convex/react'
+import { useConvexAuth, useQuery } from 'convex/react'
 
 import { AuthUser, SignUpData, authService } from '@/services/auth'
 import { authClient } from '@/lib/auth-client'
@@ -45,6 +45,7 @@ interface AuthContextType {
   connectFacebookAdsAccount: () => Promise<void>
   connectLinkedInAdsAccount: () => Promise<void>
   startGoogleOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
+  startGoogleWorkspaceOauth: (redirect?: string) => Promise<{ url: string }>
   startMetaOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
   startTikTokOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
   disconnectProvider: (providerId: string, clientId?: string | null) => Promise<void>
@@ -74,6 +75,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  const { isAuthenticated: isConvexAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -134,6 +136,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return updated
     })
   }, [convexUser, user?.id])
+
+  useEffect(() => {
+    if (convexAuthLoading || isConvexAuthenticated) return
+
+    setUser(null)
+    currentUserRef.current = null
+    lastAppliedUserKeyRef.current = 'anonymous'
+    setBetterAuthUserId(null)
+  }, [convexAuthLoading, isConvexAuthenticated])
 
   // Listen to Better Auth session changes
   useEffect(() => {
@@ -326,6 +337,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return await authService.startGoogleOauth(redirect, clientId)
   }, [])
 
+  const startGoogleWorkspaceOauth = useCallback(async (redirect?: string) => {
+    return await authService.startGoogleWorkspaceOauth(redirect)
+  }, [])
+
   const startMetaOauth = useCallback(async (redirect?: string, clientId?: string | null) => {
     return await authService.startMetaOauth(redirect, clientId)
   }, [])
@@ -343,7 +358,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const getIdToken = useCallback(async () => {
     if (typeof window === 'undefined') return null
 
-    const result = await authClient.$fetch('/convex/token').catch((error) => {
+    const result = await authClient.convex.token().catch((error) => {
       if (process.env.NODE_ENV !== 'production') {
         console.warn('[AuthContext] Failed to fetch Convex token', error)
       }
@@ -386,6 +401,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       connectFacebookAdsAccount,
       connectLinkedInAdsAccount,
       startGoogleOauth,
+      startGoogleWorkspaceOauth,
       startMetaOauth,
       startTikTokOauth,
       disconnectProvider,
@@ -413,6 +429,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       connectFacebookAdsAccount,
       connectLinkedInAdsAccount,
       startGoogleOauth,
+      startGoogleWorkspaceOauth,
       startMetaOauth,
       startTikTokOauth,
       disconnectProvider,

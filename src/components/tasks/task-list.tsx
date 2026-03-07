@@ -1,6 +1,7 @@
 'use client'
 'use no memo'
 
+import { useCallback, useState } from 'react'
 import { TriangleAlert, LoaderCircle, RefreshCw, ListTodo } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -9,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { TaskRecord, TaskStatus } from '@/types/tasks'
 import { TaskCard } from './task-card'
 import { TaskRow } from './task-row'
+import { TaskViewDialog } from './task-view-dialog'
+import type { TaskParticipant } from './task-types'
 
 export type TaskListProps = {
   tasks: TaskRecord[]
@@ -28,6 +31,22 @@ export type TaskListProps = {
   showEmptyStateFiltered: boolean
   selectedTaskIds?: Set<string>
   onToggleTaskSelection?: (taskId: string, checked: boolean) => void
+  workspaceId?: string | null
+  userId?: string | null
+  userName?: string | null
+  userRole?: string | null
+  participants?: TaskParticipant[]
+}
+
+function shouldIgnoreTaskOpen(target: EventTarget | null, currentTarget?: HTMLElement | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+
+  const interactiveAncestor = target.closest('button, a, input, textarea, select, label, [role="button"], [role="menuitem"], [role="checkbox"], [data-radix-collection-item], [data-no-task-open="true"]')
+
+  if (!interactiveAncestor) return false
+  if (currentTarget && interactiveAncestor === currentTarget) return false
+
+  return true
 }
 
 export function TaskList({
@@ -48,8 +67,19 @@ export function TaskList({
   showEmptyStateFiltered,
   selectedTaskIds,
   onToggleTaskSelection,
+  workspaceId = null,
+  userId = null,
+  userName = null,
+  userRole = null,
+  participants = [],
 }: TaskListProps) {
   'use no memo'
+
+  const [viewingTask, setViewingTask] = useState<TaskRecord | null>(null)
+
+  const openTask = useCallback((task: TaskRecord) => {
+    setViewingTask(task)
+  }, [])
 
   const renderSkeleton = (
     <div
@@ -147,27 +177,61 @@ export function TaskList({
           !error &&
           tasks.map((task) =>
             viewMode === 'grid' ? (
-              <TaskCard
+              <div
                 key={task.id}
-                task={task}
-                isPendingUpdate={pendingStatusUpdates.has(task.id)}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onQuickStatusChange={onQuickStatusChange}
-                selected={selectedTaskIds?.has(task.id)}
-                onSelectToggle={onToggleTaskSelection}
-              />
+                role="button"
+                tabIndex={0}
+                aria-label={`View task ${task.title}`}
+                className="h-full outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 rounded-[1.35rem]"
+                onClick={(event) => {
+                  if (shouldIgnoreTaskOpen(event.target, event.currentTarget)) return
+                  openTask(task)
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return
+                  if (shouldIgnoreTaskOpen(event.target, event.currentTarget)) return
+                  event.preventDefault()
+                  openTask(task)
+                }}
+              >
+                <TaskCard
+                  task={task}
+                  isPendingUpdate={pendingStatusUpdates.has(task.id)}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onQuickStatusChange={onQuickStatusChange}
+                  selected={selectedTaskIds?.has(task.id)}
+                  onSelectToggle={onToggleTaskSelection}
+                />
+              </div>
             ) : (
-              <TaskRow
+              <div
                 key={task.id}
-                task={task}
-                isPendingUpdate={pendingStatusUpdates.has(task.id)}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onQuickStatusChange={onQuickStatusChange}
-                selected={selectedTaskIds?.has(task.id)}
-                onSelectToggle={onToggleTaskSelection}
-              />
+                role="button"
+                tabIndex={0}
+                aria-label={`View task ${task.title}`}
+                className="outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
+                onClick={(event) => {
+                  if (shouldIgnoreTaskOpen(event.target, event.currentTarget)) return
+                  openTask(task)
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return
+                  if (shouldIgnoreTaskOpen(event.target, event.currentTarget)) return
+                  event.preventDefault()
+                  openTask(task)
+                }}
+              >
+                <TaskRow
+                  task={task}
+                  isPendingUpdate={pendingStatusUpdates.has(task.id)}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onQuickStatusChange={onQuickStatusChange}
+                  selected={selectedTaskIds?.has(task.id)}
+                  onSelectToggle={onToggleTaskSelection}
+                />
+              </div>
             )
           )}
 
@@ -177,6 +241,19 @@ export function TaskList({
         {/* Empty state */}
         {!loading && !error && tasks.length === 0 && renderEmpty}
       </div>
+
+      <TaskViewDialog
+        task={viewingTask}
+        open={!!viewingTask}
+        workspaceId={workspaceId}
+        userId={userId}
+        userName={userName}
+        userRole={userRole}
+        participants={participants}
+        onOpenChange={(open) => {
+          if (!open) setViewingTask(null)
+        }}
+      />
     </ScrollArea>
   )
 }

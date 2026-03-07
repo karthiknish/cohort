@@ -8,4 +8,8 @@ export type Channel = {
   clientId: string | null
   projectId: string | null
   teamMembers: ClientTeamMember[]
+  description?: string | null
+  visibility?: 'public' | 'private'
+  memberIds?: string[]
+  isCustom?: boolean
 }

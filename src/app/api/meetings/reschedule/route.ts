@@ -12,8 +12,9 @@ import { notifyMeetingRescheduledEmails } from '@/lib/notifications/brevo'
 import {
   refreshGoogleWorkspaceAccessToken,
   resolveGoogleWorkspaceOAuthCredentials,
-  updateGoogleCalendarMeetEvent,
+  updateGoogleCalendarEvent,
 } from '@/services/google-workspace'
+import { buildCohortsMeetingUrl, createLiveKitRoomName } from '@/services/livekit'
 
 const rescheduleMeetingSchema = z.object({
   legacyId: z.string().min(1),
@@ -52,7 +53,7 @@ export const POST = createApiHandler(
     bodySchema: rescheduleMeetingSchema,
     rateLimit: 'sensitive',
   },
-  async (_req, { auth, workspace, body }) => {
+  async (req, { auth, workspace, body }) => {
     if (!auth.uid) {
       throw new UnauthorizedError('Authentication required')
     }
@@ -108,9 +109,15 @@ export const POST = createApiHandler(
 
     const attendeeEmails = normalizeAttendees(body.attendeeEmails, auth.email)
 
-    let nextMeetLink = meeting.meetLink
+    const roomName = meeting.roomName?.trim() || createLiveKitRoomName(normalizedTitle)
+    const nextMeetLink = roomName
+      ? buildCohortsMeetingUrl({
+          appUrl: new URL(req.url).origin,
+          roomName,
+        })
+      : meeting.meetLink
 
-    if (meeting.providerId === 'google-workspace' && meeting.calendarEventId) {
+    if (meeting.calendarEventId) {
       const integrationUserId = meeting.integrationUserId ?? auth.uid
       const { tokens } = await getGoogleWorkspaceTokens({ userId: integrationUserId })
 
@@ -152,7 +159,7 @@ export const POST = createApiHandler(
         })
       }
 
-      const calendarEvent = await updateGoogleCalendarMeetEvent({
+      const calendarEvent = await updateGoogleCalendarEvent({
         accessToken,
         eventId: meeting.calendarEventId,
         title: normalizedTitle,
@@ -161,9 +168,8 @@ export const POST = createApiHandler(
         endTimeMs: body.endTimeMs,
         timezone: body.timezone,
         attendeeEmails,
+        meetingUrl: nextMeetLink,
       })
-
-      nextMeetLink = calendarEvent.meetLink ?? nextMeetLink
     }
 
     const { meeting: updatedMeeting } = await updateMeetingRecord({
@@ -178,6 +184,7 @@ export const POST = createApiHandler(
       timezone: body.timezone,
       attendeeEmails,
       meetLink: nextMeetLink,
+      roomName,
       status: 'scheduled',
     })
 
@@ -194,7 +201,7 @@ export const POST = createApiHandler(
       meetingTimezone: body.timezone,
       organizerName: auth.name ?? auth.email ?? 'Cohorts',
       meetLink: nextMeetLink,
-      inSiteJoinUrl: updatedMeeting.providerId === 'cohorts-quick-meet' ? nextMeetLink : null,
+      inSiteJoinUrl: nextMeetLink,
     })
 
     return {

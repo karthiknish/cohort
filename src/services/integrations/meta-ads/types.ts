@@ -110,6 +110,9 @@ export type MetaInsightsResponse = {
 export type MetaAdCreative = {
   id?: string
   name?: string
+  body?: string
+  title?: string
+  link_url?: string
   thumbnail_url?: string
   image_url?: string
   full_picture?: string
@@ -204,6 +207,28 @@ export type MetaAdCreative = {
       video_id?: string
       message?: string
       title?: string
+      call_to_action?: {
+        type?: string
+        name?: string
+        value?: {
+          link?: string
+          application?: string
+          leadgen_form_id?: string
+        }
+      }
+    }
+    photo_data?: {
+      message?: string
+    }
+    text_data?: {
+      message?: string
+    }
+    template_data?: {
+      link?: string
+      message?: string
+      name?: string
+      caption?: string
+      description?: string
       call_to_action?: {
         type?: string
         name?: string
@@ -365,7 +390,9 @@ export type MetaCreative = {
   callToAction?: string
   landingPageUrl?: string
   videoId?: string
+  imageHash?: string
   message?: string
+  descriptions?: string[]
   pageName?: string
   pageProfileImageUrl?: string
   headlines?: string[]
@@ -374,6 +401,14 @@ export type MetaCreative = {
   sourceInstagramMediaId?: string
   effectiveInstagramMediaId?: string
   objectType?: string
+  pageId?: string
+  instagramActorId?: string
+  assetFeedSpec?: string
+  destinationSpec?: {
+    url?: string
+    fallback_url?: string
+    additional_urls?: string[]
+  }
   // Lead gen specific fields
   isLeadGen?: boolean
   leadgenFormId?: string

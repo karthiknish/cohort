@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { useMutation, useQuery } from 'convex/react'
+import { useConvex, useMutation, useQuery } from 'convex/react'
 
 import { usePreview } from '@/contexts/preview-context'
-import { api } from '@/lib/convex-api'
+import { api, directMessagesApi } from '@/lib/convex-api'
+import { logError } from '@/lib/convex-errors'
 import { getPreviewDirectConversations, getPreviewDirectMessages } from '@/lib/preview-data'
 import type { DirectConversation, DirectMessage } from '@/types/collaboration'
 import { MESSAGE_PAGE_SIZE } from './constants'
+import { filterDirectMessagesForSearch, parseDirectMessageSearchQuery } from './direct-message-search'
 
 export type { DirectConversation, DirectMessage }
 
@@ -24,10 +26,15 @@ export type UseDirectMessagesReturn = {
   selectConversation: (conversation: DirectConversation | null) => void
   isLoadingConversations: boolean
   messages: DirectMessage[]
+  visibleMessages: DirectMessage[]
   isLoadingMessages: boolean
   isLoadingMore: boolean
   loadMoreMessages: () => void
   hasMoreMessages: boolean
+  messageSearchQuery: string
+  setMessageSearchQuery: (value: string) => void
+  searchHighlights: string[]
+  searchingMessages: boolean
   sendMessage: (content: string, attachments?: DirectMessage['attachments']) => Promise<void>
   isSending: boolean
   markAsRead: () => Promise<void>
@@ -66,12 +73,17 @@ export function useDirectMessages({
   currentUserRole,
 }: UseDirectMessagesOptions): UseDirectMessagesReturn {
   const { isPreviewMode } = usePreview()
+  const convex = useConvex()
   const [selectedConversation, setSelectedConversation] = useState<DirectConversation | null>(null)
   const [isSending, setIsSending] = useState(false)
   const [messageCursor, setMessageCursor] = useState<MessageCursor>(null)
   const [allMessages, setAllMessages] = useState<DirectMessage[]>([])
   const [hasMore, setHasMore] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [messageSearchQuery, setMessageSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<DirectMessage[]>([])
+  const [searchHighlights, setSearchHighlights] = useState<string[]>([])
+  const [searchingMessages, setSearchingMessages] = useState(false)
   const [previewConversations, setPreviewConversations] = useState<DirectConversation[]>([])
   const [previewMessagesByConversation, setPreviewMessagesByConversation] = useState<Record<string, DirectMessage[]>>({})
 
@@ -98,6 +110,7 @@ export function useDirectMessages({
     [conversationsQuery]
   )
   const selectedConversationLegacyId = selectedConversation?.legacyId ?? null
+  const normalizedMessageSearch = messageSearchQuery.trim()
 
   useEffect(() => {
     if (!isPreviewMode) {
@@ -273,9 +286,112 @@ export function useDirectMessages({
     .sort((a, b) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0))
 
   const conversations = isPreviewMode ? previewConversations : liveConversations
-  const currentMessages = isPreviewMode
-    ? (selectedConversation ? previewMessagesByConversation[selectedConversation.legacyId] ?? [] : [])
-    : allMessages
+  const currentMessages = useMemo(
+    () => (isPreviewMode
+      ? (selectedConversation ? previewMessagesByConversation[selectedConversation.legacyId] ?? [] : [])
+      : allMessages),
+    [allMessages, isPreviewMode, previewMessagesByConversation, selectedConversation],
+  )
+  const visibleMessages = useMemo(() => {
+    return normalizedMessageSearch ? searchResults : currentMessages
+  }, [currentMessages, normalizedMessageSearch, searchResults])
+
+  useEffect(() => {
+    if (!selectedConversation || !normalizedMessageSearch) {
+      setSearchResults([])
+      setSearchHighlights([])
+      setSearchingMessages(false)
+      return
+    }
+
+    const parsed = parseDirectMessageSearchQuery(normalizedMessageSearch)
+    setSearchingMessages(true)
+
+    if (isPreviewMode) {
+      const previewMessages = previewMessagesByConversation[selectedConversation.legacyId] ?? []
+      setSearchResults(filterDirectMessagesForSearch(previewMessages, parsed))
+      setSearchHighlights(parsed.highlights)
+      setSearchingMessages(false)
+      return
+    }
+
+    if (!workspaceId) {
+      setSearchResults([])
+      setSearchHighlights(parsed.highlights)
+      setSearchingMessages(false)
+      return
+    }
+
+    const startMs = parsed.start ? Date.parse(parsed.start) : NaN
+    const endMs = parsed.end ? Date.parse(parsed.end) : NaN
+    let cancelled = false
+
+    void convex
+      .query(directMessagesApi.searchMessages, {
+        workspaceId: String(workspaceId),
+        conversationLegacyId: selectedConversation.legacyId,
+        q: parsed.q || null,
+        sender: parsed.sender ?? null,
+        attachment: parsed.attachment ?? null,
+        startMs: Number.isFinite(startMs) ? startMs : null,
+        endMs: Number.isFinite(endMs) ? endMs : null,
+        limit: 200,
+      })
+      .then((payload: { rows?: unknown[]; highlights?: unknown[] }) => {
+        if (cancelled) return
+
+        const rows = Array.isArray(payload?.rows) ? payload.rows : []
+        const highlights = Array.isArray(payload?.highlights)
+          ? payload.highlights.filter((entry): entry is string => typeof entry === 'string')
+          : parsed.highlights
+
+        const mapped = rows
+          .map((row: unknown) => {
+            const item = (row ?? {}) as Record<string, unknown>
+            return {
+              id: String(item._id ?? ''),
+              legacyId: String(item.legacyId ?? ''),
+              senderId: String(item.senderId ?? ''),
+              senderName: typeof item.senderName === 'string' ? item.senderName : 'Unknown teammate',
+              senderRole: typeof item.senderRole === 'string' ? item.senderRole : null,
+              content: typeof item.content === 'string' ? item.content : '',
+              edited: Boolean(item.edited),
+              editedAtMs: typeof item.editedAtMs === 'number' ? item.editedAtMs : null,
+              deleted: Boolean(item.deleted),
+              deletedAtMs: typeof item.deletedAtMs === 'number' ? item.deletedAtMs : null,
+              deletedBy: typeof item.deletedBy === 'string' ? item.deletedBy : null,
+              attachments: Array.isArray(item.attachments) ? item.attachments as DirectMessage['attachments'] : null,
+              reactions: Array.isArray(item.reactions) ? item.reactions as DirectMessage['reactions'] : null,
+              readBy: Array.isArray(item.readBy) ? item.readBy.filter((value): value is string => typeof value === 'string') : [],
+              deliveredTo: Array.isArray(item.deliveredTo) ? item.deliveredTo.filter((value): value is string => typeof value === 'string') : [],
+              readAtMs: typeof item.readAtMs === 'number' ? item.readAtMs : null,
+              sharedTo: Array.isArray(item.sharedTo) ? item.sharedTo.filter((value): value is 'email' => value === 'email') : null,
+              createdAtMs: typeof item.createdAtMs === 'number' ? item.createdAtMs : 0,
+              updatedAtMs: typeof item.updatedAtMs === 'number' ? item.updatedAtMs : 0,
+            } satisfies DirectMessage
+          })
+          .filter((message) => message.legacyId)
+          .sort((a, b) => b.createdAtMs - a.createdAtMs)
+
+        setSearchResults(mapped)
+        setSearchHighlights(highlights)
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return
+        logError(error, 'useDirectMessages:searchMessages')
+        setSearchResults([])
+        setSearchHighlights(parsed.highlights)
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setSearchingMessages(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [convex, isPreviewMode, normalizedMessageSearch, previewMessagesByConversation, selectedConversation, workspaceId])
 
   const selectConversation = useCallback((conversation: DirectConversation | null) => {
     setSelectedConversation(conversation)
@@ -692,10 +808,15 @@ export function useDirectMessages({
     selectConversation,
     isLoadingConversations: isPreviewMode ? false : conversationsQuery === undefined,
     messages: currentMessages,
+    visibleMessages,
     isLoadingMessages: isPreviewMode ? false : typedMessagesQuery === undefined && messageCursor === null,
     isLoadingMore,
     loadMoreMessages,
     hasMoreMessages: isPreviewMode ? false : hasMore,
+    messageSearchQuery,
+    setMessageSearchQuery,
+    searchHighlights,
+    searchingMessages,
     sendMessage,
     isSending,
     markAsRead,

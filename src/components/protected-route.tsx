@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useConvexAuth } from 'convex/react'
 import Link from 'next/link'
 import { LoaderCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
@@ -91,6 +92,7 @@ function AccessOverlay({ title, message, action, showSpinner }: AccessOverlayPro
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { user, loading, signOut } = useAuth()
+  const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
   const router = useRouter()
   const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(() => hasValidSessionCookie())
 
@@ -135,7 +137,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
       })
   }, [signOut, router])
 
-  if (loading || isAwaitingAuthRestore) {
+  if (loading || convexAuthLoading || isAwaitingAuthRestore) {
     return (
       <AccessOverlay
         title="Loading your workspace"
@@ -145,14 +147,8 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     )
   }
 
-  // Temporarily bypass auth checks for testing - user should be authenticated
-  if (process.env.NODE_ENV === 'development' && !loading && hasValidSessionCookie()) {
-    console.log('Development mode: Bypassing auth checks - user should be authenticated')
-    return <>{children}</>
-  }
-
   // Handle unauthenticated user
-  if (!user) {
+  if (!user || !isAuthenticated) {
     return (
       <AccessOverlay
         title="Sign in required"

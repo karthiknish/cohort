@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
-import { createApiHandler } from '@/lib/api-handler'
 import { ValidationError } from '@/lib/api-errors'
+import { createApiHandler } from '@/lib/api-handler'
 import { syncGoogleAnalyticsMetrics } from '@/services/integrations/google-analytics/sync'
 
 const querySchema = z.object({
@@ -12,13 +12,10 @@ const querySchema = z.object({
     .optional(),
 })
 
-const bodySchema = z.object({}).strict()
-
 export const POST = createApiHandler(
   {
     workspace: 'required',
     querySchema,
-    bodySchema,
     rateLimit: 'sensitive',
   },
   async (req, { auth, workspace, query }) => {

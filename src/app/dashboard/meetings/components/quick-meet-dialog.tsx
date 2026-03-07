@@ -61,9 +61,9 @@ export function QuickMeetDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Start In-Site Quick Meet</DialogTitle>
+          <DialogTitle>Start Cohorts Room</DialogTitle>
           <DialogDescription>
-            Add participants, launch the meeting in-app, and enable transcript-based AI notes.
+            Launch a native in-site meeting room immediately and send optional Google Calendar invites to attendees.
           </DialogDescription>
         </DialogHeader>
 
@@ -75,7 +75,7 @@ export function QuickMeetDialog({
               required
               value={title}
               onChange={(event) => onTitleChange(event.target.value)}
-              placeholder="Quick Meet"
+              placeholder="Instant client sync"
               disabled={quickStarting}
             />
           </div>
@@ -87,7 +87,7 @@ export function QuickMeetDialog({
               rows={3}
               value={description}
               onChange={(event) => onDescriptionChange(event.target.value)}
-              placeholder="What this quick meet is for"
+              placeholder="Agenda or context for this meeting"
               disabled={quickStarting}
             />
           </div>
@@ -126,7 +126,7 @@ export function QuickMeetDialog({
             selectedEmails={attendeeEmails}
             disabled={quickStarting}
             emptyStateText="Add people by selecting users below or typing email addresses."
-            helperText="Use Enter, Tab, comma, or semicolon to add typed emails. Invite emails are optional for quick meets."
+            helperText="Use Enter, Tab, comma, or semicolon to add typed emails. Calendar invites are optional."
             suggestions={attendeeSuggestions}
             onInputChange={onAttendeeInputChange}
             onInputKeyDown={onAttendeeKeyDown}
@@ -138,7 +138,7 @@ export function QuickMeetDialog({
           <div className="md:col-span-2">
             <div className="flex flex-wrap gap-2">
               <Button type="submit" className={getButtonClasses('primary')} disabled={quickStarting}>
-                {quickStarting ? 'Starting...' : 'Start In-Site Quick Meet'}
+                {quickStarting ? 'Starting...' : 'Start Room'}
               </Button>
               <Button
                 type="button"

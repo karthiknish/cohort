@@ -26,7 +26,10 @@ function decodeEmailFromIdToken(idToken: string | undefined): string | null {
     const parts = idToken.split('.')
     if (parts.length < 2) return null
 
-    const payload = parts[1]!
+    const payload = parts[1]
+    if (typeof payload !== 'string' || payload.length === 0) {
+      return null
+    }
     const decoded = JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')) as {
       email?: unknown
     }
@@ -62,7 +65,7 @@ export const GET = createApiHandler(
     querySchema: callbackQuerySchema,
     rateLimit: 'sensitive',
   },
-  async (req, { query }) => {
+  async (_req, { query }) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
     const fallbackSuccess = `${appUrl}/dashboard/meetings?oauth_success=true&provider=google-workspace`
 
@@ -123,7 +126,25 @@ export const GET = createApiHandler(
 
       return NextResponse.redirect(successUrl.toString())
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'OAuth callback failed'
+      const rawMessage = error instanceof Error ? error.message : 'OAuth callback failed'
+      const messageLower = rawMessage.toLowerCase()
+
+      const message = (() => {
+        if (messageLower.includes('convex admin client is not configured')) {
+          return 'Google Workspace meetings integration is not configured on this environment.'
+        }
+
+        if (messageLower.includes('authentication required') || messageLower.includes('unauthorized')) {
+          return 'Your session expired. Please sign in again and retry connecting Google Workspace.'
+        }
+
+        if (messageLower.includes('invalid state')) {
+          return 'Login session expired. Please try connecting again.'
+        }
+
+        return rawMessage
+      })()
+
       const errorUrl = new URL('/dashboard/meetings', appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'google-workspace')

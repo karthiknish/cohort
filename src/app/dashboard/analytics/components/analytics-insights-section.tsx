@@ -1,13 +1,15 @@
 'use client'
 
-import { TrendingUp, RefreshCw, Info, Lightbulb, TriangleAlert, CircleCheck, ArrowRight } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ArrowRight, CircleCheck, Info, Lightbulb, RefreshCw, TrendingUp, TriangleAlert } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Skeleton } from '@/components/ui/skeleton'
 import { NoInsightsData, NoIntegrationConnected } from '@/components/ui/analytics-empty-state'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import type { ProviderInsight, AlgorithmicInsight } from '../hooks'
-import { PROVIDER_LABELS } from '../hooks'
+import { normalizeInsightMarkdown } from '../lib/insight-utils'
+import { PROVIDER_LABELS, type AlgorithmicInsight, type ProviderInsight } from '../hooks'
 
 interface AnalyticsInsightsSectionProps {
     insights: ProviderInsight[]
@@ -17,6 +19,37 @@ interface AnalyticsInsightsSectionProps {
     insightsRefreshing: boolean
     initialInsightsLoading: boolean
     onRefreshInsights: () => void
+}
+
+function formatInsightProviderLabel(providerId: string) {
+    if (providerId === 'global') return 'Overall Property'
+    if (providerId === 'google_vs_facebook') return 'Cross-platform Comparison'
+    return PROVIDER_LABELS[providerId] ?? providerId
+}
+
+function InsightMarkdown({ content }: { content: string }) {
+    const normalized = normalizeInsightMarkdown(content)
+
+    return (
+        <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            className="space-y-3 text-sm text-muted-foreground/90"
+            components={{
+                p: ({ children }) => <p className="leading-relaxed">{children}</p>,
+                ul: ({ children }) => <ul className="ml-5 list-disc space-y-1.5">{children}</ul>,
+                ol: ({ children }) => <ol className="ml-5 list-decimal space-y-1.5">{children}</ol>,
+                li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+                h1: ({ children }) => <h4 className="text-sm font-semibold text-foreground">{children}</h4>,
+                h2: ({ children }) => <h4 className="text-sm font-semibold text-foreground">{children}</h4>,
+                h3: ({ children }) => <h5 className="text-sm font-semibold text-foreground">{children}</h5>,
+                code: ({ children }) => <code className="rounded bg-muted px-1 py-0.5 text-[0.9em] text-foreground">{children}</code>,
+            }}
+            skipHtml
+        >
+            {normalized}
+        </ReactMarkdown>
+    )
 }
 
 export function AnalyticsInsightsSection({
@@ -30,7 +63,7 @@ export function AnalyticsInsightsSection({
 }: AnalyticsInsightsSectionProps) {
     return (
         <>
-            {/* Algorithmic Suggestions Card */}
+            {/* Recommended Actions Card */}
             <Card className="overflow-hidden border-primary/30 bg-primary/5 shadow-sm transition-all hover:bg-primary/[0.07] hover:shadow-md">
                 <CardHeader className="border-b border-primary/10 bg-primary/[0.03] py-4">
                     <div className="flex items-center gap-2">
@@ -38,8 +71,8 @@ export function AnalyticsInsightsSection({
                             <Lightbulb className="h-4 w-4" />
                         </div>
                         <div>
-                            <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary/80">Algorithmic suggestions</CardTitle>
-                            <CardDescription className="text-xs font-semibold text-primary/60 leading-tight">Optimizations identified based on your current performance</CardDescription>
+                            <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary/80">Recommended next actions</CardTitle>
+                            <CardDescription className="text-xs font-semibold text-primary/60 leading-tight">Rule-based observations generated from your synced analytics performance</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
@@ -82,7 +115,7 @@ export function AnalyticsInsightsSection({
                                                         {suggestion.level === 'info' && <Info className="h-3.5 w-3.5" />}
                                                     </div>
                                                     <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70">
-                                                        {group.providerId === 'global' ? 'Core Strategy' : PROVIDER_LABELS[group.providerId] ?? group.providerId}
+                                                        {formatInsightProviderLabel(group.providerId)}
                                                     </span>
                                                 </div>
                                                 <h4 className="text-sm font-bold tracking-tight text-foreground">{suggestion.title}</h4>
@@ -115,7 +148,10 @@ export function AnalyticsInsightsSection({
                     <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">AI-Powered insights</CardTitle>
+                            <div>
+                                <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">AI-powered insight brief</CardTitle>
+                                <CardDescription className="mt-1 text-xs font-medium text-muted-foreground/60">Narrative analysis generated from the selected property&apos;s synced users, sessions, conversions, and revenue.</CardDescription>
+                            </div>
                         </div>
                         <button
                             type="button"
@@ -147,7 +183,7 @@ export function AnalyticsInsightsSection({
                         </div>
                     ) : insights.length === 0 ? (
                         <NoIntegrationConnected
-                            platform="ad platform"
+                            platform="analytics property"
                             className="rounded-xl border border-dashed border-muted/40"
                         />
                     ) : (
@@ -156,9 +192,11 @@ export function AnalyticsInsightsSection({
                                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 transition-all group-hover:bg-primary" />
                                 <div className="flex items-center gap-2.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
                                     <TrendingUp className="h-3.5 w-3.5" />
-                                    <span>{PROVIDER_LABELS[insight.providerId] ?? insight.providerId}</span>
+                                    <span>{formatInsightProviderLabel(insight.providerId)}</span>
                                 </div>
-                                <p className="mt-3 text-sm font-medium text-muted-foreground/90 leading-relaxed whitespace-pre-wrap">{insight.summary}</p>
+                                <div className="mt-3">
+                                    <InsightMarkdown content={insight.summary} />
+                                </div>
                             </div>
                         ))
                     )}

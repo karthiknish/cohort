@@ -22,6 +22,19 @@ function sortParticipantIds(id1: string, id2: string): [string, string] {
   return id1 < id2 ? [id1, id2] : [id2, id1]
 }
 
+function clampSearchLimit(limit: number): number {
+  if (!Number.isFinite(limit)) return 100
+  return Math.min(Math.max(Math.trunc(limit), 20), 400)
+}
+
+function normalizeSearchValue(value: string | null | undefined): string {
+  return typeof value === 'string' ? value.trim().toLowerCase() : ''
+}
+
+function tokenizeSearchValue(value: string | null | undefined): string[] {
+  return normalizeSearchValue(value).split(/\s+/).filter(Boolean)
+}
+
 async function hydrateAttachments(
   ctx: { storage: { getUrl: (id: Id<'_storage'>) => Promise<string | null> } },
   attachments: Array<{ name: string; url: string; storageId?: string | null; type?: string | null; size?: string | null }> | null,
@@ -231,6 +244,92 @@ export const listMessages = zWorkspacePaginatedQueryActive({
         updatedAtMs: msg.updatedAtMs,
       })),
       nextCursor: result.nextCursor,
+    }
+  },
+})
+
+export const searchMessages = zWorkspaceQueryActive({
+  args: {
+    conversationLegacyId: z.string(),
+    q: z.string().nullable().optional(),
+    sender: z.string().nullable().optional(),
+    attachment: z.string().nullable().optional(),
+    startMs: z.number().nullable().optional(),
+    endMs: z.number().nullable().optional(),
+    limit: z.number(),
+  },
+  handler: async (ctx, args) => {
+    const currentUserId = ctx.user._id
+    const conversation = await ctx.db
+      .query('directConversations')
+      .withIndex('by_workspace_legacyId', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('legacyId', args.conversationLegacyId)
+      )
+      .first()
+
+    if (!conversation) {
+      throw Errors.resource.notFound('Conversation')
+    }
+
+    const isParticipant =
+      conversation.participantOneId === currentUserId ||
+      conversation.participantTwoId === currentUserId
+
+    if (!isParticipant) {
+      throw Errors.auth.forbidden()
+    }
+
+    const limit = clampSearchLimit(args.limit)
+    const startMs = typeof args.startMs === 'number' && Number.isFinite(args.startMs) ? args.startMs : null
+    const endMs = typeof args.endMs === 'number' && Number.isFinite(args.endMs) ? args.endMs : null
+    const searchTerms = tokenizeSearchValue(args.q)
+    const senderTerm = normalizeSearchValue(args.sender) || null
+    const attachmentTerm = normalizeSearchValue(args.attachment) || null
+
+    const rows = await ctx.db
+      .query('directMessages')
+      .withIndex('by_workspace_conversation_createdAtMs_legacyId', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('conversationLegacyId', args.conversationLegacyId)
+      )
+      .order('desc')
+      .collect()
+
+    const filtered = rows
+      .filter((row) => {
+        if (row.deleted) return false
+        if (startMs !== null && row.createdAtMs < startMs) return false
+        if (endMs !== null && row.createdAtMs > endMs) return false
+
+        const senderName = normalizeSearchValue(row.senderName)
+        if (senderTerm && !senderName.includes(senderTerm)) {
+          return false
+        }
+
+        const attachmentNames = Array.isArray(row.attachments)
+          ? row.attachments.map((attachment) => normalizeSearchValue(attachment?.name ?? ''))
+          : []
+        if (attachmentTerm && !attachmentNames.some((name) => name.includes(attachmentTerm))) {
+          return false
+        }
+
+        if (searchTerms.length === 0) {
+          return true
+        }
+
+        const haystacks = [
+          normalizeSearchValue(row.content),
+          senderName,
+          ...attachmentNames,
+        ].filter(Boolean)
+
+        return searchTerms.every((term) => haystacks.some((text) => text.includes(term)))
+      })
+      .slice(0, limit)
+
+    const hydrated = await Promise.all(filtered.map((row) => hydrateMessageRow(ctx, row)))
+
+    return {
+      rows: hydrated,
     }
   },
 })

@@ -9,6 +9,11 @@ import {
   hasPendingSyncJob,
   markIntegrationSyncRequested,
 } from '@/lib/ads-admin'
+import {
+  getGoogleAnalyticsIntegration,
+  hasPendingGoogleAnalyticsSyncJob,
+  markGoogleAnalyticsSyncRequested,
+} from '@/lib/analytics-admin'
 import { resolveWorkspaceIdForUser } from '@/lib/workspace'
 
 const DEFAULT_SYNC_FREQUENCY_MINUTES = 6 * 60 // every 6 hours
@@ -25,12 +30,42 @@ function getConvexClient(): ConvexHttpClient | null {
 }
 
 const listWorkspaceIntegrationIds = cache(async (convex: ConvexHttpClient, workspaceId: string) => {
-  return await convex.query(api.adsIntegrations.listWorkspaceIntegrationIds, { workspaceId })
+  const [adsProviderIds, analyticsProviderIds] = await Promise.all([
+    convex.query(api.adsIntegrations.listWorkspaceIntegrationIds, { workspaceId }),
+    convex.query(api.analyticsIntegrations.listWorkspaceIntegrationIds, { workspaceId }),
+  ])
+  return Array.from(new Set([...(adsProviderIds ?? []), ...(analyticsProviderIds ?? [])]))
 })
 
 const listAllWorkspacesWithIntegrations = cache(async (convex: ConvexHttpClient, limit: number) => {
-  return await convex.query(api.adsIntegrations.listAllWorkspacesWithIntegrations, { limit })
+  const [adsWorkspaceIds, analyticsWorkspaceIds] = await Promise.all([
+    convex.query(api.adsIntegrations.listAllWorkspacesWithIntegrations, { limit }),
+    convex.query(api.analyticsIntegrations.listAllWorkspacesWithIntegrations, { limit }),
+  ])
+  return Array.from(new Set([...(adsWorkspaceIds ?? []), ...(analyticsWorkspaceIds ?? [])]))
 })
+
+async function getIntegrationForProvider(userId: string, providerId: string) {
+  if (providerId === 'google-analytics') {
+    return await getGoogleAnalyticsIntegration({ userId })
+  }
+  return await getAdIntegration({ userId, providerId })
+}
+
+async function hasPendingJobForProvider(userId: string, providerId: string) {
+  if (providerId === 'google-analytics') {
+    return await hasPendingGoogleAnalyticsSyncJob({ userId })
+  }
+  return await hasPendingSyncJob({ userId, providerId })
+}
+
+async function markSyncRequestedForProvider(userId: string, providerId: string) {
+  if (providerId === 'google-analytics') {
+    await markGoogleAnalyticsSyncRequested({ userId })
+    return
+  }
+  await markIntegrationSyncRequested({ userId, providerId })
+}
 
 function minutesSince(date: Date | null | undefined): number | null {
   if (!date || !(date instanceof Date) || isNaN(date.getTime())) return null
@@ -88,7 +123,7 @@ export async function scheduleIntegrationSync(options: {
 }): Promise<boolean> {
   const { userId, providerId, force = false, timeframeDays } = options
 
-  const integration = await getAdIntegration({ userId, providerId })
+  const integration = await getIntegrationForProvider(userId, providerId)
   if (!integration) {
     console.warn('[integration-auto-sync] integration not found', { userId, providerId })
     return false
@@ -118,7 +153,7 @@ export async function scheduleIntegrationSync(options: {
       return false
     }
 
-    const pending = await hasPendingSyncJob({ userId, providerId })
+    const pending = await hasPendingJobForProvider(userId, providerId)
     if (pending) {
       return false
     }
@@ -131,7 +166,7 @@ export async function scheduleIntegrationSync(options: {
     timeframeDays: resolvedTimeframeDays,
   })
 
-  await markIntegrationSyncRequested({ userId, providerId })
+  await markSyncRequestedForProvider(userId, providerId)
   return true
 }
 

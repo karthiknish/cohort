@@ -52,6 +52,8 @@ function buildCreateCreativeIdempotencyKey(args: {
 export type NormalizedCreative = {
   providerId: string
   creativeId: string
+  adId?: string
+  platformCreativeId?: string
   adGroupId?: string
   campaignId: string
   campaignName?: string
@@ -63,10 +65,21 @@ export type NormalizedCreative = {
   imageUrl?: string
   thumbnailUrl?: string
   videoUrl?: string
+  videoId?: string
+  imageHash?: string
   landingPageUrl?: string
   callToAction?: string
   pageName?: string
   pageProfileImageUrl?: string
+  objectType?: string
+  pageId?: string
+  instagramActorId?: string
+  assetFeedSpec?: string
+  destinationSpec?: {
+    url?: string
+    fallback_url?: string
+    additional_urls?: string[]
+  }
   // Lead gen and additional fields
   isLeadGen?: boolean
   leadgenFormId?: string
@@ -158,6 +171,8 @@ function normalizeMetaCreatives(creatives: MetaCreative[]): NormalizedCreative[]
   return creatives.map((c) => ({
     providerId: 'facebook',
     creativeId: c.adId,
+    adId: c.adId,
+    platformCreativeId: c.creativeId,
     adGroupId: c.adSetId,
     campaignId: c.campaignId,
     campaignName: c.campaignName,
@@ -165,16 +180,23 @@ function normalizeMetaCreatives(creatives: MetaCreative[]): NormalizedCreative[]
     type: c.type ?? 'sponsored_content',
     status: c.status,
     headlines: c.headlines,
-    descriptions: c.message ? [c.message] : undefined,
+    descriptions: c.descriptions ?? (c.message ? [c.message] : undefined),
     // Try to get best quality image, fallback to thumbnail
     imageUrl: optimizeMetaImageUrl(c.imageUrl) ?? optimizeMetaImageUrl(c.videoThumbnailUrl) ?? optimizeMetaImageUrl(c.thumbnailUrl),
     // Keep original thumbnail for fallback if optimized fails
     thumbnailUrl: c.thumbnailUrl,
     videoUrl: c.videoSourceUrl ?? (c.videoId ? `https://www.facebook.com/video.php?v=${c.videoId}` : undefined),
+    videoId: c.videoId,
+    imageHash: c.imageHash,
     landingPageUrl: c.landingPageUrl,
     callToAction: c.callToAction,
     pageName: c.pageName,
     pageProfileImageUrl: optimizeMetaImageUrl(c.pageProfileImageUrl),
+    objectType: c.objectType,
+    pageId: c.pageId,
+    instagramActorId: c.instagramActorId,
+    assetFeedSpec: c.assetFeedSpec,
+    destinationSpec: c.destinationSpec,
     // Lead gen specific fields
     isLeadGen: c.isLeadGen,
     leadgenFormId: c.leadgenFormId,
@@ -714,12 +736,25 @@ export const updateCreative = action({
     providerId: v.union(v.literal('google'), v.literal('tiktok'), v.literal('linkedin'), v.literal('facebook')),
     clientId: v.optional(v.union(v.string(), v.null())),
     creativeId: v.string(),
+    adId: v.optional(v.string()),
     name: v.optional(v.string()),
     title: v.optional(v.string()),
     body: v.optional(v.string()),
     description: v.optional(v.string()),
     callToActionType: v.optional(v.string()),
     linkUrl: v.optional(v.string()),
+    objectType: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    imageHash: v.optional(v.string()),
+    videoId: v.optional(v.string()),
+    pageId: v.optional(v.string()),
+    instagramActorId: v.optional(v.string()),
+    assetFeedSpec: v.optional(v.string()),
+    destinationSpec: v.optional(v.object({
+      url: v.optional(v.string()),
+      fallback_url: v.optional(v.string()),
+      additional_urls: v.optional(v.array(v.string())),
+    })),
   },
   handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
@@ -742,10 +777,21 @@ export const updateCreative = action({
     }
 
     if (args.providerId === 'facebook') {
-      const { updateMetaAdCreative } = await import('@/services/integrations/meta-ads')
+      const { recreateMetaAdCreativeForEdit } = await import('@/services/integrations/meta-ads')
 
-      const result = await updateMetaAdCreative({
+      const adAccountId = integration.accountId
+      if (!adAccountId) {
+        throw Errors.integration.notConfigured('Meta', 'Meta ad account ID not configured')
+      }
+
+      if (!args.adId) {
+        throw Errors.validation.invalidInput('adId is required for Meta creative updates')
+      }
+
+      const result = await recreateMetaAdCreativeForEdit({
         accessToken: integration.accessToken,
+        adAccountId,
+        adId: args.adId,
         creativeId: args.creativeId,
         name: args.name,
         title: args.title,
@@ -753,6 +799,14 @@ export const updateCreative = action({
         description: args.description,
         callToActionType: args.callToActionType,
         linkUrl: args.linkUrl,
+        objectType: args.objectType,
+        imageUrl: args.imageUrl,
+        imageHash: args.imageHash,
+        videoId: args.videoId,
+        pageId: args.pageId,
+        instagramActorId: args.instagramActorId,
+        assetFeedSpec: args.assetFeedSpec,
+        destinationSpec: args.destinationSpec,
       })
 
       if (!result.success) {
@@ -761,7 +815,8 @@ export const updateCreative = action({
 
       return {
         success: true,
-        creativeId: args.creativeId,
+        creativeId: result.creativeId,
+        adId: args.adId,
       }
     }
 

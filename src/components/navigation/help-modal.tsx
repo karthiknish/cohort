@@ -74,7 +74,7 @@ const navigationGuide = [
     name: 'Meetings',
     href: '/dashboard/meetings',
     icon: Video,
-    description: 'Schedule Google Meet calls, invite attendees, and review transcript-driven notes.',
+    description: 'Schedule native meeting rooms, invite attendees through Calendar, and review transcript-driven notes.',
     tips: ['Connect Google Workspace first', 'Client users can join and review notes in read-only mode'],
   },
   {

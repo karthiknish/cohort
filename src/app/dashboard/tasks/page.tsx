@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { useQuery } from 'convex/react'
 
 import {
   Card,
@@ -19,6 +20,7 @@ import { useClientContext } from '@/contexts/client-context'
 import { useNavigationContext } from '@/contexts/navigation-context'
 import { usePreview } from '@/contexts/preview-context'
 import { isFeatureEnabled } from '@/lib/features'
+import { usersApi } from '@/lib/convex-api'
 import { exportToCsv, cn } from '@/lib/utils'
 import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
@@ -43,6 +45,7 @@ import {
   TaskResultsCount,
   TaskBulkToolbar,
 } from '@/components/tasks'
+import type { TaskParticipant } from '@/components/tasks'
 
 const TaskList = dynamic(() => import('@/components/tasks/task-list').then((mod) => mod.TaskList), {
   loading: () => <div className="p-6 text-sm text-muted-foreground">Loading tasks…</div>,
@@ -134,6 +137,40 @@ export default function TasksPage() {
     isPreviewMode,
     workspaceId: user?.agencyId ?? null,
   })
+
+  const workspaceMembers = useQuery(
+    usersApi.listWorkspaceMembers,
+    user?.agencyId && !isPreviewMode
+      ? {
+          workspaceId: user.agencyId,
+          limit: 200,
+        }
+      : 'skip'
+  ) as TaskParticipant[] | undefined
+
+  const taskParticipants = useMemo(() => {
+    const byName = new Map<string, TaskParticipant>()
+
+    for (const member of selectedClient?.teamMembers ?? []) {
+      const key = member.name.trim().toLowerCase()
+      if (!key) continue
+      byName.set(key, member)
+    }
+
+    for (const member of workspaceMembers ?? []) {
+      const key = member.name.trim().toLowerCase()
+      if (!key) continue
+      const existing = byName.get(key)
+      byName.set(key, {
+        id: member.id ?? existing?.id,
+        name: member.name,
+        role: existing?.role ?? member.role,
+        email: member.email,
+      })
+    }
+
+    return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [selectedClient?.teamMembers, workspaceMembers])
 
   // Debounced search for filters
   const [rawSearchQuery, setRawSearchQuery] = useState('')
@@ -350,6 +387,9 @@ export default function TasksPage() {
 
   const scopeLabel = selectedClient?.name ?? (selectedClientId ? 'Selected client' : 'All clients')
   const scopeHelper = selectedClient ? 'Scoped to the selected client' : 'Showing tasks across all clients'
+  const emptyStateMessage = filters.activeTab === 'my-tasks'
+    ? 'No tasks are assigned to you yet. Switch to All Tasks to see team-owned work.'
+    : 'Get started by creating your first task.'
 
   return (
     <TooltipProvider>
@@ -478,8 +518,13 @@ export default function TasksPage() {
                   loadingMore={loadingMore}
                   hasMore={!!nextCursor}
                   onLoadMore={handleLoadMore}
-                  emptyStateMessage="Get started by creating your first task."
+                  emptyStateMessage={emptyStateMessage}
                   showEmptyStateFiltered={filters.selectedStatus !== 'all' || !!debouncedQuery}
+                  workspaceId={user?.agencyId ?? null}
+                  userId={user?.id ?? null}
+                  userName={user?.name ?? null}
+                  userRole={user?.role ?? null}
+                  participants={taskParticipants}
                 />
               ) : (
                 <TaskList
@@ -496,10 +541,15 @@ export default function TasksPage() {
                   loadingMore={loadingMore}
                   hasMore={!!nextCursor}
                   onLoadMore={handleLoadMore}
-                  emptyStateMessage="Get started by creating your first task."
+                  emptyStateMessage={emptyStateMessage}
                   showEmptyStateFiltered={filters.selectedStatus !== 'all' || !!debouncedQuery}
                   selectedTaskIds={selectedTaskIds}
                   onToggleTaskSelection={handleToggleTaskSelection}
+                  workspaceId={user?.agencyId ?? null}
+                  userId={user?.id ?? null}
+                  userName={user?.name ?? null}
+                  userRole={user?.role ?? null}
+                  participants={taskParticipants}
                 />
               )}
 
@@ -524,7 +574,7 @@ export default function TasksPage() {
           creating={form.creating}
           createError={form.createError}
           onSubmit={form.handleCreateSubmit}
-          participants={selectedClient?.teamMembers ?? []}
+          participants={taskParticipants}
           pendingAttachments={form.createAttachments}
           onAddAttachments={form.handleCreateAttachmentsAdd}
           onRemoveAttachment={form.handleCreateAttachmentRemove}
@@ -544,7 +594,7 @@ export default function TasksPage() {
           currentUserId={user?.id ?? null}
           currentUserName={user?.name ?? null}
           currentUserRole={user?.role ?? null}
-          participants={selectedClient?.teamMembers ?? []}
+          participants={taskParticipants}
         />
 
         {/* Delete Confirmation Dialog */}

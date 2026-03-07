@@ -34,7 +34,7 @@ export function MeetingsHeader(props: MeetingsHeaderProps) {
           onClick={onStartQuickMeet}
         >
           {quickStarting ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Video className="mr-2 h-4 w-4" />}
-          Start Quick Meet
+          Start Cohorts Room
         </Button>
       </div>
     </div>

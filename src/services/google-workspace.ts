@@ -3,9 +3,12 @@ import { decrypt, encrypt } from '@/lib/crypto'
 const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 const GOOGLE_CALENDAR_EVENTS_ENDPOINT = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+const GOOGLE_MEET_SPACES_ENDPOINT = 'https://meet.googleapis.com/v2/spaces'
+export const GOOGLE_MEET_SPACE_SETTINGS_SCOPE = 'https://www.googleapis.com/auth/meetings.space.settings'
 
 const GOOGLE_WORKSPACE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',
+  GOOGLE_MEET_SPACE_SETTINGS_SCOPE,
   'openid',
   'email',
   'profile',
@@ -108,6 +111,14 @@ export type CalendarMeetEvent = {
   endTimeIso: string | null
 }
 
+export type MeetArtifactSetupStatus = {
+  configured: boolean
+  spaceName: string | null
+  meetingCode: string | null
+  reason: 'configured' | 'missing_meet_link' | 'missing_scope' | 'space_lookup_failed' | 'patch_failed'
+  message: string | null
+}
+
 type GoogleConferenceEntryPoint = {
   entryPointType?: string
   uri?: string
@@ -126,6 +137,16 @@ type GoogleCalendarEventResponse = {
   end?: {
     dateTime?: string
   }
+  error?: {
+    status?: string
+    message?: string
+  }
+}
+
+type GoogleMeetSpaceResponse = {
+  name?: string
+  meetingUri?: string
+  meetingCode?: string
   error?: {
     status?: string
     message?: string
@@ -166,6 +187,53 @@ function mapCalendarEventResponse(parsed: GoogleCalendarEventResponse): Calendar
     startTimeIso: typeof parsed?.start?.dateTime === 'string' ? parsed.start.dateTime : null,
     endTimeIso: typeof parsed?.end?.dateTime === 'string' ? parsed.end.dateTime : null,
   }
+}
+
+function buildCalendarEventDescription(description: string | null | undefined, meetingUrl: string | null | undefined): string {
+  const normalizedDescription = typeof description === 'string' ? description.trim() : ''
+  const normalizedMeetingUrl = typeof meetingUrl === 'string' ? meetingUrl.trim() : ''
+
+  if (normalizedDescription && normalizedMeetingUrl) {
+    return `${normalizedDescription}\n\nJoin in Cohorts: ${normalizedMeetingUrl}`
+  }
+
+  if (normalizedDescription) {
+    return normalizedDescription
+  }
+
+  if (normalizedMeetingUrl) {
+    return `Join in Cohorts: ${normalizedMeetingUrl}`
+  }
+
+  return ''
+}
+
+function parseGoogleMeetSpaceResponse(raw: string): GoogleMeetSpaceResponse {
+  try {
+    return JSON.parse(raw) as GoogleMeetSpaceResponse
+  } catch {
+    throw new GoogleWorkspaceOAuthError({
+      message: `Unexpected Google Meet response: ${raw.slice(0, 200)}`,
+    })
+  }
+}
+
+function extractGoogleMeetCode(meetLink: string | null | undefined): string | null {
+  if (!meetLink) return null
+
+  try {
+    const url = new URL(meetLink)
+    if (url.hostname !== 'meet.google.com') return null
+    const code = url.pathname.replace(/^\/+/, '').split('/')[0]
+    return code && /^[a-z]+-[a-z]+-[a-z]+$/i.test(code) ? code.toLowerCase() : null
+  } catch {
+    return null
+  }
+}
+
+export function hasGoogleWorkspaceScope(scopes: string[] | null | undefined, requiredScope: string): boolean {
+  if (!Array.isArray(scopes)) return false
+  return scopes.some((scope) => scope.trim() === requiredScope)
 }
 
 export class GoogleWorkspaceOAuthError extends Error {
@@ -394,6 +462,167 @@ export async function createGoogleCalendarMeetEvent(options: {
   return mapCalendarEventResponse(parsed)
 }
 
+export async function createGoogleCalendarEvent(options: {
+  accessToken: string
+  title: string
+  description?: string | null
+  startTimeMs: number
+  endTimeMs: number
+  timezone: string
+  attendeeEmails: string[]
+  meetingUrl?: string | null
+}): Promise<CalendarMeetEvent> {
+  if (!options.accessToken) {
+    throw new GoogleWorkspaceOAuthError({ message: 'Access token is required to schedule a meeting' })
+  }
+
+  const response = await fetch(`${GOOGLE_CALENDAR_EVENTS_ENDPOINT}?sendUpdates=all`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      summary: options.title,
+      description: buildCalendarEventDescription(options.description, options.meetingUrl),
+      location: options.meetingUrl ?? undefined,
+      start: {
+        dateTime: new Date(options.startTimeMs).toISOString(),
+        timeZone: options.timezone,
+      },
+      end: {
+        dateTime: new Date(options.endTimeMs).toISOString(),
+        timeZone: options.timezone,
+      },
+      attendees: options.attendeeEmails.map((email) => ({ email })),
+    }),
+  })
+
+  const raw = await response.text()
+  const parsed = parseCalendarEventResponse(raw)
+
+  if (!response.ok) {
+    const message = parsed?.error?.message || `Google Calendar event creation failed (${response.status})`
+    throw new GoogleWorkspaceOAuthError({
+      message,
+      code: parsed?.error?.status,
+      description: parsed?.error?.message,
+    })
+  }
+
+  const event = mapCalendarEventResponse(parsed)
+  return {
+    ...event,
+    meetLink: options.meetingUrl ?? event.meetLink,
+  }
+}
+
+export async function configureGoogleMeetArtifacts(options: {
+  accessToken: string
+  meetLink: string | null
+  scopes?: string[] | null
+}): Promise<MeetArtifactSetupStatus> {
+  if (!options.accessToken) {
+    throw new GoogleWorkspaceOAuthError({ message: 'Access token is required to configure Google Meet artifacts' })
+  }
+
+  const meetingCode = extractGoogleMeetCode(options.meetLink)
+  if (!meetingCode) {
+    return {
+      configured: false,
+      spaceName: null,
+      meetingCode: null,
+      reason: 'missing_meet_link',
+      message: 'Google Meet link missing from Calendar event response.',
+    }
+  }
+
+  if (!hasGoogleWorkspaceScope(options.scopes, GOOGLE_MEET_SPACE_SETTINGS_SCOPE)) {
+    return {
+      configured: false,
+      spaceName: null,
+      meetingCode,
+      reason: 'missing_scope',
+      message: 'Reconnect Google Workspace to grant meetings.space.settings for automatic transcripts and smart notes.',
+    }
+  }
+
+  const getResponse = await fetch(`${GOOGLE_MEET_SPACES_ENDPOINT}/${encodeURIComponent(`spaces/${meetingCode}`)}`, {
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`,
+    },
+  })
+
+  const getRaw = await getResponse.text()
+  const getParsed = parseGoogleMeetSpaceResponse(getRaw)
+
+  if (!getResponse.ok) {
+    return {
+      configured: false,
+      spaceName: null,
+      meetingCode,
+      reason: 'space_lookup_failed',
+      message: getParsed?.error?.message ?? `Failed to look up Google Meet space (${getResponse.status}).`,
+    }
+  }
+
+  const spaceName = typeof getParsed.name === 'string' ? getParsed.name : null
+  if (!spaceName) {
+    return {
+      configured: false,
+      spaceName: null,
+      meetingCode,
+      reason: 'space_lookup_failed',
+      message: 'Google Meet space lookup succeeded without returning a space name.',
+    }
+  }
+
+  const patchResponse = await fetch(
+    `${GOOGLE_MEET_SPACES_ENDPOINT}/${encodeURIComponent(spaceName)}?updateMask=config.artifactConfig`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${options.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: spaceName,
+        config: {
+          artifactConfig: {
+            transcriptionConfig: {
+              autoTranscriptionGeneration: 'ON',
+            },
+            smartNotesConfig: {
+              autoSmartNotesGeneration: 'ON',
+            },
+          },
+        },
+      }),
+    }
+  )
+
+  const patchRaw = await patchResponse.text()
+  const patchParsed = parseGoogleMeetSpaceResponse(patchRaw)
+
+  if (!patchResponse.ok) {
+    return {
+      configured: false,
+      spaceName,
+      meetingCode,
+      reason: 'patch_failed',
+      message: patchParsed?.error?.message ?? `Failed to configure Google Meet artifacts (${patchResponse.status}).`,
+    }
+  }
+
+  return {
+    configured: true,
+    spaceName,
+    meetingCode,
+    reason: 'configured',
+    message: null,
+  }
+}
+
 export async function updateGoogleCalendarMeetEvent(options: {
   accessToken: string
   eventId: string
@@ -448,6 +677,68 @@ export async function updateGoogleCalendarMeetEvent(options: {
   }
 
   return mapCalendarEventResponse(parsed)
+}
+
+export async function updateGoogleCalendarEvent(options: {
+  accessToken: string
+  eventId: string
+  title: string
+  description?: string | null
+  startTimeMs: number
+  endTimeMs: number
+  timezone: string
+  attendeeEmails: string[]
+  meetingUrl?: string | null
+}): Promise<CalendarMeetEvent> {
+  if (!options.accessToken) {
+    throw new GoogleWorkspaceOAuthError({ message: 'Access token is required to update a meeting' })
+  }
+
+  if (!options.eventId) {
+    throw new GoogleWorkspaceOAuthError({ message: 'Google Calendar event id is required' })
+  }
+
+  const endpoint = `${GOOGLE_CALENDAR_EVENTS_ENDPOINT}/${encodeURIComponent(options.eventId)}?sendUpdates=all`
+
+  const response = await fetch(endpoint, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      summary: options.title,
+      description: buildCalendarEventDescription(options.description, options.meetingUrl),
+      location: options.meetingUrl ?? undefined,
+      start: {
+        dateTime: new Date(options.startTimeMs).toISOString(),
+        timeZone: options.timezone,
+      },
+      end: {
+        dateTime: new Date(options.endTimeMs).toISOString(),
+        timeZone: options.timezone,
+      },
+      attendees: options.attendeeEmails.map((email) => ({ email })),
+    }),
+  })
+
+  const raw = await response.text()
+  const parsed = parseCalendarEventResponse(raw)
+
+  if (!response.ok) {
+    const message = parsed?.error?.message || `Google Calendar event update failed (${response.status})`
+    throw new GoogleWorkspaceOAuthError({
+      message,
+      code: parsed?.error?.status,
+      description: parsed?.error?.message,
+    })
+  }
+
+  const event = mapCalendarEventResponse(parsed)
+  return {
+    ...event,
+    meetLink: options.meetingUrl ?? event.meetLink,
+  }
 }
 
 export async function cancelGoogleCalendarEvent(options: {

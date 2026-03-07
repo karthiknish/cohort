@@ -23,6 +23,7 @@ import {
 import { Calendar } from '@/components/ui/calendar'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
+import { isTaskDueDateDisabled } from './task-types'
 import { TaskStatus, TASK_STATUSES } from '@/types/tasks'
 
 export type TaskBulkToolbarProps = {
@@ -178,6 +179,7 @@ export function TaskBulkToolbar({
               <Calendar
                 mode="single"
                 selected={dueDate}
+                disabled={isTaskDueDateDisabled}
                 onSelect={setDueDate}
                 initialFocus
               />

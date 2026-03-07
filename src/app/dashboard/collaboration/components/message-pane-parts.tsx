@@ -81,6 +81,7 @@ export interface MessageSearchBarProps {
   onChange: (event: ChangeEvent<HTMLInputElement>) => void
   resultCount: number
   isActive: boolean
+  placeholder?: string
 }
 
 export function MessageSearchBar({
@@ -88,6 +89,7 @@ export function MessageSearchBar({
   onChange,
   resultCount,
   isActive,
+  placeholder = 'Search messages…',
 }: MessageSearchBarProps) {
   return (
     <div className="border-b border-muted/40 bg-muted/5 px-4 py-2">
@@ -96,7 +98,7 @@ export function MessageSearchBar({
         <Input
           value={value}
           onChange={onChange}
-          placeholder="Search messages in this channel…"
+          placeholder={placeholder}
           className="pl-9 pr-20"
         />
         {isActive && (

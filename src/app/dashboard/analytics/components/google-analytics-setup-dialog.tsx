@@ -1,7 +1,9 @@
 'use client'
 
-import { BarChart3, AlertTriangle, Loader2 } from 'lucide-react'
+import { AlertTriangle, BarChart3, Loader2 } from 'lucide-react'
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -10,8 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 type GoogleAnalyticsPropertyOption = {
@@ -49,7 +49,7 @@ export function GoogleAnalyticsSetupDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F9AB00]/10 text-[#E37400]">
@@ -80,13 +80,16 @@ export function GoogleAnalyticsSetupDialog({
               onValueChange={onPropertySelectionChange}
               disabled={loadingProperties || initializing || properties.length === 0}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-auto min-h-10 items-start py-3 text-left">
                 <SelectValue placeholder={loadingProperties ? 'Loading properties...' : 'Select Google Analytics property'} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-[min(24rem,var(--radix-select-content-available-height))] w-[var(--radix-select-trigger-width)]">
                 {properties.map((property) => (
-                  <SelectItem key={property.id} value={property.id}>
-                    {property.name}
+                  <SelectItem key={property.id} value={property.id} className="items-start py-2.5">
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate font-medium">{property.name}</span>
+                      <span className="truncate text-xs text-muted-foreground">{property.resourceName}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>

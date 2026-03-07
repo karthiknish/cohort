@@ -1,4 +1,5 @@
-import { getAdIntegration, writeMetricsBatch } from '@/lib/ads-admin'
+import { writeMetricsBatch } from '@/lib/ads-admin'
+import { getGoogleAnalyticsIntegration } from '@/lib/analytics-admin'
 import {
   IntegrationTokenError,
   isTokenExpiringSoon,
@@ -91,9 +92,8 @@ export async function syncGoogleAnalyticsMetrics(options: {
     ? Math.max(1, Math.floor(options.days as number))
     : 30
 
-  const integration = await getAdIntegration({
+  const integration = await getGoogleAnalyticsIntegration({
     userId: options.userId,
-    providerId: 'google-analytics',
     clientId: normalizedClientId,
   })
 

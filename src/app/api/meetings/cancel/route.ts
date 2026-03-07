@@ -63,7 +63,7 @@ export const POST = createApiHandler(
       return { meeting }
     }
 
-    if (meeting.providerId === 'google-workspace' && meeting.calendarEventId) {
+    if (meeting.calendarEventId) {
       const integrationUserId = meeting.integrationUserId ?? auth.uid
       const { tokens } = await getGoogleWorkspaceTokens({ userId: integrationUserId })
 

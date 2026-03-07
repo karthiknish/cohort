@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
@@ -14,7 +16,7 @@ import { meetingIntegrationsApi, meetingsApi, usersApi } from '@/lib/convex-api'
 import { getWorkspaceId } from '@/lib/utils'
 
 import { GoogleWorkspaceCard } from './components/google-workspace-card'
-import { InSiteMeetingCard } from './components/in-site-meeting-card'
+import { MeetingRoomPage } from './components/in-site-meeting-card'
 import { MeetingScheduleCard } from './components/meeting-schedule-card'
 import { MeetingsHeader } from './components/meetings-header'
 import { QuickMeetDialog } from './components/quick-meet-dialog'
@@ -22,8 +24,9 @@ import { UpcomingMeetingsCard } from './components/upcoming-meetings-card'
 import type { MeetingRecord, WorkspaceMember } from './types'
 import {
   EMAIL_REGEX,
-  buildInSiteMeetingUrl,
+  extractRoomNameFromMeetingLink,
   hasEmail,
+  isMeetingPostProcessing,
   normalizeEmail,
   parseAttendeeInput,
   toTimeValue,
@@ -49,7 +52,7 @@ function getPreviewMeetings(clientId: string | null, timezone: string): MeetingR
       clientId: 'preview-tech-corp',
       meeting: {
         legacyId: 'preview-meeting-1',
-        providerId: 'google-workspace',
+        providerId: 'livekit',
         title: 'Weekly Growth Sync',
         description: 'Review pacing, creative tests, and SQL quality before the Q2 push.',
         startTimeMs: now.getTime() + 2 * hour,
@@ -57,7 +60,8 @@ function getPreviewMeetings(clientId: string | null, timezone: string): MeetingR
         timezone,
         calendarEventId: 'preview-gcal-1',
         status: 'scheduled',
-        meetLink: 'https://meet.jit.si/cohorts-preview-growth-sync',
+        meetLink: 'https://app.cohorts.app/dashboard/meetings?room=preview-growth-sync',
+        roomName: 'preview-growth-sync',
         attendeeEmails: ['alex@cohorts.ai', 'jordan@cohorts.ai', 'growth@techcorp.example'],
         notesSummary: null,
         transcriptText: null,
@@ -67,7 +71,7 @@ function getPreviewMeetings(clientId: string | null, timezone: string): MeetingR
       clientId: 'preview-startupxyz',
       meeting: {
         legacyId: 'preview-meeting-2',
-        providerId: 'in-site',
+        providerId: 'livekit',
         title: 'Launch War Room',
         description: 'Creator shortlist, teaser edits, and launch-week escalation plan.',
         startTimeMs: now.getTime() + day,
@@ -75,7 +79,8 @@ function getPreviewMeetings(clientId: string | null, timezone: string): MeetingR
         timezone,
         calendarEventId: null,
         status: 'in_progress',
-        meetLink: 'https://meet.jit.si/cohorts-preview-launch-war-room',
+        meetLink: 'https://app.cohorts.app/dashboard/meetings?room=preview-launch-war-room',
+        roomName: 'preview-launch-war-room',
         attendeeEmails: ['priya@cohorts.ai', 'launch@startupxyz.example'],
         notesSummary: 'Key actions:\n- Lock creator roster by Friday\n- Approve 3 teaser cutdowns\n- QA waitlist onboarding flow before launch day',
         transcriptText: 'We agreed to prioritize creator deliverables, finalize the teaser cutdowns, and tighten the waitlist onboarding experience before launch week.',
@@ -85,7 +90,7 @@ function getPreviewMeetings(clientId: string | null, timezone: string): MeetingR
       clientId: 'preview-retail-store',
       meeting: {
         legacyId: 'preview-meeting-3',
-        providerId: 'google-workspace',
+        providerId: 'livekit',
         title: 'Retail Retention Review',
         description: 'Audit repeat purchase rate, spring promo cadence, and lifecycle email segmentation.',
         startTimeMs: now.getTime() + 2 * day + 3 * hour,
@@ -93,7 +98,8 @@ function getPreviewMeetings(clientId: string | null, timezone: string): MeetingR
         timezone,
         calendarEventId: 'preview-gcal-3',
         status: 'scheduled',
-        meetLink: 'https://meet.jit.si/cohorts-preview-retail-retention-review',
+        meetLink: 'https://app.cohorts.app/dashboard/meetings?room=preview-retail-retention-review',
+        roomName: 'preview-retail-retention-review',
         attendeeEmails: ['taylor@cohorts.ai', 'marketing@retailstore.example'],
         notesSummary: null,
         transcriptText: null,
@@ -154,7 +160,7 @@ function describeNotificationSummary(
 }
 
 export default function MeetingsPage() {
-  const { user } = useAuth()
+  const { user, startGoogleWorkspaceOauth } = useAuth()
   const { selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
@@ -174,15 +180,16 @@ export default function MeetingsPage() {
   const [quickStarting, setQuickStarting] = useState(false)
   const [editingMeetingId, setEditingMeetingId] = useState<string | null>(null)
   const [cancellingMeetingId, setCancellingMeetingId] = useState<string | null>(null)
+  const [cancelDialogMeeting, setCancelDialogMeeting] = useState<MeetingRecord | null>(null)
   const [activeInSiteMeeting, setActiveInSiteMeeting] = useState<MeetingRecord | null>(null)
-  const [activeInSiteUrl, setActiveInSiteUrl] = useState<string | null>(null)
   const [meetingOverrides, setMeetingOverrides] = useState<Record<string, MeetingRecord>>({})
   const [quickMeetDialogOpen, setQuickMeetDialogOpen] = useState(false)
-  const [quickMeetTitle, setQuickMeetTitle] = useState('Quick Meet')
-  const [quickMeetDescription, setQuickMeetDescription] = useState('Instant in-site quick meeting')
+  const [quickMeetTitle, setQuickMeetTitle] = useState('Instant Cohorts Room')
+  const [quickMeetDescription, setQuickMeetDescription] = useState('Native Cohorts meeting launched from the dashboard')
   const [quickMeetDurationMinutes, setQuickMeetDurationMinutes] = useState('30')
   const [quickAttendeeInput, setQuickAttendeeInput] = useState('')
   const [quickAttendeeEmails, setQuickAttendeeEmails] = useState<string[]>([])
+  const [sharedRoomName, setSharedRoomName] = useState<string | null>(null)
   const oauthHandledRef = useRef(false)
 
   const meetings = useQuery(
@@ -233,6 +240,15 @@ export default function MeetingsPage() {
 
   const disconnectGoogleWorkspace = useMutation(meetingIntegrationsApi.deleteGoogleWorkspaceIntegration)
   const updateMeetingStatus = useMutation(meetingsApi.updateStatus)
+  const sharedRoomMeeting = useQuery(
+    meetingsApi.getByRoomName,
+    workspaceId && sharedRoomName && !isPreviewMode
+      ? {
+          workspaceId,
+          roomName: sharedRoomName,
+        }
+      : 'skip'
+  ) as MeetingRecord | undefined
   const previewTimezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', [])
   const previewMeetings = useMemo(
     () => getPreviewMeetings(selectedClientId ?? null, previewTimezone),
@@ -247,8 +263,6 @@ export default function MeetingsPage() {
     () => (isPreviewMode ? getPreviewMeetingWorkspaceMembers() : (platformUsers ?? [])),
     [isPreviewMode, platformUsers]
   )
-  const workspaceIdForRoom = workspaceId ?? 'preview-workspace'
-
   useEffect(() => {
     if (oauthHandledRef.current || typeof window === 'undefined') return
 
@@ -257,6 +271,9 @@ export default function MeetingsPage() {
     const oauthError = searchParams.get('oauth_error')
     const provider = searchParams.get('provider')
     const message = searchParams.get('message')
+    const roomParam = searchParams.get('room')
+
+    setSharedRoomName(roomParam && roomParam.trim().length > 0 ? roomParam.trim() : null)
 
     if (!oauthSuccess && !oauthError) {
       oauthHandledRef.current = true
@@ -267,7 +284,7 @@ export default function MeetingsPage() {
       if (oauthSuccess) {
         toast({
           title: 'Google Workspace connected',
-          description: 'You can now schedule Google Meet meetings from this tab.',
+          description: 'You can now schedule calendar-backed Cohorts meeting rooms from this tab.',
         })
       } else {
         toast({
@@ -291,7 +308,16 @@ export default function MeetingsPage() {
   const upcomingMeetings = useMemo(() => {
     const sourceMeetings = isPreviewMode ? previewMeetings : (meetings ?? [])
 
-    return sourceMeetings.map((meeting) => meetingOverrides[meeting.legacyId] ?? meeting)
+    const mergedMeetings = sourceMeetings.map((meeting) => meetingOverrides[meeting.legacyId] ?? meeting)
+    const knownMeetingIds = new Set(mergedMeetings.map((meeting) => meeting.legacyId))
+
+    for (const override of Object.values(meetingOverrides)) {
+      if (!knownMeetingIds.has(override.legacyId) && isMeetingPostProcessing(override)) {
+        mergedMeetings.unshift(override)
+      }
+    }
+
+    return mergedMeetings
   }, [isPreviewMode, meetingOverrides, meetings, previewMeetings])
 
   const editingMeeting = useMemo(
@@ -299,7 +325,7 @@ export default function MeetingsPage() {
     [upcomingMeetings, editingMeetingId]
   )
 
-  const scheduleRequiresGoogleWorkspace = editingMeeting ? editingMeeting.providerId === 'google-workspace' : true
+  const scheduleRequiresGoogleWorkspace = editingMeeting ? Boolean(editingMeeting.calendarEventId) : true
   const scheduleDisabled = isPreviewMode || !canSchedule || scheduling || (scheduleRequiresGoogleWorkspace && !resolvedGoogleWorkspaceStatus?.connected)
 
   const getAttendeeSuggestions = useCallback((queryValue: string, selectedEmails: string[]) => {
@@ -478,14 +504,27 @@ export default function MeetingsPage() {
   }
 
   const resetQuickMeetForm = () => {
-    setQuickMeetTitle('Quick Meet')
-    setQuickMeetDescription('Instant in-site quick meeting')
+    setQuickMeetTitle('Instant Cohorts Room')
+    setQuickMeetDescription('Native Cohorts meeting launched from the dashboard')
     setQuickMeetDurationMinutes('30')
     setQuickAttendeeInput('')
     setQuickAttendeeEmails([])
   }
 
-  const handleConnectGoogleWorkspace = () => {
+  const setRoomUrlState = useCallback((roomName: string | null) => {
+    if (typeof window === 'undefined') return
+
+    const nextUrl = new URL(window.location.href)
+    if (roomName) {
+      nextUrl.searchParams.set('room', roomName)
+    } else {
+      nextUrl.searchParams.delete('room')
+    }
+    window.history.replaceState({}, '', nextUrl.toString())
+    setSharedRoomName(roomName)
+  }, [])
+
+  const handleConnectGoogleWorkspace = async () => {
     if (isPreviewMode) {
       toast({
         title: 'Preview mode',
@@ -507,49 +546,16 @@ export default function MeetingsPage() {
 
     const redirect = `${window.location.pathname}${window.location.search}`
 
-    void fetch(
-      `/api/integrations/google-workspace/oauth/url?redirect=${encodeURIComponent(redirect)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      }
-    )
-      .then(async (response) => {
-        const payload = (await response.json().catch(() => ({}))) as {
-          success?: boolean
-          data?: { url?: string }
-          url?: string
-          error?: string
-        }
-
-        let oauthUrl: string | undefined
-        if (payload.data && typeof payload.data.url === 'string') {
-          oauthUrl = payload.data.url
-        } else if (typeof payload.url === 'string') {
-          oauthUrl = payload.url
-        }
-
-        if (!response.ok || !oauthUrl) {
-          toast({
-            variant: 'destructive',
-            title: 'Unable to connect Google Workspace',
-            description:
-              typeof payload.error === 'string'
-                ? payload.error
-                : 'Failed to start Google Workspace OAuth flow',
-          })
-          return
-        }
-
-        window.location.href = oauthUrl
+    try {
+      const { url } = await startGoogleWorkspaceOauth(redirect)
+      window.location.href = url
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Unable to connect Google Workspace',
+        description: error instanceof Error ? error.message : 'Unknown error',
       })
-      .catch((error) => {
-        toast({
-          variant: 'destructive',
-          title: 'Unable to connect Google Workspace',
-          description: error instanceof Error ? error.message : 'Unknown error',
-        })
-      })
+    }
   }
 
   const handleDisconnectGoogleWorkspace = async () => {
@@ -602,13 +608,80 @@ export default function MeetingsPage() {
       [updatedMeeting.legacyId]: updatedMeeting,
     }))
     setActiveInSiteMeeting((current) => (current?.legacyId === updatedMeeting.legacyId ? updatedMeeting : current))
-  }, [])
+    setRoomUrlState(updatedMeeting.roomName ?? extractRoomNameFromMeetingLink(updatedMeeting.meetLink))
+  }, [setRoomUrlState])
 
-  const openInSiteMeeting = (meeting: MeetingRecord) => {
-    const url = buildInSiteMeetingUrl(workspaceIdForRoom, meeting)
-    setActiveInSiteMeeting(meeting)
-    setActiveInSiteUrl(url)
-  }
+  const resolveMeetingRecord = useCallback((meeting: MeetingRecord | null) => {
+    if (!meeting) {
+      return null
+    }
+
+    const pool = sharedRoomMeeting ? [sharedRoomMeeting, ...upcomingMeetings] : upcomingMeetings
+
+    const legacyId = typeof meeting.legacyId === 'string' && meeting.legacyId.trim().length > 0 ? meeting.legacyId : null
+    if (legacyId) {
+      return pool.find((candidate) => candidate.legacyId === legacyId) ?? meeting
+    }
+
+    const calendarEventId =
+      typeof meeting.calendarEventId === 'string' && meeting.calendarEventId.trim().length > 0 ? meeting.calendarEventId : null
+    if (calendarEventId) {
+      return pool.find((candidate) => candidate.calendarEventId === calendarEventId) ?? meeting
+    }
+
+    const roomName =
+      (typeof meeting.roomName === 'string' && meeting.roomName.trim().length > 0 ? meeting.roomName : null)
+      ?? extractRoomNameFromMeetingLink(meeting.meetLink)
+    if (roomName) {
+      return pool.find((candidate) => candidate.roomName === roomName) ?? meeting
+    }
+
+    const meetLink = typeof meeting.meetLink === 'string' && meeting.meetLink.trim().length > 0 ? meeting.meetLink : null
+    if (meetLink) {
+      return pool.find((candidate) => candidate.meetLink === meetLink) ?? meeting
+    }
+
+    const title = typeof meeting.title === 'string' ? meeting.title.trim() : ''
+    const startTimeMs = Number.isFinite(meeting.startTimeMs) ? meeting.startTimeMs : null
+    const endTimeMs = Number.isFinite(meeting.endTimeMs) ? meeting.endTimeMs : null
+    if (title && startTimeMs && endTimeMs) {
+      return (
+        pool.find(
+          (candidate) =>
+            candidate.title === title && candidate.startTimeMs === startTimeMs && candidate.endTimeMs === endTimeMs
+        ) ?? meeting
+      )
+    }
+
+    return meeting
+  }, [sharedRoomMeeting, upcomingMeetings])
+
+  const resolvedActiveInSiteMeeting = useMemo(
+    () => resolveMeetingRecord(activeInSiteMeeting),
+    [activeInSiteMeeting, resolveMeetingRecord]
+  )
+
+  const openInSiteMeeting = useCallback((meeting: MeetingRecord) => {
+    const resolvedMeeting = resolveMeetingRecord(meeting)
+    setActiveInSiteMeeting(resolvedMeeting)
+    setRoomUrlState(
+      resolvedMeeting?.roomName ?? extractRoomNameFromMeetingLink(resolvedMeeting?.meetLink)
+    )
+  }, [resolveMeetingRecord, setRoomUrlState])
+
+  const closeMeetingRoom = useCallback(() => {
+    setActiveInSiteMeeting(null)
+    setRoomUrlState(null)
+  }, [setRoomUrlState])
+
+  useEffect(() => {
+    if (!sharedRoomName) return
+
+    const nextMeeting = sharedRoomMeeting ?? upcomingMeetings.find((meeting) => meeting.roomName === sharedRoomName) ?? null
+    if (!nextMeeting) return
+
+    setActiveInSiteMeeting((current) => (current?.legacyId === nextMeeting.legacyId ? current : nextMeeting))
+  }, [sharedRoomMeeting, sharedRoomName, upcomingMeetings])
 
   const handleStartQuickMeet = (options: {
     title: string
@@ -620,7 +693,7 @@ export default function MeetingsPage() {
     if (isPreviewMode) {
       toast({
         title: 'Preview mode',
-        description: 'Quick Meet is disabled while sample meeting data is active.',
+        description: 'Meeting launch is disabled while sample data is active.',
       })
       return
     }
@@ -629,7 +702,16 @@ export default function MeetingsPage() {
       toast({
         variant: 'destructive',
         title: 'Read-only access',
-        description: 'Client users cannot start quick meetings.',
+        description: 'Client users cannot start meetings.',
+      })
+      return
+    }
+
+    if (!resolvedGoogleWorkspaceStatus?.connected) {
+      toast({
+        variant: 'destructive',
+        title: 'Google Workspace required',
+        description: 'Connect Google Workspace before starting a meeting room.',
       })
       return
     }
@@ -657,69 +739,54 @@ export default function MeetingsPage() {
           error?: string
           data?: {
             meeting?: MeetingRecord
-            inSiteEmbedUrl?: string | null
             notificationSummary?: MeetingNotificationSummary
           }
           meeting?: MeetingRecord
-          inSiteEmbedUrl?: string | null
           notificationSummary?: MeetingNotificationSummary
         }
 
         if (!response.ok || payload.success === false) {
           toast({
             variant: 'destructive',
-            title: 'Quick meet failed',
-            description: payload.error || 'Unable to start quick meet',
+            title: 'Meeting launch failed',
+            description: payload.error || 'Unable to start meeting room',
           })
           return
         }
 
         const meeting = payload.data?.meeting ?? payload.meeting
-        const inSiteEmbedUrl = payload.data?.inSiteEmbedUrl ?? payload.inSiteEmbedUrl ??
-          (meeting ? buildInSiteMeetingUrl(workspaceId, meeting) : null)
         const notificationSummary = payload.data?.notificationSummary ?? payload.notificationSummary
 
         if (!meeting) {
           toast({
             variant: 'destructive',
-            title: 'Quick meet failed',
-            description: 'Quick meet was created without a meeting record',
+            title: 'Meeting launch failed',
+            description: 'The room started without a meeting record',
           })
           return
         }
 
-        if (inSiteEmbedUrl) {
-          handleMeetingUpdated(meeting)
-          setActiveInSiteMeeting(meeting)
-          setActiveInSiteUrl(inSiteEmbedUrl)
-          setQuickMeetDialogOpen(false)
-          resetQuickMeetForm()
-        } else {
-          setActiveInSiteMeeting(null)
-          setActiveInSiteUrl(null)
-          toast({
-            variant: 'destructive',
-            title: 'Room link missing',
-            description: 'Quick meet was created but no in-site room URL was returned.',
-          })
-          return
-        }
+        handleMeetingUpdated(meeting)
+        setActiveInSiteMeeting(meeting)
+        setRoomUrlState(meeting.roomName ?? null)
+        setQuickMeetDialogOpen(false)
+        resetQuickMeetForm()
 
         toast({
-          title: 'Quick meet started',
+          title: 'Meeting room started',
           description: describeNotificationSummary(notificationSummary, {
-            none: 'In-site meeting room is now open. No invite emails were sent.',
+            none: 'Your Cohorts room is ready. No invite emails were sent.',
             allSent: (sent, skipped) => {
               const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : ''
-              return `In-site meeting room is now open. ${pluralize(sent, 'invite email')} sent.${skippedText}`
+              return `Your Cohorts room is ready. ${pluralize(sent, 'invite email')} sent.${skippedText}`
             },
             partial: (sent, failed, skipped) => {
               const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : ''
-              return `In-site meeting room is now open. ${pluralize(sent, 'invite email')} sent and ${pluralize(failed, 'email delivery', 'email deliveries')} failed.${skippedText}`
+              return `Your Cohorts room is ready. ${pluralize(sent, 'invite email')} sent and ${pluralize(failed, 'email delivery', 'email deliveries')} failed.${skippedText}`
             },
             failed: (failed, skipped) => {
               const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} were skipped.` : ''
-              return `In-site meeting room is now open, but ${pluralize(failed, 'invite email delivery', 'invite email deliveries')} failed.${skippedText}`
+              return `Your Cohorts room is ready, but ${pluralize(failed, 'invite email delivery', 'invite email deliveries')} failed.${skippedText}`
             },
           }),
         })
@@ -727,7 +794,7 @@ export default function MeetingsPage() {
       .catch((error) => {
         toast({
           variant: 'destructive',
-          title: 'Quick meet failed',
+          title: 'Meeting launch failed',
           description: error instanceof Error ? error.message : 'Unknown error',
         })
       })
@@ -766,12 +833,12 @@ export default function MeetingsPage() {
       return
     }
 
-    if (typeof window !== 'undefined') {
-      const confirmed = window.confirm(`Cancel meeting "${meeting.title}"?`)
-      if (!confirmed) {
-        return
-      }
-    }
+    setCancelDialogMeeting(meeting)
+  }
+
+  const handleConfirmCancelMeeting = () => {
+    const meeting = cancelDialogMeeting
+    if (!meeting) return
 
     setCancellingMeetingId(meeting.legacyId)
 
@@ -805,6 +872,8 @@ export default function MeetingsPage() {
         if (editingMeetingId === meeting.legacyId) {
           resetScheduleForm()
         }
+
+        setCancelDialogMeeting(null)
 
         toast({
           title: 'Meeting cancelled',
@@ -1019,21 +1088,21 @@ export default function MeetingsPage() {
             title: 'Meeting scheduled',
             description: describeNotificationSummary(notificationSummary, {
               none: meetLink
-                ? 'Meeting saved and your Google Meet link is ready. No invite emails were sent.'
+                ? 'Meeting saved and your room link is ready. No invite emails were sent.'
                 : 'Meeting saved successfully. No invite emails were sent.',
               allSent: (sent, skipped) => {
                 const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : ''
-                const linkText = meetLink ? ' Your Google Meet link is ready.' : ''
+                const linkText = meetLink ? ' Your room link is ready.' : ''
                 return `${pluralize(sent, 'invite email')} sent.${linkText}${skippedText}`
               },
               partial: (sent, failed, skipped) => {
                 const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} skipped.` : ''
-                const linkText = meetLink ? ' Your Google Meet link is ready.' : ''
+                const linkText = meetLink ? ' Your room link is ready.' : ''
                 return `${pluralize(sent, 'invite email')} sent and ${pluralize(failed, 'email delivery', 'email deliveries')} failed.${linkText}${skippedText}`
               },
               failed: (failed, skipped) => {
                 const skippedText = skipped > 0 ? ` ${pluralize(skipped, 'recipient')} were skipped.` : ''
-                const linkText = meetLink ? ' Your Google Meet link is ready.' : ''
+                const linkText = meetLink ? ' Your room link is ready.' : ''
                 return `Meeting saved, but ${pluralize(failed, 'invite email delivery', 'invite email deliveries')} failed.${linkText}${skippedText}`
               },
             }),
@@ -1067,7 +1136,7 @@ export default function MeetingsPage() {
       return
     }
 
-    const title = quickMeetTitle.trim().length > 0 ? quickMeetTitle.trim() : 'Quick Meet'
+    const title = quickMeetTitle.trim().length > 0 ? quickMeetTitle.trim() : 'Instant Cohorts Room'
     const description = quickMeetDescription.trim().length > 0
       ? quickMeetDescription.trim()
       : null
@@ -1077,7 +1146,7 @@ export default function MeetingsPage() {
       toast({
         variant: 'destructive',
         title: 'Invalid attendee email',
-        description: 'Enter a valid email before starting the quick meet.',
+        description: 'Enter a valid email before starting the room.',
       })
       return
     }
@@ -1140,13 +1209,58 @@ export default function MeetingsPage() {
     }
   }
 
+  if (resolvedActiveInSiteMeeting) {
+    return (
+      <div className={DASHBOARD_THEME.layout.container}>
+        <MeetingRoomPage
+          key={[
+            resolvedActiveInSiteMeeting.legacyId,
+            resolvedActiveInSiteMeeting.calendarEventId,
+            resolvedActiveInSiteMeeting.roomName,
+            sharedRoomName,
+          ]
+            .filter(Boolean)
+            .join(':') || 'active-meeting'}
+          meeting={resolvedActiveInSiteMeeting}
+          canRecord={canSchedule && !isPreviewMode}
+          onMeetingUpdated={handleMeetingUpdated}
+          fallbackRoomName={sharedRoomName}
+          onClose={closeMeetingRoom}
+        />
+      </div>
+    )
+  }
+
+  if (sharedRoomName) {
+    return (
+      <div className={DASHBOARD_THEME.layout.container}>
+        <div className="flex flex-wrap items-start justify-between gap-4 rounded-[28px] border border-border bg-card px-5 py-4 shadow-sm">
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.32em] text-muted-foreground">Meetings</p>
+            <div className="space-y-1">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">Meeting room</h1>
+              <p className="text-sm text-muted-foreground">Resolving room workspace for {sharedRoomName}.</p>
+            </div>
+          </div>
+          <Button type="button" variant="outline" onClick={closeMeetingRoom}>
+            Back to meetings
+          </Button>
+        </div>
+        <Alert>
+          <AlertTitle>Loading room</AlertTitle>
+          <AlertDescription>Preparing the in-site meeting workspace.</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
   return (
     <div className={DASHBOARD_THEME.layout.container}>
       <MeetingsHeader
         googleWorkspaceConnected={Boolean(resolvedGoogleWorkspaceStatus?.connected)}
         canSchedule={canSchedule}
         quickStarting={quickStarting}
-        quickMeetDisabled={isPreviewMode}
+        quickMeetDisabled={isPreviewMode || !resolvedGoogleWorkspaceStatus?.connected}
         onStartQuickMeet={() => setQuickMeetDialogOpen(true)}
       />
 
@@ -1154,7 +1268,7 @@ export default function MeetingsPage() {
         <Alert>
           <AlertTitle>Preview mode</AlertTitle>
           <AlertDescription>
-            Meetings use sample data in preview mode. You can browse upcoming calls and open the in-site room, but scheduling and integration actions are disabled.
+            Meetings use sample data in preview mode. You can browse upcoming calls and open the native room workspace, but scheduling and integration actions are disabled.
           </AlertDescription>
         </Alert>
       )}
@@ -1209,19 +1323,35 @@ export default function MeetingsPage() {
         onDisconnect={() => void handleDisconnectGoogleWorkspace()}
       />
 
-      {activeInSiteMeeting && activeInSiteUrl && (
-        <InSiteMeetingCard
-          key={activeInSiteMeeting.legacyId}
-          meeting={activeInSiteMeeting}
-          inSiteUrl={activeInSiteUrl}
-          canRecord={canSchedule && !isPreviewMode}
-          onMeetingUpdated={handleMeetingUpdated}
-          onClose={() => {
-            setActiveInSiteMeeting(null)
-            setActiveInSiteUrl(null)
-          }}
-        />
-      )}
+      <AlertDialog
+        open={Boolean(cancelDialogMeeting)}
+        onOpenChange={(open) => {
+          if (!open && !cancellingMeetingId) {
+            setCancelDialogMeeting(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel meeting</AlertDialogTitle>
+            <AlertDialogDescription>
+              {cancelDialogMeeting
+                ? `Cancel "${cancelDialogMeeting.title}" and send cancellation updates to invited attendees.`
+                : 'Cancel this meeting and notify invited attendees.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={Boolean(cancellingMeetingId)}>Keep meeting</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCancelMeeting}
+              disabled={Boolean(cancellingMeetingId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancellingMeetingId ? 'Cancelling...' : 'Cancel meeting'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <MeetingScheduleCard
         editingMeeting={editingMeeting}
@@ -1260,7 +1390,7 @@ export default function MeetingsPage() {
         onOpenInSiteMeeting={openInSiteMeeting}
         onRescheduleMeeting={handleRescheduleMeeting}
         onCancelMeeting={(meeting) => {
-          void handleCancelMeeting(meeting)
+          handleCancelMeeting(meeting)
         }}
         onMarkCompleted={(legacyId) => {
           void handleMarkCompleted(legacyId)

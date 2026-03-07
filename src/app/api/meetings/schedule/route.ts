@@ -5,10 +5,11 @@ import { BadRequestError, ForbiddenError, ServiceUnavailableError, UnauthorizedE
 import { createMeetingRecord, getGoogleWorkspaceTokens, upsertGoogleWorkspaceTokens } from '@/lib/meetings-admin'
 import { notifyMeetingScheduledEmails } from '@/lib/notifications/brevo'
 import {
-  createGoogleCalendarMeetEvent,
+  createGoogleCalendarEvent,
   refreshGoogleWorkspaceAccessToken,
   resolveGoogleWorkspaceOAuthCredentials,
 } from '@/services/google-workspace'
+import { buildCohortsMeetingUrl, createLiveKitRoomName } from '@/services/livekit'
 
 const scheduleMeetingSchema = z.object({
   title: z.string().min(1),
@@ -47,7 +48,7 @@ export const POST = createApiHandler(
     bodySchema: scheduleMeetingSchema,
     rateLimit: 'sensitive',
   },
-  async (_req, { auth, workspace, body }) => {
+  async (req, { auth, workspace, body }) => {
     if (!auth.uid) {
       throw new UnauthorizedError('Authentication required')
     }
@@ -131,8 +132,14 @@ export const POST = createApiHandler(
     }
 
     const attendeeEmails = normalizeAttendees(body.attendeeEmails, auth.email)
+    const roomName = createLiveKitRoomName(normalizedTitle)
+    const appUrl = new URL(req.url).origin
+    const roomUrl = buildCohortsMeetingUrl({
+      appUrl,
+      roomName,
+    })
 
-    const calendarEvent = await createGoogleCalendarMeetEvent({
+    const calendarEvent = await createGoogleCalendarEvent({
       accessToken,
       title: normalizedTitle,
       description: normalizedDescription,
@@ -140,6 +147,7 @@ export const POST = createApiHandler(
       endTimeMs: body.endTimeMs,
       timezone: body.timezone,
       attendeeEmails,
+      meetingUrl: roomUrl,
     })
 
     const meeting = await createMeetingRecord({
@@ -153,8 +161,9 @@ export const POST = createApiHandler(
       attendeeEmails,
       clientId: body.clientId ?? null,
       integrationUserId: auth.uid,
-      providerId: 'google-workspace',
-      meetLink: calendarEvent.meetLink,
+      providerId: 'livekit',
+      meetLink: roomUrl,
+      roomName,
       calendarEventId: calendarEvent.eventId,
     })
 
@@ -168,7 +177,8 @@ export const POST = createApiHandler(
       meetingEndIso,
       meetingTimezone: body.timezone,
       organizerName: auth.name ?? tokens.userEmail ?? 'Cohorts',
-      meetLink: calendarEvent.meetLink,
+      meetLink: roomUrl,
+      inSiteJoinUrl: roomUrl,
     })
 
     return {

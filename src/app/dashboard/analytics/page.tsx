@@ -2,42 +2,33 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAction, useMutation, useQuery } from 'convex/react'
-import { LoaderCircle, Link2, CheckCircle2, RotateCw, TrendingUp, Unlink } from 'lucide-react'
-import { useSearchParams } from 'next/navigation'
-import { differenceInDays, startOfDay, endOfDay } from 'date-fns'
+import { differenceInDays, endOfDay, startOfDay } from 'date-fns'
+import { CheckCircle2, Link2, LoaderCircle, RotateCw, TrendingUp, Unlink } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-
-import { useClientContext } from '@/contexts/client-context'
-import { useToast } from '@/components/ui/use-toast'
-import { usePreview } from '@/contexts/preview-context'
+import { AutoRefreshControls } from '@/components/ui/auto-refresh-controls'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
-import { adsIntegrationsApi } from '@/lib/convex-api'
+import { useClientContext } from '@/contexts/client-context'
+import { usePreview } from '@/contexts/preview-context'
+import { apiFetch } from '@/lib/api-client'
+import { analyticsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { DASHBOARD_THEME, PAGE_TITLES, getIconContainerClasses } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
-
-// Extracted hooks and types
-import {
-  useAnalyticsData,
-  useGoogleAnalyticsSync,
-  PROVIDER_LABELS,
-  PLATFORM_OPTIONS,
-} from './hooks'
-
-// Extracted components
-import { AnalyticsSummaryCards } from './components/analytics-summary-cards'
-import { AnalyticsMetricCards } from './components/analytics-metric-cards'
-import { AnalyticsCharts } from './components/analytics-charts'
-import { AnalyticsInsightsSection } from './components/analytics-insights-section'
-import { AnalyticsCreativesSection } from './components/analytics-creatives-section'
-import { GoogleAnalyticsSetupDialog } from './components/google-analytics-setup-dialog'
-import { AnalyticsDateRangePicker, type AnalyticsDateRange } from './components/analytics-date-range-picker'
-import { AnalyticsExportButton } from './components/analytics-export-button'
-import { AutoRefreshControls } from '@/components/ui/auto-refresh-controls'
 import { DisconnectDialog } from '../ads/components/connection-dialog'
+import { AnalyticsCharts } from './components/analytics-charts'
+import { AnalyticsDateRangePicker, type AnalyticsDateRange } from './components/analytics-date-range-picker'
+import { AnalyticsDeepDiveSection } from './components/analytics-deep-dive-section'
+import { AnalyticsExportButton } from './components/analytics-export-button'
+import { AnalyticsInsightsSection } from './components/analytics-insights-section'
+import { AnalyticsMetricCards } from './components/analytics-metric-cards'
+import { AnalyticsSummaryCards } from './components/analytics-summary-cards'
+import { GoogleAnalyticsSetupDialog } from './components/google-analytics-setup-dialog'
+import { useAnalyticsData, useGoogleAnalyticsSync } from './hooks'
+import { buildGoogleAnalyticsStory } from './lib/google-analytics-story'
 
 type GoogleAnalyticsPropertyOption = {
   id: string
@@ -95,7 +86,6 @@ export default function AnalyticsPage() {
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
   const { user } = useAuth()
-  const searchParams = useSearchParams()
 
   // Date range state - initialize with 30 days
   const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => {
@@ -104,28 +94,6 @@ export default function AnalyticsPage() {
     return { start, end }
   })
   const [periodDays, setPeriodDays] = useState(30)
-
-  const [selectedPlatform, setSelectedPlatform] = useState(() => {
-    const platform = searchParams.get('platform')
-    const valid = PLATFORM_OPTIONS.some((opt) => opt.value === platform)
-    return valid ? (platform as string) : 'all'
-  })
-
-  // Keep state in sync when navigating via links that change query params.
-  const platformParam = searchParams.get('platform')
-  useEffect(() => {
-    if (platformParam && PLATFORM_OPTIONS.some((opt) => opt.value === platformParam)) {
-      const frame = requestAnimationFrame(() => {
-        setSelectedPlatform(platformParam)
-      })
-
-      return () => {
-        cancelAnimationFrame(frame)
-      }
-    }
-
-    return undefined
-  }, [platformParam])
 
   const handleDateRangeChange = (range: AnalyticsDateRange, days?: number) => {
     setDateRange(range)
@@ -155,23 +123,23 @@ export default function AnalyticsPage() {
 
   // TanStack Query mutation for Google Analytics sync
   const googleAnalyticsSyncMutation = useGoogleAnalyticsSync()
-  const listGoogleAnalyticsProperties = useAction(adsIntegrationsApi.listGoogleAnalyticsProperties)
-  const initializeAdAccount = useAction(adsIntegrationsApi.initializeAdAccount)
-  const deleteAdIntegrationMutation = useMutation(adsIntegrationsApi.deleteAdIntegration)
-  const deleteSyncJobsMutation = useMutation(adsIntegrationsApi.deleteSyncJobs)
-  const deleteProviderMetricsMutation = useMutation(adsIntegrationsApi.deleteProviderMetrics)
+  const listGoogleAnalyticsProperties = useAction(analyticsIntegrationsApi.listGoogleAnalyticsProperties)
+  const initializeGoogleAnalyticsProperty = useAction(analyticsIntegrationsApi.initializeGoogleAnalyticsProperty)
+  const deleteGoogleAnalyticsIntegrationMutation = useMutation(analyticsIntegrationsApi.deleteGoogleAnalyticsIntegration)
+  const deleteGoogleAnalyticsSyncJobsMutation = useMutation(analyticsIntegrationsApi.deleteGoogleAnalyticsSyncJobs)
+  const deleteGoogleAnalyticsMetricsMutation = useMutation(analyticsIntegrationsApi.deleteGoogleAnalyticsMetrics)
 
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
 
-  const integrationStatuses = useQuery(
-    adsIntegrationsApi.listStatuses,
+  const googleAnalyticsStatus = useQuery(
+    analyticsIntegrationsApi.getGoogleAnalyticsStatus,
     isPreviewMode || !workspaceId || !user?.id
       ? 'skip'
       : {
           workspaceId,
           clientId: selectedClientId ?? null,
         }
-  ) as GoogleAnalyticsStatusRow[] | undefined
+  ) as GoogleAnalyticsStatusRow | null | undefined
 
   const refreshGoogleAnalyticsStatus = useCallback(async () => {
     if (isPreviewMode) {
@@ -185,8 +153,7 @@ export default function AnalyticsPage() {
       return
     }
 
-    const rows = Array.isArray(integrationStatuses) ? integrationStatuses : []
-    const ga = rows.find((s) => s?.providerId === 'google-analytics')
+    const ga = googleAnalyticsStatus ?? null
 
     const linkedAtMs = typeof ga?.linkedAtMs === 'number' ? ga.linkedAtMs : null
     const accountName = typeof ga?.accountName === 'string' ? ga.accountName : null
@@ -203,7 +170,7 @@ export default function AnalyticsPage() {
     setGaLastSyncMessage(syncMessage)
     setGaLastSyncedAtMs(lastSyncedAtMs)
     setGaLastSyncRequestedAtMs(lastSyncRequestedAtMs)
-  }, [integrationStatuses, isPreviewMode])
+  }, [googleAnalyticsStatus, isPreviewMode])
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -227,7 +194,6 @@ export default function AnalyticsPage() {
     })
     return listGoogleAnalyticsProperties({
       workspaceId,
-      providerId: 'google-analytics',
       clientId: clientIdOverride ?? selectedClientId ?? null,
     })
       .then((payload) => {
@@ -346,7 +312,10 @@ export default function AnalyticsPage() {
     insightsLoading,
     insightsRefreshing,
     mutateInsights,
-  } = useAnalyticsData(null, periodDays, selectedClientId ?? null, isPreviewMode, user?.agencyId)
+  } = useAnalyticsData(null, periodDays, selectedClientId ?? null, isPreviewMode, user?.agencyId, {
+    providerIds: ['google-analytics'],
+    includeInsights: true,
+  })
 
   const metrics = metricsData
 
@@ -363,25 +332,50 @@ export default function AnalyticsPage() {
     }
   }, [loadMoreMetrics, metricsNextCursor, toast])
 
+  const selectedRangeDays = useMemo(() => {
+    return Math.max(differenceInDays(dateRange.end, dateRange.start) + 1, 1)
+  }, [dateRange.end, dateRange.start])
+
   const handleConnectGoogleAnalytics = useCallback(async () => {
     if (isPreviewMode) {
       toast({ title: 'Preview mode', description: 'Google Analytics connection is disabled in preview mode.' })
       return
     }
 
+    if (typeof window === 'undefined') {
+      return
+    }
+
     setGaSetupMessage(null)
     setGaLoading(true)
 
-    const search = new URLSearchParams()
-    if (selectedClientId) {
-      search.set('clientId', selectedClientId)
+    try {
+      const search = new URLSearchParams({
+        redirect: `${window.location.pathname}${window.location.search}`,
+      })
+      if (selectedClientId) {
+        search.set('clientId', selectedClientId)
+      }
+
+      const target = search.toString().length > 0
+        ? `/api/integrations/google-analytics/oauth/start?${search.toString()}`
+        : '/api/integrations/google-analytics/oauth/start'
+
+      const payload = await apiFetch<{ url?: string }>(target)
+      if (typeof payload?.url !== 'string' || payload.url.length === 0) {
+        throw new Error('Google Analytics OAuth did not return a URL.')
+      }
+
+      window.location.href = payload.url
+    } catch (error) {
+      logError(error, 'AnalyticsPage:handleConnectGoogleAnalytics')
+      toast({
+        title: 'Unable to connect Google Analytics',
+        description: asErrorMessage(error),
+        variant: 'destructive',
+      })
+      setGaLoading(false)
     }
-
-    const target = search.toString().length > 0
-      ? `/api/integrations/google-analytics/oauth/start?${search.toString()}`
-      : '/api/integrations/google-analytics/oauth/start'
-
-    window.location.href = target
   }, [isPreviewMode, selectedClientId, toast])
 
   const handleSyncGoogleAnalytics = useCallback(() => {
@@ -466,9 +460,8 @@ export default function AnalyticsPage() {
 
     const clientId = selectedClientId === undefined ? null : selectedClientId
 
-    void initializeAdAccount({
+    void initializeGoogleAnalyticsProperty({
       workspaceId,
-      providerId: 'google-analytics',
       clientId,
       accountId: gaSelectedPropertyId,
     })
@@ -497,7 +490,7 @@ export default function AnalyticsPage() {
       })
   }, [
     gaSelectedPropertyId,
-    initializeAdAccount,
+    initializeGoogleAnalyticsProperty,
     isPreviewMode,
     mutateMetrics,
     refreshGoogleAnalyticsStatus,
@@ -520,9 +513,8 @@ export default function AnalyticsPage() {
 
     const effectiveClientId = selectedClientId === undefined ? null : selectedClientId
     const deleteMetricsPromise = options.clearHistoricalData
-      ? deleteProviderMetricsMutation({
+      ? deleteGoogleAnalyticsMetricsMutation({
           workspaceId,
-          providerId: 'google-analytics',
           clientId: effectiveClientId,
         }).then((result) => {
           const typedResult = result as { deleted?: number }
@@ -533,14 +525,12 @@ export default function AnalyticsPage() {
     return deleteMetricsPromise
       .then((deletedMetrics) => {
         return Promise.all([
-          deleteSyncJobsMutation({
+          deleteGoogleAnalyticsSyncJobsMutation({
             workspaceId,
-            providerId: 'google-analytics',
             clientId: effectiveClientId,
           }),
-          deleteAdIntegrationMutation({
+          deleteGoogleAnalyticsIntegrationMutation({
             workspaceId,
-            providerId: 'google-analytics',
             clientId: effectiveClientId,
           }),
         ]).then(() => deletedMetrics)
@@ -566,9 +556,9 @@ export default function AnalyticsPage() {
         setGaDisconnecting(false)
       })
   }, [
-    deleteAdIntegrationMutation,
-    deleteProviderMetricsMutation,
-    deleteSyncJobsMutation,
+    deleteGoogleAnalyticsIntegrationMutation,
+    deleteGoogleAnalyticsMetricsMutation,
+    deleteGoogleAnalyticsSyncJobsMutation,
     isPreviewMode,
     refreshGoogleAnalyticsStatus,
     selectedClientId,
@@ -577,81 +567,81 @@ export default function AnalyticsPage() {
   ])
 
   const initialMetricsLoading = metricsLoading && metrics.length === 0
-  const initialInsightsLoading = insightsLoading && insights.length === 0
+  const initialInsightsLoading = insightsLoading && insights.length === 0 && algorithmic.length === 0
 
   const filteredMetrics = useMemo(() => {
     if (!metrics.length) return []
     const startMs = dateRange.start.getTime()
     const endMs = dateRange.end.getTime()
     return metrics.filter((metric) => {
-      const inPlatform = selectedPlatform === 'all' || metric.providerId === selectedPlatform
-      if (!inPlatform) return false
+      if (metric.providerId !== 'google-analytics') return false
       const metricDate = new Date(metric.date).getTime()
       return metricDate >= startMs && metricDate <= endMs
     })
-  }, [metrics, selectedPlatform, dateRange])
+  }, [dateRange, metrics])
 
   const aggregatedByDate = useMemo(() => {
-    const map = new Map<string, { date: string; spend: number; revenue: number; clicks: number; conversions: number }>()
+    const map = new Map<string, { date: string; users: number; sessions: number; conversions: number; revenue: number }>()
     filteredMetrics.forEach((metric) => {
       const key = metric.date
       if (!map.has(key)) {
-        map.set(key, { date: key, spend: 0, revenue: 0, clicks: 0, conversions: 0 })
+        map.set(key, { date: key, users: 0, sessions: 0, conversions: 0, revenue: 0 })
       }
-      const entry = map.get(key)!
-      entry.spend += metric.spend
-      entry.revenue += metric.revenue ?? 0
-      entry.clicks += metric.clicks
+      const entry = map.get(key)
+      if (!entry) return
+      entry.users += metric.impressions
+      entry.sessions += metric.clicks
       entry.conversions += metric.conversions
+      entry.revenue += metric.revenue ?? 0
     })
     return Array.from(map.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-  }, [filteredMetrics])
-
-  const platformTotals = useMemo(() => {
-    const summary: Record<string, { spend: number; revenue: number; clicks: number; conversions: number }> = {}
-    filteredMetrics.forEach((metric) => {
-      const key = metric.providerId
-      if (!summary[key]) {
-        summary[key] = { spend: 0, revenue: 0, clicks: 0, conversions: 0 }
-      }
-      summary[key].spend += metric.spend
-      summary[key].revenue += metric.revenue ?? 0
-      summary[key].clicks += metric.clicks
-      summary[key].conversions += metric.conversions
-    })
-    return summary
   }, [filteredMetrics])
 
   const totals = useMemo(() => {
     return filteredMetrics.reduce(
       (acc, metric) => {
-        acc.spend += metric.spend
-        acc.revenue += metric.revenue ?? 0
-        acc.clicks += metric.clicks
+        acc.users += metric.impressions
+        acc.sessions += metric.clicks
         acc.conversions += metric.conversions
+        acc.revenue += metric.revenue ?? 0
         return acc
       },
-      { spend: 0, revenue: 0, clicks: 0, conversions: 0 }
+      { users: 0, sessions: 0, conversions: 0, revenue: 0 }
     )
   }, [filteredMetrics])
 
-  const averageRoaS = totals.spend > 0 ? totals.revenue / totals.spend : 0
-  const conversionRate = totals.clicks > 0 ? (totals.conversions / totals.clicks) * 100 : 0
-  const averageCpc = totals.clicks > 0 ? totals.spend / totals.clicks : 0
+  const previousTotals = useMemo(() => {
+    if (!metrics.length) {
+      return { users: 0, sessions: 0, conversions: 0, revenue: 0 }
+    }
 
-  // Advanced Metrics
-  const mer = averageRoaS // Marketing Efficiency Ratio is blended ROAS
-  const aov = totals.conversions > 0 ? totals.revenue / totals.conversions : 0
-  const rpc = totals.clicks > 0 ? totals.revenue / totals.clicks : 0
-  const roi = totals.spend > 0 ? ((totals.revenue - totals.spend) / totals.spend) * 100 : 0
+    const previousEndMs = dateRange.start.getTime() - 1
+    const previousStartMs = previousEndMs - selectedRangeDays * 24 * 60 * 60 * 1000 + 1
+
+    return metrics.reduce(
+      (acc, metric) => {
+        if (metric.providerId !== 'google-analytics') return acc
+        const metricDate = new Date(metric.date).getTime()
+        if (metricDate < previousStartMs || metricDate > previousEndMs) return acc
+        acc.users += metric.impressions
+        acc.sessions += metric.clicks
+        acc.conversions += metric.conversions
+        acc.revenue += metric.revenue ?? 0
+        return acc
+      },
+      { users: 0, sessions: 0, conversions: 0, revenue: 0 }
+    )
+  }, [dateRange.start, metrics, selectedRangeDays])
+
+  const conversionRate = totals.sessions > 0 ? (totals.conversions / totals.sessions) * 100 : 0
+  const avgUsersPerDay = totals.users / selectedRangeDays
+  const avgSessionsPerDay = totals.sessions / selectedRangeDays
+  const revenuePerSession = totals.sessions > 0 ? totals.revenue / totals.sessions : 0
+  const sessionsPerUser = totals.users > 0 ? totals.sessions / totals.users : 0
 
   // Check if Google Analytics has been synced (has data for selected period)
-  const hasGaData = useMemo(() => {
-    if (selectedPlatform !== 'google-analytics') return true
-    return filteredMetrics.some((metric) => metric.providerId === 'google-analytics')
-  }, [filteredMetrics, selectedPlatform])
-
-  const isGaSelectedWithoutData = selectedPlatform === 'google-analytics' && !hasGaData && !initialMetricsLoading
+  const hasGaData = filteredMetrics.length > 0
+  const isGaSelectedWithoutData = gaConnected && !hasGaData && !initialMetricsLoading
 
   const gaStatusLabel = useMemo(() => {
     if (!gaConnected) return 'Not connected'
@@ -665,39 +655,21 @@ export default function AnalyticsPage() {
   const gaLastSyncedLabel = useMemo(() => formatRelativeSyncTime(gaLastSyncedAtMs), [gaLastSyncedAtMs])
   const gaLastRequestedLabel = useMemo(() => formatRelativeSyncTime(gaLastSyncRequestedAtMs), [gaLastSyncRequestedAtMs])
 
-  const platformBreakdown = useMemo(() => {
-    return Object.entries(platformTotals).map(([providerId, summary]) => ({
-      name: PROVIDER_LABELS[providerId] ?? providerId,
-      value: summary.spend,
-      color: providerId === 'facebook' ? '#1877F2' : providerId === 'google' ? '#4285F4' : '#6366f1',
-    }))
-  }, [platformTotals])
-
-  const creativeBreakdown = useMemo(() => {
-    return filteredMetrics
-      .filter((metric) => metric.providerId === 'facebook' && Array.isArray(metric.creatives) && metric.creatives.length > 0)
-      .flatMap((metric) =>
-        metric.creatives!.map((creative) => ({
-          id: creative.id,
-          name: creative.name || 'Untitled creative',
-          spend: creative.spend ?? metric.spend,
-          impressions: creative.impressions ?? metric.impressions,
-          clicks: creative.clicks ?? metric.clicks,
-          conversions: creative.conversions ?? metric.conversions,
-          revenue: creative.revenue ?? metric.revenue ?? 0,
-          date: metric.date,
-        }))
-      )
-      .sort((a, b) => b.spend - a.spend)
-      .slice(0, 10)
-  }, [filteredMetrics])
-
   const chartData = useMemo(() => {
     return aggregatedByDate.map((entry) => ({
       ...entry,
-      roas: entry.spend > 0 ? entry.revenue / entry.spend : 0,
+      conversionRate: entry.sessions > 0 ? (entry.conversions / entry.sessions) * 100 : 0,
     }))
   }, [aggregatedByDate])
+
+  const story = useMemo(() => {
+    return buildGoogleAnalyticsStory({
+      currentTotals: totals,
+      previousTotals,
+      chartData,
+      selectedRangeDays,
+    })
+  }, [chartData, previousTotals, selectedRangeDays, totals])
 
   return (
     <div className={DASHBOARD_THEME.layout.container}>
@@ -718,20 +690,6 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative group">
-              <div className="absolute -left-3 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full bg-primary/40 opacity-0 transition-opacity group-focus-within:opacity-100" />
-              <select
-                value={selectedPlatform}
-                onChange={(e) => setSelectedPlatform(e.target.value)}
-                className="block w-full min-w-[160px] cursor-pointer rounded-xl border border-muted/30 bg-background px-4 py-2.5 text-xs font-bold uppercase tracking-wider shadow-sm transition-all hover:border-primary/40 focus:border-primary/60 focus:outline-none focus:ring-4 focus:ring-primary/5"
-              >
-                {PLATFORM_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
             <AnalyticsDateRangePicker
               value={dateRange}
               onChange={handleDateRangeChange}
@@ -745,7 +703,7 @@ export default function AnalyticsPage() {
             <div className="flex items-center gap-3">
               {/* Google Analytics Logo */}
               <div className="flex h-10 w-10 items-center justify-center">
-                <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none">
+                <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" aria-hidden="true">
                   <path d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10z" fill="#F9AB00"/>
                   <path d="M12 2C6.477 2 2 6.477 2 12h10V2z" fill="#E37400"/>
                   <circle cx="12" cy="12" r="3" fill="#fff"/>
@@ -888,7 +846,7 @@ export default function AnalyticsPage() {
           <Card className="overflow-hidden border-0 bg-white shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)]">
             <CardContent className="flex flex-col items-center justify-center py-16 px-6 text-center">
               <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#f8f9fa]">
-                <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none">
+                <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none" aria-hidden="true">
                   <path d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10z" fill="#F9AB00"/>
                   <path d="M12 2C6.477 2 2 6.477 2 12h10V2z" fill="#E37400"/>
                   <circle cx="12" cy="12" r="3" fill="#fff"/>
@@ -896,7 +854,7 @@ export default function AnalyticsPage() {
               </div>
               <h3 className="mb-2 text-base font-medium text-[#202124]">No analytics data yet</h3>
               <p className="mb-6 max-w-md text-sm text-[#5f6368]">
-                Connect your Google Analytics property and sync your data to view performance metrics, insights, and reports.
+                Connect your Google Analytics property and sync your data to view users, sessions, conversions, and revenue trends.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
                 {!gaConnected && (
@@ -954,7 +912,7 @@ export default function AnalyticsPage() {
             <div className="flex items-center justify-between border-b border-muted/10 pb-2">
               <div className="flex items-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">Performance Summary</h2>
+                <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">Property performance</h2>
               </div>
               <div className="flex items-center gap-1.5">
                 {metricsNextCursor && (
@@ -990,30 +948,29 @@ export default function AnalyticsPage() {
             {/* Summary Cards */}
             <AnalyticsSummaryCards
               totals={totals}
-              averageRoaS={averageRoaS}
               conversionRate={conversionRate}
-              averageCpc={averageCpc}
               isLoading={initialMetricsLoading}
             />
 
             {/* Advanced Metric Cards */}
             <AnalyticsMetricCards
-              mer={mer}
-              aov={aov}
-              rpc={rpc}
-              roi={roi}
+              avgUsersPerDay={avgUsersPerDay}
+              avgSessionsPerDay={avgSessionsPerDay}
+              revenuePerSession={revenuePerSession}
+              sessionsPerUser={sessionsPerUser}
+              conversionRate={conversionRate}
               isLoading={initialMetricsLoading}
             />
+
+            <AnalyticsDeepDiveSection story={story} />
 
             {/* Charts Grid */}
             <AnalyticsCharts
               chartData={chartData}
-              platformBreakdown={platformBreakdown}
               isMetricsLoading={metricsLoading}
               initialMetricsLoading={initialMetricsLoading}
             />
 
-            {/* Insights Section */}
             <AnalyticsInsightsSection
               insights={insights}
               algorithmic={algorithmic}
@@ -1021,16 +978,9 @@ export default function AnalyticsPage() {
               insightsLoading={insightsLoading}
               insightsRefreshing={insightsRefreshing}
               initialInsightsLoading={initialInsightsLoading}
-              onRefreshInsights={() => mutateInsights()}
-            />
-
-            {/* Creatives Section */}
-            <AnalyticsCreativesSection
-              creativeBreakdown={creativeBreakdown}
-              isMetricsLoading={metricsLoading}
-              metricsRefreshing={metricsRefreshing}
-              initialMetricsLoading={initialMetricsLoading}
-              onRefreshMetrics={() => mutateMetrics()}
+              onRefreshInsights={() => {
+                void mutateInsights()
+              }}
             />
           </>
         )}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState, type FormEvent } from 'react'
-import { useMutation } from 'convex/react'
+import { useConvex, useMutation } from 'convex/react'
 import { TaskRecord } from '@/types/tasks'
 import { asErrorMessage } from '@/lib/convex-errors'
 import { filesApi } from '@/lib/convex-api'
@@ -10,7 +10,7 @@ import {
   type PendingTaskAttachment,
   uploadTaskAttachment,
 } from '@/services/task-attachments'
-import { TaskFormState, buildInitialFormState, parseMentionNames } from '../task-types'
+import { TaskFormState, buildInitialFormState, isFutureTaskDueDateValue, parseMentionNames } from '../task-types'
 import type { CreateTaskPayload, UpdateTaskPayload } from './use-tasks'
 
 export type UseTaskFormOptions = {
@@ -61,6 +61,7 @@ export function useTaskForm({
   onCreateTask,
   onUpdateTask,
 }: UseTaskFormOptions): UseTaskFormReturn {
+  const convex = useConvex()
   // Create form state
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [formState, setFormState] = useState<TaskFormState>(() =>
@@ -71,7 +72,10 @@ export function useTaskForm({
   const [createError, setCreateError] = useState<string | null>(null)
 
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
-  const getPublicUrl = useMutation(filesApi.getPublicUrl)
+  const getPublicUrl = useCallback(
+    (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
+    [convex]
+  )
 
   // Edit form state
   const [editingTask, setEditingTask] = useState<TaskRecord | null>(null)
@@ -135,6 +139,11 @@ export function useTaskForm({
     const trimmedTitle = formState.title.trim()
     if (!trimmedTitle) {
       setCreateError('Title is required.')
+      return
+    }
+
+    if (formState.dueDate && !isFutureTaskDueDateValue(formState.dueDate)) {
+      setCreateError('Due date must be today or later.')
       return
     }
 
@@ -220,6 +229,11 @@ export function useTaskForm({
     const trimmedTitle = editFormState.title.trim()
     if (!trimmedTitle) {
       setUpdateError('Title is required.')
+      return
+    }
+
+    if (editFormState.dueDate && !isFutureTaskDueDateValue(editFormState.dueDate)) {
+      setUpdateError('Due date must be today or later.')
       return
     }
 

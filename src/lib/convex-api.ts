@@ -49,6 +49,7 @@ export const notificationsApi = {
 }
 
 export const tasksApi = {
+  list: looseApi.tasks.list,
   listByClient: looseApi.tasks.listByClient,
   createTask: looseApi.tasks.createTask,
   patchTask: looseApi.tasks.patchTask,
@@ -87,6 +88,15 @@ export const adsIntegrationsApi = {
   deleteProviderMetrics: looseApi.adsIntegrations.deleteProviderMetrics,
 }
 
+export const analyticsIntegrationsApi = {
+  getGoogleAnalyticsStatus: looseApi.analyticsIntegrations.getGoogleAnalyticsStatus,
+  listGoogleAnalyticsProperties: looseApi.analyticsIntegrations.listGoogleAnalyticsProperties,
+  initializeGoogleAnalyticsProperty: looseApi.analyticsIntegrations.initializeGoogleAnalyticsProperty,
+  deleteGoogleAnalyticsIntegration: looseApi.analyticsIntegrations.deleteGoogleAnalyticsIntegration,
+  deleteGoogleAnalyticsSyncJobs: looseApi.analyticsIntegrations.deleteGoogleAnalyticsSyncJobs,
+  deleteGoogleAnalyticsMetrics: looseApi.analyticsIntegrations.deleteGoogleAnalyticsMetrics,
+}
+
 export const meetingIntegrationsApi = {
   getGoogleWorkspaceStatus: looseApi.meetingIntegrations.getGoogleWorkspaceStatus,
   deleteGoogleWorkspaceIntegration: looseApi.meetingIntegrations.deleteGoogleWorkspaceIntegration,
@@ -95,6 +105,7 @@ export const meetingIntegrationsApi = {
 export const meetingsApi = {
   list: looseApi.meetings.list,
   getByLegacyId: looseApi.meetings.getByLegacyId,
+  getByRoomName: looseApi.meetings.getByRoomName,
   create: looseApi.meetings.create,
   updateStatus: looseApi.meetings.updateStatus,
 }
@@ -167,6 +178,17 @@ export const collaborationApi = {
   setTyping: looseApi.collaborationTyping.setTyping,
   listTyping: looseApi.collaborationTyping.listForChannel,
   generateUploadUrl: looseApi.files.generateUploadUrl,
+}
+
+export const collaborationChannelsApi = {
+  listAccessible: looseApi.collaborationChannels.listAccessible,
+  create: looseApi.collaborationChannels.create,
+  updateMembers: looseApi.collaborationChannels.updateMembers,
+  remove: looseApi.collaborationChannels.remove,
+}
+
+export const directMessagesApi = {
+  searchMessages: looseApi.directMessages.searchMessages,
 }
 
 export const customFormulasApi = {

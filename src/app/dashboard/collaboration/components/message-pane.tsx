@@ -197,6 +197,11 @@ export function CollaborationMessagePane({
     return `${first?.name ?? 'Someone'}, ${second?.name ?? 'someone else'}, and ${rest.length} others are typing…`
   }, [typingParticipants])
 
+  const latestVisibleMessageId = useMemo(() => {
+    if (isSearchActive || visibleMessages.length === 0) return null
+    return visibleMessages[visibleMessages.length - 1]?.id ?? null
+  }, [isSearchActive, visibleMessages])
+
   // Clear editing state if message is deleted
   useEffect(() => {
     if (!editingMessageId) return undefined
@@ -227,12 +232,22 @@ export function CollaborationMessagePane({
     }
   }, [channel?.id, onClearThreadReplies])
 
-  // Scroll to bottom when channel changes and messages load
+  // Scroll to bottom when the latest visible message changes.
+  // This covers initial channel loads and newly-arrived messages,
+  // while avoiding jumps when older history is prepended.
   useEffect(() => {
-    if (!isLoading && visibleMessages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
+    if (isLoading || isSearchActive || !latestVisibleMessageId) {
+      return
     }
-  }, [channel?.id, isLoading])
+
+    const frame = requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+    }
+  }, [channel?.id, isLoading, isSearchActive, latestVisibleMessageId, messagesEndRef])
 
   // Handlers
   const handleStartEdit = (message: CollaborationMessage) => {

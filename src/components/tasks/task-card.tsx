@@ -1,12 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { memo, type ChangeEvent } from 'react'
+import { memo } from 'react'
 import { Calendar, User, MoreHorizontal, LoaderCircle, Pencil, Trash2, MessageCircle, Copy, CalendarX2, Clock4, Repeat, Link2, ChevronRight, ListTodo, Paperclip } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,10 +20,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { TaskRecord, TaskStatus, TASK_STATUSES } from '@/types/tasks'
+import type { TaskRecord, TaskStatus } from '@/types/tasks'
+import { TASK_STATUSES } from '@/types/tasks'
 import {
-  statusColors,
   priorityColors,
+  taskPillColors,
+  taskInfoPanelClasses,
   STATUS_ICONS,
   formatDate,
   formatStatusLabel,
@@ -64,7 +65,7 @@ function highlightMatch(text: string, query: string): React.ReactNode {
 
     if (isMatch) {
       return (
-        <mark key={key} className="bg-yellow-200/70 dark:bg-yellow-500/30 rounded px-0.5 text-foreground">
+        <mark key={key} className="rounded bg-yellow-100 px-0.5 text-slate-900">
           {part}
         </mark>
       )
@@ -83,20 +84,19 @@ function TaskCardComponent({
   onClone,
   onShare,
   selected = false,
-  onSelectToggle,
   searchQuery = '',
 }: TaskCardProps) {
-  const StatusIcon = STATUS_ICONS[task.status]
   const overdue = isOverdue(task)
   const dueSoon = isDueSoon(task)
 
   return (
     <div
       className={cn(
-        'group relative flex flex-col justify-between rounded-xl border border-muted/40 bg-background p-5 shadow-sm transition-all hover:border-primary/40 hover:shadow-md dark:hover:bg-muted/10',
+        'group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-slate-200/80 bg-gradient-to-b from-white via-white to-slate-50/70 p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
         isPendingUpdate && 'opacity-75 pointer-events-none',
-        overdue && 'border-red-500/50 bg-red-500/[0.02] dark:border-red-500/30',
-        dueSoon && !overdue && 'border-amber-500/50 bg-amber-500/[0.02] dark:border-amber-500/30',
+        selected && 'border-primary/40 ring-2 ring-primary/15 shadow-md',
+        overdue && 'border-red-300/90 bg-red-50/70',
+        dueSoon && !overdue && 'border-amber-300/90 bg-amber-50/70',
         task.parentId && 'ml-4'
       )}
     >
@@ -118,73 +118,63 @@ function TaskCardComponent({
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="flex flex-1 flex-col gap-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className="mt-1 flex-shrink-0">
-              <Checkbox
-                checked={selected}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  onSelectToggle?.(task.id, event.target.checked)
-                }
-                aria-label="Select task"
-              />
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex items-start gap-2">
+              <h3 className="line-clamp-2 min-w-0 flex-1 text-[1.05rem] font-bold leading-tight text-slate-900 transition-colors group-hover:text-primary">
+                {highlightMatch(task.title, searchQuery)}
+              </h3>
+              {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
             </div>
-            <div className="min-w-0 flex-1 space-y-1">
-              {/* Task title with subtask indicator */}
-              <div className="flex items-center gap-2">
-                {task.parentId && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                      </TooltipTrigger>
-                      <TooltipContent>Subtask</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+
+            {task.client && (
+              <div className="flex items-center gap-1.5 pt-0.5">
+                {task.clientId ? (
+                  <Link
+                    href={`/dashboard/clients?clientId=${task.clientId}`}
+                    className={cn(
+                      'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors hover:border-primary/30 hover:text-primary',
+                      taskPillColors.client
+                    )}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-current/55" />
+                    {task.client}
+                  </Link>
+                ) : (
+                  <p className={cn('inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold', taskPillColors.client)}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-current/55" />
+                    {task.client}
+                  </p>
                 )}
-                {(task.subtaskCount ?? 0) > 0 && (
+              </div>
+            )}
+
+            {/* Task metadata indicators row */}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+                {(task.parentId || (task.subtaskCount ?? 0) > 0) && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-muted/40">
-                          <ListTodo className="h-2.5 w-2.5 mr-0.5" />
-                          {task.subtaskCount}
+                        <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.subtask)}>
+                          {task.parentId ? <ChevronRight className="h-2.5 w-2.5" /> : <ListTodo className="h-2.5 w-2.5" />}
+                          {task.parentId ? 'Subtask' : task.subtaskCount}
                         </Badge>
                       </TooltipTrigger>
-                      <TooltipContent>{task.subtaskCount} subtask{task.subtaskCount !== 1 ? 's' : ''}</TooltipContent>
+                      <TooltipContent>
+                        {task.parentId
+                          ? 'Subtask'
+                          : `${task.subtaskCount} subtask${task.subtaskCount !== 1 ? 's' : ''}`}
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                <h3 className="font-bold text-base leading-tight text-foreground line-clamp-2 group-hover:text-primary transition-colors">
-                  {highlightMatch(task.title, searchQuery)}
-                </h3>
-              </div>
-
-              {task.client && (
-                <div className="flex items-center gap-1.5">
-                  {task.clientId ? (
-                    <Link href={`/dashboard/clients?clientId=${task.clientId}`} className="text-[11px] font-semibold text-muted-foreground/70 hover:text-primary hover:underline transition-colors flex items-center gap-1.5">
-                      <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-                      {task.client}
-                    </Link>
-                  ) : (
-                    <p className="text-[11px] font-semibold text-muted-foreground/70 flex items-center gap-1.5">
-                      <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-                      {task.client}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Task metadata indicators row */}
-              <div className="flex flex-wrap items-center gap-2 mt-2">
                 {/* Comment count badge */}
                 {(task.commentCount ?? 0) > 0 && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Badge variant="secondary" className="h-5 px-1.5 text-[10px] gap-1 bg-blue-50/50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400">
+                        <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.comments)}>
                           <MessageCircle className="h-2.5 w-2.5" />
                           {task.commentCount}
                         </Badge>
@@ -198,7 +188,7 @@ function TaskCardComponent({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Badge variant="secondary" className="h-5 px-1.5 text-[10px] gap-1 bg-slate-50/70 text-slate-600 dark:bg-slate-900/40 dark:text-slate-300">
+                        <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.attachments)}>
                           <Paperclip className="h-2.5 w-2.5" />
                           {task.attachments?.length}
                         </Badge>
@@ -215,7 +205,7 @@ function TaskCardComponent({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Badge variant="secondary" className="h-5 px-1.5 text-[10px] gap-1 bg-purple-50/50 text-purple-600 dark:bg-purple-950/30 dark:text-purple-400">
+                        <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.time)}>
                           <Clock4 className="h-2.5 w-2.5" />
                           {formatTimeSpent(task.timeSpentMinutes)}
                         </Badge>
@@ -230,7 +220,7 @@ function TaskCardComponent({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Badge variant="secondary" className="h-5 px-1.5 text-[10px] gap-1 bg-green-50/50 text-green-600 dark:bg-green-950/30 dark:text-green-400">
+                        <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.recurring)}>
                           <Repeat className="h-2.5 w-2.5" />
                         </Badge>
                       </TooltipTrigger>
@@ -244,7 +234,7 @@ function TaskCardComponent({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Badge variant="secondary" className="h-5 px-1.5 text-[10px] gap-1 bg-indigo-50/50 text-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-400">
+                        <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.shared)}>
                           <Link2 className="h-2.5 w-2.5" />
                           {task.sharedWith?.length}
                         </Badge>
@@ -253,38 +243,56 @@ function TaskCardComponent({
                     </Tooltip>
                   </TooltipProvider>
                 )}
-              </div>
             </div>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-start gap-1 shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    statusColors[task.status],
-                    'h-6 border px-2 py-0 cursor-pointer transition-all hover:opacity-90 gap-1.5'
-                  )}
-                  role="button"
-                  aria-label={`Change status from ${formatStatusLabel(task.status)}`}
-                  aria-haspopup="menu"
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full border border-transparent text-slate-500 transition-colors hover:border-slate-200 hover:bg-slate-100/90 hover:text-slate-900"
+                  aria-label="Task actions"
                 >
-                  {isPendingUpdate ? (
-                    <LoaderCircle className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <StatusIcon className="h-3 w-3" />
-                  )}
-                  <span className="text-[10px] font-bold tracking-wider uppercase">
-                    {formatStatusLabel(task.status)}
-                  </span>
-                </Badge>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {TASK_STATUSES.filter((s) => s !== task.status && s !== 'archived').map((status) => (
-                  <DropdownMenuItem key={status} onClick={() => onQuickStatusChange(task, status)}>
-                    {formatStatusLabel(status)}
+                {TASK_STATUSES.filter((status) => status !== task.status && status !== 'archived').map((status) => {
+                  const NextStatusIcon = STATUS_ICONS[status]
+
+                  return (
+                    <DropdownMenuItem key={status} onClick={() => onQuickStatusChange(task, status)}>
+                      <NextStatusIcon className="mr-2 h-4 w-4" />
+                      Move to {formatStatusLabel(status)}
+                    </DropdownMenuItem>
+                  )
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onEdit(task)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit task
+                </DropdownMenuItem>
+                {onClone && (
+                  <DropdownMenuItem onClick={() => onClone(task)}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Duplicate task
                   </DropdownMenuItem>
-                ))}
+                )}
+                {onShare && (
+                  <DropdownMenuItem onClick={() => onShare(task)}>
+                    <Link2 className="mr-2 h-4 w-4" />
+                    Share task
+                  </DropdownMenuItem>
+                )}
+                {(onClone || onShare) && <DropdownMenuSeparator />}
+                <DropdownMenuItem
+                  onClick={() => onDelete(task)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete task
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -293,37 +301,53 @@ function TaskCardComponent({
         <div className="flex flex-wrap gap-2">
           <Badge
             variant="outline"
-            className={cn(priorityColors[task.priority], "h-5 text-[10px] px-1.5 font-bold uppercase tracking-wide")}
+            className={cn(priorityColors[task.priority], 'h-7 rounded-full px-2.5 text-[10px] font-bold uppercase tracking-[0.18em]')}
           >
             {formatPriorityLabel(task.priority)}
           </Badge>
         </div>
 
         {task.description && (
-          <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-snug min-h-[2.5rem]">
+          <p className="min-h-[2.75rem] line-clamp-2 text-sm leading-6 text-slate-600">
             {highlightMatch(task.description, searchQuery)}
           </p>
         )}
 
-        <div className="flex flex-col gap-2.5 pt-1">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted/60 text-muted-foreground">
-                <User className="h-3 w-3" />
-              </div>
-              <span className="font-medium">
-                {(task.assignedTo ?? []).length > 0 ? (task.assignedTo ?? []).join(', ') : 'Unassigned'}
-              </span>
+        <div className="mt-auto grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5 border-t border-slate-200/70 pt-4">
+          <div className={cn(taskInfoPanelClasses.base, 'flex min-w-0 items-start gap-3')}>
+            <div className={cn(taskInfoPanelClasses.icon, 'mt-0.5')}>
+              <User className="h-3 w-3" />
             </div>
+            <div className="min-w-0 space-y-1">
+              <p className={taskInfoPanelClasses.label}>
+                Assignee
+              </p>
+              <p className={cn(taskInfoPanelClasses.value, 'line-clamp-2')}>
+                {(task.assignedTo ?? []).length > 0 ? (task.assignedTo ?? []).join(', ') : 'Unassigned'}
+              </p>
+            </div>
+          </div>
+          <div className={cn(
+            taskInfoPanelClasses.base,
+            'flex items-start gap-3',
+            overdue && 'border-red-200/90 bg-red-50/95',
+            dueSoon && !overdue && 'border-amber-200/90 bg-amber-50/95'
+          )}>
             <div className={cn(
-              "flex items-center gap-1.5 text-xs font-medium",
-              overdue && "text-red-500",
-              dueSoon && !overdue && "text-amber-500"
+              taskInfoPanelClasses.icon,
+              'mt-0.5',
+              overdue && 'border-red-200/90 bg-white text-red-600',
+              dueSoon && !overdue && 'border-amber-200/90 bg-white text-amber-700'
             )}>
-              <Calendar className="h-3.5 w-3.5" />
-              <span>
+              <Calendar className="h-3 w-3" />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <p className={taskInfoPanelClasses.label}>
+                Due date
+              </p>
+              <p className={cn(taskInfoPanelClasses.value, !task.dueDate && 'text-slate-500')}>
                 {task.dueDate ? formatDate(task.dueDate) : 'No due date'}
-              </span>
+              </p>
             </div>
           </div>
         </div>
@@ -333,64 +357,17 @@ function TaskCardComponent({
             {(task.tags ?? []).slice(0, 3).map((tag) => (
               <Badge
                 key={tag}
-                variant="secondary"
-                className="text-[10px] px-1.5 py-0 h-4 bg-muted/40 text-muted-foreground/70"
+                variant="outline"
+                className={cn('h-6 rounded-full px-2 text-[10px] font-medium', taskPillColors.tag)}
               >
                 #{highlightMatch(tag, searchQuery)}
               </Badge>
             ))}
             {(task.tags ?? []).length > 3 && (
-              <span className="text-[10px] text-muted-foreground/60">+{(task.tags ?? []).length - 3}</span>
+              <span className="text-[10px] text-slate-500">+{(task.tags ?? []).length - 3}</span>
             )}
           </div>
         )}
-      </div>
-
-      <div className="mt-4 flex items-center justify-end gap-2 pt-3 border-t border-muted/40">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-xs gap-1"
-          onClick={() => onEdit(task)}
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          Edit
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(task)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit task
-            </DropdownMenuItem>
-            {onClone && (
-              <>
-                <DropdownMenuItem onClick={() => onClone(task)}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Duplicate task
-                </DropdownMenuItem>
-              </>
-            )}
-            {onShare && (
-              <DropdownMenuItem onClick={() => onShare(task)}>
-                <Link2 className="mr-2 h-4 w-4" />
-                Share task
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => onDelete(task)}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete task
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </div>
   )

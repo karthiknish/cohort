@@ -27,6 +27,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { RichComposer } from './rich-composer'
 import { PendingAttachmentsList } from './message-composer'
 import { MessageList, collaborationToUnifiedMessage, type UnifiedMessage } from './message-list'
+import { MessageSearchBar, NoSearchResultsState } from './message-pane-parts'
 import { SwipeableMessage } from './swipeable-message'
 import { MessageAttachments } from './message-attachments'
 import { MessageContent } from './message-content'
@@ -74,6 +75,9 @@ export interface UnifiedMessagePaneProps {
   hasMore: boolean
   onLoadMore: () => void
   onRefresh?: () => Promise<void> | void
+  messageSearchQuery?: string
+  onMessageSearchChange?: (value: string) => void
+  messageSearchHighlights?: string[]
   messageInput: string
   onMessageInputChange: (value: string) => void
   onSendMessage: (content: string) => Promise<void>
@@ -121,6 +125,9 @@ export function UnifiedMessagePane({
   hasMore,
   onLoadMore,
   onRefresh,
+  messageSearchQuery = '',
+  onMessageSearchChange,
+  messageSearchHighlights = [],
   messageInput,
   onMessageInputChange,
   onSendMessage,
@@ -171,6 +178,8 @@ export function UnifiedMessagePane({
   const { toast } = useToast()
   const activeDeletingMessageId = deletingMessageId ?? messageDeletingId
   const conversationKey = header ? `${header.type}:${header.name}` : 'none'
+  const canSearchMessages = Boolean(onMessageSearchChange)
+  const isMessageSearchActive = messageSearchQuery.trim().length > 0
 
   const channelMessagesById = useMemo(() => {
     const map = new Map<string, CollaborationMessage>()
@@ -609,9 +618,10 @@ export function UnifiedMessagePane({
       <MessageContent
         content={originalMessage?.content ?? message.content ?? ''}
         mentions={originalMessage?.mentions ?? message.mentions}
+        highlightTerms={isMessageSearchActive ? messageSearchHighlights : undefined}
       />
     )
-  }, [channelMessagesById])
+  }, [channelMessagesById, isMessageSearchActive, messageSearchHighlights])
 
   const renderMessageAttachments = useCallback((message: UnifiedMessage) => {
     if (!message.attachments || message.attachments.length === 0) return null
@@ -955,8 +965,18 @@ export function UnifiedMessagePane({
         </div>
       </div>
 
+      {canSearchMessages && onMessageSearchChange ? (
+        <MessageSearchBar
+          value={messageSearchQuery}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => onMessageSearchChange(event.target.value)}
+          resultCount={messages.length}
+          isActive={isMessageSearchActive}
+          placeholder={header.type === 'dm' ? 'Search messages in this conversation…' : 'Search messages in this channel…'}
+        />
+      ) : null}
+
       {/* Messages */}
-      <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-hidden">
+      <div ref={scrollContainerRef} className="flex flex-1 min-h-0 overflow-hidden">
         <MessageList
           messages={messages}
           currentUserId={currentUserId}
@@ -979,7 +999,7 @@ export function UnifiedMessagePane({
           renderDeletedInfo={renderDeletedInfo}
           renderThreadSection={header.type === 'channel' ? renderThreadSection : undefined}
           renderMessageWrapper={renderMessageWrapper}
-          emptyState={emptyState}
+          emptyState={isMessageSearchActive ? <NoSearchResultsState /> : emptyState}
           variant={header.type === 'channel' ? 'channel' : 'dm'}
           editingMessageId={editingMessageId}
           focusMessageId={effectiveFocusMessageId}

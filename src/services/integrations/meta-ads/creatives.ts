@@ -65,6 +65,14 @@ export interface CreateAdOptions {
   maxRetries?: number
 }
 
+export interface UpdateAdOptions {
+  accessToken: string
+  adId: string
+  creativeId: string
+  name?: string
+  maxRetries?: number
+}
+
 export interface DeleteAdCreativeOptions {
   accessToken: string
   creativeId: string
@@ -83,6 +91,28 @@ export interface UpdateAdCreativeOptions {
   maxRetries?: number
 }
 
+export interface RecreateMetaAdCreativeOptions {
+  accessToken: string
+  adAccountId: string
+  adId: string
+  creativeId?: string
+  name?: string
+  title?: string
+  body?: string
+  description?: string
+  callToActionType?: string
+  linkUrl?: string
+  objectType?: string
+  imageUrl?: string
+  imageHash?: string
+  videoId?: string
+  pageId?: string
+  instagramActorId?: string
+  assetFeedSpec?: string
+  destinationSpec?: CreateAdCreativeOptions['destinationSpec']
+  maxRetries?: number
+}
+
 export interface UploadMediaOptions {
   accessToken: string
   adAccountId: string
@@ -94,6 +124,50 @@ export interface UploadMediaOptions {
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   return value as Record<string, unknown>
+}
+
+function asNonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
+export function normalizeMetaObjectTypeForCreate(objectType?: string): CreateAdCreativeOptions['objectType'] {
+  switch (objectType) {
+    case 'VIDEO':
+      return 'VIDEO'
+    case 'CAROUSEL_VIDEO':
+      return 'CAROUSEL_VIDEO'
+    case 'CAROUSEL_IMAGE':
+    case 'CAROUSEL':
+      return 'CAROUSEL_IMAGE'
+    case 'DYNAMIC_CAROUSEL':
+    case 'DYNAMIC':
+      return 'DYNAMIC_CAROUSEL'
+    default:
+      return 'IMAGE'
+  }
+}
+
+export function mergeMetaDestinationSpec(
+  destinationSpec?: CreateAdCreativeOptions['destinationSpec'],
+  linkUrl?: string
+): CreateAdCreativeOptions['destinationSpec'] {
+  const normalizedLinkUrl = linkUrl?.trim()
+
+  if (!destinationSpec && !normalizedLinkUrl) {
+    return undefined
+  }
+
+  if (!normalizedLinkUrl) {
+    return destinationSpec
+  }
+
+  return {
+    ...destinationSpec,
+    url: normalizedLinkUrl,
+    fallback_url: destinationSpec?.fallback_url ?? normalizedLinkUrl,
+  }
 }
 
 // =============================================================================
@@ -348,6 +422,270 @@ export async function createMetaAd(options: CreateAdOptions): Promise<{
       adId: '',
       error: error instanceof Error ? error.message : 'Unknown error',
     }
+  }
+}
+
+export async function updateMetaAd(options: UpdateAdOptions): Promise<{
+  success: boolean
+  error?: string
+}> {
+  const {
+    accessToken,
+    adId,
+    creativeId,
+    name,
+    maxRetries,
+  } = options
+
+  const params = new URLSearchParams()
+  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+
+  const bodyData: Record<string, unknown> = {
+    creative: { creative_id: creativeId },
+    access_token: accessToken,
+  }
+
+  if (name !== undefined) {
+    bodyData.name = name
+  }
+
+  try {
+    const { payload } = await metaAdsClient.executeRequest<{
+      success?: boolean
+      error?: { message?: string; type?: string }
+    }>({
+      url: `${META_API_BASE}/${adId}?${params.toString()}`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyData),
+      operation: 'updateMetaAd',
+      maxRetries,
+    })
+
+    if (payload?.error) {
+      return {
+        success: false,
+        error: payload.error.message || 'Failed to update ad',
+      }
+    }
+
+    return { success: payload?.success ?? true }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}
+
+async function readMetaCreativeStoryActors(options: {
+  accessToken: string
+  creativeId: string
+  maxRetries?: number
+}): Promise<{ pageId?: string; instagramActorId?: string }> {
+  const { accessToken, creativeId, maxRetries } = options
+  const params = new URLSearchParams({ fields: 'object_story_spec' })
+  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+
+  const { payload } = await metaAdsClient.executeRequest<{
+    object_story_spec?: Record<string, unknown>
+  }>({
+    url: `${META_API_BASE}/${creativeId}?${params.toString()}`,
+    operation: 'readMetaCreativeForUpdate',
+    maxRetries,
+  })
+
+  const storySpec = asRecord(payload?.object_story_spec)
+
+  return {
+    pageId: asNonEmptyString(storySpec?.page_id),
+    instagramActorId: asNonEmptyString(storySpec?.instagram_actor_id),
+  }
+}
+
+async function resolveMetaCreativeActorsForEdit(options: {
+  accessToken: string
+  adId: string
+  creativeId?: string
+  pageId?: string
+  instagramActorId?: string
+  maxRetries?: number
+}): Promise<{ pageId?: string; instagramActorId?: string }> {
+  const {
+    accessToken,
+    adId,
+    creativeId,
+    pageId,
+    instagramActorId,
+    maxRetries,
+  } = options
+
+  let resolvedPageId = asNonEmptyString(pageId)
+  let resolvedInstagramActorId = asNonEmptyString(instagramActorId)
+
+  if (resolvedPageId && resolvedInstagramActorId) {
+    return {
+      pageId: resolvedPageId,
+      instagramActorId: resolvedInstagramActorId,
+    }
+  }
+
+  const tryReadCreative = async (currentCreativeId?: string) => {
+    const normalizedCreativeId = asNonEmptyString(currentCreativeId)
+    if (!normalizedCreativeId) return
+
+    try {
+      const storyActors = await readMetaCreativeStoryActors({
+        accessToken,
+        creativeId: normalizedCreativeId,
+        maxRetries,
+      })
+
+      resolvedPageId ??= storyActors.pageId
+      resolvedInstagramActorId ??= storyActors.instagramActorId
+    } catch {
+      // Keep the original error path if fallback lookup fails.
+    }
+  }
+
+  await tryReadCreative(creativeId)
+
+  if (resolvedPageId && resolvedInstagramActorId) {
+    return {
+      pageId: resolvedPageId,
+      instagramActorId: resolvedInstagramActorId,
+    }
+  }
+
+  try {
+    const params = new URLSearchParams({ fields: 'creative{id}' })
+    await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+
+    const { payload } = await metaAdsClient.executeRequest<{
+      creative?: Record<string, unknown>
+    }>({
+      url: `${META_API_BASE}/${adId}?${params.toString()}`,
+      operation: 'readMetaAdForCreativeLookup',
+      maxRetries,
+    })
+
+    const currentCreativeId = asNonEmptyString(asRecord(payload?.creative)?.id)
+
+    if (currentCreativeId && currentCreativeId !== asNonEmptyString(creativeId)) {
+      await tryReadCreative(currentCreativeId)
+    }
+  } catch {
+    // Keep the original error path if fallback lookup fails.
+  }
+
+  return {
+    pageId: resolvedPageId,
+    instagramActorId: resolvedInstagramActorId,
+  }
+}
+
+export async function recreateMetaAdCreativeForEdit(options: RecreateMetaAdCreativeOptions): Promise<{
+  success: boolean
+  creativeId: string
+  error?: string
+}> {
+  const {
+    accessToken,
+    adAccountId,
+    adId,
+    creativeId,
+    name,
+    title,
+    body,
+    description,
+    callToActionType,
+    linkUrl,
+    objectType,
+    imageUrl,
+    imageHash,
+    videoId,
+    pageId,
+    instagramActorId,
+    assetFeedSpec,
+    destinationSpec,
+    maxRetries,
+  } = options
+
+  const normalizedObjectType = normalizeMetaObjectTypeForCreate(objectType)
+  const resolvedActors = await resolveMetaCreativeActorsForEdit({
+    accessToken,
+    adId,
+    creativeId,
+    pageId,
+    instagramActorId,
+    maxRetries,
+  })
+
+  if (!resolvedActors.pageId) {
+    return {
+      success: false,
+      creativeId: '',
+      error: 'Meta creative update requires a Facebook Page ID',
+    }
+  }
+
+  if (normalizedObjectType === 'VIDEO' && !videoId) {
+    return {
+      success: false,
+      creativeId: '',
+      error: 'Meta video creative update requires a video ID',
+    }
+  }
+
+  const createdCreative = await createMetaAdCreative({
+    accessToken,
+    adAccountId,
+    name: name?.trim() || `Updated Creative ${adId}`,
+    objectType: normalizedObjectType,
+    title,
+    body,
+    description,
+    callToActionType,
+    linkUrl,
+    imageUrl,
+    imageHash,
+    videoId,
+    pageId: resolvedActors.pageId,
+    instagramActorId: resolvedActors.instagramActorId,
+    assetFeedSpec,
+    destinationSpec: mergeMetaDestinationSpec(destinationSpec, linkUrl),
+    maxRetries,
+  })
+
+  if (!createdCreative.success) {
+    return createdCreative
+  }
+
+  const updateResult = await updateMetaAd({
+    accessToken,
+    adId,
+    creativeId: createdCreative.creativeId,
+    name,
+    maxRetries,
+  })
+
+  if (updateResult.success) {
+    return {
+      success: true,
+      creativeId: createdCreative.creativeId,
+    }
+  }
+
+  await deleteMetaAdCreative({
+    accessToken,
+    creativeId: createdCreative.creativeId,
+    maxRetries,
+  }).catch(() => undefined)
+
+  return {
+    success: false,
+    creativeId: '',
+    error: updateResult.error || 'Failed to update ad creative reference',
   }
 }
 

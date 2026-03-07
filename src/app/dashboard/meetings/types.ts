@@ -1,4 +1,5 @@
 export type MeetingStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
+export type MeetingProcessingState = 'idle' | 'processing' | 'failed'
 
 export type MeetingRecord = {
   legacyId: string
@@ -11,13 +12,18 @@ export type MeetingRecord = {
   calendarEventId: string | null
   status: MeetingStatus
   meetLink: string | null
+  roomName: string | null
   attendeeEmails: string[]
   notesSummary: string | null
   transcriptText: string | null
   transcriptUpdatedAtMs?: number | null
   transcriptSource?: string | null
+  transcriptProcessingState?: MeetingProcessingState | null
+  transcriptProcessingError?: string | null
   notesUpdatedAtMs?: number | null
   notesModel?: string | null
+  notesProcessingState?: MeetingProcessingState | null
+  notesProcessingError?: string | null
 }
 
 export type WorkspaceMember = {

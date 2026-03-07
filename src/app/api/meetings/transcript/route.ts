@@ -2,10 +2,10 @@ import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { BadRequestError, ForbiddenError, UnauthorizedError } from '@/lib/api-errors'
-import { getMeetingRecord, saveMeetingNotes, saveMeetingTranscript, updateMeetingRecord } from '@/lib/meetings-admin'
-import { GeminiAIService } from '@/services/gemini'
+import { getMeetingRecord, saveMeetingNotes, saveMeetingTranscript, setMeetingProcessingState, updateMeetingRecord } from '@/lib/meetings-admin'
+import { GeminiAIService, resolveGeminiApiKey } from '@/services/gemini'
 
-const transcriptModeValues = ['save-transcript', 'save-transcript-and-generate-notes', 'save-notes'] as const
+const transcriptModeValues = ['save-transcript', 'save-transcript-and-generate-notes', 'save-notes', 'finalize-post-meeting'] as const
 const transcriptModeZ = z.enum(transcriptModeValues)
 
 const saveTranscriptSchema = z.object({
@@ -51,7 +51,7 @@ function buildTranscriptExcerptForNotes(transcriptText: string): { text: string;
 }
 
 async function generateConciseMeetingNotes(transcriptText: string): Promise<{ summary: string; model: string; truncated: boolean } | null> {
-  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? ''
+  const apiKey = resolveGeminiApiKey()
   if (!apiKey) {
     return null
   }
@@ -75,7 +75,7 @@ async function generateConciseMeetingNotes(transcriptText: string): Promise<{ su
   ].join('\n')
 
   const summary = await gemini.generateContent(prompt)
-  const model = process.env.GEMINI_MODEL?.trim() || 'gemini-3-flash-preview'
+  const model = gemini.getModel()
 
   return {
     summary: normalizeNotesSummary(summary),
@@ -105,6 +105,10 @@ export const POST = createApiHandler(
     }
 
     const mode = body.mode ?? 'save-transcript-and-generate-notes'
+    const shouldFinalizeAfterMeeting = mode === 'finalize-post-meeting'
+    const shouldSaveTranscript =
+      mode === 'save-transcript' || mode === 'save-transcript-and-generate-notes' || shouldFinalizeAfterMeeting
+    const shouldGenerateNotes = mode === 'save-transcript-and-generate-notes' || shouldFinalizeAfterMeeting
     const meetingRecord = await getMeetingRecord({
       userId: auth.uid,
       legacyId: body.legacyId,
@@ -125,29 +129,82 @@ export const POST = createApiHandler(
     let notesReason: 'ai_not_configured' | 'generation_failed' | null = null
     let transcriptTruncatedForNotes = false
 
-    if (mode === 'save-transcript' || mode === 'save-transcript-and-generate-notes') {
-      if (effectiveTranscript.length < 20) {
+    if (shouldFinalizeAfterMeeting) {
+      await setMeetingProcessingState({
+        userId: auth.uid,
+        workspaceId: workspace.workspaceId,
+        legacyId: body.legacyId,
+        userEmail: auth.email,
+        status: 'completed',
+        transcriptProcessingState: effectiveTranscript.length >= 20 ? 'processing' : 'idle',
+        transcriptProcessingError: null,
+        notesProcessingState: effectiveTranscript.length >= 20 ? 'processing' : 'idle',
+        notesProcessingError: null,
+      })
+    } else if (shouldGenerateNotes && effectiveTranscript.length >= 20) {
+      await setMeetingProcessingState({
+        userId: auth.uid,
+        workspaceId: workspace.workspaceId,
+        legacyId: body.legacyId,
+        userEmail: auth.email,
+        transcriptProcessingState: shouldSaveTranscript ? 'processing' : currentMeeting.transcriptProcessingState ?? 'idle',
+        transcriptProcessingError: null,
+        notesProcessingState: 'processing',
+        notesProcessingError: null,
+      })
+    }
+
+    if (shouldSaveTranscript) {
+      if (effectiveTranscript.length < 20 && !shouldFinalizeAfterMeeting) {
         throw new BadRequestError('Transcript is too short. Record at least a few sentences before saving.')
       }
 
-      await saveMeetingTranscript({
-        userId: auth.uid,
-        workspaceId: workspace.workspaceId,
-        meetingLegacyId: body.legacyId,
-        transcriptText: effectiveTranscript,
-        source: body.source ?? currentMeeting.transcriptSource ?? 'in-site-voice',
-        status: body.markCompleted ? 'completed' : 'in_progress',
-        eventType: 'transcript.manual',
-        rawPayload: {
-          mode,
-          meetingLegacyId: body.legacyId,
-        },
-      })
+      if (effectiveTranscript.length >= 20) {
+        try {
+          await saveMeetingTranscript({
+            userId: auth.uid,
+            workspaceId: workspace.workspaceId,
+            meetingLegacyId: body.legacyId,
+            transcriptText: effectiveTranscript,
+            source: body.source ?? currentMeeting.transcriptSource ?? 'in-site-voice',
+            status: body.markCompleted || shouldFinalizeAfterMeeting ? 'completed' : 'in_progress',
+            eventType: shouldFinalizeAfterMeeting ? 'transcript.finalized' : 'transcript.manual',
+            rawPayload: {
+              mode,
+              meetingLegacyId: body.legacyId,
+            },
+          })
 
-      transcriptSaved = true
+          transcriptSaved = true
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Transcript finalization failed'
+
+          await setMeetingProcessingState({
+            userId: auth.uid,
+            workspaceId: workspace.workspaceId,
+            legacyId: body.legacyId,
+            userEmail: auth.email,
+            status: body.markCompleted || shouldFinalizeAfterMeeting ? 'completed' : undefined,
+            transcriptProcessingState: 'failed',
+            transcriptProcessingError: message,
+            notesProcessingState: shouldGenerateNotes ? 'failed' : undefined,
+            notesProcessingError: shouldGenerateNotes ? 'Transcript could not be finalized, so notes were not generated.' : undefined,
+          })
+
+          throw error
+        }
+      } else if (shouldFinalizeAfterMeeting && currentMeeting.status !== 'completed') {
+        await updateMeetingRecord({
+          userId: auth.uid,
+          userEmail: auth.email,
+          workspaceId: workspace.workspaceId,
+          legacyId: body.legacyId,
+          status: 'completed',
+        })
+      }
     }
 
-    if (mode === 'save-transcript-and-generate-notes') {
+    if (shouldGenerateNotes && effectiveTranscript.length >= 20) {
       try {
         const notes = await generateConciseMeetingNotes(effectiveTranscript)
         if (notes) {
@@ -167,10 +224,28 @@ export const POST = createApiHandler(
           transcriptTruncatedForNotes = notes.truncated
         } else {
           notesReason = 'ai_not_configured'
+
+          await setMeetingProcessingState({
+            userId: auth.uid,
+            workspaceId: workspace.workspaceId,
+            legacyId: body.legacyId,
+            userEmail: auth.email,
+            notesProcessingState: 'failed',
+            notesProcessingError: 'AI notes generation is unavailable in this environment.',
+          })
         }
       } catch (error) {
         notesReason = 'generation_failed'
         console.error('[meetings/transcript] Failed to generate notes', error)
+
+        await setMeetingProcessingState({
+          userId: auth.uid,
+          workspaceId: workspace.workspaceId,
+          legacyId: body.legacyId,
+          userEmail: auth.email,
+          notesProcessingState: 'failed',
+          notesProcessingError: error instanceof Error ? error.message : 'AI note generation failed',
+        })
       }
     }
 

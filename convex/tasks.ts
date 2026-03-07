@@ -113,6 +113,52 @@ function mapTaskRow(row: TaskRowInput): z.infer<typeof taskZ> {
   }
 }
 
+function getDueDateDayKey(dueDateMs: number): string {
+  return new Date(dueDateMs).toISOString().slice(0, 10)
+}
+
+function getCurrentDayKey(nowMs: number, timeZone?: string | null): string {
+  const currentDate = new Date(nowMs)
+
+  if (timeZone) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).formatToParts(currentDate)
+
+      const year = parts.find((part) => part.type === 'year')?.value
+      const month = parts.find((part) => part.type === 'month')?.value
+      const day = parts.find((part) => part.type === 'day')?.value
+
+      if (year && month && day) {
+        return `${year}-${month}-${day}`
+      }
+    } catch {
+      // Fall back to UTC below if the timezone is invalid.
+    }
+  }
+
+  return currentDate.toISOString().slice(0, 10)
+}
+
+function assertFutureDueDateMs(dueDateMs: number | null | undefined, nowMs: number, timeZone?: string | null) {
+  if (dueDateMs == null) return
+
+  const dueDateKey = getDueDateDayKey(dueDateMs)
+  const todayKey = getCurrentDayKey(nowMs, timeZone)
+
+  if (dueDateKey < todayKey) {
+    throw Errors.validation.invalidInput('Due date must be today or later.', {
+      field: 'dueDateMs',
+      dueDate: dueDateKey,
+      today: todayKey,
+    })
+  }
+}
+
 export const list = zWorkspacePaginatedQueryActive({
   args: {},
   returns: z.object({
@@ -267,6 +313,8 @@ export const createTask = zAuthenticatedMutation({
   },
   returns: z.string(),
   handler: async (ctx, args) => {
+    assertFutureDueDateMs(args.dueDateMs, ctx.now, ctx.user.regionalPreferences?.timezone ?? null)
+
     const legacyId = `task_${ctx.now}_${Math.random().toString(16).slice(2)}`
 
     await ctx.db.insert('tasks', {
@@ -364,7 +412,10 @@ export const patchTask = zAuthenticatedMutation({
     if (args.update.status !== undefined) patch.status = args.update.status
     if (args.update.priority !== undefined) patch.priority = args.update.priority
     if (args.update.assignedTo !== undefined) patch.assignedTo = args.update.assignedTo
-    if (args.update.dueDateMs !== undefined) patch.dueDateMs = args.update.dueDateMs
+    if (args.update.dueDateMs !== undefined) {
+      assertFutureDueDateMs(args.update.dueDateMs, ctx.now, ctx.user.regionalPreferences?.timezone ?? null)
+      patch.dueDateMs = args.update.dueDateMs
+    }
     if (args.update.tags !== undefined) patch.tags = args.update.tags
 
     await ctx.db.patch(row._id, patch)
@@ -427,6 +478,10 @@ export const bulkPatchTasks = zAuthenticatedMutation({
   },
   returns: z.object({ ok: z.boolean(), updated: z.number() }),
   handler: async (ctx, args) => {
+    if (args.update.dueDateMs !== undefined) {
+      assertFutureDueDateMs(args.update.dueDateMs, ctx.now, ctx.user.regionalPreferences?.timezone ?? null)
+    }
+
     const idSet = new Set(args.ids)
 
     const rows = await ctx.db

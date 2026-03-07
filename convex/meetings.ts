@@ -6,6 +6,8 @@ import type { Doc } from './_generated/dataModel'
 
 const meetingStatusValues = ['scheduled', 'in_progress', 'completed', 'cancelled'] as const
 const meetingStatusZ = z.enum(meetingStatusValues)
+const meetingProcessingStateValues = ['idle', 'processing', 'failed'] as const
+const meetingProcessingStateZ = z.enum(meetingProcessingStateValues)
 
 function assertCanManageMeetings(role: string | null | undefined): void {
   if (role === 'admin' || role === 'team') {
@@ -26,6 +28,7 @@ const meetingZ = z.object({
   endTimeMs: z.number(),
   timezone: z.string(),
   meetLink: z.string().nullable(),
+  roomName: z.string().nullable(),
   calendarEventId: z.string().nullable(),
   status: meetingStatusZ,
   attendeeEmails: z.array(z.string()),
@@ -35,9 +38,13 @@ const meetingZ = z.object({
   transcriptText: z.string().nullable(),
   transcriptUpdatedAtMs: z.number().nullable(),
   transcriptSource: z.string().nullable(),
+  transcriptProcessingState: meetingProcessingStateZ.nullable(),
+  transcriptProcessingError: z.string().nullable(),
   notesSummary: z.string().nullable(),
   notesUpdatedAtMs: z.number().nullable(),
   notesModel: z.string().nullable(),
+  notesProcessingState: meetingProcessingStateZ.nullable(),
+  notesProcessingError: z.string().nullable(),
 })
 
 function slugify(value: string): string {
@@ -125,6 +132,7 @@ function mapMeeting(row: Doc<'meetings'>): z.infer<typeof meetingZ> {
     endTimeMs: row.endTimeMs,
     timezone: row.timezone,
     meetLink: row.meetLink,
+    roomName: row.roomName ?? null,
     calendarEventId: row.calendarEventId,
     status: row.status,
     attendeeEmails: row.attendeeEmails,
@@ -134,9 +142,13 @@ function mapMeeting(row: Doc<'meetings'>): z.infer<typeof meetingZ> {
     transcriptText: row.transcriptText,
     transcriptUpdatedAtMs: row.transcriptUpdatedAtMs,
     transcriptSource: row.transcriptSource,
+    transcriptProcessingState: row.transcriptProcessingState ?? 'idle',
+    transcriptProcessingError: row.transcriptProcessingError ?? null,
     notesSummary: row.notesSummary,
     notesUpdatedAtMs: row.notesUpdatedAtMs,
     notesModel: row.notesModel,
+    notesProcessingState: row.notesProcessingState ?? 'idle',
+    notesProcessingError: row.notesProcessingError ?? null,
   }
 }
 
@@ -172,7 +184,15 @@ export const list = zWorkspaceQuery({
 
     if (!includePast) {
       const now = Date.now()
-      query = query.filter((q) => q.gte(q.field('endTimeMs'), now))
+      query = query.filter((q) =>
+        q.or(
+          q.gte(q.field('endTimeMs'), now),
+          q.eq(q.field('transcriptProcessingState'), 'processing'),
+          q.eq(q.field('transcriptProcessingState'), 'failed'),
+          q.eq(q.field('notesProcessingState'), 'processing'),
+          q.eq(q.field('notesProcessingState'), 'failed')
+        )
+      )
     }
 
     if (status && clientId) {
@@ -204,6 +224,58 @@ export const getByLegacyId = zWorkspaceQuery({
   },
 })
 
+export const getByRoomName = zWorkspaceQuery({
+  args: {
+    workspaceId: z.string(),
+    roomName: z.string(),
+  },
+  returns: meetingZ,
+  handler: async (ctx, args) => {
+    const roomName = args.roomName.trim()
+    if (roomName.length === 0) {
+      throw Errors.validation.invalidInput('Room name is required')
+    }
+
+    const row = await ctx.db
+      .query('meetings')
+      .withIndex('by_workspace_roomName', (q) => q.eq('workspaceId', args.workspaceId).eq('roomName', roomName))
+      .unique()
+
+    if (!row) {
+      throw Errors.resource.notFound('Meeting room', roomName)
+    }
+
+    return mapMeeting(row)
+  },
+})
+
+export const getByCalendarEventId = zWorkspaceQuery({
+  args: {
+    workspaceId: z.string(),
+    calendarEventId: z.string(),
+  },
+  returns: meetingZ,
+  handler: async (ctx, args) => {
+    const calendarEventId = args.calendarEventId.trim()
+    if (calendarEventId.length === 0) {
+      throw Errors.validation.invalidInput('Calendar event id is required')
+    }
+
+    const row = await ctx.db
+      .query('meetings')
+      .withIndex('by_workspace_calendarEventId', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('calendarEventId', calendarEventId)
+      )
+      .unique()
+
+    if (!row) {
+      throw Errors.resource.notFound('Meeting calendar event', calendarEventId)
+    }
+
+    return mapMeeting(row)
+  },
+})
+
 export const create = zWorkspaceMutation({
   args: {
     workspaceId: z.string(),
@@ -213,6 +285,7 @@ export const create = zWorkspaceMutation({
     endTimeMs: z.number(),
     timezone: z.string(),
     meetLink: z.string().nullable().optional(),
+    roomName: z.string().nullable().optional(),
     calendarEventId: z.string().nullable().optional(),
     attendeeEmails: z.array(z.string()),
     clientId: z.string().nullable().optional(),
@@ -260,6 +333,7 @@ export const create = zWorkspaceMutation({
       endTimeMs: args.endTimeMs,
       timezone: args.timezone,
       meetLink: args.meetLink ?? null,
+      roomName: args.roomName ?? null,
       calendarEventId: args.calendarEventId ?? null,
       status: 'scheduled' as const,
       attendeeEmails: normalizeEmails(args.attendeeEmails),
@@ -269,9 +343,13 @@ export const create = zWorkspaceMutation({
       transcriptText: null,
       transcriptUpdatedAtMs: null,
       transcriptSource: null,
+      transcriptProcessingState: 'idle' as const,
+      transcriptProcessingError: null,
       notesSummary: null,
       notesUpdatedAtMs: null,
       notesModel: null,
+      notesProcessingState: 'idle' as const,
+      notesProcessingError: null,
     }
 
     await ctx.db.insert('meetings', payload)
@@ -318,6 +396,7 @@ export const updateDetails = zWorkspaceMutation({
     timezone: z.string().optional(),
     attendeeEmails: z.array(z.string()).optional(),
     meetLink: z.string().nullable().optional(),
+    roomName: z.string().nullable().optional(),
     status: meetingStatusZ.optional(),
   },
   returns: meetingZ,
@@ -353,7 +432,50 @@ export const updateDetails = zWorkspaceMutation({
       timezone: args.timezone ?? meeting.timezone,
       attendeeEmails: args.attendeeEmails ? normalizeEmails(args.attendeeEmails) : meeting.attendeeEmails,
       meetLink: args.meetLink === undefined ? meeting.meetLink : args.meetLink,
+      roomName: args.roomName === undefined ? meeting.roomName : args.roomName,
       status: args.status ?? meeting.status,
+      updatedAtMs: ctx.now,
+    })
+
+    const updated = await ctx.db.get(meeting._id)
+    if (!updated) {
+      throw Errors.resource.notFound('Meeting', args.legacyId)
+    }
+
+    return mapMeeting(updated)
+  },
+})
+
+export const ensureNativeRoom = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    roomName: z.string(),
+    meetLink: z.string().nullable(),
+  },
+  returns: meetingZ,
+  handler: async (ctx, args) => {
+    const roomName = args.roomName.trim()
+    if (roomName.length === 0) {
+      throw Errors.validation.invalidInput('Meeting room name is required')
+    }
+
+    const meeting = await ctx.db
+      .query('meetings')
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .unique()
+
+    if (!meeting) {
+      throw Errors.resource.notFound('Meeting', args.legacyId)
+    }
+
+    if (meeting.roomName === roomName && meeting.meetLink === (args.meetLink ?? null)) {
+      return mapMeeting(meeting)
+    }
+
+    await ctx.db.patch(meeting._id, {
+      roomName,
+      meetLink: args.meetLink ?? meeting.meetLink ?? null,
       updatedAtMs: ctx.now,
     })
 
@@ -395,6 +517,8 @@ export const attachTranscript = zWorkspaceMutation({
       transcriptText: args.transcriptText,
       transcriptUpdatedAtMs: ctx.now,
       transcriptSource: args.source ?? meeting.transcriptSource ?? 'google-workspace',
+      transcriptProcessingState: 'idle',
+      transcriptProcessingError: null,
       status: nextStatus,
       updatedAtMs: ctx.now,
     })
@@ -442,6 +566,8 @@ export const attachTranscriptByCalendarEventId = zWorkspaceMutation({
       transcriptText: args.transcriptText,
       transcriptUpdatedAtMs: ctx.now,
       transcriptSource: args.source ?? meeting.transcriptSource ?? 'google-workspace',
+      transcriptProcessingState: 'idle',
+      transcriptProcessingError: null,
       status: nextStatus,
       updatedAtMs: ctx.now,
     })
@@ -488,6 +614,8 @@ export const saveNotes = zWorkspaceMutation({
       notesSummary: summary,
       notesUpdatedAtMs: ctx.now,
       notesModel: args.model ?? null,
+      notesProcessingState: 'idle',
+      notesProcessingError: null,
       updatedAtMs: ctx.now,
     })
 
@@ -502,5 +630,63 @@ export const saveNotes = zWorkspaceMutation({
     })
 
     return meeting.legacyId
+  },
+})
+
+export const setProcessingState = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    legacyId: z.string(),
+    status: meetingStatusZ.optional(),
+    transcriptProcessingState: meetingProcessingStateZ.optional(),
+    transcriptProcessingError: z.string().nullable().optional(),
+    notesProcessingState: meetingProcessingStateZ.optional(),
+    notesProcessingError: z.string().nullable().optional(),
+  },
+  returns: meetingZ,
+  handler: async (ctx, args) => {
+    assertCanManageMeetings(ctx.user.role)
+
+    const meeting = await ctx.db
+      .query('meetings')
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+      .unique()
+
+    if (!meeting) {
+      throw Errors.resource.notFound('Meeting', args.legacyId)
+    }
+
+    const patch: Partial<Doc<'meetings'>> = {
+      updatedAtMs: ctx.now,
+    }
+
+    if (args.status !== undefined) {
+      patch.status = args.status
+    }
+
+    if (args.transcriptProcessingState !== undefined) {
+      patch.transcriptProcessingState = args.transcriptProcessingState
+    }
+
+    if (args.transcriptProcessingError !== undefined) {
+      patch.transcriptProcessingError = args.transcriptProcessingError
+    }
+
+    if (args.notesProcessingState !== undefined) {
+      patch.notesProcessingState = args.notesProcessingState
+    }
+
+    if (args.notesProcessingError !== undefined) {
+      patch.notesProcessingError = args.notesProcessingError
+    }
+
+    await ctx.db.patch(meeting._id, patch)
+
+    const updated = await ctx.db.get(meeting._id)
+    if (!updated) {
+      throw Errors.resource.notFound('Meeting', args.legacyId)
+    }
+
+    return mapMeeting(updated)
   },
 })

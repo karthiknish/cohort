@@ -136,12 +136,14 @@ export function useMessagesData({
     return Array.from(ids).slice(0, 200)
   }, [channelMessages])
   const normalizedMessageSearch = messageSearchQuery.trim()
+  const selectedChannelIdArg = selectedChannel?.isCustom ? selectedChannel.id : null
 
   const threadUnreadCountsResult = useQuery(
     collaborationApi.getThreadUnreadCounts,
     !isPreviewMode && workspaceId && currentUserId && selectedChannel && threadRootIdsForUnread.length > 0
       ? {
           workspaceId: String(workspaceId),
+          channelId: selectedChannelIdArg,
           channelType: selectedChannel.type,
           clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
           projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
@@ -361,6 +363,7 @@ export function useMessagesData({
     void convex
       .query(collaborationApi.searchChannel, {
         workspaceId: String(workspaceId),
+        channelId: selectedChannel.isCustom ? selectedChannel.id : null,
         channelType: selectedChannel.type,
         clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
         projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
@@ -600,6 +603,7 @@ export function useMessagesData({
 
       await markChannelAsRead({
         workspaceId: String(workspaceId),
+        channelId: selectedChannel.isCustom ? selectedChannel.id : null,
         channelType: selectedChannel.type,
         clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
         projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
@@ -631,6 +635,7 @@ export function useMessagesData({
 
         await markThreadAsReadMutation({
           workspaceId: String(workspaceId),
+          channelId: selectedChannel.isCustom ? selectedChannel.id : null,
           channelType: selectedChannel.type,
           clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
           projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
@@ -823,6 +828,7 @@ export function useMessagesData({
         await createMessage({
           workspaceId: String(workspaceId),
           legacyId: messageId,
+          channelId: selectedChannel.isCustom ? selectedChannel.id : null,
           channelType: selectedChannel.type,
           clientId: selectedChannel.clientId ?? null,
           projectId: selectedChannel.projectId ?? null,
@@ -989,6 +995,7 @@ export function useMessagesData({
 
         const rows = (await convex.query(collaborationApi.listChannel, {
           workspaceId: String(workspaceId),
+          channelId: channel.isCustom ? channel.id : null,
           channelType: channel.type,
           clientId: channel.type === 'client' ? (channel.clientId ?? null) : null,
           projectId: channel.type === 'project' ? (channel.projectId ?? null) : null,

@@ -1,18 +1,20 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Send, X, Sparkles, Loader2, History, Pencil, Trash2, Check, RefreshCw, Clock, WifiOff } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type RefObject } from 'react'
+import { Send, X, Sparkles, Loader2, History, Pencil, Trash2, Check, RefreshCw, Clock, WifiOff, SquarePen } from 'lucide-react'
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@/components/ui/badge'
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
 import { useMentionData } from '@/hooks/use-mention-data'
 import { VoiceInputButton } from '@/components/ui/voice-input'
 import { MentionDropdown, formatMention, type MentionItem } from './mention-dropdown'
 import { AgentMessageCard } from './agent-message-card'
+import { splitAgentTextWithMentions } from './mention-highlights'
 import type { AgentConversationSummary, AgentMessage, ConnectionStatus } from '@/hooks/use-agent-mode'
 import type { AgentError } from '@/lib/agent-errors'
 
@@ -26,6 +28,8 @@ interface AgentModePanelProps {
   conversationId: string | null
   history: AgentConversationSummary[]
   isHistoryLoading: boolean
+  isConversationLoading?: boolean
+  loadingConversationId?: string | null
   onOpenHistory: () => void
   onSelectConversation: (conversationId: string) => void
   onUpdateConversationTitle: (conversationId: string, title: string) => void
@@ -53,7 +57,7 @@ function HistorySkeleton() {
   return (
     <div className="space-y-2 p-2">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="animate-pulse">
+        <div key={`history-skeleton-${i}`} className="animate-pulse">
           <div className="h-12 rounded-lg bg-muted" />
         </div>
       ))}
@@ -113,15 +117,73 @@ function RateLimitBanner({ countdown, onDismiss }: { countdown: number; onDismis
   )
 }
 
+function AgentComposerInput({
+  value,
+  onChange,
+  onKeyDown,
+  inputRef,
+  placeholder,
+  disabled,
+  mentionLabels,
+}: {
+  value: string
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void
+  inputRef: RefObject<HTMLInputElement | null>
+  placeholder: string
+  disabled: boolean
+  mentionLabels: string[]
+}) {
+  const activeMentions = useMemo(() => {
+    const seen = new Set<string>()
+    return splitAgentTextWithMentions(value, mentionLabels)
+      .filter((segment) => segment.isMention)
+      .map((segment) => segment.text)
+      .filter((mention) => {
+        if (seen.has(mention.toLowerCase())) return false
+        seen.add(mention.toLowerCase())
+        return true
+      })
+  }, [mentionLabels, value])
+
+  return (
+    <div className="flex-1 space-y-2">
+      <Input
+        ref={inputRef}
+        value={value}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        placeholder={placeholder}
+        className="text-sm"
+        disabled={disabled}
+        spellCheck={false}
+      />
+
+      {activeMentions.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {activeMentions.map((mention) => (
+            <Badge key={mention} variant="secondary" className="rounded-full bg-primary/10 text-primary hover:bg-primary/10">
+              {mention}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function AgentModePanel({
   isOpen,
   onClose,
   messages,
   isProcessing,
   onSendMessage,
+  onClear,
   conversationId,
   history,
   isHistoryLoading,
+  isConversationLoading = false,
+  loadingConversationId = null,
   onOpenHistory,
   onSelectConversation,
   onUpdateConversationTitle,
@@ -143,7 +205,8 @@ export function AgentModePanel({
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   // Fetch data for mentions
-  const { clients, projects, teams, users, isLoading: mentionsLoading } = useMentionData()
+  const { clients, projects, teams, users, allItems, isLoading: mentionsLoading } = useMentionData()
+  const mentionLabels = useMemo(() => allItems.map((item) => item.name), [allItems])
 
   const handleVoiceTranscript = useCallback((text: string) => {
     if (text.trim()) {
@@ -223,12 +286,18 @@ export function AgentModePanel({
     if (atIndex !== -1) {
       const beforeMention = inputValue.slice(0, atIndex)
       const afterMention = inputValue.slice(cursorPos)
-      const newValue = beforeMention + formatMention(item) + ' ' + afterMention
+      const insertedMention = `${formatMention(item)} `
+      const newValue = `${beforeMention}${insertedMention}${afterMention}`
+      const nextCursorPos = beforeMention.length + insertedMention.length
       setInputValue(newValue)
+
+      requestAnimationFrame(() => {
+        inputRef.current?.focus()
+        inputRef.current?.setSelectionRange(nextCursorPos, nextCursorPos)
+      })
     }
 
     setShowMentions(false)
-    inputRef.current?.focus()
   }, [inputValue])
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -254,7 +323,18 @@ export function AgentModePanel({
     onRetry?.()
   }
 
-  const showEmptyState = messages.length === 0
+  const handleStartNewChat = useCallback(() => {
+    onClear()
+    setInputValue('')
+    setShowMentions(false)
+    setMentionQuery('')
+    setShowHistory(false)
+    setEditingConversationId(null)
+    setEditingTitle('')
+    setTimeout(() => inputRef.current?.focus(), 0)
+  }, [onClear])
+
+  const showEmptyState = messages.length === 0 && !isConversationLoading
 
   const toggleHistory = () => setShowHistory((prev) => !prev)
 
@@ -282,6 +362,18 @@ export function AgentModePanel({
               <span className="text-sm font-semibold">Agent Mode</span>
             </div>
             <div className="flex items-center gap-2">
+              {(conversationId || messages.length > 0) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleStartNewChat}
+                  className="h-9 gap-2 rounded-full"
+                >
+                  <SquarePen className="h-4 w-4" />
+                  New chat
+                </Button>
+              )}
+
               <AnimatePresence>
                 {connectionStatus !== 'connected' && (
                   <ConnectionIndicator status={connectionStatus} />
@@ -321,7 +413,15 @@ export function AgentModePanel({
             <div className="absolute right-4 top-[60px] z-50 w-[340px] overflow-hidden rounded-xl border bg-background shadow-sm">
               <div className="flex items-center justify-between border-b px-3 py-2">
                 <p className="text-sm font-medium">Previous chats</p>
-                {isHistoryLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                <div className="flex items-center gap-2">
+                  {(conversationId || messages.length > 0) && (
+                    <Button variant="ghost" size="sm" className="h-8 gap-2" onClick={handleStartNewChat}>
+                      <SquarePen className="h-3.5 w-3.5" />
+                      New
+                    </Button>
+                  )}
+                  {isHistoryLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
               </div>
               <ScrollArea className="max-h-[320px]">
                 {isHistoryLoading ? (
@@ -360,15 +460,20 @@ export function AgentModePanel({
                               />
                             ) : (
                               <button
+                                type="button"
                                 onClick={() => {
+                                  if (isConversationLoading) return
                                   onSelectConversation(c.id)
                                   setShowHistory(false)
                                 }}
-                                className="w-full min-w-0 text-left"
+                                className="w-full min-w-0 text-left disabled:cursor-wait"
+                                disabled={isConversationLoading}
                               >
                                 <div className="flex items-center justify-between gap-2">
                                   <span className="truncate font-medium">{c.title || 'Chat'}</span>
-                                  {c.lastMessageAt && (
+                                  {isConversationLoading && c.id === loadingConversationId ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                                  ) : c.lastMessageAt && (
                                     <span className="shrink-0 text-xs text-muted-foreground">
                                       {new Date(c.lastMessageAt).toLocaleString()}
                                     </span>
@@ -464,14 +569,14 @@ export function AgentModePanel({
                   />
 
                   <div className="flex items-center gap-2">
-                    <Input
-                      ref={inputRef}
+                    <AgentComposerInput
+                      inputRef={inputRef}
                       value={inputValue}
                       onChange={handleInputChange}
                       onKeyDown={handleKeyDown}
                       placeholder="Describe what you want to do..."
-                      className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm"
                       disabled={isInputDisabled}
+                      mentionLabels={mentionLabels}
                     />
 
                     <VoiceInputButton
@@ -498,6 +603,7 @@ export function AgentModePanel({
                   <div className="mt-3 flex flex-wrap justify-center gap-2">
                     {QUICK_SUGGESTIONS.map((suggestion) => (
                       <button
+                        type="button"
                         key={suggestion}
                         onClick={() => handleSuggestionClick(suggestion)}
                         disabled={isInputDisabled}
@@ -514,20 +620,29 @@ export function AgentModePanel({
             <>
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4" ref={scrollAreaRef} onWheel={(e) => e.stopPropagation()}>
-                <div className="space-y-3">
-                  {messages.map((msg) => (
-                    <AgentMessageCard key={msg.id} message={msg} />
-                  ))}
+                {isConversationLoading ? (
+                  <div className="flex h-full min-h-[240px] items-center justify-center">
+                    <div className="flex items-center gap-3 rounded-2xl border bg-background px-4 py-3 text-sm text-muted-foreground shadow-sm">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Loading previous chat…</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {messages.map((msg) => (
+                      <AgentMessageCard key={msg.id} message={msg} mentionLabels={mentionLabels} />
+                    ))}
 
-                  {isProcessing && (
-                    <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-                      <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2.5 text-sm">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span className="text-foreground">Thinking...</span>
-                      </div>
-                    </m.div>
-                  )}
-                </div>
+                    {isProcessing && (
+                      <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
+                        <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2.5 text-sm">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-foreground">Thinking...</span>
+                        </div>
+                      </m.div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Retry banner for failed messages */}
@@ -566,14 +681,14 @@ export function AgentModePanel({
                   isLoading={mentionsLoading}
                 />
 
-                <Input
-                  ref={inputRef}
+                <AgentComposerInput
+                  inputRef={inputRef}
                   value={inputValue}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
                   placeholder="Ask naturally, or use @ to mention context"
-                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm"
-                  disabled={isInputDisabled}
+                  disabled={isInputDisabled || isConversationLoading}
+                  mentionLabels={mentionLabels}
                 />
 
                 <VoiceInputButton
@@ -581,13 +696,13 @@ export function AgentModePanel({
                   showWaveform={false}
                   onTranscript={handleVoiceTranscript}
                   onInterimTranscript={handleVoiceInterim}
-                  disabled={isInputDisabled}
+                  disabled={isInputDisabled || isConversationLoading}
                 />
 
                 <Button
                   size="icon"
                   onClick={handleSubmit}
-                  disabled={!inputValue.trim() || isInputDisabled}
+                  disabled={!inputValue.trim() || isInputDisabled || isConversationLoading}
                   className="h-10 w-10 shrink-0 rounded-full"
                   title="Send message"
                 >
