@@ -1,11 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { FormEvent, KeyboardEvent } from 'react'
 import { useMutation, useQuery } from 'convex/react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
@@ -21,143 +20,19 @@ import { MeetingScheduleCard } from './components/meeting-schedule-card'
 import { MeetingsHeader } from './components/meetings-header'
 import { QuickMeetDialog } from './components/quick-meet-dialog'
 import { UpcomingMeetingsCard } from './components/upcoming-meetings-card'
+import { useMeetingAttendees } from './hooks/use-meeting-attendees'
+import { describeNotificationSummary, pluralize, type MeetingNotificationSummary } from './lib/notifications'
+import {
+  getPreviewGoogleWorkspaceStatus,
+  getPreviewMeetingWorkspaceMembers,
+  getPreviewMeetings,
+} from './lib/preview-data'
 import type { MeetingRecord, WorkspaceMember } from './types'
 import {
-  EMAIL_REGEX,
   extractRoomNameFromMeetingLink,
-  hasEmail,
   isMeetingPostProcessing,
-  normalizeEmail,
-  parseAttendeeInput,
   toTimeValue,
 } from './utils'
-
-function getPreviewMeetingWorkspaceMembers(): WorkspaceMember[] {
-  return [
-    { id: 'preview-member-1', name: 'Alex Morgan', email: 'alex@cohorts.ai', role: 'Account Manager' },
-    { id: 'preview-member-2', name: 'Jordan Lee', email: 'jordan@cohorts.ai', role: 'Strategist' },
-    { id: 'preview-member-3', name: 'Priya Patel', email: 'priya@cohorts.ai', role: 'Growth Lead' },
-    { id: 'preview-member-4', name: 'Taylor Kim', email: 'taylor@cohorts.ai', role: 'Client Partner' },
-    { id: 'preview-member-5', name: 'Sam Chen', email: 'sam@cohorts.ai', role: 'Performance Marketer' },
-  ]
-}
-
-function getPreviewMeetings(clientId: string | null, timezone: string): MeetingRecord[] {
-  const now = typeof window === 'undefined' ? new Date('2024-01-15T12:00:00.000Z') : new Date()
-  const hour = 60 * 60 * 1000
-  const day = 24 * hour
-
-  const meetings: Array<{ clientId: string; meeting: MeetingRecord }> = [
-    {
-      clientId: 'preview-tech-corp',
-      meeting: {
-        legacyId: 'preview-meeting-1',
-        providerId: 'livekit',
-        title: 'Weekly Growth Sync',
-        description: 'Review pacing, creative tests, and SQL quality before the Q2 push.',
-        startTimeMs: now.getTime() + 2 * hour,
-        endTimeMs: now.getTime() + 2 * hour + 45 * 60 * 1000,
-        timezone,
-        calendarEventId: 'preview-gcal-1',
-        status: 'scheduled',
-        meetLink: 'https://app.cohorts.app/dashboard/meetings?room=preview-growth-sync',
-        roomName: 'preview-growth-sync',
-        attendeeEmails: ['alex@cohorts.ai', 'jordan@cohorts.ai', 'growth@techcorp.example'],
-        notesSummary: null,
-        transcriptText: null,
-      },
-    },
-    {
-      clientId: 'preview-startupxyz',
-      meeting: {
-        legacyId: 'preview-meeting-2',
-        providerId: 'livekit',
-        title: 'Launch War Room',
-        description: 'Creator shortlist, teaser edits, and launch-week escalation plan.',
-        startTimeMs: now.getTime() + day,
-        endTimeMs: now.getTime() + day + 30 * 60 * 1000,
-        timezone,
-        calendarEventId: null,
-        status: 'in_progress',
-        meetLink: 'https://app.cohorts.app/dashboard/meetings?room=preview-launch-war-room',
-        roomName: 'preview-launch-war-room',
-        attendeeEmails: ['priya@cohorts.ai', 'launch@startupxyz.example'],
-        notesSummary: 'Key actions:\n- Lock creator roster by Friday\n- Approve 3 teaser cutdowns\n- QA waitlist onboarding flow before launch day',
-        transcriptText: 'We agreed to prioritize creator deliverables, finalize the teaser cutdowns, and tighten the waitlist onboarding experience before launch week.',
-      },
-    },
-    {
-      clientId: 'preview-retail-store',
-      meeting: {
-        legacyId: 'preview-meeting-3',
-        providerId: 'livekit',
-        title: 'Retail Retention Review',
-        description: 'Audit repeat purchase rate, spring promo cadence, and lifecycle email segmentation.',
-        startTimeMs: now.getTime() + 2 * day + 3 * hour,
-        endTimeMs: now.getTime() + 2 * day + 4 * hour,
-        timezone,
-        calendarEventId: 'preview-gcal-3',
-        status: 'scheduled',
-        meetLink: 'https://app.cohorts.app/dashboard/meetings?room=preview-retail-retention-review',
-        roomName: 'preview-retail-retention-review',
-        attendeeEmails: ['taylor@cohorts.ai', 'marketing@retailstore.example'],
-        notesSummary: null,
-        transcriptText: null,
-      },
-    },
-  ]
-
-  if (!clientId) {
-    return meetings.map((entry) => entry.meeting)
-  }
-
-  return meetings.filter((entry) => entry.clientId === clientId).map((entry) => entry.meeting)
-}
-
-function getPreviewGoogleWorkspaceStatus() {
-  const linkedAt = typeof window === 'undefined' ? new Date('2024-01-10T10:00:00.000Z') : new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
-
-  return {
-    connected: true,
-    linkedAtMs: linkedAt.getTime(),
-    scopes: ['calendar.events', 'meetings.space.created'],
-  }
-}
-
-type MeetingNotificationSummary = {
-  attempted: number
-  sent: number
-  failed: number
-  skipped: number
-}
-
-function pluralize(count: number, singular: string, plural = `${singular}s`): string {
-  return `${count} ${count === 1 ? singular : plural}`
-}
-
-function describeNotificationSummary(
-  summary: MeetingNotificationSummary | undefined,
-  builder: {
-    none: string
-    allSent: (sent: number, skipped: number) => string
-    partial: (sent: number, failed: number, skipped: number) => string
-    failed: (failed: number, skipped: number) => string
-  }
-): string {
-  if (!summary || summary.attempted === 0) {
-    return builder.none
-  }
-
-  if (summary.failed === 0) {
-    return builder.allSent(summary.sent, summary.skipped)
-  }
-
-  if (summary.sent === 0) {
-    return builder.failed(summary.failed, summary.skipped)
-  }
-
-  return builder.partial(summary.sent, summary.failed, summary.skipped)
-}
 
 export default function MeetingsPage() {
   const { user, startGoogleWorkspaceOauth } = useAuth()
@@ -173,8 +48,6 @@ export default function MeetingsPage() {
   const [meetingDate, setMeetingDate] = useState<Date | undefined>(undefined)
   const [meetingTime, setMeetingTime] = useState('09:00')
   const [durationMinutes, setDurationMinutes] = useState('30')
-  const [attendeeInput, setAttendeeInput] = useState('')
-  const [attendeeEmails, setAttendeeEmails] = useState<string[]>([])
   const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')
   const [scheduling, setScheduling] = useState(false)
   const [quickStarting, setQuickStarting] = useState(false)
@@ -187,8 +60,6 @@ export default function MeetingsPage() {
   const [quickMeetTitle, setQuickMeetTitle] = useState('Instant Cohorts Room')
   const [quickMeetDescription, setQuickMeetDescription] = useState('Native Cohorts meeting launched from the dashboard')
   const [quickMeetDurationMinutes, setQuickMeetDurationMinutes] = useState('30')
-  const [quickAttendeeInput, setQuickAttendeeInput] = useState('')
-  const [quickAttendeeEmails, setQuickAttendeeEmails] = useState<string[]>([])
   const [sharedRoomName, setSharedRoomName] = useState<string | null>(null)
   const oauthHandledRef = useRef(false)
 
@@ -263,6 +134,13 @@ export default function MeetingsPage() {
     () => (isPreviewMode ? getPreviewMeetingWorkspaceMembers() : (platformUsers ?? [])),
     [isPreviewMode, platformUsers]
   )
+  const meetingAttendees = useMeetingAttendees({
+    workspaceMembers: resolvedWorkspaceMembers,
+    platformUsers: resolvedPlatformUsers,
+    organizerEmail: user?.email ?? null,
+  })
+  const scheduleAttendees = meetingAttendees.schedule
+  const quickAttendees = meetingAttendees.quick
   useEffect(() => {
     if (oauthHandledRef.current || typeof window === 'undefined') return
 
@@ -328,187 +206,14 @@ export default function MeetingsPage() {
   const scheduleRequiresGoogleWorkspace = editingMeeting ? Boolean(editingMeeting.calendarEventId) : true
   const scheduleDisabled = isPreviewMode || !canSchedule || scheduling || (scheduleRequiresGoogleWorkspace && !resolvedGoogleWorkspaceStatus?.connected)
 
-  const getAttendeeSuggestions = useCallback((queryValue: string, selectedEmails: string[]) => {
-    const workspaceList = resolvedWorkspaceMembers
-    const platformList = resolvedPlatformUsers
-
-    const mergedByEmail = new Map<string, WorkspaceMember>()
-    for (const member of [...workspaceList, ...platformList]) {
-      if (!hasEmail(member)) continue
-
-      const key = normalizeEmail(member.email)
-      if (!mergedByEmail.has(key)) {
-        mergedByEmail.set(key, member)
-      }
-    }
-
-    const members = Array.from(mergedByEmail.values())
-    if (members.length === 0) {
-      return []
-    }
-
-    const query = queryValue.trim().toLowerCase()
-    const selected = new Set(selectedEmails.map((email) => normalizeEmail(email)))
-
-    return members
-      .filter(hasEmail)
-      .filter((member) => !selected.has(normalizeEmail(member.email)))
-      .filter((member) => {
-        if (!query) return true
-        return (
-          member.name.toLowerCase().includes(query) ||
-          (member.email ?? '').toLowerCase().includes(query)
-        )
-      })
-      .slice(0, 8)
-  }, [resolvedPlatformUsers, resolvedWorkspaceMembers])
-
-  const attendeeSuggestions = useMemo(
-    () => getAttendeeSuggestions(attendeeInput, attendeeEmails),
-    [attendeeEmails, attendeeInput, getAttendeeSuggestions]
-  )
-
-  const quickAttendeeSuggestions = useMemo(
-    () => getAttendeeSuggestions(quickAttendeeInput, quickAttendeeEmails),
-    [getAttendeeSuggestions, quickAttendeeEmails, quickAttendeeInput]
-  )
-
-  const addAttendees = (entries: string[]) => {
-    if (entries.length === 0) return
-
-    setAttendeeEmails((current) => {
-      const normalizedCurrent = current.map((email) => normalizeEmail(email))
-      const merged = [...normalizedCurrent]
-
-      for (const entry of entries) {
-        const email = normalizeEmail(entry)
-        if (!EMAIL_REGEX.test(email) || merged.includes(email)) {
-          continue
-        }
-        merged.push(email)
-      }
-
-      return merged
-    })
-  }
-
-  const commitAttendeeInput = () => {
-    const parsed = parseAttendeeInput(attendeeInput)
-
-    if (parsed.length === 0 && attendeeInput.trim().length > 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid attendee email',
-        description: 'Enter a valid email or choose a teammate from suggestions.',
-      })
-      return
-    }
-
-    addAttendees(parsed)
-    setAttendeeInput('')
-  }
-
-  const removeAttendee = (email: string) => {
-    setAttendeeEmails((current) => current.filter((value) => value !== email))
-  }
-
-  const handleAttendeeKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' || event.key === 'Tab') {
-      const firstSuggestion = attendeeSuggestions[0]
-
-      if (firstSuggestion && attendeeInput.trim().length > 0) {
-        event.preventDefault()
-        addSuggestedAttendee(firstSuggestion.email)
-        return
-      }
-
-      event.preventDefault()
-      commitAttendeeInput()
-      return
-    }
-
-    if (event.key === ',' || event.key === ';') {
-      event.preventDefault()
-      commitAttendeeInput()
-    }
-  }
-
-  const addSuggestedAttendee = (email: string) => {
-    addAttendees([email])
-    setAttendeeInput('')
-  }
-
-  const addQuickAttendees = (entries: string[]) => {
-    if (entries.length === 0) return
-
-    setQuickAttendeeEmails((current) => {
-      const normalizedCurrent = current.map((email) => normalizeEmail(email))
-      const merged = [...normalizedCurrent]
-
-      for (const entry of entries) {
-        const email = normalizeEmail(entry)
-        if (!EMAIL_REGEX.test(email) || merged.includes(email)) {
-          continue
-        }
-        merged.push(email)
-      }
-
-      return merged
-    })
-  }
-
-  const commitQuickAttendeeInput = () => {
-    const parsed = parseAttendeeInput(quickAttendeeInput)
-
-    if (parsed.length === 0 && quickAttendeeInput.trim().length > 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid attendee email',
-        description: 'Enter a valid email or choose a teammate from suggestions.',
-      })
-      return
-    }
-
-    addQuickAttendees(parsed)
-    setQuickAttendeeInput('')
-  }
-
-  const removeQuickAttendee = (email: string) => {
-    setQuickAttendeeEmails((current) => current.filter((value) => value !== email))
-  }
-
-  const addQuickSuggestedAttendee = (email: string) => {
-    addQuickAttendees([email])
-    setQuickAttendeeInput('')
-  }
-
-  const handleQuickAttendeeKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' || event.key === 'Tab') {
-      const firstSuggestion = quickAttendeeSuggestions[0]
-
-      if (firstSuggestion && quickAttendeeInput.trim().length > 0) {
-        event.preventDefault()
-        addQuickSuggestedAttendee(firstSuggestion.email)
-        return
-      }
-
-      event.preventDefault()
-      commitQuickAttendeeInput()
-      return
-    }
-
-    if (event.key === ',' || event.key === ';') {
-      event.preventDefault()
-      commitQuickAttendeeInput()
-    }
-  }
+  const scheduleAttendeeDraft = scheduleAttendees.resolveSubmission()
+  const quickAttendeeDraft = quickAttendees.resolveSubmission()
 
   const resetQuickMeetForm = () => {
     setQuickMeetTitle('Instant Cohorts Room')
     setQuickMeetDescription('Native Cohorts meeting launched from the dashboard')
     setQuickMeetDurationMinutes('30')
-    setQuickAttendeeInput('')
-    setQuickAttendeeEmails([])
+    quickAttendees.reset()
   }
 
   const setRoomUrlState = useCallback((roomName: string | null) => {
@@ -596,8 +301,7 @@ export default function MeetingsPage() {
   const resetScheduleForm = () => {
     setTitle('')
     setDescription('')
-    setAttendeeInput('')
-    setAttendeeEmails([])
+    scheduleAttendees.reset()
     setDurationMinutes('30')
     setEditingMeetingId(null)
   }
@@ -707,6 +411,15 @@ export default function MeetingsPage() {
       return
     }
 
+    if (options.attendeeEmails.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Add a participant',
+        description: 'Add at least one participant before starting a room.',
+      })
+      return
+    }
+
     if (!resolvedGoogleWorkspaceStatus?.connected) {
       toast({
         variant: 'destructive',
@@ -811,8 +524,8 @@ export default function MeetingsPage() {
     setMeetingTime(toTimeValue(meeting.startTimeMs))
     setDurationMinutes(String(Math.max(15, Math.round((meeting.endTimeMs - meeting.startTimeMs) / 60_000))))
     setTimezone(meeting.timezone)
-    setAttendeeInput('')
-    setAttendeeEmails(meeting.attendeeEmails)
+    scheduleAttendees.setInput('')
+    scheduleAttendees.setEmails(meeting.attendeeEmails)
   }
 
   const handleCancelMeeting = (meeting: MeetingRecord) => {
@@ -906,8 +619,9 @@ export default function MeetingsPage() {
       })
   }
 
-  const handleScheduleMeeting = (event: FormEvent<HTMLFormElement>) => {
+  const handleScheduleMeeting = (event: { preventDefault(): void }) => {
     event.preventDefault()
+    const { attendeeEmails, hasPendingInvalidInput, hasParticipants } = scheduleAttendeeDraft
 
     if (isPreviewMode) {
       toast({
@@ -922,6 +636,24 @@ export default function MeetingsPage() {
         variant: 'destructive',
         title: 'Read-only access',
         description: 'Client users can view meetings but cannot schedule them.',
+      })
+      return
+    }
+
+    if (hasPendingInvalidInput) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid attendee email',
+        description: 'Enter a valid email before scheduling the meeting.',
+      })
+      return
+    }
+
+    if (!hasParticipants) {
+      toast({
+        variant: 'destructive',
+        title: 'Add a participant',
+        description: 'Add at least one participant before scheduling a meeting.',
       })
       return
     }
@@ -1123,8 +855,9 @@ export default function MeetingsPage() {
       })
   }
 
-  const handleSubmitQuickMeet = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmitQuickMeet = (event: { preventDefault(): void }) => {
     event.preventDefault()
+    const { attendeeEmails, hasPendingInvalidInput, hasParticipants } = quickAttendeeDraft
 
     const duration = Number(quickMeetDurationMinutes)
     if (!Number.isFinite(duration) || duration < 10 || duration > 240) {
@@ -1136,13 +869,7 @@ export default function MeetingsPage() {
       return
     }
 
-    const title = quickMeetTitle.trim().length > 0 ? quickMeetTitle.trim() : 'Instant Cohorts Room'
-    const description = quickMeetDescription.trim().length > 0
-      ? quickMeetDescription.trim()
-      : null
-    const typedAttendees = parseAttendeeInput(quickAttendeeInput)
-
-    if (quickAttendeeInput.trim().length > 0 && typedAttendees.length === 0) {
+    if (hasPendingInvalidInput) {
       toast({
         variant: 'destructive',
         title: 'Invalid attendee email',
@@ -1151,9 +878,19 @@ export default function MeetingsPage() {
       return
     }
 
-    const attendeeEmails = Array.from(
-      new Set([...quickAttendeeEmails, ...typedAttendees.map((email) => normalizeEmail(email))])
-    )
+    if (!hasParticipants) {
+      toast({
+        variant: 'destructive',
+        title: 'Add a participant',
+        description: 'Add at least one participant before starting a room.',
+      })
+      return
+    }
+
+    const title = quickMeetTitle.trim().length > 0 ? quickMeetTitle.trim() : 'Instant Cohorts Room'
+    const description = quickMeetDescription.trim().length > 0
+      ? quickMeetDescription.trim()
+      : null
 
     void handleStartQuickMeet({
       title,
@@ -1280,9 +1017,10 @@ export default function MeetingsPage() {
         description={quickMeetDescription}
         durationMinutes={quickMeetDurationMinutes}
         timezone={timezone}
-        attendeeInput={quickAttendeeInput}
-        attendeeEmails={quickAttendeeEmails}
-        attendeeSuggestions={quickAttendeeSuggestions}
+        attendeeInput={quickAttendees.input}
+        attendeeEmails={quickAttendees.emails}
+        attendeeSuggestions={quickAttendees.suggestions}
+        submitDisabled={!quickAttendeeDraft.hasParticipants}
         onOpenChange={(open) => {
           if (quickStarting) return
           setQuickMeetDialogOpen(open)
@@ -1300,11 +1038,11 @@ export default function MeetingsPage() {
         onDescriptionChange={setQuickMeetDescription}
         onDurationMinutesChange={setQuickMeetDurationMinutes}
         onTimezoneChange={setTimezone}
-        onAttendeeInputChange={setQuickAttendeeInput}
-        onAttendeeKeyDown={handleQuickAttendeeKeyDown}
-        onCommitAttendeeInput={commitQuickAttendeeInput}
-        onRemoveAttendee={removeQuickAttendee}
-        onAddSuggestedAttendee={addQuickSuggestedAttendee}
+        onAttendeeInputChange={quickAttendees.setInput}
+        onAttendeeKeyDown={quickAttendees.handleKeyDown}
+        onCommitAttendeeInput={quickAttendees.commitInput}
+        onRemoveAttendee={quickAttendees.removeEmail}
+        onAddSuggestedAttendee={quickAttendees.addSuggestedEmail}
       />
 
       {!canSchedule && (
@@ -1361,12 +1099,13 @@ export default function MeetingsPage() {
         timezone={timezone}
         title={title}
         description={description}
-        attendeeInput={attendeeInput}
-        attendeeEmails={attendeeEmails}
-        attendeeSuggestions={attendeeSuggestions}
+        attendeeInput={scheduleAttendees.input}
+        attendeeEmails={scheduleAttendees.emails}
+        attendeeSuggestions={scheduleAttendees.suggestions}
         scheduleRequiresGoogleWorkspace={scheduleRequiresGoogleWorkspace}
         googleWorkspaceConnected={Boolean(resolvedGoogleWorkspaceStatus?.connected)}
         scheduleDisabled={scheduleDisabled}
+        submitDisabled={scheduleDisabled || !scheduleAttendeeDraft.hasParticipants}
         scheduling={scheduling}
         onMeetingDateChange={setMeetingDate}
         onMeetingTimeChange={setMeetingTime}
@@ -1374,11 +1113,11 @@ export default function MeetingsPage() {
         onTimezoneChange={setTimezone}
         onTitleChange={setTitle}
         onDescriptionChange={setDescription}
-        onAttendeeInputChange={setAttendeeInput}
-        onAttendeeKeyDown={handleAttendeeKeyDown}
-        onCommitAttendeeInput={commitAttendeeInput}
-        onRemoveAttendee={removeAttendee}
-        onAddSuggestedAttendee={addSuggestedAttendee}
+        onAttendeeInputChange={scheduleAttendees.setInput}
+        onAttendeeKeyDown={scheduleAttendees.handleKeyDown}
+        onCommitAttendeeInput={scheduleAttendees.commitInput}
+        onRemoveAttendee={scheduleAttendees.removeEmail}
+        onAddSuggestedAttendee={scheduleAttendees.addSuggestedEmail}
         onReset={resetScheduleForm}
         onSubmit={handleScheduleMeeting}
       />

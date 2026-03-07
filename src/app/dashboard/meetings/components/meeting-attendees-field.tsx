@@ -1,5 +1,7 @@
 'use client'
 
+import type { MeetingAttendeeSuggestion } from '@/lib/meetings/attendees'
+
 import type { KeyboardEvent } from 'react'
 import { X } from 'lucide-react'
 
@@ -7,11 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-export type MeetingAttendeeSuggestion = {
-  id: string
-  name: string
-  email: string
-}
+export type { MeetingAttendeeSuggestion } from '@/lib/meetings/attendees'
 
 type MeetingAttendeesFieldProps = {
   label: string

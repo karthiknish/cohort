@@ -1,6 +1,6 @@
-import type { MeetingProcessingState, MeetingRecord, MeetingStatus, WorkspaceMember, WorkspaceMemberWithEmail } from './types'
+import { EMAIL_REGEX, normalizeEmail, parseAttendeeInput } from '@/lib/meetings/attendees'
 
-export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import type { MeetingProcessingState, MeetingRecord, MeetingStatus, WorkspaceMember, WorkspaceMemberWithEmail } from './types'
 
 export const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, index) => {
   const hour = Math.floor(index / 4)
@@ -18,29 +18,11 @@ export const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, index) => {
   }
 })
 
-export function normalizeEmail(value: string): string {
-  return value.trim().toLowerCase()
-}
-
 export function hasEmail(member: WorkspaceMember): member is WorkspaceMemberWithEmail {
   return typeof member.email === 'string' && member.email.trim().length > 0
 }
 
-export function parseAttendeeInput(value: string): string[] {
-  return Array.from(
-    new Set(
-      value
-        .split(/[\n,;]/)
-        .map((entry) => {
-          const trimmed = entry.trim()
-          const angleMatch = trimmed.match(/<([^>]+)>/)
-          const candidate = normalizeEmail(angleMatch?.[1] ?? trimmed)
-          return EMAIL_REGEX.test(candidate) ? candidate : null
-        })
-        .filter((entry): entry is string => Boolean(entry))
-    )
-  )
-}
+export { EMAIL_REGEX, normalizeEmail, parseAttendeeInput }
 
 export function extractRoomNameFromMeetingLink(value: string | null | undefined): string | null {
   if (typeof value !== 'string') {

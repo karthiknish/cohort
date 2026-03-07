@@ -1,5 +1,10 @@
 import { resolveGeminiApiKey } from '@/services/gemini'
-import { resolveGoogleAnalyticsOAuthCredentials, resolveGoogleAnalyticsOAuthRedirectUri, resolveGoogleAdsOAuthCredentials, resolveGoogleAdsOAuthRedirectUri } from '@/services/google-oauth'
+import {
+  resolveGoogleAdsOAuthCredentials,
+  resolveGoogleAdsOAuthRedirectUri,
+  resolveGoogleAnalyticsOAuthCredentials,
+  resolveGoogleAnalyticsOAuthRedirectUri,
+} from '@/services/google-oauth'
 import { resolveGoogleWorkspaceOAuthCredentials, resolveGoogleWorkspaceOAuthRedirectUri } from '@/services/google-workspace'
 import { resolveLiveKitCredentials } from '@/services/livekit'
 

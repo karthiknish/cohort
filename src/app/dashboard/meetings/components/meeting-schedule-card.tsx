@@ -33,6 +33,7 @@ type MeetingScheduleCardProps = {
   scheduleRequiresGoogleWorkspace: boolean
   googleWorkspaceConnected: boolean
   scheduleDisabled: boolean
+  submitDisabled: boolean
   scheduling: boolean
   onMeetingDateChange: (value: Date | undefined) => void
   onMeetingTimeChange: (value: string) => void
@@ -63,6 +64,7 @@ export function MeetingScheduleCard({
   scheduleRequiresGoogleWorkspace,
   googleWorkspaceConnected,
   scheduleDisabled,
+  submitDisabled,
   scheduling,
   onMeetingDateChange,
   onMeetingTimeChange,
@@ -205,7 +207,7 @@ export function MeetingScheduleCard({
             selectedEmails={attendeeEmails}
             disabled={scheduleDisabled}
             emptyStateText="Add people by selecting users below or typing email addresses."
-            helperText="Use Enter, Tab, comma, or semicolon to add typed emails."
+            helperText="Use Enter, Tab, comma, or semicolon to add typed emails. Add at least one participant before scheduling."
             suggestions={attendeeSuggestions}
             onInputChange={onAttendeeInputChange}
             onInputKeyDown={onAttendeeKeyDown}
@@ -219,7 +221,7 @@ export function MeetingScheduleCard({
               <Button
                 type="submit"
                 className={getButtonClasses('primary')}
-                disabled={scheduleDisabled}
+                disabled={submitDisabled}
               >
                 {scheduling
                   ? editingMeeting

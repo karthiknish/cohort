@@ -20,6 +20,7 @@ type QuickMeetDialogProps = {
   attendeeInput: string
   attendeeEmails: string[]
   attendeeSuggestions: MeetingAttendeeSuggestion[]
+  submitDisabled: boolean
   onOpenChange: (open: boolean) => void
   onCancel: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
@@ -44,6 +45,7 @@ export function QuickMeetDialog({
   attendeeInput,
   attendeeEmails,
   attendeeSuggestions,
+  submitDisabled,
   onOpenChange,
   onCancel,
   onSubmit,
@@ -126,7 +128,7 @@ export function QuickMeetDialog({
             selectedEmails={attendeeEmails}
             disabled={quickStarting}
             emptyStateText="Add people by selecting users below or typing email addresses."
-            helperText="Use Enter, Tab, comma, or semicolon to add typed emails. Calendar invites are optional."
+            helperText="Use Enter, Tab, comma, or semicolon to add typed emails. Add at least one participant before starting the room."
             suggestions={attendeeSuggestions}
             onInputChange={onAttendeeInputChange}
             onInputKeyDown={onAttendeeKeyDown}
@@ -137,7 +139,7 @@ export function QuickMeetDialog({
 
           <div className="md:col-span-2">
             <div className="flex flex-wrap gap-2">
-              <Button type="submit" className={getButtonClasses('primary')} disabled={quickStarting}>
+              <Button type="submit" className={getButtonClasses('primary')} disabled={quickStarting || submitDisabled}>
                 {quickStarting ? 'Starting...' : 'Start Room'}
               </Button>
               <Button

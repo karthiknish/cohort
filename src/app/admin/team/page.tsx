@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import {
@@ -10,32 +9,16 @@ import {
   ShieldCheck,
   UserCheck,
   UserMinus,
-  Users as UsersIcon,
   UserPlus,
+  Users as UsersIcon,
 } from 'lucide-react'
+import Link from 'next/link'
 
-import { useAuth } from '@/contexts/auth-context'
 import { api } from '../../../../convex/_generated/api'
-import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -45,9 +28,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn } from '@/lib/utils'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/contexts/auth-context'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
+import { cn } from '@/lib/utils'
 import { ADMIN_USER_ROLES, ADMIN_USER_STATUSES, type AdminUserRecord, type AdminUserRole, type AdminUserStatus } from '@/types/admin'
 import { buildClientAllocationSummary } from '../lib/client-allocation'
 
@@ -253,14 +241,14 @@ export default function AdminTeamPage() {
   }
 
   const handleInviteUser = () => {
-    if (!inviteEmail) return
+    if (!inviteEmail || !user?.id) return
     
     setInviteSending(true)
 
     void createInvitation({
       email: inviteEmail,
       role: inviteRole,
-      invitedBy: user!.id,
+      invitedBy: user.id,
       invitedByName: user?.name ?? null,
     })
       .then(() => {
@@ -643,7 +631,6 @@ function statusToVariant(status: UserStatus) {
       return 'destructive' as const
     case 'invited':
     case 'pending':
-    default:
       return 'secondary' as const
   }
 }

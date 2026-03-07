@@ -1,11 +1,10 @@
-import type { ProjectStatus } from '@/types/projects'
-import { PROJECT_STATUSES } from '@/types/projects'
-import type { ProjectRecord } from '@/types/projects'
-import { FolderKanban, CircleCheck, TriangleAlert } from 'lucide-react'
+import { CircleCheck, FolderKanban, TriangleAlert } from 'lucide-react'
+
+import { SEMANTIC_COLORS } from '@/lib/colors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { calculateBackoffDelay as calculateBackoffDelayLib } from '@/lib/retry-utils'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { SEMANTIC_COLORS } from '@/lib/colors'
+import { PROJECT_STATUSES, type ProjectRecord, type ProjectStatus } from '@/types/projects'
 
 export type StatusFilter = 'all' | ProjectStatus
 export type SortField = 'updatedAt' | 'createdAt' | 'name' | 'status' | 'taskCount'
@@ -113,7 +112,31 @@ export function formatDateRange(start: string | null, end: string | null): strin
   return `${startLabel} – ${endLabel}`
 }
 
-export function getErrorMessage(error: unknown, fallback: string, context?: string): string {
+export function projectMatchesQuery(
+  project: Pick<ProjectRecord, 'name' | 'description' | 'clientName' | 'tags'>,
+  rawQuery: string,
+): boolean {
+  const query = rawQuery.trim().toLowerCase()
+  if (!query) return true
+
+  return (
+    project.name.toLowerCase().includes(query) ||
+    project.description?.toLowerCase().includes(query) === true ||
+    project.clientName?.toLowerCase().includes(query) === true ||
+    project.tags.some((tag) => tag.toLowerCase().includes(query))
+  )
+}
+
+export function filterProjectsByQuery<T extends Pick<ProjectRecord, 'name' | 'description' | 'clientName' | 'tags'>>(
+  projects: T[],
+  rawQuery: string,
+): T[] {
+  const query = rawQuery.trim()
+  if (!query) return projects
+  return projects.filter((project) => projectMatchesQuery(project, query))
+}
+
+export function getErrorMessage(error: unknown, _fallback: string, context?: string): string {
   if (context) {
     logError(error, context)
   }
@@ -145,7 +168,6 @@ export function milestoneStatusColor(status: string): string {
       return SEMANTIC_COLORS.status.info
     case 'blocked':
       return SEMANTIC_COLORS.priority.high
-    case 'planned':
     default:
       return '#6366f1'
   }

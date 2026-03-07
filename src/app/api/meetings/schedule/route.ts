@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { BadRequestError, ForbiddenError, ServiceUnavailableError, UnauthorizedError } from '@/lib/api-errors'
+import { sanitizeMeetingParticipantEmails } from '@/lib/meetings/attendees'
 import { createMeetingRecord, getGoogleWorkspaceTokens, upsertGoogleWorkspaceTokens } from '@/lib/meetings-admin'
 import { notifyMeetingScheduledEmails } from '@/lib/notifications/brevo'
 import {
@@ -25,18 +26,6 @@ const MIN_MEETING_DURATION_MS = 10 * 60 * 1000
 const MAX_MEETING_DURATION_MS = 8 * 60 * 60 * 1000
 const MIN_SCHEDULE_LEAD_MS = 5 * 60 * 1000
 const MAX_SCHEDULE_AHEAD_MS = 365 * 24 * 60 * 60 * 1000
-
-function normalizeAttendees(attendees: string[], includeEmail?: string | null): string[] {
-  const base = attendees
-    .map((value) => value.trim().toLowerCase())
-    .filter((value) => value.length > 0)
-
-  if (includeEmail) {
-    base.push(includeEmail.trim().toLowerCase())
-  }
-
-  return Array.from(new Set(base))
-}
 
 function normalizeMeetingText(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
@@ -131,7 +120,12 @@ export const POST = createApiHandler(
       })
     }
 
-    const attendeeEmails = normalizeAttendees(body.attendeeEmails, auth.email)
+    const attendeeEmails = sanitizeMeetingParticipantEmails(body.attendeeEmails, auth.email)
+
+    if (attendeeEmails.length === 0) {
+      throw new BadRequestError('Add at least one participant before scheduling a meeting')
+    }
+
     const roomName = createLiveKitRoomName(normalizedTitle)
     const appUrl = new URL(req.url).origin
     const roomUrl = buildCohortsMeetingUrl({

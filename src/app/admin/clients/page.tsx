@@ -1,29 +1,14 @@
 'use client'
 
-import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { usePaginatedQuery } from 'convex/react'
+import { LoaderCircle, Plus, Trash2, Users as UsersIcon, X } from 'lucide-react'
+import Link from 'next/link'
 
 import { api } from '../../../../convex/_generated/api'
-import { useAuth } from '@/contexts/auth-context'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -32,8 +17,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { LoaderCircle, Plus, Trash2, Users as UsersIcon, X } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useAuth } from '@/contexts/auth-context'
 
+import { UserSearchPicker } from '../components/user-search-picker'
 import { buildClientAllocationSummary, getAssignableWorkspaceUsers } from '../lib/client-allocation'
 import { useAdminClients } from './hooks'
 
@@ -254,18 +242,16 @@ export default function AdminClientsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="admin-client-owner">Account manager</Label>
                   {assignableUsers.length > 0 ? (
-                    <Select value={clientAccountManager || undefined} onValueChange={setClientAccountManager}>
-                      <SelectTrigger id="admin-client-owner" disabled={clientSaving}>
-                        <SelectValue placeholder="Select a workspace owner" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {assignableUsers.map((workspaceUser) => (
-                          <SelectItem key={workspaceUser.id} value={workspaceUser.name}>
-                            {workspaceUser.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <UserSearchPicker
+                      id="admin-client-owner"
+                      value={clientAccountManager}
+                      onChange={setClientAccountManager}
+                      options={assignableUsers}
+                      placeholder="Select a workspace owner"
+                      searchPlaceholder="Search internal teammates"
+                      emptyText="No matching teammate found."
+                      disabled={clientSaving}
+                    />
                   ) : (
                     <Input
                       id="admin-client-owner"
@@ -297,18 +283,19 @@ export default function AdminClientsPage() {
                           Name
                         </Label>
                         {assignableUsers.length > 0 ? (
-                          <Select value={member.name || undefined} onValueChange={(value) => updateTeamMemberField(member.key, 'name', value)}>
-                            <SelectTrigger id={`team-member-name-${member.key}`} disabled={clientSaving}>
-                              <SelectValue placeholder={index === 0 ? 'Select teammate' : 'Choose teammate'} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {assignableUsers.map((workspaceUser) => (
-                                <SelectItem key={`${member.key}-${workspaceUser.id}`} value={workspaceUser.name}>
-                                  {workspaceUser.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <UserSearchPicker
+                            id={`team-member-name-${member.key}`}
+                            value={member.name}
+                            onChange={(value) => updateTeamMemberField(member.key, 'name', value)}
+                            options={assignableUsers}
+                            placeholder={index === 0 ? 'Select teammate' : 'Choose teammate'}
+                            searchPlaceholder="Search teammates"
+                            emptyText="No matching teammate found."
+                            disabled={clientSaving}
+                            excludeNames={teamMemberFields
+                              .filter((candidate) => candidate.key !== member.key)
+                              .map((candidate) => candidate.name)}
+                          />
                         ) : (
                           <Input
                             id={`team-member-name-${member.key}`}
@@ -541,18 +528,17 @@ export default function AdminClientsPage() {
             <div className="space-y-2">
               <Label htmlFor="team-member-name-input">Name</Label>
               {assignableUsers.length > 0 ? (
-                <Select value={memberName || undefined} onValueChange={setMemberName}>
-                  <SelectTrigger id="team-member-name-input" disabled={addingMember}>
-                    <SelectValue placeholder="Select teammate" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assignableUsers.map((workspaceUser) => (
-                      <SelectItem key={`dialog-${workspaceUser.id}`} value={workspaceUser.name}>
-                        {workspaceUser.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <UserSearchPicker
+                  id="team-member-name-input"
+                  value={memberName}
+                  onChange={setMemberName}
+                  options={assignableUsers}
+                  placeholder="Select teammate"
+                  searchPlaceholder="Search teammates"
+                  emptyText="No matching teammate found."
+                  disabled={addingMember}
+                  excludeNames={(clientPendingMembers?.teamMembers ?? []).map((member) => member.name)}
+                />
               ) : (
                 <Input
                   id="team-member-name-input"

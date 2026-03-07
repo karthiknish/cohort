@@ -104,7 +104,9 @@ export function buildClientAllocationSummary(users: AllocationUser[], clients: A
       matchedUserIds.add(user.id)
     })
 
-    matchedUserIds.forEach((userId) => allocations.get(userId)?.total.add(client.name))
+    matchedUserIds.forEach((userId) => {
+      allocations.get(userId)?.total.add(client.name)
+    })
   })
 
   const byUserId: Record<string, UserClientAllocation> = {}

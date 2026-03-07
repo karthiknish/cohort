@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { BadRequestError, ForbiddenError, ServiceUnavailableError, UnauthorizedError } from '@/lib/api-errors'
+import { sanitizeMeetingParticipantEmails } from '@/lib/meetings/attendees'
 import {
   getGoogleWorkspaceTokens,
   getMeetingRecord,
@@ -19,18 +20,6 @@ const cancelMeetingSchema = z.object({
   legacyId: z.string().min(1),
   reason: z.string().optional(),
 })
-
-function normalizeAttendees(attendees: string[], includeEmail?: string | null): string[] {
-  const base = attendees
-    .map((value) => value.trim().toLowerCase())
-    .filter((value) => value.length > 0)
-
-  if (includeEmail) {
-    base.push(includeEmail.trim().toLowerCase())
-  }
-
-  return Array.from(new Set(base))
-}
 
 export const POST = createApiHandler(
   {
@@ -119,7 +108,7 @@ export const POST = createApiHandler(
       status: 'cancelled',
     })
 
-    const attendeeEmails = normalizeAttendees(meeting.attendeeEmails, auth.email)
+    const attendeeEmails = sanitizeMeetingParticipantEmails(meeting.attendeeEmails, auth.email)
     const meetingStartIso = new Date(meeting.startTimeMs).toISOString()
 
     const notificationSummary = await notifyMeetingCancelledEmails({

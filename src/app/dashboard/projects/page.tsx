@@ -1,46 +1,21 @@
 'use client'
 
-import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation, useQuery } from 'convex/react'
 import { useMutation as useTanstackMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from 'convex/react'
 import {
   TriangleAlert,
   Briefcase,
+  CircleX,
   FolderKanban,
   ListChecks,
   LoaderCircle,
-  MoreHorizontal,
-  Plus,
   RefreshCw,
   Users,
-  CircleX,
 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { useAuth } from '@/contexts/auth-context'
-import { useClientContext } from '@/contexts/client-context'
-import { usePreview } from '@/contexts/preview-context'
-import { useToast } from '@/components/ui/use-toast'
-import { getPreviewProjects } from '@/lib/preview-data'
-import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
-import { cn } from '@/lib/utils'
-import type { ProjectRecord, ProjectStatus } from '@/types/projects'
-import { PROJECT_STATUSES } from '@/types/projects'
-import { projectMilestonesApi, projectsApi } from '@/lib/convex-api'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { emitDashboardRefresh } from '@/lib/refresh-bus'
-import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
-import { MILESTONE_STATUSES, type MilestoneRecord } from '@/types/milestones'
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog'
 import { EditProjectDialog } from '@/components/projects/edit-project-dialog'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,38 +26,55 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Progress } from '@/components/ui/progress'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/contexts/auth-context'
+import { useClientContext } from '@/contexts/client-context'
+import { usePreview } from '@/contexts/preview-context'
+import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
+import { projectMilestonesApi, projectsApi } from '@/lib/convex-api'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
+import { getPreviewProjects } from '@/lib/preview-data'
+import { emitDashboardRefresh } from '@/lib/refresh-bus'
+import { cn } from '@/lib/utils'
+import { MILESTONE_STATUSES, type MilestoneRecord } from '@/types/milestones'
+import { PROJECT_STATUSES, type ProjectRecord, type ProjectStatus } from '@/types/projects'
 
 // Import extracted components
 import {
-  ProjectCard,
-  ProjectRow,
-  ProjectKanban,
-  SummaryCard,
+  type SortDirection,
+  type SortField,
+  type StatusFilter,
+  type ViewMode,
+  filterProjectsByQuery,
   GanttView,
-  StatusFilter,
-  SortField,
-  SortDirection,
-  ViewMode,
+  ProjectCard,
+  ProjectFilters,
+  ProjectKanban,
+  ProjectRow,
+  ProjectSearch,
   RETRY_CONFIG,
+  SummaryCard,
+  ViewModeSelector,
   formatStatusLabel,
   useDebouncedValue,
-  ProjectFilters,
-  ProjectSearch,
-  ViewModeSelector,
 } from './components'
-
-type ProjectResponse = {
-  projects?: ProjectRecord[]
-}
 
 function isProjectStatus(value: unknown): value is ProjectStatus {
   return typeof value === 'string' && PROJECT_STATUSES.includes(value as ProjectStatus)
@@ -161,16 +153,6 @@ export default function ProjectsPage() {
         previewProjects = previewProjects.filter((p) => p.status === statusFilter)
       }
 
-      const trimmedQuery = debouncedQuery.trim()
-      if (trimmedQuery) {
-        const query = trimmedQuery.toLowerCase()
-        previewProjects = previewProjects.filter((p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.description?.toLowerCase().includes(query) ||
-          p.tags.some((tag) => tag.toLowerCase().includes(query))
-        )
-      }
-
       setProjects(previewProjects)
       setLoading(false)
       setError(null)
@@ -233,10 +215,11 @@ export default function ProjectsPage() {
     setError(null)
     setRetryCount(0)
     setLoading(false)
-  }, [debouncedQuery, isPreviewMode, selectedClientId, statusFilter, user?.id, workspaceId, projectsRealtime])
+  }, [isPreviewMode, selectedClientId, statusFilter, user?.id, workspaceId, projectsRealtime])
 
-  const loadMilestones = useCallback(async (_projectIds: string[]) => {
+  const loadMilestones = useCallback(async (projectIds: string[]) => {
     // Milestones are realtime via Convex; this function is effectively a no-op.
+    void projectIds
     return
   }, [])
 
@@ -422,7 +405,7 @@ export default function ProjectsPage() {
 
       return { projectId: project.id, previousStatus: project.status, clientId: project.clientId ?? null, projectName: project.name }
     },
-    onError: (error, variables, context) => {
+    onError: (error, _variables, context) => {
       if (!context) return
 
       logError(error, 'ProjectsPage:updateStatusMutation')
@@ -430,7 +413,7 @@ export default function ProjectsPage() {
 
       toast({ title: 'Status update failed', description: asErrorMessage(error), variant: 'destructive' })
     },
-    onSuccess: (_data, variables, _context) => {
+    onSuccess: (_data, variables) => {
       emitDashboardRefresh({ reason: 'project-mutated', clientId: variables.project.clientId ?? null })
       toast({
         title: 'Status updated',
@@ -473,21 +456,7 @@ export default function ProjectsPage() {
   }, [])
 
   // Sort projects
-  const searchedProjects = useMemo(() => {
-    if (!projects.length) return []
-
-    const trimmedQuery = debouncedQuery.trim()
-    if (!trimmedQuery) {
-      return projects
-    }
-
-    const query = trimmedQuery.toLowerCase()
-    return projects.filter((project) =>
-      project.name.toLowerCase().includes(query) ||
-      project.description?.toLowerCase().includes(query) ||
-      project.tags.some((tag) => tag.toLowerCase().includes(query))
-    )
-  }, [debouncedQuery, projects])
+  const searchedProjects = useMemo(() => filterProjectsByQuery(projects, debouncedQuery), [debouncedQuery, projects])
 
   const sortedProjects = useMemo(() => {
     const sorted = [...searchedProjects]
@@ -507,7 +476,6 @@ export default function ProjectsPage() {
         case 'createdAt':
           comparison = (new Date(a.createdAt ?? 0).getTime()) - (new Date(b.createdAt ?? 0).getTime())
           break
-        case 'updatedAt':
         default:
           comparison = (new Date(a.updatedAt ?? 0).getTime()) - (new Date(b.updatedAt ?? 0).getTime())
           break
@@ -540,11 +508,20 @@ export default function ProjectsPage() {
   }, [projects.length, statusCounts.completed])
 
   const initialLoading = loading && projects.length === 0
+  const hasActiveFilters = statusFilter !== 'all' || debouncedQuery.trim().length > 0
+  const hasVisibleProjects = sortedProjects.length > 0
 
   const portfolioLabel = selectedClient?.name ? `${selectedClient.name} workspace` : 'all workspaces'
 
   const toggleSortDirection = useCallback(() => {
     setSortDirection((prev) => prev === 'asc' ? 'desc' : 'asc')
+  }, [])
+
+  const clearAllFilters = useCallback(() => {
+    setSearchInput('')
+    setStatusFilter('all')
+    setSortField('updatedAt')
+    setSortDirection('desc')
   }, [])
 
   return (
@@ -697,8 +674,8 @@ export default function ProjectsPage() {
               <>
                 {initialLoading && (
                   <div className="space-y-4">
-                    {Array.from({ length: 4 }).map((_, index) => (
-                      <Skeleton key={index} className="h-28 w-full" />
+                    {['project-skeleton-1', 'project-skeleton-2', 'project-skeleton-3', 'project-skeleton-4'].map((key) => (
+                      <Skeleton key={key} className="h-28 w-full" />
                     ))}
                   </div>
                 )}
@@ -720,7 +697,7 @@ export default function ProjectsPage() {
                   </div>
                 )}
 
-                {!initialLoading && !error && projects.length === 0 && (
+                {!initialLoading && !error && projects.length === 0 && !hasActiveFilters && (
                   <div className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center">
                     <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/40" />
                     <h3 className="mt-4 text-lg font-medium text-foreground">No projects yet</h3>
@@ -733,7 +710,27 @@ export default function ProjectsPage() {
                   </div>
                 )}
 
-                {!initialLoading && !error && projects.length > 0 && viewMode === 'list' && (
+                {!initialLoading && !error && !hasVisibleProjects && hasActiveFilters && (
+                  <div className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center">
+                    <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/40" />
+                    <h3 className="mt-4 text-lg font-medium text-foreground">No matching projects</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Try a different search or reset your filters to see more work.
+                    </p>
+                    <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                      {searchInput ? (
+                        <Button type="button" variant="outline" size="sm" onClick={() => setSearchInput('')}>
+                          Clear search
+                        </Button>
+                      ) : null}
+                      <Button type="button" size="sm" onClick={clearAllFilters}>
+                        Reset filters
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {!initialLoading && !error && hasVisibleProjects && viewMode === 'list' && (
                   <div className="space-y-4">
                     {sortedProjects.map((project) => (
                       <ProjectRow
@@ -748,7 +745,7 @@ export default function ProjectsPage() {
                   </div>
                 )}
 
-                {!initialLoading && !error && projects.length > 0 && viewMode === 'grid' && (
+                {!initialLoading && !error && hasVisibleProjects && viewMode === 'grid' && (
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {sortedProjects.map((project) => (
                       <ProjectCard
@@ -763,9 +760,9 @@ export default function ProjectsPage() {
                   </div>
                 )}
 
-                {!initialLoading && !error && projects.length > 0 && viewMode === 'board' && (
+                {!initialLoading && !error && hasVisibleProjects && viewMode === 'board' && (
                   <ProjectKanban
-                    projects={projects}
+                    projects={sortedProjects}
                     pendingStatusUpdates={pendingStatusUpdates}
                     onUpdateStatus={handleUpdateStatus}
                     onEdit={openEditDialog}
