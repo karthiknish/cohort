@@ -71,6 +71,16 @@ function formatTaskDueDate(value: number | string | null): string | null {
   return null
 }
 
+function formatDateValue(value: number | string | null): string | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return new Date(value).toISOString().slice(0, 10)
+  }
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim()
+  }
+  return null
+}
+
 function formatDeltaPercent(value: number | null, digits = 1): string | null {
   if (value === null || !Number.isFinite(value) || Math.abs(value) < 0.01) return null
   return `${value > 0 ? '+' : ''}${value.toFixed(digits)}%`
@@ -356,6 +366,43 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
             secondary: secondary || undefined,
           }
         }),
+      })
+    }
+  }
+
+  if (operation === 'createProject' || operation === 'updateProject') {
+    const projectName = asString(data.name)
+    const projectId = asString(data.projectId)
+    const projectStatus = asString(data.status)
+    const projectClientName = asString(data.clientName)
+    const startDateValue = formatDateValue(asNumber(data.startDateMs) ?? asString(data.startDate))
+    const endDateValue = formatDateValue(asNumber(data.endDateMs) ?? asString(data.endDate))
+    const tags = Array.isArray(data.tags)
+      ? data.tags.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0)
+      : []
+    const updatedFields = Array.isArray(data.updatedFields)
+      ? data.updatedFields.filter((field): field is string => typeof field === 'string' && field.trim().length > 0)
+      : []
+
+    const projectItems = compact<MetricItem>([
+      projectName ? { label: 'Project', value: projectName } : null,
+      projectId ? { label: 'Project ID', value: projectId } : null,
+      projectStatus ? { label: 'Status', value: formatLabel(projectStatus) } : null,
+      projectClientName ? { label: 'Client', value: projectClientName } : null,
+      startDateValue ? { label: 'Start Date', value: startDateValue } : null,
+      endDateValue ? { label: 'End Date', value: endDateValue } : null,
+      tags.length > 0 ? { label: 'Tags', value: tags.join(', ') } : null,
+    ])
+
+    if (projectItems.length > 0) {
+      sections.push({ type: 'metrics', title: 'Project Details', items: projectItems })
+    }
+
+    if (updatedFields.length > 0) {
+      sections.push({
+        type: 'list',
+        title: 'Updated Fields',
+        items: updatedFields.map((field) => ({ primary: formatLabel(field) })),
       })
     }
   }

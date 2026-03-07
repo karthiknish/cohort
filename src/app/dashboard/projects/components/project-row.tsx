@@ -9,6 +9,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   Pencil,
+  Plus,
   Tag,
   Trash2,
 } from 'lucide-react'
@@ -24,6 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { buildProjectTasksRoute } from '@/lib/project-routes'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '../../collaboration/utils'
 import { STATUS_CLASSES, STATUS_ICONS, formatStatusLabel, formatTaskSummary, formatDateRange, formatDate, STATUS_ACCENT_COLORS } from './utils'
@@ -37,11 +39,19 @@ export interface ProjectRowProps {
 }
 
 function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPendingUpdate }: ProjectRowProps) {
-  const tasksQuery = new URLSearchParams({
+  const tasksHref = buildProjectTasksRoute({
     projectId: project.id,
     projectName: project.name,
+    clientId: project.clientId,
+    clientName: project.clientName,
   })
-  const tasksHref = `/dashboard/tasks?${tasksQuery.toString()}`
+  const createTaskHref = buildProjectTasksRoute({
+    projectId: project.id,
+    projectName: project.name,
+    clientId: project.clientId,
+    clientName: project.clientName,
+    action: 'create',
+  })
   const collaborationHref = `/dashboard/collaboration?${new URLSearchParams({ projectId: project.id }).toString()}`
   const StatusIcon = STATUS_ICONS[project.status]
 
@@ -181,6 +191,12 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem asChild className="gap-2 cursor-pointer">
+                  <Link href={createTaskHref} prefetch>
+                    <Plus className="h-4 w-4" />
+                    <span>Create Task</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild className="gap-2 cursor-pointer">
                   <Link href={tasksHref} prefetch>
                     <ListChecks className="h-4 w-4" />

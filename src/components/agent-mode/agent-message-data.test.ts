@@ -120,6 +120,33 @@ describe('buildAgentDataSections', () => {
     ])
   })
 
+  it('shows project details and updated fields for project actions', () => {
+    const sections = buildAgentDataSections('updateProject', {
+      projectId: 'project_42',
+      name: 'Website Refresh',
+      clientName: 'Client Forty Two',
+      status: 'active',
+      tags: ['seo', 'launch'],
+      updatedFields: ['status', 'tags'],
+    })
+
+    expect(sections.map((section) => section.title)).toEqual(['Project Details', 'Updated Fields'])
+    expect(sections[0]).toMatchObject({
+      type: 'metrics',
+      title: 'Project Details',
+      items: expect.arrayContaining([
+        { label: 'Project', value: 'Website Refresh' },
+        { label: 'Client', value: 'Client Forty Two' },
+        { label: 'Status', value: 'Active' },
+      ]),
+    })
+    expect(sections[1]).toMatchObject({
+      type: 'list',
+      title: 'Updated Fields',
+      items: [{ primary: 'Status' }, { primary: 'Tags' }],
+    })
+  })
+
   it('shows task summary sections for client task summaries', () => {
     const sections = buildAgentDataSections('summarizeClientTasks', {
       clientName: 'ABC Client',

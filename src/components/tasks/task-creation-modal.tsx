@@ -152,6 +152,8 @@ export function TaskCreationModal({
           assignedTo: payload.assignedTo,
           clientId: payload.clientId ?? '',
           client: payload.client ?? null,
+          projectId: payload.projectId ?? null,
+          projectName: payload.projectName ?? null,
           dueDateMs: payload.dueDate ? Date.parse(payload.dueDate) : null,
           tags: payload.tags,
           attachments,

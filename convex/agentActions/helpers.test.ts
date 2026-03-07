@@ -141,6 +141,50 @@ describe('resolveDeterministicAgentIntent', () => {
     })
   })
 
+  it('creates projects against the active client context', () => {
+    const intent = resolveDeterministicAgentIntent('Create project Website Refresh', {
+      activeClientId: 'client_123',
+    })
+
+    expect(intent).toEqual({
+      action: 'execute',
+      operation: 'createProject',
+      params: {
+        name: 'Website Refresh',
+        clientId: 'client_123',
+      },
+      message: 'Creating project Website Refresh.',
+    })
+  })
+
+  it('asks for the exact project change before executing a vague update', () => {
+    const intent = resolveDeterministicAgentIntent('Update this project', {
+      activeProjectId: 'project_42',
+    })
+
+    expect(intent).toEqual({
+      action: 'clarify',
+      message: 'I can update that project — what should I change: status, name, dates, client, description, or tags?',
+    })
+  })
+
+  it('maps weekly analytics report requests to report execution', () => {
+    const intent = resolveDeterministicAgentIntent('Generate a weekly Meta performance report', {
+      activeClientId: 'client_1',
+    })
+
+    expect(intent).toEqual({
+      action: 'execute',
+      operation: 'generatePerformanceReport',
+      params: {
+        period: 'weekly',
+        providerIds: ['facebook'],
+        clientId: 'client_1',
+      },
+      message: 'Generating your weekly performance report...',
+    })
+  })
+
   it('asks conversationally for missing task details on weak task commands', () => {
     const intent = resolveDeterministicAgentIntent('create task')
 

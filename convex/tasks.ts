@@ -307,6 +307,8 @@ export const createTask = zAuthenticatedMutation({
     assignedTo: z.array(z.string()),
     clientId: z.string(),
     client: z.string().nullable(),
+    projectId: z.string().nullable().optional(),
+    projectName: z.string().nullable().optional(),
     dueDateMs: z.number().nullable(),
     tags: z.array(z.string()),
     attachments: z.array(taskAttachmentZ).optional(),
@@ -327,8 +329,8 @@ export const createTask = zAuthenticatedMutation({
       assignedTo: args.assignedTo,
       clientId: args.clientId,
       client: args.client,
-      projectId: null,
-      projectName: null,
+      projectId: args.projectId ?? null,
+      projectName: args.projectName ?? null,
       dueDateMs: args.dueDateMs,
       tags: args.tags,
       attachments: Array.isArray(args.attachments) ? args.attachments : [],
@@ -345,6 +347,7 @@ export const createTask = zAuthenticatedMutation({
       segments.push(`Due: ${new Date(args.dueDateMs).toLocaleDateString()}`)
     }
     if (args.client) segments.push(`Client: ${args.client}`)
+    if (args.projectName) segments.push(`Project: ${args.projectName}`)
     if (Array.isArray(args.attachments) && args.attachments.length > 0) {
       segments.push(`Attachments: ${args.attachments.length}`)
     }
@@ -371,6 +374,8 @@ export const createTask = zAuthenticatedMutation({
         assignedTo: args.assignedTo,
         clientId,
         clientName: args.client ?? null,
+        projectId: args.projectId ?? null,
+        projectName: args.projectName ?? null,
       },
       createdAtMs: nowMs,
       updatedAtMs: nowMs,

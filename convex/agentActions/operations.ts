@@ -1,7 +1,6 @@
-import type { ActionCtx } from '../_generated/server'
-
-import { api } from '../_generated/api'
 import { mergeProposalForm } from '../../src/lib/proposals'
+import { api } from '../_generated/api'
+import type { ActionCtx } from '../_generated/server'
 
 import {
   asErrorMessage,
@@ -24,10 +23,10 @@ import {
   normalizeProviderIds,
   normalizeReportPeriod,
   parseDateToMs,
-  resolveReportWindow,
   resolveAgentDueDateMs,
   resolveClientIdFromParams,
   resolveProposalId,
+  resolveReportWindow,
   unwrapConvexResult,
 } from './helpers'
 import type { JsonRecord, OperationHandler, OperationInput, OperationResult } from './types'
@@ -335,6 +334,12 @@ function matchesCampaignQuery(value: string | null | undefined, campaignQuery: s
 
   const tokens = campaignQuery.split(' ').filter(Boolean)
   return tokens.length > 0 && tokens.every((token) => normalizedValue.includes(token))
+}
+
+function buildProjectRoute(projectId: string, projectName?: string | null): string {
+  const params = new URLSearchParams({ projectId })
+  if (projectName) params.set('projectName', projectName)
+  return `/dashboard/projects?${params.toString()}`
 }
 
 function buildProviderBreakdownFromRows(
@@ -782,12 +787,15 @@ const operationHandlers: Record<string, OperationHandler> = {
     const legacyId = asNonEmptyString(input.params.projectId) ?? asNonEmptyString(input.params.legacyId) ?? `project_${crypto.randomUUID()}`
     const description = asNonEmptyString(input.params.description)
     const status = asNonEmptyString(input.params.status) ?? 'planning'
-    const clientIdRaw = asNonEmptyString(input.params.clientId)
-    const clientId = clientIdRaw === 'none' ? null : clientIdRaw
-    const clientName = asNonEmptyString(input.params.clientName)
     const startDateMs = asNumber(input.params.startDateMs) ?? parseDateToMs(input.params.startDate)
     const endDateMs = asNumber(input.params.endDateMs) ?? parseDateToMs(input.params.endDate)
     const tags = asStringArray(input.params.tags)
+    const shouldClearClient = asNonEmptyString(input.params.clientId) === 'none'
+    const resolvedClient = shouldClearClient
+      ? { clientId: '', clientName: null }
+      : await resolveClientIdFromParams(ctx, input.workspaceId, input.params, input.context)
+    const clientId = shouldClearClient ? null : (resolvedClient.clientId || null)
+    const clientName = shouldClearClient ? null : (resolvedClient.clientName ?? asNonEmptyString(input.params.clientName) ?? null)
 
     const rawResult = await ctx.runMutation(api.projects.create, {
       workspaceId: input.workspaceId,
@@ -810,13 +818,17 @@ const operationHandlers: Record<string, OperationHandler> = {
 
     return {
       success: true,
-      data: { projectId, name },
+      route: buildProjectRoute(projectId, name),
+      data: { projectId, name, clientId, clientName, status, tags },
       userMessage: `Created project ${name}.`,
     }
   },
 
   async updateProject(ctx, input) {
-    const projectId = asNonEmptyString(input.params.projectId) ?? asNonEmptyString(input.params.legacyId) ?? asNonEmptyString(input.params.id)
+    const projectId = asNonEmptyString(input.params.projectId)
+      ?? asNonEmptyString(input.params.legacyId)
+      ?? asNonEmptyString(input.params.id)
+      ?? asNonEmptyString(input.context?.activeProjectId ?? null)
     if (!projectId) {
       return { success: false, data: { error: 'projectId is required.' }, userMessage: 'Please tell me which project to update.' }
     }
@@ -849,13 +861,20 @@ const operationHandlers: Record<string, OperationHandler> = {
     const status = asNonEmptyString(input.params.status)
     if (status) updateArgs.status = status
 
-    if ('clientId' in input.params) {
-      const clientIdRaw = asNonEmptyString(input.params.clientId)
-      updateArgs.clientId = clientIdRaw === 'none' ? null : clientIdRaw
-    }
-
-    if ('clientName' in input.params) {
-      updateArgs.clientName = asString(input.params.clientName)
+    if ('clientId' in input.params || 'clientName' in input.params) {
+      const shouldClearClient = asNonEmptyString(input.params.clientId) === 'none'
+      if (shouldClearClient) {
+        updateArgs.clientId = null
+        updateArgs.clientName = null
+      } else {
+        const resolvedClient = await resolveClientIdFromParams(ctx, input.workspaceId, input.params, input.context)
+        if ('clientId' in input.params) {
+          updateArgs.clientId = resolvedClient.clientId || null
+        }
+        if ('clientName' in input.params || updateArgs.clientId) {
+          updateArgs.clientName = resolvedClient.clientName ?? asString(input.params.clientName)
+        }
+      }
     }
 
     const startDateMs = asNumber(input.params.startDateMs) ?? parseDateToMs(input.params.startDate)
@@ -883,9 +902,24 @@ const operationHandlers: Record<string, OperationHandler> = {
 
     await ctx.runMutation(api.projects.update, updateArgs)
 
+    const projectRecord = await ctx.runQuery(api.projects.getByLegacyId, {
+      workspaceId: input.workspaceId,
+      legacyId: projectId,
+    }) as { name?: unknown; clientName?: unknown; status?: unknown; tags?: unknown } | null
+
+    const resolvedName = asNonEmptyString(projectRecord?.name) ?? name ?? projectId
+
     return {
       success: true,
-      data: { projectId, updatedFields: mutatedFields },
+      route: buildProjectRoute(projectId, resolvedName),
+      data: {
+        projectId,
+        name: resolvedName,
+        clientName: asNonEmptyString(projectRecord?.clientName) ?? updateArgs.clientName ?? null,
+        status: asNonEmptyString(projectRecord?.status) ?? updateArgs.status ?? null,
+        tags: Array.isArray(projectRecord?.tags) ? projectRecord.tags : updateArgs.tags,
+        updatedFields: mutatedFields,
+      },
       userMessage: 'Project updated successfully.',
     }
   },
@@ -1431,6 +1465,7 @@ const operationHandlers: Record<string, OperationHandler> = {
 
       return {
         success: true,
+        route: '/dashboard/analytics',
         data: {
           period,
           periodLabel,
@@ -1504,6 +1539,7 @@ const operationHandlers: Record<string, OperationHandler> = {
 
     return {
       success: true,
+      route: '/dashboard/analytics',
       data: {
         period,
         periodLabel,
@@ -1700,6 +1736,7 @@ const operationHandlers: Record<string, OperationHandler> = {
 
     return {
       success: true,
+      route: '/dashboard/analytics',
       data: {
         reportId: notificationLegacyId,
         period,

@@ -136,6 +136,20 @@ export function filterProjectsByQuery<T extends Pick<ProjectRecord, 'name' | 'de
   return projects.filter((project) => projectMatchesQuery(project, query))
 }
 
+export function projectMatchesContext(
+  project: Pick<ProjectRecord, 'id' | 'name'>,
+  projectId?: string | null,
+  projectName?: string | null,
+): boolean {
+  if (!projectId && !projectName) return true
+
+  const normalizedProjectName = projectName?.trim().toLowerCase() ?? ''
+  const matchesId = projectId ? project.id === projectId : false
+  const matchesName = normalizedProjectName ? project.name.trim().toLowerCase() === normalizedProjectName : false
+
+  return matchesId || matchesName
+}
+
 export function getErrorMessage(error: unknown, _fallback: string, context?: string): string {
   if (context) {
     logError(error, context)

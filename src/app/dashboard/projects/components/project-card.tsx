@@ -8,6 +8,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   Pencil,
+  Plus,
   Trash2,
 } from 'lucide-react'
 
@@ -28,6 +29,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { buildProjectTasksRoute } from '@/lib/project-routes'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '../../collaboration/utils'
 import { STATUS_CLASSES, STATUS_ICONS, formatStatusLabel, STATUS_ACCENT_COLORS } from './utils'
@@ -41,11 +43,19 @@ export interface ProjectCardProps {
 }
 
 function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPendingUpdate }: ProjectCardProps) {
-  const tasksQuery = new URLSearchParams({
+  const tasksHref = buildProjectTasksRoute({
     projectId: project.id,
     projectName: project.name,
+    clientId: project.clientId,
+    clientName: project.clientName,
   })
-  const tasksHref = `/dashboard/tasks?${tasksQuery.toString()}`
+  const createTaskHref = buildProjectTasksRoute({
+    projectId: project.id,
+    projectName: project.name,
+    clientId: project.clientId,
+    clientName: project.clientName,
+    action: 'create',
+  })
   const collaborationHref = `/dashboard/collaboration?${new URLSearchParams({ projectId: project.id }).toString()}`
   const StatusIcon = STATUS_ICONS[project.status]
 
@@ -121,6 +131,12 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
                   <Pencil className="h-4 w-4" />
                   <span>Edit Details</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild className="gap-2 cursor-pointer">
+                  <Link href={createTaskHref} prefetch>
+                    <Plus className="h-4 w-4" />
+                    <span>Create Task</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
@@ -188,7 +204,7 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
       <div className="mt-5 flex items-center gap-2.5 pt-4 border-t border-muted/30">
         <Button asChild size="sm" variant="ghost" className="flex-1 h-9 text-xs font-bold uppercase tracking-wider hover:bg-primary/5 hover:text-primary transition-all">
           <Link href={tasksHref} prefetch>
-            Overview
+            Tasks
           </Link>
         </Button>
         <Separator orientation="vertical" className="h-4 opacity-50" />

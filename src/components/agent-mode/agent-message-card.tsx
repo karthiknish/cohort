@@ -1,21 +1,21 @@
 'use client'
 
-import Link from 'next/link'
+import { domAnimation, LazyMotion, m } from 'framer-motion'
 import {
-    CheckCircle2,
     AlertCircle,
-    Sparkles,
     ArrowRight,
+    CheckCircle2,
     Navigation,
+    Sparkles,
     Zap,
 } from 'lucide-react'
-import { LazyMotion, domAnimation, m } from 'framer-motion'
+import Link from 'next/link'
 
-import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
-import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { AgentMessage } from '@/hooks/use-agent-mode'
+import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
+import { cn } from '@/lib/utils'
 import { buildAgentDataSections } from './agent-message-data'
 import { AgentMentionText } from './mention-highlights'
 
@@ -39,6 +39,10 @@ function getActionLabel(action?: string, operation?: string): string {
 
     if (operation === 'generatePerformanceReport') {
         return 'Report'
+    }
+
+    if (operation === 'createProject' || operation === 'updateProject') {
+        return 'Project Action'
     }
 
     switch (action) {
@@ -73,6 +77,14 @@ function getStatusTitle(isSuccess: boolean, action?: string, operation?: string)
 
     if (operation === 'generatePerformanceReport') {
         return isSuccess ? 'Report Ready' : 'Report Failed'
+    }
+
+    if (operation === 'createProject') {
+        return isSuccess ? 'Project Created' : 'Project Action Failed'
+    }
+
+    if (operation === 'updateProject') {
+        return isSuccess ? 'Project Updated' : 'Project Action Failed'
     }
 
     return isSuccess ? 'Action Complete' : 'Action Failed'

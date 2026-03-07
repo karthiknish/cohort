@@ -1,10 +1,25 @@
 'use client'
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useQuery } from 'convex/react'
 
+import {
+  formatDate,
+  ProjectFilterBanner,
+  TaskBulkToolbar,
+  TaskFilters,
+  type TaskParticipant,
+  TaskResultsCount,
+  TasksHeader,
+  TaskSummaryCards,
+  TaskViewControls,
+  useDebouncedValue,
+  useTaskFilters,
+  useTaskForm,
+  useTasks,
+} from '@/components/tasks'
 import {
   Card,
   CardContent,
@@ -19,33 +34,13 @@ import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useNavigationContext } from '@/contexts/navigation-context'
 import { usePreview } from '@/contexts/preview-context'
-import { isFeatureEnabled } from '@/lib/features'
-import { usersApi } from '@/lib/convex-api'
-import { exportToCsv, cn } from '@/lib/utils'
-import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard-shortcuts'
 import { usePersistedTab } from '@/hooks/use-persisted-tab'
-import { useToast } from '@/components/ui/use-toast'
-import { TaskRecord, TaskStatus, TaskPriority } from '@/types/tasks'
-import type { UpdateTaskPayload } from '@/components/tasks/hooks/use-tasks'
-
-
-// Import task components and hooks
-import {
-  formatDate,
-  useTasks,
-  useTaskForm,
-  useTaskFilters,
-  useDebouncedValue,
-  TasksHeader,
-  TaskSummaryCards,
-  TaskFilters,
-  ProjectFilterBanner,
-  TaskViewControls,
-  TaskResultsCount,
-  TaskBulkToolbar,
-} from '@/components/tasks'
-import type { TaskParticipant } from '@/components/tasks'
+import { usersApi } from '@/lib/convex-api'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import { isFeatureEnabled } from '@/lib/features'
+import { exportToCsv } from '@/lib/utils'
+import type { TaskStatus } from '@/types/tasks'
 
 const TaskList = dynamic(() => import('@/components/tasks/task-list').then((mod) => mod.TaskList), {
   loading: () => <div className="p-6 text-sm text-muted-foreground">Loading tasks…</div>,
@@ -82,7 +77,6 @@ export default function TasksPage() {
   const { selectedClient, selectedClientId } = useClientContext()
   const { setProjectContext } = useNavigationContext()
   const { isPreviewMode } = usePreview()
-  const { toast } = useToast()
 
   const taskTabs = usePersistedTab({
     param: 'tab',
@@ -96,6 +90,21 @@ export default function TasksPage() {
     id: searchParams.get('projectId'),
     name: searchParams.get('projectName'),
   }), [searchParams])
+
+  const routeClientContext = useMemo(() => {
+    const clientId = searchParams.get('clientId')
+    const clientName = searchParams.get('clientName')
+    if (!clientId && !clientName) return null
+    return {
+      id: clientId,
+      name: clientName,
+    }
+  }, [searchParams])
+
+  const taskFormClient = selectedClient ?? routeClientContext
+  const taskFormClientId = selectedClientId ?? routeClientContext?.id ?? undefined
+  const actionParam = searchParams.get('action')
+  const searchParamsString = searchParams.toString()
 
   // Sync navigation context from URL project filters.
   useEffect(() => {
@@ -129,7 +138,6 @@ export default function TasksPage() {
     handleBulkUpdate,
     handleBulkDelete,
     nextCursor,
-    setError,
   } = useTasks({
     userId: user?.id,
     clientId: selectedClientId ?? undefined,
@@ -202,36 +210,37 @@ export default function TasksPage() {
 
   // Form management hook
   const form = useTaskForm({
-    selectedClient,
-    selectedClientId: selectedClientId ?? undefined,
+    selectedClient: taskFormClient,
+    selectedClientId: taskFormClientId,
+    projectContext: projectFilter,
     userId: user?.id,
     onCreateTask: handleCreateTask,
     onUpdateTask: handleUpdateTask,
   })
+  const { setFormState, handleCreateOpenChange } = form
 
   // Update form when client changes
   useEffect(() => {
-    form.setFormState((prev) => ({
+    setFormState((prev) => ({
       ...prev,
-      clientId: selectedClient?.id ?? null,
-      clientName: selectedClient?.name ?? '',
+      clientId: taskFormClient?.id ?? null,
+      clientName: taskFormClient?.name ?? '',
+      projectId: projectFilter.id,
+      projectName: projectFilter.name ?? '',
     }))
-    // eslint_disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClient?.id, selectedClient?.name])
+  }, [projectFilter.id, projectFilter.name, setFormState, taskFormClient?.id, taskFormClient?.name])
 
   // Auto-open create sheet when action=create is in URL
   useEffect(() => {
-    const action = searchParams.get('action')
-    if (action === 'create') {
-      form.handleCreateOpenChange(true)
+    if (actionParam === 'create') {
+      handleCreateOpenChange(true)
       // Clean up the URL without refreshing
-      const params = new URLSearchParams(searchParams.toString())
+      const params = new URLSearchParams(searchParamsString)
       params.delete('action')
       const next = params.toString()
       router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
     }
-    // eslint_disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [actionParam, handleCreateOpenChange, pathname, router, searchParamsString])
 
   // Keyboard shortcuts
   useKeyboardShortcut({
@@ -407,8 +416,8 @@ export default function TasksPage() {
         {/* Summary Cards */}
         {initialLoading ? (
           <div className={DASHBOARD_THEME.stats.container}>
-            {Array.from({ length: 5 }).map((_, idx) => (
-              <Card key={idx} className={DASHBOARD_THEME.cards.base}>
+            {['task-stats-1', 'task-stats-2', 'task-stats-3', 'task-stats-4', 'task-stats-5'].map((key) => (
+              <Card key={key} className={DASHBOARD_THEME.cards.base}>
                 <CardContent className="flex items-center gap-3 p-4">
                   <Skeleton className={DASHBOARD_THEME.skeletons.avatar} />
                   <div className="space-y-2">

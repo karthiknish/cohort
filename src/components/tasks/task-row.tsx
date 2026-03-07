@@ -1,11 +1,23 @@
 'use client'
 
-import Link from 'next/link'
 import { memo } from 'react'
-import { Calendar, User, MoreHorizontal, LoaderCircle, Pencil, Trash2, Paperclip, MessageCircle } from 'lucide-react'
+import Link from 'next/link'
+import {
+  Calendar,
+  FolderKanban,
+  LoaderCircle,
+  MessageCircle,
+  MoreHorizontal,
+  Paperclip,
+  Pencil,
+  Trash2,
+  User,
+} from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
+import type { TaskRecord, TaskStatus } from '@/types/tasks'
+import { TASK_STATUSES } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,19 +25,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { buildProjectRoute } from '@/lib/project-routes'
 import { cn } from '@/lib/utils'
-import type { TaskRecord, TaskStatus } from '@/types/tasks'
-import { TASK_STATUSES } from '@/types/tasks'
 import {
-  statusColors,
-  priorityColors,
-  taskPillColors,
-  STATUS_ICONS,
   formatDate,
-  formatStatusLabel,
   formatPriorityLabel,
-  isOverdue,
+  formatStatusLabel,
   isDueSoon,
+  isOverdue,
+  priorityColors,
+  STATUS_ICONS,
+  statusColors,
+  taskPillColors,
 } from './task-types'
 
 export type TaskRowProps = {
@@ -158,6 +169,22 @@ function TaskRowComponent({
                 </Badge>
               )
             )}
+            {task.projectId ? (
+              <Link href={buildProjectRoute(task.projectId, task.projectName)}>
+                <Badge
+                  variant="outline"
+                  className={cn('h-7 rounded-full px-2.5 text-[11px] font-semibold transition-colors hover:border-primary/30 hover:text-primary', taskPillColors.project)}
+                >
+                  <FolderKanban className="mr-1.5 h-3.5 w-3.5" />
+                  {task.projectName ?? task.projectId}
+                </Badge>
+              </Link>
+            ) : task.projectName ? (
+              <Badge variant="outline" className={cn('h-7 rounded-full px-2.5 text-[11px] font-semibold', taskPillColors.project)}>
+                <FolderKanban className="mr-1.5 h-3.5 w-3.5" />
+                {task.projectName}
+              </Badge>
+            ) : null}
             <span className={cn('inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-medium', taskPillColors.neutral)}>
               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/80 text-slate-500">
                 <User className="h-2.5 w-2.5" />

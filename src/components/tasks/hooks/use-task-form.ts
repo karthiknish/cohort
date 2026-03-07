@@ -16,6 +16,7 @@ import type { CreateTaskPayload, UpdateTaskPayload } from './use-tasks'
 export type UseTaskFormOptions = {
   selectedClient: { id: string | null; name: string | null } | null
   selectedClientId: string | undefined
+  projectContext?: { id: string | null; name: string | null }
   userId: string | undefined
   onCreateTask: (payload: CreateTaskPayload) => Promise<TaskRecord | null>
   onUpdateTask: (taskId: string, payload: UpdateTaskPayload) => Promise<TaskRecord | null>
@@ -57,6 +58,7 @@ export type UseTaskFormReturn = {
 export function useTaskForm({
   selectedClient,
   selectedClientId,
+  projectContext,
   userId,
   onCreateTask,
   onUpdateTask,
@@ -65,7 +67,7 @@ export function useTaskForm({
   // Create form state
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [formState, setFormState] = useState<TaskFormState>(() =>
-    buildInitialFormState(selectedClient ?? undefined)
+    buildInitialFormState(selectedClient ?? undefined, projectContext)
   )
   const [createAttachments, setCreateAttachments] = useState<PendingTaskAttachment[]>([])
   const [creating, setCreating] = useState(false)
@@ -90,10 +92,10 @@ export function useTaskForm({
   const [deleting, setDeleting] = useState(false)
 
   const resetForm = useCallback(() => {
-    setFormState(buildInitialFormState(selectedClient ?? undefined))
+    setFormState(buildInitialFormState(selectedClient ?? undefined, projectContext))
     setCreateAttachments([])
     setCreateError(null)
-  }, [selectedClient])
+  }, [projectContext, selectedClient])
 
   const handleCreateAttachmentsAdd = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -115,12 +117,14 @@ export function useTaskForm({
           ...prev,
           clientId: selectedClient?.id ?? null,
           clientName: selectedClient?.name ?? '',
+          projectId: projectContext?.id ?? null,
+          projectName: projectContext?.name ?? '',
         }))
       } else {
         resetForm()
       }
     },
-    [resetForm, selectedClient]
+    [projectContext, resetForm, selectedClient]
   )
 
   const handleCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -158,6 +162,7 @@ export function useTaskForm({
       .filter((t) => t.length > 0)
 
     const normalizedClientName = (selectedClient?.name ?? formState.clientName).trim()
+    const normalizedProjectName = formState.projectName.trim()
 
     const payload: CreateTaskPayload = {
       title: trimmedTitle,
@@ -167,6 +172,8 @@ export function useTaskForm({
       assignedTo: assignedMembers,
       clientId: selectedClientId,
       client: normalizedClientName || undefined,
+      projectId: formState.projectId ?? undefined,
+      projectName: normalizedProjectName || undefined,
       dueDate: formState.dueDate || undefined,
       tags: normalizedTags,
       attachments: [],
@@ -207,6 +214,8 @@ export function useTaskForm({
       assignedTo: (task.assignedTo ?? []).map((name) => `@[${name}]`).join(' '),
       clientId: task.clientId || null,
       clientName: task.client || '',
+      projectId: task.projectId || null,
+      projectName: task.projectName || '',
       dueDate: task.dueDate || '',
       tags: (task.tags ?? []).join(', '),
     })

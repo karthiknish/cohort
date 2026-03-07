@@ -1,8 +1,8 @@
 import { v } from 'convex/values'
 
-import { Errors } from '../errors'
 import { buildRoutesForPrompt } from '../../src/lib/navigation-intents'
 import { geminiAI } from '../../src/services/gemini'
+import { Errors } from '../errors'
 
 import type { ParsedAgentResponse } from './types'
 
@@ -28,9 +28,15 @@ When the user wants to CREATE or UPDATE data, use:
 ### Project Operations
 - **createProject**: Create a project
   Params: { name: string, description?: string, status?: string, clientId?: string, clientName?: string, startDate?: string, endDate?: string, tags?: string[] }
+  Examples:
+  - "create project Website Refresh" → {"action": "execute", "operation": "createProject", "params": {"name": "Website Refresh"}, "message": "Creating project Website Refresh."}
+  - "create project Q2 SEO Sprint for this client" → use activeClientId when present
 
 - **updateProject**: Update project fields
   Params: { projectId: string, name?: string, description?: string, status?: string, clientId?: string, clientName?: string, startDate?: string, endDate?: string, tags?: string[] }
+  Examples:
+  - "update this project status to active" → use activeProjectId when present
+  - "update project proj_123 status to on_hold" → {"action": "execute", "operation": "updateProject", "params": {"projectId": "proj_123", "status": "on_hold"}, "message": "Updating that project now."}
 
 ### Client Operations
 - **createClient**: Create a client record
@@ -66,9 +72,15 @@ When the user wants to CREATE or UPDATE data, use:
 ### Reporting Operations
 - **summarizeAdsPerformance**: Return a compact ads snapshot with current performance and leading campaigns
   Params: { period?: "daily"|"weekly"|"monthly", startDate?: string, endDate?: string, focus?: "active", clientId?: string, providerId?: "google"|"tiktok"|"linkedin"|"facebook", providerIds?: string[] }
+  Examples:
+  - "how are my Meta ads doing this week" → use summarizeAdsPerformance with providerIds: ["facebook"] and activeClientId when available
+  - "what campaigns are active right now" → use summarizeAdsPerformance with focus: "active"
 
 - **generatePerformanceReport**: Generate a daily, weekly, or monthly performance report
   Params: { period?: "daily"|"weekly"|"monthly", startDate?: string, endDate?: string, clientId?: string, providerIds?: string[] }
+  Examples:
+  - "generate a weekly performance report" → {"action": "execute", "operation": "generatePerformanceReport", "params": {"period": "weekly"}, "message": "Generating your weekly performance report..."}
+  - "generate a monthly Google + Meta report for this client" → include providerIds and activeClientId when available
 `
 }
 
@@ -126,7 +138,8 @@ If the request is vague, underspecified, or refers to "this/that/it" without eno
 
 ## Tips for Understanding Users
 - "create a task to..." or "remind me to..." → EXECUTE createTask
-- "update this task/project/client/proposal" → EXECUTE the matching update operation
+- "update this task/project/client/proposal" → EXECUTE the matching update operation, preferring active context ids when present
+- "create project" / "new project" → EXECUTE createProject
 - "generate weekly report" / "daily report" / "monthly report" → EXECUTE generatePerformanceReport
 - "meta ad metrics" / "facebook ad metric" / "how are my ads doing" / "metrics from 2026-01-01 to 2026-01-31" → EXECUTE summarizeAdsPerformance
 - "what ads are active right now" / "which campaigns are live" → EXECUTE summarizeAdsPerformance with focus: "active"

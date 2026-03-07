@@ -45,9 +45,9 @@ interface AgentModePanelProps {
 
 const QUICK_SUGGESTIONS = [
   'Schedule a meeting',
-  'Start a quick meet',
-  'Open Ads Hub',
-  'Sync ad campaigns',
+  'Create project Website Refresh',
+  'Update this project status to active',
+  'How are my Meta ads doing this week?',
   'Generate weekly report',
   'Show my Tasks',
 ]
@@ -56,8 +56,8 @@ const QUICK_SUGGESTIONS = [
 function HistorySkeleton() {
   return (
     <div className="space-y-2 p-2">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={`history-skeleton-${i}`} className="animate-pulse">
+      {['history-skeleton-1', 'history-skeleton-2', 'history-skeleton-3'].map((key) => (
+        <div key={key} className="animate-pulse">
           <div className="h-12 rounded-lg bg-muted" />
         </div>
       ))}
@@ -238,7 +238,7 @@ export function AgentModePanel({
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
     }
-  }, [messages])
+  }, [messages.length])
 
 
 
@@ -574,7 +574,7 @@ export function AgentModePanel({
                       value={inputValue}
                       onChange={handleInputChange}
                       onKeyDown={handleKeyDown}
-                      placeholder="Describe what you want to do..."
+                      placeholder="Create projects, run analytics, send messages, or navigate..."
                       disabled={isInputDisabled}
                       mentionLabels={mentionLabels}
                     />
@@ -686,7 +686,7 @@ export function AgentModePanel({
                   value={inputValue}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask naturally, or use @ to mention context"
+                  placeholder="Ask naturally for project, analytics, ads, task, or meeting actions"
                   disabled={isInputDisabled || isConversationLoading}
                   mentionLabels={mentionLabels}
                 />

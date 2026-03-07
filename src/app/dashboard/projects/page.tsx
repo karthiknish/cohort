@@ -1,18 +1,20 @@
 'use client'
 
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useMutation as useTanstackMutation } from '@tanstack/react-query'
 import { useMutation, useQuery } from 'convex/react'
 import {
-  TriangleAlert,
   Briefcase,
   CircleX,
   FolderKanban,
   ListChecks,
   LoaderCircle,
   RefreshCw,
+  TriangleAlert,
   Users,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog'
 import { EditProjectDialog } from '@/components/projects/edit-project-dialog'
@@ -50,6 +52,7 @@ import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/hooks/use-keyboard
 import { projectMilestonesApi, projectsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
+import { buildProjectTasksRoute } from '@/lib/project-routes'
 import { getPreviewProjects } from '@/lib/preview-data'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { cn } from '@/lib/utils'
@@ -64,6 +67,7 @@ import {
   type ViewMode,
   filterProjectsByQuery,
   GanttView,
+  projectMatchesContext,
   ProjectCard,
   ProjectFilters,
   ProjectKanban,
@@ -85,6 +89,9 @@ function isMilestoneStatus(value: unknown): value is MilestoneRecord['status'] {
 }
 
 export default function ProjectsPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
   const { user } = useAuth()
 
   const softDeleteProject = useMutation(projectsApi.softDelete)
@@ -105,6 +112,10 @@ export default function ProjectsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [projectToDelete, setProjectToDelete] = useState<ProjectRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const focusedProject = useMemo(() => ({
+    id: searchParams.get('projectId'),
+    name: searchParams.get('projectName'),
+  }), [searchParams])
 
   const [milestonesByProject, setMilestonesByProject] = useState<Record<string, MilestoneRecord[]>>({})
   const [milestonesLoading, setMilestonesLoading] = useState(false)
@@ -455,8 +466,13 @@ export default function ProjectsPage() {
     setDeleteDialogOpen(true)
   }, [])
 
+  const focusedProjects = useMemo(() => {
+    if (!focusedProject.id && !focusedProject.name) return projects
+    return projects.filter((project) => projectMatchesContext(project, focusedProject.id, focusedProject.name))
+  }, [focusedProject.id, focusedProject.name, projects])
+
   // Sort projects
-  const searchedProjects = useMemo(() => filterProjectsByQuery(projects, debouncedQuery), [debouncedQuery, projects])
+  const searchedProjects = useMemo(() => filterProjectsByQuery(focusedProjects, debouncedQuery), [debouncedQuery, focusedProjects])
 
   const sortedProjects = useMemo(() => {
     const sorted = [...searchedProjects]
@@ -508,10 +524,32 @@ export default function ProjectsPage() {
   }, [projects.length, statusCounts.completed])
 
   const initialLoading = loading && projects.length === 0
-  const hasActiveFilters = statusFilter !== 'all' || debouncedQuery.trim().length > 0
+  const hasActiveFilters = statusFilter !== 'all' || debouncedQuery.trim().length > 0 || Boolean(focusedProject.id || focusedProject.name)
   const hasVisibleProjects = sortedProjects.length > 0
+  const focusedProjectRecord = useMemo(
+    () => projects.find((project) => projectMatchesContext(project, focusedProject.id, focusedProject.name)) ?? null,
+    [focusedProject.id, focusedProject.name, projects],
+  )
+  const focusedProjectTasksHref = focusedProjectRecord?.id
+    ? buildProjectTasksRoute({
+      projectId: focusedProjectRecord.id,
+      projectName: focusedProjectRecord.name,
+      clientId: focusedProjectRecord.clientId,
+      clientName: focusedProjectRecord.clientName,
+    })
+    : focusedProject.id
+      ? buildProjectTasksRoute({ projectId: focusedProject.id, projectName: focusedProject.name })
+      : null
 
   const portfolioLabel = selectedClient?.name ? `${selectedClient.name} workspace` : 'all workspaces'
+
+  const clearFocusedProject = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('projectId')
+    params.delete('projectName')
+    const next = params.toString()
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
+  }, [pathname, router, searchParams])
 
   const toggleSortDirection = useCallback(() => {
     setSortDirection((prev) => prev === 'asc' ? 'desc' : 'asc')
@@ -522,7 +560,8 @@ export default function ProjectsPage() {
     setStatusFilter('all')
     setSortField('updatedAt')
     setSortDirection('desc')
-  }, [])
+    clearFocusedProject()
+  }, [clearFocusedProject])
 
   return (
     <TooltipProvider>
@@ -667,6 +706,30 @@ export default function ProjectsPage() {
                 />
               </div>
             </div>
+            {(focusedProject.id || focusedProject.name) && (
+              <div className="rounded-xl border border-primary/15 bg-primary/5 p-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      Showing linked project{focusedProjectRecord?.name ? `: ${focusedProjectRecord.name}` : focusedProject.name ? `: ${focusedProject.name}` : ''}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      This view was opened from a related task or cross-link. Clear it to return to the full portfolio.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {focusedProjectTasksHref ? (
+                      <Button asChild type="button" size="sm" variant="outline">
+                        <Link href={focusedProjectTasksHref}>Open related tasks</Link>
+                      </Button>
+                    ) : null}
+                    <Button type="button" size="sm" variant="ghost" onClick={clearFocusedProject}>
+                      Show all projects
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
             <Separator />
           </CardHeader>
           <CardContent>

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { ProjectRecord } from '@/types/projects'
 
-import { filterProjectsByQuery, projectMatchesQuery } from './utils'
+import { filterProjectsByQuery, projectMatchesContext, projectMatchesQuery } from './utils'
 
 const PROJECT: ProjectRecord = {
   id: 'project-1',
@@ -38,5 +38,11 @@ describe('project search helpers', () => {
     const otherProject = { ...PROJECT, id: 'project-2', name: 'Paid Social Sprint', clientName: 'Beta Co', tags: ['ads'] }
 
     expect(filterProjectsByQuery([PROJECT, otherProject], 'acme')).toEqual([PROJECT])
+  })
+
+  it('matches incoming project context by id or name', () => {
+    expect(projectMatchesContext(PROJECT, 'project-1', null)).toBe(true)
+    expect(projectMatchesContext(PROJECT, null, 'website redesign')).toBe(true)
+    expect(projectMatchesContext(PROJECT, 'project-2', 'paid social sprint')).toBe(false)
   })
 })

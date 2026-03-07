@@ -1,9 +1,10 @@
-
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Calendar, Clock4, Download, MessageCircle, Paperclip, Tag, User } from 'lucide-react'
+import Link from 'next/link'
+import { Calendar, Clock4, Download, FolderKanban, ListChecks, MessageCircle, Paperclip, Tag, User } from 'lucide-react'
 
+import type { TaskRecord } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,8 +17,8 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { buildProjectRoute, buildProjectTasksRoute } from '@/lib/project-routes'
 import { cn } from '@/lib/utils'
-import type { TaskRecord } from '@/types/tasks'
 import { TaskCommentsPanel } from './task-comments'
 import {
   formatDate,
@@ -56,7 +57,7 @@ export function TaskViewDialog({
 
   useEffect(() => {
     setLiveCommentCount(task?.commentCount ?? 0)
-  }, [open, task?.commentCount, task?.id])
+  }, [task?.commentCount])
 
   if (!task) return null
 
@@ -105,6 +106,36 @@ export function TaskViewDialog({
                     {task.description?.trim() ? task.description : 'No description provided.'}
                   </div>
                 </section>
+
+                {(task.projectId || task.projectName) && (
+                  <section className="space-y-3">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Linked Project</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {task.projectName ? (
+                        <Badge variant="outline" className={cn('h-7 rounded-full px-2.5 text-[11px] font-medium', taskPillColors.project)}>
+                          <FolderKanban className="mr-1.5 h-3.5 w-3.5" />
+                          {task.projectName}
+                        </Badge>
+                      ) : null}
+                      {task.projectId ? (
+                        <>
+                          <Button asChild type="button" variant="outline" size="sm" className="h-8 rounded-xl">
+                            <Link href={buildProjectRoute(task.projectId, task.projectName)}>
+                              <FolderKanban className="mr-1.5 h-3.5 w-3.5" />
+                              Open project
+                            </Link>
+                          </Button>
+                          <Button asChild type="button" variant="ghost" size="sm" className="h-8 rounded-xl">
+                            <Link href={buildProjectTasksRoute({ projectId: task.projectId, projectName: task.projectName, clientId: task.clientId, clientName: task.client })}>
+                              <ListChecks className="mr-1.5 h-3.5 w-3.5" />
+                              View related tasks
+                            </Link>
+                          </Button>
+                        </>
+                      ) : null}
+                    </div>
+                  </section>
+                )}
 
                 <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {detailItems.map(({ label, value, icon: Icon }) => (

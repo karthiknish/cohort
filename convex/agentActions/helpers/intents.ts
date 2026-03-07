@@ -420,12 +420,18 @@ function resolveDeterministicExecuteIntent(message: string, context?: AgentReque
     return { action: 'execute', operation: 'createProject', params, message: `Creating project ${name}.` }
   }
 
-  if (includesAnyPhrase(normalized, ['update project', 'edit project'])) {
+  if (includesAnyPhrase(normalized, ['update project', 'update this project', 'edit project', 'edit this project'])) {
     const projectId = extractEntityIdFromIntent(message, 'project') ?? asNonEmptyString(context?.activeProjectId ?? null)
     if (!projectId) return { action: 'clarify', message: 'I can update that project — which project should I use?' }
     const params: Record<string, unknown> = { projectId }
     const status = extractTrailingText(message, [/status\s+(?:to\s+)?([a-zA-Z_-]+)/i])
     if (status) params.status = status
+    if (Object.keys(params).length === 1) {
+      return {
+        action: 'clarify',
+        message: 'I can update that project — what should I change: status, name, dates, client, description, or tags?',
+      }
+    }
     return { action: 'execute', operation: 'updateProject', params, message: 'Updating that project now.' }
   }
 

@@ -1,11 +1,30 @@
 'use client'
 
-import Link from 'next/link'
 import { memo } from 'react'
-import { Calendar, User, MoreHorizontal, LoaderCircle, Pencil, Trash2, MessageCircle, Copy, CalendarX2, Clock4, Repeat, Link2, ChevronRight, ListTodo, Paperclip } from 'lucide-react'
+import Link from 'next/link'
+import {
+  Calendar,
+  CalendarX2,
+  ChevronRight,
+  Clock4,
+  Copy,
+  FolderKanban,
+  Link2,
+  ListTodo,
+  LoaderCircle,
+  MessageCircle,
+  MoreHorizontal,
+  Paperclip,
+  Pencil,
+  Repeat,
+  Trash2,
+  User,
+} from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
+import type { TaskRecord, TaskStatus } from '@/types/tasks'
+import { TASK_STATUSES } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,20 +38,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { buildProjectRoute } from '@/lib/project-routes'
 import { cn } from '@/lib/utils'
-import type { TaskRecord, TaskStatus } from '@/types/tasks'
-import { TASK_STATUSES } from '@/types/tasks'
 import {
-  priorityColors,
-  taskPillColors,
-  taskInfoPanelClasses,
-  STATUS_ICONS,
   formatDate,
-  formatStatusLabel,
   formatPriorityLabel,
-  isOverdue,
-  isDueSoon,
+  formatStatusLabel,
   formatTimeSpent,
+  isDueSoon,
+  isOverdue,
+  priorityColors,
+  STATUS_ICONS,
+  taskInfoPanelClasses,
+  taskPillColors,
 } from './task-types'
 
 export type TaskCardProps = {
@@ -128,9 +146,9 @@ function TaskCardComponent({
               {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
             </div>
 
-            {task.client && (
-              <div className="flex items-center gap-1.5 pt-0.5">
-                {task.clientId ? (
+            {(task.client || task.projectName) && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                {task.client && task.clientId ? (
                   <Link
                     href={`/dashboard/clients?clientId=${task.clientId}`}
                     className={cn(
@@ -141,12 +159,29 @@ function TaskCardComponent({
                     <span className="h-1.5 w-1.5 rounded-full bg-current/55" />
                     {task.client}
                   </Link>
-                ) : (
+                ) : task.client ? (
                   <p className={cn('inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold', taskPillColors.client)}>
                     <span className="h-1.5 w-1.5 rounded-full bg-current/55" />
                     {task.client}
                   </p>
-                )}
+                ) : null}
+                {task.projectId ? (
+                  <Link
+                    href={buildProjectRoute(task.projectId, task.projectName)}
+                    className={cn(
+                      'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors hover:border-primary/30 hover:text-primary',
+                      taskPillColors.project,
+                    )}
+                  >
+                    <FolderKanban className="h-3 w-3" />
+                    {task.projectName ?? task.projectId}
+                  </Link>
+                ) : task.projectName ? (
+                  <p className={cn('inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold', taskPillColors.project)}>
+                    <FolderKanban className="h-3 w-3" />
+                    {task.projectName}
+                  </p>
+                ) : null}
               </div>
             )}
 

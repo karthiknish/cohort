@@ -174,6 +174,21 @@ export function CreateTaskSheet({
                 </p>
               </div>
               <div className="space-y-2">
+                <Label htmlFor="task-project">Project</Label>
+                <Input
+                  id="task-project"
+                  value={formState.projectName}
+                  placeholder="Open tasks from a project to link them automatically"
+                  readOnly
+                  disabled
+                />
+                <p className="text-xs text-muted-foreground">
+                  Start from a project workspace or filtered project task view to attach tasks here.
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
                 <Label htmlFor="task-due-date">Due date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -402,6 +417,28 @@ export function EditTaskSheet({
                 disabled={updating}
                 allowMultiple
               />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-task-client">Client</Label>
+                <Input
+                  id="edit-task-client"
+                  value={formState.clientName}
+                  placeholder="No client linked"
+                  readOnly
+                  disabled
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-task-project">Project</Label>
+                <Input
+                  id="edit-task-project"
+                  value={formState.projectName}
+                  placeholder="No project linked"
+                  readOnly
+                  disabled
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-task-due-date">Due date</Label>

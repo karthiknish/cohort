@@ -1,8 +1,8 @@
-import { CirclePlay, Eye, CheckCircle2, Circle, Archive } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-import type { TaskStatus, TaskPriority, TaskRecord, RecurrenceRule } from '@/types/tasks'
+import { Archive, CheckCircle2, Circle, CirclePlay, Eye, type LucideIcon } from 'lucide-react'
+
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep as sleepLib } from '@/lib/retry-utils'
+import type { RecurrenceRule, TaskPriority, TaskRecord, TaskStatus } from '@/types/tasks'
 
 // Retry configuration for network resilience
 export const RETRY_CONFIG = {
@@ -49,6 +49,7 @@ export const priorityColors: Record<TaskPriority, string> = {
 export const taskPillColors = {
   count: 'border-slate-200/90 bg-white text-slate-700 shadow-sm',
   client: 'border-slate-200/90 bg-slate-100/95 text-slate-700 shadow-sm',
+  project: 'border-indigo-200/90 bg-indigo-100/95 text-indigo-700 shadow-sm',
   neutral: 'border-slate-200/90 bg-slate-100/95 text-slate-700 shadow-sm',
   subtask: 'border-violet-200/90 bg-violet-100/95 text-violet-700 shadow-sm',
   comments: 'border-sky-200/90 bg-sky-100/95 text-sky-700 shadow-sm',
@@ -91,6 +92,8 @@ export type TaskFormState = {
   assignedTo: string
   clientId: string | null
   clientName: string
+  projectId: string | null
+  projectName: string
   dueDate: string
   tags: string
 }
@@ -119,7 +122,10 @@ export type SummaryCardConfig = {
   iconClass: string
 }
 
-export const buildInitialFormState = (client?: { id: string | null; name: string | null }): TaskFormState => ({
+export const buildInitialFormState = (
+  client?: { id: string | null; name: string | null },
+  project?: { id: string | null; name: string | null },
+): TaskFormState => ({
   title: '',
   description: '',
   status: 'todo',
@@ -127,6 +133,8 @@ export const buildInitialFormState = (client?: { id: string | null; name: string
   assignedTo: '',
   clientId: client?.id ?? null,
   clientName: client?.name ?? '',
+  projectId: project?.id ?? null,
+  projectName: project?.name ?? '',
   dueDate: '',
   tags: '',
 })

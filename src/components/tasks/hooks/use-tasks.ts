@@ -46,6 +46,8 @@ export type CreateTaskPayload = {
   assignedTo: string[]
   clientId: string
   client?: string
+  projectId?: string
+  projectName?: string
   dueDate?: string
   tags: string[]
   attachments?: TaskAttachment[]
@@ -297,8 +299,8 @@ export function useTasks({
           assignedTo: payload.assignedTo,
           clientId: payload.clientId,
           client: payload.client ?? null,
-          projectId: null,
-          projectName: null,
+          projectId: payload.projectId ?? null,
+          projectName: payload.projectName ?? null,
           dueDate: payload.dueDate ?? null,
           tags: payload.tags,
           attachments: payload.attachments ?? [],
@@ -325,6 +327,8 @@ export function useTasks({
           assignedTo: payload.assignedTo,
           clientId: payload.clientId,
           client: payload.client ?? null,
+          projectId: payload.projectId ?? null,
+          projectName: payload.projectName ?? null,
           dueDateMs: msFromIsoDateString(payload.dueDate),
           tags: payload.tags,
           attachments: payload.attachments ?? [],
@@ -344,8 +348,8 @@ export function useTasks({
             assignedTo: payload.assignedTo,
             clientId: payload.clientId,
             client: payload.client ?? null,
-            projectId: null,
-            projectName: null,
+            projectId: payload.projectId ?? null,
+            projectName: payload.projectName ?? null,
             dueDate: payload.dueDate ?? null,
             tags: payload.tags,
             attachments: payload.attachments ?? [],
