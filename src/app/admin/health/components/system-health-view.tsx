@@ -26,11 +26,27 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 interface HealthCheck {
-    status: 'ok' | 'error'
+    status: 'ok' | 'warning' | 'error'
     message?: string
     responseTime?: number
     metadata?: Record<string, unknown>
 }
+const SERVICE_META: Record<string, { label: string; description: string }> = {
+    convex: { label: 'Convex', description: 'Realtime database and backend functions' },
+    betterauth: { label: 'Better Auth', description: 'Authentication and session plumbing' },
+    gemini: { label: 'Gemini', description: 'AI summaries and admin intelligence' },
+    posthog: { label: 'PostHog', description: 'Product analytics and event tracking' },
+    brevo: { label: 'Brevo', description: 'Transactional email delivery' },
+    googleads: { label: 'Google Ads', description: 'Ads OAuth and sync configuration' },
+    googleanalytics: { label: 'Google Analytics', description: 'Analytics OAuth and property sync configuration' },
+    metaads: { label: 'Meta Ads', description: 'Meta OAuth and ads sync configuration' },
+    linkedinads: { label: 'LinkedIn Ads', description: 'LinkedIn OAuth and ads sync configuration' },
+    tiktokads: { label: 'TikTok Ads', description: 'TikTok OAuth and ads sync configuration' },
+    googleworkspace: { label: 'Google Workspace', description: 'Calendar and Meet integration' },
+    livekit: { label: 'LiveKit', description: 'Meeting room and token infrastructure' },
+    environment: { label: 'Environment', description: 'Base runtime configuration' },
+}
+
 
 interface HealthData {
     status: 'healthy' | 'degraded' | 'unhealthy'
@@ -109,16 +125,20 @@ export function SystemHealthView() {
         switch (key) {
             case 'convex':
                 return <Database className="h-4 w-4" />
-            case 'redis':
+            case 'betterauth':
+                return <Server className="h-4 w-4" />
+            case 'gemini':
                 return <Zap className="h-4 w-4" />
             case 'brevo':
                 return <Mail className="h-4 w-4" />
             case 'posthog':
                 return <PieChart className="h-4 w-4" />
+            case 'googleworkspace':
+                return <Activity className="h-4 w-4" />
+            case 'livekit':
+                return <Server className="h-4 w-4" />
             case 'environment':
                 return <Settings className="h-4 w-4" />
-            case 'scheduler':
-                return <Activity className="h-4 w-4" />
             default:
                 return <Globe className="h-4 w-4" />
         }
@@ -126,21 +146,8 @@ export function SystemHealthView() {
 
     const getServiceDescription = (name: string, check: HealthCheck) => {
         const key = name.toLowerCase()
-        if (check.message === 'Not configured') {
-            return 'Not configured'
-        }
-        switch (key) {
-            case 'convex':
-                return 'Real-time database'
-            case 'brevo':
-                return 'Email delivery'
-            case 'posthog':
-                return 'Product analytics'
-            case 'environment':
-                return 'Environment variables'
-            default:
-                return check.status === 'ok' ? 'Connected' : 'Service issue'
-        }
+        if (check.status === 'warning' && check.message) return check.message
+        return SERVICE_META[key]?.description ?? (check.status === 'ok' ? 'Connected' : 'Service issue')
     }
 
     const formatUptime = (seconds: number) => {
@@ -194,6 +201,7 @@ export function SystemHealthView() {
     }
 
     const okCount = data ? Object.values(data.checks).filter(c => c.status === 'ok').length : 0
+    const warningCount = data ? Object.values(data.checks).filter(c => c.status === 'warning').length : 0
     const totalCount = data ? Object.keys(data.checks).length : 0
 
     return (
@@ -218,7 +226,7 @@ export function SystemHealthView() {
                             </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                            {okCount}/{totalCount} services operational · Last checked: {data ? new Date(data.timestamp).toLocaleTimeString() : 'Never'}
+                            {okCount}/{totalCount} services operational{warningCount > 0 ? ` · ${warningCount} need configuration` : ''} · Last checked: {data ? new Date(data.timestamp).toLocaleTimeString() : 'Never'}
                         </p>
                     </div>
                 </div>
@@ -272,12 +280,14 @@ export function SystemHealthView() {
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {data && Object.entries(data.checks).map(([name, check]) => {
                         const isExpanded = expandedServices.has(name)
-                        const isNotConfigured = check.message === 'Not configured'
+                        const isWarning = check.status === 'warning'
+                        const serviceMeta = SERVICE_META[name.toLowerCase()]
 
                         return (
                             <Card key={name} className={cn(
                                 "overflow-hidden transition-all border-muted/60",
-                                check.status === 'error' && !isNotConfigured && "border-destructive/30 bg-destructive/5"
+                                check.status === 'error' && "border-destructive/30 bg-destructive/5",
+                                isWarning && "border-amber-200 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20"
                             )}>
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                                     <div className="flex items-center gap-3">
@@ -285,14 +295,14 @@ export function SystemHealthView() {
                                             "rounded-lg p-2",
                                             check.status === 'ok'
                                                 ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
-                                                : isNotConfigured
-                                                    ? "bg-muted text-muted-foreground"
+                                                : isWarning
+                                                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                                                     : "bg-destructive/10 text-destructive"
                                         )}>
                                             {getServiceIcon(name)}
                                         </div>
                                         <div>
-                                            <CardTitle className="text-base capitalize">{name}</CardTitle>
+                                            <CardTitle className="text-base">{serviceMeta?.label ?? name}</CardTitle>
                                             <CardDescription className="text-xs">
                                                 {getServiceDescription(name, check)}
                                             </CardDescription>
@@ -304,20 +314,18 @@ export function SystemHealthView() {
                                                 {check.responseTime}ms
                                             </Badge>
                                         )}
-                                        {isNotConfigured ? (
-                                            <Badge variant="secondary" className="text-[10px]">
-                                                N/A
-                                            </Badge>
-                                        ) : (
-                                            getStatusIcon(check.status)
-                                        )}
+                                        {getStatusIcon(check.status)}
                                     </div>
                                 </CardHeader>
                                 <CardContent className="pt-0">
-                                    {check.message && !isNotConfigured && (
+                                    {check.message && (
                                         <p className={cn(
                                             "mb-2 text-xs font-medium",
-                                            check.status === 'error' ? "text-destructive" : "text-muted-foreground"
+                                            check.status === 'error'
+                                                ? "text-destructive"
+                                                : check.status === 'warning'
+                                                    ? "text-amber-700 dark:text-amber-300"
+                                                    : "text-muted-foreground"
                                         )}>
                                             {check.message}
                                         </p>

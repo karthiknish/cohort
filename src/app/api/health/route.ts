@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
+
 import { apiError, apiSuccess, createApiHandler } from '@/lib/api-handler'
+import { buildConfiguredServiceChecks, type ServiceCheck } from '@/lib/health/service-checks'
 import type { AuthResult } from '@/lib/server-auth'
 import { api as convexApi } from '../../../../convex/_generated/api'
 
@@ -8,9 +10,9 @@ export const GET = createApiHandler(
     auth: 'none',
     rateLimit: 'standard'
   },
-  async (_request: NextRequest) => {
+  async () => {
     const startTime = Date.now()
-    const checks: Record<string, { status: 'ok' | 'error'; message?: string; responseTime?: number }> = {}
+    const checks: Record<string, ServiceCheck> = buildConfiguredServiceChecks()
 
     // Check Convex connectivity
     try {
@@ -60,11 +62,6 @@ export const GET = createApiHandler(
           responseTime: Date.now() - checkStart,
           message: healthy ? undefined : 'Brevo API health check failed'
         }
-      } else {
-        checks.brevo = {
-          status: 'ok',
-          message: 'Not configured'
-        }
       }
     } catch (error) {
       checks.brevo = {
@@ -73,27 +70,10 @@ export const GET = createApiHandler(
       }
     }
 
-    // Check PostHog configuration
-    checks.posthog = {
-      status: process.env.NEXT_PUBLIC_POSTHOG_KEY ? 'ok' : 'error',
-      message: process.env.NEXT_PUBLIC_POSTHOG_KEY ? undefined : 'Missing PostHog key'
-    }
-
-    // Check environment variables
-    const requiredEnvVars = [
-      'NEXT_PUBLIC_CONVEX_URL'
-    ]
-
-    const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName])
-
-    checks.environment = {
-      status: missingEnvVars.length === 0 ? 'ok' : 'error',
-      message: missingEnvVars.length > 0 ? `Missing: ${missingEnvVars.join(', ')}` : undefined
-    }
-
     // Overall health status
     const hasErrors = Object.values(checks).some(check => check.status === 'error')
-    const overallStatus = hasErrors ? 'unhealthy' : 'healthy'
+    const hasWarnings = Object.values(checks).some(check => check.status === 'warning')
+    const overallStatus = hasErrors ? 'unhealthy' : hasWarnings ? 'degraded' : 'healthy'
 
     const response = {
       status: overallStatus,
@@ -104,10 +84,10 @@ export const GET = createApiHandler(
       version: process.env.npm_package_version || '0.1.0'
     }
 
-    const statusCode = overallStatus === 'healthy' ? 200 : 503
+    const statusCode = overallStatus === 'unhealthy' ? 503 : 200
     const payload = overallStatus === 'healthy'
       ? apiSuccess(response)
-      : { ...apiError('Service health degraded', 'SERVICE_UNAVAILABLE'), data: response }
+      : { ...apiError(overallStatus === 'degraded' ? 'Service health degraded' : 'Service unavailable', 'SERVICE_UNAVAILABLE'), data: response }
 
     return NextResponse.json(payload, { status: statusCode })
   }

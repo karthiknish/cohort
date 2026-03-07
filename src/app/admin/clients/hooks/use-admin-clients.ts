@@ -3,11 +3,13 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useConvex } from 'convex/react'
+
+import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { useToast } from '@/components/ui/use-toast'
 import { clientsApi } from '@/lib/convex-api'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
+import { dedupeClientTeamMembers } from '../../lib/client-allocation'
 
 type ConvexArgs = Record<string, unknown>
 
@@ -134,9 +136,6 @@ export function useAdminClients(): UseAdminClientsReturn {
         },
     })
 
-    // Client list state (derived from Convex query)
-    const [clientsError, setClientsError] = useState<string | null>(null)
-
     // Delete dialog state
     const [clientPendingDelete, setClientPendingDelete] = useState<ClientRecord | null>(null)
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -177,11 +176,13 @@ export function useAdminClients(): UseAdminClientsReturn {
     }, [clientsQuery.data])
 
     // Dummy setClients for backward compatibility (TanStack handles state)
-    const setClients = useCallback((_updater: React.SetStateAction<ClientRecord[]>) => {
+    const setClients = useCallback((updater: React.SetStateAction<ClientRecord[]>) => {
+        void updater
         // No-op: TanStack Query automatically updates
     }, [])
 
     const clientsLoading = clientsQuery.isLoading
+    const clientsError = clientsQuery.error ? asErrorMessage(clientsQuery.error) : null
     const loadingMore = false
     const nextCursor = null
 
@@ -259,6 +260,18 @@ export function useAdminClients(): UseAdminClientsReturn {
         const name = memberName.trim()
         if (!name) {
             toast({ title: 'Name required', description: 'Enter a teammate name before adding.', variant: 'destructive' })
+            return
+        }
+
+        const alreadyAssigned = clientPendingMembers.teamMembers.some(
+            (member) => member.name.trim().toLowerCase() === name.toLowerCase()
+        )
+        if (alreadyAssigned) {
+            toast({
+                title: 'Already assigned',
+                description: `${name} is already on ${clientPendingMembers.name}.`,
+                variant: 'destructive',
+            })
             return
         }
 
@@ -355,23 +368,21 @@ export function useAdminClients(): UseAdminClientsReturn {
             return
         }
 
-        const teamMembers = teamMemberFields
+        const teamMembers = dedupeClientTeamMembers(
+            accountManager,
+            teamMemberFields
             .map((member) => ({
                 name: member.name.trim(),
                 role: member.role.trim(),
             }))
             .filter((member) => member.name.length > 0)
             .map((member) => ({ ...member, role: member.role || 'Contributor' }))
-
-        // Add account manager if not in team
-        if (!teamMembers.some((member) => member.name.toLowerCase() === accountManager.toLowerCase())) {
-            teamMembers.unshift({ name: accountManager, role: 'Account Manager' })
-        }
+        )
 
         setClientSaving(true)
 
         try {
-            const result = await createClientMutation.mutateAsync({
+            await createClientMutation.mutateAsync({
                 workspaceId,
                 name,
                 accountManager,

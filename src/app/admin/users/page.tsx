@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { CircleAlert, RefreshCw, ShieldCheck, UserCheck, Users as UsersIcon, UserPlus, MoreHorizontal, Trash2 } from 'lucide-react'
 
@@ -166,7 +167,9 @@ export default function AdminUsersPage() {
     const pending = users.filter((record) => record.status === 'pending' || record.status === 'invited').length
     const active = users.filter((record) => record.status === 'active').length
     const total = users.length
-    return { total, pending, active }
+    const internal = users.filter((record) => record.role !== 'client').length
+    const clients = users.filter((record) => record.role === 'client').length
+    return { total, pending, active, internal, clients }
   }, [users])
 
   const invitationsLoading = invitationResponse === undefined
@@ -310,14 +313,14 @@ export default function AdminUsersPage() {
   }
 
   const handleInviteUser = () => {
-    if (!inviteEmail) return
+    if (!inviteEmail || !user?.id) return
     
     setInviteSending(true)
 
     void createInvitation({
       email: inviteEmail,
       role: inviteRole,
-      invitedBy: user!.id,
+      invitedBy: user.id,
       invitedByName: user?.name ?? null,
     })
       .then(() => {
@@ -409,10 +412,16 @@ export default function AdminUsersPage() {
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-10">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">User approvals</h1>
-            <p className="text-muted-foreground">Approve pending accounts, assign workspace roles, and keep access aligned with your team structure.</p>
+            <h1 className="text-3xl font-bold tracking-tight">Users & approvals</h1>
+            <p className="text-muted-foreground">Approve new accounts and assign access. Use Team Management for internal staffing and Client Workspaces for client allocation.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <Button asChild variant="outline">
+              <Link href="/admin/team">Team management</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/admin/clients">Client workspaces</Link>
+            </Button>
             <Button type="button" variant="outline" onClick={handleRefresh} disabled={loading} className="inline-flex items-center gap-2">
               <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} /> Refresh
             </Button>
@@ -464,7 +473,7 @@ export default function AdminUsersPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total users</CardTitle>
@@ -489,12 +498,23 @@ export default function AdminUsersPage() {
 
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active users</CardTitle>
+              <CardTitle className="text-sm font-medium">Internal team</CardTitle>
               <ShieldCheck className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold">{summary.active}</div>
-              <p className="text-xs text-muted-foreground">Currently able to sign in</p>
+              <div className="text-2xl font-semibold">{summary.internal}</div>
+              <p className="text-xs text-muted-foreground">Admins and internal team accounts</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-muted/60 bg-background">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Client access</CardTitle>
+              <UsersIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-semibold">{summary.clients}</div>
+              <p className="text-xs text-muted-foreground">Accounts currently marked as client users</p>
             </CardContent>
           </Card>
         </div>
@@ -503,7 +523,7 @@ export default function AdminUsersPage() {
           <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <CardTitle className="text-lg">Account directory</CardTitle>
-              <CardDescription>Filter by status or role, approve users, and assign them to team or client access.</CardDescription>
+              <CardDescription>Filter by status or role, approve users, and assign access. Internal staffing and client ownership are managed on the Team and Client pages.</CardDescription>
             </div>
             <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-center">
               <Input
@@ -857,7 +877,6 @@ function statusToVariant(status: AdminUserStatus) {
       return 'secondary' as const
     case 'disabled':
     case 'suspended':
-    default:
       return 'destructive' as const
   }
 }
@@ -874,7 +893,6 @@ function invitationStatusToVariant(status: InvitationLifecycleStatus) {
       return 'secondary' as const
     case 'expired':
     case 'revoked':
-    default:
       return 'destructive' as const
   }
 }

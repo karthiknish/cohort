@@ -2,6 +2,9 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { usePaginatedQuery } from 'convex/react'
+
+import { api } from '../../../../convex/_generated/api'
 import { useAuth } from '@/contexts/auth-context'
 import {
   Card,
@@ -15,6 +18,13 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -23,10 +33,22 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { LoaderCircle, Plus, Trash2, Users as UsersIcon, X } from 'lucide-react'
+
+import { buildClientAllocationSummary, getAssignableWorkspaceUsers } from '../lib/client-allocation'
 import { useAdminClients } from './hooks'
+
+type AdminUserRow = {
+  _id?: string
+  legacyId?: string | null
+  name?: string | null
+  email?: string | null
+  role?: string | null
+  status?: string | null
+}
 
 export default function AdminClientsPage() {
   const { user } = useAuth()
+  const workspaceId = user?.agencyId ?? user?.id ?? null
 
   const {
     // Client list
@@ -75,7 +97,35 @@ export default function AdminClientsPage() {
     handleRemoveTeamMember,
   } = useAdminClients()
 
+  const { results: adminUserRows } = usePaginatedQuery(
+    api.adminUsers.listUsers,
+    workspaceId
+      ? {
+          workspaceId,
+          includeAllWorkspaces: false,
+        }
+      : 'skip',
+    { initialNumItems: 200 }
+  )
+
   const [clientSearch, setClientSearch] = useState('')
+
+  const assignableUsers = useMemo(() => {
+    const normalizedUsers = (adminUserRows ?? []).map((row: AdminUserRow) => ({
+      id: row.legacyId ?? row._id ?? '',
+      name: row.name?.trim() || row.email?.trim() || 'Unknown user',
+      email: row.email?.trim() || null,
+      role: row.role ?? 'team',
+      status: row.status ?? 'pending',
+    }))
+
+    return getAssignableWorkspaceUsers(normalizedUsers)
+  }, [adminUserRows])
+
+  const allocationSummary = useMemo(
+    () => buildClientAllocationSummary(assignableUsers, clients),
+    [assignableUsers, clients]
+  )
 
   const filteredClients = useMemo(() => {
     const query = clientSearch.trim().toLowerCase()
@@ -87,6 +137,13 @@ export default function AdminClientsPage() {
       return haystack.includes(query)
     })
   }, [clients, clientSearch])
+
+  const unmatchedByClientId = useMemo(() => {
+    return allocationSummary.unmatched.reduce<Record<string, number>>((acc, item) => {
+      acc[item.clientId] = (acc[item.clientId] ?? 0) + 1
+      return acc
+    }, {})
+  }, [allocationSummary.unmatched])
 
   if (!user) {
     return (
@@ -108,7 +165,7 @@ export default function AdminClientsPage() {
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Client workspaces</h1>
-            <p className="text-muted-foreground">Create new client pods and keep delivery teams in sync.</p>
+            <p className="text-muted-foreground">Allocate real internal teammates to each client workspace and keep ownership clean.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button asChild variant="outline">
@@ -123,7 +180,7 @@ export default function AdminClientsPage() {
           </div>
         </div>
 
-         <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Active clients</CardTitle>
@@ -148,14 +205,23 @@ export default function AdminClientsPage() {
 
           <Card>
             <CardHeader className="space-y-1 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Quick start</CardTitle>
-              <CardDescription>Need a workspace fast?</CardDescription>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Assignable teammates</CardTitle>
+              <CardDescription>Internal users available</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" className="w-full" onClick={resetClientForm} disabled={clientSaving}>
-                Reset form
-              </Button>
-              <p className="mt-2 text-xs text-muted-foreground">Clears the form and seeds a fresh team member slot.</p>
+              <div className="text-2xl font-bold">{assignableUsers.length}</div>
+              <p className="text-xs text-muted-foreground">Admins and team members available for client allocation</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="space-y-1 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Allocation cleanup</CardTitle>
+              <CardDescription>Legacy names to review</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{allocationSummary.unmatched.length}</div>
+              <p className="text-xs text-muted-foreground">Client assignments that no longer map to current users</p>
             </CardContent>
           </Card>
         </div>
@@ -187,14 +253,29 @@ export default function AdminClientsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="admin-client-owner">Account manager</Label>
-                  <Input
-                    id="admin-client-owner"
-                    placeholder="Primary owner"
-                    value={clientAccountManager}
-                    onChange={(event) => setClientAccountManager(event.target.value)}
-                    required
-                    disabled={clientSaving}
-                  />
+                  {assignableUsers.length > 0 ? (
+                    <Select value={clientAccountManager || undefined} onValueChange={setClientAccountManager}>
+                      <SelectTrigger id="admin-client-owner" disabled={clientSaving}>
+                        <SelectValue placeholder="Select a workspace owner" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {assignableUsers.map((workspaceUser) => (
+                          <SelectItem key={workspaceUser.id} value={workspaceUser.name}>
+                            {workspaceUser.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="admin-client-owner"
+                      placeholder="Primary owner"
+                      value={clientAccountManager}
+                      onChange={(event) => setClientAccountManager(event.target.value)}
+                      required
+                      disabled={clientSaving}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -215,13 +296,28 @@ export default function AdminClientsPage() {
                         <Label htmlFor={`team-member-name-${member.key}`} className="text-xs uppercase tracking-wide text-muted-foreground">
                           Name
                         </Label>
-                        <Input
-                          id={`team-member-name-${member.key}`}
-                          placeholder={index === 0 ? 'Alex Chen' : 'Teammate name'}
-                          value={member.name}
-                          onChange={(event) => updateTeamMemberField(member.key, 'name', event.target.value)}
-                          disabled={clientSaving}
-                        />
+                        {assignableUsers.length > 0 ? (
+                          <Select value={member.name || undefined} onValueChange={(value) => updateTeamMemberField(member.key, 'name', value)}>
+                            <SelectTrigger id={`team-member-name-${member.key}`} disabled={clientSaving}>
+                              <SelectValue placeholder={index === 0 ? 'Select teammate' : 'Choose teammate'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {assignableUsers.map((workspaceUser) => (
+                                <SelectItem key={`${member.key}-${workspaceUser.id}`} value={workspaceUser.name}>
+                                  {workspaceUser.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            id={`team-member-name-${member.key}`}
+                            placeholder={index === 0 ? 'Alex Chen' : 'Teammate name'}
+                            value={member.name}
+                            onChange={(event) => updateTeamMemberField(member.key, 'name', event.target.value)}
+                            disabled={clientSaving}
+                          />
+                        )}
                       </div>
                       <div className="flex-1 space-y-2">
                         <Label htmlFor={`team-member-role-${member.key}`} className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -251,10 +347,17 @@ export default function AdminClientsPage() {
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground">Include anyone collaborating with this client. Account managers are automatically added if missing.</p>
+                <p className="text-xs text-muted-foreground">
+                  {assignableUsers.length > 0
+                    ? 'Choose from active internal teammates so client ownership stays mapped to real workspace users. Account managers are automatically added to the client team.'
+                    : 'No internal teammates are available yet, so legacy free-text allocation is still enabled.'}
+                </p>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-between gap-3">
+                <Button variant="outline" type="button" onClick={resetClientForm} disabled={clientSaving}>
+                  Reset form
+                </Button>
                 <Button type="submit" disabled={clientSaving}>
                   {clientSaving && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
                   Create client
@@ -298,6 +401,9 @@ export default function AdminClientsPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline">Team {client.teamMembers.length}</Badge>
+                          <Badge variant={unmatchedByClientId[client.id] ? 'secondary' : 'outline'}>
+                            {unmatchedByClientId[client.id] ? `${unmatchedByClientId[client.id]} unmatched` : 'Mapped'}
+                          </Badge>
                           <Button
                             variant="outline"
                             size="sm"
@@ -324,6 +430,11 @@ export default function AdminClientsPage() {
                           </Button>
                         </div>
                       </div>
+                      {unmatchedByClientId[client.id] ? (
+                        <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+                          This client still has legacy allocation names that do not match current workspace users.
+                        </p>
+                      ) : null}
                       {client.teamMembers.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-2">
                           {client.teamMembers.map((member) => (
@@ -429,13 +540,28 @@ export default function AdminClientsPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="team-member-name-input">Name</Label>
-              <Input
-                id="team-member-name-input"
-                placeholder="e.g. Priya Patel"
-                value={memberName}
-                onChange={(event) => setMemberName(event.target.value)}
-                disabled={addingMember}
-              />
+              {assignableUsers.length > 0 ? (
+                <Select value={memberName || undefined} onValueChange={setMemberName}>
+                  <SelectTrigger id="team-member-name-input" disabled={addingMember}>
+                    <SelectValue placeholder="Select teammate" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assignableUsers.map((workspaceUser) => (
+                      <SelectItem key={`dialog-${workspaceUser.id}`} value={workspaceUser.name}>
+                        {workspaceUser.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="team-member-name-input"
+                  placeholder="e.g. Priya Patel"
+                  value={memberName}
+                  onChange={(event) => setMemberName(event.target.value)}
+                  disabled={addingMember}
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="team-member-role-input">Role (optional)</Label>

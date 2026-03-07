@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import {
   CircleAlert,
   LoaderCircle,
@@ -14,7 +15,6 @@ import {
 } from 'lucide-react'
 
 import { useAuth } from '@/contexts/auth-context'
-import { useMutation, usePaginatedQuery } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
@@ -49,6 +49,7 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 import { ADMIN_USER_ROLES, ADMIN_USER_STATUSES, type AdminUserRecord, type AdminUserRole, type AdminUserStatus } from '@/types/admin'
+import { buildClientAllocationSummary } from '../lib/client-allocation'
 
 type UserStatus = AdminUserStatus
 
@@ -56,7 +57,7 @@ type StatusFilter = 'all' | AdminUserStatus
 
 type RoleFilter = 'all' | AdminUserRole
 
-const ROLE_OPTIONS = ADMIN_USER_ROLES
+const ROLE_OPTIONS = ADMIN_USER_ROLES.filter((role) => role !== 'client')
 const STATUS_OPTIONS: StatusFilter[] = ['all', ...ADMIN_USER_STATUSES]
 
 type AdminUserRow = {
@@ -101,6 +102,12 @@ export default function AdminTeamPage() {
 
   const updateUserRoleStatus = useMutation(api.adminUsers.updateUserRoleStatus)
   const createInvitation = useMutation(api.adminInvitations.createInvitation)
+  const clientsData = useQuery(api.clients.list, workspaceId ? {
+    workspaceId,
+    limit: 200,
+    cursor: null,
+    includeAllWorkspaces: false,
+  } : 'skip')
 
   // Invite dialog state
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -129,9 +136,31 @@ export default function AdminTeamPage() {
 
   const loading = isLoading
 
+  const internalUsers = useMemo(() => users.filter((candidate) => candidate.role !== 'client'), [users])
+
+  const allocationSummary = useMemo(() => {
+    const clientRows = Array.isArray(clientsData?.items) ? clientsData.items : []
+
+    return buildClientAllocationSummary(
+      internalUsers.map((record) => ({
+        id: record.id,
+        name: record.name,
+        email: record.email,
+        role: record.role,
+        status: record.status,
+      })),
+      clientRows.map((client) => ({
+        id: client.legacyId,
+        name: client.name,
+        accountManager: client.accountManager,
+        teamMembers: client.teamMembers ?? [],
+      }))
+    )
+  }, [clientsData?.items, internalUsers])
+
   const filteredUsers = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()
-    return users.filter((candidate) => {
+    return internalUsers.filter((candidate) => {
       if (statusFilter !== 'all' && candidate.status !== statusFilter) {
         return false
       }
@@ -144,20 +173,20 @@ export default function AdminTeamPage() {
       }
       return true
     })
-  }, [users, statusFilter, roleFilter, searchTerm])
+  }, [internalUsers, roleFilter, searchTerm, statusFilter])
 
   const summary = useMemo(() => {
-    const active = users.filter((record) => record.status === 'active').length
-    const admins = users.filter((record) => record.role === 'admin').length
-    const disabled = users.filter((record) => record.status === 'disabled' || record.status === 'suspended').length
+    const active = internalUsers.filter((record) => record.status === 'active').length
+    const admins = internalUsers.filter((record) => record.role === 'admin').length
+    const allocated = internalUsers.filter((record) => (allocationSummary.byUserId[record.id]?.totalClientNames.length ?? 0) > 0).length
 
     return {
-      total: users.length,
+      total: internalUsers.length,
       active,
       admins,
-      disabled,
+      allocated,
     }
-  }, [users])
+  }, [allocationSummary.byUserId, internalUsers])
 
   const handleRoleChange = (userId: string, role: AdminUserRecord['role']) => {
     setSavingId(userId)
@@ -280,7 +309,7 @@ export default function AdminTeamPage() {
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Team management</h1>
-            <p className="text-muted-foreground">Review active teammates, adjust roles, and keep access aligned with responsibilities.</p>
+            <p className="text-muted-foreground">Manage internal staff, their roles, and how they are allocated across client workspaces.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button asChild variant="outline">
@@ -323,7 +352,6 @@ export default function AdminTeamPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="team">Team Member</SelectItem>
-                        <SelectItem value="client">Client</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
@@ -340,7 +368,7 @@ export default function AdminTeamPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total teammates</CardTitle>
@@ -373,13 +401,24 @@ export default function AdminTeamPage() {
               <p className="text-xs text-muted-foreground">Including yourself</p>
             </CardContent>
           </Card>
+
+          <Card className="border-muted/60 bg-background">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Allocated to clients</CardTitle>
+              <UsersIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-semibold">{summary.allocated}</div>
+              <p className="text-xs text-muted-foreground">Internal users attached to at least one client</p>
+            </CardContent>
+          </Card>
         </div>
 
         <Card className="border-muted/60 bg-background">
           <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <CardTitle className="text-lg">Team directory</CardTitle>
-              <CardDescription>Search and manage permissions across your organisation.</CardDescription>
+              <CardDescription>Search internal teammates, manage permissions, and review their current client allocation load.</CardDescription>
             </div>
             <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-center">
               <Input
@@ -425,6 +464,7 @@ export default function AdminTeamPage() {
                     <th className="w-24 py-2 pr-3 text-center font-medium">Admin</th>
                     <th className="w-32 py-2 pr-3 font-medium">Status</th>
                     <th className="w-40 py-2 pr-3 font-medium">Joined</th>
+                    <th className="w-40 py-2 pr-3 font-medium">Client allocation</th>
                     <th className="w-40 py-2 pr-3 font-medium">Last active</th>
                     <th className="py-2 text-right font-medium">Actions</th>
                   </tr>
@@ -432,7 +472,7 @@ export default function AdminTeamPage() {
                 <tbody>
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                      <td colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
                         {loading
                           ? 'Loading team…'
                           : error
@@ -441,71 +481,93 @@ export default function AdminTeamPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredUsers.map((record) => (
-                      <tr key={record.id} className="border-b border-muted/30">
-                        <td className="py-3 pr-3">
-                          <div className="font-medium text-foreground">{record.name}</div>
-                          <div className="text-xs text-muted-foreground">{record.email || 'No email on file'}</div>
-                          {record.agencyId && (
-                            <div className="text-xs text-muted-foreground">Agency: {record.agencyId}</div>
-                          )}
-                        </td>
-                        <td className="py-3 pr-3 align-middle">
-                          <Select
-                            value={record.role}
-                            onValueChange={(value) => handleRoleChange(record.id, value as AdminUserRecord['role'])}
-                            disabled={savingId === record.id}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ROLE_OPTIONS.map((role) => (
-                                <SelectItem key={role} value={role}>
-                                  {role.charAt(0).toUpperCase() + role.slice(1)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="py-3 pr-3 text-center align-middle">
-                          <Checkbox
-                            checked={record.role === 'admin'}
-                            onChange={(event) => handleAdminToggle(record, event.target.checked)}
-                            disabled={savingId === record.id}
-                            aria-label={`Toggle admin role for ${record.name}`}
-                          />
-                        </td>
-                        <td className="py-3 pr-3 align-middle">
-                          <Badge variant={statusToVariant(record.status)} className="capitalize">
-                            {record.status.replace('_', ' ')}
-                          </Badge>
-                        </td>
-                        <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
-                          {formatDate(record.createdAt)}
-                        </td>
-                        <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
-                          {formatDate(record.lastLoginAt)}
-                        </td>
-                        <td className="py-3 align-middle text-right">
-                          <Button
-                            type="button"
-                            variant={record.status === 'active' ? 'destructive' : 'outline'}
-                            size="sm"
-                            onClick={() => handleStatusAction(record)}
-                            disabled={savingId === record.id}
-                            className="inline-flex items-center gap-2"
-                          >
-                            {savingId === record.id ? (
-                              <LoaderCircle className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <ActionIcon status={record.status} />
+                    filteredUsers.map((record) => {
+                      const allocation = allocationSummary.byUserId[record.id] ?? {
+                        managedClientNames: [],
+                        supportingClientNames: [],
+                        totalClientNames: [],
+                      }
+
+                      return (
+                        <tr key={record.id} className="border-b border-muted/30">
+                          <td className="py-3 pr-3">
+                            <div className="font-medium text-foreground">{record.name}</div>
+                            <div className="text-xs text-muted-foreground">{record.email || 'No email on file'}</div>
+                            {record.agencyId && (
+                              <div className="text-xs text-muted-foreground">Agency: {record.agencyId}</div>
                             )}
-                            {statusActionLabel(record.status)}
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                          <td className="py-3 pr-3 align-middle">
+                            <Select
+                              value={record.role}
+                              onValueChange={(value) => handleRoleChange(record.id, value as AdminUserRecord['role'])}
+                              disabled={savingId === record.id}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ROLE_OPTIONS.map((role) => (
+                                  <SelectItem key={role} value={role}>
+                                    {role.charAt(0).toUpperCase() + role.slice(1)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="py-3 pr-3 text-center align-middle">
+                            <Checkbox
+                              checked={record.role === 'admin'}
+                              onChange={(event) => handleAdminToggle(record, event.target.checked)}
+                              disabled={savingId === record.id}
+                              aria-label={`Toggle admin role for ${record.name}`}
+                            />
+                          </td>
+                          <td className="py-3 pr-3 align-middle">
+                            <Badge variant={statusToVariant(record.status)} className="capitalize">
+                              {record.status.replace('_', ' ')}
+                            </Badge>
+                          </td>
+                          <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
+                            {formatDate(record.createdAt)}
+                          </td>
+                          <td className="py-3 pr-3 align-middle">
+                            {allocation.totalClientNames.length > 0 ? (
+                              <div className="space-y-1">
+                                <div className="text-sm font-medium text-foreground">
+                                  {allocation.totalClientNames.length} client{allocation.totalClientNames.length === 1 ? '' : 's'}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Owner {allocation.managedClientNames.length} · Support {allocation.supportingClientNames.length}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Unassigned</span>
+                            )}
+                          </td>
+                          <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
+                            {formatDate(record.lastLoginAt)}
+                          </td>
+                          <td className="py-3 align-middle text-right">
+                            <Button
+                              type="button"
+                              variant={record.status === 'active' ? 'destructive' : 'outline'}
+                              size="sm"
+                              onClick={() => handleStatusAction(record)}
+                              disabled={savingId === record.id}
+                              className="inline-flex items-center gap-2"
+                            >
+                              {savingId === record.id ? (
+                                <LoaderCircle className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <ActionIcon status={record.status} />
+                              )}
+                              {statusActionLabel(record.status)}
+                            </Button>
+                          </td>
+                        </tr>
+                      )
+                    })
                   )}
                 </tbody>
               </table>
