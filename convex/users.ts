@@ -347,6 +347,22 @@ export const getWorkspaceIdForUser = internalQuery({
   },
 })
 
+export const getMyWorkspaceContext = authenticatedQuery({
+  args: {},
+  returns: v.object({
+    workspaceId: v.string(),
+    userId: v.string(),
+    role: v.string(),
+  }),
+  handler: async (ctx) => {
+    return {
+      workspaceId: ctx.agencyId,
+      userId: ctx.legacyId,
+      role: ctx.user.role ?? 'team',
+    }
+  },
+})
+
 /**
  * Get notification preferences for a user by email.
  * Used by email notification services to check preferences.

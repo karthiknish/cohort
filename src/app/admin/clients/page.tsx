@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { usePaginatedQuery } from 'convex/react'
+import { usePaginatedQuery, useQuery } from 'convex/react'
 import { LoaderCircle, Plus, Trash2, Users as UsersIcon, X } from 'lucide-react'
 import Link from 'next/link'
 
@@ -36,7 +36,9 @@ type AdminUserRow = {
 
 export default function AdminClientsPage() {
   const { user } = useAuth()
-  const workspaceId = user?.agencyId ?? user?.id ?? null
+  const workspaceContext = useQuery(api.users.getMyWorkspaceContext, user ? {} : 'skip')
+  const workspaceId = workspaceContext?.workspaceId ?? null
+  const includeAllWorkspaces = workspaceContext?.role === 'admin'
 
   const {
     // Client list
@@ -90,7 +92,7 @@ export default function AdminClientsPage() {
     workspaceId
       ? {
           workspaceId,
-          includeAllWorkspaces: false,
+          includeAllWorkspaces,
         }
       : 'skip',
     { initialNumItems: 200 }

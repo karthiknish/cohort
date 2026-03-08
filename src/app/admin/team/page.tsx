@@ -76,26 +76,35 @@ export default function AdminTeamPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
-  const workspaceId = user?.agencyId ?? user?.id
+  const workspaceContext = useQuery(api.users.getMyWorkspaceContext, user ? {} : 'skip')
+  const workspaceId = workspaceContext?.workspaceId ?? null
+  const includeAllWorkspaces = workspaceContext?.role === 'admin'
   const { toast } = useToast()
 
   const { results: usersPage, status, loadMore, isLoading } = usePaginatedQuery(
     api.adminUsers.listUsers,
-    {
-      workspaceId,
-      includeAllWorkspaces: false,
-    },
+    workspaceId
+      ? {
+          workspaceId,
+          includeAllWorkspaces,
+        }
+      : 'skip',
     { initialNumItems: 50 }
   )
 
   const updateUserRoleStatus = useMutation(api.adminUsers.updateUserRoleStatus)
   const createInvitation = useMutation(api.adminInvitations.createInvitation)
-  const clientsData = useQuery(api.clients.list, workspaceId ? {
-    workspaceId,
-    limit: 200,
-    cursor: null,
-    includeAllWorkspaces: false,
-  } : 'skip')
+  const clientsData = useQuery(
+    api.clients.list,
+    workspaceId
+      ? {
+          workspaceId,
+          limit: 200,
+          cursor: null,
+          includeAllWorkspaces,
+        }
+      : 'skip'
+  )
 
   // Invite dialog state
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -122,7 +131,7 @@ export default function AdminTeamPage() {
     }})
   }, [usersOverride, usersPage])
 
-  const loading = isLoading
+  const loading = (user != null && workspaceContext === undefined) || isLoading
 
   const internalUsers = useMemo(() => users.filter((candidate) => candidate.role !== 'client'), [users])
 

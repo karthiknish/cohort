@@ -88,21 +88,30 @@ type AdminSection = {
 
 export default function AdminPage() {
   const { user } = useAuth()
-  const workspaceId = user?.agencyId || user?.id || ''
+  const workspaceContext = useQuery(api.users.getMyWorkspaceContext, user ? {} : 'skip')
+  const workspaceId = workspaceContext?.workspaceId ?? null
+  const includeAllWorkspaces = workspaceContext?.role === 'admin'
   const { results: usersPage } = usePaginatedQuery(
     api.adminUsers.listUsers,
-    {
-      workspaceId,
-      includeAllWorkspaces: false,
-    },
+    workspaceId
+      ? {
+          workspaceId,
+          includeAllWorkspaces,
+        }
+      : 'skip',
     { initialNumItems: 50 }
   )
 
-  const clientsRealtime = useQuery(api.clients.list, {
-    workspaceId,
-    limit: 100,
-    includeAllWorkspaces: false,
-  }) as { items?: Array<unknown> } | undefined
+  const clientsRealtime = useQuery(
+    api.clients.list,
+    workspaceId
+      ? {
+          workspaceId,
+          limit: 100,
+          includeAllWorkspaces,
+        }
+      : 'skip'
+  ) as { items?: Array<unknown> } | undefined
 
   const schedulerEventsRealtime = useQuery(api.schedulerEvents.list, {
     limit: 10,

@@ -91,7 +91,7 @@ export default function AdminUsersPage() {
 
   const [usersOverride, setUsersOverride] = useState<AdminUserRecord[] | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [invitationSearchTerm, setInvitationSearchTerm] = useState('')
@@ -99,14 +99,18 @@ export default function AdminUsersPage() {
   const [error] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [invitationActionKey, setInvitationActionKey] = useState<string | null>(null)
-  const workspaceId = user?.agencyId ?? user?.id
+  const workspaceContext = useQuery(api.users.getMyWorkspaceContext, user ? {} : 'skip')
+  const workspaceId = workspaceContext?.workspaceId ?? null
+  const includeAllWorkspaces = workspaceContext?.role === 'admin'
 
   const { results: usersPage, status, loadMore, isLoading } = usePaginatedQuery(
     api.adminUsers.listUsers,
-    {
-      workspaceId,
-      includeAllWorkspaces: false,
-    },
+    workspaceId
+      ? {
+          workspaceId,
+          includeAllWorkspaces,
+        }
+      : 'skip',
     { initialNumItems: 50 }
   )
 
@@ -142,7 +146,7 @@ export default function AdminUsersPage() {
     }))
   }, [usersOverride, usersPage])
 
-  const loading = isLoading
+  const loading = (user != null && workspaceContext === undefined) || isLoading
   const filteredUsers = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()
     return users.filter((record) => {
@@ -383,7 +387,7 @@ export default function AdminUsersPage() {
 
   const handleRefresh = () => {
     if (loading) return
-    setStatusFilter('pending')
+    setStatusFilter('all')
     setRoleFilter('all')
     setSearchTerm('')
     setInvitationStatusFilter('pending')

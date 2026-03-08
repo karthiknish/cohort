@@ -1,6 +1,7 @@
 import { adminMutation, adminQuery, adminPaginatedQuery } from './functions'
 import { v } from 'convex/values'
 import { Errors } from './errors'
+import { buildAdminUserPage } from '../src/app/admin/lib/admin-user-list'
 
 const userSummaryValidator = v.object({
   _id: v.id('users'),
@@ -21,7 +22,7 @@ export const listUsers = adminPaginatedQuery({
   },
   returns: v.object({
     page: v.array(userSummaryValidator),
-    continueCursor: v.union(v.string(), v.null()),
+    continueCursor: v.string(),
     isDone: v.boolean(),
   }),
   handler: async (ctx, args) => {
@@ -32,13 +33,29 @@ export const listUsers = adminPaginatedQuery({
       ? null
       : (args.workspaceId ?? adminWorkspaceId)
 
-    const result = targetWorkspaceId
-      ? await ctx.db
-          .query('users')
-          .withIndex('by_agencyId', (q) => q.eq('agencyId', targetWorkspaceId))
-          .order('desc')
-          .paginate({ numItems, cursor })
-      : await ctx.db.query('users').order('desc').paginate({ numItems, cursor })
+    const result = includeAllWorkspaces
+      ? buildAdminUserPage({
+          includeAllWorkspaces: true,
+          allUsers: await ctx.db.query('users').collect(),
+          numItems,
+          cursor,
+        })
+      : buildAdminUserPage({
+          owner: targetWorkspaceId
+            ? await ctx.db
+                .query('users')
+                .withIndex('by_legacyId', (q) => q.eq('legacyId', targetWorkspaceId))
+                .unique()
+            : null,
+          members: targetWorkspaceId
+            ? await ctx.db
+                .query('users')
+                .withIndex('by_agencyId', (q) => q.eq('agencyId', targetWorkspaceId))
+                .collect()
+            : [],
+          numItems,
+          cursor,
+        })
 
     // Transform to match validator
     return {
@@ -53,7 +70,7 @@ export const listUsers = adminPaginatedQuery({
         createdAtMs: user.createdAtMs ?? null,
         updatedAtMs: user.updatedAtMs ?? null,
       })),
-      continueCursor: result.continueCursor ?? null,
+      continueCursor: result.continueCursor ?? '',
       isDone: result.isDone,
     }
   },

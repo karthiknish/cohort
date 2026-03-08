@@ -2,7 +2,8 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useConvex } from 'convex/react'
+import { api } from '../../../../../convex/_generated/api'
+import { useConvex, useQuery as useConvexQuery } from 'convex/react'
 
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
@@ -92,7 +93,10 @@ export function useAdminClients(): UseAdminClientsReturn {
     const { toast } = useToast()
     const convex = useConvex()
 
-    const workspaceId = user?.agencyId ?? null
+    const workspaceContext = useConvexQuery(api.users.getMyWorkspaceContext, user ? {} : 'skip')
+    const workspaceId = workspaceContext?.workspaceId ?? null
+    const includeAllWorkspaces = workspaceContext?.role === 'admin'
+    const workspaceLoading = user != null && workspaceContext === undefined
 
     const clientsQuery = useQuery({
         queryKey: ['adminClients', workspaceId],
@@ -102,7 +106,7 @@ export function useAdminClients(): UseAdminClientsReturn {
                 workspaceId,
                 limit: 100,
                 cursor: null,
-                includeAllWorkspaces: false,
+                includeAllWorkspaces,
             } as never)
         },
         enabled: Boolean(workspaceId),
@@ -181,7 +185,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         // No-op: TanStack Query automatically updates
     }, [])
 
-    const clientsLoading = clientsQuery.isLoading
+    const clientsLoading = workspaceLoading || clientsQuery.isLoading
     const clientsError = clientsQuery.error ? asErrorMessage(clientsQuery.error) : null
     const loadingMore = false
     const nextCursor = null
