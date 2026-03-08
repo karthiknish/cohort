@@ -185,6 +185,27 @@ export function teamMembersToMentionable(
   }))
 }
 
+export function mergeTaskParticipants(sources: TaskParticipant[][]): TaskParticipant[] {
+  const byName = new Map<string, TaskParticipant>()
+
+  for (const members of sources) {
+    for (const member of members) {
+      const key = member.name.trim().toLowerCase()
+      if (!key) continue
+
+      const existing = byName.get(key)
+      byName.set(key, {
+        id: member.id ?? existing?.id,
+        name: member.name,
+        role: existing?.role ?? member.role,
+        email: member.email ?? existing?.email,
+      })
+    }
+  }
+
+  return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name))
+}
+
 /**
  * Extract plain user names from a MentionInput value string.
  * Handles both `@[Name]` mention format and plain comma-separated names.

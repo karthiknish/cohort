@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQuery } from 'convex/react'
 import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useQuery } from 'convex/react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   formatDate,
+  mergeTaskParticipants,
   ProjectFilterBanner,
   TaskBulkToolbar,
   TaskFilters,
@@ -151,34 +152,29 @@ export default function TasksPage() {
     user?.agencyId && !isPreviewMode
       ? {
           workspaceId: user.agencyId,
-          limit: 200,
+          limit: 500,
+        }
+      : 'skip'
+  ) as TaskParticipant[] | undefined
+
+  const platformUsers = useQuery(
+    usersApi.listAllUsers,
+    user?.agencyId && !isPreviewMode
+      ? {
+          limit: 500,
         }
       : 'skip'
   ) as TaskParticipant[] | undefined
 
   const taskParticipants = useMemo(() => {
-    const byName = new Map<string, TaskParticipant>()
+    const platformAdmins = (platformUsers ?? []).filter((member) => member.role?.toLowerCase() === 'admin')
 
-    for (const member of selectedClient?.teamMembers ?? []) {
-      const key = member.name.trim().toLowerCase()
-      if (!key) continue
-      byName.set(key, member)
-    }
-
-    for (const member of workspaceMembers ?? []) {
-      const key = member.name.trim().toLowerCase()
-      if (!key) continue
-      const existing = byName.get(key)
-      byName.set(key, {
-        id: member.id ?? existing?.id,
-        name: member.name,
-        role: existing?.role ?? member.role,
-        email: member.email,
-      })
-    }
-
-    return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name))
-  }, [selectedClient?.teamMembers, workspaceMembers])
+    return mergeTaskParticipants([
+      selectedClient?.teamMembers ?? [],
+      workspaceMembers ?? [],
+      platformAdmins,
+    ])
+  }, [platformUsers, selectedClient?.teamMembers, workspaceMembers])
 
   // Debounced search for filters
   const [rawSearchQuery, setRawSearchQuery] = useState('')
