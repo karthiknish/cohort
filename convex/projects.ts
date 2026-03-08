@@ -12,7 +12,9 @@ import {
 } from './functions'
 import { v } from 'convex/values'
 import { z } from 'zod/v4'
+import { internal } from './_generated/api'
 import { Errors } from './errors'
+import { resolveProjectNotificationRecipientUserIds } from './notificationTargeting'
  
 const projectZ = z.object({
   legacyId: z.string(),
@@ -43,21 +45,21 @@ export const list = zWorkspacePaginatedQueryActive({
     }).nullable(),
   }),
   handler: async (ctx, args) => {
-    const hasStatus = typeof args.status === 'string'
-    const hasClientId = typeof args.clientId === 'string'
+    const status = typeof args.status === 'string' ? args.status : null
+    const clientId = typeof args.clientId === 'string' ? args.clientId : null
 
     const baseQuery = ctx.db.query('projects')
-    const indexedQuery = hasStatus && hasClientId
+    const indexedQuery = status && clientId
       ? baseQuery.withIndex('by_workspace_status_clientId_updatedAtMs_legacyId', (q) =>
-          q.eq('workspaceId', args.workspaceId).eq('status', args.status!).eq('clientId', args.clientId!)
+          q.eq('workspaceId', args.workspaceId).eq('status', status).eq('clientId', clientId)
         )
-      : hasStatus
+      : status
         ? baseQuery.withIndex('by_workspace_status_updatedAtMs_legacyId', (q) =>
-            q.eq('workspaceId', args.workspaceId).eq('status', args.status!)
+            q.eq('workspaceId', args.workspaceId).eq('status', status)
           )
-        : hasClientId
+        : clientId
           ? baseQuery.withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
-              q.eq('workspaceId', args.workspaceId).eq('clientId', args.clientId!)
+              q.eq('workspaceId', args.workspaceId).eq('clientId', clientId)
             )
           : baseQuery.withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
 
@@ -136,6 +138,9 @@ export const create = zWorkspaceMutation({
   },
   returns: z.string(),
   handler: async (ctx, args) => {
+    const createdAtMs = args.createdAtMs ?? ctx.now
+    const updatedAtMs = args.updatedAtMs ?? ctx.now
+
     await ctx.db.insert('projects', {
       workspaceId: args.workspaceId,
       legacyId: args.legacyId,
@@ -149,10 +154,52 @@ export const create = zWorkspaceMutation({
       endDateMs: args.endDateMs,
       tags: args.tags,
       ownerId: args.ownerId,
-      createdAtMs: args.createdAtMs ?? ctx.now,
-      updatedAtMs: args.updatedAtMs ?? ctx.now,
+      createdAtMs,
+      updatedAtMs,
       deletedAtMs: null,
     })
+
+    const recipientUserIds = (await resolveProjectNotificationRecipientUserIds(
+      ctx,
+      args.workspaceId,
+      args.ownerId,
+    )).filter((userId) => userId !== ctx.legacyId)
+
+    if (recipientUserIds.length > 0) {
+      const clientId = typeof args.clientId === 'string' && args.clientId.length > 0 ? args.clientId : null
+      const segments = [`Status: ${args.status}`]
+
+      if (args.startDateMs) {
+        segments.push(`Start: ${new Date(args.startDateMs).toLocaleDateString()}`)
+      }
+
+      if (args.clientName) {
+        segments.push(`Client: ${args.clientName}`)
+      }
+
+      await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+        workspaceId: args.workspaceId,
+        legacyId: `project:created:${args.legacyId}`,
+        kind: 'project.created',
+        title: `New project: ${args.name}`,
+        body: segments.join(' · '),
+        actorId: ctx.legacyId ?? null,
+        actorName: null,
+        resourceType: 'project',
+        resourceId: args.legacyId,
+        recipientRoles: [],
+        recipientClientId: clientId,
+        recipientClientIds: clientId ? [clientId] : undefined,
+        recipientUserIds,
+        metadata: {
+          status: args.status,
+          clientId,
+          clientName: args.clientName ?? null,
+        },
+        createdAtMs,
+        updatedAtMs,
+      })
+    }
 
     return args.legacyId
   },

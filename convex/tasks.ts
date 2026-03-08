@@ -22,6 +22,7 @@ import { v } from 'convex/values'
 import { internal } from './_generated/api'
 
 import { Errors } from './errors'
+import { resolveTaskNotificationRecipientUserIds } from './notificationTargeting'
 
 const taskAttachmentZ = z.object({
   name: z.string(),
@@ -353,33 +354,41 @@ export const createTask = zAuthenticatedMutation({
     }
 
     const clientId = typeof args.clientId === 'string' && args.clientId.length > 0 ? args.clientId : null
-    const baseRoles = clientId ? ['admin', 'team', 'client'] : ['admin', 'team']
-
-    await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+    const recipientUserIds = (await resolveTaskNotificationRecipientUserIds(ctx, {
       workspaceId: args.workspaceId,
-      legacyId: `task:created:${legacyId}`,
-      kind: 'task.created',
-      title: `Task created: ${args.title}`,
-      body: segments.join(' · '),
-      actorId: ctx.legacyId ?? null,
-      actorName: null,
-      resourceType: 'task',
-      resourceId: legacyId,
-      recipientRoles: baseRoles,
-      recipientClientId: clientId,
-      recipientClientIds: clientId ? [clientId] : undefined,
-      metadata: {
-        status: args.status,
-        priority: args.priority,
-        assignedTo: args.assignedTo,
-        clientId,
-        clientName: args.client ?? null,
-        projectId: args.projectId ?? null,
-        projectName: args.projectName ?? null,
-      },
-      createdAtMs: nowMs,
-      updatedAtMs: nowMs,
-    })
+      assignedTo: args.assignedTo,
+      createdBy: ctx.legacyId,
+      projectId: args.projectId ?? null,
+    })).filter((userId) => userId !== ctx.legacyId)
+
+    if (recipientUserIds.length > 0) {
+      await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+        workspaceId: args.workspaceId,
+        legacyId: `task:created:${legacyId}`,
+        kind: 'task.created',
+        title: `Task created: ${args.title}`,
+        body: segments.join(' · '),
+        actorId: ctx.legacyId ?? null,
+        actorName: null,
+        resourceType: 'task',
+        resourceId: legacyId,
+        recipientRoles: [],
+        recipientClientId: clientId,
+        recipientClientIds: clientId ? [clientId] : undefined,
+        recipientUserIds,
+        metadata: {
+          status: args.status,
+          priority: args.priority,
+          assignedTo: args.assignedTo,
+          clientId,
+          clientName: args.client ?? null,
+          projectId: args.projectId ?? null,
+          projectName: args.projectName ?? null,
+        },
+        createdAtMs: nowMs,
+        updatedAtMs: nowMs,
+      })
+    }
 
     return legacyId
   },
@@ -438,31 +447,41 @@ export const patchTask = zAuthenticatedMutation({
     if (changes.length > 0) {
       const nowMs = ctx.now
       const clientId = typeof row.clientId === 'string' && row.clientId.length > 0 ? row.clientId : null
-      const baseRoles = clientId ? ['admin', 'team', 'client'] : ['admin', 'team']
-
-      await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+      const recipientUserIds = (await resolveTaskNotificationRecipientUserIds(ctx, {
         workspaceId: args.workspaceId,
-        legacyId: `task:updated:${args.legacyId}:${nowMs}`,
-        kind: 'task.updated',
-        title: `Task updated: ${row.title}`,
-        body: changes.join(' · '),
-        actorId: ctx.legacyId ?? null,
-        actorName: null,
-        resourceType: 'task',
-        resourceId: args.legacyId,
-        recipientRoles: baseRoles,
-        recipientClientId: clientId,
-        recipientClientIds: clientId ? [clientId] : undefined,
-        metadata: {
-          status: (args.update.status ?? row.status) as string,
-          priority: (args.update.priority ?? row.priority) as string,
-          clientId,
-          clientName: row.client ?? null,
-          changes,
-        },
-        createdAtMs: nowMs,
-        updatedAtMs: nowMs,
-      })
+        assignedTo: args.update.assignedTo ?? row.assignedTo,
+        createdBy: row.createdBy,
+        projectId: typeof row.projectId === 'string' ? row.projectId : null,
+        taskLegacyId: args.legacyId,
+        includeCommentAuthors: true,
+      })).filter((userId) => userId !== ctx.legacyId)
+
+      if (recipientUserIds.length > 0) {
+        await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+          workspaceId: args.workspaceId,
+          legacyId: `task:updated:${args.legacyId}:${nowMs}`,
+          kind: 'task.updated',
+          title: `Task updated: ${row.title}`,
+          body: changes.join(' · '),
+          actorId: ctx.legacyId ?? null,
+          actorName: null,
+          resourceType: 'task',
+          resourceId: args.legacyId,
+          recipientRoles: [],
+          recipientClientId: clientId,
+          recipientClientIds: clientId ? [clientId] : undefined,
+          recipientUserIds,
+          metadata: {
+            status: (args.update.status ?? row.status) as string,
+            priority: (args.update.priority ?? row.priority) as string,
+            clientId,
+            clientName: row.client ?? null,
+            changes,
+          },
+          createdAtMs: nowMs,
+          updatedAtMs: nowMs,
+        })
+      }
     }
 
     return { ok: true }

@@ -8,6 +8,7 @@ import { action } from './_generated/server'
 import { geminiAI } from '../src/services/gemini'
 import { formatCurrency } from '../src/lib/utils'
 import { withErrorHandling } from './errors'
+import { enforceGeminiActionRateLimit } from './geminiRateLimit'
 import {
   calculateAlgorithmicInsights,
   getGlobalBudgetSuggestions,
@@ -365,6 +366,7 @@ export const generateInsights = action({
   }),
   handler: async (ctx, args) =>
     withErrorHandling(async () => {
+      const identity = await ctx.auth.getUserIdentity()
       const periodDays = args.periodDays ?? 30
       const cutoff = Date.now() - periodDays * 24 * 60 * 60 * 1000
 
@@ -404,6 +406,21 @@ export const generateInsights = action({
       }
 
       const summaries = summarizeByProvider(records, periodDays)
+      const promptCount = summaries.length + (
+        summaries.some((summary) => summary.providerId === 'google')
+          && summaries.some((summary) => summary.providerId === 'facebook')
+          ? 1
+          : 0
+      )
+
+      await enforceGeminiActionRateLimit(ctx, {
+        name: 'analyticsInsights',
+        userId: identity?.subject ?? null,
+        workspaceId: args.workspaceId,
+        resourceId: args.clientId ?? null,
+        count: promptCount,
+      })
+
       const { insights, algorithmic } = await generateAllInsights(summaries)
 
       return { insights, algorithmic }

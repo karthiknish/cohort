@@ -1,12 +1,18 @@
 import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
-import { UnauthorizedError } from '@/lib/api-errors'
+import { RateLimitError, UnauthorizedError } from '@/lib/api-errors'
 import {
   buildClientSummaryPrompt,
   buildFallbackClientSummary,
   parseClientSummaryResponse,
 } from '@/app/dashboard/utils/client-summary'
+import {
+  buildGeminiRateLimitKey,
+  formatGeminiRateLimitMessage,
+  GEMINI_RATE_LIMITS,
+} from '@/lib/geminiRateLimits'
+import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
 import { GeminiAIService, resolveGeminiApiKey, resolveGeminiModel } from '@/services/gemini'
 
 const providerSnapshotSchema = z.object({
@@ -77,6 +83,20 @@ export const POST = createApiHandler(
     const model = resolveGeminiModel()
 
     try {
+      const rateLimit = await checkConvexRateLimit(
+        buildGeminiRateLimitKey({
+          name: 'clientSummary',
+          userId: auth.uid,
+          workspaceId: auth.claims?.agencyId ? String(auth.claims.agencyId) : null,
+          resourceId: snapshot.clientId,
+        }),
+        GEMINI_RATE_LIMITS.clientSummary,
+      )
+
+      if (!rateLimit.allowed) {
+        throw new RateLimitError(formatGeminiRateLimitMessage(rateLimit.resetMs))
+      }
+
       const apiKey = resolveGeminiApiKey()
       if (!apiKey) {
         return {

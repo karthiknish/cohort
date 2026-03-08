@@ -422,7 +422,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
         startDateMs: payload.startDate ? new Date(payload.startDate).getTime() : null,
         endDateMs: payload.endDate ? new Date(payload.endDate).getTime() : null,
         tags: payload.tags,
-        ownerId: null,
+        ownerId: user?.id ?? null,
       })
 
       .then(() => {
@@ -437,7 +437,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
           startDate: payload.startDate ? new Date(payload.startDate).toISOString() : null,
           endDate: payload.endDate ? new Date(payload.endDate).toISOString() : null,
           tags: payload.tags,
-          ownerId: null,
+          ownerId: user?.id ?? null,
           createdAt: new Date(nowMs).toISOString(),
           updatedAt: new Date(nowMs).toISOString(),
           taskCount: 0,

@@ -1,4 +1,5 @@
 import { internal } from '../_generated/api'
+import { resolveMentionRecipientUserIds } from '../notificationTargeting'
 
 import {
   attachmentZ,
@@ -163,6 +164,10 @@ export const create = zWorkspaceMutation({
       const mentionName = typeof mention.name === 'string' ? mention.name : ''
       if (!mentionSlug) continue
 
+      const recipientUserIds = (await resolveMentionRecipientUserIds(ctx, args.workspaceId, [mention]))
+        .filter((id) => id !== currentUserId)
+      if (recipientUserIds.length === 0) continue
+
       const mentionSnippet = content.length > 150 ? `${content.slice(0, 147)}…` : content
 
       await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
@@ -178,6 +183,7 @@ export const create = zWorkspaceMutation({
         recipientRoles: channelId ? [] : ['admin', 'team', 'client'],
         recipientClientId: clientId,
         recipientClientIds: clientId ? [clientId] : undefined,
+        recipientUserIds,
         metadata: {
           channelType: normalizedScope.channelType,
           channelId,

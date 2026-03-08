@@ -7,6 +7,7 @@ import {
 } from './functions'
 import { z } from 'zod/v4'
 import type { WorkspaceNotification, WorkspaceNotificationKind, WorkspaceNotificationRole, WorkspaceNotificationResource } from '../src/types/notifications'
+import { matchesNotificationRecipient } from './notificationTargeting'
 
 const RESOURCE_TO_URL: Record<string, string> = {
   task: '/dashboard/tasks',
@@ -208,11 +209,13 @@ export const list = zWorkspaceQuery({
 
     const filtered = rows
       .filter((row) => {
-        if (args.role && !(row.recipientRoles ?? []).includes(args.role)) return false
-        if (args.clientId && row.recipientClientId !== args.clientId) return false
-        if (args.unread && (row.readBy ?? []).includes(userId)) return false
-        if (row.actorId && row.actorId === userId) return false
-        return true
+        return matchesNotificationRecipient(row, {
+          userId,
+          role: args.role,
+          clientId: args.clientId,
+          unreadOnly: args.unread,
+          excludeActor: true,
+        })
       })
       .filter((row) => {
         if (!args.afterCreatedAtMs && !args.afterLegacyId) return true
@@ -317,10 +320,13 @@ export const getUnreadCount = zWorkspaceQuery({
     let count = 0
 
     for (const row of rows) {
-      if (args.role && !(row.recipientRoles ?? []).includes(args.role)) continue
-      if (args.clientId && row.recipientClientId !== args.clientId) continue
-      if ((row.readBy ?? []).includes(userId)) continue
-      if (row.actorId && row.actorId === userId) continue
+      if (!matchesNotificationRecipient(row, {
+        userId,
+        role: args.role,
+        clientId: args.clientId,
+        unreadOnly: true,
+        excludeActor: true,
+      })) continue
       count += 1
     }
 

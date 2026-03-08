@@ -2,6 +2,7 @@ import { v } from 'convex/values'
 import { internal } from './_generated/api'
 import { Errors } from './errors'
 import { workspaceQuery, workspaceMutation, authenticatedMutation } from './functions'
+import { resolveMentionRecipientUserIds, resolveTaskNotificationRecipientUserIds } from './notificationTargeting'
 
 const attachment = v.object({
   name: v.string(),
@@ -132,37 +133,52 @@ export const create = workspaceMutation({
     const taskTitle = task?.title ?? 'Task'
     const taskClientId = typeof task?.clientId === 'string' && task.clientId.length > 0 ? task.clientId : null
     const taskClientName = typeof task?.client === 'string' && task.client.length > 0 ? task.client : null
-    const baseRoles = taskClientId ? ['admin', 'team', 'client'] : ['admin', 'team']
 
     const content = typeof args.content === 'string' ? args.content : ''
     const snippet = content.length > 200 ? `${content.slice(0, 197)}…` : content
 
-    await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+    const recipientUserIds = (await resolveTaskNotificationRecipientUserIds(ctx, {
       workspaceId: args.workspaceId,
-      legacyId: `task:comment:${args.legacyId}`,
-      kind: 'task.comment',
-      title: `New comment: ${taskTitle}`,
-      body: snippet || '(no content)',
-      actorId: currentUserId,
-      actorName: currentUserName ?? null,
-      resourceType: 'task',
-      resourceId: args.taskLegacyId,
-      recipientRoles: baseRoles,
-      recipientClientId: taskClientId,
-      recipientClientIds: taskClientId ? [taskClientId] : undefined,
-      metadata: {
-        taskId: args.taskLegacyId,
-        commentId: args.legacyId,
-        clientId: taskClientId,
-        clientName: taskClientName,
-      },
-      createdAtMs: timestamp,
-      updatedAtMs: timestamp,
-    })
+      assignedTo: task?.assignedTo,
+      createdBy: task?.createdBy,
+      projectId: typeof task?.projectId === 'string' ? task.projectId : null,
+      taskLegacyId: args.taskLegacyId,
+      includeCommentAuthors: true,
+    })).filter((userId) => userId !== currentUserId)
+
+    if (recipientUserIds.length > 0) {
+      await ctx.scheduler.runAfter(0, internal.notifications.createInternal, {
+        workspaceId: args.workspaceId,
+        legacyId: `task:comment:${args.legacyId}`,
+        kind: 'task.comment',
+        title: `New comment: ${taskTitle}`,
+        body: snippet || '(no content)',
+        actorId: currentUserId,
+        actorName: currentUserName ?? null,
+        resourceType: 'task',
+        resourceId: args.taskLegacyId,
+        recipientRoles: [],
+        recipientClientId: taskClientId,
+        recipientClientIds: taskClientId ? [taskClientId] : undefined,
+        recipientUserIds,
+        metadata: {
+          taskId: args.taskLegacyId,
+          commentId: args.legacyId,
+          clientId: taskClientId,
+          clientName: taskClientName,
+        },
+        createdAtMs: timestamp,
+        updatedAtMs: timestamp,
+      })
+    }
 
     const mentions = args.mentions ?? []
     for (const mention of mentions) {
       if (!mention || typeof mention.slug !== 'string' || !mention.slug) continue
+
+      const recipientUserIds = (await resolveMentionRecipientUserIds(ctx, args.workspaceId, [mention]))
+        .filter((id) => id !== currentUserId)
+      if (recipientUserIds.length === 0) continue
 
       const mentionSnippet = content.length > 150 ? `${content.slice(0, 147)}…` : content
       const senderName = currentUserName ?? 'Someone'
@@ -180,6 +196,7 @@ export const create = workspaceMutation({
         recipientRoles: ['admin', 'team', 'client'],
         recipientClientId: taskClientId,
         recipientClientIds: taskClientId ? [taskClientId] : undefined,
+        recipientUserIds,
         metadata: {
           taskId: args.taskLegacyId,
           taskTitle,

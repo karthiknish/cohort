@@ -2,7 +2,13 @@ import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { BadRequestError, ForbiddenError, UnauthorizedError } from '@/lib/api-errors'
+import {
+  buildGeminiRateLimitKey,
+  formatGeminiRateLimitMessage,
+  GEMINI_RATE_LIMITS,
+} from '@/lib/geminiRateLimits'
 import { getMeetingRecord, saveMeetingNotes, saveMeetingTranscript, setMeetingProcessingState, updateMeetingRecord } from '@/lib/meetings-admin'
+import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
 import { GeminiAIService, resolveGeminiApiKey } from '@/services/gemini'
 
 const transcriptModeValues = ['save-transcript', 'save-transcript-and-generate-notes', 'save-notes', 'finalize-post-meeting'] as const
@@ -206,6 +212,21 @@ export const POST = createApiHandler(
 
     if (shouldGenerateNotes && effectiveTranscript.length >= 20) {
       try {
+        const rateLimit = await checkConvexRateLimit(
+          buildGeminiRateLimitKey({
+            name: 'meetingNotes',
+            userId: auth.uid,
+            workspaceId: workspace.workspaceId,
+            resourceId: body.legacyId,
+            scope: mode,
+          }),
+          GEMINI_RATE_LIMITS.meetingNotes,
+        )
+
+        if (!rateLimit.allowed) {
+          throw new Error(formatGeminiRateLimitMessage(rateLimit.resetMs))
+        }
+
         const notes = await generateConciseMeetingNotes(effectiveTranscript)
         if (notes) {
           await saveMeetingNotes({

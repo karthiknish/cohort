@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { adminAction } from './functions'
 import { Errors, withErrorHandling } from './errors'
+import { enforceGeminiActionRateLimit } from './geminiRateLimit'
 
 type GeminiContentPart = string | { text?: string }
 type GeminiPayload = {
@@ -127,6 +128,13 @@ export const generate = adminAction({
   },
   handler: async (ctx, args) =>
     withErrorHandling(async () => {
+      await enforceGeminiActionRateLimit(ctx, {
+        name: 'adminFeatureAssist',
+        userId: ctx.legacyId,
+        workspaceId: ctx.agencyId,
+        resourceId: args.field,
+      })
+
       const prompt = buildPrompt({ field: args.field, context: args.context })
       const raw = await generateWithGemini(prompt)
       const cleaned = cleanupOutput(raw)

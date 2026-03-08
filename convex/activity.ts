@@ -3,6 +3,7 @@ import { Errors } from './errors'
 import {
   zAuthenticatedQuery,
 } from './functions'
+import { matchesNotificationRecipient } from './notificationTargeting'
 import { z } from 'zod/v4'
 
 function requireIdentity(identity: unknown): asserts identity {
@@ -24,6 +25,7 @@ type Activity = {
   entityName: string
   description: string
   navigationUrl: string
+  userId: string | null
   userName: string | null
   isRead: boolean
   kind: string
@@ -134,6 +136,11 @@ export const listForClient = zAuthenticatedQuery({
     requireIdentity(identity)
 
     const userId = identity.subject
+    const currentUser = await ctx.db
+      .query('users')
+      .withIndex('by_legacyId', (q) => q.eq('legacyId', userId))
+      .unique()
+    const currentUserRole = typeof currentUser?.role === 'string' ? currentUser.role : null
     const take = Math.max(1, Math.min(args.limit, 100))
     const seenIds = new Set<string>()
     const activities: Activity[] = []
@@ -148,12 +155,11 @@ export const listForClient = zAuthenticatedQuery({
       .take(500)
 
     for (const n of notifRows) {
-      const matchesClient =
-        n.recipientClientId === args.clientId ||
-        (Array.isArray(n.recipientClientIds) && n.recipientClientIds.includes(args.clientId)) ||
-        ((n.metadata as Record<string, unknown> | undefined)?.clientId === args.clientId)
-
-      if (!matchesClient) continue
+      if (!matchesNotificationRecipient(n, {
+        userId,
+        role: currentUserRole,
+        clientId: args.clientId,
+      })) continue
 
       const activityType = KIND_TO_TYPE[n.kind]
       if (!activityType) continue
@@ -176,6 +182,7 @@ export const listForClient = zAuthenticatedQuery({
         entityName: n.title,
         description: n.body,
         navigationUrl,
+        userId: typeof n.actorId === 'string' ? n.actorId : null,
         userName: n.actorName ?? null,
         isRead: Array.isArray(n.readBy) && n.readBy.includes(userId),
         kind: n.kind,
@@ -211,6 +218,7 @@ export const listForClient = zAuthenticatedQuery({
         entityName: title,
         description: `Task "${title}" was updated`,
         navigationUrl: '/dashboard/tasks',
+        userId: null,
         userName: null,
         isRead: false,
         kind: 'task.updated',
@@ -254,6 +262,7 @@ export const listForClient = zAuthenticatedQuery({
               ? message.threadRootId
               : (typeof message.parentMessageId === 'string' ? message.parentMessageId : null),
         }),
+        userId: typeof message.senderId === 'string' ? message.senderId : null,
         userName:
           typeof message.senderName === 'string' && message.senderName.trim().length > 0
             ? message.senderName

@@ -23,6 +23,7 @@ import type {
   ConversationMessagesResult,
   JsonRecord,
 } from './agentActions/types'
+import { enforceGeminiActionRateLimit } from './geminiRateLimit'
 import { geminiAI } from '../src/services/gemini'
 
 function serializeExecuteResultForStorage(executeResult: {
@@ -86,6 +87,18 @@ export const sendMessage = action({
 
       const isNewConversation = !existingConversation
       const previousMessageCount = existingConversation?.messageCount ?? 0
+      const deterministicIntent = resolveDeterministicAgentIntent(args.message, args.context)
+      const geminiRequestCount = (isNewConversation ? 1 : 0) + (deterministicIntent ? 0 : 1)
+
+      if (geminiRequestCount > 0) {
+        await enforceGeminiActionRateLimit(ctx, {
+          name: 'agentMessage',
+          userId,
+          workspaceId: args.workspaceId,
+          resourceId: convId,
+          count: geminiRequestCount,
+        })
+      }
 
       if (isNewConversation) {
         let title = fallbackTitleFromMessage(args.message)
@@ -143,8 +156,6 @@ export const sendMessage = action({
         retryable?: boolean
         userMessage?: string
       } | null = null
-
-      const deterministicIntent = resolveDeterministicAgentIntent(args.message, args.context)
 
       if (deterministicIntent?.action === 'navigate') {
         agentAction = 'navigate'

@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { Bell, CircleCheck, Folder, MessageSquare } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { Folder, CircleCheck, MessageSquare, Bell } from 'lucide-react'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import type { Activity } from '@/types/activity'
@@ -33,8 +33,7 @@ export function useActivityNotifications(activities: Activity[]) {
   const showNotificationToast = useCallback((activity: Activity, isFromOtherTab = false) => {
     if (!config.enabled || !user) return
 
-    // Don't show notifications for user's own actions (if we can detect it)
-    // This would require tracking user ID in activity data
+    if (!activity.userId || activity.userId === user.id) return
 
     let shouldNotify = false
     let message = ''
@@ -132,32 +131,43 @@ export function useActivityNotifications(activities: Activity[]) {
       }
 
       notificationTimeoutRef.current = setTimeout(() => {
-        if (newActivities.length === 1) {
+        const notifiableActivities = newActivities.filter((activity) => activity.userId && activity.userId !== user?.id)
+
+        if (notifiableActivities.length === 0) {
+          return
+        }
+
+        const firstNotifiableActivity = notifiableActivities[0]
+        if (!firstNotifiableActivity) {
+          return
+        }
+
+        if (notifiableActivities.length === 1) {
           // Single activity notification
-          showNotificationToast(newActivities[0]!)
+          showNotificationToast(firstNotifiableActivity)
 
           // Broadcast to other tabs
           if (broadcastChannelRef.current) {
             broadcastChannelRef.current.postMessage({
               type: 'NEW_ACTIVITY',
-              activity: newActivities[0]!,
+              activity: firstNotifiableActivity,
             })
           }
         } else {
           // Batch notification for multiple activities
-          const activityTypes = newActivities.map(a => a.type)
+          const activityTypes = notifiableActivities.map(a => a.type)
           let message = ''
           
           if (activityTypes.includes('project_updated') && activityTypes.includes('task_activity')) {
-            message = `${newActivities.length} new updates`
+            message = `${notifiableActivities.length} new updates`
           } else if (activityTypes.every(t => t === 'project_updated')) {
-            message = `${newActivities.length} project updates`
+            message = `${notifiableActivities.length} project updates`
           } else if (activityTypes.every(t => t === 'task_activity')) {
-            message = `${newActivities.length} tasks completed`
+            message = `${notifiableActivities.length} tasks completed`
           } else if (activityTypes.every(t => t === 'message_posted')) {
-            message = `${newActivities.length} new messages`
+            message = `${notifiableActivities.length} new messages`
           } else {
-            message = `${newActivities.length} new activities`
+            message = `${notifiableActivities.length} new activities`
           }
 
           toast.success(message, {
@@ -169,7 +179,7 @@ export function useActivityNotifications(activities: Activity[]) {
           if (broadcastChannelRef.current) {
             broadcastChannelRef.current.postMessage({
               type: 'BATCH_NOTIFICATION',
-              count: newActivities.length,
+              count: notifiableActivities.length,
               message,
             })
           }
@@ -185,7 +195,7 @@ export function useActivityNotifications(activities: Activity[]) {
         clearTimeout(notificationTimeoutRef.current)
       }
     }
-  }, [activities, selectedClient?.id, showNotificationToast])
+  }, [activities, selectedClient?.id, showNotificationToast, user?.id])
 
   return {
     config,

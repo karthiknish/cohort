@@ -3,6 +3,7 @@
 import { api } from './_generated/api'
 import { Errors } from './errors'
 import { zWorkspaceAction } from './functions'
+import { enforceGeminiActionRateLimit } from './geminiRateLimit'
 import { z } from 'zod/v4'
 
 import { GAMMA_PRESENTATION_THEMES } from '../src/lib/gamma-themes'
@@ -118,6 +119,14 @@ export const generateFromProposal = zWorkspaceAction({
     let instructions: string
     let suggestions: string | null
     let inputText: string
+
+    await enforceGeminiActionRateLimit(ctx, {
+      name: 'proposalGeneration',
+      userId: ctx.legacyId,
+      workspaceId: args.workspaceId,
+      resourceId: args.legacyId,
+      count: 2,
+    })
 
     try {
       const formData = mergeProposalForm(proposal.formData ?? null)

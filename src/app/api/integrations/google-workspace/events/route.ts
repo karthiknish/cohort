@@ -2,7 +2,13 @@ import { z } from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { BadRequestError, UnauthorizedError } from '@/lib/api-errors'
+import {
+  buildGeminiRateLimitKey,
+  formatGeminiRateLimitMessage,
+  GEMINI_RATE_LIMITS,
+} from '@/lib/geminiRateLimits'
 import { saveMeetingNotes, saveMeetingTranscript } from '@/lib/meetings-admin'
+import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
 import { GeminiAIService, resolveGeminiApiKey } from '@/services/gemini'
 
 const webhookSchema = z.unknown()
@@ -443,6 +449,21 @@ export const POST = createApiHandler(
     let notesGenerated = false
 
     try {
+      const rateLimit = await checkConvexRateLimit(
+        buildGeminiRateLimitKey({
+          name: 'meetingWebhookNotes',
+          userId: normalized.userId,
+          workspaceId: normalized.workspaceId,
+          resourceId: normalized.meetingLegacyId ?? normalized.calendarEventId,
+          scope: normalized.eventType,
+        }),
+        GEMINI_RATE_LIMITS.meetingWebhookNotes,
+      )
+
+      if (!rateLimit.allowed) {
+        throw new Error(formatGeminiRateLimitMessage(rateLimit.resetMs))
+      }
+
       const notes = await generateConciseMeetingNotes(normalized.transcriptText as string)
       if (notes) {
         await saveMeetingNotes({

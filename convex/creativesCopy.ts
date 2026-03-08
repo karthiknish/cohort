@@ -5,6 +5,7 @@ import { v } from 'convex/values'
 
 import { geminiAI } from '../src/services/gemini'
 import { withErrorHandling } from './errors'
+import { enforceGeminiActionRateLimit } from './geminiRateLimit'
 
 const providerIdValidator = v.union(
   v.literal('google'),
@@ -151,8 +152,16 @@ export const generateCopy = action({
     captions: v.array(v.string()),
     generatedAt: v.string(),
   }),
-  handler: async (_, args) =>
+  handler: async (ctx, args) =>
     withErrorHandling(async () => {
+      const identity = await ctx.auth.getUserIdentity()
+      await enforceGeminiActionRateLimit(ctx, {
+        name: 'creativeCopy',
+        userId: identity?.subject ?? null,
+        resourceId: `${args.campaignId}:${args.creativeId}`,
+        scope: args.clientId ?? null,
+      })
+
       const input: GenerateCopyInput = {
         providerId: args.providerId,
         clientId: args.clientId,
