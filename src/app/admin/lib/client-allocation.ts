@@ -30,6 +30,21 @@ function normalizeAllocationValue(value?: string | null) {
   return (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
+function pushUnmatched(
+  unmatched: UnmatchedClientAllocation[],
+  seenUnmatched: Set<string>,
+  item: UnmatchedClientAllocation
+) {
+  const normalizedPerson = normalizeAllocationValue(item.person)
+  if (!normalizedPerson) return
+
+  const dedupeKey = `${item.clientId}:${normalizedPerson}`
+  if (seenUnmatched.has(dedupeKey)) return
+
+  seenUnmatched.add(dedupeKey)
+  unmatched.push({ ...item, person: item.person.trim() })
+}
+
 export function getAssignableWorkspaceUsers<T extends AllocationUser>(users: T[]) {
   return users
     .filter((user) => user.role !== 'client' && user.status !== 'disabled' && user.status !== 'suspended')
@@ -57,6 +72,7 @@ export function buildClientAllocationSummary(users: AllocationUser[], clients: A
   const userLookup = new Map<string, AllocationUser>()
   const allocations = new Map<string, { managed: Set<string>; supporting: Set<string>; total: Set<string> }>()
   const unmatched: UnmatchedClientAllocation[] = []
+  const seenUnmatched = new Set<string>()
 
   users.forEach((user) => {
     allocations.set(user.id, { managed: new Set(), supporting: new Set(), total: new Set() })
@@ -75,7 +91,7 @@ export function buildClientAllocationSummary(users: AllocationUser[], clients: A
         allocations.get(manager.id)?.total.add(client.name)
         matchedUserIds.add(manager.id)
       } else {
-        unmatched.push({
+        pushUnmatched(unmatched, seenUnmatched, {
           clientId: client.id,
           clientName: client.name,
           person: client.accountManager?.trim() ?? '',
@@ -90,7 +106,7 @@ export function buildClientAllocationSummary(users: AllocationUser[], clients: A
 
       const user = userLookup.get(memberName)
       if (!user) {
-        unmatched.push({
+        pushUnmatched(unmatched, seenUnmatched, {
           clientId: client.id,
           clientName: client.name,
           person: member.name.trim(),

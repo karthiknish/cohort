@@ -47,4 +47,27 @@ describe('client allocation helpers', () => {
       { clientId: 'c1', clientName: 'Northwind', person: 'Legacy User', source: 'teamMember' },
     ])
   })
+
+  it('dedupes the same unmatched legacy name when it appears as manager and teammate', () => {
+    const summary = buildClientAllocationSummary(
+      [
+        { id: 'u1', name: 'Jordan Lee', email: 'jordan@test.com', role: 'admin', status: 'active' },
+      ],
+      [
+        {
+          id: 'c1',
+          name: 'Northwind',
+          accountManager: 'Admin',
+          teamMembers: [
+            { name: ' Admin ', role: 'Account Manager' },
+            { name: 'Jordan Lee', role: 'Designer' },
+          ],
+        },
+      ]
+    )
+
+    expect(summary.unmatched).toEqual([
+      { clientId: 'c1', clientName: 'Northwind', person: 'Admin', source: 'accountManager' },
+    ])
+  })
 })

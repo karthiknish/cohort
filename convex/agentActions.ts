@@ -1,10 +1,7 @@
 "use node"
 
-import { action } from './_generated/server'
 import { api } from './_generated/api'
-import { v } from 'convex/values'
-
-import { Errors, withErrorHandling } from './errors'
+import { action } from './_generated/server'
 import {
   SYSTEM_PROMPT,
   agentRequestContext,
@@ -16,6 +13,10 @@ import {
   requireIdentity,
   resolveDeterministicAgentIntent,
 } from './agentActions/helpers'
+import {
+  getProposalConversationPromptIdFromAssistantMessage,
+  isProposalConversationRequest,
+} from './agentActions/helpers/proposalConversation'
 import { safeExecuteOperation } from './agentActions/operations'
 import type {
   ConversationGetResult,
@@ -23,7 +24,10 @@ import type {
   ConversationMessagesResult,
   JsonRecord,
 } from './agentActions/types'
+import { Errors, withErrorHandling } from './errors'
 import { enforceGeminiActionRateLimit } from './geminiRateLimit'
+
+import { v } from 'convex/values'
 import { geminiAI } from '../src/services/gemini'
 
 function serializeExecuteResultForStorage(executeResult: {
@@ -87,7 +91,25 @@ export const sendMessage = action({
 
       const isNewConversation = !existingConversation
       const previousMessageCount = existingConversation?.messageCount ?? 0
-      const deterministicIntent = resolveDeterministicAgentIntent(args.message, args.context)
+      const previousAssistantMessage = [...(args.context?.previousMessages ?? [])]
+        .reverse()
+        .find((message) => message.type === 'agent')
+      const proposalPromptId = getProposalConversationPromptIdFromAssistantMessage(previousAssistantMessage?.content)
+      const deterministicIntent = proposalPromptId
+        ? {
+            action: 'execute' as const,
+            operation: 'advanceProposalConversation',
+            params: { promptId: proposalPromptId },
+            message: undefined,
+          }
+        : isProposalConversationRequest(args.message)
+          ? {
+              action: 'execute' as const,
+              operation: 'advanceProposalConversation',
+              params: {},
+              message: 'I’ll gather the proposal details with you here.',
+            }
+          : resolveDeterministicAgentIntent(args.message, args.context)
       const geminiRequestCount = (isNewConversation ? 1 : 0) + (deterministicIntent ? 0 : 1)
 
       if (geminiRequestCount > 0) {

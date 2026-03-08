@@ -1,0 +1,1 @@
+export { proposalOperationHandlers } from './proposals/index'

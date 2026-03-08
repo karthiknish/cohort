@@ -380,4 +380,81 @@ describe('safeExecuteOperation', () => {
     expect(result.success).toBe(true)
     expect(result.route).toBe('/dashboard/analytics')
   })
+
+  it('starts a conversational proposal draft and asks for the next field', async () => {
+    const runQuery = vi.fn().mockResolvedValueOnce({ items: [] })
+    const runMutation = vi.fn().mockResolvedValueOnce({ legacyId: 'proposal_42' })
+
+    const result = await safeExecuteOperation(
+      { runQuery, runMutation, runAction: vi.fn() } as never,
+      {
+        workspaceId: 'ws_1',
+        userId: 'user_1',
+        conversationId: 'agent_conv_1',
+        operation: 'advanceProposalConversation',
+        params: {},
+        rawMessage: 'make a proposal for Acme Health',
+      },
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        proposalId: 'proposal_42',
+        clientName: 'Acme Health',
+        stage: 'collecting',
+        nextPromptId: 'industry',
+      },
+      userMessage: 'Let’s build it. Great — what industry or sector should I use?',
+    })
+  })
+
+  it('finishes the conversational proposal flow and returns a deck route', async () => {
+    const runQuery = vi.fn().mockResolvedValueOnce({
+      items: [
+        {
+          legacyId: 'proposal_42',
+          agentConversationId: 'agent_conv_1',
+          clientName: 'Acme Health',
+          formData: {
+            company: { name: 'Acme Health', industry: 'Healthcare' },
+            marketing: { budget: '£5,000/month' },
+            goals: { objectives: ['Lead Generation'] },
+            scope: { services: ['SEO'] },
+            timelines: { startTime: 'ASAP' },
+            value: {
+              proposalSize: '£5,000 – £10,000',
+              engagementType: 'Ongoing monthly support',
+            },
+          },
+          lastAgentInteractionAtMs: 10,
+        },
+      ],
+    })
+    const runMutation = vi.fn().mockResolvedValueOnce('proposal_42').mockResolvedValueOnce('proposal_42')
+    const runAction = vi.fn().mockResolvedValueOnce({ status: 'ready' })
+
+    const result = await safeExecuteOperation(
+      { runQuery, runMutation, runAction } as never,
+      {
+        workspaceId: 'ws_1',
+        userId: 'user_1',
+        conversationId: 'agent_conv_1',
+        operation: 'advanceProposalConversation',
+        params: { promptId: 'additionalNotes' },
+        rawMessage: 'skip',
+      },
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      route: '/dashboard/proposals/proposal_42/deck',
+      data: {
+        proposalId: 'proposal_42',
+        status: 'ready',
+        route: '/dashboard/proposals/proposal_42/deck',
+      },
+      userMessage: 'Your proposal proposal_42 is ready. You can open it here.',
+    })
+  })
 })
