@@ -179,7 +179,6 @@ export const taskOperationHandlers: Record<string, OperationHandler> = {
       rawMessage: input.rawMessage,
       nowMs: Date.now(),
     })
-    const tags = asStringArray(input.params.tags)
     const assignedTo = asStringArray(input.params.assignedTo)
     const projectContext = await resolveProjectContextFromParams(ctx, input.workspaceId, input.params, input.context)
     const resolvedClient = projectContext.clientId
@@ -210,7 +209,6 @@ export const taskOperationHandlers: Record<string, OperationHandler> = {
       projectId: projectContext.projectId ?? null,
       projectName: projectContext.projectName ?? null,
       dueDateMs,
-      tags,
     })
 
     const unwrapped = unwrapConvexResult(rawResult)
@@ -264,9 +262,6 @@ export const taskOperationHandlers: Record<string, OperationHandler> = {
     if (dueDateMs !== null || 'dueDate' in input.params || 'dueDateMs' in input.params) {
       update.dueDateMs = dueDateMs
     }
-
-    const tags = asStringArray(input.params.tags)
-    if (Array.isArray(input.params.tags)) update.tags = tags
 
     if (Object.keys(update).length === 0) {
       return {

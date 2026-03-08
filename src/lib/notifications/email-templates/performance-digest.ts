@@ -34,7 +34,7 @@ export function performanceDigestTemplate(params: PerformanceDigestTemplateParam
 
     return wrapEmailTemplate(`
         <div style="margin-bottom: 32px;">
-            <div style="font-size: 14px; font-weight: 600; color: ${EMAIL_COLORS.button.primary}; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px;">
+            <div style="font-size: 12px; font-weight: 700; color: ${EMAIL_COLORS.subtle}; text-transform: uppercase; letter-spacing: 0.22em; margin-bottom: 10px;">
                 ${workspaceName}
             </div>
             <div style="font-size: 28px; font-weight: 800; color: ${EMAIL_COLORS.heading};">
@@ -79,7 +79,7 @@ export function performanceDigestTemplate(params: PerformanceDigestTemplateParam
         ` : ''}
 
         <div style="text-align: center;">
-            <a href="https://cohorts.app/dashboard/ads" class="button" style="background: ${EMAIL_COLORS.button.dark}; padding: 14px 40px; border-radius: 9999px;">
+            <a href="https://cohorts.app/dashboard/ads" class="button" style="padding: 14px 40px; border-radius: 9999px;">
                 Open Performance Lab
             </a>
         </div>

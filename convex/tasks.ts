@@ -43,7 +43,6 @@ const taskZ = z.object({
   projectId: z.string().nullable(),
   projectName: z.string().nullable(),
   dueDateMs: z.number().nullable(),
-  tags: z.array(z.string()),
   attachments: z.array(taskAttachmentZ),
   createdAtMs: z.number(),
   updatedAtMs: z.number(),
@@ -106,7 +105,6 @@ function mapTaskRow(row: TaskRowInput): z.infer<typeof taskZ> {
     projectId: row.projectId,
     projectName: row.projectName,
     dueDateMs: row.dueDateMs,
-    tags: row.tags,
     attachments: normalizeTaskAttachments(row.attachments),
     createdAtMs: row.createdAtMs,
     updatedAtMs: row.updatedAtMs,
@@ -311,7 +309,6 @@ export const createTask = zAuthenticatedMutation({
     projectId: z.string().nullable().optional(),
     projectName: z.string().nullable().optional(),
     dueDateMs: z.number().nullable(),
-    tags: z.array(z.string()),
     attachments: z.array(taskAttachmentZ).optional(),
   },
   returns: z.string(),
@@ -333,7 +330,6 @@ export const createTask = zAuthenticatedMutation({
       projectId: args.projectId ?? null,
       projectName: args.projectName ?? null,
       dueDateMs: args.dueDateMs,
-      tags: args.tags,
       attachments: Array.isArray(args.attachments) ? args.attachments : [],
       createdBy: ctx.legacyId,
       updatedAtMs: ctx.now,
@@ -405,7 +401,6 @@ export const patchTask = zAuthenticatedMutation({
       priority: z.string().optional(),
       assignedTo: z.array(z.string()).optional(),
       dueDateMs: z.number().nullable().optional(),
-      tags: z.array(z.string()).optional(),
     }),
   },
   returns: z.object({ ok: z.boolean() }),
@@ -430,7 +425,6 @@ export const patchTask = zAuthenticatedMutation({
       assertFutureDueDateMs(args.update.dueDateMs, ctx.now, ctx.user.regionalPreferences?.timezone ?? null)
       patch.dueDateMs = args.update.dueDateMs
     }
-    if (args.update.tags !== undefined) patch.tags = args.update.tags
 
     await ctx.db.patch(row._id, patch)
 
@@ -442,7 +436,6 @@ export const patchTask = zAuthenticatedMutation({
     if (args.update.dueDateMs !== undefined) {
       changes.push(args.update.dueDateMs ? `Due → ${new Date(args.update.dueDateMs).toLocaleDateString()}` : 'Due date removed')
     }
-    if (args.update.tags !== undefined) changes.push(`Tags → ${args.update.tags.join(', ') || 'none'}`)
 
     if (changes.length > 0) {
       const nowMs = ctx.now
@@ -497,7 +490,6 @@ export const bulkPatchTasks = zAuthenticatedMutation({
       priority: z.string().optional(),
       assignedTo: z.array(z.string()).optional(),
       dueDateMs: z.number().nullable().optional(),
-      tags: z.array(z.string()).optional(),
     }),
   },
   returns: z.object({ ok: z.boolean(), updated: z.number() }),
@@ -522,7 +514,6 @@ export const bulkPatchTasks = zAuthenticatedMutation({
       if (args.update.priority !== undefined) patch.priority = args.update.priority
       if (args.update.assignedTo !== undefined) patch.assignedTo = args.update.assignedTo
       if (args.update.dueDateMs !== undefined) patch.dueDateMs = args.update.dueDateMs
-      if (args.update.tags !== undefined) patch.tags = args.update.tags
       await ctx.db.patch(row._id, patch)
     }
 
@@ -582,7 +573,6 @@ export const upsert = zAuthenticatedMutation({
     projectId: z.string().nullable(),
     projectName: z.string().nullable(),
     dueDateMs: z.number().nullable(),
-    tags: z.array(z.string()),
     attachments: z.array(taskAttachmentZ).optional(),
     createdBy: z.string().nullable(),
     createdAtMs: z.number().optional(),
@@ -609,7 +599,6 @@ export const upsert = zAuthenticatedMutation({
       projectId: args.projectId,
       projectName: args.projectName,
       dueDateMs: args.dueDateMs,
-      tags: args.tags,
       attachments: Array.isArray(args.attachments)
         ? args.attachments
         : (existing ? normalizeTaskAttachments(existing.attachments) : []),
@@ -645,7 +634,6 @@ export const bulkUpsert = zAuthenticatedMutation({
         projectId: z.string().nullable(),
         projectName: z.string().nullable(),
         dueDateMs: z.number().nullable(),
-        tags: z.array(z.string()),
         attachments: z.array(taskAttachmentZ).optional(),
         createdBy: z.string().nullable(),
         createdAtMs: z.number(),
@@ -678,7 +666,6 @@ export const bulkUpsert = zAuthenticatedMutation({
         projectId: task.projectId,
         projectName: task.projectName,
         dueDateMs: task.dueDateMs,
-        tags: task.tags,
         attachments: Array.isArray(task.attachments)
           ? task.attachments
           : (existing ? normalizeTaskAttachments(existing.attachments) : []),
@@ -709,7 +696,6 @@ export const bulkUpdate = zAuthenticatedMutation({
       status: z.string().optional(),
       priority: z.string().optional(),
       assignedTo: z.array(z.string()).optional(),
-      tags: z.array(z.string()).optional(),
     }),
   },
   returns: z.object({ ok: z.boolean(), results: z.array(bulkTaskResultZ), tasks: z.array(taskZ) }),
@@ -729,7 +715,6 @@ export const bulkUpdate = zAuthenticatedMutation({
       projectId: string | null
       projectName: string | null
       dueDateMs: number | null
-      tags: string[]
       attachments: Array<z.infer<typeof taskAttachmentZ>>
       createdAtMs: number
       updatedAtMs: number
@@ -751,7 +736,6 @@ export const bulkUpdate = zAuthenticatedMutation({
         ...(args.update.status !== undefined ? { status: args.update.status } : {}),
         ...(args.update.priority !== undefined ? { priority: args.update.priority } : {}),
         ...(args.update.assignedTo !== undefined ? { assignedTo: args.update.assignedTo } : {}),
-        ...(args.update.tags !== undefined ? { tags: args.update.tags } : {}),
         updatedAtMs: ctx.now,
       }
 
@@ -769,7 +753,6 @@ export const bulkUpdate = zAuthenticatedMutation({
         projectId: row.projectId,
         projectName: row.projectName,
         dueDateMs: row.dueDateMs,
-        tags: args.update.tags ?? row.tags,
         attachments: normalizeTaskAttachments(row.attachments),
         createdAtMs: row.createdAtMs,
         updatedAtMs: ctx.now,

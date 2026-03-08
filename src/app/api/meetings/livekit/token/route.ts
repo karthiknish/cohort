@@ -196,6 +196,7 @@ export const POST = createApiHandler(
       metadata: {
         email: auth.email ?? null,
         meetingLegacyId: resolvedMeeting?.legacyId ?? null,
+        photoURL: typeof auth.claims?.photoURL === 'string' ? auth.claims.photoURL : null,
         role: typeof auth.claims?.role === 'string' ? auth.claims.role : null,
         workspaceId: workspace.workspaceId,
       },

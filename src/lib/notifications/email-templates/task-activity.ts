@@ -58,7 +58,7 @@ export function taskActivityTemplate(params: TaskActivityTemplateParams): string
         </div>
 
         <div style="text-align: center; margin-top: 32px;">
-            <a href="${taskUrl}" class="button" style="background: ${EMAIL_COLORS.button.dark};">
+            <a href="${taskUrl}" class="button">
                 View Task
             </a>
         </div>

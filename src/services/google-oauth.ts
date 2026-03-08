@@ -1,5 +1,5 @@
 import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
-import { persistIntegrationTokens, enqueueSyncJob, getAdIntegration } from '@/lib/ads-admin'
+import { enqueueSyncJob, getAdIntegration, persistIntegrationTokens } from '@/lib/ads-admin'
 import { getGoogleAnalyticsIntegration, persistGoogleAnalyticsTokens } from '@/lib/analytics-admin'
 
 // =============================================================================
@@ -393,20 +393,16 @@ export async function completeGoogleOAuthFlow(options: {
     throw new GoogleOAuthError('No access token received from Google')
   }
 
-  const developerToken = typeof process.env.GOOGLE_ADS_DEVELOPER_TOKEN === 'string'
-    ? process.env.GOOGLE_ADS_DEVELOPER_TOKEN.trim()
-    : ''
-  if (developerToken.length === 0) {
-    throw new GoogleOAuthError(
-      'Google Ads developer token is not configured. Set GOOGLE_ADS_DEVELOPER_TOKEN before connecting Google Ads.'
-    )
-  }
-
   const existingIntegration = await getAdIntegration({
     userId,
     providerId: 'google',
     clientId: integrationClientId ?? null,
   })
+
+  const developerTokenFromEnv = typeof process.env.GOOGLE_ADS_DEVELOPER_TOKEN === 'string'
+    ? process.env.GOOGLE_ADS_DEVELOPER_TOKEN.trim()
+    : ''
+  const developerToken = developerTokenFromEnv || existingIntegration?.developerToken || null
 
   // Persist the tokens
   await persistIntegrationTokens({

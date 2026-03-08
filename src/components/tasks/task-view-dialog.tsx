@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Calendar, Clock4, Download, FolderKanban, ListChecks, MessageCircle, Paperclip, Tag, User } from 'lucide-react'
+import { Calendar, Clock4, Download, FolderKanban, ListChecks, MessageCircle, Paperclip, User } from 'lucide-react'
 
 import type { TaskRecord } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
@@ -149,22 +149,6 @@ export function TaskViewDialog({
                       </div>
                     </div>
                   ))}
-                </section>
-
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Tags</h3>
-                  {(task.tags ?? []).length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {(task.tags ?? []).map((tag) => (
-                        <Badge key={tag} variant="outline" className={cn('h-7 rounded-full px-2.5 text-[11px] font-medium', taskPillColors.tag)}>
-                          <Tag className="mr-1.5 h-3 w-3" />
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-500">No tags added.</p>
-                  )}
                 </section>
 
                 <section className="space-y-3">

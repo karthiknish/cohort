@@ -30,6 +30,7 @@ const ClientContext = createContext<ClientContextValue | undefined>(undefined)
 
 type ConvexClientRow = {
   legacyId: string
+  workspaceId?: string | null
   name: string
   accountManager?: string | null
   teamMembers?: unknown
@@ -50,6 +51,7 @@ function isConvexClientRow(value: unknown): value is ConvexClientRow {
 function mapClients(rows: unknown[]): ClientRecord[] {
   const list = rows.filter(isConvexClientRow).map((row) => ({
     id: row.legacyId,
+    workspaceId: typeof row.workspaceId === 'string' ? row.workspaceId : null,
     name: row.name,
     accountManager: typeof row.accountManager === 'string' ? row.accountManager : '',
     teamMembers: Array.isArray(row.teamMembers) ? row.teamMembers : [],
@@ -306,6 +308,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
     const created: ClientRecord = {
       id: res.legacyId,
+      workspaceId,
       name,
       accountManager,
       teamMembers,
@@ -322,8 +325,11 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Workspace is required to remove a client')
     }
 
+    const targetClient = clientsRef.current.find((client) => client.id === clientId)
+    const targetWorkspaceId = targetClient?.workspaceId ?? workspaceId
+
     await convexSoftDeleteClient({
-      workspaceId,
+      workspaceId: targetWorkspaceId,
       legacyId: clientId,
       deletedAtMs: Date.now(),
     })

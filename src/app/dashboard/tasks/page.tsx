@@ -257,7 +257,6 @@ export default function TasksPage() {
       Client: task.client || 'Internal',
       'Assigned To': (task.assignedTo ?? []).join(', '),
       'Due Date': task.dueDate ? formatDate(task.dueDate) : 'No due date',
-      Tags: (task.tags ?? []).join(', '),
       Description: task.description || '',
     }))
 

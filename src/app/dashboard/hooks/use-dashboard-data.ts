@@ -138,7 +138,6 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
                 projectId: typeof row.projectId === 'string' ? row.projectId : null,
                 projectName: typeof row.projectName === 'string' ? row.projectName : null,
                 dueDate: typeof row.dueDateMs === 'number' ? new Date(row.dueDateMs).toISOString() : null,
-                tags: Array.isArray(row.tags) ? row.tags : [],
                 createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
                 updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
                 deletedAt: typeof row.deletedAtMs === 'number' ? new Date(row.deletedAtMs).toISOString() : null,

@@ -227,19 +227,6 @@ export function CreateTaskSheet({
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="task-tags">Tags</Label>
-              <Input
-                id="task-tags"
-                value={formState.tags}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, tags: event.target.value }))
-                }
-                placeholder="Separate tags with commas"
-                disabled={creating}
-              />
-            </div>
-
-            <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <Label>Attachments</Label>
                 <Button
@@ -476,18 +463,6 @@ export function EditTaskSheet({
                   />
                 </PopoverContent>
               </Popover>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-task-tags">Tags</Label>
-              <Input
-                id="edit-task-tags"
-                value={formState.tags}
-                onChange={(event) =>
-                  setFormState((prev) => ({ ...prev, tags: event.target.value }))
-                }
-                placeholder="e.g. urgent, marketing (comma separated)"
-                disabled={updating}
-              />
             </div>
             {updateError && <p className="text-sm text-destructive">{updateError}</p>}
 

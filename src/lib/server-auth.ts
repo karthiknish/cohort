@@ -40,6 +40,7 @@ type BetterAuthSessionUser = {
   sub?: string
   email?: string | null
   name?: string | null
+  image?: string | null
   role?: string | null
   status?: string | null
   agencyId?: string | null
@@ -165,6 +166,7 @@ function buildAuthResultFromBetterAuthSession(
 
   const email = typeof user.email === 'string' ? user.email.toLowerCase() : null
   const name = typeof user.name === 'string' ? user.name : null
+  const photoURL = typeof user.image === 'string' && user.image.trim().length > 0 ? user.image.trim() : null
 
   const role =
     (typeof user.role === 'string' && user.role.length > 0 ? user.role : undefined)
@@ -189,6 +191,7 @@ function buildAuthResultFromBetterAuthSession(
     name,
     claims: {
       provider: 'better-auth',
+      photoURL,
       role,
       status,
       agencyId,

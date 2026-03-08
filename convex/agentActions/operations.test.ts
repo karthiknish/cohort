@@ -69,7 +69,6 @@ describe('safeExecuteOperation', () => {
             projectId: null,
             projectName: null,
             dueDateMs: nowMs + 86_400_000,
-            tags: [],
             attachments: [],
             createdAtMs: nowMs,
             updatedAtMs: nowMs,
@@ -86,7 +85,6 @@ describe('safeExecuteOperation', () => {
             projectId: null,
             projectName: null,
             dueDateMs: null,
-            tags: [],
             attachments: [],
             createdAtMs: nowMs,
             updatedAtMs: nowMs,
@@ -295,7 +293,6 @@ describe('safeExecuteOperation', () => {
       projectId: 'project_42',
       projectName: 'Website Refresh',
       dueDateMs: null,
-      tags: [],
     })
 
     expect(result).toMatchObject({

@@ -115,7 +115,7 @@ export const workspaceTables = {
     projectId: v.union(v.string(), v.null()),
     projectName: v.union(v.string(), v.null()),
     dueDateMs: v.union(v.number(), v.null()),
-    tags: v.array(v.string()),
+    tags: v.optional(v.array(v.string())),
     attachments: v.optional(
       v.array(
         v.object({

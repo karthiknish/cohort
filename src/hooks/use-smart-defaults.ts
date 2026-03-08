@@ -41,9 +41,7 @@ export function useSmartDefaults(): SmartDefaults {
       
       // Calculate due date (7 days from now)
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      
-      // Default empty arrays/collections
-      tags: [],
+
       description: '',
     }
 
@@ -98,7 +96,6 @@ export function createTaskWithDefaults(
     projectId: overrides.projectId || smartDefaults.projectId || null,
     projectName: overrides.projectName || smartDefaults.projectName || null,
     dueDate: overrides.dueDate || smartDefaults.dueDate || null,
-    tags: overrides.tags || smartDefaults.tags || [],
     createdAt: now,
     updatedAt: now,
   }

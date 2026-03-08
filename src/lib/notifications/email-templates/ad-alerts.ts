@@ -66,7 +66,7 @@ export function adAlertsTemplate(params: AdAlertsTemplateParams): string {
             <div style="font-size: 14px; color: ${EMAIL_COLORS.body}; margin-bottom: 16px;">
                 View your performance dashboard for detailed analysis and real-time metrics.
             </div>
-            <a href="https://cohorts.app/dashboard/ads" class="button" style="margin-top: 0; background: ${EMAIL_COLORS.button.dark};">
+            <a href="https://cohorts.app/dashboard/ads" class="button" style="margin-top: 0;">
                 View Dashboard
             </a>
         </div>

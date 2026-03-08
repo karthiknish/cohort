@@ -35,7 +35,6 @@ export type StoredTask = {
   projectId?: unknown
   projectName?: unknown
   dueDate?: unknown
-  tags?: unknown
   createdAt?: unknown
   updatedAt?: unknown
   deletedAt?: unknown

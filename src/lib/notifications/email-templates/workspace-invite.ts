@@ -39,7 +39,7 @@ export function workspaceInviteTemplate(params: WorkspaceInviteTemplateParams): 
             <p style="font-size: 15px; color: ${EMAIL_COLORS.body}; margin-bottom: 24px;">
                 Click the button below to accept your invitation and start collaborating.
             </p>
-            <a href="${inviteUrl}" class="button" style="background: ${EMAIL_COLORS.button.primary}; font-size: 16px; padding: 14px 32px; box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.2);">
+            <a href="${inviteUrl}" class="button" style="font-size: 16px; padding: 14px 32px;">
                 Accept Invitation
             </a>
         </div>

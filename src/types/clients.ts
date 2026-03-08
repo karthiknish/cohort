@@ -6,6 +6,7 @@ export type ClientTeamMember = {
 
 export type ClientRecord = {
   id: string
+  workspaceId?: string | null
   name: string
   accountManager: string
   teamMembers: ClientTeamMember[]

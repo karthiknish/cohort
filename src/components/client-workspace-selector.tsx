@@ -31,8 +31,19 @@ type ClientWorkspaceSelectorProps = {
   className?: string
 }
 
+function normalizeMentionInputValue(input: string): string {
+  return input.replace(/@\[(.*?)\]/g, '$1').trim()
+}
+
+function parseSinglePerson(input: string): string {
+  return normalizeMentionInputValue(input)
+    .split(',')
+    .map((value) => value.trim())
+    .find((value) => value.length > 0) ?? ''
+}
+
 function parseTeamMembers(input: string): ClientTeamMember[] {
-  return input
+  return normalizeMentionInputValue(input)
     .split(',')
     .map((member) => member.trim())
     .filter(Boolean)
@@ -99,17 +110,29 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
 
   const handleCreateClient = async () => {
     const name = newClientName.trim()
-    const accountManager = accountManagerMentions[0]?.name ?? ''
+    const accountManager = accountManagerMentions[0]?.name ?? parseSinglePerson(accountManagerInput)
 
     if (!name || !accountManager) {
       setErrorMessage('Client name and account manager are required')
       return
     }
 
-    const teamMembers: ClientTeamMember[] = teamMentions.map((user) => ({
+    const mentionTeamMembers: ClientTeamMember[] = teamMentions.map((user) => ({
       name: user.name,
       role: user.role ?? 'Contributor',
     }))
+    const typedTeamMembers = parseTeamMembers(teamInput)
+    const teamMembers = Array.from(
+      new Map(
+        [...mentionTeamMembers, ...typedTeamMembers].map((member) => [
+          member.name.trim().toLowerCase(),
+          {
+            name: member.name.trim(),
+            role: member.role?.trim() || 'Contributor',
+          },
+        ])
+      ).values()
+    )
 
     setSaving(true)
     setErrorMessage(null)
@@ -268,7 +291,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                     setAccountManagerMentions(mentions.slice(0, 1))
                   }}
                   users={mentionableUsers}
-                  placeholder="Type @ to search users..."
+                  placeholder="Type a name or use @ to pick a user..."
                   disabled={saving}
                   singleSelect
                 />
@@ -280,7 +303,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                     setTeamMentions(mentions)
                   }}
                   users={mentionableUsers}
-                  placeholder="Type @ to add team members..."
+                  placeholder="Type names separated by commas, or use @ to add users..."
                   disabled={saving}
                   allowMultiple
                   maxMentions={10}

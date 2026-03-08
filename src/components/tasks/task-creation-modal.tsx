@@ -118,7 +118,6 @@ export function TaskCreationModal({
       client: selectedClient?.name || undefined,
       projectId: formData.projectId || undefined,
       projectName: formData.projectName || undefined,
-      tags: [] as string[],
     }
 
     if (!user?.agencyId) {
@@ -155,7 +154,6 @@ export function TaskCreationModal({
           projectId: payload.projectId ?? null,
           projectName: payload.projectName ?? null,
           dueDateMs: payload.dueDate ? Date.parse(payload.dueDate) : null,
-          tags: payload.tags,
           attachments,
         }).then((result) => ({ attachments, result }))
       })
@@ -185,7 +183,6 @@ export function TaskCreationModal({
           projectId: payload.projectId ?? null,
           projectName: payload.projectName ?? null,
           dueDate: payload.dueDate ?? null,
-          tags: payload.tags,
           attachments,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),

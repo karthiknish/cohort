@@ -386,23 +386,6 @@ function TaskCardComponent({
             </div>
           </div>
         </div>
-
-        {(task.tags ?? []).length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {(task.tags ?? []).slice(0, 3).map((tag) => (
-              <Badge
-                key={tag}
-                variant="outline"
-                className={cn('h-6 rounded-full px-2 text-[10px] font-medium', taskPillColors.tag)}
-              >
-                #{highlightMatch(tag, searchQuery)}
-              </Badge>
-            ))}
-            {(task.tags ?? []).length > 3 && (
-              <span className="text-[10px] text-slate-500">+{(task.tags ?? []).length - 3}</span>
-            )}
-          </div>
-        )}
       </div>
     </div>
   )

@@ -18,8 +18,8 @@ When the user wants to CREATE or UPDATE data, use:
   Params: { title: string, priority?: "low"|"medium"|"high", description?: string, dueDate?: string, clientId?: string, clientName?: string }
   Example: "remind me to review proposals" → {"action": "execute", "operation": "createTask", "params": {"title": "Review proposals"}, "message": "Done! Task created."}
 
-- **updateTask**: Update a task status, priority, title, description, due date, or tags
-  Params: { taskId: string, status?: string, priority?: string, title?: string, description?: string, dueDate?: string, tags?: string[] }
+- **updateTask**: Update a task status, priority, title, description, or due date
+  Params: { taskId: string, status?: string, priority?: string, title?: string, description?: string, dueDate?: string }
 
 - **summarizeClientTasks**: List or summarize tasks for a specific client
   Params: { clientReference?: string, clientId?: string, mode?: "list"|"summary" }

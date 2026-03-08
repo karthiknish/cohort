@@ -67,7 +67,6 @@ export type TaskRecord = {
   projectId?: string | null
   projectName?: string | null
   dueDate?: string | null
-  tags: string[]
   attachments?: TaskAttachment[]
   createdAt?: string | null
   updatedAt?: string | null

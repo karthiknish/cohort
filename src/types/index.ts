@@ -63,7 +63,6 @@ export interface Task {
   completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
-  tags: string[];
 }
 
 export interface Proposal {

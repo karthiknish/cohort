@@ -154,14 +154,6 @@ function PrintableTaskCard({ task }: { task: TaskRecord }) {
             {task.client && <span>🏢 {task.client}</span>}
           </div>
 
-          {(task.tags ?? []).length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {(task.tags ?? []).map(tag => (
-                <span key={tag} className="tasks-print-tag">#{tag}</span>
-              ))}
-            </div>
-          )}
-
           <div className="tasks-print-indicators mt-2">
             {(task.commentCount ?? 0) > 0 && <span>💬 {task.commentCount}</span>}
             {((task.timeSpentMinutes ?? 0) ?? 0) > 0 && <span>⏱ {Math.floor((task.timeSpentMinutes ?? 0) / 60)}h {(task.timeSpentMinutes ?? 0) % 60}m</span>}
@@ -230,4 +222,3 @@ export function PrintTasksButton({ tasks, title }: { tasks: TaskRecord[], title?
     </Button>
   )
 }
-

@@ -12,13 +12,13 @@ import { decodeTimestampIdCursor, encodeTimestampIdCursor } from '@/lib/paginati
 import { getPreviewCollaborationMessages } from '@/lib/preview-data'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
-import type { CollaborationChannelType } from '@/types/collaboration'
-import type { CollaborationMessageFormat } from '@/types/collaboration'
 
 import type { Channel } from '../types'
 import { extractMentionsFromContent } from '../utils/mentions'
 import type { ChannelSummary, MessagesByChannelState, SendMessageOptions } from './types'
+import { mapCollaborationMessageRow, previewPendingAttachmentToCollaborationAttachment } from './message-mappers'
 import { useRealtimeMessages, useRealtimeTyping } from './use-realtime'
+import { useChannelMessageSearch } from './use-channel-message-search'
 import { useThreads } from './use-threads'
 import { useTyping } from './use-typing'
 import { useMessageActions } from './use-message-actions'
@@ -36,36 +36,6 @@ interface UseMessagesDataOptions {
   uploading: boolean
   clearAttachments: () => void
   uploadAttachments: (attachments: PendingAttachment[]) => Promise<CollaborationAttachment[]>
-}
-
-function toStringArray(value: unknown): string[] | undefined {
-  if (!Array.isArray(value) || value.length === 0) return undefined
-  const normalized = value.filter((entry): entry is string => typeof entry === 'string')
-  return normalized.length > 0 ? normalized : undefined
-}
-
-function toSharedPlatforms(value: unknown): Array<'email'> | undefined {
-  if (!Array.isArray(value) || value.length === 0) return undefined
-  const normalized = value.filter((entry): entry is 'email' => entry === 'email')
-  return normalized.length > 0 ? normalized : undefined
-}
-
-function toChannelType(value: unknown, fallback: CollaborationChannelType): CollaborationChannelType {
-  if (value === 'client' || value === 'team' || value === 'project') {
-    return value
-  }
-  return fallback
-}
-
-function previewPendingAttachmentToCollaborationAttachment(
-  attachment: PendingAttachment,
-): CollaborationAttachment {
-  return {
-    name: attachment.name,
-    url: '#',
-    type: attachment.mimeType,
-    size: attachment.sizeLabel,
-  }
 }
 
 export function useMessagesData({
@@ -97,10 +67,6 @@ export function useMessagesData({
   const [messageInput, setMessageInputState] = useState('')
   const [sending, setSending] = useState(false)
   const [messageSearchQuery, setMessageSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<CollaborationMessage[]>([])
-  const [searchHighlights, setSearchHighlights] = useState<string[]>([])
-  const [searchingMessages, setSearchingMessages] = useState(false)
-  const [searchError, setSearchError] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const lastMarkedMessageByChannelRef = useRef<Record<string, string>>({})
@@ -135,7 +101,6 @@ export function useMessagesData({
 
     return Array.from(ids).slice(0, 200)
   }, [channelMessages])
-  const normalizedMessageSearch = messageSearchQuery.trim()
   const selectedChannelIdArg = selectedChannel?.isCustom ? selectedChannel.id : null
 
   const threadUnreadCountsResult = useQuery(
@@ -201,15 +166,21 @@ export function useMessagesData({
     [channelParticipants]
   )
 
-  const visibleMessages = useMemo(() => {
-    if (normalizedMessageSearch) {
-      if (searchResults.length > 0) return searchResults
-      if (searchingMessages) return searchResults
-      if (searchError) return []
-      return searchResults
-    }
-    return channelMessages
-  }, [channelMessages, normalizedMessageSearch, searchError, searchResults, searchingMessages])
+  const {
+    normalizedMessageSearch,
+    visibleMessages,
+    searchingMessages,
+    searchHighlights,
+    searchError,
+  } = useChannelMessageSearch({
+    convex,
+    workspaceId,
+    selectedChannel,
+    channelMessages,
+    messagesByChannel,
+    messageSearchQuery,
+    isPreviewMode,
+  })
 
   const isSearchActive = Boolean(normalizedMessageSearch)
   const activeMessagesError = isSearchActive ? searchError : messagesError
@@ -257,187 +228,6 @@ export function useMessagesData({
       ]),
     )
   }, [threadUnreadCountsResult])
-
-  const parseSearchQuery = useCallback((input: string) => {
-    const tokens = input.split(/\s+/).filter(Boolean)
-    const terms: string[] = []
-    let sender: string | null = null
-    let attachment: string | null = null
-    let mention: string | null = null
-    let start: string | null = null
-    let end: string | null = null
-
-    tokens.forEach((token) => {
-      const lower = token.toLowerCase()
-      if (lower.startsWith('from:')) {
-        sender = token.slice(5)
-      } else if (lower.startsWith('attachment:')) {
-        attachment = token.slice(11)
-      } else if (lower.startsWith('mention:')) {
-        mention = token.slice(8)
-      } else if (lower.startsWith('before:')) {
-        end = token.slice(7)
-      } else if (lower.startsWith('after:')) {
-        start = token.slice(6)
-      } else {
-        terms.push(token)
-      }
-    })
-
-    const highlights = [...terms]
-    if (sender) highlights.push(sender)
-    if (attachment) highlights.push(attachment)
-    if (mention) highlights.push(mention)
-
-    const normalizeField = (value: string | null): string | null => {
-      if (!value) return null
-      const trimmed = value.trim()
-      return trimmed.length > 0 ? trimmed : null
-    }
-
-    return {
-      q: terms.join(' ').trim(),
-      sender: normalizeField(sender),
-      attachment: normalizeField(attachment),
-      mention: normalizeField(mention),
-      start: normalizeField(start),
-      end: normalizeField(end),
-      highlights: highlights.filter(Boolean),
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!selectedChannel || !normalizedMessageSearch) {
-      setSearchResults([])
-      setSearchHighlights([])
-      setSearchError(null)
-      setSearchingMessages(false)
-      return
-    }
-
-    setSearchingMessages(true)
-    setSearchError(null)
-
-    const parsed = parseSearchQuery(normalizedMessageSearch)
-
-    if (isPreviewMode) {
-      const startMs = parsed.start ? Date.parse(parsed.start) : NaN
-      const endMs = parsed.end ? Date.parse(parsed.end) : NaN
-      const channelMessagesForSearch = messagesByChannel[selectedChannel.id] ?? []
-
-      const results = channelMessagesForSearch
-        .filter((message) => {
-          const createdAtMs = message.createdAt ? Date.parse(message.createdAt) : NaN
-          const text = `${message.content} ${message.senderName}`.toLowerCase()
-          const matchesQuery = !parsed.q || parsed.q.toLowerCase().split(/\s+/).every((term) => text.includes(term))
-          const matchesSender = !parsed.sender || message.senderName.toLowerCase().includes(parsed.sender.toLowerCase())
-          const attachmentSearch = parsed.attachment?.toLowerCase() ?? null
-          const matchesAttachment =
-            !attachmentSearch ||
-            (message.attachments ?? []).some((attachment) =>
-              attachment.name.toLowerCase().includes(attachmentSearch)
-            )
-          const mentionSearch = parsed.mention?.toLowerCase() ?? null
-          const matchesMention =
-            !mentionSearch ||
-            (message.mentions ?? []).some((mention) => {
-              return mention.name.toLowerCase().includes(mentionSearch) || mention.slug.toLowerCase().includes(mentionSearch)
-            })
-          const matchesStart = !Number.isFinite(startMs) || (Number.isFinite(createdAtMs) && createdAtMs >= startMs)
-          const matchesEnd = !Number.isFinite(endMs) || (Number.isFinite(createdAtMs) && createdAtMs <= endMs)
-
-          return matchesQuery && matchesSender && matchesAttachment && matchesMention && matchesStart && matchesEnd
-        })
-        .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
-
-      setSearchResults(results)
-      setSearchHighlights(parsed.highlights)
-      setSearchError(null)
-      setSearchingMessages(false)
-      return
-    }
-
-    const startMs = parsed.start ? Date.parse(parsed.start) : NaN
-    const endMs = parsed.end ? Date.parse(parsed.end) : NaN
-
-    void convex
-      .query(collaborationApi.searchChannel, {
-        workspaceId: String(workspaceId),
-        channelId: selectedChannel.isCustom ? selectedChannel.id : null,
-        channelType: selectedChannel.type,
-        clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
-        projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
-        q: parsed.q || null,
-        sender: parsed.sender ?? null,
-        attachment: parsed.attachment ?? null,
-        mention: parsed.mention ?? null,
-        startMs: Number.isFinite(startMs) ? startMs : null,
-        endMs: Number.isFinite(endMs) ? endMs : null,
-        limit: 200,
-      })
-      .then((payload: { rows?: unknown[]; highlights?: unknown[] }) => {
-        const rows = Array.isArray(payload?.rows) ? payload.rows : []
-        const highlights = Array.isArray(payload?.highlights)
-          ? payload.highlights.filter((entry): entry is string => typeof entry === 'string')
-          : parsed.highlights
-
-        const mapped: CollaborationMessage[] = rows
-          .map((row: unknown) => {
-            const item = (row ?? {}) as Record<string, unknown>
-            return {
-            id: String(item.legacyId ?? ''),
-            channelType: toChannelType(item.channelType, 'team'),
-            clientId: typeof item.clientId === 'string' ? item.clientId : null,
-            projectId: typeof item.projectId === 'string' ? item.projectId : null,
-            senderId: typeof item.senderId === 'string' ? item.senderId : null,
-            senderName: typeof item.senderName === 'string' ? item.senderName : 'Unknown teammate',
-            senderRole: typeof item.senderRole === 'string' ? item.senderRole : null,
-            content: Boolean(item.deleted || item.deletedAtMs) ? '' : String(item.content ?? ''),
-            createdAt: typeof item.createdAtMs === 'number' ? new Date(item.createdAtMs).toISOString() : null,
-            updatedAt: typeof item.updatedAtMs === 'number' ? new Date(item.updatedAtMs).toISOString() : null,
-            isEdited: Boolean(item.updatedAtMs && item.createdAtMs && item.updatedAtMs !== item.createdAtMs),
-            deletedAt: typeof item.deletedAtMs === 'number' ? new Date(item.deletedAtMs).toISOString() : null,
-            deletedBy: typeof item.deletedBy === 'string' ? item.deletedBy : null,
-            isDeleted: Boolean(item.deleted || item.deletedAtMs),
-            attachments:
-              Array.isArray(item.attachments) && item.attachments.length > 0
-                ? (item.attachments as CollaborationAttachment[])
-                : undefined,
-            format: (item.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
-            mentions: Array.isArray(item.mentions) && item.mentions.length > 0 ? item.mentions : undefined,
-            reactions: Array.isArray(item.reactions) && item.reactions.length > 0 ? item.reactions : undefined,
-            readBy: toStringArray(item.readBy),
-            deliveredTo: toStringArray(item.deliveredTo),
-            isPinned: Boolean(item.isPinned),
-            pinnedAt: typeof item.pinnedAtMs === 'number' ? new Date(item.pinnedAtMs).toISOString() : null,
-            pinnedBy: typeof item.pinnedBy === 'string' ? item.pinnedBy : null,
-            sharedTo: toSharedPlatforms(item.sharedTo),
-            parentMessageId: typeof item.parentMessageId === 'string' ? item.parentMessageId : null,
-            threadRootId: typeof item.threadRootId === 'string' ? item.threadRootId : null,
-            threadReplyCount: typeof item.threadReplyCount === 'number' ? item.threadReplyCount : undefined,
-            threadLastReplyAt:
-              typeof item.threadLastReplyAtMs === 'number' ? new Date(item.threadLastReplyAtMs).toISOString() : null,
-          }
-          })
-          .filter((m) => m.id)
-          .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime())
-
-        setSearchResults(mapped)
-        setSearchHighlights(highlights)
-        setSearchError(null)
-      })
-      .catch((error: unknown) => {
-        logError(error, 'useCollaborationData:searchChannel')
-        setSearchError(asErrorMessage(error))
-        setSearchResults([])
-      })
-      .finally(() => {
-        setSearchingMessages(false)
-      })
-
-    return
-    // eslint_disable-next-line react-hooks/exhaustive-deps
-  }, [convex, isPreviewMode, messagesByChannel, normalizedMessageSearch, parseSearchQuery, selectedChannel, workspaceId])
 
   const channelSummaries = useMemo<Map<string, ChannelSummary>>(() => {
     const result = new Map<string, ChannelSummary>()
@@ -742,6 +532,7 @@ export function useMessagesData({
       try {
         await stopTyping()
 
+        const senderDetails = resolveSenderDetails()
         const uploadedAttachments = isPreviewMode
           ? pendingAttachments.map(previewPendingAttachmentToCollaborationAttachment)
           : await uploadAttachments(pendingAttachments)
@@ -771,8 +562,8 @@ export function useMessagesData({
             clientId: selectedChannel.clientId ?? null,
             projectId: selectedChannel.projectId ?? null,
             senderId: String(currentUserId),
-            senderName: resolveSenderDetails().senderName,
-            senderRole: resolveSenderDetails().senderRole,
+            senderName: senderDetails.senderName,
+            senderRole: senderDetails.senderRole,
             content: trimmedContent,
             createdAt: new Date().toISOString(),
             updatedAt: null,
@@ -833,15 +624,15 @@ export function useMessagesData({
           clientId: selectedChannel.clientId ?? null,
           projectId: selectedChannel.projectId ?? null,
           senderId: String(currentUserId),
-          senderName: resolveSenderDetails().senderName,
-          senderRole: resolveSenderDetails().senderRole,
+          senderName: senderDetails.senderName,
+          senderRole: senderDetails.senderRole,
           content: trimmedContent,
           attachments: (uploadedAttachments as CollaborationAttachment[]) ?? [],
           format: 'markdown',
           mentions: mentionMetadata,
           parentMessageId: options?.parentMessageId ?? null,
           threadRootId: resolvedThreadRootId,
-          isThreadRoot: options?.parentMessageId ? false : true,
+          isThreadRoot: !options?.parentMessageId,
         })
 
         const createdRow = await convex.query(collaborationApi.getByLegacyId, {
@@ -849,59 +640,27 @@ export function useMessagesData({
           legacyId: messageId,
         })
 
-        const createdMessage: CollaborationMessage = createdRow
-          ? {
-              id: String(createdRow?.legacyId ?? messageId),
-              channelType: typeof createdRow?.channelType === 'string' ? createdRow.channelType : selectedChannel.type,
-              clientId: typeof createdRow?.clientId === 'string' ? createdRow.clientId : selectedChannel.clientId ?? null,
-              projectId: typeof createdRow?.projectId === 'string' ? createdRow.projectId : selectedChannel.projectId ?? null,
-              senderId: typeof createdRow?.senderId === 'string' ? createdRow.senderId : String(currentUserId),
-              senderName: typeof createdRow?.senderName === 'string' ? createdRow.senderName : resolveSenderDetails().senderName,
-              senderRole: typeof createdRow?.senderRole === 'string' ? createdRow.senderRole : resolveSenderDetails().senderRole,
-              content: Boolean(createdRow?.deleted || createdRow?.deletedAtMs)
-                ? ''
-                : String(createdRow?.content ?? ''),
-              createdAt:
-                typeof createdRow?.createdAtMs === 'number'
-                  ? new Date(createdRow.createdAtMs).toISOString()
-                  : new Date().toISOString(),
-              updatedAt: typeof createdRow?.updatedAtMs === 'number' ? new Date(createdRow.updatedAtMs).toISOString() : null,
-              isEdited: Boolean(createdRow?.updatedAtMs && createdRow?.createdAtMs && createdRow.updatedAtMs !== createdRow.createdAtMs),
-              deletedAt: typeof createdRow?.deletedAtMs === 'number' ? new Date(createdRow.deletedAtMs).toISOString() : null,
-              deletedBy: typeof createdRow?.deletedBy === 'string' ? createdRow.deletedBy : null,
-              isDeleted: Boolean(createdRow?.deleted || createdRow?.deletedAtMs),
-              attachments:
-                Array.isArray(createdRow?.attachments) && createdRow.attachments.length > 0
-                  ? createdRow.attachments
-                  : undefined,
-              format: createdRow?.format === 'plaintext' ? 'plaintext' : 'markdown',
-              mentions: Array.isArray(createdRow?.mentions) && createdRow.mentions.length > 0 ? createdRow.mentions : undefined,
-              reactions: Array.isArray(createdRow?.reactions) && createdRow.reactions.length > 0 ? createdRow.reactions : undefined,
-              readBy: toStringArray(createdRow?.readBy),
-              deliveredTo: toStringArray(createdRow?.deliveredTo),
-              isPinned: Boolean(createdRow?.isPinned),
-              pinnedAt: typeof createdRow?.pinnedAtMs === 'number' ? new Date(createdRow.pinnedAtMs).toISOString() : null,
-              pinnedBy: typeof createdRow?.pinnedBy === 'string' ? createdRow.pinnedBy : null,
-              sharedTo: toSharedPlatforms(createdRow?.sharedTo),
-              parentMessageId: typeof createdRow?.parentMessageId === 'string' ? createdRow.parentMessageId : null,
-              threadRootId:
-                typeof createdRow?.threadRootId === 'string'
-                  ? createdRow.threadRootId
-                  : resolvedThreadRootId,
-              threadReplyCount: typeof createdRow?.threadReplyCount === 'number' ? createdRow.threadReplyCount : undefined,
-              threadLastReplyAt:
-                typeof createdRow?.threadLastReplyAtMs === 'number'
-                  ? new Date(createdRow.threadLastReplyAtMs).toISOString()
-                  : null,
-            }
-          : {
+        const createdMessage = createdRow
+          ? mapCollaborationMessageRow(createdRow, {
+              fallbackChannelType: selectedChannel.type,
+              fallbackClientId: selectedChannel.clientId ?? null,
+              fallbackProjectId: selectedChannel.projectId ?? null,
+              fallbackSenderId: String(currentUserId),
+              fallbackSenderName: senderDetails.senderName,
+              fallbackSenderRole: senderDetails.senderRole,
+              fallbackThreadRootId: resolvedThreadRootId,
+              fallbackCreatedAtIso: new Date().toISOString(),
+            })
+          : null
+
+        const safeCreatedMessage: CollaborationMessage = createdMessage ?? {
               id: messageId,
               channelType: selectedChannel.type,
               clientId: selectedChannel.clientId ?? null,
               projectId: selectedChannel.projectId ?? null,
               senderId: String(currentUserId),
-              senderName: resolveSenderDetails().senderName,
-              senderRole: resolveSenderDetails().senderRole,
+              senderName: senderDetails.senderName,
+              senderRole: senderDetails.senderRole,
               content: trimmedContent,
               createdAt: new Date().toISOString(),
               updatedAt: null,
@@ -924,13 +683,13 @@ export function useMessagesData({
             }
 
         mutateChannelMessages(channelId, (messages) => {
-          if (messages.some((m) => m.id === createdMessage.id)) return messages
-          return [...messages, createdMessage]
+          if (messages.some((m) => m.id === safeCreatedMessage.id)) return messages
+          return [...messages, safeCreatedMessage]
         })
 
         // Also add to thread replies if this is a reply
         if (resolvedThreadRootId) {
-          addThreadReplyToState(resolvedThreadRootId, createdMessage)
+          addThreadReplyToState(resolvedThreadRootId, safeCreatedMessage)
         }
 
         clearAttachments()
@@ -938,7 +697,7 @@ export function useMessagesData({
 
         // Send to external platforms based on notification preferences
         if (workspaceId) {
-          void sendToExternalPlatforms(createdMessage, workspaceId)
+          void sendToExternalPlatforms(safeCreatedMessage, workspaceId)
         }
 
         toast({ title: 'Message sent', description: 'Your message is live for the team.' })
@@ -1008,44 +767,8 @@ export function useMessagesData({
         const pageRows = hasMore ? rows.slice(0, 50) : rows
 
         const mapped: CollaborationMessage[] = pageRows
-          .map((row: unknown) => {
-            const item = (row ?? {}) as Record<string, unknown>
-            return {
-            id: String(item.legacyId ?? ''),
-            channelType: toChannelType(item.channelType, channel.type),
-            clientId: typeof item.clientId === 'string' ? item.clientId : null,
-            projectId: typeof item.projectId === 'string' ? item.projectId : null,
-            senderId: typeof item.senderId === 'string' ? item.senderId : null,
-            senderName: typeof item.senderName === 'string' ? item.senderName : 'Unknown teammate',
-            senderRole: typeof item.senderRole === 'string' ? item.senderRole : null,
-            content: Boolean(item.deleted || item.deletedAtMs) ? '' : String(item.content ?? ''),
-            createdAt: typeof item.createdAtMs === 'number' ? new Date(item.createdAtMs).toISOString() : null,
-            updatedAt: typeof item.updatedAtMs === 'number' ? new Date(item.updatedAtMs).toISOString() : null,
-            isEdited: Boolean(item.updatedAtMs && item.createdAtMs && item.updatedAtMs !== item.createdAtMs),
-            deletedAt: typeof item.deletedAtMs === 'number' ? new Date(item.deletedAtMs).toISOString() : null,
-            deletedBy: typeof item.deletedBy === 'string' ? item.deletedBy : null,
-            isDeleted: Boolean(item.deleted || item.deletedAtMs),
-            attachments:
-              Array.isArray(item.attachments) && item.attachments.length > 0
-                ? (item.attachments as CollaborationAttachment[])
-                : undefined,
-            format: (item.format === 'plaintext' ? 'plaintext' : 'markdown') as CollaborationMessageFormat,
-            mentions: Array.isArray(item.mentions) && item.mentions.length > 0 ? item.mentions : undefined,
-            reactions: Array.isArray(item.reactions) && item.reactions.length > 0 ? item.reactions : undefined,
-            readBy: toStringArray(item.readBy),
-            deliveredTo: toStringArray(item.deliveredTo),
-            isPinned: Boolean(item.isPinned),
-            pinnedAt: typeof item.pinnedAtMs === 'number' ? new Date(item.pinnedAtMs).toISOString() : null,
-            pinnedBy: typeof item.pinnedBy === 'string' ? item.pinnedBy : null,
-            sharedTo: toSharedPlatforms(item.sharedTo),
-            parentMessageId: typeof item.parentMessageId === 'string' ? item.parentMessageId : null,
-            threadRootId: typeof item.threadRootId === 'string' ? item.threadRootId : null,
-            threadReplyCount: typeof item.threadReplyCount === 'number' ? item.threadReplyCount : undefined,
-            threadLastReplyAt:
-              typeof item.threadLastReplyAtMs === 'number' ? new Date(item.threadLastReplyAtMs).toISOString() : null,
-          }
-          })
-          .filter((m) => m.id)
+          .map((row) => mapCollaborationMessageRow(row, { fallbackChannelType: channel.type }))
+          .filter((message): message is CollaborationMessage => Boolean(message))
           .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
 
         const oldestRow = pageRows.length ? pageRows[pageRows.length - 1] : null

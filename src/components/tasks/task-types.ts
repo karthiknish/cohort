@@ -95,7 +95,6 @@ export type TaskFormState = {
   projectId: string | null
   projectName: string
   dueDate: string
-  tags: string
 }
 
 export type TaskListResponse = {
@@ -136,7 +135,6 @@ export const buildInitialFormState = (
   projectId: project?.id ?? null,
   projectName: project?.name ?? '',
   dueDate: '',
-  tags: '',
 })
 
 function parseTaskDateValue(value: string): Date | null {

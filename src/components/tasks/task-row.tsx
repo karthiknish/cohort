@@ -212,19 +212,6 @@ function TaskRowComponent({
                 {task.commentCount} comment{task.commentCount !== 1 ? 's' : ''}
               </span>
             )}
-
-            {(task.tags ?? []).length > 0 && (
-              <div className="flex items-center gap-1.5">
-                {(task.tags ?? []).slice(0, 2).map((tag) => (
-                  <Badge key={tag} variant="outline" className={cn('h-6 rounded-full px-2 text-[10px] font-medium', taskPillColors.tag)}>
-                    #{tag}
-                  </Badge>
-                ))}
-                {(task.tags ?? []).length > 2 && (
-                  <span className="text-[10px] text-slate-400">+{(task.tags ?? []).length - 2}</span>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>

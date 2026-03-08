@@ -2,22 +2,6 @@ import { EMAIL_REGEX, normalizeEmail, parseAttendeeInput } from '@/lib/meetings/
 
 import type { MeetingProcessingState, MeetingRecord, MeetingStatus, WorkspaceMember, WorkspaceMemberWithEmail } from './types'
 
-export const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, index) => {
-  const hour = Math.floor(index / 4)
-  const minute = (index % 4) * 15
-  const value = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-  const displayDate = new Date()
-  displayDate.setHours(hour, minute, 0, 0)
-
-  return {
-    value,
-    label: new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-    }).format(displayDate),
-  }
-})
-
 export function hasEmail(member: WorkspaceMember): member is WorkspaceMemberWithEmail {
   return typeof member.email === 'string' && member.email.trim().length > 0
 }

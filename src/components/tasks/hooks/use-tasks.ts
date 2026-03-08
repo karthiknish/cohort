@@ -49,7 +49,6 @@ export type CreateTaskPayload = {
   projectId?: string
   projectName?: string
   dueDate?: string
-  tags: string[]
   attachments?: TaskAttachment[]
 }
 
@@ -60,7 +59,6 @@ export type UpdateTaskPayload = {
   priority: string
   assignedTo: string[]
   dueDate?: string
-  tags: string[]
 }
 
 function msFromIsoDateString(input: string | undefined): number | null {
@@ -87,7 +85,6 @@ type TaskQueryRow = {
   projectId: string | null
   projectName: string | null
   dueDateMs: number | null
-  tags: string[]
   attachments?: TaskAttachment[]
   createdAtMs: number | null
   updatedAtMs: number | null
@@ -127,7 +124,6 @@ function mapConvexTaskToTaskRecord(row: TaskQueryRow): TaskRecord {
     projectId: row.projectId ?? null,
     projectName: row.projectName ?? null,
     dueDate: toIsoDateString(row.dueDateMs ?? null),
-    tags: Array.isArray(row.tags) ? row.tags : [],
     attachments,
     createdAt: toIsoDateString(row.createdAtMs ?? null),
     updatedAt: toIsoDateString(row.updatedAtMs ?? null),
@@ -302,7 +298,6 @@ export function useTasks({
           projectId: payload.projectId ?? null,
           projectName: payload.projectName ?? null,
           dueDate: payload.dueDate ?? null,
-          tags: payload.tags,
           attachments: payload.attachments ?? [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -330,7 +325,6 @@ export function useTasks({
           projectId: payload.projectId ?? null,
           projectName: payload.projectName ?? null,
           dueDateMs: msFromIsoDateString(payload.dueDate),
-          tags: payload.tags,
           attachments: payload.attachments ?? [],
         })
 
@@ -351,7 +345,6 @@ export function useTasks({
             projectId: payload.projectId ?? null,
             projectName: payload.projectName ?? null,
             dueDate: payload.dueDate ?? null,
-            tags: payload.tags,
             attachments: payload.attachments ?? [],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -385,7 +378,6 @@ export function useTasks({
                 priority: (payload.priority as TaskRecord['priority']) ?? t.priority,
                 assignedTo: payload.assignedTo ?? t.assignedTo,
                 dueDate: payload.dueDate ?? t.dueDate,
-                tags: payload.tags ?? t.tags,
                 updatedAt: new Date().toISOString(),
               }
               : t
@@ -408,7 +400,6 @@ export function useTasks({
             priority: payload.priority,
             assignedTo: payload.assignedTo,
             dueDateMs: msFromIsoDateString(payload.dueDate),
-            tags: payload.tags,
           },
         })
   
@@ -439,7 +430,6 @@ export function useTasks({
               priority: (update.priority as TaskRecord['priority']) ?? t.priority,
               assignedTo: update.assignedTo ?? t.assignedTo,
               dueDate: update.dueDate ?? t.dueDate,
-              tags: update.tags ?? t.tags,
               updatedAt: new Date().toISOString(),
             }
           })
@@ -459,7 +449,6 @@ export function useTasks({
             priority: update.priority,
             assignedTo: update.assignedTo,
             dueDateMs: update.dueDate !== undefined ? msFromIsoDateString(update.dueDate) : undefined,
-            tags: update.tags,
           },
         })
         toast({ title: 'Bulk update complete' })

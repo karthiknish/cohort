@@ -1,6 +1,7 @@
 'use client'
 
 import type { FormEvent, KeyboardEvent } from 'react'
+
 import { format } from 'date-fns'
 import { CalendarDays, CalendarPlus } from 'lucide-react'
 
@@ -10,13 +11,12 @@ import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { TimePicker } from '@/components/ui/time-picker'
 import { getButtonClasses } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
 
 import type { MeetingRecord } from '../types'
-import { TIME_OPTIONS } from '../utils'
 import { MeetingAttendeesField, type MeetingAttendeeSuggestion } from './meeting-attendees-field'
 
 type MeetingScheduleCardProps = {
@@ -158,21 +158,16 @@ export function MeetingScheduleCard({
             </Popover>
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="schedule-start-time" className="text-sm font-medium">Start Time</label>
-            <Select value={meetingTime} onValueChange={onMeetingTimeChange} disabled={scheduleDisabled}>
-              <SelectTrigger id="schedule-start-time">
-                <SelectValue placeholder="Select time" />
-              </SelectTrigger>
-              <SelectContent>
-                {TIME_OPTIONS.map((time) => (
-                  <SelectItem key={time.value} value={time.value}>
-                    {time.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium">Start Time</legend>
+            <TimePicker
+              id="schedule-start-time"
+              value={meetingTime}
+              onChange={onMeetingTimeChange}
+              disabled={scheduleDisabled}
+              minuteStep={15}
+            />
+          </fieldset>
 
           <div className="space-y-2">
             <label htmlFor="schedule-duration" className="text-sm font-medium">Duration (minutes)</label>

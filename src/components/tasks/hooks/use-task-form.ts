@@ -156,11 +156,6 @@ export function useTaskForm({
 
     const assignedMembers = parseMentionNames(formState.assignedTo)
 
-    const normalizedTags = formState.tags
-      .split(',')
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0)
-
     const normalizedClientName = (selectedClient?.name ?? formState.clientName).trim()
     const normalizedProjectName = formState.projectName.trim()
 
@@ -175,7 +170,6 @@ export function useTaskForm({
       projectId: formState.projectId ?? undefined,
       projectName: normalizedProjectName || undefined,
       dueDate: formState.dueDate || undefined,
-      tags: normalizedTags,
       attachments: [],
     }
 
@@ -217,7 +211,6 @@ export function useTaskForm({
       projectId: task.projectId || null,
       projectName: task.projectName || '',
       dueDate: task.dueDate || '',
-      tags: (task.tags ?? []).join(', '),
     })
     setUpdateError(null)
     setIsEditOpen(true)
@@ -251,11 +244,6 @@ export function useTaskForm({
 
     const assignedMembers = parseMentionNames(editFormState.assignedTo)
 
-    const normalizedTags = editFormState.tags
-      .split(',')
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0)
-
     const payload: UpdateTaskPayload = {
       title: trimmedTitle,
       description: editFormState.description.trim() || undefined,
@@ -263,7 +251,6 @@ export function useTaskForm({
       priority: editFormState.priority,
       assignedTo: assignedMembers,
       dueDate: editFormState.dueDate || undefined,
-      tags: normalizedTags,
     }
 
     try {
