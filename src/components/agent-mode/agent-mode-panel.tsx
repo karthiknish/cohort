@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type RefObject } from 'react'
-import { Send, X, Sparkles, Loader2, History, Pencil, Trash2, Check, RefreshCw, Clock, WifiOff, SquarePen } from 'lucide-react'
+import { Send, X, Sparkles, Loader2, History, Pencil, Trash2, Check, RefreshCw, Clock, WifiOff, SquarePen, Paperclip, FileText, Upload, AlertCircle } from 'lucide-react'
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
+import { AGENT_ATTACHMENT_ACCEPT, type AgentAttachmentContext } from '@/lib/agent-attachments'
 import { cn } from '@/lib/utils'
 import { useMentionData } from '@/hooks/use-mention-data'
 import { VoiceInputButton } from '@/components/ui/voice-input'
@@ -24,6 +25,10 @@ interface AgentModePanelProps {
   messages: AgentMessage[]
   isProcessing: boolean
   onSendMessage: (text: string) => void
+  pendingAttachments: AgentAttachmentContext[]
+  onAddAttachments: (files: FileList | File[]) => Promise<void>
+  onRemoveAttachment: (attachmentId: string) => void
+  isExtractingAttachments: boolean
   onClear: () => void
   conversationId: string | null
   history: AgentConversationSummary[]
@@ -59,6 +64,105 @@ function HistorySkeleton() {
       {['history-skeleton-1', 'history-skeleton-2', 'history-skeleton-3'].map((key) => (
         <div key={key} className="animate-pulse">
           <div className="h-12 rounded-lg bg-muted" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function AttachmentStatusBadge({ attachment }: { attachment: AgentAttachmentContext }) {
+  if (attachment.extractionStatus === 'ready') {
+    return <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Ready</span>
+  }
+
+  if (attachment.extractionStatus === 'limited') {
+    return <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Limited</span>
+  }
+
+  return <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700">Needs Review</span>
+}
+
+function AttachmentDropzone({
+  isDraggingFiles,
+  isExtractingAttachments,
+  onOpenFilePicker,
+}: {
+  isDraggingFiles: boolean
+  isExtractingAttachments: boolean
+  onOpenFilePicker: () => void
+}) {
+  return (
+    <div
+      className={cn(
+        'mb-3 rounded-2xl border border-dashed px-4 py-3 transition-colors',
+        isDraggingFiles ? 'border-primary bg-primary/5' : 'border-border/70 bg-background/70'
+      )}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="rounded-2xl bg-primary/10 p-2 text-primary">
+            {isExtractingAttachments ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          </div>
+          <div>
+            <p className="text-sm font-medium">Drop docs here for context</p>
+            <p className="text-xs text-muted-foreground">
+              ODF, Office, text, and PDF files can be attached. The assistant uses them to draft tasks and projects, then asks follow-up questions if required details are still unclear.
+            </p>
+          </div>
+        </div>
+        <Button type="button" variant="outline" size="sm" className="gap-2 rounded-full" onClick={onOpenFilePicker}>
+          <Paperclip className="h-4 w-4" />
+          Attach
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function AttachmentList({
+  attachments,
+  onRemoveAttachment,
+}: {
+  attachments: AgentAttachmentContext[]
+  onRemoveAttachment: (attachmentId: string) => void
+}) {
+  if (attachments.length === 0) return null
+
+  return (
+    <div className="mb-3 space-y-2">
+      {attachments.map((attachment) => (
+        <div key={attachment.id} className="rounded-2xl border bg-card/70 px-3 py-3 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                <FileText className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate text-sm font-medium">{attachment.name}</p>
+                  <AttachmentStatusBadge attachment={attachment} />
+                  <span className="text-xs text-muted-foreground">{attachment.sizeLabel}</span>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">{attachment.excerpt}</p>
+                {attachment.errorMessage ? (
+                  <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-amber-700">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    <span>{attachment.errorMessage}</span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={() => onRemoveAttachment(attachment.id)}
+              aria-label={`Remove ${attachment.name}`}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       ))}
     </div>
@@ -178,6 +282,10 @@ export function AgentModePanel({
   messages,
   isProcessing,
   onSendMessage,
+  pendingAttachments,
+  onAddAttachments,
+  onRemoveAttachment,
+  isExtractingAttachments,
   onClear,
   conversationId,
   history,
@@ -202,7 +310,9 @@ export function AgentModePanel({
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false)
 
   // Fetch data for mentions
   const { clients, projects, teams, users, allItems, isLoading: mentionsLoading } = useMentionData()
@@ -243,7 +353,7 @@ export function AgentModePanel({
 
 
   const handleSubmit = () => {
-    if (inputValue.trim() && !isProcessing) {
+    if (inputValue.trim() && !isProcessing && !isExtractingAttachments) {
       onSendMessage(inputValue.trim())
       setInputValue('')
       setShowMentions(false)
@@ -318,6 +428,39 @@ export function AgentModePanel({
     onSendMessage(suggestion)
   }
 
+  const handleOpenFilePicker = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleFileSelection = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+    await onAddAttachments(files)
+    event.target.value = ''
+  }, [onAddAttachments])
+
+  const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    if (event.dataTransfer.types.includes('Files')) {
+      setIsDraggingFiles(true)
+    }
+  }, [])
+
+  const handleDragLeave = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    const nextTarget = event.relatedTarget
+    if (!nextTarget || !(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+      setIsDraggingFiles(false)
+    }
+  }, [])
+
+  const handleDrop = useCallback(async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    setIsDraggingFiles(false)
+    if (event.dataTransfer.files.length === 0) return
+    await onAddAttachments(event.dataTransfer.files)
+  }, [onAddAttachments])
+
   const handleRetry = () => {
     onClearError?.()
     onRetry?.()
@@ -339,7 +482,7 @@ export function AgentModePanel({
   const toggleHistory = () => setShowHistory((prev) => !prev)
 
   // Check if input is disabled (rate limited or processing)
-  const isInputDisabled = isProcessing || (typeof rateLimitCountdown === 'number' && rateLimitCountdown > 0)
+  const isInputDisabled = isProcessing || isExtractingAttachments || (typeof rateLimitCountdown === 'number' && rateLimitCountdown > 0)
 
   return (
     <LazyMotion features={domAnimation}>
@@ -354,7 +497,19 @@ export function AgentModePanel({
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
             onScroll={(e) => e.stopPropagation()}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
           >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={AGENT_ATTACHMENT_ACCEPT}
+            multiple
+            className="hidden"
+            onChange={handleFileSelection}
+          />
+
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-2">
@@ -555,6 +710,13 @@ export function AgentModePanel({
 
                 {/* Input (centered) */}
                 <div className="relative rounded-2xl border bg-background p-3">
+                  <AttachmentDropzone
+                    isDraggingFiles={isDraggingFiles}
+                    isExtractingAttachments={isExtractingAttachments}
+                    onOpenFilePicker={handleOpenFilePicker}
+                  />
+                  <AttachmentList attachments={pendingAttachments} onRemoveAttachment={onRemoveAttachment} />
+
                   {/* Mention Dropdown */}
                   <MentionDropdown
                     isOpen={showMentions}
@@ -586,6 +748,18 @@ export function AgentModePanel({
                       onInterimTranscript={handleVoiceInterim}
                       disabled={isInputDisabled}
                     />
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleOpenFilePicker}
+                      disabled={isInputDisabled}
+                      className="h-10 w-10 shrink-0 rounded-full"
+                      title="Attach context files"
+                    >
+                      {isExtractingAttachments ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                    </Button>
 
                     <Button
                       size="icon"
@@ -667,7 +841,15 @@ export function AgentModePanel({
 
 
               {/* Input */}
-              <div className="relative flex items-center gap-2 border-t bg-muted/30 p-3">
+              <div className="relative border-t bg-muted/30 p-3">
+                <AttachmentDropzone
+                  isDraggingFiles={isDraggingFiles}
+                  isExtractingAttachments={isExtractingAttachments}
+                  onOpenFilePicker={handleOpenFilePicker}
+                />
+                <AttachmentList attachments={pendingAttachments} onRemoveAttachment={onRemoveAttachment} />
+
+                <div className="relative flex items-center gap-2">
                 {/* Mention Dropdown */}
                 <MentionDropdown
                   isOpen={showMentions}
@@ -700,6 +882,18 @@ export function AgentModePanel({
                 />
 
                 <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleOpenFilePicker}
+                  disabled={isInputDisabled || isConversationLoading}
+                  className="h-10 w-10 shrink-0 rounded-full"
+                  title="Attach context files"
+                >
+                  {isExtractingAttachments ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                </Button>
+
+                <Button
                   size="icon"
                   onClick={handleSubmit}
                   disabled={!inputValue.trim() || isInputDisabled || isConversationLoading}
@@ -708,6 +902,7 @@ export function AgentModePanel({
                 >
                   <Send className="h-4 w-4" />
                 </Button>
+                </div>
               </div>
             </>
           )}

@@ -221,7 +221,9 @@ describe('safeExecuteOperation', () => {
   })
 
   it('creates projects from active client context and returns a project route', async () => {
-    const runQuery = vi.fn().mockResolvedValueOnce({ legacyId: 'client_42', name: 'Client Forty Two' })
+    const runQuery = vi.fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce({ legacyId: 'client_42', name: 'Client Forty Two' })
     const runMutation = vi.fn().mockResolvedValueOnce('project_42')
 
     const result = await safeExecuteOperation(
@@ -256,13 +258,113 @@ describe('safeExecuteOperation', () => {
     })
   })
 
-  it('creates tasks from active project context and returns a project task route', async () => {
-    const runQuery = vi.fn().mockResolvedValueOnce({
-      legacyId: 'project_42',
-      name: 'Website Refresh',
-      clientId: 'client_42',
-      clientName: 'Client Forty Two',
+  it('assigns a created project to a mentioned workspace member', async () => {
+    const runQuery = vi.fn()
+      .mockResolvedValueOnce([
+        { id: 'user_deepak', name: 'Deepak', email: 'deepak@example.com', role: 'member' },
+      ])
+      .mockResolvedValueOnce({ legacyId: 'client_42', name: 'Client Forty Two' })
+    const runMutation = vi.fn().mockResolvedValueOnce('project_99')
+
+    const result = await safeExecuteOperation(
+      { runQuery, runMutation } as never,
+      {
+        workspaceId: 'ws_1',
+        userId: 'user_1',
+        conversationId: 'agent_conv_1',
+        operation: 'createProject',
+        params: {
+          name: 'Website Refresh',
+          description: 'Owner: Deepak',
+        },
+        context: {
+          activeClientId: 'client_42',
+        },
+        rawMessage: 'create project Website Refresh and assign to Deepak',
+      },
+    )
+
+    expect(runMutation).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      ownerId: 'user_deepak',
+    }))
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        ownerId: 'user_deepak',
+        ownerName: 'Deepak',
+      },
     })
+  })
+
+  it('asks for a client before creating a project when client context is missing', async () => {
+    const result = await safeExecuteOperation(
+      { runQuery: vi.fn(), runMutation: vi.fn() } as never,
+      {
+        workspaceId: 'ws_1',
+        userId: 'user_1',
+        conversationId: 'agent_conv_1',
+        operation: 'createProject',
+        params: {
+          name: 'Website Refresh',
+        },
+      },
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      retryable: false,
+      userMessage: 'Which client should I attach this project to?',
+      data: {
+        error: 'Client context is unclear.',
+      },
+    })
+  })
+
+  it('asks for a clearer client before creating a task when the client name is ambiguous', async () => {
+    const runQuery = vi.fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce({
+        items: [
+          { legacyId: 'client_1', name: 'Acme Labs' },
+          { legacyId: 'client_2', name: 'Acme Ventures' },
+        ],
+      })
+
+    const result = await safeExecuteOperation(
+      { runQuery, runMutation: vi.fn() } as never,
+      {
+        workspaceId: 'ws_1',
+        userId: 'user_1',
+        conversationId: 'agent_conv_1',
+        operation: 'createTask',
+        params: {
+          title: 'Review launch brief',
+          clientName: 'Acme',
+        },
+      },
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      retryable: false,
+      userMessage: 'I’m not sure which client you mean for this task. I found: Acme Labs, Acme Ventures. Which client should I use?',
+      data: {
+        error: 'Client context is unclear.',
+        suggestions: ['Acme Labs', 'Acme Ventures'],
+      },
+    })
+  })
+
+  it('creates tasks from active project context and returns a project task route', async () => {
+    const runQuery = vi.fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce({
+        legacyId: 'project_42',
+        name: 'Website Refresh',
+        clientId: 'client_42',
+        clientName: 'Client Forty Two',
+      })
     const runMutation = vi.fn().mockResolvedValueOnce('task_42')
 
     const result = await safeExecuteOperation(
@@ -307,6 +409,80 @@ describe('safeExecuteOperation', () => {
         projectName: 'Website Refresh',
       },
       userMessage: 'Created task “Review homepage revisions” (task_42).',
+    })
+  })
+
+  it('assigns a created task to a mentioned workspace member', async () => {
+    const runQuery = vi.fn()
+      .mockResolvedValueOnce([
+        { id: 'user_deepak', name: 'Deepak', email: 'deepak@example.com', role: 'member' },
+      ])
+      .mockResolvedValueOnce({
+        legacyId: 'project_42',
+        name: 'Website Refresh',
+        clientId: 'client_42',
+        clientName: 'Client Forty Two',
+      })
+    const runMutation = vi.fn().mockResolvedValueOnce('task_77')
+
+    const result = await safeExecuteOperation(
+      { runQuery, runMutation } as never,
+      {
+        workspaceId: 'ws_1',
+        userId: 'user_1',
+        conversationId: 'agent_conv_1',
+        operation: 'createTask',
+        params: {
+          title: 'Review homepage revisions',
+          description: 'Assigned to Deepak',
+        },
+        context: {
+          activeProjectId: 'project_42',
+        },
+        rawMessage: 'create task Review homepage revisions and assign it to Deepak',
+      },
+    )
+
+    expect(runMutation).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      assignedTo: ['Deepak'],
+    }))
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        taskId: 'task_77',
+      },
+    })
+  })
+
+  it('asks for a clearer assignee when the mentioned user is ambiguous', async () => {
+    const runQuery = vi.fn().mockResolvedValueOnce([
+      { id: 'user_sam_1', name: 'Sam Chen' },
+      { id: 'user_sam_2', name: 'Samir Patel' },
+    ])
+
+    const result = await safeExecuteOperation(
+      { runQuery, runMutation: vi.fn() } as never,
+      {
+        workspaceId: 'ws_1',
+        userId: 'user_1',
+        conversationId: 'agent_conv_1',
+        operation: 'createTask',
+        params: {
+          title: 'Review launch brief',
+        },
+        rawMessage: 'create task Review launch brief and assign to Sam',
+      },
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      retryable: false,
+      userMessage: 'I found multiple workspace members matching “Sam”: Sam Chen, Samir Patel. Who should I assign this task to?',
+      data: {
+        error: 'Assignee is unclear.',
+        suggestions: ['Sam Chen', 'Samir Patel'],
+      },
     })
   })
 

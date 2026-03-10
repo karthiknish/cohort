@@ -8,6 +8,7 @@ import {
   resolveAgentDueDateMs,
   resolveClientIdFromParams,
   resolveProjectContextFromParams,
+  resolveWorkspaceAssignments,
   unwrapConvexResult,
 } from '../../helpers'
 import type { OperationHandler } from '../../types'
@@ -179,21 +180,61 @@ export const taskOperationHandlers: Record<string, OperationHandler> = {
       rawMessage: input.rawMessage,
       nowMs: Date.now(),
     })
-    const assignedTo = asStringArray(input.params.assignedTo)
+    const assignmentResolution = await resolveWorkspaceAssignments(ctx, input.workspaceId, {
+      rawMessage: input.rawMessage,
+      params: input.params,
+      context: input.context,
+      mode: 'task',
+    })
+    if (assignmentResolution.status === 'ambiguous') {
+      return {
+        success: false,
+        retryable: false,
+        data: {
+          query: assignmentResolution.query,
+          suggestions: assignmentResolution.suggestions,
+          error: 'Assignee is unclear.',
+        },
+        userMessage: `I found multiple workspace members matching “${assignmentResolution.query}”: ${assignmentResolution.suggestions.join(', ')}. Who should I assign this task to?`,
+      }
+    }
+
+    const assignedTo = assignmentResolution.names.length > 0
+      ? assignmentResolution.names
+      : asStringArray(input.params.assignedTo)
     const projectContext = await resolveProjectContextFromParams(ctx, input.workspaceId, input.params, input.context)
-    const resolvedClient = projectContext.clientId
+    const clientResolution = projectContext.clientId
       ? {
+          status: 'resolved' as const,
           clientId: projectContext.clientId,
           clientName: projectContext.clientName,
         }
       : await resolveClientIdFromParams(ctx, input.workspaceId, input.params, input.context)
 
+    if (clientResolution.status !== 'resolved') {
+      const suggestionText = clientResolution.suggestions.length > 0
+        ? ` I found: ${clientResolution.suggestions.join(', ')}.`
+        : ''
+      return {
+        success: false,
+        retryable: false,
+        data: {
+          clientName: clientResolution.clientName,
+          suggestions: clientResolution.suggestions,
+          error: 'Client context is unclear.',
+        },
+        userMessage: clientResolution.status === 'missing'
+          ? 'Which client should I attach this task to?'
+          : `I’m not sure which client you mean for this task.${suggestionText} Which client should I use?`,
+      }
+    }
+
     const route = projectContext.projectId
       ? buildProjectTasksRoute({
           projectId: projectContext.projectId,
           projectName: projectContext.projectName,
-          clientId: resolvedClient.clientId || undefined,
-          clientName: resolvedClient.clientName,
+          clientId: clientResolution.clientId || undefined,
+          clientName: clientResolution.clientName,
         })
       : '/dashboard/tasks'
 
@@ -204,8 +245,8 @@ export const taskOperationHandlers: Record<string, OperationHandler> = {
       status,
       priority,
       assignedTo,
-      clientId: resolvedClient.clientId,
-      client: resolvedClient.clientName ?? null,
+      clientId: clientResolution.clientId,
+      client: clientResolution.clientName ?? null,
       projectId: projectContext.projectId ?? null,
       projectName: projectContext.projectName ?? null,
       dueDateMs,
@@ -219,8 +260,8 @@ export const taskOperationHandlers: Record<string, OperationHandler> = {
       data: {
         taskId,
         title,
-        clientId: resolvedClient.clientId || null,
-        clientName: resolvedClient.clientName ?? null,
+        clientId: clientResolution.clientId || null,
+        clientName: clientResolution.clientName ?? null,
         projectId: projectContext.projectId,
         projectName: projectContext.projectName,
         route,

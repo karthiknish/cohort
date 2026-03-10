@@ -8,6 +8,15 @@ export type AgentRequestContextType = {
   activeProposalId?: string | null
   activeProjectId?: string | null
   activeClientId?: string | null
+  attachmentContext?: Array<{
+    name: string
+    mimeType: string
+    sizeLabel: string
+    excerpt: string
+    extractedText?: string
+    extractionStatus: 'ready' | 'limited' | 'failed'
+    errorMessage?: string
+  }>
 }
 
 export type ParsedAgentResponse = {

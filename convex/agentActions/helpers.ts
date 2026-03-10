@@ -2,6 +2,7 @@ export {
   formatConversationHistory,
   resolveClientIdFromParams,
   resolveProjectContextFromParams,
+  resolveWorkspaceAssignments,
 } from './helpers/context'
 
 export {

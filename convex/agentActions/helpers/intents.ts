@@ -165,6 +165,75 @@ function cleanDirectMessageContent(value: string | null): string | null {
   return cleaned && cleaned.length > 0 ? cleaned : null
 }
 
+function hasAttachmentContext(context?: AgentRequestContextType): boolean {
+  return Boolean(context?.attachmentContext?.some((attachment) => attachment.extractionStatus === 'ready' && asNonEmptyString(attachment.extractedText)))
+}
+
+function toTitleCase(value: string): string {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+function deriveEntityDraftLabelFromAttachment(context?: AgentRequestContextType): string | null {
+  const attachment = context?.attachmentContext?.find((candidate) => candidate.extractionStatus === 'ready')
+  if (!attachment) return null
+
+  const fileStem = attachment.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim()
+  if (fileStem.length >= 3) {
+    return toTitleCase(fileStem)
+  }
+
+  const excerpt = asNonEmptyString(attachment.excerpt) ?? asNonEmptyString(attachment.extractedText) ?? null
+  if (!excerpt) return null
+
+  const sentence = excerpt
+    .split(/[.!?\n]/)
+    .map((part) => part.trim())
+    .find((part) => part.length >= 3)
+
+  if (!sentence) return null
+  return sentence.slice(0, 80).trim()
+}
+
+function sanitizeEntityDraftLabel(value: string | null): string | null {
+  const cleaned = value
+    ?.replace(/^[\s"'`]+|[\s"'`]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!cleaned) return null
+
+  const normalized = normalizeIntentText(cleaned)
+  const invalidPhrases = [
+    'from this doc',
+    'from this document',
+    'from this file',
+    'from this attachment',
+    'from this brief',
+    'from that doc',
+    'from attached doc',
+    'from attached document',
+    'from the attached doc',
+    'from the attached document',
+    'from the attached brief',
+    'from attached file',
+    'from the attached file',
+    'using this doc',
+    'using this document',
+    'using the attached doc',
+    'using the attached document',
+    'using the attached file',
+  ]
+
+  if (invalidPhrases.includes(normalized)) return null
+  if (/^(?:this|that|attached|attachment|document|doc|file|brief)$/i.test(cleaned)) return null
+
+  return cleaned
+}
+
 function extractDirectMessageContentFromIntent(message: string): string | null {
   const target = extractDirectMessageTargetFromIntent(message)
   const escapedTarget = target ? escapeRegex(target) : null
@@ -393,10 +462,16 @@ function resolveDeterministicExecuteIntent(message: string, context?: AgentReque
   }
 
   if (includesAnyPhrase(normalized, ['remind me to', 'create task', 'add task', 'new task']) && !includesAnyPhrase(normalized, ['update task', 'complete task', 'close task', 'mark task'])) {
-    const title = extractTrailingText(message, [/remind\s+me\s+to\s+(.+)$/i, /(?:create|add)\s+(?:a\s+)?task(?:\s+(?:to|for))?\s+(.+)$/i, /new\s+task\s+(.+)$/i]) ?? null
+    let title = sanitizeEntityDraftLabel(
+      extractTrailingText(message, [/remind\s+me\s+to\s+(.+)$/i, /(?:create|add)\s+(?:a\s+)?task(?:\s+(?:to|for))?\s+(.+)$/i, /new\s+task\s+(.+)$/i]) ?? null
+    )
+    if (!title && hasAttachmentContext(context)) {
+      title = deriveEntityDraftLabelFromAttachment(context)
+    }
     if (!title) return { action: 'clarify', message: buildClarificationMessage('task', context) }
     const priority = inferPriorityFromIntent(normalized)
     const params: Record<string, unknown> = { title }
+    if (context?.attachmentContext?.[0]?.excerpt) params.description = context.attachmentContext[0].excerpt
     if (priority) params.priority = priority
     if (context?.activeClientId) params.clientId = context.activeClientId
     return { action: 'execute', operation: 'createTask', params, message: 'Creating that task now.' }
@@ -413,9 +488,15 @@ function resolveDeterministicExecuteIntent(message: string, context?: AgentReque
   }
 
   if (includesAnyPhrase(normalized, ['create project', 'add project', 'new project'])) {
-    const name = extractTrailingText(message, [/(?:create|add)\s+(?:a\s+)?project(?:\s+(?:called|named))?\s+(.+)$/i, /new\s+project\s+(.+)$/i]) ?? null
+    let name = sanitizeEntityDraftLabel(
+      extractTrailingText(message, [/(?:create|add)\s+(?:a\s+)?project(?:\s+(?:called|named))?\s+(.+)$/i, /new\s+project\s+(.+)$/i]) ?? null
+    )
+    if (!name && hasAttachmentContext(context)) {
+      name = deriveEntityDraftLabelFromAttachment(context)
+    }
     if (!name) return { action: 'clarify', message: 'I can create that project — what should I name it, and should I link it to the current client?' }
     const params: Record<string, unknown> = { name }
+    if (context?.attachmentContext?.[0]?.excerpt) params.description = context.attachmentContext[0].excerpt
     if (context?.activeClientId) params.clientId = context.activeClientId
     return { action: 'execute', operation: 'createProject', params, message: `Creating project ${name}.` }
   }

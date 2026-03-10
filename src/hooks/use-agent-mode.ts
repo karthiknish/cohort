@@ -1,12 +1,17 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { startTransition, useCallback, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAction, useMutation } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useNavigationContext } from '@/contexts/navigation-context'
 import type { AgentError } from '@/lib/agent-errors'
+import {
+  buildAgentAttachmentContext,
+  hasUsableAttachmentContext,
+  type AgentAttachmentContext,
+} from '@/lib/agent-attachments'
 import { agentApi } from '@/lib/convex-api'
 import { AgentValidationError, parseAgentError, ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
 
@@ -85,6 +90,14 @@ export interface UseAgentModeReturn {
   isProcessing: boolean
   /** Process user input (text or voice transcript) */
   processInput: (text: string) => void
+  /** Current files attached as agent context */
+  pendingAttachments: AgentAttachmentContext[]
+  /** Add documents to the current request context */
+  addAttachments: (files: FileList | File[]) => Promise<void>
+  /** Remove a document from the current request context */
+  removeAttachment: (attachmentId: string) => void
+  /** Whether attachment text is still being extracted */
+  isExtractingAttachments: boolean
   /** Clear message history */
   clearMessages: () => void
   /** Current conversation ID */
@@ -216,6 +229,8 @@ export function useAgentMode(): UseAgentModeReturn {
   const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connected')
   const [rateLimitCountdown, setRateLimitCountdown] = useState<number | null>(null)
+  const [pendingAttachments, setPendingAttachments] = useState<AgentAttachmentContext[]>([])
+  const [isExtractingAttachments, setIsExtractingAttachments] = useState(false)
 
   // Debounce ref to prevent rapid submissions
   const lastSubmitTimeRef = useRef<number>(0)
@@ -255,6 +270,25 @@ export function useAgentMode(): UseAgentModeReturn {
     }
     setMessages((prev) => [...prev, message])
     return message
+  }, [])
+
+  const addAttachments = useCallback(async (files: FileList | File[]) => {
+    const nextFiles = Array.from(files)
+    if (nextFiles.length === 0) return
+
+    setIsExtractingAttachments(true)
+    try {
+      const extracted = await Promise.all(nextFiles.map((file) => buildAgentAttachmentContext(file)))
+      startTransition(() => {
+        setPendingAttachments((prev) => [...prev, ...extracted])
+      })
+    } finally {
+      setIsExtractingAttachments(false)
+    }
+  }, [])
+
+  const removeAttachment = useCallback((attachmentId: string) => {
+    setPendingAttachments((prev) => prev.filter((attachment) => attachment.id !== attachmentId))
   }, [])
 
   /**
@@ -323,6 +357,11 @@ export function useAgentMode(): UseAgentModeReturn {
       return
     }
 
+    if (isExtractingAttachments) {
+      addMessage('agent', 'I’m still reading the attached files. Send the message again in a moment.', null, 'error')
+      return
+    }
+
     const trimmedText = text.trim()
 
     // Clear previous errors
@@ -352,6 +391,15 @@ export function useAgentMode(): UseAgentModeReturn {
           activeProposalId: activeContext.activeProposalId ?? null,
           activeProjectId: activeContext.activeProjectId ?? null,
           activeClientId: activeContext.activeClientId ?? null,
+          attachmentContext: pendingAttachments.map((attachment) => ({
+            name: attachment.name,
+            mimeType: attachment.mimeType,
+            sizeLabel: attachment.sizeLabel,
+            excerpt: attachment.excerpt,
+            extractedText: attachment.extractedText,
+            extractionStatus: attachment.extractionStatus,
+            errorMessage: attachment.errorMessage,
+          })),
         },
       })
 
@@ -391,8 +439,14 @@ export function useAgentMode(): UseAgentModeReturn {
               : null
 
         addMessage('agent', responseData.message || 'Action completed', executeRoute, status, metadata)
+        if (responseData.executeResult.success) {
+          setPendingAttachments([])
+        }
       } else {
         addMessage('agent', responseData?.message || 'I didn\'t quite understand that.', responseData?.route, 'info', metadata)
+        if (!hasUsableAttachmentContext(pendingAttachments)) {
+          setPendingAttachments([])
+        }
       }
 
       setLastFailedMessage(null)
@@ -412,6 +466,8 @@ export function useAgentMode(): UseAgentModeReturn {
     conversationId,
     handleError,
     messages,
+    isExtractingAttachments,
+    pendingAttachments,
     router,
     sendMessage,
     workspaceId,
@@ -427,6 +483,7 @@ export function useAgentMode(): UseAgentModeReturn {
   const clearMessages = useCallback(() => {
     setMessages([])
     setConversationId(null)
+    setPendingAttachments([])
     clearError()
   }, [clearError])
 
@@ -570,6 +627,10 @@ export function useAgentMode(): UseAgentModeReturn {
     messages,
     isProcessing,
     processInput,
+    pendingAttachments,
+    addAttachments,
+    removeAttachment,
+    isExtractingAttachments,
     clearMessages,
     conversationId,
     history,

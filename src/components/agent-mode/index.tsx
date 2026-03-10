@@ -18,6 +18,10 @@ export function AgentMode() {
     messages,
     isProcessing,
     processInput,
+    pendingAttachments,
+    addAttachments,
+    removeAttachment,
+    isExtractingAttachments,
     clearMessages,
     conversationId,
     history,
@@ -46,6 +50,10 @@ export function AgentMode() {
         messages={messages}
         isProcessing={isProcessing}
         onSendMessage={processInput}
+        pendingAttachments={pendingAttachments}
+        onAddAttachments={addAttachments}
+        onRemoveAttachment={removeAttachment}
+        isExtractingAttachments={isExtractingAttachments}
         onClear={clearMessages}
         conversationId={conversationId}
         history={history}

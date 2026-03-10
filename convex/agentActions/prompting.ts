@@ -102,6 +102,19 @@ const agentRequestContext = v.object({
   activeProposalId: v.optional(v.union(v.string(), v.null())),
   activeProjectId: v.optional(v.union(v.string(), v.null())),
   activeClientId: v.optional(v.union(v.string(), v.null())),
+  attachmentContext: v.optional(
+    v.array(
+      v.object({
+        name: v.string(),
+        mimeType: v.string(),
+        sizeLabel: v.string(),
+        excerpt: v.string(),
+        extractedText: v.optional(v.string()),
+        extractionStatus: v.union(v.literal('ready'), v.literal('limited'), v.literal('failed')),
+        errorMessage: v.optional(v.string()),
+      })
+    )
+  ),
 })
 
 const SYSTEM_PROMPT = `You are a friendly AI assistant for "Cohorts", a marketing agency dashboard.
@@ -154,6 +167,7 @@ If the request is vague, underspecified, or refers to "this/that/it" without eno
 - vague requests like "do that", "handle this", "check metrics", or "create task" without enough detail → CLARIFY first
 
 If activeProposalId/activeProjectId/activeClientId is present in context, prefer it when the user says "this proposal/project/client".
+If attachmentContext is present, use the attached document excerpts to draft task/project/proposal fields. Do not invent missing facts. If the document does not make a critical field clear, ask a clarify question before executing.
 
 **Always respond with valid JSON only. Be brief but friendly.**`
 

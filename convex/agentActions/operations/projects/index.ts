@@ -7,6 +7,7 @@ import {
   asStringArray,
   parseDateToMs,
   resolveClientIdFromParams,
+  resolveWorkspaceAssignments,
   unwrapConvexResult,
 } from '../../helpers'
 import type { OperationHandler } from '../../types'
@@ -24,12 +25,49 @@ export const projectOperationHandlers: Record<string, OperationHandler> = {
     const startDateMs = asNumber(input.params.startDateMs) ?? parseDateToMs(input.params.startDate)
     const endDateMs = asNumber(input.params.endDateMs) ?? parseDateToMs(input.params.endDate)
     const tags = asStringArray(input.params.tags)
+    const assignmentResolution = await resolveWorkspaceAssignments(ctx, input.workspaceId, {
+      rawMessage: input.rawMessage,
+      params: input.params,
+      context: input.context,
+      mode: 'project',
+    })
+    if (assignmentResolution.status === 'ambiguous') {
+      return {
+        success: false,
+        retryable: false,
+        data: {
+          query: assignmentResolution.query,
+          suggestions: assignmentResolution.suggestions,
+          error: 'Project owner is unclear.',
+        },
+        userMessage: `I found multiple workspace members matching “${assignmentResolution.query}”: ${assignmentResolution.suggestions.join(', ')}. Who should own this project?`,
+      }
+    }
     const shouldClearClient = asNonEmptyString(input.params.clientId) === 'none'
-    const resolvedClient = shouldClearClient
-      ? { clientId: '', clientName: null }
+    const clientResolution = shouldClearClient
+      ? { status: 'resolved' as const, clientId: '', clientName: null }
       : await resolveClientIdFromParams(ctx, input.workspaceId, input.params, input.context)
-    const clientId = shouldClearClient ? null : (resolvedClient.clientId || null)
-    const clientName = shouldClearClient ? null : (resolvedClient.clientName ?? asNonEmptyString(input.params.clientName) ?? null)
+
+    if (clientResolution.status !== 'resolved') {
+      const suggestionText = clientResolution.suggestions.length > 0
+        ? ` I found: ${clientResolution.suggestions.join(', ')}.`
+        : ''
+      return {
+        success: false,
+        retryable: false,
+        data: {
+          clientName: clientResolution.clientName,
+          suggestions: clientResolution.suggestions,
+          error: 'Client context is unclear.',
+        },
+        userMessage: clientResolution.status === 'missing'
+          ? 'Which client should I attach this project to?'
+          : `I’m not sure which client you mean for this project.${suggestionText} Which client should I use?`,
+      }
+    }
+
+    const clientId = shouldClearClient ? null : (clientResolution.clientId || null)
+    const clientName = shouldClearClient ? null : (clientResolution.clientName ?? asNonEmptyString(input.params.clientName) ?? null)
 
     const rawResult = await ctx.runMutation(api.projects.create, {
       workspaceId: input.workspaceId,
@@ -42,7 +80,7 @@ export const projectOperationHandlers: Record<string, OperationHandler> = {
       startDateMs,
       endDateMs,
       tags,
-      ownerId: input.userId,
+      ownerId: assignmentResolution.ownerId ?? input.userId,
       createdAtMs: Date.now(),
       updatedAtMs: Date.now(),
     })
@@ -53,7 +91,7 @@ export const projectOperationHandlers: Record<string, OperationHandler> = {
     return {
       success: true,
       route: buildProjectRoute(projectId, name),
-      data: { projectId, name, clientId, clientName, status, tags },
+      data: { projectId, name, clientId, clientName, status, tags, ownerId: assignmentResolution.ownerId ?? input.userId, ownerName: assignmentResolution.ownerName },
       userMessage: `Created project ${name}.`,
     }
   },

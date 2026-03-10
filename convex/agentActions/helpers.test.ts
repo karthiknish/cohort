@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import { extractCampaignQueryFromIntent, getPeriodWindow, resolveDeterministicAgentIntent, resolveReportWindow, resolveWeakCommandClarification } from './helpers'
 
@@ -157,6 +157,58 @@ describe('resolveDeterministicAgentIntent', () => {
     })
   })
 
+  it('derives a project draft label from the attached document when the message omits the name', () => {
+    const intent = resolveDeterministicAgentIntent('Create project from this document', {
+      activeClientId: 'client_123',
+      attachmentContext: [
+        {
+          name: 'website-refresh.odt',
+          mimeType: 'application/vnd.oasis.opendocument.text',
+          sizeLabel: '24 KB',
+          excerpt: 'Website Refresh kickoff brief',
+          extractedText: 'Website Refresh kickoff brief with scope, timeline, and deliverables.',
+          extractionStatus: 'ready',
+        },
+      ],
+    })
+
+    expect(intent).toEqual({
+      action: 'execute',
+      operation: 'createProject',
+      params: {
+        name: 'Website Refresh',
+        description: 'Website Refresh kickoff brief',
+        clientId: 'client_123',
+      },
+      message: 'Creating project Website Refresh.',
+    })
+  })
+
+  it('derives a task draft label from the attached document when the message omits the title', () => {
+    const intent = resolveDeterministicAgentIntent('Create task from the attached brief', {
+      attachmentContext: [
+        {
+          name: 'launch-plan.docx',
+          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          sizeLabel: '48 KB',
+          excerpt: 'Launch plan with required pre-launch QA checks.',
+          extractedText: 'Launch plan with required pre-launch QA checks.',
+          extractionStatus: 'ready',
+        },
+      ],
+    })
+
+    expect(intent).toEqual({
+      action: 'execute',
+      operation: 'createTask',
+      params: {
+        title: 'Launch Plan',
+        description: 'Launch plan with required pre-launch QA checks.',
+      },
+      message: 'Creating that task now.',
+    })
+  })
+
   it('asks for the exact project change before executing a vague update', () => {
     const intent = resolveDeterministicAgentIntent('Update this project', {
       activeProjectId: 'project_42',
@@ -229,16 +281,28 @@ describe('extractCampaignQueryFromIntent', () => {
 })
 
 describe('resolveReportWindow', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-  })
+  const RealDate = Date
+  let mockedDate: DateConstructor | null = null
 
   afterEach(() => {
-    vi.useRealTimers()
+    if (mockedDate) {
+      globalThis.Date = RealDate
+      mockedDate = null
+    }
   })
 
   it('uses inclusive weekly calendar windows', () => {
-    vi.setSystemTime(new Date('2026-03-07T12:00:00.000Z'))
+    const fixedNow = new RealDate('2026-03-07T12:00:00.000Z')
+    mockedDate = class extends RealDate {
+      constructor(value?: string | number | Date) {
+        super(value ?? fixedNow)
+      }
+
+      static override now() {
+        return fixedNow.valueOf()
+      }
+    } as unknown as DateConstructor
+    globalThis.Date = mockedDate
 
     expect(getPeriodWindow('weekly')).toMatchObject({
       periodLabel: 'Weekly',
