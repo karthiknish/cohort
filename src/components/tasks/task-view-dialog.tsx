@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import { useState } from 'react'
 import { Calendar, Clock4, Download, FolderKanban, ListChecks, MessageCircle, Paperclip, User } from 'lucide-react'
+import Link from 'next/link'
 
 import type { TaskRecord } from '@/types/tasks'
 import { Badge } from '@/components/ui/badge'
@@ -53,13 +53,24 @@ export function TaskViewDialog({
   userRole = null,
   participants = EMPTY_PARTICIPANTS,
 }: TaskViewDialogProps) {
-  const [liveCommentCount, setLiveCommentCount] = useState(0)
-
-  useEffect(() => {
-    setLiveCommentCount(task?.commentCount ?? 0)
-  }, [task?.commentCount])
-
+  const [commentCountState, setCommentCountState] = useState<{
+    taskId: string
+    sourceCount: number
+    count: number
+  } | null>(null)
   if (!task) return null
+
+  const sourceCommentCount = task.commentCount ?? 0
+  const liveCommentCount = commentCountState?.taskId === task.id && commentCountState.sourceCount === sourceCommentCount
+    ? commentCountState.count
+    : sourceCommentCount
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setCommentCountState(null)
+    }
+    onOpenChange(nextOpen)
+  }
 
   const summaryParts = [
     formatStatusLabel(task.status),
@@ -75,7 +86,7 @@ export function TaskViewDialog({
   ]
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-h-[88vh] max-w-5xl overflow-hidden p-0">
         <DialogHeader className="border-b border-slate-200/80 px-6 py-5">
           <DialogTitle className="text-2xl leading-tight text-slate-950">{task.title}</DialogTitle>
@@ -216,7 +227,11 @@ export function TaskViewDialog({
                   userName={userName}
                   userRole={userRole}
                   participants={participants}
-                  onCommentCountChange={setLiveCommentCount}
+                  onCommentCountChange={(count) => setCommentCountState({
+                    taskId: task.id,
+                    sourceCount: sourceCommentCount,
+                    count,
+                  })}
                 />
               </TabsContent>
             </Tabs>

@@ -18,6 +18,8 @@ export type UseTaskFormOptions = {
   selectedClientId: string | undefined
   projectContext?: { id: string | null; name: string | null }
   userId: string | undefined
+  initialCreateOpen?: boolean
+  onCreateOpenChange?: (open: boolean) => void
   onCreateTask: (payload: CreateTaskPayload) => Promise<TaskRecord | null>
   onUpdateTask: (taskId: string, payload: UpdateTaskPayload) => Promise<TaskRecord | null>
 }
@@ -60,12 +62,14 @@ export function useTaskForm({
   selectedClientId,
   projectContext,
   userId,
+  initialCreateOpen = false,
+  onCreateOpenChange,
   onCreateTask,
   onUpdateTask,
 }: UseTaskFormOptions): UseTaskFormReturn {
   const convex = useConvex()
   // Create form state
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [isCreateOpen, setIsCreateOpen] = useState(initialCreateOpen)
   const [formState, setFormState] = useState<TaskFormState>(() =>
     buildInitialFormState(selectedClient ?? undefined, projectContext)
   )
@@ -111,6 +115,7 @@ export function useTaskForm({
   const handleCreateOpenChange = useCallback(
     (open: boolean) => {
       setIsCreateOpen(open)
+      onCreateOpenChange?.(open)
       if (open) {
         setCreateError(null)
         setFormState((prev) => ({
@@ -124,7 +129,7 @@ export function useTaskForm({
         resetForm()
       }
     },
-    [projectContext, resetForm, selectedClient]
+    [onCreateOpenChange, projectContext, resetForm, selectedClient]
   )
 
   const handleCreateSubmit = async (event: FormEvent<HTMLFormElement>) => {

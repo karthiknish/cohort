@@ -129,7 +129,7 @@ export function AutomationControlsCard({
                   </div>
                 </div>
 
-                <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Checkbox
                     id={`auto-sync-${status.providerId}`}
                     checked={draft.autoSyncEnabled}
@@ -143,7 +143,7 @@ export function AutomationControlsCard({
                   <label htmlFor={`auto-sync-${status.providerId}`} className="cursor-pointer">
                     Enable automatic sync
                   </label>
-                </label>
+                </div>
 
                 {isExpanded && (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">

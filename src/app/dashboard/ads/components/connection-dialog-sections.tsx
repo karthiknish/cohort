@@ -24,8 +24,8 @@ type ProviderInfoShape = {
   name: string
   shortName: string
   estimatedSetupTime: string
-  benefits: string[]
-  requirements: string[]
+  benefits: readonly string[]
+  requirements: readonly string[]
   loginMethod: 'redirect' | 'popup'
 }
 

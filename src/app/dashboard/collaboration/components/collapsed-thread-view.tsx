@@ -93,7 +93,7 @@ function ThreadCard({
     (r) => !r.readBy || r.readBy.length === 0
   ).length
 
-  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       onClick()
@@ -104,14 +104,9 @@ function ThreadCard({
     <div
       className={cn(
         'border rounded-lg overflow-hidden transition-colors',
-        'hover:bg-muted/50 cursor-pointer',
+        'hover:bg-muted/50',
         unreadCount > 0 && 'border-primary/50 bg-primary/5'
       )}
-      onClick={onClick}
-      onKeyDown={handleCardKeyDown}
-      role="button"
-      tabIndex={0}
-      aria-expanded={isExpanded}
     >
       {/* Thread header - always visible */}
       <div className="p-3">
@@ -134,68 +129,67 @@ function ThreadCard({
             )}
           </Button>
 
-          {/* Thread icon */}
-          <div className="flex-shrink-0">
-            <MessageSquare className="h-5 w-5 text-muted-foreground" />
-          </div>
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-start gap-3 text-left"
+            onClick={onClick}
+            onKeyDown={handleCardKeyDown}
+            aria-expanded={isExpanded}
+          >
+            <div className="flex-shrink-0">
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
+            </div>
 
-          {/* Thread content */}
-          <div className="min-w-0 flex-1">
-            {/* Thread title/snippet */}
-            <p className="text-sm font-medium line-clamp-1">
-              {rootMessage.content}
-            </p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium line-clamp-1">
+                {rootMessage.content}
+              </p>
 
-            {/* Thread metadata */}
-            <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
-              {/* Reply count */}
-              <span className="flex items-center gap-1">
-                <MessageSquare className="h-3 w-3" />
-                {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
-              </span>
-
-              {/* Participants */}
-              <span className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                {participants.length} {participants.length === 1 ? 'person' : 'people'}
-              </span>
-
-              {/* Last activity */}
-              {lastReplyAt && (
+              <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatRelativeTime(new Date(lastReplyAt))}
+                  <MessageSquare className="h-3 w-3" />
+                  {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
                 </span>
-              )}
 
-              {/* Unread indicator */}
-              {unreadCount > 0 && (
-                <Badge variant="default" className="text-xs">
-                  {unreadCount} new
-                </Badge>
-              )}
-            </div>
+                <span className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {participants.length} {participants.length === 1 ? 'person' : 'people'}
+                </span>
 
-            {/* Participant avatars */}
-            <div className="flex -space-x-1 mt-2">
-              {participants.slice(0, 4).map((name, i) => (
-                <Avatar
-                  key={name}
-                  className="h-6 w-6 border-2 border-background"
-                  style={{ zIndex: participants.length - i }}
-                >
-                  <AvatarFallback className="text-[10px]">
-                    {name.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-              {participants.length > 4 && (
-                <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] text-muted-foreground">
-                  +{participants.length - 4}
-                </div>
-              )}
+                {lastReplyAt && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {formatRelativeTime(new Date(lastReplyAt))}
+                  </span>
+                )}
+
+                {unreadCount > 0 && (
+                  <Badge variant="default" className="text-xs">
+                    {unreadCount} new
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex -space-x-1 mt-2">
+                {participants.slice(0, 4).map((name, i) => (
+                  <Avatar
+                    key={name}
+                    className="h-6 w-6 border-2 border-background"
+                    style={{ zIndex: participants.length - i }}
+                  >
+                    <AvatarFallback className="text-[10px]">
+                      {name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+                {participants.length > 4 && (
+                  <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] text-muted-foreground">
+                    +{participants.length - 4}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </button>
         </div>
       </div>
 

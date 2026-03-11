@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import {
   BellOff,
@@ -53,6 +53,26 @@ type AckAction = 'read' | 'dismiss'
 type FilterType = 'all' | 'unread' | 'mentions' | 'system'
 
 export default function NotificationsPage() {
+  return (
+    <Suspense fallback={<NotificationsPageFallback />}>
+      <NotificationsPageContent />
+    </Suspense>
+  )
+}
+
+function NotificationsPageFallback() {
+  return (
+    <div className={DASHBOARD_THEME.layout.container}>
+      <Card>
+        <CardContent className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+          <LoaderCircle className="h-5 w-5 animate-spin" /> Loading notifications…
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function NotificationsPageContent() {
   const router = useRouter()
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
@@ -70,15 +90,22 @@ export default function NotificationsPage() {
   const activeFilter = filterTabs.value
   const setActiveFilter = filterTabs.setValue
   const [ackInFlight, setAckInFlight] = useState(false)
-  const [previewNotifications, setPreviewNotifications] = useState<WorkspaceNotification[]>([])
-
-  useEffect(() => {
-    if (!isPreviewMode) {
-      return
+  const [previewNotificationState, setPreviewNotificationState] = useState<{
+    sourceKey: string
+    notifications: WorkspaceNotification[]
+  } | null>(null)
+  const previewSourceKey = useMemo(() => `preview:${selectedClientId ?? 'all'}`, [selectedClientId])
+  const basePreviewNotifications = useMemo(
+    () => getPreviewNotifications(selectedClientId ?? null),
+    [selectedClientId]
+  )
+  const previewNotifications = useMemo(() => {
+    if (previewNotificationState?.sourceKey === previewSourceKey) {
+      return previewNotificationState.notifications
     }
 
-    setPreviewNotifications(getPreviewNotifications(selectedClientId ?? null))
-  }, [isPreviewMode, selectedClientId])
+    return basePreviewNotifications
+  }, [basePreviewNotifications, previewNotificationState, previewSourceKey])
 
   const convex = useConvex()
   const workspaceId = user?.agencyId
@@ -142,16 +169,26 @@ export default function NotificationsPage() {
           return Promise.resolve()
         }
 
-        setPreviewNotifications((current) => {
+        setPreviewNotificationState((current) => {
+          const notifications = current?.sourceKey === previewSourceKey
+            ? current.notifications
+            : basePreviewNotifications
+
           if (action === 'dismiss') {
-            return current.filter((notification) => !ids.includes(notification.id))
+            return {
+              sourceKey: previewSourceKey,
+              notifications: notifications.filter((notification) => !ids.includes(notification.id)),
+            }
           }
 
-          return current.map((notification) => (
-            ids.includes(notification.id)
-              ? { ...notification, read: true, acknowledged: true }
-              : notification
-          ))
+          return {
+            sourceKey: previewSourceKey,
+            notifications: notifications.map((notification) => (
+              ids.includes(notification.id)
+                ? { ...notification, read: true, acknowledged: true }
+                : notification
+            )),
+          }
         })
 
         toast({
@@ -185,18 +222,21 @@ export default function NotificationsPage() {
           setAckInFlight(false)
         })
     },
-    [ackNotifications, isPreviewMode, notificationsInfiniteQuery, toast, workspaceId]
+    [ackNotifications, basePreviewNotifications, isPreviewMode, notificationsInfiniteQuery, previewSourceKey, toast, workspaceId]
   )
 
   const handleRefresh = useCallback(() => {
     if (isPreviewMode) {
-      setPreviewNotifications(getPreviewNotifications(selectedClientId ?? null))
+      setPreviewNotificationState({
+        sourceKey: previewSourceKey,
+        notifications: basePreviewNotifications,
+      })
       toast({ title: 'Preview data refreshed', description: 'Showing sample notifications.' })
       return
     }
 
     void notificationsInfiniteQuery.refetch()
-  }, [isPreviewMode, notificationsInfiniteQuery, selectedClientId, toast])
+  }, [basePreviewNotifications, isPreviewMode, notificationsInfiniteQuery, previewSourceKey, toast])
 
   const handleLoadMore = useCallback(() => {
     if (isPreviewMode) {

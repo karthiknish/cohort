@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Check, ChevronsUpDown } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,9 @@ function normalizeName(value: string) {
 
 export function UserSearchPicker({ id, value, onChange, options, placeholder, searchPlaceholder, emptyText, disabled = false, excludeNames = [] }: UserSearchPickerProps) {
   const [open, setOpen] = useState(false)
+  const generatedId = useId()
+  const triggerId = id ?? `user-search-picker-${generatedId}`
+  const listboxId = `${triggerId}-listbox`
 
   const selectedValue = normalizeName(value)
   const excluded = useMemo(() => new Set(excludeNames.map(normalizeName)), [excludeNames])
@@ -41,11 +44,13 @@ export function UserSearchPicker({ id, value, onChange, options, placeholder, se
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          id={id}
+          id={triggerId}
           type="button"
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listboxId}
+          aria-haspopup="listbox"
           disabled={disabled}
           className={cn('w-full justify-between font-normal', !selectedLabel && 'text-muted-foreground')}
         >
@@ -56,7 +61,7 @@ export function UserSearchPicker({ id, value, onChange, options, placeholder, se
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
-          <CommandList>
+          <CommandList id={listboxId} role="listbox" aria-labelledby={triggerId}>
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {availableOptions.map((option) => {

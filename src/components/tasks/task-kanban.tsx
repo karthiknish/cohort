@@ -50,17 +50,6 @@ type DraggedTask = {
 const EMPTY_SELECTED_TASK_IDS = new Set<string>()
 const EMPTY_TASK_PARTICIPANTS: TaskParticipant[] = []
 
-function shouldIgnoreToggle(target: EventTarget | null, currentTarget?: HTMLElement | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-
-  const interactiveAncestor = target.closest('button, a, input, textarea, select, label, [role="button"], [role="menuitem"], [role="checkbox"], [data-radix-collection-item], [data-no-kanban-toggle="true"]')
-
-  if (!interactiveAncestor) return false
-  if (currentTarget && interactiveAncestor === currentTarget) return false
-
-  return true
-}
-
 export function TaskKanban({
   tasks,
   loading,
@@ -313,22 +302,7 @@ export function TaskKanban({
                             </div>
                           </button>
                         ) : (
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`Collapse task ${task.title}`}
-                            onClick={(event) => {
-                              if (shouldIgnoreToggle(event.target, event.currentTarget)) return
-                              toggleCollapsed(task.id)
-                            }}
-                            onKeyDown={(event) => {
-                              if (event.key !== 'Enter' && event.key !== ' ') return
-                              if (shouldIgnoreToggle(event.target, event.currentTarget)) return
-                              event.preventDefault()
-                              toggleCollapsed(task.id)
-                            }}
-                            className="space-y-2"
-                          >
+                          <div className="space-y-2">
                             <TaskCard
                               task={task}
                               isPendingUpdate={pendingStatusUpdates.has(task.id)}

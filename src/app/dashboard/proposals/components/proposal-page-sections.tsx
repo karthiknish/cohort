@@ -14,11 +14,11 @@ import { ProposalDraftPanel } from './proposal-draft-panel'
 import { ProposalHistory } from './proposal-history'
 import { ProposalMetrics } from './proposal-metrics'
 import { ProposalStepIndicator } from './proposal-step-indicator'
+import type { ProposalStep } from './proposal-step-indicator'
 import { ProposalSubmittedPanel } from './proposal-submitted-panel'
 import { ProposalTemplateSelector } from './proposal-template-selector'
 import { ProposalVersionHistory } from './proposal-version-history'
 import { ProposalWizardHeader } from './proposal-wizard-header'
-import type { ProposalStepId } from './proposal-step-types'
 
 export function ProposalPageActions(props: {
   currentFormData: ProposalFormData
@@ -159,9 +159,9 @@ export function ProposalBuilderOverlay(props: {
   canResumeSubmission: boolean
   onResumeSubmission: () => void
   isSubmitting: boolean
-  onRecheckDeck: () => void
+  onRecheckDeck: () => Promise<void>
   isRecheckingDeck: boolean
-  steps: Array<{ id: ProposalStepId; label: string; title: string; description: string }>
+  steps: ProposalStep[]
   currentStep: number
   draftId: string | null
   autosaveStatus: 'idle' | 'saving' | 'saved' | 'error'

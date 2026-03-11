@@ -1,29 +1,45 @@
-"use client"
+'use client'
 
-import { type KeyboardEvent, useState } from "react"
-import { Download, Image as ImageIcon, ZoomIn } from "lucide-react"
+import { Download, Image as ImageIcon, ZoomIn } from 'lucide-react'
+import { useState } from 'react'
 
-import { Button } from "@/components/ui/button"
-import { LazyImage } from "@/components/ui/lazy-image"
-import { cn } from "@/lib/utils"
-import { ImagePreviewModal } from "./image-preview-modal"
+import { Button } from '@/components/ui/button'
+import { LazyImage } from '@/components/ui/lazy-image'
+import { cn } from '@/lib/utils'
+
+import { ImagePreviewModal } from './image-preview-modal'
 
 interface ImageGalleryProps {
-  images: Array<{
-    url: string
-    name: string
-    size?: string
-  }>
+  images: Array<{ url: string; name: string; size?: string }>
   className?: string
 }
 
-function createPreviewKeyDownHandler(openPreview: () => void) {
-  return (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault()
-      openPreview()
-    }
-  }
+function PreviewTile({ image, onPreview, className, aspectClassName = 'aspect-square', overlay }: {
+  image: ImageGalleryProps['images'][number]
+  onPreview: () => void
+  className?: string
+  aspectClassName?: string
+  overlay?: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPreview}
+      className={cn('group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted', className)}
+      aria-label={`Preview image ${image.name}`}
+    >
+      <div className={cn('relative overflow-hidden', aspectClassName)}>
+        <LazyImage src={image.url} alt={image.name} className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105" />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+          {overlay ?? (
+            <div className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
+              <ZoomIn className="h-4 w-4" />
+            </div>
+          )}
+        </div>
+      </div>
+    </button>
+  )
 }
 
 export function ImageGallery({ images, className }: ImageGalleryProps) {
@@ -37,220 +53,66 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
     setPreviewOpen(true)
   }
 
-  // Single image layout
   if (images.length === 1) {
-    const image = images[0]! // Safe: we verified images.length === 1
+    const image = images[0]
+    if (!image) return null
     return (
       <>
-        <figure
-          className={cn(
-            "group relative max-w-xl overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted my-2",
-            className
-          )}
-          onClick={() => handleImageClick(0)}
-          onKeyDown={createPreviewKeyDownHandler(() => handleImageClick(0))}
-          role="button"
-          tabIndex={0}
-          aria-label={`Preview image ${image.name}`}
-        >
-          <div className="relative aspect-video max-h-96 overflow-hidden">
-            <LazyImage
-              src={image.url}
-              alt={image.name}
-              className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105"
-            />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-              <div className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
-                <ZoomIn className="h-4 w-4" />
-                <span className="text-sm font-medium">Preview</span>
-              </div>
-            </div>
-          </div>
+        <figure className={cn('my-2 max-w-xl overflow-hidden rounded-lg border border-muted/60 bg-muted/10', className)}>
+          <PreviewTile image={image} onPreview={() => handleImageClick(0)} aspectClassName="aspect-video max-h-96" className="rounded-none border-0" />
           <figcaption className="flex items-center justify-between gap-3 border-t border-muted/40 p-3 text-xs text-muted-foreground">
             <div className="flex flex-1 items-center gap-2 truncate">
               <ImageIcon className="h-4 w-4 flex-shrink-0" />
               <span className="truncate">{image.name}</span>
-              {image.size && (
-                <span className="whitespace-nowrap text-muted-foreground/60">
-                  {image.size}
-                </span>
-              )}
+              {image.size ? <span className="whitespace-nowrap text-muted-foreground/60">{image.size}</span> : null}
             </div>
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <a href={image.url} download={image.name}>
-                <Download className="mr-1 h-3.5 w-3.5" />
-                Download
-              </a>
+            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
+              <a href={image.url} download={image.name}><Download className="mr-1 h-3.5 w-3.5" />Download</a>
             </Button>
           </figcaption>
         </figure>
-
-        <ImagePreviewModal
-          images={images}
-          initialIndex={previewIndex}
-          isOpen={previewOpen}
-          onClose={() => setPreviewOpen(false)}
-        />
+        <ImagePreviewModal images={images} initialIndex={previewIndex} isOpen={previewOpen} onClose={() => setPreviewOpen(false)} />
       </>
     )
   }
 
-  // Two images layout - side by side
+  const modal = <ImagePreviewModal images={images} initialIndex={previewIndex} isOpen={previewOpen} onClose={() => setPreviewOpen(false)} />
+
   if (images.length === 2) {
-    return (
-      <>
-        <div className={cn("grid grid-cols-2 gap-2 max-w-xl", className)}>
-            {images.map((image, index) => (
-            <figure
-                key={image.url}
-              className="group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted"
-              onClick={() => handleImageClick(index)}
-              onKeyDown={createPreviewKeyDownHandler(() => handleImageClick(index))}
-              role="button"
-              tabIndex={0}
-              aria-label={`Preview image ${image.name}`}
-            >
-              <div className="relative aspect-square overflow-hidden">
-                <LazyImage
-                  src={image.url}
-                  alt={image.name}
-                  className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                  <div className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
-                    <ZoomIn className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-            </figure>
-          ))}
-        </div>
-
-        <ImagePreviewModal
-          images={images}
-          initialIndex={previewIndex}
-          isOpen={previewOpen}
-          onClose={() => setPreviewOpen(false)}
-        />
-      </>
-    )
+    return <><div className={cn('grid max-w-xl grid-cols-2 gap-2', className)}>{images.map((image, index) => <PreviewTile key={image.url} image={image} onPreview={() => handleImageClick(index)} />)}</div>{modal}</>
   }
 
-  // Three images layout - one large, two small
   if (images.length === 3) {
+    const firstImage = images[0]
+    if (!firstImage) return null
+
     return (
       <>
-        <div className={cn("grid grid-cols-2 gap-2 max-w-xl", className)}>
-          <figure
-            className="group relative col-span-1 row-span-2 overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted"
-            onClick={() => handleImageClick(0)}
-            onKeyDown={createPreviewKeyDownHandler(() => handleImageClick(0))}
-            role="button"
-            tabIndex={0}
-            aria-label={`Preview image ${images[0]!.name}`}
-          >
-            <div className="relative aspect-[3/4] overflow-hidden">
-              <LazyImage
-                src={images[0]!.url}
-                alt={images[0]!.name}
-                className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105"
-              />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                <div className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  <ZoomIn className="h-4 w-4" />
-                </div>
-              </div>
-            </div>
-          </figure>
-            {images.slice(1, 3).map((image, index) => (
-            <figure
-                key={image.url}
-              className="group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted"
-              onClick={() => handleImageClick(index + 1)}
-              onKeyDown={createPreviewKeyDownHandler(() => handleImageClick(index + 1))}
-              role="button"
-              tabIndex={0}
-              aria-label={`Preview image ${image.name}`}
-            >
-              <div className="relative aspect-square overflow-hidden">
-                <LazyImage
-                  src={image.url}
-                  alt={image.name}
-                  className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                  <div className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
-                    <ZoomIn className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-            </figure>
-          ))}
+        <div className={cn('grid max-w-xl grid-cols-2 gap-2', className)}>
+          <PreviewTile image={firstImage} onPreview={() => handleImageClick(0)} className="col-span-1 row-span-2" aspectClassName="aspect-[3/4]" />
+          {images.slice(1, 3).map((image, index) => <PreviewTile key={image.url} image={image} onPreview={() => handleImageClick(index + 1)} />)}
         </div>
-
-        <ImagePreviewModal
-          images={images}
-          initialIndex={previewIndex}
-          isOpen={previewOpen}
-          onClose={() => setPreviewOpen(false)}
-        />
+        {modal}
       </>
     )
   }
 
-  // Four+ images layout - grid with "+X more" overlay
   const displayImages = images.slice(0, 4)
   const remainingCount = images.length - 4
 
   return (
     <>
-      <div className={cn("grid grid-cols-2 gap-2 max-w-xl", className)}>
-          {displayImages.map((image, index) => (
-          <figure
-              key={image.url}
-            className="group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted"
-            onClick={() => handleImageClick(index)}
-            onKeyDown={createPreviewKeyDownHandler(() => handleImageClick(index))}
-            role="button"
-            tabIndex={0}
-            aria-label={`Preview image ${image.name}`}
-          >
-            <div className="relative aspect-square overflow-hidden">
-              <LazyImage
-                src={image.url}
-                alt={image.name}
-                className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105"
-              />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                {index === 3 && remainingCount > 0 ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                    <span className="text-2xl font-bold text-white">
-                      +{remainingCount}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
-                    <ZoomIn className="h-4 w-4" />
-                  </div>
-                )}
-              </div>
-            </div>
-          </figure>
+      <div className={cn('grid max-w-xl grid-cols-2 gap-2', className)}>
+        {displayImages.map((image, index) => (
+          <PreviewTile
+            key={image.url}
+            image={image}
+            onPreview={() => handleImageClick(index)}
+            overlay={index === 3 && remainingCount > 0 ? <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-2xl font-bold text-white">+{remainingCount}</div> : undefined}
+          />
         ))}
       </div>
-
-      <ImagePreviewModal
-        images={images}
-        initialIndex={previewIndex}
-        isOpen={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-      />
+      {modal}
     </>
   )
 }

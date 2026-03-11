@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import {
   Download,
   RefreshCcw,
@@ -52,7 +52,9 @@ import type { OnboardingItem } from './types'
 export default function ClientsDashboardPage() {
   return (
     <ClientAccessGate>
-      <ClientsDashboardContent />
+      <Suspense fallback={<ClientsDashboardSkeleton />}>
+        <ClientsDashboardContent />
+      </Suspense>
     </ClientAccessGate>
   )
 }

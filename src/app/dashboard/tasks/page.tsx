@@ -3,7 +3,7 @@
 import { useQuery } from 'convex/react'
 import dynamic from 'next/dynamic'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   formatDate,
@@ -71,6 +71,26 @@ const DeleteTaskDialog = dynamic(
 )
 
 export default function TasksPage() {
+  return (
+    <Suspense fallback={<TasksPageFallback />}>
+      <TasksPageContent />
+    </Suspense>
+  )
+}
+
+function TasksPageFallback() {
+  return (
+    <div className={DASHBOARD_THEME.layout.container}>
+      <Card className={DASHBOARD_THEME.cards.base}>
+        <CardContent className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+          Loading tasks…
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function TasksPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -210,10 +230,19 @@ export default function TasksPage() {
     selectedClientId: taskFormClientId,
     projectContext: projectFilter,
     userId: user?.id,
+    initialCreateOpen: actionParam === 'create',
+    onCreateOpenChange: (open) => {
+      if (open || actionParam !== 'create') return
+
+      const params = new URLSearchParams(searchParamsString)
+      params.delete('action')
+      const next = params.toString()
+      router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
+    },
     onCreateTask: handleCreateTask,
     onUpdateTask: handleUpdateTask,
   })
-  const { setFormState, handleCreateOpenChange } = form
+  const { setFormState } = form
 
   // Update form when client changes
   useEffect(() => {
@@ -225,18 +254,6 @@ export default function TasksPage() {
       projectName: projectFilter.name ?? '',
     }))
   }, [projectFilter.id, projectFilter.name, setFormState, taskFormClient?.id, taskFormClient?.name])
-
-  // Auto-open create sheet when action=create is in URL
-  useEffect(() => {
-    if (actionParam === 'create') {
-      handleCreateOpenChange(true)
-      // Clean up the URL without refreshing
-      const params = new URLSearchParams(searchParamsString)
-      params.delete('action')
-      const next = params.toString()
-      router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
-    }
-  }, [actionParam, handleCreateOpenChange, pathname, router, searchParamsString])
 
   // Keyboard shortcuts
   useKeyboardShortcut({
