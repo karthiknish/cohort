@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono, Anybody } from 'next/font/google'
-
+import { Agentation } from "agentation";
 export const dynamic = 'force-dynamic'
 import './globals.css'
 import '@livekit/components-styles'
@@ -73,10 +73,11 @@ export default function RootLayout({
             <SiteHeader />
             <main id="main-content" className="flex-1">
               <MotionProvider>{children}</MotionProvider>
+               {process.env.NODE_ENV === "development" && <Agentation />}
             </main>
             <SiteFooter />
           </div>
-          <Suspense fallback={null}>
+          <Suspense fallback={null}>    
             <PWAProvider />
           </Suspense>
         </AppProviders>

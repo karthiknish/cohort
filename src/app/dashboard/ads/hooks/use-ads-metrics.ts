@@ -106,9 +106,14 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   const processedMetrics = useMemo(() => {
     const uniqueMap = new Map<string, MetricRecord>()
     metrics.forEach((m) => {
-      // Include accountId in the key to properly handle multiple accounts per provider
+      // Key must include publisherPlatform because Meta returns one row per
+      // platform breakdown per day, and campaignId because each provider can
+      // return multiple campaign rows per day.  Without campaignId, multiple
+      // campaign rows collapse into one and spend appears as zero.
       const accountId = m.accountId ?? ''
-      const key = `${m.providerId}|${accountId}|${m.date}`
+      const platform = m.publisherPlatform ?? ''
+      const campaign = (m as MetricRecord & { campaignId?: string | null }).campaignId ?? ''
+      const key = `${m.providerId}|${accountId}|${platform}|${campaign}|${m.date}`
       const existing = uniqueMap.get(key)
       if (!existing || (m.createdAt && existing.createdAt && m.createdAt > existing.createdAt)) {
         uniqueMap.set(key, m)
@@ -184,7 +189,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   }, [canQueryConvex, isPreviewMode, workspaceId])
 
   const metricsRealtime = useQuery(
-    api.adsMetrics.listMetrics,
+    api.adsMetrics.listMetricsWithSummary,
     isPreviewMode || !workspaceId || !canQueryConvex
       ? 'skip'
       : {
@@ -193,6 +198,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
           startDate: dateRange.start.toISOString().split('T')[0],
           endDate: dateRange.end.toISOString().split('T')[0],
           limit: 1000,
+          aggregate: true,
         }
   )
 
@@ -201,11 +207,12 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     if (isPreviewMode) return getPreviewAdsMetrics() as MetricRecord[]
     if (!workspaceId || !canQueryConvex) return [] as MetricRecord[]
 
-    const rows = Array.isArray(metricsRealtime) ? metricsRealtime : []
+    const rows = Array.isArray(metricsRealtime?.metrics) ? metricsRealtime.metrics : []
     return rows.map((row) => ({
-      id: `${normalizeProviderId(String(row.providerId))}:${String(row.accountId ?? '')}:${String(row.date)}`,
+      id: typeof row.id === 'string' ? row.id : `${normalizeProviderId(String(row.providerId))}:${String(row.accountId ?? '')}:${String(row.publisherPlatform ?? '')}:${String(row.date)}`,
       providerId: normalizeProviderId(String(row.providerId)),
       accountId: typeof row.accountId === 'string' ? row.accountId : null,
+      currency: typeof row.currency === 'string' ? row.currency : null,
       publisherPlatform:
         typeof row.publisherPlatform === 'string' && row.publisherPlatform.length > 0
           ? row.publisherPlatform
@@ -249,12 +256,15 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     setVisibleCount(METRICS_PAGE_SIZE)
     setMetricError(null)
     setLoadMoreError(null)
-    setServerSideSummary(null)
+
+    // Populate server-side aggregated summary when available.
+    const summary = !isPreviewMode && metricsRealtime?.summary ? metricsRealtime.summary : null
+    setServerSideSummary(summary)
 
     const firstPage = metricsSource.slice(0, METRICS_PAGE_SIZE)
     setMetrics(firstPage)
     setNextCursor(metricsSource.length > METRICS_PAGE_SIZE ? 'more' : null)
-  }, [canQueryConvex, isConvexLoading, isPreviewMode, metricsSource, refreshTick, workspaceId])
+  }, [canQueryConvex, isConvexLoading, isPreviewMode, metricsRealtime, metricsSource, refreshTick, workspaceId])
 
   // Keep nextCursor in sync with current visible count.
   useEffect(() => {

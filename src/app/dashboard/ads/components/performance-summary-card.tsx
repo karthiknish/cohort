@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatProviderName } from '@/lib/themes'
+import { formatProviderName, normalizeProviderId } from '@/lib/themes'
 import { cn, formatCurrency } from '@/lib/utils'
 
 import type { ProviderSummary } from './types'
@@ -21,6 +21,7 @@ import type { ProviderSummary } from './types'
 interface PerformanceSummaryCardProps {
   providerSummaries: Record<string, ProviderSummary>
   currency?: string
+  providerCurrencies?: Record<string, string>
   hasMetrics: boolean
   initialMetricsLoading: boolean
   metricsLoading: boolean
@@ -37,6 +38,7 @@ interface PerformanceSummaryCardProps {
 export function PerformanceSummaryCard({
   providerSummaries,
   currency = 'USD',
+  providerCurrencies,
   hasMetrics,
   initialMetricsLoading,
   metricsLoading,
@@ -116,6 +118,7 @@ export function PerformanceSummaryCard({
         ) : (
           <div className="grid gap-5 md:grid-cols-3">
             {Object.entries(providerSummaries).map(([providerId, summary], index) => {
+              const providerCurrency = providerCurrencies?.[normalizeProviderId(providerId)] ?? currency
               const ctr = summary.impressions > 0 ? (summary.clicks / summary.impressions) * 100 : null
               const cpc = summary.clicks > 0 ? summary.spend / summary.clicks : null
               const cpa = summary.conversions > 0 ? summary.spend / summary.conversions : null
@@ -127,8 +130,8 @@ export function PerformanceSummaryCard({
                 { id: 'clicks', label: 'Clicks', value: formatNumber(summary.clicks) },
                 { id: 'conversions', label: 'Conversions', value: formatNumber(summary.conversions) },
                 { id: 'ctr', label: 'CTR', value: ctr !== null ? `${ctr.toFixed(2)}%` : '—' },
-                { id: 'avg-cpc', label: 'Avg CPC', value: cpc !== null ? formatCurrency(cpc, currency) : '—' },
-                { id: 'cpa', label: 'CPA', value: cpa !== null ? formatCurrency(cpa, currency) : '—' },
+                { id: 'avg-cpc', label: 'Avg CPC', value: cpc !== null ? formatCurrency(cpc, providerCurrency) : '—' },
+                { id: 'cpa', label: 'CPA', value: cpa !== null ? formatCurrency(cpa, providerCurrency) : '—' },
                 { id: 'roas', label: 'ROAS', value: roas !== null ? `${roas.toFixed(2)}x` : '—' },
               ]
 
@@ -159,7 +162,7 @@ export function PerformanceSummaryCard({
                       <div>
                         <div className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Total Spend</div>
                         <div className="text-3xl font-bold tracking-tight tabular-nums mt-1">
-                          {formatCurrency(summary.spend, currency)}
+                          {formatCurrency(summary.spend, providerCurrency)}
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

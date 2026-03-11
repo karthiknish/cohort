@@ -17,12 +17,19 @@ import { asErrorMessage, logError } from '@/lib/convex-errors'
 import type { AdPlatform, IntegrationStatus, IntegrationStatusResponse } from '../components/types'
 
 import { formatProviderName } from '../components/utils'
+import { normalizeProviderId } from '@/lib/themes'
 import {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
   TOAST_TITLES,
   PROVIDER_IDS,
 } from '../components/constants'
+
+// Raw providerId values that are genuine ads platforms.
+// This is checked against the raw DB value BEFORE normalization so that
+// analytics-only providers like 'google-analytics' are excluded even though
+// normalizeProviderId maps them to 'google' (which IS a valid ads provider).
+const RAW_ADS_PROVIDER_IDS = new Set(['google', 'facebook', 'linkedin', 'tiktok'])
 
 
 type ConvexIntegrationStatusRow = {
@@ -166,23 +173,36 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
     const rows = Array.isArray(convexStatuses) ? convexStatuses : []
 
-    const statuses = rows.map((row) => ({
-      providerId: String(row.providerId),
-      status: String(row.lastSyncStatus ?? 'never'),
-      message: row.lastSyncMessage ?? null,
-      lastSyncedAt: typeof row.lastSyncedAtMs === 'number' ? new Date(row.lastSyncedAtMs).toISOString() : null,
-      lastSyncRequestedAt:
-        typeof row.lastSyncRequestedAtMs === 'number'
-          ? new Date(row.lastSyncRequestedAtMs).toISOString()
-          : null,
-      linkedAt: typeof row.linkedAtMs === 'number' ? new Date(row.linkedAtMs).toISOString() : null,
-      accountId: row.accountId ?? null,
-      accountName: row.accountName ?? null,
-      currency: row.currency ?? null,
-      autoSyncEnabled: row.autoSyncEnabled ?? null,
-      syncFrequencyMinutes: row.syncFrequencyMinutes ?? null,
-      scheduledTimeframeDays: row.scheduledTimeframeDays ?? null,
-    }))
+    // Filter to genuine ads providers on the raw providerId BEFORE normalization.
+    // normalizeProviderId maps 'google-analytics' → 'google', which would otherwise
+    // pass an ADS_PROVIDER_IDS check on the normalized value.
+    const seenProviders = new Set<string>()
+    const statuses = rows
+      .filter((row) => RAW_ADS_PROVIDER_IDS.has(String(row.providerId).trim().toLowerCase()))
+      .map((row) => ({
+        providerId: normalizeProviderId(String(row.providerId)),
+        status: String(row.lastSyncStatus ?? 'never'),
+        message: row.lastSyncMessage ?? null,
+        lastSyncedAt: typeof row.lastSyncedAtMs === 'number' ? new Date(row.lastSyncedAtMs).toISOString() : null,
+        lastSyncRequestedAt:
+          typeof row.lastSyncRequestedAtMs === 'number'
+            ? new Date(row.lastSyncRequestedAtMs).toISOString()
+            : null,
+        linkedAt: typeof row.linkedAtMs === 'number' ? new Date(row.linkedAtMs).toISOString() : null,
+        accountId: row.accountId ?? null,
+        accountName: row.accountName ?? null,
+        currency: row.currency ?? null,
+        autoSyncEnabled: row.autoSyncEnabled ?? null,
+        syncFrequencyMinutes: row.syncFrequencyMinutes ?? null,
+        scheduledTimeframeDays: row.scheduledTimeframeDays ?? null,
+      }))
+      .filter((s) => RAW_ADS_PROVIDER_IDS.has(s.providerId))
+      .filter((s) => {
+        // Deduplicate by normalized provider ID, keeping the first entry.
+        if (seenProviders.has(s.providerId)) return false
+        seenProviders.add(s.providerId)
+        return true
+      })
 
     return { statuses }
   }, [convexStatuses, isPreviewMode, canQueryConvex, workspaceId])

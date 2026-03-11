@@ -4,7 +4,6 @@ import { memo, useMemo } from 'react'
 import Link from 'next/link'
 import { Info } from 'lucide-react'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import {
@@ -115,69 +114,58 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
 
   if (loading) {
     return (
-      <Card className="h-full shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">Performance Overview</CardTitle>
-          <CardDescription>Loading metrics...</CardDescription>
-        </CardHeader>
-        <CardContent className="h-[300px] flex items-center justify-center">
-          <Skeleton className="h-full w-full" />
-        </CardContent>
-      </Card>
+      <div className="flex h-full flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-muted-foreground">Performance Overview</span>
+        </div>
+        <Skeleton className="h-full w-full" />
+      </div>
     )
   }
 
   if (chartData.length === 0) {
     return (
-      <Card className="h-full shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">Performance Overview</CardTitle>
-            <CardDescription>Key metrics from pipelines, tasks, and active campaigns.</CardDescription>
-          </div>
+      <div className="flex h-full flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">Performance Overview</span>
           <Button asChild variant="outline" size="sm">
             <Link href="/dashboard/analytics">Open analytics workspace</Link>
           </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-muted/70 p-10 text-center h-[300px]">
-            <p className="max-w-md text-sm text-muted-foreground">
-              Charts appear once analytics data is connected. Until then, you can explore channel-level insights in the analytics workspace.
-            </p>
-            <Button asChild size="sm">
-              <Link href="/dashboard/analytics">Review analytics</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-muted/70 p-10 text-center">
+          <p className="max-w-md text-sm text-muted-foreground">
+            Charts appear once analytics data is connected. Until then, you can explore channel-level insights in the analytics workspace.
+          </p>
+          <Button asChild size="sm">
+            <Link href="/dashboard/analytics">Review analytics</Link>
+          </Button>
+        </div>
+      </div>
     )
   }
 
   return (
-    <Card className="h-full shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-lg">Performance Overview</CardTitle>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <p><strong>Revenue:</strong> Total income generated from campaign conversions.</p>
-                  <p className="mt-1"><strong>Ad Spend:</strong> Total amount invested in advertising. Compare with revenue to assess campaign profitability.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <CardDescription>Revenue vs Ad Spend over time</CardDescription>
+    <div className="flex h-full flex-col gap-1">
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Performance Overview</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p><strong>Revenue:</strong> Total income generated from campaign conversions.</p>
+                <p className="mt-1"><strong>Ad Spend:</strong> Total amount invested in advertising. Compare with revenue to assess campaign profitability.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <Button asChild variant="outline" size="sm">
           <Link href="/dashboard/analytics">View details</Link>
         </Button>
-      </CardHeader>
-      <CardContent className="h-[336px] pb-10">
+      </div>
+      <div className="min-h-0 flex-1">
         <ChartContainer config={chartConfig} className="h-full w-full">
           <AreaChart data={chartData} margin={{ top: 12, right: 12, left: 0, bottom: 28 }}>
             <defs>
@@ -240,7 +228,7 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
             />
           </AreaChart>
         </ChartContainer>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 })

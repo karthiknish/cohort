@@ -58,7 +58,7 @@
     "@types/socket.io": "^3.0.1",
     "@types/stripe": "^8.0.416",
     "@types/uuid": "^10.0.0",
-    "agentation": "^1.3.2",
+    "agentation": "^2.3.2",
     "axios": "^1.13.6",
     "better-auth": "^1.4.18",
     "cheerio": "^1.0.0-rc.12",

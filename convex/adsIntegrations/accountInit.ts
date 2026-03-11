@@ -83,6 +83,7 @@ export const initializeAdAccount = action({
         clientId,
         accountId,
         accountName: selectedAccount.name,
+        currency: selectedAccount.currencyCode ?? null,
         developerToken,
         loginCustomerId: loginCustomerId ?? null,
         managerCustomerId: managerCustomerId ?? null,
@@ -230,6 +231,7 @@ export const initializeAdAccount = action({
         clientId,
         accountId: selectedAccount.id,
         accountName: selectedAccount.name,
+        currency: selectedAccount.currency ?? null,
         linkedAtMs,
       })
 

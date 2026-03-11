@@ -3,6 +3,8 @@
 import { AlertCircle, Facebook, Instagram, Sparkles } from 'lucide-react'
 import { SiFacebook, SiInstagram } from 'react-icons/si'
 
+import { cn } from '@/lib/utils'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -109,11 +111,11 @@ export function SocialSurfacePanel({
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden border-muted/60 shadow-sm">
-        <CardHeader className="border-b border-muted/40 bg-muted/[0.03]">
+      <Card className={cn('overflow-hidden', DASHBOARD_THEME.cards.base)}>
+        <CardHeader className={DASHBOARD_THEME.cards.header}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/15 bg-primary/5 text-primary">
+              <div className={DASHBOARD_THEME.icons.container}>
                 <SurfaceIcon className="h-6 w-6" />
               </div>
               <div className="space-y-1">
@@ -121,7 +123,7 @@ export function SocialSurfacePanel({
                 <CardDescription>{copy.listDescription}</CardDescription>
               </div>
             </div>
-            <Badge variant="outline" className="w-fit rounded-full px-3 py-1 text-xs">
+            <Badge variant="outline" className={cn(DASHBOARD_THEME.badges.base, 'w-fit')}>
               {surfaceStatusLabel}
             </Badge>
           </div>
@@ -138,9 +140,9 @@ export function SocialSurfacePanel({
             </div>
           ) : items.length > 0 ? (
             items.map((item) => (
-              <div key={item.id} className="rounded-3xl border border-muted/50 bg-background p-4">
+              <div key={item.id} className="rounded-2xl border border-muted/50 bg-background p-4">
                 <div className="mb-3 flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10')}>
                     <AccentIcon className="h-5 w-5" />
                   </div>
                   <div className="min-w-0">
@@ -152,7 +154,7 @@ export function SocialSurfacePanel({
             ))
           ) : itemsLoading ? (
             <div className="grid gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-3 xl:grid-cols-3">
-              {[0, 1, 2].map((slot) => <Skeleton key={slot} className="h-24 w-full rounded-3xl" />)}
+              {[0, 1, 2].map((slot) => <Skeleton key={slot} className="h-24 w-full rounded-2xl" />)}
             </div>
           ) : (
             <div className="md:col-span-2 xl:col-span-3">
@@ -162,7 +164,7 @@ export function SocialSurfacePanel({
                 description={emptyStateDescription}
                 action={surfaceStatus !== 'source_required' && surfaceStatus !== 'disconnected' ? { label: 'Retry discovery', onClick: onRetryItems } : undefined}
                 variant="card"
-                className="rounded-3xl"
+                className="rounded-2xl"
               />
             </div>
           )}

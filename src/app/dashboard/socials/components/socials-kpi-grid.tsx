@@ -3,7 +3,7 @@
 import { Activity, Gauge, MousePointerClick, Wallet } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
 type SocialKpi = {
   id: string
@@ -25,39 +25,30 @@ type SocialsKpiGridProps = {
 
 export function SocialsKpiGrid({ items }: SocialsKpiGridProps) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {items.map((item, index) => {
+    <div className={DASHBOARD_THEME.stats.container}>
+      {items.map((item) => {
         const Icon = KPI_ICONS[item.id as keyof typeof KPI_ICONS] ?? Gauge
 
         return (
           <Card
             key={item.id}
-            className="overflow-hidden border-muted/50 bg-background shadow-sm transition-[transform,box-shadow,border-color] hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md"
+            className={DASHBOARD_THEME.stats.card}
           >
-            <CardContent className="relative p-5">
-              <div
-                className={cn(
-                  'pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r',
-                  index % 4 === 0 && 'from-violet-500 via-fuchsia-500 to-rose-500',
-                  index % 4 === 1 && 'from-rose-500 via-orange-500 to-amber-400',
-                  index % 4 === 2 && 'from-slate-950 via-slate-700 to-slate-500',
-                  index % 4 === 3 && 'from-emerald-500 via-lime-500 to-amber-400',
-                )}
-              />
+            <CardContent className="p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                  <p className={DASHBOARD_THEME.stats.label}>
                     {item.label}
                   </p>
-                  <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
+                  <p className={`mt-2 tracking-tight ${DASHBOARD_THEME.stats.value}`}>
                     {item.value}
                   </p>
                 </div>
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/5 text-primary">
+                <div className={DASHBOARD_THEME.icons.container}>
                   <Icon className="h-5 w-5" />
                 </div>
               </div>
-              <p className="text-sm leading-6 text-muted-foreground">{item.detail}</p>
+              <p className={DASHBOARD_THEME.stats.description}>{item.detail}</p>
             </CardContent>
           </Card>
         )

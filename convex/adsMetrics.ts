@@ -18,6 +18,7 @@ const metricValidator = v.object({
   providerId: v.union(v.string(), v.null()),
   clientId: v.union(v.string(), v.null()),
   accountId: v.union(v.string(), v.null()),
+  currency: v.union(v.string(), v.null()),
   publisherPlatform: v.union(v.string(), v.null()),
   date: v.string(),
   spend: v.number(),
@@ -48,6 +49,7 @@ const enrichedMetricValidator = v.object({
   id: v.string(),
   providerId: v.string(),
   accountId: v.union(v.string(), v.null()),
+  currency: v.union(v.string(), v.null()),
   publisherPlatform: v.union(v.string(), v.null()),
   date: v.string(),
   spend: v.number(),
@@ -92,6 +94,27 @@ export const listMetrics = workspaceQuery({
   },
   returns: v.array(metricValidator),
   handler: async (ctx, args) => {
+    const normalizeProviderId = (providerId: string | null | undefined): string => {
+      const normalized = String(providerId ?? '').trim().toLowerCase()
+      if (normalized === 'meta' || normalized === 'meta_ads' || normalized === 'meta-ads' || normalized === 'facebook_ads' || normalized === 'facebook-ads') {
+        return 'facebook'
+      }
+      if (normalized === 'google_ads' || normalized === 'google-ads' || normalized === 'googleads' || normalized === 'adwords') {
+        return 'google'
+      }
+      if (normalized === 'linkedin_ads' || normalized === 'linkedin-ads') {
+        return 'linkedin'
+      }
+      if (normalized === 'tiktok_ads' || normalized === 'tiktok-ads') {
+        return 'tiktok'
+      }
+      return normalized
+    }
+
+    const normalizeAccountId = (accountId: string | null | undefined): string => {
+      return String(accountId ?? '').trim().toLowerCase().replace(/^act_/, '').replace(/\s+/g, '')
+    }
+
     const limit = Math.min(Math.max(args.limit ?? 500, 1), 2000)
 
     const all = await ctx.db
@@ -101,6 +124,22 @@ export const listMetrics = workspaceQuery({
 
     const providerSet = args.providerIds ? new Set(args.providerIds) : null
     const clientId = typeof args.clientId === 'string' ? args.clientId : null
+    const integrations = await ctx.db
+      .query('adIntegrations')
+      .withIndex('by_workspace_provider', (q) => q.eq('workspaceId', args.workspaceId))
+      .collect()
+
+    const accountCurrencyMap = new Map<string, string>()
+    const providerDefaultCurrencyMap = new Map<string, string>()
+    integrations.forEach((integration) => {
+      if (!integration.currency || integration.currency.trim().length === 0) return
+      const normalizedProvider = normalizeProviderId(integration.providerId)
+      const key = `${normalizedProvider}|${normalizeAccountId(integration.accountId)}`
+      accountCurrencyMap.set(key, integration.currency)
+      if (!providerDefaultCurrencyMap.has(normalizedProvider)) {
+        providerDefaultCurrencyMap.set(normalizedProvider, integration.currency)
+      }
+    })
 
     const filtered = all.filter((row) => {
       if (clientId !== null && row.clientId !== clientId) return false
@@ -116,6 +155,12 @@ export const listMetrics = workspaceQuery({
     })
 
     return filtered.slice(0, limit).map((row) => ({
+      currency:
+        accountCurrencyMap.get(
+          `${normalizeProviderId(row.providerId)}|${normalizeAccountId(row.accountId)}`
+        ) ??
+        providerDefaultCurrencyMap.get(normalizeProviderId(row.providerId)) ??
+        null,
       providerId: row.providerId,
       clientId: row.clientId,
       accountId: row.accountId,
@@ -199,6 +244,27 @@ export const listMetricsWithSummary = workspaceQuery({
     summary: v.union(v.null(), summaryValidator),
   }),
   handler: async (ctx, args) => {
+    const normalizeProviderId = (providerId: string | null | undefined): string => {
+      const normalized = String(providerId ?? '').trim().toLowerCase()
+      if (normalized === 'meta' || normalized === 'meta_ads' || normalized === 'meta-ads' || normalized === 'facebook_ads' || normalized === 'facebook-ads') {
+        return 'facebook'
+      }
+      if (normalized === 'google_ads' || normalized === 'google-ads' || normalized === 'googleads' || normalized === 'adwords') {
+        return 'google'
+      }
+      if (normalized === 'linkedin_ads' || normalized === 'linkedin-ads') {
+        return 'linkedin'
+      }
+      if (normalized === 'tiktok_ads' || normalized === 'tiktok-ads') {
+        return 'tiktok'
+      }
+      return normalized
+    }
+
+    const normalizeAccountId = (accountId: string | null | undefined): string => {
+      return String(accountId ?? '').trim().toLowerCase().replace(/^act_/, '').replace(/\s+/g, '')
+    }
+
     const shouldAggregate = args.aggregate === true
     const pageSize = Math.min(Math.max(args.limit ?? 100, 1), 500)
     const fetchLimit = shouldAggregate ? 3000 : pageSize
@@ -207,6 +273,22 @@ export const listMetricsWithSummary = workspaceQuery({
       .query('adMetrics')
       .withIndex('by_workspace_date', (q) => q.eq('workspaceId', args.workspaceId))
       .collect()
+    const integrations = await ctx.db
+      .query('adIntegrations')
+      .withIndex('by_workspace_provider', (q) => q.eq('workspaceId', args.workspaceId))
+      .collect()
+
+    const accountCurrencyMap = new Map<string, string>()
+    const providerDefaultCurrencyMap = new Map<string, string>()
+    integrations.forEach((integration) => {
+      if (!integration.currency || integration.currency.trim().length === 0) return
+      const normalizedProvider = normalizeProviderId(integration.providerId)
+      const key = `${normalizedProvider}|${normalizeAccountId(integration.accountId)}`
+      accountCurrencyMap.set(key, integration.currency)
+      if (!providerDefaultCurrencyMap.has(normalizedProvider)) {
+        providerDefaultCurrencyMap.set(normalizedProvider, integration.currency)
+      }
+    })
 
     const providerSet = args.providerIds ? new Set(args.providerIds) : null
     const clientId = typeof args.clientId === 'string' ? args.clientId : null
@@ -234,6 +316,12 @@ export const listMetricsWithSummary = workspaceQuery({
       id: `${row.providerId ?? 'unknown'}|${row.accountId ?? ''}|${row.date ?? ''}|${row.createdAtMs ?? ''}`,
       providerId: row.providerId ?? 'unknown',
       accountId: row.accountId ?? null,
+      currency:
+        accountCurrencyMap.get(
+          `${normalizeProviderId(row.providerId)}|${normalizeAccountId(row.accountId)}`
+        ) ??
+        providerDefaultCurrencyMap.get(normalizeProviderId(row.providerId)) ??
+        null,
       publisherPlatform: row.publisherPlatform ?? null,
       date: row.date ?? 'unknown',
       spend: Number(row.spend ?? 0),
@@ -255,10 +343,16 @@ export const listMetricsWithSummary = workspaceQuery({
       }
     }
 
-    // Aggregation: deduplicate by providerId|accountId|date, keeping newest
+    // Aggregation: deduplicate by providerId|accountId|publisherPlatform|date, keeping newest.
+    // publisherPlatform must be included because Meta returns one row per platform breakdown
+    // (facebook, instagram, audience_network) per day — collapsing on date alone would drop spend.
     const uniqueMetrics = new Map<string, (typeof mapped)[0] & { createdAtMillis: number }>()
     mapped.forEach((m) => {
-      const key = `${m.providerId}|${m.accountId ?? ''}|${m.date}`
+      // Include campaignId in the dedup key so that multiple campaigns for the
+      // same (provider, account, platform, date) are each kept and summed into
+      // the totals. Without campaignId, multi-campaign rows collapse to one,
+      // making total spend appear as a single campaign's spend.
+      const key = `${m.providerId}|${m.accountId ?? ''}|${m.publisherPlatform ?? ''}|${m.campaignId ?? ''}|${m.date}`
       const existing = uniqueMetrics.get(key)
       const createdAtMillis = m.createdAtMs ?? 0
       const existingCreatedAt = existing?.createdAtMillis ?? 0

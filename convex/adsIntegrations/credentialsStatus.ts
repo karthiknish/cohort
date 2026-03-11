@@ -25,6 +25,7 @@ const updateIntegrationCredentialsArgs = {
   managerCustomerId: v.optional(v.union(v.string(), v.null())),
   accountId: v.optional(v.union(v.string(), v.null())),
   accountName: v.optional(v.union(v.string(), v.null())),
+  currency: v.optional(v.union(v.string(), v.null())),
   linkedAtMs: v.optional(v.union(v.number(), v.null())),
 }
 
@@ -53,7 +54,7 @@ export const updateIntegrationCredentialsInternal = internalMutation({
           scopes: [],
           accountId: args.accountId ?? null,
           accountName: args.accountName ?? null,
-          currency: null,
+          currency: args.currency ?? null,
           developerToken: args.developerToken ?? null,
           loginCustomerId: args.loginCustomerId ?? null,
           managerCustomerId: args.managerCustomerId ?? null,
@@ -88,6 +89,7 @@ export const updateIntegrationCredentialsInternal = internalMutation({
     if (hasOwn(args, 'managerCustomerId')) patch.managerCustomerId = args.managerCustomerId ?? null
     if (hasOwn(args, 'accountId')) patch.accountId = args.accountId ?? null
     if (hasOwn(args, 'accountName')) patch.accountName = args.accountName ?? null
+    if (hasOwn(args, 'currency')) patch.currency = args.currency ?? null
     if (hasOwn(args, 'accessTokenExpiresAtMs')) patch.accessTokenExpiresAtMs = args.accessTokenExpiresAtMs ?? null
     if (hasOwn(args, 'refreshTokenExpiresAtMs')) patch.refreshTokenExpiresAtMs = args.refreshTokenExpiresAtMs ?? null
 

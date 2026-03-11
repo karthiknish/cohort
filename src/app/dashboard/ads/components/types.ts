@@ -22,8 +22,12 @@ export interface MetricRecord {
   providerId: string
   /** The ad account ID this metric belongs to (for multi-account support). */
   accountId?: string | null
+  /** Optional account currency inferred from the linked integration. */
+  currency?: string | null
   /** Optional Meta publisher platform or equivalent reporting surface. */
   publisherPlatform?: string | null
+  /** Campaign identifier used for dedup and drill-down. */
+  campaignId?: string | null
   date: string
   spend: number
   impressions: number

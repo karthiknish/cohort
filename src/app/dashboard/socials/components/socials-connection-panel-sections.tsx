@@ -2,6 +2,8 @@
 
 import { AlertTriangle, ArrowRightLeft, CheckCircle2, CopyPlus, LoaderCircle, RefreshCw } from 'lucide-react'
 
+import { cn } from '@/lib/utils'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState, NetworkErrorEmptyState } from '@/components/ui/empty-state'
@@ -57,14 +59,14 @@ export function SocialsMetaSetupCard(props: {
   } = props
 
   return (
-    <div className="rounded-3xl border border-muted/50 bg-muted/[0.04] p-5">
+    <div className="rounded-2xl border border-muted/50 bg-muted/[0.04] p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={setupState.stage === 'ready' ? 'secondary' : setupState.stage === 'discovering' ? 'info' : 'outline'} className="rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-[0.18em]">
+            <Badge variant={setupState.stage === 'ready' ? 'secondary' : setupState.stage === 'discovering' ? 'info' : 'outline'} className={DASHBOARD_THEME.badges.base}>
               {setupState.stage.replace('_', ' ')}
             </Badge>
-            {selectedSourceLabel ? <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-[10px]">Source: {selectedSourceLabel}</Badge> : null}
+            {selectedSourceLabel ? <Badge variant="outline" className={DASHBOARD_THEME.badges.base}>Source: {selectedSourceLabel}</Badge> : null}
           </div>
           <div>
             <h3 className="text-base font-semibold text-foreground">{setupState.title}</h3>
@@ -88,7 +90,7 @@ export function SocialsMetaSetupCard(props: {
 
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         <div className="rounded-2xl border border-muted/50 bg-background px-3 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Meta source</p>
+          <p className={DASHBOARD_THEME.stats.label}>Meta source</p>
           <div className="mt-2 flex items-center gap-2 text-sm text-foreground">
             {sourceSelectionRequired ? <AlertTriangle className="h-4 w-4 text-amber-500" /> : <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
             <span>{sourceSelectionRequired ? 'Selection still required' : selectedSourceLabel ?? 'Source selected'}</span>
@@ -96,15 +98,15 @@ export function SocialsMetaSetupCard(props: {
         </div>
         <div className="rounded-2xl border border-muted/50 bg-background px-3 py-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Facebook Pages</p>
-            <Badge variant={getSurfaceStatusVariant(facebookStatus)} className="rounded-full px-2 py-0.5 text-[10px]">{getSurfaceStatusLabel(facebookStatus, facebookCount)}</Badge>
+            <p className={DASHBOARD_THEME.stats.label}>Facebook Pages</p>
+            <Badge variant={getSurfaceStatusVariant(facebookStatus)} className={DASHBOARD_THEME.badges.base}>{getSurfaceStatusLabel(facebookStatus, facebookCount)}</Badge>
           </div>
           <p className="mt-2 text-sm text-foreground">{facebookCount > 0 ? `${facebookCount} Pages discovered from the selected Meta source.` : sourceSelectionRequired ? 'Choose a source before Pages can load.' : 'Pages have not surfaced yet from this source.'}</p>
         </div>
         <div className="rounded-2xl border border-muted/50 bg-background px-3 py-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Instagram Profiles</p>
-            <Badge variant={getSurfaceStatusVariant(instagramStatus)} className="rounded-full px-2 py-0.5 text-[10px]">{getSurfaceStatusLabel(instagramStatus, instagramCount)}</Badge>
+            <p className={DASHBOARD_THEME.stats.label}>Instagram Profiles</p>
+            <Badge variant={getSurfaceStatusVariant(instagramStatus)} className={DASHBOARD_THEME.badges.base}>{getSurfaceStatusLabel(instagramStatus, instagramCount)}</Badge>
           </div>
           <p className="mt-2 text-sm text-foreground">{instagramCount > 0 ? `${instagramCount} business profile${instagramCount === 1 ? '' : 's'} discovered from the selected Meta source.` : sourceSelectionRequired ? 'Choose a source before Instagram can load.' : 'Instagram profiles have not surfaced yet from this source.'}</p>
         </div>
@@ -158,15 +160,15 @@ export function SocialsMetaSourceSwitcherCard(props: {
     null
 
   return (
-    <div className="rounded-3xl border border-dashed border-primary/25 bg-primary/[0.03] p-5">
+    <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/[0.03] p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.18em]">
+            <Badge variant="outline" className={DASHBOARD_THEME.badges.base}>
               Meta source
             </Badge>
             {currentSourceLabel ? (
-              <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px]">
+              <Badge variant="secondary" className={DASHBOARD_THEME.badges.base}>
                 Current: {currentSourceLabel}
               </Badge>
             ) : null}
@@ -188,7 +190,7 @@ export function SocialsMetaSourceSwitcherCard(props: {
           onValueChange={onSelectAccount}
           disabled={loadingMetaAccountOptions || metaAccountOptions.length === 0}
         >
-          <SelectTrigger className="w-full rounded-2xl border-muted/60 bg-background sm:max-w-md">
+          <SelectTrigger className={cn(DASHBOARD_THEME.inputs.base, 'w-full sm:max-w-md')}>
             <SelectValue placeholder={loadingMetaAccountOptions ? 'Loading sources…' : 'Choose a Meta source'} />
           </SelectTrigger>
           <SelectContent>
@@ -235,10 +237,10 @@ export function SocialsSurfaceInventoryCard(props: {
   } = props
 
   return (
-    <div className="rounded-3xl border border-muted/50 bg-background p-4">
+    <div className="rounded-2xl border border-muted/50 bg-background p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-sm font-semibold text-foreground">{title}</p>
-        <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-[10px]">
+        <Badge variant="outline" className={DASHBOARD_THEME.badges.base}>
           {getSurfaceStatusLabel(status, count)}
         </Badge>
       </div>

@@ -61,6 +61,8 @@ describe('meetings reliability states', () => {
 
     expect(markup).toContain('Setup required')
     expect(markup).toContain('Connect Google Workspace')
+    expect(markup).toContain('Install Agentation')
+    expect(markup).toContain('https://www.agentation.com/install')
     expect(markup).toContain('Required before scheduled Cohorts rooms can send Calendar invites.')
   })
 
