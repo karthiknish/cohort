@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
+import { normalizeProviderId } from '@/lib/themes'
 
 import type { MetricRecord, MetricsSummary, SummaryCard, Totals } from './types'
 import type { DateRange } from './date-range-picker'
@@ -41,20 +42,40 @@ export function CrossChannelOverviewCard({
 
   const summaryProviders = useMemo(() => {
     if (!serverSideSummary?.providers) return []
-    return Object.keys(serverSideSummary.providers).sort()
+    return Object.keys(serverSideSummary.providers)
+      .map((providerId) => normalizeProviderId(providerId))
+      .sort()
   }, [serverSideSummary])
 
   // Get unique providers from the data
   const availableProviders = useMemo(() => {
-    const providers = new Set<string>([...processedMetrics.map((m) => m.providerId), ...summaryProviders])
+    const providers = new Set<string>([
+      ...processedMetrics.map((m) => normalizeProviderId(m.providerId)),
+      ...summaryProviders,
+    ])
     return Array.from(providers).sort()
   }, [processedMetrics, summaryProviders])
 
   // Filter metrics by selected providers
   const filteredMetrics = useMemo(() => {
     if (selectedProviders.length === 0) return processedMetrics
-    return processedMetrics.filter((m) => selectedProviders.includes(m.providerId))
+    return processedMetrics.filter((m) => selectedProviders.includes(normalizeProviderId(m.providerId)))
   }, [processedMetrics, selectedProviders])
+
+  const normalizedServerProviders = useMemo(() => {
+    if (!serverSideSummary?.providers) return {}
+    return Object.entries(serverSideSummary.providers).reduce<Record<string, Totals>>((acc, [providerId, totals]) => {
+      const normalized = normalizeProviderId(providerId)
+      const current = acc[normalized] ?? { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
+      current.spend += Number(totals.spend ?? 0)
+      current.impressions += Number(totals.impressions ?? 0)
+      current.clicks += Number(totals.clicks ?? 0)
+      current.conversions += Number(totals.conversions ?? 0)
+      current.revenue += Number(totals.revenue ?? 0)
+      acc[normalized] = current
+      return acc
+    }, {})
+  }, [serverSideSummary?.providers])
 
   const filteredTotals: Totals = useMemo(() => {
     if (serverSideSummary?.totals && serverSideSummary.providers) {
@@ -64,7 +85,7 @@ export function CrossChannelOverviewCard({
 
       return selectedProviders.reduce<Totals>(
         (acc, providerId) => {
-          const p = serverSideSummary.providers[providerId]
+          const p = normalizedServerProviders[normalizeProviderId(providerId)]
           if (!p) return acc
           acc.spend += p.spend
           acc.impressions += p.impressions
@@ -88,7 +109,7 @@ export function CrossChannelOverviewCard({
       },
       { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
     )
-  }, [filteredMetrics, selectedProviders, serverSideSummary])
+  }, [filteredMetrics, normalizedServerProviders, selectedProviders, serverSideSummary])
 
   // Calculate summary cards from filtered metrics
   const summaryCards: SummaryCard[] = useMemo(() => {

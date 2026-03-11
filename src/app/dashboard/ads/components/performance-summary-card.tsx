@@ -49,6 +49,8 @@ export function PerformanceSummaryCard({
   emptyCtaLabel = 'Run first sync',
   emptyCtaHref = '#connect-ad-platforms',
 }: PerformanceSummaryCardProps) {
+  const formatNumber = (value: number): string => new Intl.NumberFormat('en-US').format(value)
+
   return (
     <Card className="overflow-hidden border-muted/60 shadow-sm">
       <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between pb-4">
@@ -114,6 +116,22 @@ export function PerformanceSummaryCard({
         ) : (
           <div className="grid gap-5 md:grid-cols-3">
             {Object.entries(providerSummaries).map(([providerId, summary], index) => {
+              const ctr = summary.impressions > 0 ? (summary.clicks / summary.impressions) * 100 : null
+              const cpc = summary.clicks > 0 ? summary.spend / summary.clicks : null
+              const cpa = summary.conversions > 0 ? summary.spend / summary.conversions : null
+              const roas =
+                summary.spend > 0 && Number.isFinite(summary.revenue) ? summary.revenue / summary.spend : null
+
+              const dynamicStats = [
+                { id: 'impressions', label: 'Impressions', value: formatNumber(summary.impressions) },
+                { id: 'clicks', label: 'Clicks', value: formatNumber(summary.clicks) },
+                { id: 'conversions', label: 'Conversions', value: formatNumber(summary.conversions) },
+                { id: 'ctr', label: 'CTR', value: ctr !== null ? `${ctr.toFixed(2)}%` : '—' },
+                { id: 'avg-cpc', label: 'Avg CPC', value: cpc !== null ? formatCurrency(cpc, currency) : '—' },
+                { id: 'cpa', label: 'CPA', value: cpa !== null ? formatCurrency(cpa, currency) : '—' },
+                { id: 'roas', label: 'ROAS', value: roas !== null ? `${roas.toFixed(2)}x` : '—' },
+              ]
+
               return (
                 <div
                   key={providerId}
@@ -144,19 +162,13 @@ export function PerformanceSummaryCard({
                           {formatCurrency(summary.spend, currency)}
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="rounded-lg border border-muted/50 bg-muted/20 p-2">
-                          <div className="text-[10px] font-medium text-muted-foreground/70 uppercase">Impressions</div>
-                          <div className="text-sm font-semibold tabular-nums mt-0.5">{summary.impressions.toLocaleString()}</div>
-                        </div>
-                        <div className="rounded-lg border border-muted/50 bg-muted/20 p-2">
-                          <div className="text-[10px] font-medium text-muted-foreground/70 uppercase">Clicks</div>
-                          <div className="text-sm font-semibold tabular-nums mt-0.5">{summary.clicks.toLocaleString()}</div>
-                        </div>
-                        <div className="rounded-lg border border-muted/50 bg-muted/20 p-2">
-                          <div className="text-[10px] font-medium text-muted-foreground/70 uppercase">Conversions</div>
-                          <div className="text-sm font-semibold tabular-nums mt-0.5">{summary.conversions.toLocaleString()}</div>
-                        </div>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {dynamicStats.map((stat) => (
+                          <div key={stat.id} className="rounded-lg border border-muted/50 bg-muted/20 p-2">
+                            <div className="text-[10px] font-medium text-muted-foreground/70 uppercase">{stat.label}</div>
+                            <div className="text-sm font-semibold tabular-nums mt-0.5">{stat.value}</div>
+                          </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>

@@ -177,9 +177,9 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
           <Link href="/dashboard/analytics">View details</Link>
         </Button>
       </CardHeader>
-      <CardContent className="h-[320px] pb-6">
+      <CardContent className="h-[336px] pb-10">
         <ChartContainer config={chartConfig} className="h-full w-full">
-          <AreaChart data={chartData} margin={{ top: 12, right: 12, left: 0, bottom: 12 }}>
+          <AreaChart data={chartData} margin={{ top: 12, right: 12, left: 0, bottom: 28 }}>
             <defs>
               <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.3} />
@@ -196,7 +196,7 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
               axisLine={false}
               tickLine={false}
               tickMargin={12}
-              height={32}
+              height={40}
               tick={{ fontSize: 12 }}
             />
             <YAxis
