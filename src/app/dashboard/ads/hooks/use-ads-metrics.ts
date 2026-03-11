@@ -4,20 +4,23 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { endOfDay, startOfDay, subDays } from 'date-fns'
 
-import type { DateRange } from '../components/date-range-picker'
-import type { MetricRecord, MetricsSummary, ProviderSummary } from '../components/types'
-import { DEFAULT_DATE_RANGE_DAYS, ERROR_MESSAGES } from '../components/constants'
-import {
-  exportMetricsToCsv,
-  METRICS_PAGE_SIZE,
-} from '../components/utils'
+import { api } from '../../../../../convex/_generated/api'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
 import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors'
 import { getPreviewAdsMetrics } from '@/lib/preview-data'
-import { normalizeProviderId } from '@/lib/themes'
-import { api } from '../../../../../convex/_generated/api'
+
+import { DEFAULT_DATE_RANGE_DAYS, ERROR_MESSAGES } from '../components/constants'
+import type { DateRange } from '../components/date-range-picker'
+import type { MetricRecord, MetricsSummary, ProviderSummary } from '../components/types'
+import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
+
+import {
+  buildProviderSummariesFromServer,
+  isAdsProviderId,
+  mapRealtimeMetricRow,
+} from './use-ads-metrics.helpers'
 
 function isAuthError(error: unknown): boolean {
   const code = extractErrorCode(error)
@@ -135,23 +138,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   // otherwise fallback to client-side calculation from loaded metrics.
   const providerSummaries = useMemo(() => {
     if (serverSideSummary?.providers && metrics.length <= METRICS_PAGE_SIZE) {
-      return Object.entries(serverSideSummary.providers).reduce<Record<string, ProviderSummary>>((acc, [providerId, totals]) => {
-        const normalizedProviderId = normalizeProviderId(providerId)
-        const providerSummary = acc[normalizedProviderId] ?? {
-          spend: 0,
-          impressions: 0,
-          clicks: 0,
-          conversions: 0,
-          revenue: 0,
-        }
-        providerSummary.spend += Number(totals.spend ?? 0)
-        providerSummary.impressions += Number(totals.impressions ?? 0)
-        providerSummary.clicks += Number(totals.clicks ?? 0)
-        providerSummary.conversions += Number(totals.conversions ?? 0)
-        providerSummary.revenue += Number(totals.revenue ?? 0)
-        acc[normalizedProviderId] = providerSummary
-        return acc
-      }, {})
+      return buildProviderSummariesFromServer(serverSideSummary.providers)
     }
 
     const summary: Record<string, ProviderSummary> = {}
@@ -208,28 +195,21 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     if (!workspaceId || !canQueryConvex) return [] as MetricRecord[]
 
     const rows = Array.isArray(metricsRealtime?.metrics) ? metricsRealtime.metrics : []
-    return rows.map((row) => ({
-      id: typeof row.id === 'string' ? row.id : `${normalizeProviderId(String(row.providerId))}:${String(row.accountId ?? '')}:${String(row.publisherPlatform ?? '')}:${String(row.date)}`,
-      providerId: normalizeProviderId(String(row.providerId)),
-      accountId: typeof row.accountId === 'string' ? row.accountId : null,
-      currency: typeof row.currency === 'string' ? row.currency : null,
-      publisherPlatform:
-        typeof row.publisherPlatform === 'string' && row.publisherPlatform.length > 0
-          ? row.publisherPlatform
-          : null,
-      date: String(row.date),
-      spend: Number(row.spend ?? 0),
-      impressions: Number(row.impressions ?? 0),
-      clicks: Number(row.clicks ?? 0),
-      conversions: Number(row.conversions ?? 0),
-      revenue: row.revenue === null || row.revenue === undefined ? null : Number(row.revenue),
-      createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
-    }))
+    return rows.filter((row) => isAdsProviderId(row.providerId)).map((row) => mapRealtimeMetricRow(row))
   }, [isPreviewMode, metricsRealtime, canQueryConvex, workspaceId])
 
   // Keep local pagination state but page client-side.
   const isConvexLoading =
     !isPreviewMode && Boolean(workspaceId && canQueryConvex) && metricsRealtime === undefined
+
+  useEffect(() => {
+    const resetRequested = refreshTick > 0
+    setVisibleCount(METRICS_PAGE_SIZE)
+    if (resetRequested) {
+      setMetricError(null)
+      setLoadMoreError(null)
+    }
+  }, [refreshTick])
 
   // Load/refresh local paged list from Convex/preview.
   // Important: avoid state updates during render.
@@ -252,11 +232,6 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
 
     setMetricsLoading(false)
 
-    // Reset pagination + derived state on each refresh trigger.
-    setVisibleCount(METRICS_PAGE_SIZE)
-    setMetricError(null)
-    setLoadMoreError(null)
-
     // Populate server-side aggregated summary when available.
     const summary = !isPreviewMode && metricsRealtime?.summary ? metricsRealtime.summary : null
     setServerSideSummary(summary)
@@ -264,7 +239,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     const firstPage = metricsSource.slice(0, METRICS_PAGE_SIZE)
     setMetrics(firstPage)
     setNextCursor(metricsSource.length > METRICS_PAGE_SIZE ? 'more' : null)
-  }, [canQueryConvex, isConvexLoading, isPreviewMode, metricsRealtime, metricsSource, refreshTick, workspaceId])
+  }, [canQueryConvex, isConvexLoading, isPreviewMode, metricsRealtime, metricsSource, workspaceId])
 
   // Keep nextCursor in sync with current visible count.
   useEffect(() => {
