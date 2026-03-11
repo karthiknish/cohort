@@ -129,7 +129,9 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
     return null
   }
 
-  const currentStage = generationFlow[stageIndex] ?? generationFlow[generationFlow.length - 1]
+  const currentStage = generationFlow[stageIndex]
+  const currentStageLabel = currentStage?.label ?? 'Generating presentation...'
+  const currentStageHelper = currentStage?.helper ?? 'We are creating your presentation slides. This may take a moment.'
   const isFinalStage = stageIndex === generationFlow.length - 1
   const isComplete = showCompletionState || (isFinalStage && isPresentationReady)
   const progressPercent = ((stageIndex + (isComplete ? 1 : 0)) / generationFlow.length) * 100
@@ -137,8 +139,8 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
   return (
     <DeckProgressOverlayShell className="fixed inset-0 z-[2100] flex items-center justify-center animate-in fade-in bg-background/40 backdrop-blur-xl duration-500">
       <ProposalGenerationOverlayContent
-        currentStageHelper={currentStage.helper}
-        currentStageLabel={currentStage.label}
+        currentStageHelper={currentStageHelper}
+        currentStageLabel={currentStageLabel}
         isComplete={isComplete}
         progressPercent={progressPercent}
         stageIndex={stageIndex}

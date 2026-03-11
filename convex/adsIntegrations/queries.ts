@@ -104,6 +104,7 @@ export const listStatuses = zWorkspaceQuery({
         clientId: row.clientId,
         accountId: row.accountId,
         accountName: row.accountName,
+        currency: row.currency,
         lastSyncStatus: row.lastSyncStatus,
         lastSyncMessage: row.lastSyncMessage,
         lastSyncedAtMs: row.lastSyncedAtMs,
