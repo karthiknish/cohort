@@ -77,6 +77,7 @@ export const listStatuses = zWorkspaceQuery({
     clientId: z.string().nullable(),
     accountId: z.string().nullable(),
     accountName: z.string().nullable(),
+    currency: z.string().nullable(),
     lastSyncStatus: z.string(),
     lastSyncMessage: z.string().nullable(),
     lastSyncedAtMs: z.number().nullable(),

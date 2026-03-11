@@ -16,6 +16,7 @@ import { formatProviderName } from './utils'
 
 interface MetricsTableCardProps {
   processedMetrics: MetricRecord[]
+  currency?: string
   hasMetrics: boolean
   initialMetricsLoading: boolean
   metricsLoading: boolean
@@ -34,6 +35,7 @@ interface MetricsTableCardProps {
 
 function MetricsTableCardComponent({
   processedMetrics,
+  currency = 'USD',
   hasMetrics,
   initialMetricsLoading,
   metricsLoading,
@@ -83,7 +85,7 @@ function MetricsTableCardComponent({
 
   const hasActiveFilters = searchQuery.length > 0 || selectedProviders.length > 0
 
-  const columns = useMemo(() => buildMetricsTableColumns(), [])
+  const columns = useMemo(() => buildMetricsTableColumns(currency), [currency])
 
   return (
     <Card className="shadow-sm">

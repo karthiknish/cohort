@@ -58,7 +58,7 @@ describe('algorithmic insights card sections', () => {
         globalEfficiencyScore={38}
         hasMoreInsights={true}
         onViewAll={vi.fn()}
-        providerEfficiencyScores={{ Google: 44, Meta: 31 }}
+        providerEfficiencyScores={{ meta_ads: 31, google_ads: 44 }}
         title="AI-Powered Insights"
       />,
     )
@@ -66,6 +66,7 @@ describe('algorithmic insights card sections', () => {
     expect(markup).toContain('1 critical')
     expect(markup).toContain('View all insights')
     expect(markup).toContain('Immediate attention recommended')
+    expect(markup).toContain('Meta: 31%')
     expect(markup).toContain('Google: 44%')
     expect(markup).toContain('All systems nominal')
   })

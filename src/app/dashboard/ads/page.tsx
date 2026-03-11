@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useRef, Suspense, lazy } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
 
+import { normalizeCurrencyCode } from '@/constants/currencies'
 import { extractErrorCode, logError } from '@/lib/convex-errors'
 import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
 
@@ -130,6 +131,30 @@ export default function AdsPage() {
   } = useAdsConnections({
     onRefresh: triggerMetricsRefresh,
   })
+
+  const displayCurrency = useMemo(() => {
+    const successfulStatusCurrencies = automationStatuses
+      .filter((status) => status.status === 'success')
+      .map((status) => status.currency)
+      .filter((currency): currency is string => typeof currency === 'string' && currency.trim().length > 0)
+      .map((currency) => normalizeCurrencyCode(currency))
+
+    const uniqueStatusCurrencies = Array.from(new Set(successfulStatusCurrencies))
+    if (uniqueStatusCurrencies.length === 1) {
+      return uniqueStatusCurrencies[0]
+    }
+
+    const selectedMetaCurrency = metaAccountOptions.find((account) => account.id === selectedMetaAccountId)?.currency
+    const selectedGoogleCurrency = googleAccountOptions.find((account) => account.id === selectedGoogleAccountId)?.currencyCode
+
+    return normalizeCurrencyCode(selectedMetaCurrency ?? selectedGoogleCurrency ?? successfulStatusCurrencies[0])
+  }, [
+    automationStatuses,
+    googleAccountOptions,
+    metaAccountOptions,
+    selectedGoogleAccountId,
+    selectedMetaAccountId,
+  ])
 
   const hasAnyAdIntegration =
     !isPreviewMode &&
@@ -320,6 +345,7 @@ export default function AdsPage() {
         <CrossChannelOverviewCard
           processedMetrics={processedMetrics}
           serverSideSummary={serverSideSummary}
+          currency={displayCurrency}
           hasMetricData={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}
@@ -332,6 +358,7 @@ export default function AdsPage() {
       <FadeIn>
         <PerformanceSummaryCard
           providerSummaries={providerSummaries}
+          currency={displayCurrency}
           hasMetrics={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}
@@ -356,6 +383,7 @@ export default function AdsPage() {
         <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
           <InsightsChartsCard
             analysis={algorithmicInsights.analysis}
+            currency={displayCurrency}
             loading={metricsLoading || initialMetricsLoading}
           />
         </Suspense>
@@ -366,6 +394,7 @@ export default function AdsPage() {
           <ComparisonViewCard
             periodComparison={periodComparison}
             providerComparison={providerComparison}
+            currency={displayCurrency}
             loading={metricsLoading || initialMetricsLoading}
           />
         </Suspense>
@@ -376,6 +405,7 @@ export default function AdsPage() {
           <CustomInsightsCard
             derivedMetrics={hasMetricData ? derivedMetrics : null}
             processedMetrics={processedMetrics}
+            currency={displayCurrency}
             loading={metricsLoading || initialMetricsLoading}
           />
         </Suspense>
@@ -394,6 +424,7 @@ export default function AdsPage() {
       <FadeIn>
         <MetricsTableCard
           processedMetrics={processedMetrics}
+          currency={displayCurrency}
           hasMetrics={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}

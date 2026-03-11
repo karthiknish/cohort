@@ -25,6 +25,7 @@ describe('custom insights card sections', () => {
   it('renders the KPI grid tiles', () => {
     const markup = renderToStaticMarkup(
       <CustomInsightsGrid
+        currency="GBP"
         items={[
           {
             label: 'CPA',
@@ -41,7 +42,7 @@ describe('custom insights card sections', () => {
     )
 
     expect(markup).toContain('CPA')
-    expect(markup).toContain('$42')
+    expect(markup).toContain('£42')
     expect(markup).toContain('12.0%')
     expect(markup).toContain('ring-amber-500/50')
   })

@@ -2,17 +2,15 @@
 
 import { useMemo } from 'react'
 import {
-    TrendingUp,
-    Zap,
-    Target,
-    DollarSign,
-    MousePointer,
-    Eye,
+  DollarSign,
+  Eye,
+  MousePointer,
+  Target,
+  TrendingUp,
+  Zap,
 } from 'lucide-react'
 
-import {
-    Card,
-} from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { calculateBenchmarks } from '@/lib/metrics'
 
 import {
@@ -31,22 +29,23 @@ import type { MetricRecord } from './types'
 // =============================================================================
 
 interface CustomInsightsCardProps {
-    derivedMetrics: DerivedMetrics | null
-    processedMetrics?: MetricRecord[]
-    loading?: boolean
+  derivedMetrics: DerivedMetrics | null
+  processedMetrics?: MetricRecord[]
+  currency?: string
+  loading?: boolean
 }
 
 function isAnomaly(value: number | null, benchmark: number | undefined | null, threshold = 0.5): boolean {
-    if (value === null || benchmark === undefined || benchmark === null || benchmark === 0) return false
-    const deviation = Math.abs((value - benchmark) / benchmark)
-    return deviation > threshold
+  if (value === null || benchmark === undefined || benchmark === null || benchmark === 0) return false
+  const deviation = Math.abs((value - benchmark) / benchmark)
+  return deviation > threshold
 }
 
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
-export function CustomInsightsCard({ derivedMetrics, processedMetrics, loading }: CustomInsightsCardProps) {
+export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency = 'USD', loading }: CustomInsightsCardProps) {
     const computedBenchmarks = useMemo(() => {
         if (!derivedMetrics) return null
 
@@ -134,7 +133,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, loading }
                 icon: <Target className="h-4 w-4" />,
                 trend: growthWeekOverWeek.conversions,
                 benchmark: conversionRateBenchmark,
-                theme: 'blue' as const,
+                theme: 'violet' as const,
             },
             {
                 label: 'Profit',
@@ -162,11 +161,9 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, loading }
     }, [kpiData])
 
     return (
-        <Card className="shadow-lg border-muted/80 overflow-hidden">
-            {/* Subtle gradient accent at top */}
-            <div className="h-1 bg-gradient-to-r from-emerald-500 via-blue-500 to-violet-500" />
+        <Card className="overflow-hidden border-muted/60 shadow-sm">
             <CustomInsightsCardHeader anomalyCount={anomalyCount} />
-            {loading ? <CustomInsightsLoadingState /> : !derivedMetrics || !kpiData ? <CustomInsightsEmptyState /> : <CustomInsightsGrid items={kpiData} />}
+            {loading ? <CustomInsightsLoadingState /> : !derivedMetrics || !kpiData ? <CustomInsightsEmptyState /> : <CustomInsightsGrid currency={currency} items={kpiData} />}
         </Card>
     )
 }

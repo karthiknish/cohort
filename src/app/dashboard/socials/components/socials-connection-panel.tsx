@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo } from 'react'
-import Link from 'next/link'
 import { ArrowRight, CheckCircle2, CopyPlus, RefreshCw, Sparkles, Unplug } from 'lucide-react'
+import Link from 'next/link'
+import { useMemo } from 'react'
 import { SiFacebook, SiInstagram } from 'react-icons/si'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -39,7 +39,8 @@ type SocialsConnectionPanelProps = {
   loadingMetaAccountOptions: boolean
   connectingProvider: string | null
   initializingMeta: boolean
-  onConnect: () => Promise<void>
+  onConnectFacebook: () => Promise<void>
+  onConnectInstagram: () => Promise<void>
   onDisconnect: () => Promise<void>
   onRefresh: () => void
   onReloadAccounts: () => Promise<MetaAccountOption[]>
@@ -78,7 +79,8 @@ export function SocialsConnectionPanel({
   loadingMetaAccountOptions,
   connectingProvider,
   initializingMeta,
-  onConnect,
+  onConnectFacebook,
+  onConnectInstagram,
   onDisconnect,
   onRefresh,
   onReloadAccounts,
@@ -92,6 +94,7 @@ export function SocialsConnectionPanel({
   surfaceActorsError,
   onRetrySurfaceActors,
 }: SocialsConnectionPanelProps) {
+  const isConnectingMeta = connectingProvider === 'facebook'
   const surfaceStates = useMemo(
     () => [
       {
@@ -123,7 +126,7 @@ export function SocialsConnectionPanel({
 
   return (
     <Card id={panelId} className="overflow-hidden border-muted/60 shadow-sm">
-      <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(10,102,194,0.35),_transparent_40%),linear-gradient(135deg,_rgba(7,23,64,1),_rgba(12,54,110,0.98)_52%,_rgba(24,112,153,0.94))] px-6 py-6 text-white">
+      <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.12),_transparent_40%),linear-gradient(135deg,_rgba(15,23,42,1),_rgba(24,24,27,0.98)_52%,_rgba(39,39,42,0.96))] px-6 py-6 text-white">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-2xl space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -139,18 +142,30 @@ export function SocialsConnectionPanel({
                 See Facebook and Instagram performance as social surfaces, not setup plumbing.
               </h2>
               <p className="max-w-xl text-sm text-white/72">
-                Connect Meta once, then keep Pages, Instagram business profiles, trend signals,
-                and AI recommendations in a single social workspace.
+                Start with Facebook or Instagram, then complete the shared Meta authorization to keep
+                Pages, Instagram business profiles, trend signals, and AI recommendations in one workspace.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Button
                 type="button"
-                onClick={() => void onConnect()}
-                disabled={connectingProvider === 'facebook'}
+                onClick={() => void onConnectFacebook()}
+                disabled={isConnectingMeta}
                 className="h-11 rounded-2xl bg-white px-5 text-[11px] font-black uppercase tracking-[0.2em] text-slate-950 hover:bg-white/90"
               >
-                {connected ? 'Reconnect Meta Login' : 'Continue with Facebook'}
+                <SiFacebook className="mr-2 h-4 w-4" />
+                {connected ? 'Reconnect Facebook' : 'Continue with Facebook'}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void onConnectInstagram()}
+                disabled={isConnectingMeta}
+                className="h-11 rounded-2xl border-white/20 bg-white/5 px-5 text-[11px] font-black uppercase tracking-[0.2em] text-white hover:bg-white/10"
+              >
+                <SiInstagram className="mr-2 h-4 w-4" />
+                {connected ? 'Reconnect Instagram' : 'Continue with Instagram'}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button
@@ -173,6 +188,9 @@ export function SocialsConnectionPanel({
                 Disconnect
               </Button>
             </div>
+            <p className="text-xs text-white/65">
+              Both buttons complete the same Meta Business authorization today, but let you start from the social surface you care about.
+            </p>
           </div>
 
           <div className="grid min-w-0 gap-3 sm:grid-cols-2">
@@ -259,8 +277,8 @@ export function SocialsConnectionPanel({
 
           {!connected ? (
             <div className="rounded-3xl border border-dashed border-muted/60 bg-muted/20 p-5 text-sm text-muted-foreground">
-              Start with the Meta login. That single authorization unlocks Facebook Pages,
-              Instagram business profiles, and the AI suggestion loop for this workspace.
+              Start with Facebook or Instagram. Either button begins the same Meta Business authorization,
+              then unlocks Facebook Pages, Instagram business profiles, and the AI suggestion loop for this workspace.
             </div>
           ) : null}
 
@@ -273,7 +291,7 @@ export function SocialsConnectionPanel({
               count={facebookPages.length}
               status={surfaceAvailability.facebook.status}
               emptyConnectedMessage={surfaceAvailability.facebook.emptyMessage}
-              emptyDisconnectedMessage="Connect Meta to load Facebook Pages for this workspace."
+              emptyDisconnectedMessage="Use the Facebook login above to start loading Facebook Pages for this workspace."
               onRetry={onRetrySurfaceActors}
               items={facebookPages.map((page) => ({
                 id: page.id,
@@ -290,7 +308,7 @@ export function SocialsConnectionPanel({
               count={instagramProfiles.length}
               status={surfaceAvailability.instagram.status}
               emptyConnectedMessage={surfaceAvailability.instagram.emptyMessage}
-              emptyDisconnectedMessage="Connect Meta to load Instagram business profiles for this workspace."
+              emptyDisconnectedMessage="Use the Instagram login above to start loading Instagram business profiles for this workspace."
               onRetry={onRetrySurfaceActors}
               items={instagramProfiles.map((profile) => ({
                 id: profile.id,

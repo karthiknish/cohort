@@ -31,6 +31,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from '@/components/ui/chart'
+import { formatMoney, normalizeCurrencyCode } from '@/constants/currencies'
 
 const engagementChartConfig = {
   clicks: {
@@ -123,10 +124,12 @@ export function InsightsChartsSection({
   insightsLoading,
   currency = 'USD'
 }: InsightsChartsSectionProps) {
+  const displayCurrency = normalizeCurrencyCode(currency)
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* 1. Performance Overview */}
-      <PerformanceChart metrics={chartMetrics} loading={insightsLoading} currency={currency} />
+      <PerformanceChart metrics={chartMetrics} loading={insightsLoading} currency={displayCurrency} />
 
       {/* 2. Engagement Trends */}
       <Card className="border-muted/40 shadow-sm">
@@ -271,7 +274,7 @@ export function InsightsChartsSection({
                           </span>
                           <span className="font-mono font-medium">
                             {name === 'revenue'
-                              ? new Intl.NumberFormat('en-US', { style: 'currency', currency: currency }).format(Number(value))
+                              ? formatMoney(Number(value), displayCurrency)
                               : Number(value).toLocaleString('en-US')}
                           </span>
                         </div>
@@ -337,7 +340,7 @@ export function InsightsChartsSection({
                   tickLine={false}
                   tickMargin={8}
                   tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => new Intl.NumberFormat('en-US', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(Number(value))}
+                  tickFormatter={(value) => formatMoney(Number(value), displayCurrency)}
                 />
                 <RechartsTooltip
                   cursor={false}
@@ -349,7 +352,7 @@ export function InsightsChartsSection({
                             {costChartConfig[name as keyof typeof costChartConfig]?.label ?? name}
                           </span>
                           <span className="font-mono font-medium">
-                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: currency }).format(Number(value))}
+                            {formatMoney(Number(value), displayCurrency)}
                           </span>
                         </div>
                       )}

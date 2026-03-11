@@ -38,10 +38,10 @@ export function SocialsKpiGrid({ items }: SocialsKpiGridProps) {
               <div
                 className={cn(
                   'pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r',
-                  index % 4 === 0 && 'from-[#0668E1] via-[#1877F2] to-[#4C68D7]',
-                  index % 4 === 1 && 'from-[#E4405F] via-[#FD5949] to-[#FCAF45]',
-                  index % 4 === 2 && 'from-[#0F172A] via-[#0668E1] to-[#0EA5E9]',
-                  index % 4 === 3 && 'from-emerald-500 via-cyan-500 to-blue-500',
+                  index % 4 === 0 && 'from-violet-500 via-fuchsia-500 to-rose-500',
+                  index % 4 === 1 && 'from-rose-500 via-orange-500 to-amber-400',
+                  index % 4 === 2 && 'from-slate-950 via-slate-700 to-slate-500',
+                  index % 4 === 3 && 'from-emerald-500 via-lime-500 to-amber-400',
                 )}
               />
               <div className="mb-4 flex items-center justify-between gap-3">

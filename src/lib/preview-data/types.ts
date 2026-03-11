@@ -96,6 +96,7 @@ export type PreviewAdsIntegrationStatus = {
     message: string | null
     linkedAt: string | null
     accountId: string | null
+    currency?: string | null
     autoSyncEnabled: boolean
     syncFrequencyMinutes: number
     scheduledTimeframeDays: number

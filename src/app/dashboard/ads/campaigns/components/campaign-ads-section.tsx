@@ -42,7 +42,9 @@ import {
 } from '@/components/ui/table'
 import { toast } from '@/components/ui/use-toast'
 import { Switch } from '@/components/ui/switch'
+import { normalizeCurrencyCode } from '@/constants/currencies'
 import { cn } from '@/lib/utils'
+import { formatCurrency } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsAdMetricsApi, adsCreativesApi } from '@/lib/convex-api'
@@ -101,6 +103,7 @@ type Props = {
   campaignId: string
   clientId?: string | null
   isPreviewMode?: boolean
+  currency?: string | null
 }
 
 type ViewMode = 'grid' | 'list'
@@ -341,12 +344,14 @@ function CampaignAdsFilters({
 function CampaignAdsGrid({
   adMetrics,
   ads,
+  currency,
   onCreativeClick,
   onToggleStatus,
   providerId,
 }: {
   adMetrics: Record<string, AggregatedMetric>
   ads: CampaignAd[]
+  currency: string
   onCreativeClick: (creative: CampaignAd) => void
   onToggleStatus: (ad: CampaignAd, nextStatus: string) => void
   providerId: string
@@ -422,7 +427,7 @@ function CampaignAdsGrid({
                 <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-muted pt-1.5">
                   <div className="flex flex-col">
                     <span className="mb-0.5 text-[9px] uppercase leading-none text-muted-foreground">Spend</span>
-                    <span className="text-[11px] font-bold leading-none">${adMetrics[ad.creativeId]?.spend.toFixed(2) ?? '0.00'}</span>
+                    <span className="text-[11px] font-bold leading-none">{formatCurrency(adMetrics[ad.creativeId]?.spend ?? 0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="mb-0.5 text-[9px] uppercase leading-none text-muted-foreground">Conv.</span>
@@ -453,12 +458,14 @@ function CampaignAdsGrid({
 function CampaignAdsList({
   adMetrics,
   ads,
+  currency,
   onCreativeClick,
   onToggleStatus,
   providerId,
 }: {
   adMetrics: Record<string, AggregatedMetric>
   ads: CampaignAd[]
+  currency: string
   onCreativeClick: (creative: CampaignAd) => void
   onToggleStatus: (ad: CampaignAd, nextStatus: string) => void
   providerId: string
@@ -532,7 +539,9 @@ function CampaignAdsList({
                 </div>
               </TableCell>
               <TableCell className="text-right font-mono text-xs">
-                {adMetrics[ad.creativeId]?.spend !== undefined ? `$${adMetrics[ad.creativeId]?.spend.toFixed(2)}` : '—'}
+                {adMetrics[ad.creativeId]?.spend !== undefined
+                  ? formatCurrency(adMetrics[ad.creativeId]?.spend ?? 0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                  : '—'}
               </TableCell>
               <TableCell className="text-right font-mono text-xs">
                 {adMetrics[ad.creativeId]?.clicks !== undefined ? adMetrics[ad.creativeId]?.clicks.toLocaleString() : '—'}
@@ -556,10 +565,11 @@ function CampaignAdsList({
   )
 }
 
-export function CampaignAdsSection({ providerId, campaignId, clientId, isPreviewMode }: Props) {
+export function CampaignAdsSection({ providerId, campaignId, clientId, isPreviewMode, currency }: Props) {
   const router = useRouter()
   const { user } = useAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
+  const displayCurrency = normalizeCurrencyCode(currency)
 
   const listCreatives = useAction(adsCreativesApi.listCreatives)
   const updateCreativeStatus = useAction(adsCreativesApi.updateCreativeStatus)
@@ -712,6 +722,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
     const cName = creative.name || creative.headlines?.[0] || creative.creativeId
     params.set('creativeName', cName)
+    params.set('currency', displayCurrency)
     router.push(`/dashboard/ads/campaigns/${providerId}/${campaignId}/creative/${creative.creativeId}?${params.toString()}`)
   }
 
@@ -849,6 +860,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
               <CampaignAdsGrid
                 adMetrics={adMetrics}
                 ads={filteredAds}
+                currency={displayCurrency}
                 onCreativeClick={handleCreativeClick}
                 onToggleStatus={(ad, nextStatus) => {
                   void toggleAdStatus(ad, nextStatus)
@@ -859,6 +871,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
               <CampaignAdsList
                 adMetrics={adMetrics}
                 ads={filteredAds}
+                currency={displayCurrency}
                 onCreativeClick={handleCreativeClick}
                 onToggleStatus={(ad, nextStatus) => {
                   void toggleAdStatus(ad, nextStatus)

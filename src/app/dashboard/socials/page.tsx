@@ -2,16 +2,16 @@
 
 import { useState } from 'react'
 
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import { PROVIDER_IDS } from '@/lib/themes'
 import { FadeIn } from '@/components/ui/animate-in'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useSocialsPageController } from './hooks/use-socials-page-controller'
 import { SocialsHeader } from './components/socials-header'
 import { SocialsConnectionPanel } from './components/socials-connection-panel'
 import { SocialSurfacePanel } from './components/social-surface-panel'
-import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
-import { PROVIDER_IDS } from '@/lib/themes'
+import { useSocialsPageController } from './hooks/use-socials-page-controller'
 
 export default function SocialsPage() {
   const {
@@ -73,7 +73,8 @@ export default function SocialsPage() {
             loadingMetaAccountOptions={connections.loadingMetaAccountOptions}
             connectingProvider={connections.connectingProvider}
             initializingMeta={connections.initializingMeta}
-            onConnect={() => connections.handleOauthRedirect(PROVIDER_IDS.FACEBOOK)}
+            onConnectFacebook={() => connections.handleOauthRedirect(PROVIDER_IDS.FACEBOOK)}
+            onConnectInstagram={() => connections.handleOauthRedirect(PROVIDER_IDS.FACEBOOK)}
             onDisconnect={() => connections.handleDisconnect(PROVIDER_IDS.FACEBOOK)}
             onRefresh={metrics.handleManualRefresh}
             onReloadAccounts={() => connections.reloadMetaAccountOptions()}
@@ -102,13 +103,13 @@ export default function SocialsPage() {
             <TabsTrigger value="facebook" className="rounded-xl px-4 py-2.5 text-sm font-semibold">
               <span className="flex items-center gap-2">
                 <span>Facebook</span>
-                <Badge variant={surfaceAvailability.facebook.status === 'ready' ? 'secondary' : surfaceAvailability.facebook.status === 'loading' ? 'info' : 'outline'} className="rounded-full px-2 py-0.5 text-[10px]">{surfaceAvailability.facebook.status === 'ready' ? `${surfaceAvailability.facebook.count} ready` : surfaceAvailability.facebook.status === 'source_required' ? 'Source needed' : surfaceAvailability.facebook.status === 'error' ? 'Retry needed' : surfaceAvailability.facebook.status === 'disconnected' ? 'Connect Meta' : 'Waiting'}</Badge>
+                <Badge variant={surfaceAvailability.facebook.status === 'ready' ? 'secondary' : surfaceAvailability.facebook.status === 'loading' ? 'info' : 'outline'} className="rounded-full px-2 py-0.5 text-[10px]">{surfaceAvailability.facebook.status === 'ready' ? `${surfaceAvailability.facebook.count} ready` : surfaceAvailability.facebook.status === 'source_required' ? 'Source needed' : surfaceAvailability.facebook.status === 'error' ? 'Retry needed' : surfaceAvailability.facebook.status === 'disconnected' ? 'Connect Facebook' : 'Waiting'}</Badge>
               </span>
             </TabsTrigger>
             <TabsTrigger value="instagram" className="rounded-xl px-4 py-2.5 text-sm font-semibold">
               <span className="flex items-center gap-2">
                 <span>Instagram</span>
-                <Badge variant={surfaceAvailability.instagram.status === 'ready' ? 'secondary' : surfaceAvailability.instagram.status === 'loading' ? 'info' : 'outline'} className="rounded-full px-2 py-0.5 text-[10px]">{surfaceAvailability.instagram.status === 'ready' ? `${surfaceAvailability.instagram.count} ready` : surfaceAvailability.instagram.status === 'source_required' ? 'Source needed' : surfaceAvailability.instagram.status === 'error' ? 'Retry needed' : surfaceAvailability.instagram.status === 'disconnected' ? 'Connect Meta' : 'Waiting'}</Badge>
+                <Badge variant={surfaceAvailability.instagram.status === 'ready' ? 'secondary' : surfaceAvailability.instagram.status === 'loading' ? 'info' : 'outline'} className="rounded-full px-2 py-0.5 text-[10px]">{surfaceAvailability.instagram.status === 'ready' ? `${surfaceAvailability.instagram.count} ready` : surfaceAvailability.instagram.status === 'source_required' ? 'Source needed' : surfaceAvailability.instagram.status === 'error' ? 'Retry needed' : surfaceAvailability.instagram.status === 'disconnected' ? 'Connect Instagram' : 'Waiting'}</Badge>
               </span>
             </TabsTrigger>
             </TabsList>

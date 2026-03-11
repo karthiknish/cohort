@@ -5,6 +5,7 @@ import { useAction } from 'convex/react'
 import { useParams } from 'next/navigation'
 
 import { type DateRange } from '@/app/dashboard/ads/components/date-range-picker'
+import { normalizeCurrencyCode } from '@/constants/currencies'
 import { Card, CardContent } from '@/components/ui/card'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
@@ -472,6 +473,11 @@ function CampaignInsightsPageContent() {
     return calculateAlgorithmicInsights(summary)
   }, [calculatedMetrics, campaign?.providerId, insights?.series])
 
+  const displayCurrency = useMemo(
+    () => normalizeCurrencyCode(insights?.currency ?? campaign?.currency),
+    [campaign?.currency, insights?.currency],
+  )
+
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-10 p-6 pb-20">
       {/* 1. Header & Controls */}
@@ -488,7 +494,7 @@ function CampaignInsightsPageContent() {
         <Card className="border-red-500/20 bg-red-500/5">
           <CardContent className="flex items-center gap-3 p-4 text-sm font-bold text-red-600">
             <span>{campaignError}</span>
-            <button onClick={() => void loadCampaign()} className="underline">Retry</button>
+            <button type="button" onClick={() => void loadCampaign()} className="underline">Retry</button>
           </CardContent>
         </Card>
       )}
@@ -497,7 +503,7 @@ function CampaignInsightsPageContent() {
       <MetricCardsSection
         metrics={calculatedMetrics}
         loading={insightsLoading}
-        currency={insights?.currency || campaign?.currency}
+        currency={displayCurrency}
         efficiencyScore={efficiencyScore}
       />
 
@@ -508,7 +514,7 @@ function CampaignInsightsPageContent() {
         campaignId={campaignId}
         clientId={selectedClientId}
         isPreviewMode={isPreviewMode}
-        currency={insights?.currency || campaign?.currency}
+        currency={displayCurrency}
         budget={campaign?.budget}
         budgetType={campaign?.budgetType}
         onReloadCampaign={loadCampaign}
@@ -534,7 +540,7 @@ function CampaignInsightsPageContent() {
           conversionsChartData={conversionsChartData}
           reachChartData={reachChartData}
           insightsLoading={insightsLoading}
-          currency={insights?.currency || campaign?.currency}
+          currency={displayCurrency}
         />
       )}
 
@@ -544,6 +550,7 @@ function CampaignInsightsPageContent() {
         campaignId={campaignId}
         clientId={selectedClientId}
         isPreviewMode={isPreviewMode}
+        currency={displayCurrency}
       />
 
       {/* 7. Formula Builder */}

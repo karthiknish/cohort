@@ -30,6 +30,7 @@ type ConvexIntegrationStatusRow = {
   clientId: string | null
   accountId: string | null
   accountName: string | null
+  currency: string | null
   lastSyncStatus: string | null
   lastSyncMessage: string | null
   lastSyncedAtMs: number | null
@@ -76,6 +77,7 @@ export interface IntegrationStatusInfo {
   status?: string
   accountId?: string | null
   accountName?: string | null
+  currency?: string | null
 }
 
 export interface UseAdsConnectionsReturn {
@@ -176,6 +178,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       linkedAt: typeof row.linkedAtMs === 'number' ? new Date(row.linkedAtMs).toISOString() : null,
       accountId: row.accountId ?? null,
       accountName: row.accountName ?? null,
+      currency: row.currency ?? null,
       autoSyncEnabled: row.autoSyncEnabled ?? null,
       syncFrequencyMinutes: row.syncFrequencyMinutes ?? null,
       scheduledTimeframeDays: row.scheduledTimeframeDays ?? null,
@@ -230,6 +233,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       status: status.status,
       accountId: status.accountId,
       accountName: status.accountName,
+      currency: status.currency,
     }
   })
 

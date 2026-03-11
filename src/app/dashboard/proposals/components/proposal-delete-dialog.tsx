@@ -2,15 +2,9 @@
 
 import { memo } from 'react'
 
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog } from '@/components/ui/dialog'
+
+import { ProposalDeleteDialogContent } from './proposal-delete-dialog-sections'
 
 interface ProposalDeleteDialogProps {
   open: boolean
@@ -23,22 +17,12 @@ interface ProposalDeleteDialogProps {
 function ProposalDeleteDialogComponent({ open, isDeleting, proposalName, onOpenChange, onConfirm }: ProposalDeleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete proposal</DialogTitle>
-          <DialogDescription>
-            This action cannot be undone. {proposalName ? `${proposalName} ` : ''}and its data will be removed permanently.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isDeleting}>
-            Cancel
-          </Button>
-          <Button type="button" variant="destructive" onClick={onConfirm} disabled={isDeleting}>
-            {isDeleting ? 'Deleting…' : 'Delete'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+      <ProposalDeleteDialogContent
+        isDeleting={isDeleting}
+        onConfirm={onConfirm}
+        onOpenChange={onOpenChange}
+        proposalName={proposalName}
+      />
     </Dialog>
   )
 }

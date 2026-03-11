@@ -40,6 +40,7 @@ describe('comparison view card sections', () => {
   it('renders populated period and provider comparisons', () => {
     const markup = renderToStaticMarkup(
       <ComparisonViewCardShell
+        currency="GBP"
         onTabChange={vi.fn()}
         periodComparison={periodComparison}
         providerComparison={[{ providerId: 'google_ads', metrics: { spend: 650, ctr: 0.031, roas: 3.4, cpa: 18.2, conversions: 42 } }]}
@@ -48,9 +49,9 @@ describe('comparison view card sections', () => {
     )
 
     expect(markup).toContain('Spend')
-    expect(markup).toContain('$1,000')
+    expect(markup).toContain('£1,000')
     expect(markup).toContain('Google')
-    expect(markup).toContain('$650')
+    expect(markup).toContain('£650')
     expect(markup).toContain('3.40')
   })
 })

@@ -1,63 +1,67 @@
-"use client"
+'use client'
 
-import { useEffect, useState } from "react"
-import { TriangleAlert, CircleCheck, LoaderCircle } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { LoaderCircle, type LucideIcon } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
-export type DeckProgressStage = "initializing" | "polling" | "launching" | "queued" | "error"
+import {
+  DeckProgressOverlayContent,
+  DeckProgressOverlayShell,
+  ProposalGenerationOverlayContent,
+} from './deck-progress-overlays-sections'
+
+export type DeckProgressStage = 'initializing' | 'polling' | 'launching' | 'queued' | 'error'
 
 const deckStageMessages: Record<DeckProgressStage, { title: string; description: string }> = {
   initializing: {
-    title: "Starting deck request...",
-    description: "Collecting your proposal details and preparing the presentation export.",
+    title: 'Starting deck request...',
+    description: 'Collecting your proposal details and preparing the presentation export.',
   },
   polling: {
-    title: "Generating slides & saving...",
-    description: "We are exporting the PPT and saving a copy for you.",
+    title: 'Generating slides & saving...',
+    description: 'We are exporting the PPT and saving a copy for you.',
   },
   launching: {
-    title: "Deck ready",
-    description: "We saved a copy and are opening it for you now.",
+    title: 'Deck ready',
+    description: 'We saved a copy and are opening it for you now.',
   },
   queued: {
-    title: "Still processing",
+    title: 'Still processing',
     description: "The presentation export is still processing. We'll save it automatically as soon as it lands.",
   },
   error: {
-    title: "Deck preparation failed",
-    description: "We could not finish the export. Please retry or regenerate the proposal.",
+    title: 'Deck preparation failed',
+    description: 'We could not finish the export. Please retry or regenerate the proposal.',
   },
 }
 
 const generationFlow: { label: string; helper: string; icon: LucideIcon; duration: number | null }[] = [
   {
-    label: "Analyzing your input...",
-    helper: "Reviewing your responses and goals to set the brief.",
+    label: 'Analyzing your input...',
+    helper: 'Reviewing your responses and goals to set the brief.',
     icon: LoaderCircle,
     duration: 3000,
   },
   {
-    label: "Gathering market insights...",
-    helper: "Pulling benchmarks, comps, and audience signals.",
+    label: 'Gathering market insights...',
+    helper: 'Pulling benchmarks, comps, and audience signals.',
     icon: LoaderCircle,
     duration: 4000,
   },
   {
-    label: "Drafting strategy...",
-    helper: "Writing tailored recommendations and messaging.",
+    label: 'Drafting strategy...',
+    helper: 'Writing tailored recommendations and messaging.',
     icon: LoaderCircle,
     duration: 6000,
   },
   {
-    label: "Formatting sections...",
-    helper: "Structuring slides, pricing, and CTA blocks.",
+    label: 'Formatting sections...',
+    helper: 'Structuring slides, pricing, and CTA blocks.',
     icon: LoaderCircle,
     duration: 8000,
   },
   {
-    label: "Generating presentation...",
-    helper: "We are creating your presentation slides. This may take a moment.",
+    label: 'Generating presentation...',
+    helper: 'We are creating your presentation slides. This may take a moment.',
     icon: LoaderCircle,
     duration: null, // This stage waits for actual completion
   },
@@ -125,81 +129,22 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
     return null
   }
 
-  const currentStage = generationFlow[stageIndex]!
+  const currentStage = generationFlow[stageIndex] ?? generationFlow[generationFlow.length - 1]
   const isFinalStage = stageIndex === generationFlow.length - 1
   const isComplete = showCompletionState || (isFinalStage && isPresentationReady)
   const progressPercent = ((stageIndex + (isComplete ? 1 : 0)) / generationFlow.length) * 100
 
   return (
-    <div
-      className="fixed inset-0 z-[2100] flex items-center justify-center bg-background/40 backdrop-blur-xl animate-in fade-in duration-500"
-      role="status"
-      aria-live="polite"
-    >
-      <div className="relative w-full max-w-lg mx-auto p-8 flex flex-col items-center gap-8">
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
-          <div className="relative h-24 w-24 rounded-full bg-background border-4 border-primary/20 flex items-center justify-center shadow-xl">
-            {isComplete ? (
-              <div className="animate-in zoom-in duration-500 fill-mode-forwards text-emerald-500">
-                <CircleCheck className="h-12 w-12" />
-              </div>
-            ) : (
-              <div className="relative">
-                <LoaderCircle className="h-12 w-12 animate-[spin_3s_linear_infinite] text-primary" />
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center gap-4 text-center z-10">
-          <div className="space-y-1">
-            <h3 className="text-2xl font-bold tracking-tight text-foreground bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-              {isComplete ? "Proposal Generated!" : currentStage.label}
-            </h3>
-            <p className="text-sm text-muted-foreground/80 font-medium max-w-sm">
-              {isComplete ? "Your strategy and presentation deck are ready for review." : currentStage.helper}
-            </p>
-          </div>
-
-          <div className="w-full mt-4 space-y-3">
-            <div className="h-2 w-full bg-muted/30 rounded-full overflow-hidden border border-muted/20">
-              <div 
-                className="h-full bg-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none relative"
-                style={{ width: `${progressPercent}%` }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2s_infinite]" />
-              </div>
-            </div>
-            <div className="flex justify-between items-center px-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                Processing Strategy
-              </span>
-              <span className="text-[10px] font-bold text-primary">
-                {Math.round(progressPercent)}%
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-5 gap-2 w-full mt-4">
-            {generationFlow.map((flowStage, index) => (
-              <div 
-                key={flowStage.label}
-                className={cn(
-                  "h-1 rounded-full transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none",
-                  index <= stageIndex ? "bg-primary" : "bg-muted/40",
-                  index === stageIndex && !isComplete && "animate-pulse"
-                )}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Floating elements for visual interest */}
-        <div className="absolute top-1/4 -left-8 w-16 h-16 bg-primary/5 rounded-full blur-xl animate-pulse" />
-        <div className="absolute bottom-1/4 -right-8 w-20 h-20 bg-primary/10 rounded-full blur-2xl animate-pulse delay-700" />
-      </div>
-    </div>
+    <DeckProgressOverlayShell className="fixed inset-0 z-[2100] flex items-center justify-center animate-in fade-in bg-background/40 backdrop-blur-xl duration-500">
+      <ProposalGenerationOverlayContent
+        currentStageHelper={currentStage.helper}
+        currentStageLabel={currentStage.label}
+        isComplete={isComplete}
+        progressPercent={progressPercent}
+        stageIndex={stageIndex}
+        stageLabels={generationFlow.map((flowStage) => flowStage.label)}
+      />
+    </DeckProgressOverlayShell>
   )
 }
 
@@ -216,25 +161,9 @@ export function DeckProgressOverlay({ stage, isVisible }: DeckProgressOverlayPro
   const copy = deckStageMessages[stage]
 
   return (
-    <div
-      className="fixed inset-0 z-[2100] flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm"
-      role="status"
-      aria-live="polite"
-    >
-      <div className="flex flex-col items-center gap-3 text-center">
-        {stage === "launching" ? (
-          <CircleCheck className="h-10 w-10 text-primary" />
-        ) : stage === "error" ? (
-          <TriangleAlert className="h-10 w-10 text-destructive" />
-        ) : (
-          <LoaderCircle className="h-10 w-10 animate-spin text-primary" />
-        )}
-        <div>
-          <p className="text-lg font-semibold text-foreground">{copy.title}</p>
-          <p className="mt-1 max-w-sm text-sm text-muted-foreground">{copy.description}</p>
-        </div>
-      </div>
-    </div>
+    <DeckProgressOverlayShell className="fixed inset-0 z-[2100] flex flex-col items-center justify-center gap-6 bg-background/80 backdrop-blur-sm">
+      <DeckProgressOverlayContent copy={copy} stage={stage} />
+    </DeckProgressOverlayShell>
   )
 }
 

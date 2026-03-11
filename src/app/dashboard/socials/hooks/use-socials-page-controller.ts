@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAction } from 'convex/react'
 
-import { useClientContext } from '@/contexts/client-context'
-import { PROVIDER_IDS } from '@/lib/themes'
+import type { ProviderSummary } from '@/app/dashboard/ads/components/types'
 import { useAdsConnections } from '@/app/dashboard/ads/hooks/use-ads-connections'
 import { useAdsMetrics } from '@/app/dashboard/ads/hooks/use-ads-metrics'
 import { useAlgorithmicInsights } from '@/app/dashboard/ads/hooks/use-algorithmic-insights'
-import type { ProviderSummary } from '@/app/dashboard/ads/components/types'
 import { useAuth } from '@/contexts/auth-context'
+import { useClientContext } from '@/contexts/client-context'
 import { adsCreativesApi } from '@/lib/convex-api'
+import { PROVIDER_IDS } from '@/lib/themes'
 import type {
   SocialSurfaceKey,
   SocialsMetaSetupState,
@@ -284,8 +284,8 @@ export function useSocialsPageController() {
     if (!metaConnected) {
       return {
         stage: 'disconnected',
-        title: 'Connect Meta to start social surface discovery',
-        description: 'Authorize Meta once to unlock Facebook Pages, Instagram business profiles, and social performance insights for this workspace.',
+        title: 'Connect Facebook or Instagram to start social surface discovery',
+        description: 'Choose either login button to begin the shared Meta Business authorization that unlocks Facebook Pages, Instagram business profiles, and social performance insights for this workspace.',
         switchSourceRecommended: false,
         switchSourceMessage: null,
       }

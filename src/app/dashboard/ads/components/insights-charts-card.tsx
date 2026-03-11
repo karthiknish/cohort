@@ -37,6 +37,7 @@ import {
 
 interface InsightsChartsCardProps {
   analysis: PerformanceAnalysis | null
+  currency?: string
   loading?: boolean
 }
 
@@ -50,7 +51,7 @@ const metricColors = CHART_COLORS.metrics
 // SUB-COMPONENTS
 // =============================================================================
 
-function ProviderComparisonChart({ data }: { data: PerformanceAnalysis['chartData']['providerComparison'] }) {
+function ProviderComparisonChart({ currency = 'USD', data }: { currency?: string; data: PerformanceAnalysis['chartData']['providerComparison'] }) {
   const chartData = data.map(d => ({
     name: d.displayName,
     spend: d.metrics.spend,
@@ -65,11 +66,11 @@ function ProviderComparisonChart({ data }: { data: PerformanceAnalysis['chartDat
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} layout="vertical" margin={{ left: 80 }}>
           <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-          <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} />
+          <XAxis type="number" tickFormatter={(v) => formatCurrency(v, currency)} />
           <YAxis type="category" dataKey="name" width={80} />
           <Tooltip
             formatter={(value: number, name: string) => {
-              if (name === 'spend' || name === 'revenue') return formatCurrency(value)
+              if (name === 'spend' || name === 'revenue') return formatCurrency(value, currency)
               if (name === 'roas') return `${value.toFixed(2)}x`
               return value
             }}
@@ -127,9 +128,11 @@ function EfficiencyRadarChart({
 }
 
 function TrendChart({
+  currency = 'USD',
   data,
   providerId
 }: {
+  currency?: string
   data: Record<string, { date: string; actual: number; trend: number }[]>
   providerId: string
 }) {
@@ -152,10 +155,10 @@ function TrendChart({
             tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             tick={{ fontSize: 10 }}
           />
-          <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fontSize: 10 }} />
+          <YAxis tickFormatter={(v) => formatCurrency(v, currency)} tick={{ fontSize: 10 }} />
           <Tooltip
             labelFormatter={(v) => new Date(v).toLocaleDateString()}
-            formatter={(v: number) => formatCurrency(v)}
+            formatter={(v: number) => formatCurrency(v, currency)}
           />
           <Legend />
           <Line
@@ -275,7 +278,7 @@ function BenchmarkChart({
 // MAIN COMPONENT
 // =============================================================================
 
-export function InsightsChartsCard({ analysis, loading = false }: InsightsChartsCardProps) {
+export function InsightsChartsCard({ analysis, currency = 'USD', loading = false }: InsightsChartsCardProps) {
   const [selectedProvider, setSelectedProvider] = useState<string>('all')
 
   const providers = useMemo(() => {
@@ -305,7 +308,7 @@ export function InsightsChartsCard({ analysis, loading = false }: InsightsCharts
   return (
     <Card className="shadow-sm">
       <InsightsChartsHeader onSelectedProviderChange={setSelectedProvider} providers={providers} providersCount={providers.length} selectedProvider={selectedProvider} />
-      <InsightsChartsTabs benchmarkChart={<BenchmarkChart data={analysis.chartData.benchmarkCharts} providerId={activeProvider} />} comparisonChart={<ProviderComparisonChart data={analysis.chartData.providerComparison} />} efficiencyChart={<EfficiencyRadarChart data={analysis.chartData.efficiencyBreakdown} providerId={activeProvider} />} funnelChart={<FunnelChart data={analysis.chartData.funnelCharts} providerId={activeProvider} />} trendsChart={<TrendChart data={analysis.chartData.trendCharts} providerId={activeProvider} />} />
+      <InsightsChartsTabs benchmarkChart={<BenchmarkChart data={analysis.chartData.benchmarkCharts} providerId={activeProvider} />} comparisonChart={<ProviderComparisonChart currency={currency} data={analysis.chartData.providerComparison} />} efficiencyChart={<EfficiencyRadarChart data={analysis.chartData.efficiencyBreakdown} providerId={activeProvider} />} funnelChart={<FunnelChart data={analysis.chartData.funnelCharts} providerId={activeProvider} />} trendsChart={<TrendChart currency={currency} data={analysis.chartData.trendCharts} providerId={activeProvider} />} />
     </Card>
   )
 }

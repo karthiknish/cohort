@@ -7,6 +7,7 @@ export interface IntegrationStatus {
   linkedAt?: string | null
   accountId?: string | null
   accountName?: string | null
+  currency?: string | null
   autoSyncEnabled?: boolean | null
   syncFrequencyMinutes?: number | null
   scheduledTimeframeDays?: number | null

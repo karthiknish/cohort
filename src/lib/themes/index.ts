@@ -20,6 +20,38 @@ export const PROVIDER_IDS = {
 
 export type ProviderId = typeof PROVIDER_IDS[keyof typeof PROVIDER_IDS]
 
+const PROVIDER_ID_ALIASES: Record<string, ProviderId> = {
+  google: PROVIDER_IDS.GOOGLE,
+  google_ads: PROVIDER_IDS.GOOGLE,
+  'google-ads': PROVIDER_IDS.GOOGLE,
+  googleads: PROVIDER_IDS.GOOGLE,
+  adwords: PROVIDER_IDS.GOOGLE,
+  facebook: PROVIDER_IDS.FACEBOOK,
+  facebook_ads: PROVIDER_IDS.FACEBOOK,
+  'facebook-ads': PROVIDER_IDS.FACEBOOK,
+  meta: PROVIDER_IDS.FACEBOOK,
+  meta_ads: PROVIDER_IDS.FACEBOOK,
+  'meta-ads': PROVIDER_IDS.FACEBOOK,
+  metaads: PROVIDER_IDS.FACEBOOK,
+  linkedin: PROVIDER_IDS.LINKEDIN,
+  linkedin_ads: PROVIDER_IDS.LINKEDIN,
+  'linkedin-ads': PROVIDER_IDS.LINKEDIN,
+  tiktok: PROVIDER_IDS.TIKTOK,
+  tiktok_ads: PROVIDER_IDS.TIKTOK,
+  'tiktok-ads': PROVIDER_IDS.TIKTOK,
+}
+
+export function normalizeProviderId(providerId: string): string {
+  const normalized = providerId.trim().toLowerCase()
+  return PROVIDER_ID_ALIASES[normalized] ?? normalized
+}
+
+function humanizeProviderId(providerId: string): string {
+  return providerId
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase())
+}
+
 // =============================================================================
 // PROVIDER THEMES - TAILWIND CLASSES
 // =============================================================================
@@ -279,7 +311,8 @@ export const KPI_THEMES: Record<KpiTheme, {
  * Falls back to Google theme if provider not found.
  */
 export function getProviderTheme(providerId: string): typeof PROVIDER_THEMES[ProviderId] {
-  return PROVIDER_THEMES[providerId as ProviderId] ?? PROVIDER_THEMES.google
+  const normalized = normalizeProviderId(providerId)
+  return PROVIDER_THEMES[normalized as ProviderId] ?? PROVIDER_THEMES.google
 }
 
 /**
@@ -287,7 +320,8 @@ export function getProviderTheme(providerId: string): typeof PROVIDER_THEMES[Pro
  * Falls back to Google color if provider not found.
  */
 export function getProviderColor(providerId: string): typeof PROVIDER_COLORS[ProviderId] {
-  return PROVIDER_COLORS[providerId as ProviderId] ?? PROVIDER_COLORS.google
+  const normalized = normalizeProviderId(providerId)
+  return PROVIDER_COLORS[normalized as ProviderId] ?? PROVIDER_COLORS.google
 }
 
 /**
@@ -295,7 +329,8 @@ export function getProviderColor(providerId: string): typeof PROVIDER_COLORS[Pro
  * Falls back to Google info if provider not found.
  */
 export function getProviderInfo(providerId: string): ProviderInfo {
-  return PROVIDER_INFO[providerId as ProviderId] ?? PROVIDER_INFO[PROVIDER_IDS.GOOGLE]
+  const normalized = normalizeProviderId(providerId)
+  return PROVIDER_INFO[normalized as ProviderId] ?? PROVIDER_INFO[PROVIDER_IDS.GOOGLE]
 }
 
 /**
@@ -310,5 +345,9 @@ export function getKpiTheme(theme: KpiTheme = 'blue'): typeof KPI_THEMES[KpiThem
  * Format provider name for display.
  */
 export function formatProviderName(providerId: string): string {
-  return getProviderInfo(providerId).shortName
+  const normalized = normalizeProviderId(providerId)
+  if (normalized in PROVIDER_INFO) {
+    return PROVIDER_INFO[normalized as ProviderId].shortName
+  }
+  return humanizeProviderId(providerId)
 }

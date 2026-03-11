@@ -17,6 +17,7 @@ import {
 interface CrossChannelOverviewCardProps {
   processedMetrics: MetricRecord[]
   serverSideSummary?: MetricsSummary | null
+  currency?: string
   hasMetricData: boolean
   initialMetricsLoading: boolean
   metricsLoading: boolean
@@ -28,6 +29,7 @@ interface CrossChannelOverviewCardProps {
 export function CrossChannelOverviewCard({
   processedMetrics,
   serverSideSummary,
+  currency = 'USD',
   hasMetricData,
   initialMetricsLoading,
   metricsLoading,
@@ -101,7 +103,7 @@ export function CrossChannelOverviewCard({
       {
         id: 'spend',
         label: 'Total Spend',
-        value: formatCurrency(filteredTotals.spend),
+        value: formatCurrency(filteredTotals.spend, currency),
         helper: hasData ? 'All selected platforms combined' : 'Connect a platform to populate',
       },
       {
@@ -119,13 +121,13 @@ export function CrossChannelOverviewCard({
       {
         id: 'avg-cpc',
         label: 'Avg CPC',
-        value: filteredTotals.clicks > 0 ? formatCurrency(averageCpc) : '—',
+        value: filteredTotals.clicks > 0 ? formatCurrency(averageCpc, currency) : '—',
         helper: filteredTotals.clicks > 0 ? 'What each click cost on average' : 'Need click data to calculate',
       },
       {
         id: 'cpa',
         label: 'CPA',
-        value: cpa > 0 ? formatCurrency(cpa) : '—',
+        value: cpa > 0 ? formatCurrency(cpa, currency) : '—',
         helper: cpa > 0 ? 'Spend ÷ conversions (lower is better)' : 'Needs spend and conversions data',
       },
       {
@@ -141,7 +143,7 @@ export function CrossChannelOverviewCard({
         helper: roas > 0 ? 'Revenue ÷ spend (higher is better)' : 'Needs revenue and spend data',
       },
     ]
-  }, [filteredMetrics.length, filteredTotals])
+  }, [currency, filteredMetrics.length, filteredTotals])
 
   const toggleProvider = (providerId: string) => {
     setSelectedProviders((prev) =>
@@ -156,7 +158,7 @@ export function CrossChannelOverviewCard({
   return (
     <Card className="shadow-sm">
       <CrossChannelOverviewHeader availableProviders={availableProviders} dateRange={dateRange} hasMetricData={hasMetricData} hasProviderFilter={hasProviderFilter} onDateRangeChange={onDateRangeChange} onExport={onExport} onToggleProvider={toggleProvider} selectedProviders={selectedProviders} serverAggregated={Boolean(serverSideSummary)} />
-      {initialMetricsLoading ? <CrossChannelOverviewLoadingState /> : !hasMetricData ? <CrossChannelOverviewEmptyState /> : <CrossChannelOverviewContent metrics={filteredMetrics} metricsLoading={metricsLoading} summaryCards={summaryCards} />}
+      {initialMetricsLoading ? <CrossChannelOverviewLoadingState /> : !hasMetricData ? <CrossChannelOverviewEmptyState /> : <CrossChannelOverviewContent currency={currency} metrics={filteredMetrics} metricsLoading={metricsLoading} summaryCards={summaryCards} />}
     </Card>
   )
 }

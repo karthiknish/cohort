@@ -2,13 +2,15 @@
 
 import { useMemo } from 'react'
 
-import type { MetricRecord, ProviderSummary } from '../components/types'
 import {
   analyzeAdPerformance,
-  type PerformanceAnalysis,
   type AlgorithmicInsight,
   type MetricDataPoint,
+  type PerformanceAnalysis,
 } from '@/lib/ad-algorithms'
+import { normalizeProviderId } from '@/lib/themes'
+
+import type { MetricRecord, ProviderSummary } from '../components/types'
 
 // =============================================================================
 // TYPES
@@ -56,7 +58,7 @@ export interface UseAlgorithmicInsightsReturn {
 function convertToDataPoints(metrics: MetricRecord[]): MetricDataPoint[] {
   return metrics.map(m => ({
     date: m.date,
-    providerId: m.providerId,
+    providerId: normalizeProviderId(m.providerId),
     accountId: m.accountId,
     spend: m.spend,
     revenue: m.revenue ?? 0,

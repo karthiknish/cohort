@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
+import { normalizeCurrencyCode } from '@/constants/currencies'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
@@ -228,6 +229,7 @@ export default function CreativeDetailPage() {
   const [creativeMetrics, setCreativeMetrics] = useState<NormalizedAdMetric[] | null>(null)
 
   const campaignName = searchParams.get('campaignName') || 'Campaign'
+  const displayCurrency = normalizeCurrencyCode(searchParams.get('currency'))
 
   const fetchCreative = useCallback(async () => {
     setLoading(true)
@@ -838,6 +840,7 @@ export default function CreativeDetailPage() {
           onChangeDays={setDays}
           metricsLoading={metricsLoading}
           metricsError={metricsError}
+          currency={displayCurrency}
           performanceSummary={performanceSummary}
           efficiencyScore={efficiencyScore}
           onRefreshPerformance={fetchMetrics}

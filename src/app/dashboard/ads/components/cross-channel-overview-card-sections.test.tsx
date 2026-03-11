@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/components/dashboard/performance-chart', () => ({
-  PerformanceChart: ({ metrics }: { metrics: Array<{ providerId: string }> }) => <div>chart:{metrics.length}:{metrics[0]?.providerId}</div>,
+  PerformanceChart: ({ currency, metrics }: { currency?: string; metrics: Array<{ providerId: string }> }) => <div>chart:{currency}:{metrics.length}:{metrics[0]?.providerId}</div>,
 }))
 
 vi.mock('@/components/ui/animate-in', () => ({
@@ -57,12 +57,12 @@ describe('cross channel overview card sections', () => {
 
   it('renders summary cards and the chart', () => {
     const markup = renderToStaticMarkup(
-      <CrossChannelOverviewContent metrics={[{ id: '1', providerId: 'google_ads', date: '2024-01-01', spend: 120, impressions: 1000, clicks: 45, conversions: 4, revenue: 380 }]} metricsLoading={false} summaryCards={[{ id: 'spend', label: 'Total Spend', value: '$120', helper: 'All selected platforms combined' }]} />,
+      <CrossChannelOverviewContent currency="GBP" metrics={[{ id: '1', providerId: 'google_ads', date: '2024-01-01', spend: 120, impressions: 1000, clicks: 45, conversions: 4, revenue: 380 }]} metricsLoading={false} summaryCards={[{ id: 'spend', label: 'Total Spend', value: '£120', helper: 'All selected platforms combined' }]} />,
     )
 
     expect(markup).toContain('Total Spend')
-    expect(markup).toContain('$120')
+    expect(markup).toContain('£120')
     expect(markup).toContain('All selected platforms combined')
-    expect(markup).toContain('chart:1:google_ads')
+    expect(markup).toContain('chart:GBP:1:google_ads')
   })
 })

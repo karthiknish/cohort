@@ -14,12 +14,14 @@ import type { PeriodComparison, ProviderComparison } from '../hooks/use-metrics-
 interface ComparisonViewCardProps {
     periodComparison: PeriodComparison | null
     providerComparison: ProviderComparison[]
+    currency?: string
     loading?: boolean
 }
 
 export function ComparisonViewCard({
     periodComparison,
     providerComparison,
+    currency = 'USD',
     loading,
 }: ComparisonViewCardProps) {
     const viewTabs = usePersistedTab({
@@ -31,5 +33,5 @@ export function ComparisonViewCard({
 
     return loading
         ? <ComparisonViewLoadingCard />
-        : <ComparisonViewCardShell onTabChange={viewTabs.setValue} periodComparison={periodComparison} providerComparison={providerComparison} selectedTab={viewTabs.value} />
+        : <ComparisonViewCardShell currency={currency} onTabChange={viewTabs.setValue} periodComparison={periodComparison} providerComparison={providerComparison} selectedTab={viewTabs.value} />
 }

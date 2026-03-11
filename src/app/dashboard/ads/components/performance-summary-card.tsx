@@ -1,8 +1,10 @@
 'use client'
 
+import { BarChart3, Download, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
-import { Download, RefreshCw, BarChart3 } from 'lucide-react'
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -10,16 +12,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatCurrency, cn } from '@/lib/utils'
-import { getProviderTheme, formatProviderName } from '@/lib/themes'
+import { formatProviderName } from '@/lib/themes'
+import { cn, formatCurrency } from '@/lib/utils'
 
 import type { ProviderSummary } from './types'
 
 interface PerformanceSummaryCardProps {
   providerSummaries: Record<string, ProviderSummary>
+  currency?: string
   hasMetrics: boolean
   initialMetricsLoading: boolean
   metricsLoading: boolean
@@ -35,6 +36,7 @@ interface PerformanceSummaryCardProps {
 
 export function PerformanceSummaryCard({
   providerSummaries,
+  currency = 'USD',
   hasMetrics,
   initialMetricsLoading,
   metricsLoading,
@@ -48,15 +50,12 @@ export function PerformanceSummaryCard({
   emptyCtaHref = '#connect-ad-platforms',
 }: PerformanceSummaryCardProps) {
   return (
-    <Card className="shadow-lg border-muted/80 overflow-hidden">
-      {/* Subtle gradient accent at top */}
-      <div className="h-1 bg-gradient-to-r from-blue-500 via-violet-500 to-rose-500" />
-
+    <Card className="overflow-hidden border-muted/60 shadow-sm">
       <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between pb-4">
         <div className="flex flex-col gap-2">
           <CardTitle className="flex items-center gap-3 text-xl">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/10 to-violet-500/10">
-              <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-muted/60 bg-muted/30">
+              <BarChart3 className="h-5 w-5 text-foreground" />
             </div>
             {title}
           </CardTitle>
@@ -91,8 +90,8 @@ export function PerformanceSummaryCard({
       <CardContent className="pt-2">
         {initialMetricsLoading ? (
           <div className="grid gap-5 md:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-36 w-full rounded-xl" />
+            {['summary-skeleton-1', 'summary-skeleton-2', 'summary-skeleton-3'].map((key) => (
+              <Skeleton key={key} className="h-36 w-full rounded-xl" />
             ))}
           </div>
         ) : metricError ? (
@@ -115,8 +114,6 @@ export function PerformanceSummaryCard({
         ) : (
           <div className="grid gap-5 md:grid-cols-3">
             {Object.entries(providerSummaries).map(([providerId, summary], index) => {
-              const theme = getProviderTheme(providerId)
-
               return (
                 <div
                   key={providerId}
@@ -125,22 +122,14 @@ export function PerformanceSummaryCard({
                 >
                   <Card
                     className={cn(
-                      'group relative overflow-hidden rounded-xl border transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
-                      'hover:shadow-lg hover:shadow-black/5 hover:-translate-y-1',
-                      theme.bg, theme.border
+                      'rounded-xl border border-muted/60 bg-card transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+                      'hover:border-muted hover:shadow-md'
                     )}
                   >
-                    {/* Subtle inner glow on hover */}
-                    <div className="absolute inset-0 opacity-0 transition-opacity duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:opacity-100 bg-gradient-to-tr from-white/60 to-transparent dark:from-white/10" />
-
-                    <CardHeader className="pb-3 relative z-10">
+                    <CardHeader className="pb-3">
                       <div className="flex items-center gap-2">
-                        <div className={cn(
-                          'flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br shadow-sm transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
-                          'group-hover:scale-110 group-hover:shadow-md',
-                          theme.iconBg
-                        )}>
-                          <BarChart3 className={cn('h-4 w-4', theme.accent)} />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-muted/60 bg-muted/30">
+                          <BarChart3 className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <CardTitle className="text-base">
                           {formatProviderName(providerId)}
@@ -148,23 +137,23 @@ export function PerformanceSummaryCard({
                       </div>
                       <CardDescription className="text-xs">Since last sync</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4 relative z-10">
+                    <CardContent className="space-y-4">
                       <div>
                         <div className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Total Spend</div>
                         <div className="text-3xl font-bold tracking-tight tabular-nums mt-1">
-                          {formatCurrency(summary.spend)}
+                          {formatCurrency(summary.spend, currency)}
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
-                        <div className="rounded-lg bg-background/50 p-2 transition-colors group-hover:bg-background/80">
+                        <div className="rounded-lg border border-muted/50 bg-muted/20 p-2">
                           <div className="text-[10px] font-medium text-muted-foreground/70 uppercase">Impressions</div>
                           <div className="text-sm font-semibold tabular-nums mt-0.5">{summary.impressions.toLocaleString()}</div>
                         </div>
-                        <div className="rounded-lg bg-background/50 p-2 transition-colors group-hover:bg-background/80">
+                        <div className="rounded-lg border border-muted/50 bg-muted/20 p-2">
                           <div className="text-[10px] font-medium text-muted-foreground/70 uppercase">Clicks</div>
                           <div className="text-sm font-semibold tabular-nums mt-0.5">{summary.clicks.toLocaleString()}</div>
                         </div>
-                        <div className="rounded-lg bg-background/50 p-2 transition-colors group-hover:bg-background/80">
+                        <div className="rounded-lg border border-muted/50 bg-muted/20 p-2">
                           <div className="text-[10px] font-medium text-muted-foreground/70 uppercase">Conversions</div>
                           <div className="text-sm font-semibold tabular-nums mt-0.5">{summary.conversions.toLocaleString()}</div>
                         </div>

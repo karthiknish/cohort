@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { normalizeCurrencyCode } from '@/constants/currencies'
 
 interface CalculatedMetrics {
   spend: number
@@ -137,7 +138,7 @@ function MetricCard({
 }
 
 export function MetricCardsSection({ metrics, loading, currency, efficiencyScore }: MetricCardsSectionProps) {
-  const displayCurrency = currency?.toUpperCase() || 'USD'
+  const displayCurrency = normalizeCurrencyCode(currency)
   const displayEfficiencyScore =
     typeof efficiencyScore === 'number' && Number.isFinite(efficiencyScore)
       ? Math.max(0, Math.min(100, Math.round(efficiencyScore)))

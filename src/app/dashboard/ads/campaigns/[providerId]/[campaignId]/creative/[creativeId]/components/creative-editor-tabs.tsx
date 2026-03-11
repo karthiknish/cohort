@@ -81,6 +81,7 @@ export function CreativeEditorTabs(props: {
   onChangeDays: (value: string) => void
   metricsLoading: boolean
   metricsError: string | null
+  currency?: string
   performanceSummary: CreativePerformanceSummary | null
   efficiencyScore: number | null
   onRefreshPerformance: () => void
@@ -113,6 +114,7 @@ export function CreativeEditorTabs(props: {
     onChangeDays,
     metricsLoading,
     metricsError,
+    currency = 'USD',
     performanceSummary,
     onRefreshPerformance,
     algorithmicInsights,
@@ -477,13 +479,13 @@ export function CreativeEditorTabs(props: {
                   <div className="p-4 rounded-xl bg-muted/30 border border-muted/20">
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Spend</p>
                     <p className="text-xl font-bold mt-1">
-                      {formatCurrency(performanceSummary.totalSpend, 'USD', { maximumFractionDigits: 0 })}
+                      {formatCurrency(performanceSummary.totalSpend, currency, { maximumFractionDigits: 0 })}
                     </p>
                   </div>
                   <div className="p-4 rounded-xl bg-muted/30 border border-muted/20">
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Revenue</p>
                     <p className="text-xl font-bold mt-1">
-                      {formatCurrency(performanceSummary.totalRevenue, 'USD', { maximumFractionDigits: 0 })}
+                      {formatCurrency(performanceSummary.totalRevenue, currency, { maximumFractionDigits: 0 })}
                     </p>
                   </div>
                   <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">

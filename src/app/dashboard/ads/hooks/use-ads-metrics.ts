@@ -2,28 +2,27 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useConvexAuth, useQuery } from 'convex/react'
-import { subDays, startOfDay, endOfDay } from 'date-fns'
+import { endOfDay, startOfDay, subDays } from 'date-fns'
 
+import type { DateRange } from '../components/date-range-picker'
+import type { MetricRecord, MetricsSummary, ProviderSummary } from '../components/types'
+import { DEFAULT_DATE_RANGE_DAYS, ERROR_MESSAGES } from '../components/constants'
+import {
+  exportMetricsToCsv,
+  METRICS_PAGE_SIZE,
+} from '../components/utils'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
-import { getPreviewAdsMetrics } from '@/lib/preview-data'
 import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors'
+import { getPreviewAdsMetrics } from '@/lib/preview-data'
+import { normalizeProviderId } from '@/lib/themes'
 import { api } from '../../../../../convex/_generated/api'
 
 function isAuthError(error: unknown): boolean {
   const code = extractErrorCode(error)
   return code === 'UNAUTHORIZED' || code === 'FORBIDDEN'
 }
-
-import type { MetricRecord, ProviderSummary } from '../components/types'
-import type { MetricsSummary } from '../components/types'
-import type { DateRange } from '../components/date-range-picker'
-import {
-  METRICS_PAGE_SIZE,
-  exportMetricsToCsv,
-} from '../components/utils'
-import { DEFAULT_DATE_RANGE_DAYS, ERROR_MESSAGES } from '../components/constants'
 
 // =============================================================================
 // TYPES
@@ -115,8 +114,6 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
         uniqueMap.set(key, m)
       } else if (!existing?.createdAt && m.createdAt) {
         uniqueMap.set(key, m)
-      } else if (!existing && !m.createdAt) {
-        uniqueMap.set(key, m)
       }
     })
     return Array.from(uniqueMap.values())
@@ -133,20 +130,40 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   // otherwise fallback to client-side calculation from loaded metrics.
   const providerSummaries = useMemo(() => {
     if (serverSideSummary?.providers && metrics.length <= METRICS_PAGE_SIZE) {
-      return serverSideSummary.providers as Record<string, ProviderSummary>
+      return Object.entries(serverSideSummary.providers).reduce<Record<string, ProviderSummary>>((acc, [providerId, totals]) => {
+        const normalizedProviderId = normalizeProviderId(providerId)
+        const providerSummary = acc[normalizedProviderId] ?? {
+          spend: 0,
+          impressions: 0,
+          clicks: 0,
+          conversions: 0,
+          revenue: 0,
+        }
+        providerSummary.spend += Number(totals.spend ?? 0)
+        providerSummary.impressions += Number(totals.impressions ?? 0)
+        providerSummary.clicks += Number(totals.clicks ?? 0)
+        providerSummary.conversions += Number(totals.conversions ?? 0)
+        providerSummary.revenue += Number(totals.revenue ?? 0)
+        acc[normalizedProviderId] = providerSummary
+        return acc
+      }, {})
     }
 
     const summary: Record<string, ProviderSummary> = {}
     processedMetrics.forEach((metric) => {
-      if (!summary[metric.providerId]) {
-        summary[metric.providerId] = { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
+      const providerSummary = summary[metric.providerId] ?? {
+        spend: 0,
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+        revenue: 0,
       }
-      const s = summary[metric.providerId]!
-      s.spend += metric.spend
-      s.impressions += metric.impressions
-      s.clicks += metric.clicks
-      s.conversions += metric.conversions
-      s.revenue += metric.revenue ?? 0
+      providerSummary.spend += metric.spend
+      providerSummary.impressions += metric.impressions
+      providerSummary.clicks += metric.clicks
+      providerSummary.conversions += metric.conversions
+      providerSummary.revenue += metric.revenue ?? 0
+      summary[metric.providerId] = providerSummary
     })
     return summary
   }, [processedMetrics, serverSideSummary, metrics.length])
@@ -186,8 +203,8 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
 
     const rows = Array.isArray(metricsRealtime) ? metricsRealtime : []
     return rows.map((row) => ({
-      id: `${String(row.providerId)}:${String(row.accountId ?? '')}:${String(row.date)}`,
-      providerId: String(row.providerId),
+      id: `${normalizeProviderId(String(row.providerId))}:${String(row.accountId ?? '')}:${String(row.date)}`,
+      providerId: normalizeProviderId(String(row.providerId)),
       accountId: typeof row.accountId === 'string' ? row.accountId : null,
       publisherPlatform:
         typeof row.publisherPlatform === 'string' && row.publisherPlatform.length > 0

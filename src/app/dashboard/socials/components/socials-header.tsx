@@ -2,9 +2,9 @@
 
 import { BadgeCheck, CalendarRange, Share2 } from 'lucide-react'
 
+import { DateRangePicker, type DateRange } from '@/app/dashboard/ads/components/date-range-picker'
 import { FadeIn } from '@/components/ui/animate-in'
 import { Badge } from '@/components/ui/badge'
-import { DateRangePicker, type DateRange } from '@/app/dashboard/ads/components/date-range-picker'
 import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
 
 type SocialsHeaderProps = {
@@ -39,7 +39,7 @@ export function SocialsHeader({
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="rounded-full border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary">
               <BadgeCheck className="mr-1.5 h-3.5 w-3.5" />
-              One Meta login unlocks both Facebook and Instagram
+              Separate Facebook and Instagram login buttons, one shared Meta connection flow
             </Badge>
             {selectedClientName ? (
               <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
