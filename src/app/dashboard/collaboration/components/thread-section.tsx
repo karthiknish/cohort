@@ -1,9 +1,14 @@
 'use client'
 
+import { Fragment } from 'react'
 import { ChevronDown, ChevronRight, LoaderCircle, MessageSquare, RefreshCw, Reply } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import type { AsyncViewState } from '@/components/ui/state-wrapper'
 import { cn } from '@/lib/utils'
 import type { CollaborationMessage } from '@/types/collaboration'
+
 import { formatRelativeTime } from '../utils'
 
 export interface ThreadToggleButtonProps {
@@ -36,6 +41,7 @@ export function ThreadToggleButton({
       )}
       onClick={onToggle}
       disabled={isLoading && !isOpen && !hasRepliesLoaded}
+      aria-expanded={isOpen}
     >
       {isLoading && !isOpen && !hasRepliesLoaded ? (
         <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
@@ -68,7 +74,7 @@ export interface ThreadErrorProps {
 
 export function ThreadError({ error, isLoading, onRetry }: ThreadErrorProps) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+    <div role="alert" aria-live="assertive" className="flex items-center justify-between gap-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
       <span>{error}</span>
       <Button
         type="button"
@@ -91,7 +97,7 @@ export interface ThreadLoadingProps {
 
 export function ThreadLoading({ hasReplies }: ThreadLoadingProps) {
   return (
-    <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
+    <div aria-live="polite" aria-busy="true" className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
       <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
       <span>{hasReplies ? 'Loading more replies…' : 'Loading replies…'}</span>
     </div>
@@ -100,9 +106,13 @@ export function ThreadLoading({ hasReplies }: ThreadLoadingProps) {
 
 export function ThreadEmptyState() {
   return (
-    <div className="rounded-md border border-dashed border-muted/50 bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
-      Be the first to reply in this thread
-    </div>
+    <EmptyState
+      icon={MessageSquare}
+      title="No replies yet"
+      description="Be the first to reply in this thread."
+      variant="inline"
+      className="rounded-md border-dashed bg-muted/10 px-3 py-2 [&_p:last-child]:text-xs"
+    />
   )
 }
 
@@ -226,6 +236,16 @@ export function ThreadSection({
   const hasThreadReplies = replyCount > 0
   const lastReplyLabel = lastReplyIso ? formatRelativeTime(lastReplyIso) : null
   const hasRepliesLoaded = replies.length > 0
+  const panelId = `thread-panel-${threadRootId}`
+
+  let threadState: AsyncViewState = 'ready'
+  if (error && replies.length === 0) {
+    threadState = 'error'
+  } else if (isLoading && replies.length === 0) {
+    threadState = 'loading'
+  } else if (!isLoading && replies.length === 0) {
+    threadState = 'empty'
+  }
 
   return (
     <div className="pt-2" data-thread-root-id={threadRootId}>
@@ -249,21 +269,21 @@ export function ThreadSection({
 
       {/* Thread Replies Container */}
       {isOpen && (
-        <div className="mt-3 animate-in slide-in-from-top-2 space-y-2 border-l-2 border-primary/20 pl-4 duration-200">
-          {/* Thread Error */}
-          {error && <ThreadError error={error} isLoading={isLoading} onRetry={onRetry} />}
+        <div id={panelId} className="mt-3 animate-in slide-in-from-top-2 space-y-2 border-l-2 border-primary/20 pl-4 duration-200">
+          {threadState === 'error' ? <ThreadError error={error ?? 'Unable to load replies.'} isLoading={isLoading} onRetry={onRetry} /> : null}
 
-          {/* Loading State */}
-          {isLoading && replies.length === 0 && <ThreadLoading hasReplies={false} />}
+          {threadState === 'loading' ? <ThreadLoading hasReplies={false} /> : null}
 
-          {/* Thread Replies */}
-          <div className="space-y-2">{replies.map((reply) => renderReply(reply))}</div>
+          {threadState === 'empty' ? <ThreadEmptyState /> : null}
 
-          {/* Loading More State */}
-          {isLoading && replies.length > 0 && <ThreadLoading hasReplies={true} />}
+          {threadState === 'ready' ? (
+            <>
+              {error ? <ThreadError error={error} isLoading={isLoading} onRetry={onRetry} /> : null}
+              <div className="space-y-2">{replies.map((reply) => <Fragment key={reply.id}>{renderReply(reply)}</Fragment>)}</div>
+            </>
+          ) : null}
 
-          {/* Empty State */}
-          {!isLoading && replies.length === 0 && !error && <ThreadEmptyState />}
+          {isLoading && replies.length > 0 ? <ThreadLoading hasReplies={true} /> : null}
 
           {/* Load More Button */}
           {hasNextCursor && (

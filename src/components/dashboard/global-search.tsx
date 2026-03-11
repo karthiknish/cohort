@@ -1,25 +1,16 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
-import { Search, X, FileText, MessageSquare, Users, FolderOpen, Hash, Clock } from 'lucide-react'
+import { useState, useCallback, useEffect, useMemo, type ComponentType } from 'react'
+import { Search, X, FileText, MessageSquare, Users, FolderOpen, Clock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { cn, formatRelativeTime } from '@/lib/utils'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 
 export type SearchResultType = 'tasks' | 'projects' | 'messages' | 'clients' | 'files' | 'proposals'
 
@@ -55,7 +46,7 @@ interface GlobalSearchProps {
 
 const EMPTY_SEARCH_FUNCTIONS: NonNullable<GlobalSearchProps['searchFunctions']> = {}
 
-const SEARCH_TYPE_ICONS: Record<SearchResultType, React.ComponentType<{ className?: string }>> = {
+const SEARCH_TYPE_ICONS: Record<SearchResultType, ComponentType<{ className?: string }>> = {
   tasks: FileText,
   projects: FolderOpen,
   messages: MessageSquare,
@@ -206,7 +197,7 @@ export function GlobalSearch({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search across all items..."
+            placeholder="Search across all items…"
             className="flex-1"
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
@@ -265,7 +256,7 @@ export function GlobalSearch({
           {isSearching && (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              <span className="ml-2">Searching...</span>
+              <span className="ml-2">Searching…</span>
             </div>
           )}
 
@@ -291,7 +282,7 @@ export function GlobalSearch({
           {!isSearching && results.length > 0 && (
             <div className="space-y-4">
               {Object.entries(groupedResults)
-                .filter(([_, items]) => selectedType === 'all' || selectedType === _)
+                .filter(([type]) => selectedType === 'all' || selectedType === type)
                 .map(([type, items]) => {
                   const IconComponent = SEARCH_TYPE_ICONS[type as SearchResultType]
                   return (
@@ -455,5 +446,3 @@ export function QuickSearchInput({
     </form>
   )
 }
-
-import type { ComponentType } from 'react'

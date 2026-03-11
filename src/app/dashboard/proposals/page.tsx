@@ -1,7 +1,7 @@
 'use client'
 
-import { useSearchParams, useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -38,8 +38,7 @@ import {
   useDeckPreparation,
 } from './hooks'
 
-export default function ProposalsPage() {
-  const searchParams = useSearchParams()
+function ProposalsPageContent() {
   const router = useRouter()
   const { toast } = useToast()
   const { selectedClientId, selectClient } = useClientContext()
@@ -48,11 +47,12 @@ export default function ProposalsPage() {
 
   // Handle URL params for client selection
   useEffect(() => {
-    const clientIdParam = searchParams.get('clientId')
+    if (typeof window === 'undefined') return
+    const clientIdParam = new URLSearchParams(window.location.search).get('clientId')
     if (clientIdParam && clientIdParam !== selectedClientId) {
       selectClient(clientIdParam)
     }
-  }, [searchParams, selectedClientId, selectClient])
+  }, [selectedClientId, selectClient])
 
   useEffect(() => {
     if (!isWizardOpen) {
@@ -122,11 +122,6 @@ export default function ProposalsPage() {
     wizardRef,
   } = drafts
 
-  // Sync proposals from drafts hook to local state
-  useEffect(() => {
-    // This is handled inside the drafts hook via the refreshProposals callback
-  }, [])
-
   // Submission hook - AI generation and deck polling
   const submission = useProposalSubmission({
     draftId,
@@ -147,6 +142,7 @@ export default function ProposalsPage() {
   })
   const {
     isSubmitting,
+    isRecheckingDeck,
     submitted,
     isPresentationReady,
     presentationDeck,
@@ -223,7 +219,8 @@ export default function ProposalsPage() {
     })
   }
 
-  const renderStepContent = () => (
+  const stepContent = useMemo(
+    () => (
     <ProposalStepContent
       stepId={step.id}
       formState={formState}
@@ -233,6 +230,8 @@ export default function ProposalsPage() {
       onToggleArrayValue={toggleArrayValue}
       onChangeSocialHandle={handleSocialHandleChange}
     />
+    ),
+    [formState, handleSocialHandleChange, step.id, summary, toggleArrayValue, updateField, validationErrors]
   )
 
   const handleStartProposal = async () => {
@@ -341,7 +340,7 @@ export default function ProposalsPage() {
           <Button
             onClick={handleStartProposal}
             disabled={!selectedClientId || isCreatingDraft}
-            className={cn(getButtonClasses('primary'), 'shrink-0 shadow-sm transition-all hover:shadow-md')}
+            className={cn(getButtonClasses('primary'), 'shrink-0 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md')}
           >
             <Plus className="mr-2 h-4 w-4" />
             New Proposal
@@ -428,7 +427,7 @@ export default function ProposalsPage() {
                         onResumeSubmission={handleContinueEditingInModal}
                         isSubmitting={isSubmitting}
                         onRecheckDeck={handleRecheckDeck}
-                        isRecheckingDeck={false}
+                        isRecheckingDeck={isRecheckingDeck}
                       />
                     </CardContent>
                   </Card>
@@ -442,7 +441,7 @@ export default function ProposalsPage() {
                         <ProposalDraftPanel
                           draftId={draftId}
                           autosaveStatus={autosaveStatus}
-                          stepContent={renderStepContent()}
+                          stepContent={stepContent}
                           onBack={handleBack}
                           onNext={handleNext}
                           isFirstStep={isFirstStep}
@@ -461,5 +460,13 @@ export default function ProposalsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function ProposalsPage() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <ProposalsPageContent />
+    </Suspense>
   )
 }

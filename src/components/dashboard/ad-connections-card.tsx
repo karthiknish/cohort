@@ -337,7 +337,7 @@ const ProviderCard = memo(function ProviderCard({
 
   return (
     <Card className={cn(
-      'relative overflow-hidden border-muted/70 bg-background shadow-sm transition-all',
+      'relative overflow-hidden border-muted/70 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
       isConnected && (theme?.border || 'border-primary/20'),
       error && 'border-destructive/30',
       !isConnected && 'hover:border-muted-foreground/30 opacity-90 hover:opacity-100'
@@ -355,7 +355,7 @@ const ProviderCard = memo(function ProviderCard({
       <CardHeader className="space-y-3 pb-3">
         <div className="flex items-start justify-between">
           <span className={cn(
-            'flex h-12 w-12 items-center justify-center rounded-xl transition-all shadow-sm',
+            'flex h-12 w-12 items-center justify-center rounded-xl transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] shadow-sm',
             theme?.bg || (isConnected ? 'bg-primary/10' : 'bg-muted'),
             theme?.color || (isConnected ? 'text-primary' : 'text-muted-foreground')
           )}>
@@ -444,7 +444,7 @@ const ProviderCard = memo(function ProviderCard({
               {isConnecting ? (
                 <>
                   <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Connecting...
+                  Connecting…
                 </>
               ) : (
                 'Connect'
@@ -463,7 +463,7 @@ const ProviderCard = memo(function ProviderCard({
                 {isConnecting ? (
                   <>
                     <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                    Connecting...
+                    Connecting…
                   </>
                 ) : (
                   'Reconnect'

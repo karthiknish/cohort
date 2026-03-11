@@ -71,16 +71,27 @@ export function buildMeetingAttendeeSuggestions<T extends MeetingSuggestionSourc
   platformUsers: T[]
   queryValue: string
   selectedEmails: string[]
+  organizerId?: string | null
   organizerEmail?: string | null
   limit?: number
 }): MeetingAttendeeSuggestion[] {
   const mergedByEmail = new Map<string, MeetingAttendeeSuggestion>()
+  const organizerId = typeof options.organizerId === 'string' && options.organizerId.trim().length > 0
+    ? options.organizerId.trim()
+    : null
   const organizer = options.organizerEmail ? normalizeEmail(options.organizerEmail) : null
   const selected = new Set(sanitizeMeetingParticipantEmails(options.selectedEmails, options.organizerEmail))
 
   for (const member of [...options.workspaceMembers, ...options.platformUsers]) {
     const email = typeof member.email === 'string' ? normalizeEmail(member.email) : null
-    if (!email || !EMAIL_REGEX.test(email) || email === organizer || selected.has(email) || mergedByEmail.has(email)) {
+    if (
+      !email
+      || !EMAIL_REGEX.test(email)
+      || member.id === organizerId
+      || email === organizer
+      || selected.has(email)
+      || mergedByEmail.has(email)
+    ) {
       continue
     }
 

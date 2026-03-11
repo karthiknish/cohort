@@ -49,10 +49,19 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
     <>
       <figure
         className={cn(
-          "group relative block max-w-md overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted my-2",
+          "group relative block max-w-md overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted my-2",
           className
         )}
         onClick={() => setPreviewOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            setPreviewOpen(true)
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label={`Preview image ${fileName}`}
       >
         <div className="relative overflow-hidden">
           {isLoading && (
@@ -64,7 +73,7 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
             src={url}
             alt={fileName}
             className={cn(
-              "max-h-80 w-auto object-contain transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
+              "max-h-80 w-auto object-contain transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
               isLoading && "opacity-0",
               "group-hover:scale-105"
             )}

@@ -121,7 +121,7 @@ Timeline: ${summary.timelines.startTime}
             </p>
             <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-4">
               {deckDownloadUrl && activeProposalIdForDeck && (
-                <Button size="lg" className="h-14 rounded-2xl shadow-xl shadow-primary/25 px-8 text-base font-bold bg-primary hover:bg-primary/90 transition-all hover:scale-105 active:scale-95" asChild>
+                <Button size="lg" className="h-14 rounded-2xl shadow-xl shadow-primary/25 px-8 text-base font-bold bg-primary hover:bg-primary/90 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:scale-105 active:scale-95" asChild>
                   <Link href={`/dashboard/proposals/${activeProposalIdForDeck}/deck`}>
                     <Presentation className="mr-3 h-6 w-6" />
                     View Presentation
@@ -132,7 +132,7 @@ Timeline: ${summary.timelines.startTime}
                 <Button
                   size="lg"
                   variant="outline"
-                  className="h-14 rounded-2xl border-muted/60 px-8 text-base font-bold backdrop-blur-sm transition-all hover:bg-muted/10"
+                  className="h-14 rounded-2xl border-muted/60 px-8 text-base font-bold backdrop-blur-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/10"
                   onClick={onResumeSubmission}
                   disabled={isSubmitting}
                 >
@@ -161,7 +161,7 @@ Timeline: ${summary.timelines.startTime}
                   </div>
                   <CardTitle className="text-sm font-bold uppercase tracking-wider">Strategy Brief</CardTitle>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors" onClick={handleCopySummary}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors" onClick={handleCopySummary} aria-label="Copy strategy brief">
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
@@ -244,7 +244,7 @@ Timeline: ${summary.timelines.startTime}
                 <div className="flex flex-col h-full gap-6">
                   <div className="grid sm:grid-cols-2 gap-6">
                     {/* Visual Preview Placeholder */}
-                    <div className="group relative aspect-[16/10] rounded-2xl bg-muted/40 overflow-hidden ring-1 ring-muted transition-all hover:ring-primary/40 hover:shadow-xl hover:shadow-primary/5">
+                    <div className="group relative aspect-[16/10] rounded-2xl bg-muted/40 overflow-hidden ring-1 ring-muted transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:ring-primary/40 hover:shadow-xl hover:shadow-primary/5">
                       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(var(--primary),0.05)_0%,transparent_70%)]" />
                       
                       {/* Fake Slide Elements */}
@@ -273,7 +273,7 @@ Timeline: ${summary.timelines.startTime}
                       <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Export & Share</p>
                       <div className="space-y-3">
                         {(presentationDeck.storageUrl || presentationDeck.pptxUrl) && (
-                          <Button variant="outline" className="w-full justify-start h-14 rounded-2xl border-muted/60 hover:bg-primary/[0.03] hover:border-primary/30 group transition-all" asChild>
+                          <Button variant="outline" className="w-full justify-start h-14 rounded-2xl border-muted/60 hover:bg-primary/[0.03] hover:border-primary/30 group transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]" asChild>
                             <a href={presentationDeck.storageUrl || presentationDeck.pptxUrl || '#'} target="_blank" rel="noreferrer">
                               <div className="p-2 rounded-xl bg-muted group-hover:bg-primary/10 transition-colors mr-4">
                                 <Download className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -287,7 +287,7 @@ Timeline: ${summary.timelines.startTime}
                         )}
                         
                         {viewerHref && (
-                          <Button variant="outline" className="w-full justify-start h-14 rounded-2xl border-muted/60 hover:bg-primary/[0.03] hover:border-primary/30 group transition-all" asChild>
+                          <Button variant="outline" className="w-full justify-start h-14 rounded-2xl border-muted/60 hover:bg-primary/[0.03] hover:border-primary/30 group transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]" asChild>
                             <Link href={viewerHref}>
                               <div className="p-2 rounded-xl bg-muted group-hover:bg-primary/10 transition-colors mr-4">
                                 <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -302,7 +302,7 @@ Timeline: ${summary.timelines.startTime}
 
                         <Button 
                           variant="ghost" 
-                          className="w-full justify-center h-10 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all"
+                          className="w-full justify-center h-10 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground hover:text-primary hover:bg-primary/5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
                           onClick={() => {
                             if (activeProposalIdForDeck) {
                               const shareLink = `${window.location.origin}/dashboard/proposals/${activeProposalIdForDeck}/deck`

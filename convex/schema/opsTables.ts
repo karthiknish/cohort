@@ -111,7 +111,9 @@ export const opsTables = {
     failureThreshold: v.union(v.number(), v.null()),
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
-  }).index('by_providerId', ['providerId']),
+  })
+    .index('by_providerId', ['providerId'])
+    .index('by_updatedAtMs', ['updatedAtMs']),
 
   alertRules: defineTable({
     workspaceId: v.string(),
@@ -204,7 +206,9 @@ export const opsTables = {
     .index('by_workspace_participantOne_participantTwo', ['workspaceId', 'participantOneId', 'participantTwoId'])
     .index('by_workspace_participantOne_updatedAtMs', ['workspaceId', 'participantOneId', 'updatedAtMs'])
     .index('by_workspace_participantTwo_updatedAtMs', ['workspaceId', 'participantTwoId', 'updatedAtMs'])
-    .index('by_workspace_lastMessageAtMs', ['workspaceId', 'lastMessageAtMs']),
+    .index('by_workspace_lastMessageAtMs', ['workspaceId', 'lastMessageAtMs'])
+    .index('by_workspace_participantOne_read_updatedAtMs', ['workspaceId', 'participantOneId', 'readByParticipantOne', 'updatedAtMs'])
+    .index('by_workspace_participantTwo_read_updatedAtMs', ['workspaceId', 'participantTwoId', 'readByParticipantTwo', 'updatedAtMs']),
 
   directMessages: defineTable({
     workspaceId: v.string(),
@@ -277,7 +281,9 @@ export const opsTables = {
     .index('by_workspace_resource', ['workspaceId', 'resourceType', 'resourceId'])
     .index('by_workspace_assignedTo_status', ['workspaceId', 'assignedToId', 'status'])
     .index('by_workspace_status_priority', ['workspaceId', 'status', 'priority'])
-    .index('by_workspace_slaDeadline', ['workspaceId', 'slaDeadlineMs']),
+    .index('by_workspace_slaDeadline', ['workspaceId', 'slaDeadlineMs'])
+    .index('by_workspace_assignedTo_priority_createdAtMs', ['workspaceId', 'assignedToId', 'priority', 'createdAtMs'])
+    .index('by_workspace_assignedTo_createdAtMs', ['workspaceId', 'assignedToId', 'createdAtMs']),
 
   messageAnalytics: defineTable({
     workspaceId: v.string(),
@@ -305,7 +311,9 @@ export const opsTables = {
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_conversation_createdAtMs', ['workspaceId', 'conversationId', 'createdAtMs'])
     .index('by_workspace_sender_createdAtMs', ['workspaceId', 'senderId', 'createdAtMs'])
-    .index('by_workspace_conversationType_responseTime', ['workspaceId', 'conversationType', 'responseTimeMs']),
+    .index('by_workspace_conversationType_responseTime', ['workspaceId', 'conversationType', 'responseTimeMs'])
+    .index('by_workspace_createdAtMs', ['workspaceId', 'createdAtMs'])
+    .index('by_workspace_conversationType_createdAtMs', ['workspaceId', 'conversationType', 'createdAtMs']),
 
   inboxItems: defineTable({
     workspaceId: v.string(),
@@ -339,10 +347,15 @@ export const opsTables = {
   })
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_user_updatedAtMs', ['workspaceId', 'userId', 'updatedAtMs'])
+    .index('by_workspace_user_updatedAtMs_legacyId', ['workspaceId', 'userId', 'updatedAtMs', 'legacyId'])
     .index('by_workspace_user_sourceType', ['workspaceId', 'userId', 'sourceType'])
+    .index('by_workspace_user_sourceType_updatedAtMs_legacyId', ['workspaceId', 'userId', 'sourceType', 'updatedAtMs', 'legacyId'])
     .index('by_workspace_user_archived_updatedAtMs', ['workspaceId', 'userId', 'archived', 'updatedAtMs'])
+    .index('by_workspace_user_archived_updatedAtMs_legacyId', ['workspaceId', 'userId', 'archived', 'updatedAtMs', 'legacyId'])
     .index('by_workspace_user_pinned_updatedAtMs', ['workspaceId', 'userId', 'pinned', 'updatedAtMs'])
-    .index('by_workspace_user_unread', ['workspaceId', 'userId', 'isRead']),
+    .index('by_workspace_user_pinned_updatedAtMs_legacyId', ['workspaceId', 'userId', 'pinned', 'updatedAtMs', 'legacyId'])
+    .index('by_workspace_user_unread', ['workspaceId', 'userId', 'isRead'])
+    .index('by_workspace_user_unread_updatedAtMs_legacyId', ['workspaceId', 'userId', 'isRead', 'updatedAtMs', 'legacyId']),
 
   privacyMasks: defineTable({
     workspaceId: v.string(),

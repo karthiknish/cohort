@@ -63,7 +63,7 @@ function DependencyLink({ task, type, onRemove, readonly }: {
       {!readonly && onRemove && (
         <button
           onClick={onRemove}
-          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
         >
           <Unlink className="h-3 w-3" />
         </button>
@@ -158,7 +158,7 @@ export function TaskDependencyManager({
 
                   {/* Search input */}
                   <Input
-                    placeholder="Search tasks..."
+                    placeholder="Search tasks…"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="h-8"
@@ -277,7 +277,7 @@ export function SubtaskCreator({
   return (
     <form onSubmit={handleSubmit} className="flex items-center gap-2">
       <Input
-        placeholder="Subtask title..."
+        placeholder="Subtask title…"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="h-8 text-sm"

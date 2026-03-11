@@ -144,7 +144,7 @@ export function ImagePreviewModal({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-[1200] bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" />
         <DialogPrimitive.Content
-          className="fixed inset-0 z-[1200] flex items-center justify-center outline-none"
+          className="fixed inset-0 z-[1200] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-0"
           onPointerDownOutside={handleClose}
         >
           <DialogPrimitive.Title className="sr-only">
@@ -278,6 +278,15 @@ export function ImagePreviewModal({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault()
+            handleClose()
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label={`Preview image ${currentImage.name}`}
       >
         <LazyImage
           src={currentImage.url}
@@ -307,7 +316,7 @@ export function ImagePreviewModal({
             <button
               key={`${image.url}-${image.name}`}
               className={cn(
-                "h-14 w-14 overflow-hidden rounded-md border-2 transition-all",
+                "h-14 w-14 overflow-hidden rounded-md border-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
                 index === normalizedIndex
                   ? "border-white opacity-100"
                   : "border-transparent opacity-50 hover:opacity-80"

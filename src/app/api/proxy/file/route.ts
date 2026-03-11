@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { createApiHandler } from '@/lib/api-handler'
-import { ValidationError, ForbiddenError, ServiceUnavailableError } from '@/lib/api-errors'
+import { ForbiddenError, ServiceUnavailableError } from '@/lib/api-errors'
 
 const ALLOWED_DOMAINS = new Set([
   'storage.googleapis.com',

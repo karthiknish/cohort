@@ -1,18 +1,17 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, ClipboardEvent, ComponentType, DragEvent, KeyboardEvent, MouseEvent } from 'react'
-import { AtSign, Bold, Code, Italic, List, ListOrdered, Mic, Paperclip, Quote, Smile, Upload } from 'lucide-react'
-import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import type { ChangeEvent, ClipboardEvent, DragEvent, KeyboardEvent, MouseEvent } from 'react'
+import type { EmojiClickData } from 'emoji-picker-react'
 
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import type { ClientTeamMember } from '@/types/clients'
-import { VoiceInputButton } from '@/components/ui/voice-input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
-import { cn } from '@/lib/utils'
 import { buildMentionMarkup } from '../utils/mentions'
+import {
+  RichComposerMentionMenu,
+  RichComposerTextareaShell,
+  RichComposerToolbar,
+} from './rich-composer-sections'
 
 const MAX_MENTION_RESULTS = 6
 const MENTION_TRIGGER_LOOKBACK = 40
@@ -96,7 +95,7 @@ export function RichComposer({
         map.set(key, participant)
       }
     })
-    return Array.from(map.values())
+    return Array.from(map.values()).sort((left, right) => left.name.localeCompare(right.name))
   }, [participants])
 
   const mentionResults = useMemo(() => {
@@ -110,7 +109,10 @@ export function RichComposer({
     }
 
     return uniqueParticipants
-      .filter((participant) => participant.name.toLowerCase().includes(normalizedQuery))
+      .filter((participant) => {
+        const role = participant.role?.toLowerCase() ?? ''
+        return participant.name.toLowerCase().includes(normalizedQuery) || role.includes(normalizedQuery)
+      })
       .slice(0, MAX_MENTION_RESULTS)
   }, [mentionState, uniqueParticipants])
 
@@ -213,7 +215,7 @@ export function RichComposer({
           case 'code': {
             if (selectedText.includes('\n')) {
               const blockPlaceholder = selectedText || 'code block'
-              const wrapped = '\n\n```\n' + blockPlaceholder + '\n```\n'
+              const wrapped = `\n\n\`\`\`\n${blockPlaceholder}\n\`\`\`\n`
               const nextValue = current.slice(0, selectionStart) + wrapped + current.slice(selectionEnd)
               const anchor = selectionStart + wrapped.indexOf('\n') + 3
               const nextEnd = anchor + blockPlaceholder.length
@@ -224,7 +226,7 @@ export function RichComposer({
               }
             }
             const inlinePlaceholder = selectedText || 'inline code'
-            const wrapped = '`' + inlinePlaceholder + '`'
+            const wrapped = `\`${inlinePlaceholder}\``
             const nextValue = current.slice(0, selectionStart) + wrapped + current.slice(selectionEnd)
             if (noSelection) {
               const startInside = selectionStart + 1
@@ -286,7 +288,7 @@ export function RichComposer({
       for (let index = caretPosition - 1; index >= start; index -= 1) {
         const char = currentValue[index]
         if (char === '@') {
-          const preceding = index > 0 ? currentValue[index - 1]! : ' ' // Safe: we check index > 0
+          const preceding = index > 0 ? (currentValue[index - 1] ?? ' ') : ' '
           if (!preceding.match(/[\s([{]/)) {
             break
           }
@@ -343,7 +345,7 @@ export function RichComposer({
       }
 
       const caretPosition = textarea.selectionStart
-      const markup = buildMentionMarkup(name) + ' '
+      const markup = `${buildMentionMarkup(name)} `
       const nextValue = value.slice(0, state.startIndex) + markup + value.slice(caretPosition)
       const nextCaret = state.startIndex + markup.length
 
@@ -454,166 +456,57 @@ export function RichComposer({
 
   return (
     <div className="relative flex flex-col">
-      <div className="flex flex-wrap items-center gap-0.5 border-b border-muted/40 bg-muted/10 px-2 py-1.5 rounded-t-lg">
-        <ComposerButton icon={Bold} label="Bold" onClick={() => handleFormattingAction('bold')} disabled={disabled} />
-        <ComposerButton icon={Italic} label="Italic" onClick={() => handleFormattingAction('italic')} disabled={disabled} />
-        <ComposerButton icon={Quote} label="Quote" onClick={() => handleFormattingAction('blockquote')} disabled={disabled} />
-        <ComposerButton icon={Code} label="Code" onClick={() => handleFormattingAction('code')} disabled={disabled} />
-        <ComposerButton
-          icon={List}
-          label="Bulleted list"
-          onClick={() => handleFormattingAction('unordered-list')}
-          disabled={disabled}
-        />
-        <ComposerButton
-          icon={ListOrdered}
-          label="Numbered list"
-          onClick={() => handleFormattingAction('ordered-list')}
-          disabled={disabled}
-        />
-        <ComposerButton
-          icon={AtSign}
-          label="Mention"
-          onClick={() => {
-            const textarea = textareaRef.current
-            if (!textarea) {
-              return
+      <RichComposerToolbar
+        disabled={disabled}
+        emojiPickerOpen={emojiPickerOpen}
+        hasAttachments={hasAttachments}
+        onAction={handleFormattingAction}
+        onAttachClick={onAttachClick}
+        onEmojiClick={handleEmojiClick}
+        onInsertMention={() => {
+          const textarea = textareaRef.current
+          if (!textarea) {
+            return
+          }
+          applyTextUpdate((current, selectionStart, selectionEnd) => {
+            const insertionPoint = selectionStart === selectionEnd ? selectionStart : selectionEnd
+            const nextValue = `${current.slice(0, insertionPoint)}@${current.slice(insertionPoint)}`
+            const nextCaret = insertionPoint + 1
+            return {
+              nextValue,
+              nextSelectionStart: nextCaret,
+              nextSelectionEnd: nextCaret,
             }
-            applyTextUpdate((current, selectionStart, selectionEnd) => {
-              const insertionPoint = selectionStart === selectionEnd ? selectionStart : selectionEnd
-              const nextValue = current.slice(0, insertionPoint) + '@' + current.slice(insertionPoint)
-              const nextCaret = insertionPoint + 1
-              return {
-                nextValue,
-                nextSelectionStart: nextCaret,
-                nextSelectionEnd: nextCaret,
-              }
-            })
-          }}
-          disabled={disabled}
+          })
+        }}
+        onOpenEmojiChange={setEmojiPickerOpen}
+        onVoiceTranscript={(transcript) => onChange(value + (value && !value.endsWith(' ') ? ' ' : '') + transcript)}
+      />
+      <RichComposerTextareaShell
+        disabled={disabled}
+        isDraggingOver={isDraggingOver}
+        onBlur={handleBlur}
+        onChange={handleInputChange}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOverInternal}
+        onDrop={handleDropInternal}
+        onFocus={handleFocus}
+        onKeyDown={handleKeyDown}
+        onPaste={onPaste}
+        placeholder={placeholder}
+        textareaRef={textareaRef}
+        value={value}
+      />
+      {mentionState.active ? (
+        <RichComposerMentionMenu
+          highlightedMention={highlightedMention}
+          mentionQuery={mentionState.query}
+          mentionResults={mentionResults}
+          onMentionClick={handleMentionClick}
+          onMentionMouseDown={handleMentionMouseDown}
         />
-        <div className="mx-1 h-4 w-px bg-muted/60" />
-        {onAttachClick && (
-          <Button
-            type="button"
-            size="sm"
-            variant={hasAttachments ? 'secondary' : 'ghost'}
-            onClick={onAttachClick}
-            disabled={disabled}
-            className={cn(
-              "h-7 gap-1.5 px-2 text-xs hover:bg-background/50",
-              hasAttachments && "bg-primary/10 text-primary hover:bg-primary/20"
-            )}
-          >
-            <Paperclip className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Attach</span>
-          </Button>
-        )}
-        <div className="mx-1 h-4 w-px bg-muted/60" />
-        <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              disabled={disabled}
-              className="h-7 w-7"
-            >
-              <Smile className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <EmojiPicker
-              onEmojiClick={handleEmojiClick}
-              theme={Theme.LIGHT}
-              width={320}
-              height={400}
-            />
-          </PopoverContent>
-        </Popover>
-        <VoiceInputButton
-          onTranscript={(transcript) => onChange(value + (value && !value.endsWith(' ') ? ' ' : '') + transcript)}
-          disabled={disabled}
-        />
-      </div>
-      <div className="relative">
-        <Textarea
-          ref={textareaRef}
-          value={value}
-          placeholder={placeholder}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onBlur={handleBlur}
-          onFocus={handleFocus}
-          onDrop={handleDropInternal}
-          onDragOver={handleDragOverInternal}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onPaste={onPaste}
-          disabled={disabled}
-          maxLength={2000}
-          className={cn(
-            "min-h-[120px] resize-y border-0 shadow-none focus-visible:ring-0 bg-transparent p-3 rounded-b-lg rounded-t-none",
-            isDraggingOver && "bg-primary/5"
-          )}
-        />
-        {isDraggingOver && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-primary/10 rounded-b-lg">
-            <div className="flex flex-col items-center gap-2 text-primary">
-              <Upload className="h-8 w-8" />
-              <span className="text-sm font-medium">Drop files here to attach</span>
-            </div>
-          </div>
-        )}
-      </div>
-      {mentionState.active && mentionResults.length > 0 && (
-        <div className="absolute bottom-2 left-2 z-20 w-64 rounded-md border border-muted/60 bg-popover p-1 shadow-lg">
-          <p className="px-2 py-1 text-xs font-medium uppercase text-muted-foreground">Mention teammate</p>
-          <div className="max-h-52 overflow-y-auto">
-            {mentionResults.map((participant, index) => {
-              const isActive = index === highlightedMention
-              return (
-                <button
-                  key={participant.name}
-                  type="button"
-                  onMouseDown={handleMentionMouseDown}
-                  onClick={() => handleMentionClick(participant)}
-                  className={cn(
-                    'flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-sm transition',
-                    isActive ? 'bg-primary/10 text-primary' : 'hover:bg-muted'
-                  )}
-                >
-                  <span className="truncate">{participant.name}</span>
-                  {participant.role ? <span className="text-xs text-muted-foreground">{participant.role}</span> : null}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      ) : null}
     </div>
-  )
-}
-
-type ComposerButtonProps = {
-  icon: ComponentType<{ className?: string }>
-  label: string
-  onClick: () => void
-  disabled?: boolean
-}
-
-function ComposerButton({ icon: Icon, label, onClick, disabled }: ComposerButtonProps) {
-  const handleClick = useCallback(() => {
-    if (disabled) {
-      return
-    }
-    onClick()
-  }, [disabled, onClick])
-
-  return (
-    <Button type="button" size="icon" variant="ghost" onClick={handleClick} disabled={disabled} className="h-7 w-7 hover:bg-background/50">
-      <Icon className="h-3.5 w-3.5" />
-      <span className="sr-only">{label}</span>
-    </Button>
   )
 }

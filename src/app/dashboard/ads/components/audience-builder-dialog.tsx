@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Plus, X, Users, MapPin, Tag, Heart, Globe, Sparkles, ChevronRight } from 'lucide-react'
+import { Plus, X, Users, Tag, Heart, Globe, Sparkles, ChevronRight } from 'lucide-react'
 
 import { useAction } from 'convex/react'
 
@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/components/ui/use-toast'
@@ -296,7 +296,7 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
                 <Label htmlFor="aud-desc">Description</Label>
                 <Textarea 
                   id="aud-desc" 
-                  placeholder="Describe your target audience and campaign goals..." 
+                  placeholder="Describe your target audience and campaign goals…" 
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
@@ -372,7 +372,7 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
                 </Label>
                 <div className="flex gap-2">
                   <Input 
-                    placeholder="Add custom interest..." 
+                    placeholder="Add custom interest…" 
                     value={newInterest}
                     onChange={(e) => setNewInterest(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddInterest(newInterest))}
@@ -512,7 +512,7 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
                 Cancel
               </Button>
               <Button onClick={handleCreate} disabled={loading}>
-                {loading ? 'Creating...' : 'Create Audience'}
+                {loading ? 'Creating…' : 'Create Audience'}
               </Button>
             </div>
           </div>

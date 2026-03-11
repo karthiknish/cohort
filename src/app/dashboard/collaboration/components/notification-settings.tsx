@@ -16,13 +16,6 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -32,7 +25,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/use-toast'
-import { cn } from '@/lib/utils'
 
 export type NotificationPreference = {
   enabled: boolean
@@ -150,7 +142,7 @@ export function NotificationSettings({
 
   const defaultTrigger = (
     <DialogTrigger asChild>
-      <Button variant="ghost" size="icon" className="h-8 w-8">
+      <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Open notification settings">
         {isMuted ? (
           <BellOff className="h-4 w-4" />
         ) : (
@@ -282,7 +274,7 @@ export function NotificationSettings({
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Add keyword..."
+                  placeholder="Add keyword…"
                   value={keywordInput}
                   onChange={(e) => setKeywordInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddKeyword())}
@@ -425,7 +417,7 @@ export function NotificationSettings({
             {isSaving ? (
               <>
                 <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                Saving…
               </>
             ) : (
               <>

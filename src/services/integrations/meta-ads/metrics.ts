@@ -215,10 +215,15 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
 
       const campaignId = typeof row?.campaign_id === 'string' && row.campaign_id.length > 0 ? row.campaign_id : undefined
       const campaignName = typeof row?.campaign_name === 'string' && row.campaign_name.length > 0 ? row.campaign_name : undefined
+      const publisherPlatform =
+        typeof row?.publisher_platform === 'string' && row.publisher_platform.length > 0
+          ? row.publisher_platform.toLowerCase()
+          : undefined
 
       metrics.push({
         providerId: 'facebook',
         accountId: adAccountId,
+        publisherPlatform,
         date: row?.date_start ?? row?.date_stop ?? formatDate(new Date(), 'yyyy-MM-dd'),
         spend,
         impressions,

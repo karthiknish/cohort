@@ -35,7 +35,7 @@ export function Spinner({ className, size = 'md', variant = 'default', ...props 
           className
         )}
       />
-      <span className="sr-only">Loading...</span>
+      <span className="sr-only">Loading…</span>
     </div>
   )
 }
@@ -47,7 +47,7 @@ export interface LoadingOverlayProps extends React.HTMLAttributes<HTMLDivElement
 
 export function LoadingOverlay({ 
   className, 
-  message = 'Loading...', 
+  message = 'Loading…', 
   fullScreen = false,
   ...props 
 }: LoadingOverlayProps) {
@@ -79,7 +79,7 @@ export interface LoadingButtonProps {
 
 export function LoadingContent({ 
   isLoading, 
-  loadingText = 'Loading...', 
+  loadingText = 'Loading…', 
   children 
 }: LoadingButtonProps) {
   if (isLoading) {

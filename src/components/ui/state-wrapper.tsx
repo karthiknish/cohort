@@ -1,18 +1,16 @@
 'use client'
 
-import * as React from 'react'
+import { AlertCircle, RefreshCw, type LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
+
 import { cn } from '@/lib/utils'
-import { Spinner } from './spinner'
-import { Skeleton, SkeletonCard, SkeletonTable, SkeletonList, SkeletonDashboardCard } from './skeleton'
+import { Button } from './button'
 import {
   EmptyState,
   NoDataEmptyState,
-  NoResultsEmptyState,
-  NoAccessEmptyState,
-  NetworkErrorEmptyState,
 } from './empty-state'
-import { AlertCircle, RefreshCw, LucideIcon } from 'lucide-react'
-import { Button } from './button'
+import { Skeleton, SkeletonCard, SkeletonDashboardCard, SkeletonList, SkeletonTable } from './skeleton'
+import { Spinner } from './spinner'
 
 // =============================================================================
 // TYPES
@@ -26,13 +24,16 @@ export type StateWrapperLoadingVariant =
   | 'skeleton-dashboard'
   | 'overlay'
 
+export type AsyncViewState = 'loading' | 'empty' | 'error' | 'ready'
+
 export interface StateWrapperProps {
   // State control
+  state?: AsyncViewState
   isLoading?: boolean
   isEmpty?: boolean
   isError?: boolean
   // Content
-  children: React.ReactNode
+  children: ReactNode
   // Loading configuration
   loadingVariant?: StateWrapperLoadingVariant
   loadingMessage?: string
@@ -70,7 +71,7 @@ interface ErrorStateProps {
 
 function ErrorState({ title, description, onRetry, className }: ErrorStateProps) {
   return (
-    <div className={cn('flex flex-col items-center justify-center py-12 px-4', className)}>
+    <div role="alert" aria-live="assertive" className={cn('flex flex-col items-center justify-center py-12 px-4', className)}>
       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 ring-4 ring-destructive/5 mb-4">
         <AlertCircle className="h-7 w-7 text-destructive" />
       </div>
@@ -103,7 +104,7 @@ interface LoadingStateProps {
 function LoadingState({ variant, message, rows, columns, items }: LoadingStateProps) {
   if (variant === 'spinner') {
     return (
-      <div className="flex flex-col items-center justify-center py-12 px-4">
+      <div aria-live="polite" aria-busy="true" className="flex flex-col items-center justify-center py-12 px-4">
         <Spinner size="lg" variant="primary" />
         {message && (
           <p className="mt-3 text-sm text-muted-foreground animate-pulse">{message}</p>
@@ -114,7 +115,7 @@ function LoadingState({ variant, message, rows, columns, items }: LoadingStatePr
 
   if (variant === 'overlay') {
     return (
-      <div className="flex flex-col items-center justify-center inset-0 bg-background/50 backdrop-blur-sm z-10">
+      <div aria-live="polite" aria-busy="true" className="flex flex-col items-center justify-center inset-0 bg-background/50 backdrop-blur-sm z-10">
         <Spinner size="lg" variant="primary" />
         {message && (
           <p className="mt-3 text-sm text-muted-foreground animate-pulse">{message}</p>
@@ -147,7 +148,31 @@ function LoadingState({ variant, message, rows, columns, items }: LoadingStatePr
     return <SkeletonCard />
   }
 
-  return <Skeleton />
+  return (
+    <div aria-live="polite" aria-busy="true">
+      <Skeleton />
+    </div>
+  )
+}
+
+function resolveViewState({ state, isLoading, isEmpty, isError }: Pick<StateWrapperProps, 'state' | 'isLoading' | 'isEmpty' | 'isError'>): AsyncViewState {
+  if (state) {
+    return state
+  }
+
+  if (isError) {
+    return 'error'
+  }
+
+  if (isLoading) {
+    return 'loading'
+  }
+
+  if (isEmpty) {
+    return 'empty'
+  }
+
+  return 'ready'
 }
 
 // =============================================================================
@@ -155,6 +180,7 @@ function LoadingState({ variant, message, rows, columns, items }: LoadingStatePr
 // =============================================================================
 
 export function StateWrapper({
+  state,
   isLoading = false,
   isEmpty = false,
   isError = false,
@@ -175,8 +201,9 @@ export function StateWrapper({
   className,
   contentClassName,
 }: StateWrapperProps) {
-  // Error state takes precedence
-  if (isError) {
+  const resolvedState = resolveViewState({ state, isLoading, isEmpty, isError })
+
+  if (resolvedState === 'error') {
     const errorMessage = typeof error === 'string' ? error : error?.message
     return (
       <ErrorState
@@ -188,8 +215,7 @@ export function StateWrapper({
     )
   }
 
-  // Loading state
-  if (isLoading) {
+  if (resolvedState === 'loading') {
     return (
       <div className={className}>
         <LoadingState
@@ -203,8 +229,7 @@ export function StateWrapper({
     )
   }
 
-  // Empty state
-  if (isEmpty) {
+  if (resolvedState === 'empty') {
     if (emptyIcon || emptyTitle) {
       return (
         <div className={className}>
@@ -225,8 +250,15 @@ export function StateWrapper({
     )
   }
 
-  // Success - render children
   return <div className={contentClassName}>{children}</div>
+}
+
+export interface ViewStateProps extends Omit<StateWrapperProps, 'isLoading' | 'isEmpty' | 'isError' | 'state'> {
+  state: AsyncViewState
+}
+
+export function ViewState({ state, ...props }: ViewStateProps) {
+  return <StateWrapper {...props} state={state} />
 }
 
 // =============================================================================

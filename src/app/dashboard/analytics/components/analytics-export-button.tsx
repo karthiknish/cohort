@@ -50,7 +50,7 @@ export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButt
       exportTimeoutRef.current = setTimeout(() => {
         setIsExporting(false)
       }, 1000)
-    } catch (error) {
+    } catch {
       setIsExporting(false)
       toast({
         title: 'Export failed',

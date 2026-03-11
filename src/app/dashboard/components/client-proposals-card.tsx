@@ -2,7 +2,7 @@
 
 import React, { memo } from 'react'
 import Link from 'next/link'
-import { FileText, ArrowRight, Clock, CheckCircle2, FileEdit } from 'lucide-react'
+import { FileText, ArrowRight, Clock } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

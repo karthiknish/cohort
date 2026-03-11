@@ -1,11 +1,11 @@
 'use client'
 
 import { useRef, useCallback, useState } from 'react'
-import { Reply, Trash2, MoreHorizontal, Check, X } from 'lucide-react'
+import { Reply, Trash2, Check, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { useSwipe, type SwipeState } from '@/hooks/gestures'
+import { useSwipe } from '@/hooks/gestures'
 import type { UnifiedMessage } from './message-list'
 
 export interface SwipeableMessageProps {
@@ -19,8 +19,6 @@ export interface SwipeableMessageProps {
 }
 
 export function SwipeableMessage({
-  message,
-  currentUserId,
   canDelete = false,
   onReply,
   onDelete,
@@ -61,7 +59,6 @@ export function SwipeableMessage({
     setPendingAction(null)
   }, [])
 
-  const isOwn = message.senderId === currentUserId
   const swipeOffset = state.isSwiping ? (state.direction === 'right' ? Math.min(state.distance, 80) : state.direction === 'left' ? -Math.min(state.distance, 80) : 0) : 0
 
   return (
@@ -126,7 +123,6 @@ export interface LongPressMessageProps {
 }
 
 export function LongPressMessage({
-  message,
   onLongPress,
   children,
   className,
@@ -180,7 +176,7 @@ export function LongPressMessage({
     <div
       className={cn(
         isPressed && 'bg-muted/50 scale-[0.98]',
-        'transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+        'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
         className
       )}
       onTouchStart={handleTouchStart}

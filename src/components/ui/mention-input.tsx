@@ -1,9 +1,11 @@
 'use client'
 
-import React, { useCallback, useId, useMemo, useRef, useState, forwardRef } from 'react'
-import { X, User } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { forwardRef, useCallback, useId, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type SyntheticEvent } from 'react'
+import { User, X } from 'lucide-react'
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 
 export interface MentionableUser {
   id: string
@@ -71,15 +73,17 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
       const mentionRegex = /@\[([^\]]+)\]/g
       const mentions: MentionableUser[] = []
       const seenIds = new Set<string>()
-      let match: RegExpExecArray | null
+      let match = mentionRegex.exec(nextValue)
 
-      while ((match = mentionRegex.exec(nextValue)) !== null) {
+      while (match !== null) {
         const name = match[1]
         const user = users.find((u) => u.name === name)
         if (user && !seenIds.has(user.id)) {
           seenIds.add(user.id)
           mentions.push(user)
         }
+
+        match = mentionRegex.exec(nextValue)
       }
 
       return mentions
@@ -255,7 +259,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
     )
 
     const handleInputChange = useCallback(
-      (event: React.ChangeEvent<HTMLInputElement>) => {
+      (event: ChangeEvent<HTMLInputElement>) => {
         const newValue = event.target.value
         const caretPosition = event.target.selectionStart || newValue.length
         const newMentions = resolveMentionsFromValue(newValue)
@@ -267,7 +271,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
     )
 
     const handleInputSelect = useCallback(
-      (event: React.SyntheticEvent<HTMLInputElement>) => {
+      (event: SyntheticEvent<HTMLInputElement>) => {
         const caretPosition = event.currentTarget.selectionStart ?? event.currentTarget.value.length
         detectMentionTrigger(event.currentTarget.value, caretPosition)
       },
@@ -296,7 +300,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
       detectMentionTrigger(value, caretPosition)
     }, [value, detectMentionTrigger])
 
-    const handleDropdownMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    const handleDropdownMouseDown = useCallback((event: MouseEvent<HTMLDivElement>) => {
       event.preventDefault()
     }, [])
 
@@ -308,7 +312,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
     )
 
     const handleKeyDown = useCallback(
-      (event: React.KeyboardEvent<HTMLInputElement>) => {
+      (event: KeyboardEvent<HTMLInputElement>) => {
         if (!mentionState.active) {
           return
         }
@@ -436,17 +440,12 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
                             : 'hover:bg-muted'
                         )}
                       >
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-                          {user.avatar ? (
-                            <img
-                              src={user.avatar}
-                              alt={user.name}
-                              className="h-7 w-7 rounded-full object-cover"
-                            />
-                          ) : (
+                        <Avatar className="h-7 w-7 shrink-0">
+                          {user.avatar ? <AvatarImage src={user.avatar} alt={user.name} className="object-cover" /> : null}
+                          <AvatarFallback className="bg-muted">
                             <User className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </div>
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="min-w-0 flex-1">
                           <p className="truncate font-medium">{user.name}</p>
                           <p className="truncate text-xs text-muted-foreground">

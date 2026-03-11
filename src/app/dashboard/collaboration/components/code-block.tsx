@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { TrustedHtml, createTrustedHtml } from '@/components/ui/trusted-html'
 import { cn } from '@/lib/utils'
 
 // Simple syntax highlighting (could be replaced with a library like Prism.js or Shiki)
@@ -73,7 +74,7 @@ export function CodeBlock({
   const visibleCode = visibleLines.join('\n')
 
   const highlightedCode = useMemo(() => {
-    return highlightCode(visibleCode, language)
+    return createTrustedHtml(highlightCode(visibleCode, language), 'collaboration-code-block:highlightCode')
   }, [visibleCode, language])
 
   return (
@@ -114,6 +115,7 @@ export function CodeBlock({
               size="icon"
               className="h-7 w-7"
               onClick={() => setIsExpanded(!isExpanded)}
+              aria-label={isExpanded ? 'Collapse code block' : 'Expand code block'}
             >
               {isExpanded ? (
                 <ChevronUp className="h-4 w-4" />
@@ -133,6 +135,7 @@ export function CodeBlock({
             size="icon"
             className="h-7 w-7"
             onClick={handleCopy}
+            aria-label={copied ? 'Code copied' : 'Copy code'}
           >
             {copied ? (
               <Check className="h-4 w-4 text-green-500" />
@@ -150,8 +153,9 @@ export function CodeBlock({
         style={{ maxHeight: isExpanded ? undefined : maxHeight }}
       >
         <pre className="p-4 text-sm">
-          <code
-            dangerouslySetInnerHTML={{ __html: highlightedCode }}
+          <TrustedHtml
+            as="code"
+            html={highlightedCode}
             className={cn(
               'font-mono',
               getLanguageColor(language)

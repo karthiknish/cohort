@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { Download, FileSpreadsheet, FileImage, FileJson, LoaderCircle, Check } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import { Download, FileImage, FileJson, FileSpreadsheet, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -97,11 +97,7 @@ export interface ExportOptions {
  * Export button with multiple format support
  */
 export function DashboardExport({
-  data,
-  filename = 'dashboard-export',
-  title = 'Dashboard Data',
   formats = EXPORT_OPTIONS,
-  includeFormats,
   onExport,
   trigger,
   buttonVariant = 'outline',
@@ -111,7 +107,6 @@ export function DashboardExport({
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
-  const [selectedFormats, setSelectedFormats] = useState<ExportFormat[]>(['csv'])
   const [includeHeaders, setIncludeHeaders] = useState(true)
   const [includeMetadata, setIncludeMetadata] = useState(false)
 
@@ -383,10 +378,10 @@ export function ScheduledExportDialog({
   const [open, setOpen] = useState(false)
   const [format, setFormat] = useState<ExportFormat>('csv')
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('weekly')
-  const [recipients, setRecipients] = useState<string[]>([])
   const [isScheduling, setIsScheduling] = useState(false)
 
   const handleSchedule = useCallback(() => {
+    const recipients: string[] = []
     setIsScheduling(true)
     Promise.resolve()
       .then(() => {
@@ -407,7 +402,7 @@ export function ScheduledExportDialog({
       .finally(() => {
         setIsScheduling(false)
       })
-  }, [format, frequency, recipients, onSchedule, toast])
+  }, [format, frequency, onSchedule, toast])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

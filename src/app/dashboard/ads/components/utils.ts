@@ -3,7 +3,6 @@ import { SiGoogleads, SiMeta, SiLinkedin, SiTiktok } from 'react-icons/si'
 
 import type { MetricRecord } from './types'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { getRetryableErrorMessage } from './retry-fetch'
 import { formatProviderName } from '@/lib/themes'
 import { UnifiedError } from '@/lib/errors/unified-error'
 

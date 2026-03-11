@@ -114,7 +114,6 @@ export function RecurrenceEditor({
 // Recurrence badge for display
 export function RecurrenceBadge({
   rule,
-  endDate,
   className,
 }: {
   rule: RecurrenceRule

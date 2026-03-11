@@ -38,7 +38,7 @@ export function GoogleObjectiveSelector({ value, onChange, disabled }: Objective
             disabled={disabled}
             onClick={() => onChange(config.value)}
             className={cn(
-              'relative flex flex-col items-start p-4 rounded-lg border-2 text-left transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+              'relative flex flex-col items-start p-4 rounded-lg border-2 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
               'hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2',
               isSelected
                 ? 'border-primary bg-primary/5 shadow-sm'

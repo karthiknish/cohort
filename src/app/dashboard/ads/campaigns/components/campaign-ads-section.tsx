@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAction } from 'convex/react'
 import NextImage from 'next/image'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import {
   RefreshCw,
   Image as ImageIcon,
@@ -41,7 +41,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { toast } from '@/components/ui/use-toast'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth-context'
@@ -142,9 +141,423 @@ function getStatusVariant(status: string): 'default' | 'secondary' | 'outline' |
   return 'outline'
 }
 
+function isAdEnabled(status: string) {
+  const normalizedStatus = status.toUpperCase()
+  return normalizedStatus === 'ACTIVE' || normalizedStatus === 'ENABLED' || normalizedStatus === 'ENABLE'
+}
+
+function getNextAdStatus(providerId: string, checked: boolean) {
+  if (providerId === 'google') return checked ? 'ENABLED' : 'PAUSED'
+  if (providerId === 'tiktok') return checked ? 'ENABLE' : 'DISABLE'
+  return checked ? 'ACTIVE' : 'PAUSED'
+}
+
+function CreativeStatusToggle({
+  providerId,
+  status,
+  onChange,
+  showLabel = false,
+  className,
+}: {
+  providerId: string
+  status: string
+  onChange: (nextStatus: string) => void
+  showLabel?: boolean
+  className?: string
+}) {
+  return (
+    <div className={className}>
+      <Switch
+        checked={isAdEnabled(status)}
+        onCheckedChange={(checked) => {
+          onChange(getNextAdStatus(providerId, checked))
+        }}
+        className={showLabel ? undefined : 'h-3.5 w-7'}
+      />
+      {showLabel ? (
+        <span className="w-14 text-xs font-medium capitalize">{status.toLowerCase()}</span>
+      ) : (
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white">{status.toLowerCase()}</span>
+      )}
+    </div>
+  )
+}
+
+function CampaignAdsHeader({
+  availableAdSets,
+  campaignId,
+  canLoad,
+  clientId,
+  fetchAds,
+  firstAdSetId,
+  isPreviewMode,
+  loading,
+  providerId,
+  setViewMode,
+  summaryStats,
+  viewMode,
+  workspaceId,
+}: {
+  availableAdSets: Array<{ id: string; name: string }>
+  campaignId: string
+  canLoad: boolean
+  clientId?: string | null
+  fetchAds: () => Promise<void>
+  firstAdSetId?: string
+  isPreviewMode?: boolean
+  loading: boolean
+  providerId: string
+  setViewMode: (viewMode: ViewMode) => void
+  summaryStats: { total: number; totalTypes: number; activeCount: number } | null
+  viewMode: ViewMode
+  workspaceId: string | null
+}) {
+  return (
+    <CardHeader className="pb-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+            <Layers className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div>
+            <CardTitle className="text-lg">Ad Creatives</CardTitle>
+            <CardDescription>
+              {isPreviewMode
+                ? 'Ads list is not available in preview mode.'
+                : loading
+                  ? 'Loading creatives...'
+                  : summaryStats
+                    ? `${summaryStats.total} creatives`
+                    : 'No creatives found'}
+            </CardDescription>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <CreateCreativeDialog
+            key={`creative-${campaignId}-${firstAdSetId ?? 'none'}`}
+            workspaceId={workspaceId}
+            providerId={providerId}
+            campaignId={campaignId}
+            clientId={clientId}
+            adSetId={firstAdSetId}
+            availableAdSets={availableAdSets}
+            onSuccess={fetchAds}
+          />
+          <div className="flex items-center rounded-lg border p-1">
+            <Button
+              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setViewMode('grid')}
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              void fetchAds()
+            }}
+            disabled={!canLoad || loading}
+          >
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+          </Button>
+        </div>
+      </div>
+    </CardHeader>
+  )
+}
+
+function CampaignAdsFilters({
+  searchQuery,
+  setSearchQuery,
+  statusFilter,
+  setStatusFilter,
+  typeFilter,
+  setTypeFilter,
+  uniqueStatuses,
+  uniqueTypes,
+}: {
+  searchQuery: string
+  setSearchQuery: (value: string) => void
+  statusFilter: string
+  setStatusFilter: (value: string) => void
+  typeFilter: string
+  setTypeFilter: (value: string) => void
+  uniqueStatuses: string[]
+  uniqueTypes: string[]
+}) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search creatives…"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          className="pl-9"
+        />
+      </div>
+      <Select value={typeFilter} onValueChange={setTypeFilter}>
+        <SelectTrigger className="w-full sm:w-[140px]">
+          <Filter className="mr-2 h-4 w-4" />
+          <SelectValue placeholder="Type" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Types</SelectItem>
+          {uniqueTypes.map((type) => (
+            <SelectItem key={type} value={type} className="capitalize">
+              {type.toLowerCase().replace(/_/g, ' ')}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <SelectTrigger className="w-full sm:w-[140px]">
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Status</SelectItem>
+          {uniqueStatuses.map((status) => (
+            <SelectItem key={status} value={status} className="capitalize">
+              {status.toLowerCase()}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
+function CampaignAdsGrid({
+  adMetrics,
+  ads,
+  onCreativeClick,
+  onToggleStatus,
+  providerId,
+}: {
+  adMetrics: Record<string, AggregatedMetric>
+  ads: CampaignAd[]
+  onCreativeClick: (creative: CampaignAd) => void
+  onToggleStatus: (ad: CampaignAd, nextStatus: string) => void
+  providerId: string
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      {ads.map((ad) => (
+        <div
+          key={ad.creativeId}
+          className="group relative overflow-hidden rounded-lg border bg-card text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/50 hover:shadow-md"
+        >
+          <button
+            type="button"
+            onClick={() => onCreativeClick(ad)}
+            className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          >
+            <div className="relative aspect-square overflow-hidden bg-muted">
+              {ad.imageUrl ? (
+                <NextImage
+                  src={ad.imageUrl}
+                  alt={ad.name || 'Creative preview'}
+                  fill
+                  unoptimized
+                  sizes="(max-width: 1024px) 50vw, 240px"
+                  className="object-cover transition-transform group-hover:scale-105"
+                  onError={(event) => {
+                    const target = event.target as HTMLImageElement
+                    target.style.display = 'none'
+                    const parent = target.parentElement
+                    if (parent && !parent.querySelector('.fallback-icon')) {
+                      const fallback = document.createElement('div')
+                      fallback.className = 'fallback-icon flex h-full items-center justify-center'
+                      fallback.innerHTML = '<svg class="h-10 w-10 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>'
+                      parent.appendChild(fallback)
+                    }
+                  }}
+                />
+              ) : ad.videoUrl ? (
+                <div className="flex h-full items-center justify-center bg-muted">
+                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                    <Play className="h-10 w-10" />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <Layers className="h-10 w-10 text-muted-foreground/30" />
+                </div>
+              )}
+
+              {ad.videoUrl && ad.imageUrl ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90">
+                    <Play className="ml-0.5 h-6 w-6 text-black" />
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-colors group-hover:bg-black/10 group-hover:opacity-100">
+                <span className="rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">View Details</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5 border-t bg-card p-3">
+              <div className="flex items-center justify-between">
+                <span className="max-w-[60%] truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{ad.type}</span>
+                <Badge variant={getStatusVariant(ad.status)} className="h-4 px-1 text-[8px] font-bold">
+                  {ad.status}
+                </Badge>
+              </div>
+              <h4 className="line-clamp-1 text-xs font-semibold">{ad.name || ad.headlines?.[0] || 'Ad'}</h4>
+
+              {adMetrics[ad.creativeId] ? (
+                <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-muted pt-1.5">
+                  <div className="flex flex-col">
+                    <span className="mb-0.5 text-[9px] uppercase leading-none text-muted-foreground">Spend</span>
+                    <span className="text-[11px] font-bold leading-none">${adMetrics[ad.creativeId]?.spend.toFixed(2) ?? '0.00'}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="mb-0.5 text-[9px] uppercase leading-none text-muted-foreground">Conv.</span>
+                    <span className="text-[11px] font-bold leading-none">{adMetrics[ad.creativeId]?.conversions ?? 0}</span>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </button>
+
+          <div className="absolute right-2 top-2">
+            <div className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-2 py-1 backdrop-blur-sm">
+              <CreativeStatusToggle
+                providerId={providerId}
+                status={ad.status}
+                onChange={(nextStatus) => {
+                  onToggleStatus(ad, nextStatus)
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CampaignAdsList({
+  adMetrics,
+  ads,
+  onCreativeClick,
+  onToggleStatus,
+  providerId,
+}: {
+  adMetrics: Record<string, AggregatedMetric>
+  ads: CampaignAd[]
+  onCreativeClick: (creative: CampaignAd) => void
+  onToggleStatus: (ad: CampaignAd, nextStatus: string) => void
+  providerId: string
+}) {
+  return (
+    <div className="overflow-hidden rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-16">Preview</TableHead>
+            <TableHead>Creative Details</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Spend</TableHead>
+            <TableHead className="text-right">Clicks</TableHead>
+            <TableHead className="text-right">Conv.</TableHead>
+            <TableHead className="hidden lg:table-cell">Primary Text/Headline</TableHead>
+            <TableHead className="w-10"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {ads.map((ad) => (
+            <TableRow
+              key={ad.creativeId}
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() => onCreativeClick(ad)}
+            >
+              <TableCell>
+                <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border bg-muted">
+                  {ad.imageUrl ? (
+                    <NextImage
+                      src={ad.imageUrl}
+                      alt=""
+                      fill
+                      unoptimized
+                      sizes="56px"
+                      className="object-cover"
+                    />
+                  ) : ad.videoUrl ? (
+                    <Play className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    getCreativeTypeIcon(ad.type, 'h-5 w-5 text-muted-foreground')
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-col gap-0.5">
+                  <p className="max-w-[240px] truncate font-medium">
+                    {ad.name || ad.headlines?.[0] || ad.descriptions?.[0] || ad.creativeId}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] font-bold uppercase text-muted-foreground">{ad.type}</span>
+                    {ad.pageName ? (
+                      <>
+                        <span className="text-[9px] text-muted-foreground">•</span>
+                        <span className="text-[9px] font-medium text-muted-foreground">{ad.pageName}</span>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell onClick={(event) => event.stopPropagation()}>
+                <div className="flex items-center gap-2">
+                  <CreativeStatusToggle
+                    providerId={providerId}
+                    status={ad.status}
+                    showLabel
+                    onChange={(nextStatus) => {
+                      onToggleStatus(ad, nextStatus)
+                    }}
+                  />
+                </div>
+              </TableCell>
+              <TableCell className="text-right font-mono text-xs">
+                {adMetrics[ad.creativeId]?.spend !== undefined ? `$${adMetrics[ad.creativeId]?.spend.toFixed(2)}` : '—'}
+              </TableCell>
+              <TableCell className="text-right font-mono text-xs">
+                {adMetrics[ad.creativeId]?.clicks !== undefined ? adMetrics[ad.creativeId]?.clicks.toLocaleString() : '—'}
+              </TableCell>
+              <TableCell className="text-right font-mono text-xs">
+                {adMetrics[ad.creativeId]?.conversions !== undefined ? adMetrics[ad.creativeId]?.conversions.toLocaleString() : '—'}
+              </TableCell>
+              <TableCell className="hidden lg:table-cell">
+                <p className="max-w-[200px] truncate text-sm text-muted-foreground">
+                  {ad.headlines?.[0] || ad.descriptions?.[0] || '-'}
+                </p>
+              </TableCell>
+              <TableCell>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
 export function CampaignAdsSection({ providerId, campaignId, clientId, isPreviewMode }: Props) {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { user } = useAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
 
@@ -160,7 +573,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   const [hasLoaded, setHasLoaded] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [adMetrics, setAdMetrics] = useState<Record<string, AggregatedMetric>>({})
-  const [metricsLoading, setMetricsLoading] = useState(false)
+  const [, setMetricsLoading] = useState(false)
 
   const canLoad = !isPreviewMode
 
@@ -296,7 +709,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   }, [ads, searchQuery, typeFilter, statusFilter])
 
   const handleCreativeClick = (creative: CampaignAd) => {
-    const params = new URLSearchParams(searchParams.toString())
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
     const cName = creative.name || creative.headlines?.[0] || creative.creativeId
     params.set('creativeName', cName)
     router.push(`/dashboard/ads/campaigns/${providerId}/${campaignId}/creative/${creative.creativeId}?${params.toString()}`)
@@ -349,66 +762,27 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   const summaryStats = useMemo(() => {
     if (!summary) return null
     const totalTypes = Object.keys(summary.byType).length
-    const activeCount = summary.byStatus?.['ACTIVE'] ?? summary.byStatus?.['ENABLED'] ?? 0
+    const activeCount = summary.byStatus?.ACTIVE ?? summary.byStatus?.ENABLED ?? 0
     return { total: summary.total, totalTypes, activeCount }
   }, [summary])
 
   return (
     <Card>
-      <CardHeader className="pb-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-              <Layers className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">Ad Creatives</CardTitle>
-              <CardDescription>
-                {isPreviewMode
-                  ? 'Ads list is not available in preview mode.'
-                  : loading
-                    ? 'Loading creatives...'
-                    : summaryStats
-                      ? `${summaryStats.total} creatives`
-                      : 'No creatives found'}
-              </CardDescription>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <CreateCreativeDialog
-              key={`creative-${campaignId}-${firstAdSetId ?? 'none'}`}
-              workspaceId={workspaceId}
-              providerId={providerId}
-              campaignId={campaignId}
-              clientId={clientId}
-              adSetId={firstAdSetId}
-              availableAdSets={availableAdSets}
-              onSuccess={fetchAds}
-            />
-            <div className="flex items-center rounded-lg border p-1">
-              <Button
-                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button variant="ghost" size="icon" onClick={fetchAds} disabled={!canLoad || loading}>
-              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
+      <CampaignAdsHeader
+        availableAdSets={availableAdSets}
+        campaignId={campaignId}
+        canLoad={canLoad}
+        clientId={clientId}
+        fetchAds={fetchAds}
+        firstAdSetId={firstAdSetId}
+        isPreviewMode={isPreviewMode}
+        loading={loading}
+        providerId={providerId}
+        setViewMode={setViewMode}
+        summaryStats={summaryStats}
+        viewMode={viewMode}
+        workspaceId={workspaceId}
+      />
 
       <CardContent className="space-y-4">
         {loading && !hasLoaded ? (
@@ -419,8 +793,8 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
             </div>
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                  {['skeleton-a', 'skeleton-b', 'skeleton-c', 'skeleton-d'].map((skeletonId) => (
-                    <Skeleton key={skeletonId} className="aspect-square rounded-lg" />
+                {['skeleton-a', 'skeleton-b', 'skeleton-c', 'skeleton-d'].map((skeletonId) => (
+                  <Skeleton key={skeletonId} className="aspect-square rounded-lg" />
                 ))}
               </div>
             ) : (
@@ -429,61 +803,32 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
           </div>
         ) : !canLoad ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-3">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
               <Layers className="h-6 w-6 text-muted-foreground" />
             </div>
             <p className="text-sm font-medium">Preview Mode</p>
-            <p className="text-xs text-muted-foreground mt-1">Enable live mode to view ad creatives</p>
+            <p className="mt-1 text-xs text-muted-foreground">Enable live mode to view ad creatives</p>
           </div>
         ) : ads.length === 0 && hasLoaded ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-3">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
               <FileText className="h-6 w-6 text-muted-foreground" />
             </div>
             <p className="text-sm font-medium">No Creatives Found</p>
-            <p className="text-xs text-muted-foreground mt-1">This campaign doesn&apos;t have ad creatives yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">This campaign doesn&apos;t have ad creatives yet</p>
           </div>
         ) : (
           <>
-            {/* Filters */}
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search creatives..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-full sm:w-[140px]">
-                  <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {uniqueTypes.map(type => (
-                    <SelectItem key={type} value={type} className="capitalize">
-                      {type.toLowerCase().replace(/_/g, ' ')}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-[140px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  {uniqueStatuses.map(status => (
-                    <SelectItem key={status} value={status} className="capitalize">
-                      {status.toLowerCase()}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <CampaignAdsFilters
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              typeFilter={typeFilter}
+              setTypeFilter={setTypeFilter}
+              uniqueStatuses={uniqueStatuses}
+              uniqueTypes={uniqueTypes}
+            />
 
             {filteredAds.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -491,226 +836,38 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                 <Button
                   variant="link"
                   size="sm"
-                  onClick={() => { setSearchQuery(''); setTypeFilter('all'); setStatusFilter('all'); }}
+                  onClick={() => {
+                    setSearchQuery('')
+                    setTypeFilter('all')
+                    setStatusFilter('all')
+                  }}
                 >
                   Clear filters
                 </Button>
               </div>
             ) : viewMode === 'grid' ? (
-              <>
-                {/* Grid View */}
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-                  {filteredAds.map((ad) => (
-                    <div
-                      key={ad.creativeId}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleCreativeClick(ad)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          handleCreativeClick(ad)
-                        }
-                      }}
-                      className="group relative overflow-hidden rounded-lg border bg-card text-left transition-all hover:shadow-md hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
-                    >
-                      {/* Thumbnail */}
-                      <div className="aspect-square bg-muted relative overflow-hidden">
-                        {ad.imageUrl ? (
-                          <NextImage
-                            src={ad.imageUrl}
-                            alt={ad.name || 'Creative preview'}
-                            fill
-                            unoptimized
-                            sizes="(max-width: 1024px) 50vw, 240px"
-                            className="object-cover transition-transform group-hover:scale-105"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.style.display = 'none'
-                              const parent = target.parentElement
-                              if (parent && !parent.querySelector('.fallback-icon')) {
-                                const fallback = document.createElement('div')
-                                fallback.className = 'fallback-icon flex items-center justify-center h-full'
-                                fallback.innerHTML = '<svg class="h-10 w-10 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>'
-                                parent.appendChild(fallback)
-                              }
-                            }}
-                          />
-                        ) : ad.videoUrl ? (
-                          <div className="flex items-center justify-center h-full bg-muted">
-                            <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                              <Play className="h-10 w-10" />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center h-full">
-                            <Layers className="h-10 w-10 text-muted-foreground/30" />
-                          </div>
-                        )}
-
-                        {/* Video indicator overlay */}
-                        {ad.videoUrl && ad.imageUrl && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90">
-                              <Play className="h-6 w-6 text-black ml-0.5" />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Status toggle */}
-                        <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full border border-white/20">
-                            <Switch
-                              checked={ad.status.toUpperCase() === 'ACTIVE' || ad.status.toUpperCase() === 'ENABLED' || ad.status.toUpperCase() === 'ENABLE'}
-                              onCheckedChange={(checked) => {
-                                let nextStatus = ''
-                                if (providerId === 'google') nextStatus = checked ? 'ENABLED' : 'PAUSED'
-                                else if (providerId === 'tiktok') nextStatus = checked ? 'ENABLE' : 'DISABLE'
-                                else nextStatus = checked ? 'ACTIVE' : 'PAUSED'
-                                void toggleAdStatus(ad, nextStatus)
-                              }}
-                              className="h-3.5 w-7"
-                            />
-                            <span className="text-[10px] font-medium text-white uppercase tracking-wider">
-                              {ad.status.toLowerCase()}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Hover overlay */}
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <span className="text-xs font-medium text-white bg-black/60 px-2 py-1 rounded">View Details</span>
-                        </div>
-                      </div>
-
-                      {/* Caption */}
-                      <div className="p-3 bg-card flex flex-col gap-1.5 border-t">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground truncate max-w-[60%]">{ad.type}</span>
-                          <Badge variant={getStatusVariant(ad.status)} className="h-4 px-1 text-[8px] font-bold">
-                            {ad.status}
-                          </Badge>
-                        </div>
-                        <h4 className="line-clamp-1 text-xs font-semibold">{ad.name || ad.headlines?.[0] || 'Ad'}</h4>
-
-                        {adMetrics[ad.creativeId] && (
-                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-1 pt-1.5 border-t border-muted">
-                            <div className="flex flex-col">
-                              <span className="text-[9px] text-muted-foreground uppercase leading-none mb-0.5">Spend</span>
-                              <span className="text-[11px] font-mono font-bold leading-none">${adMetrics[ad.creativeId]?.spend.toFixed(2) ?? '0.00'}</span>
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-[9px] text-muted-foreground uppercase leading-none mb-0.5">Conv.</span>
-                              <span className="text-[11px] font-mono font-bold leading-none">{adMetrics[ad.creativeId]?.conversions ?? 0}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
+              <CampaignAdsGrid
+                adMetrics={adMetrics}
+                ads={filteredAds}
+                onCreativeClick={handleCreativeClick}
+                onToggleStatus={(ad, nextStatus) => {
+                  void toggleAdStatus(ad, nextStatus)
+                }}
+                providerId={providerId}
+              />
             ) : (
-              <>
-                {/* List View */}
-                <div className="rounded-lg border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-16">Preview</TableHead>
-                        <TableHead>Creative Details</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Spend</TableHead>
-                        <TableHead className="text-right">Clicks</TableHead>
-                        <TableHead className="text-right">Conv.</TableHead>
-                        <TableHead className="hidden lg:table-cell">Primary Text/Headline</TableHead>
-                        <TableHead className="w-10"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAds.map((ad) => (
-                        <TableRow
-                          key={ad.creativeId}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => handleCreativeClick(ad)}
-                        >
-                          <TableCell>
-                            <div className="relative h-14 w-14 rounded-lg overflow-hidden bg-muted flex items-center justify-center border">
-                              {ad.imageUrl ? (
-                                <NextImage
-                                  src={ad.imageUrl}
-                                  alt=""
-                                  fill
-                                  unoptimized
-                                  sizes="56px"
-                                  className="object-cover"
-                                />
-                              ) : ad.videoUrl ? (
-                                <Play className="h-5 w-5 text-muted-foreground" />
-                              ) : (
-                                getCreativeTypeIcon(ad.type, "h-5 w-5 text-muted-foreground")
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-0.5">
-                              <p className="font-medium truncate max-w-[240px]">
-                                {ad.name || ad.headlines?.[0] || ad.descriptions?.[0] || ad.creativeId}
-                              </p>
-                              <div className="flex items-center gap-1">
-                                <span className="text-[9px] font-bold uppercase text-muted-foreground">{ad.type}</span>
-                                {ad.pageName && (
-                                  <>
-                                    <span className="text-[9px] text-muted-foreground">•</span>
-                                    <span className="text-[9px] font-medium text-muted-foreground">{ad.pageName}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={ad.status.toUpperCase() === 'ACTIVE' || ad.status.toUpperCase() === 'ENABLED' || ad.status.toUpperCase() === 'ENABLE'}
-                                onCheckedChange={(checked) => {
-                                  let nextStatus = ''
-                                  if (providerId === 'google') nextStatus = checked ? 'ENABLED' : 'PAUSED'
-                                  else if (providerId === 'tiktok') nextStatus = checked ? 'ENABLE' : 'DISABLE'
-                                  else nextStatus = checked ? 'ACTIVE' : 'PAUSED'
-                                  void toggleAdStatus(ad, nextStatus)
-                                }}
-                              />
-                              <span className="text-xs font-medium capitalize w-14">
-                                {ad.status.toLowerCase()}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs">
-                            {adMetrics[ad.creativeId]?.spend !== undefined ? `$${adMetrics[ad.creativeId]?.spend.toFixed(2)}` : '—'}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs">
-                            {adMetrics[ad.creativeId]?.clicks !== undefined ? adMetrics[ad.creativeId]?.clicks.toLocaleString() : '—'}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs">
-                            {adMetrics[ad.creativeId]?.conversions !== undefined ? adMetrics[ad.creativeId]?.conversions.toLocaleString() : '—'}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                              {ad.headlines?.[0] || ad.descriptions?.[0] || '-'}
-                            </p>
-                          </TableCell>
-                          <TableCell>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </>
+              <CampaignAdsList
+                adMetrics={adMetrics}
+                ads={filteredAds}
+                onCreativeClick={handleCreativeClick}
+                onToggleStatus={(ad, nextStatus) => {
+                  void toggleAdStatus(ad, nextStatus)
+                }}
+                providerId={providerId}
+              />
             )}
 
-            <div className="text-xs text-muted-foreground text-center">
+            <div className="text-center text-xs text-muted-foreground">
               Showing {filteredAds.length} of {ads.length} creatives
             </div>
           </>

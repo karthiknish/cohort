@@ -219,7 +219,7 @@ export function MessageForwardDialog({
             <Label htmlFor="message">Add a message (optional)</Label>
             <Textarea
               id="message"
-              placeholder="Add context or comments before the forwarded message..."
+              placeholder="Add context or comments before the forwarded message…"
               value={forwardMessage}
               onChange={(e) => setForwardMessage(e.target.value)}
               rows={3}

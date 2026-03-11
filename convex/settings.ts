@@ -1,6 +1,4 @@
 import {
-  authenticatedMutation,
-  authenticatedQuery,
   zAuthenticatedMutation,
   zAuthenticatedQuery,
 } from './functions'

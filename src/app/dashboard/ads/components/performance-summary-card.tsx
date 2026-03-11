@@ -26,6 +26,11 @@ interface PerformanceSummaryCardProps {
   metricError: string | null
   onRefresh: () => void
   onExport: () => void
+  title?: string
+  description?: string
+  emptyMessage?: string
+  emptyCtaLabel?: string
+  emptyCtaHref?: string
 }
 
 export function PerformanceSummaryCard({
@@ -36,6 +41,11 @@ export function PerformanceSummaryCard({
   metricError,
   onRefresh,
   onExport,
+  title = 'Ad performance summary',
+  description = 'Aggregated spend, clicks, and conversions over the last synced period',
+  emptyMessage = 'No synced performance data yet. Connect an ad platform and run a sync to populate these insights.',
+  emptyCtaLabel = 'Run first sync',
+  emptyCtaHref = '#connect-ad-platforms',
 }: PerformanceSummaryCardProps) {
   return (
     <Card className="shadow-lg border-muted/80 overflow-hidden">
@@ -48,10 +58,10 @@ export function PerformanceSummaryCard({
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/10 to-violet-500/10">
               <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
-            Ad performance summary
+            {title}
           </CardTitle>
           <CardDescription className="text-sm">
-            Aggregated spend, clicks, and conversions over the last synced period
+            {description}
           </CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -61,7 +71,7 @@ export function PerformanceSummaryCard({
             size="sm"
             onClick={onRefresh}
             disabled={metricsLoading}
-            className="h-10 px-4 inline-flex items-center gap-2 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-md"
+            className="h-10 px-4 inline-flex items-center gap-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-md"
           >
             <RefreshCw className={cn('h-4 w-4', metricsLoading && 'animate-spin')} />
             Refresh
@@ -71,7 +81,7 @@ export function PerformanceSummaryCard({
             variant="outline"
             size="sm"
             onClick={onExport}
-            className="h-10 px-4 inline-flex items-center gap-2 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-md"
+            className="h-10 px-4 inline-flex items-center gap-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-md"
           >
             <Download className="h-4 w-4" />
             Export CSV
@@ -96,10 +106,10 @@ export function PerformanceSummaryCard({
               <BarChart3 className="h-6 w-6 text-muted-foreground/50" />
             </div>
             <p className="text-sm text-muted-foreground">
-              No synced performance data yet. Connect an ad platform and run a sync to populate these insights.
+              {emptyMessage}
             </p>
             <Button asChild size="sm" variant="outline" className="h-10">
-              <Link href="#connect-ad-platforms">Run first sync</Link>
+              <Link href={emptyCtaHref}>{emptyCtaLabel}</Link>
             </Button>
           </div>
         ) : (
@@ -115,7 +125,7 @@ export function PerformanceSummaryCard({
                 >
                   <Card
                     className={cn(
-                      'group relative overflow-hidden rounded-xl border transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+                      'group relative overflow-hidden rounded-xl border transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
                       'hover:shadow-lg hover:shadow-black/5 hover:-translate-y-1',
                       theme.bg, theme.border
                     )}

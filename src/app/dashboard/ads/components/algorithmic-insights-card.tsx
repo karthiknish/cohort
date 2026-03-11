@@ -36,6 +36,9 @@ interface AlgorithmicInsightsCardProps {
   compact?: boolean
   maxInsights?: number
   onViewAll?: () => void
+  title?: string
+  description?: string
+  emptyMessage?: string
 }
 
 // =============================================================================
@@ -161,7 +164,7 @@ function EfficiencyScoreRing({ score, size = 'md' }: { score: number; size?: 'sm
         />
         <circle
           className={cn(
-            'transition-all duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
+            'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
             score > 70 ? 'stroke-emerald-500' : score > 40 ? 'stroke-amber-500' : 'stroke-red-500'
           )}
           strokeWidth={d.stroke}
@@ -220,6 +223,9 @@ export function AlgorithmicInsightsCard({
   compact = false,
   maxInsights = 5,
   onViewAll,
+  title = 'AI-Powered Insights',
+  description = 'Algorithmic analysis of your cross-platform ad performance',
+  emptyMessage = 'Connect ad platforms and sync data to receive AI-powered insights.',
 }: AlgorithmicInsightsCardProps) {
   const displayedInsights = useMemo(() => {
     return (Array.isArray(insights) ? insights : []).slice(0, maxInsights)
@@ -232,11 +238,11 @@ export function AlgorithmicInsightsCard({
 
   if (loading) {
     return (
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">AI-Powered Insights</CardTitle>
-          <CardDescription>Analyzing your ad performance...</CardDescription>
-        </CardHeader>
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">{title}</CardTitle>
+            <CardDescription>Analyzing your performance data…</CardDescription>
+          </CardHeader>
         <CardContent>
           <InsightsSkeleton compact={compact} />
         </CardContent>
@@ -249,17 +255,17 @@ export function AlgorithmicInsightsCard({
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Lightbulb className="h-5 w-5 text-amber-500" />
-            AI-Powered Insights
-          </CardTitle>
-          <CardDescription>
-            Algorithmic analysis of your ad performance
-          </CardDescription>
+              <Lightbulb className="h-5 w-5 text-amber-500" />
+              {title}
+            </CardTitle>
+            <CardDescription>
+              {description}
+            </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground">
             <Lightbulb className="h-8 w-8 text-muted-foreground/50" />
-            <p>Connect ad platforms and sync data to receive AI-powered insights.</p>
+            <p>{emptyMessage}</p>
           </div>
         </CardContent>
       </Card>
@@ -274,7 +280,7 @@ export function AlgorithmicInsightsCard({
             <div>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Lightbulb className="h-4 w-4 text-amber-500" />
-                Ad Insights
+                {title}
                 {(criticalCount > 0 || warningCount > 0) && (
                   <Badge variant="outline" className="border-amber-500/50 text-amber-600 text-xs">
                     {criticalCount + warningCount} action{criticalCount + warningCount !== 1 ? 's' : ''} needed
@@ -309,7 +315,7 @@ export function AlgorithmicInsightsCard({
           <div>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Lightbulb className="h-5 w-5 text-amber-500" />
-              AI-Powered Insights
+              {title}
               {criticalCount > 0 && (
                 <Badge variant="destructive" className="text-xs">
                   {criticalCount} critical
@@ -317,7 +323,7 @@ export function AlgorithmicInsightsCard({
               )}
             </CardTitle>
             <CardDescription>
-              Algorithmic analysis of your cross-platform ad performance
+              {description}
             </CardDescription>
           </div>
           {onViewAll && hasMoreInsights && (

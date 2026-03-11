@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Play, Pause, Square, Clock, Plus } from 'lucide-react'
+import { Play, Square, Clock, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -16,7 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { cn, formatRelativeTime } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { TimeEntry } from '@/types/tasks'
 
 type TaskTimeTrackingProps = {
@@ -32,7 +31,6 @@ type TaskTimeTrackingProps = {
 }
 
 export function TaskTimeTracking({
-  taskId,
   timeEntries,
   totalTimeMinutes,
   isRunning = false,

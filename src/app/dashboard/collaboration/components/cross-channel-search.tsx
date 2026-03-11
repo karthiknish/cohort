@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
-import { Search, X, ChevronRight, FileText, AtSign, Paperclip, Clock } from 'lucide-react'
-import { Input } from '@/components/ui/input'
+import { AtSign, ChevronRight, FileText, Paperclip, Search, X } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -12,11 +13,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { cn, formatRelativeTime } from '@/lib/utils'
-import type { CollaborationMessage, CollaborationChannelType } from '@/types/collaboration'
-
-type SearchFilter = 'all' | 'from' | 'hasAttachment' | 'hasLink' | 'date'
+import type { CollaborationChannelType, CollaborationMessage } from '@/types/collaboration'
 
 interface ChannelOption {
   id: string
@@ -31,10 +30,15 @@ interface SearchResult {
 }
 
 interface CrossChannelSearchProps {
-  channels: ChannelOption[]
   onSearch: (query: CrossChannelSearchQuery) => Promise<SearchResult[]>
   onResultClick?: (messageId: string, channelId: string) => void
   trigger?: React.ReactNode
+}
+
+type CrossChannelSearchFilterState = {
+  selectedChannelType: CollaborationChannelType | 'all'
+  hasAttachment: boolean
+  hasLink: boolean
 }
 
 export interface CrossChannelSearchQuery {
@@ -48,15 +52,10 @@ export interface CrossChannelSearchQuery {
   afterDate?: string
 }
 
-/**
- * Cross-channel message search dialog with advanced filters
- */
-export function CrossChannelSearch({
-  channels,
+function useCrossChannelSearchController({
   onSearch,
   onResultClick,
-  trigger,
-}: CrossChannelSearchProps) {
+}: Pick<CrossChannelSearchProps, 'onSearch' | 'onResultClick'>) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
@@ -65,16 +64,17 @@ export function CrossChannelSearch({
   const [hasAttachment, setHasAttachment] = useState(false)
   const [hasLink, setHasLink] = useState(false)
 
-  // Group channels by type
-  const channelsByType = useMemo(() => {
-    const grouped: Record<string, ChannelOption[]> = {
-      all: channels,
-      team: channels.filter((c) => c.type === 'team'),
-      client: channels.filter((c) => c.type === 'client'),
-      project: channels.filter((c) => c.type === 'project'),
-    }
-    return grouped
-  }, [channels])
+  const filterState = useMemo<CrossChannelSearchFilterState>(
+    () => ({
+      selectedChannelType,
+      hasAttachment,
+      hasLink,
+    }),
+    [hasAttachment, hasLink, selectedChannelType]
+  )
+
+  const hasActiveFilters =
+    selectedChannelType !== 'all' || hasAttachment || hasLink
 
   const handleSearch = useCallback(async () => {
     if (!query.trim() || isSearching) return
@@ -95,49 +95,256 @@ export function CrossChannelSearch({
       .finally(() => {
         setIsSearching(false)
       })
-  }, [query, selectedChannelType, hasAttachment, hasLink, isSearching, onSearch])
+  }, [hasAttachment, hasLink, isSearching, onSearch, query, selectedChannelType])
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault()
-        handleSearch()
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault()
+        void handleSearch()
       }
     },
     [handleSearch]
   )
 
+  const clearFilters = useCallback(() => {
+    setSelectedChannelType('all')
+    setHasAttachment(false)
+    setHasLink(false)
+  }, [])
+
+  const clearSearch = useCallback(() => {
+    setQuery('')
+    setResults([])
+    clearFilters()
+  }, [clearFilters])
+
   const handleResultClick = useCallback(
     (result: SearchResult) => {
       onResultClick?.(result.message.id, result.channel.id)
       setOpen(false)
-      // Reset search
       setQuery('')
       setResults([])
     },
     [onResultClick]
   )
 
-  const clearSearch = useCallback(() => {
-    setQuery('')
-    setResults([])
-    setSelectedChannelType('all')
-    setHasAttachment(false)
-    setHasLink(false)
-  }, [])
+  return {
+    open,
+    setOpen,
+    query,
+    setQuery,
+    isSearching,
+    results,
+    filterState,
+    hasActiveFilters,
+    handleSearch,
+    handleKeyDown,
+    handleResultClick,
+    clearFilters,
+    clearSearch,
+    setSelectedChannelType,
+    setHasAttachment,
+    setHasLink,
+  }
+}
 
-  // Filter channels based on selected type
-  const availableChannels = selectedChannelType === 'all' ? channels : channelsByType[selectedChannelType] || []
+function SearchTriggerButton({ trigger }: { trigger?: React.ReactNode }) {
+  return trigger || (
+    <Button variant="outline" size="sm" className="gap-2">
+      <Search className="h-4 w-4" />
+      Search
+    </Button>
+  )
+}
+
+function CrossChannelSearchBar({
+  query,
+  isSearching,
+  onQueryChange,
+  onKeyDown,
+  onSearch,
+}: {
+  query: string
+  isSearching: boolean
+  onQueryChange: (value: string) => void
+  onKeyDown: (event: React.KeyboardEvent) => void
+  onSearch: () => void
+}) {
+  return (
+    <div className="flex gap-2">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search messages…"
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+          onKeyDown={onKeyDown}
+          className="pl-9"
+        />
+      </div>
+      <Button onClick={onSearch} disabled={!query.trim() || isSearching}>
+        {isSearching ? 'Searching…' : 'Search'}
+      </Button>
+    </div>
+  )
+}
+
+function CrossChannelSearchFilters({
+  filterState,
+  hasActiveFilters,
+  onChannelTypeChange,
+  onToggleAttachment,
+  onToggleLink,
+  onClear,
+}: {
+  filterState: CrossChannelSearchFilterState
+  hasActiveFilters: boolean
+  onChannelTypeChange: (value: CollaborationChannelType | 'all') => void
+  onToggleAttachment: () => void
+  onToggleLink: () => void
+  onClear: () => void
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <div className="flex gap-1">
+        {(['all', 'team', 'client', 'project'] as const).map((type) => (
+          <Button
+            key={type}
+            type="button"
+            variant={filterState.selectedChannelType === type ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => onChannelTypeChange(type)}
+            className="capitalize"
+          >
+            {type}
+          </Button>
+        ))}
+      </div>
+
+      <Button
+        type="button"
+        variant={filterState.hasAttachment ? 'default' : 'outline'}
+        size="sm"
+        onClick={onToggleAttachment}
+        className="gap-1"
+      >
+        <Paperclip className="h-3 w-3" />
+        Has attachment
+      </Button>
+
+      <Button
+        type="button"
+        variant={filterState.hasLink ? 'default' : 'outline'}
+        size="sm"
+        onClick={onToggleLink}
+        className="gap-1"
+      >
+        🔗 Has link
+      </Button>
+
+      {hasActiveFilters ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onClear}
+          className="gap-1 text-muted-foreground"
+        >
+          <X className="h-3 w-3" />
+          Clear
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
+function CrossChannelSearchResults({
+  query,
+  isSearching,
+  results,
+  onResultClick,
+}: {
+  query: string
+  isSearching: boolean
+  results: SearchResult[]
+  onResultClick: (result: SearchResult) => void
+}) {
+  return (
+    <div className="flex-1 overflow-y-auto -mx-6 px-6">
+      {results.length === 0 && query && !isSearching ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Search className="mb-4 h-12 w-12 text-muted-foreground/50" />
+          <p className="text-muted-foreground">No messages found</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Try adjusting your search or filters
+          </p>
+        </div>
+      ) : null}
+
+      {results.length === 0 && !query ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <FileText className="mb-4 h-12 w-12 text-muted-foreground/50" />
+          <p className="text-muted-foreground">Search across all channels</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Type a message content, sender name, or use filters
+          </p>
+        </div>
+      ) : null}
+
+      <div className="space-y-1">
+        {results.map((result) => (
+          <SearchResultItem
+            key={`${result.channel.id}-${result.message.id}`}
+            result={result}
+            onClick={() => onResultClick(result)}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CrossChannelSearchResultsFooter({ count }: { count: number }) {
+  if (count === 0) return null
+
+  return (
+    <div className="border-t pt-3 text-sm text-muted-foreground">
+      Found {count} result{count !== 1 ? 's' : ''}
+    </div>
+  )
+}
+
+/**
+ * Cross-channel message search dialog with advanced filters
+ */
+export function CrossChannelSearch({
+  onSearch,
+  onResultClick,
+  trigger,
+}: CrossChannelSearchProps) {
+  const {
+    open,
+    setOpen,
+    query,
+    setQuery,
+    isSearching,
+    results,
+    filterState,
+    hasActiveFilters,
+    handleSearch,
+    handleKeyDown,
+    handleResultClick,
+    clearSearch,
+    setSelectedChannelType,
+    setHasAttachment,
+    setHasLink,
+  } = useCrossChannelSearchController({ onSearch, onResultClick })
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm" className="gap-2">
-            <Search className="h-4 w-4" />
-            Search
-          </Button>
-        )}
+        <SearchTriggerButton trigger={trigger} />
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
@@ -147,118 +354,33 @@ export function CrossChannelSearch({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Search input */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search messages..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="pl-9"
-            />
-          </div>
-          <Button onClick={handleSearch} disabled={!query.trim() || isSearching}>
-            {isSearching ? 'Searching...' : 'Search'}
-          </Button>
-        </div>
+        <CrossChannelSearchBar
+          query={query}
+          isSearching={isSearching}
+          onQueryChange={setQuery}
+          onKeyDown={handleKeyDown}
+          onSearch={() => {
+            void handleSearch()
+          }}
+        />
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-2">
-          {/* Channel type filter */}
-          <div className="flex gap-1">
-            {(['all', 'team', 'client', 'project'] as const).map((type) => (
-              <Button
-                key={type}
-                type="button"
-                variant={selectedChannelType === type ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedChannelType(type)}
-                className="capitalize"
-              >
-                {type}
-              </Button>
-            ))}
-          </div>
+        <CrossChannelSearchFilters
+          filterState={filterState}
+          hasActiveFilters={hasActiveFilters}
+          onChannelTypeChange={setSelectedChannelType}
+          onToggleAttachment={() => setHasAttachment((current) => !current)}
+          onToggleLink={() => setHasLink((current) => !current)}
+          onClear={clearSearch}
+        />
 
-          {/* Attachment filter */}
-          <Button
-            type="button"
-            variant={hasAttachment ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setHasAttachment(!hasAttachment)}
-            className="gap-1"
-          >
-            <Paperclip className="h-3 w-3" />
-            Has attachment
-          </Button>
+        <CrossChannelSearchResults
+          query={query}
+          isSearching={isSearching}
+          results={results}
+          onResultClick={handleResultClick}
+        />
 
-          {/* Link filter */}
-          <Button
-            type="button"
-            variant={hasLink ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setHasLink(!hasLink)}
-            className="gap-1"
-          >
-            🔗 Has link
-          </Button>
-
-          {/* Clear filters */}
-          {(selectedChannelType !== 'all' || hasAttachment || hasLink) && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={clearSearch}
-              className="gap-1 text-muted-foreground"
-            >
-              <X className="h-3 w-3" />
-              Clear
-            </Button>
-          )}
-        </div>
-
-        {/* Results */}
-        <div className="flex-1 overflow-y-auto -mx-6 px-6">
-          {results.length === 0 && query && !isSearching && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Search className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">No messages found</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Try adjusting your search or filters
-              </p>
-            </div>
-          )}
-
-          {results.length === 0 && !query && (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">Search across all channels</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Type a message content, sender name, or use filters
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-1">
-            {results.map((result) => (
-              <SearchResultItem
-                key={`${result.channel.id}-${result.message.id}`}
-                result={result}
-                onClick={() => handleResultClick(result)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Results count */}
-        {results.length > 0 && (
-          <div className="border-t pt-3 text-sm text-muted-foreground">
-            Found {results.length} result{results.length !== 1 ? 's' : ''}
-          </div>
-        )}
+        <CrossChannelSearchResultsFooter count={results.length} />
       </DialogContent>
     </Dialog>
   )
@@ -325,9 +447,9 @@ function SearchResultItem({ result, onClick }: SearchResultItemProps) {
           {/* Highlights */}
           {highlights.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
-              {highlights.slice(0, 3).map((highlight, i) => (
+              {highlights.slice(0, 3).map((highlight) => (
                 <span
-                  key={i}
+                  key={`${result.message.id}-${highlight}`}
                   className="px-1.5 py-0.5 bg-primary/10 text-primary text-xs rounded"
                 >
                   {highlight}
@@ -359,7 +481,7 @@ export function QuickSearchInput({
   const [value, setValue] = useState('')
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    (e: { preventDefault: () => void }) => {
       e.preventDefault()
       if (value.trim()) {
         onSearch(value.trim())

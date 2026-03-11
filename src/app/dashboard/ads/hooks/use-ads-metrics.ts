@@ -7,7 +7,6 @@ import { subDays, startOfDay, endOfDay } from 'date-fns'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
-import { useToast } from '@/components/ui/use-toast'
 import { getPreviewAdsMetrics } from '@/lib/preview-data'
 import { asErrorMessage, extractErrorCode, logError } from '@/lib/convex-errors'
 import { api } from '../../../../../convex/_generated/api'
@@ -190,6 +189,10 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
       id: `${String(row.providerId)}:${String(row.accountId ?? '')}:${String(row.date)}`,
       providerId: String(row.providerId),
       accountId: typeof row.accountId === 'string' ? row.accountId : null,
+      publisherPlatform:
+        typeof row.publisherPlatform === 'string' && row.publisherPlatform.length > 0
+          ? row.publisherPlatform
+          : null,
       date: String(row.date),
       spend: Number(row.spend ?? 0),
       impressions: Number(row.impressions ?? 0),

@@ -28,7 +28,6 @@ export function ActivityComments({
   activity,
   comments,
   onAddComment,
-  currentUserName,
 }: ActivityCommentsProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [newComment, setNewComment] = useState('')
@@ -100,7 +99,7 @@ export function ActivityComments({
           {/* Add comment */}
           <div className="flex gap-2">
             <Textarea
-              placeholder="Add a comment... (⌘+Enter to send)"
+              placeholder="Add a comment… (⌘+Enter to send)"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               onKeyDown={handleKeyDown}

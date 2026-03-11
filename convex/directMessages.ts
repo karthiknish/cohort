@@ -1,11 +1,7 @@
-import { v } from 'convex/values'
 import { z } from 'zod/v4'
 import type { Id } from './_generated/dataModel'
 import { Errors } from './errors'
 import {
-  workspaceMutation,
-  workspaceQuery,
-  workspaceQueryActive,
   zWorkspaceMutation,
   zWorkspaceQuery,
   zWorkspaceQueryActive,
@@ -74,12 +70,6 @@ const attachmentZ = z.object({
   storageId: z.string().nullable().optional(),
   type: z.string().nullable().optional(),
   size: z.string().nullable().optional(),
-})
-
-const reactionZ = z.object({
-  emoji: z.string(),
-  count: z.number(),
-  userIds: z.array(z.string()),
 })
 
 export const getOrCreateConversation = zWorkspaceMutation({
@@ -712,18 +702,16 @@ export const getUnreadCount = zWorkspaceQuery({
 
     const asParticipantOne = await ctx.db
       .query('directConversations')
-      .withIndex('by_workspace_participantOne_updatedAtMs', (q) =>
-        q.eq('workspaceId', args.workspaceId).eq('participantOneId', currentUserId)
+      .withIndex('by_workspace_participantOne_read_updatedAtMs', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('participantOneId', currentUserId).eq('readByParticipantOne', false)
       )
-      .filter((q) => q.eq(q.field('readByParticipantOne'), false))
       .collect()
 
     const asParticipantTwo = await ctx.db
       .query('directConversations')
-      .withIndex('by_workspace_participantTwo_updatedAtMs', (q) =>
-        q.eq('workspaceId', args.workspaceId).eq('participantTwoId', currentUserId)
+      .withIndex('by_workspace_participantTwo_read_updatedAtMs', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('participantTwoId', currentUserId).eq('readByParticipantTwo', false)
       )
-      .filter((q) => q.eq(q.field('readByParticipantTwo'), false))
       .collect()
 
     return asParticipantOne.length + asParticipantTwo.length

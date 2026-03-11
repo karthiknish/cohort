@@ -16,9 +16,7 @@ import { api } from '../../../../convex/_generated/api'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 
@@ -63,6 +62,8 @@ export default function AdminIssuesPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<ProblemReport | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const reports = useQuery(api.problemReports.list, {
     status: statusFilter === 'all' ? null : statusFilter,
@@ -94,12 +95,15 @@ export default function AdminIssuesPage() {
       })
   }
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Are you sure you want to delete this report?')) return
+  const handleDelete = () => {
+    if (!deleteTarget || deletingId === deleteTarget.id) return
 
-    void removeReport({ legacyId: id })
+    setDeletingId(deleteTarget.id)
+
+    void removeReport({ legacyId: deleteTarget.id })
       .then(() => {
         toast({ title: 'Report deleted', description: 'The report has been removed.' })
+        setDeleteTarget(null)
       })
       .catch((error) => {
         console.error('Error deleting report:', error)
@@ -108,6 +112,9 @@ export default function AdminIssuesPage() {
           description: 'Failed to delete report',
           variant: 'destructive',
         })
+      })
+      .finally(() => {
+        setDeletingId(null)
       })
   }
 
@@ -164,7 +171,7 @@ export default function AdminIssuesPage() {
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by title, user, or email..."
+                placeholder="Search by title, user, or email…"
                 className="pl-9"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -249,8 +256,10 @@ export default function AdminIssuesPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDelete(report.id)}
+                          onClick={() => setDeleteTarget(report)}
                           className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          disabled={deletingId === report.id}
+                          aria-label={`Delete report ${report.title}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -263,6 +272,23 @@ export default function AdminIssuesPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open && deletingId !== deleteTarget?.id) {
+            setDeleteTarget(null)
+          }
+        }}
+        title="Delete reported issue"
+        description={deleteTarget ? `Delete “${deleteTarget.title}”? This action cannot be undone.` : 'This action cannot be undone.'}
+        confirmLabel="Delete report"
+        cancelLabel="Cancel"
+        variant="destructive"
+        isLoading={deletingId === deleteTarget?.id}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

@@ -271,7 +271,7 @@ export function ProfileCard({
                   ) : (
                     <ImagePlus className="mr-2 h-4 w-4" />
                   )}
-                  {avatarUploading ? 'Uploading...' : avatarPreview ? 'Change photo' : 'Upload photo'}
+                  {avatarUploading ? 'Uploading…' : avatarPreview ? 'Change photo' : 'Upload photo'}
                 </Button>
                 {avatarPreview ? (
                   <Button

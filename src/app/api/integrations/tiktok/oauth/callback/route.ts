@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 import { completeTikTokOAuthFlow, validateTikTokOAuthState } from '@/services/tiktok-business'
 import { createApiHandler } from '@/lib/api-handler'
-import { ServiceUnavailableError, ValidationError, BadRequestError } from '@/lib/api-errors'
+import { ServiceUnavailableError, ValidationError } from '@/lib/api-errors'
 import { isValidRedirectUrl } from '@/lib/utils'
 
 const querySchema = z.object({

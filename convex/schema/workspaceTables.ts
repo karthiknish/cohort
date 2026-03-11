@@ -33,7 +33,11 @@ export const workspaceTables = {
   })
     .index('by_legacyId', ['legacyId'])
     .index('by_emailLower', ['emailLower'])
-    .index('by_agencyId', ['agencyId']),
+    .index('by_agencyId', ['agencyId'])
+    .index('by_status_updatedAtMs', ['status', 'updatedAtMs'])
+    .index('by_agencyId_status_updatedAtMs', ['agencyId', 'status', 'updatedAtMs'])
+    .index('by_createdAtMs', ['createdAtMs'])
+    .index('by_updatedAtMs_legacyId', ['updatedAtMs', 'legacyId']),
 
   platformFeatures: defineTable({
     legacyId: v.union(v.string(), v.null()),
@@ -57,7 +61,8 @@ export const workspaceTables = {
     updatedAtMs: v.number(),
   })
     .index('by_status_createdAtMs', ['status', 'createdAtMs'])
-    .index('by_legacyId', ['legacyId']),
+    .index('by_legacyId', ['legacyId'])
+    .index('by_createdAtMs', ['createdAtMs']),
 
   invitations: defineTable({
     legacyId: v.union(v.string(), v.null()),
@@ -82,7 +87,8 @@ export const workspaceTables = {
     .index('by_emailLower_status', ['emailLower', 'status'])
     .index('by_status_createdAtMs', ['status', 'createdAtMs'])
     .index('by_token', ['token'])
-    .index('by_legacyId', ['legacyId']),
+    .index('by_legacyId', ['legacyId'])
+    .index('by_createdAtMs', ['createdAtMs']),
 
   customFormulas: defineTable({
     workspaceId: v.string(),

@@ -75,7 +75,7 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
                       type="button"
                       onClick={() => onChange({ leadFormId: form.id })}
                       disabled={disabled}
-                      className={`flex items-center justify-between p-3 rounded-lg border text-left transition-all ${
+                      className={`flex items-center justify-between p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
                         formData.leadFormId === form.id
                           ? 'border-blue-500 bg-blue-500/5'
                           : 'border-border hover:border-blue-500/50'

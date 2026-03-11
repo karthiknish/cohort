@@ -1,7 +1,11 @@
 'use client'
 
-import { Pin, PinOff, LoaderCircle } from 'lucide-react'
+import { useCallback, useState } from 'react'
+
+import { LoaderCircle, Pin, PinOff } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
 import {
   Tooltip,
   TooltipContent,
@@ -14,7 +18,7 @@ import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import type { CollaborationMessage } from '@/types/collaboration'
-import { useCallback, useState } from 'react'
+
 import { formatRelativeTime } from '../utils'
 
 interface PinnedMessagesProps {
@@ -23,6 +27,7 @@ interface PinnedMessagesProps {
   userId: string | null
   onMessageClick?: (messageId: string) => void
   className?: string
+  showEmptyState?: boolean
 }
 
 /**
@@ -31,19 +36,35 @@ interface PinnedMessagesProps {
 export function PinnedMessages({
   messages,
   workspaceId,
-  userId,
   onMessageClick,
   className,
+  showEmptyState = false,
 }: PinnedMessagesProps) {
   const pinnedMessages = messages.filter((m) => m.isPinned && !m.isDeleted)
 
   if (pinnedMessages.length === 0) {
-    return null
+    return showEmptyState ? (
+      <div className={cn('overflow-hidden', className)}>
+        <div className="flex items-center gap-2 border-b border-muted/20 px-4 py-3">
+          <Pin className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-medium">Pinned Messages</h3>
+        </div>
+        <div className="p-3">
+          <EmptyState
+            icon={Pin}
+            title="No pinned messages"
+            description="Pin important messages to keep them easy to find."
+            variant="inline"
+            className="rounded-lg border-dashed bg-muted/10 px-3 py-3 [&_p:last-child]:text-xs"
+          />
+        </div>
+      </div>
+    ) : null
   }
 
   return (
-    <div className={cn('border-b bg-muted/30', className)}>
-      <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/50">
+    <div className={cn('overflow-hidden border-b bg-muted/30', className)}>
+      <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2">
         <Pin className="h-4 w-4 text-primary" />
         <h3 className="text-sm font-medium">
           Pinned Messages ({pinnedMessages.length})
@@ -55,7 +76,6 @@ export function PinnedMessages({
             key={message.id}
             message={message}
             workspaceId={workspaceId}
-            userId={userId}
             onClick={onMessageClick}
           />
         ))}
@@ -67,16 +87,13 @@ export function PinnedMessages({
 interface PinnedMessageItemProps {
   message: CollaborationMessage
   workspaceId: string | null
-  userId: string | null
   onClick?: (messageId: string) => void
 }
 
-function PinnedMessageItem({ message, workspaceId, userId, onClick }: PinnedMessageItemProps) {
+function PinnedMessageItem({ message, workspaceId, onClick }: PinnedMessageItemProps) {
   const { toast } = useToast()
-  const pinMessage = useMutation(generatedApi.collaborationMessages.pinMessage)
   const unpinMessage = useMutation(generatedApi.collaborationMessages.unpinMessage)
 
-  const [isPinning, setIsPinning] = useState(false)
   const [isUnpinning, setIsUnpinning] = useState(false)
 
   const handleUnpin = useCallback(
@@ -115,43 +132,33 @@ function PinnedMessageItem({ message, workspaceId, userId, onClick }: PinnedMess
   }, [message.id, onClick])
 
   return (
-    <div
-      className="group flex gap-3 p-3 hover:bg-muted/50 cursor-pointer transition-colors"
-      onClick={handleClick}
-    >
-      {/* Sender avatar */}
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary ring-2 ring-background">
-        {message.senderName.charAt(0).toUpperCase()}
-      </div>
+    <div className="group flex items-start gap-3 p-3 transition-colors hover:bg-muted/50">
+      <button
+        type="button"
+        className="flex min-w-0 flex-1 items-start gap-3 text-left"
+        onClick={handleClick}
+        aria-label={`Open pinned message from ${message.senderName}`}
+      >
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary ring-2 ring-background">
+          {message.senderName.charAt(0).toUpperCase()}
+        </div>
 
-      {/* Content */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground">
-              {message.senderName}
-            </p>
-            <p className="text-xs text-muted-foreground line-clamp-2">
-              {message.content}
-            </p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-muted-foreground">
-                {message.pinnedAt && formatRelativeTime(message.pinnedAt)}
-              </span>
-              {message.attachments && message.attachments.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  📎 {message.attachments.length}
-                </span>
-              )}
-              {message.reactions && message.reactions.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {message.reactions.reduce((sum, r) => sum + r.count, 0)} reactions
-                </span>
-              )}
-            </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-foreground">{message.senderName}</p>
+          <p className="line-clamp-2 text-xs text-muted-foreground">{message.content}</p>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{message.pinnedAt && formatRelativeTime(message.pinnedAt)}</span>
+            {message.attachments && message.attachments.length > 0 ? (
+              <span className="text-xs text-muted-foreground">📎 {message.attachments.length}</span>
+            ) : null}
+            {message.reactions && message.reactions.length > 0 ? (
+              <span className="text-xs text-muted-foreground">{message.reactions.reduce((sum, r) => sum + r.count, 0)} reactions</span>
+            ) : null}
           </div>
+        </div>
+      </button>
 
-          {/* Unpin button */}
+      <div className="shrink-0">
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -159,9 +166,10 @@ function PinnedMessageItem({ message, workspaceId, userId, onClick }: PinnedMess
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                   onClick={handleUnpin}
-                  disabled={isUnpinning}
+                  disabled={isUnpinning || !workspaceId}
+                  aria-label="Unpin message"
                 >
                   {isUnpinning ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -174,7 +182,6 @@ function PinnedMessageItem({ message, workspaceId, userId, onClick }: PinnedMess
               <TooltipContent side="bottom">Unpin message</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        </div>
       </div>
     </div>
   )

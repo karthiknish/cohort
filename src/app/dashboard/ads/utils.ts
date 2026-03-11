@@ -2,7 +2,6 @@ import { formatDistanceToNow } from 'date-fns'
 
 import { DISPLAY_DATE_FORMATTER, FREQUENCY_OPTIONS, TIMEFRAME_OPTIONS } from './constants'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { formatProviderName } from '@/lib/themes'
 
 // Re-export formatProviderName from centralized theme
 export { formatProviderName } from '@/lib/themes'

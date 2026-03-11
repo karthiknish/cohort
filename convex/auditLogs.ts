@@ -1,4 +1,4 @@
-import { internalMutation, mutation, query } from './_generated/server'
+import { internalMutation, mutation } from './_generated/server'
 import { internal } from './_generated/api'
 import { v } from 'convex/values'
 import { z } from 'zod/v4'
@@ -57,8 +57,17 @@ export const log = mutation({
     if (!secret || args.serverKey !== secret) {
       throw Errors.auth.unauthorized()
     }
-    const { serverKey, ...logArgs } = args
-    return await ctx.runMutation(internal.auditLogs.logInternal, logArgs)
+    return await ctx.runMutation(internal.auditLogs.logInternal, {
+      action: args.action,
+      actorId: args.actorId,
+      actorEmail: args.actorEmail,
+      targetId: args.targetId,
+      workspaceId: args.workspaceId,
+      metadata: args.metadata,
+      ip: args.ip,
+      userAgent: args.userAgent,
+      requestId: args.requestId,
+    })
   },
 })
 

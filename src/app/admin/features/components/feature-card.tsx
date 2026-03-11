@@ -1,6 +1,6 @@
 'use client'
 
-import { ExternalLink, GripVertical, Image, Link2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { ExternalLink, GripVertical, ImageIcon, Link2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -35,7 +35,7 @@ export function FeatureCard({
   return (
     <div
       className={cn(
-        'group relative flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm transition-all',
+        'group relative flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
         'hover:border-primary/30 hover:shadow-md',
         isDragging && 'opacity-50 rotate-2 shadow-lg'
       )}
@@ -109,7 +109,7 @@ export function FeatureCard({
         <div className="flex items-center gap-2 text-muted-foreground">
           {feature.imageUrl && (
             <div className="flex items-center gap-0.5" title="Has image">
-              <Image className="h-3 w-3" />
+              <ImageIcon className="h-3 w-3" />
             </div>
           )}
           {feature.references.length > 0 && (

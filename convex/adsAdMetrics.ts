@@ -27,12 +27,6 @@ function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
   return expiresAtMs - Date.now() <= fiveMinutes
 }
 
-function asErrorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message
-  if (typeof err === 'string') return err
-  return 'Unknown error'
-}
-
 export type NormalizedAdMetric = {
   providerId: string
   adId: string

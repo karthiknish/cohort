@@ -48,6 +48,8 @@ export interface NormalizedMetric {
   clientId?: string | null
   /** The ad account ID this metric belongs to (for multi-account support). */
   accountId?: string | null
+  /** Optional Meta publisher platform or equivalent reporting surface. */
+  publisherPlatform?: string | null
   date: string
   spend: number
   impressions: number

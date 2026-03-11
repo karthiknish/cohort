@@ -1,9 +1,8 @@
 "use client"
 
 import { ReactNode } from "react"
-import { ChevronLeft, ChevronRight, RefreshCw, FileText } from "lucide-react"
+import { ChevronLeft, ChevronRight, FileText } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -37,7 +36,7 @@ export function ProposalDraftPanel({
       <div className="flex items-center justify-between text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 px-1">
         <div className="flex items-center gap-2">
           <div className={cn(
-             "h-1.5 w-1.5 rounded-full transition-all duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none",
+             "h-1.5 w-1.5 rounded-full transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none",
              autosaveStatus === "saving" ? "bg-primary animate-pulse" : "bg-emerald-500"
           )} />
           <span>{autosaveStatus === "saving" ? "Saving progress..." : "All changes saved"}</span>
@@ -45,7 +44,7 @@ export function ProposalDraftPanel({
         <span>Draft #{draftId?.slice(0, 8).toUpperCase() ?? "NEW"}</span>
       </div>
 
-      <div className="relative min-h-[300px] rounded-xl border border-muted/40 bg-muted/5 p-4 sm:p-6 backdrop-blur-sm shadow-inner transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none">
+      <div className="relative min-h-[300px] rounded-xl border border-muted/40 bg-muted/5 p-4 sm:p-6 backdrop-blur-sm shadow-inner transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none">
         {stepContent}
       </div>
 
@@ -54,7 +53,7 @@ export function ProposalDraftPanel({
           variant="outline" 
           onClick={onBack} 
           disabled={isFirstStep}
-          className="h-10 px-6 font-medium transition-all hover:bg-primary/5 hover:text-primary hover:border-primary/20"
+          className="h-10 px-6 font-medium transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-primary/5 hover:text-primary hover:border-primary/20"
         >
           <ChevronLeft className="mr-2 h-4 w-4" /> Previous
         </Button>
@@ -67,7 +66,7 @@ export function ProposalDraftPanel({
             onClick={onNext} 
             disabled={isSubmitting}
             className={cn(
-               "h-10 px-8 font-semibold shadow-lg transition-all active:scale-[0.98]",
+               "h-10 px-8 font-semibold shadow-lg transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] active:scale-[0.98]",
                isLastStep && "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
             )}
           >

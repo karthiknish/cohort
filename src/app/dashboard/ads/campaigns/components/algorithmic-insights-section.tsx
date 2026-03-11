@@ -3,11 +3,8 @@
 import { 
   Lightbulb, 
   CircleCheck, 
-  TriangleAlert, 
-  Info,
   TrendingUp,
   Target,
-  Zap
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -66,7 +63,7 @@ export function AlgorithmicInsightsSection({
                   />
                   <circle
                     className={cn(
-                      "transition-all duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none",
+                      "transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none",
                       efficiencyScore > 80 ? "stroke-emerald-500" :
                       efficiencyScore > 60 ? "stroke-yellow-500" :
                       "stroke-red-500"
@@ -136,7 +133,7 @@ export function AlgorithmicInsightsSection({
           ) : (
             <div className="space-y-6">
                 {insights.map((insight) => (
-                  <div key={`${insight.type}-${insight.title}`} className="group relative flex gap-4 transition-all">
+                  <div key={`${insight.type}-${insight.title}`} className="group relative flex gap-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]">
                   <div className={cn(
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
                     insight.level === 'success' ? "bg-emerald-500/10 text-emerald-600" :

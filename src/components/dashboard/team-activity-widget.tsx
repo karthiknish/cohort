@@ -1,19 +1,12 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
-import { Users, TrendingUp, TrendingDown, Activity, MoreHorizontal, Eye } from 'lucide-react'
+import { useMemo } from 'react'
+import { Users, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
-import { cn, formatRelativeTime } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 export interface TeamMember {
   id: string
@@ -47,7 +40,6 @@ interface TeamActivityWidgetProps {
  */
 export function TeamActivityWidget({
   data,
-  userCount = 0,
   onMemberClick,
   onViewAllClick,
   className,
@@ -287,13 +279,21 @@ export function TeamPresenceStrip({
   const onlineMembers = members.filter((m) => m.status === 'online')
   const displayMembers = onlineMembers.slice(0, maxVisible)
   const remainingCount = onlineMembers.length - maxVisible
+  const Wrapper = onClick ? 'button' : 'div'
 
   return (
-    <div
-      onClick={onClick}
+    <Wrapper
+      {...(onClick
+        ? {
+            type: 'button' as const,
+            onClick,
+            'aria-label': `View team presence, ${onlineMembers.length} online members`,
+          }
+        : {})}
       className={cn(
-        'flex items-center gap-1 cursor-pointer',
-        onClick && 'hover:opacity-80 transition-opacity'
+        'flex items-center gap-1',
+        onClick && 'cursor-pointer hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        className,
       )}
     >
       {displayMembers.map((member) => (
@@ -316,7 +316,7 @@ export function TeamPresenceStrip({
           +{remainingCount}
         </div>
       )}
-    </div>
+    </Wrapper>
   )
 }
 

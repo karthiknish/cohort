@@ -16,30 +16,36 @@ function throwDeprecated(): never {
   )
 }
 
-export async function createCustomFormula(_input: CreateCustomFormulaInput): Promise<CustomFormulaRecord> {
+export async function createCustomFormula(input: CreateCustomFormulaInput): Promise<CustomFormulaRecord> {
+  void input
   throwDeprecated()
 }
 
-export async function getCustomFormula(_options: { workspaceId: string; formulaId: string }): Promise<CustomFormulaRecord | null> {
+export async function getCustomFormula(options: { workspaceId: string; formulaId: string }): Promise<CustomFormulaRecord | null> {
+  void options
   throwDeprecated()
 }
 
-export async function getCustomFormulas(_options: { workspaceId: string; activeOnly?: boolean }): Promise<CustomFormulasListResult> {
+export async function getCustomFormulas(options: { workspaceId: string; activeOnly?: boolean }): Promise<CustomFormulasListResult> {
+  void options
   throwDeprecated()
 }
 
-export async function getCustomFormulasByUser(_options: {
+export async function getCustomFormulasByUser(options: {
   workspaceId: string
   userId: string
   activeOnly?: boolean
 }): Promise<CustomFormulasListResult> {
+  void options
   throwDeprecated()
 }
 
-export async function updateCustomFormula(_input: UpdateCustomFormulaInput): Promise<void> {
+export async function updateCustomFormula(input: UpdateCustomFormulaInput): Promise<void> {
+  void input
   throwDeprecated()
 }
 
-export async function deleteCustomFormula(_options: { workspaceId: string; formulaId: string }): Promise<void> {
+export async function deleteCustomFormula(options: { workspaceId: string; formulaId: string }): Promise<void> {
+  void options
   throwDeprecated()
 }

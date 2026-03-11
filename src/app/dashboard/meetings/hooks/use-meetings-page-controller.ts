@@ -1,7 +1,7 @@
 'use client'
 
-import { useMutation, useQuery } from 'convex/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
@@ -10,9 +10,8 @@ import { usePreview } from '@/contexts/preview-context'
 import { meetingIntegrationsApi, meetingsApi, usersApi } from '@/lib/convex-api'
 import { getWorkspaceId } from '@/lib/utils'
 
-import { useMeetingAttendees } from '../hooks/use-meeting-attendees'
-import { describeNotificationSummary, pluralize } from '../lib/notifications'
-import type { MeetingNotificationSummary } from '../lib/notifications'
+import { useMeetingAttendees } from './use-meeting-attendees'
+import { describeNotificationSummary, pluralize, type MeetingNotificationSummary } from '../lib/notifications'
 import {
   getPreviewGoogleWorkspaceStatus,
   getPreviewMeetingWorkspaceMembers,
@@ -114,6 +113,7 @@ export function useMeetingsPageController() {
   const meetingAttendees = useMeetingAttendees({
     workspaceMembers: resolvedWorkspaceMembers,
     platformUsers: resolvedPlatformUsers,
+    organizerId: user?.id ?? null,
     organizerEmail: user?.email ?? null,
   })
   const scheduleAttendees = meetingAttendees.schedule

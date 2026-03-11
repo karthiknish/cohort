@@ -2,10 +2,6 @@
 // LINKEDIN ADS CAMPAIGNS - List Operations
 // =============================================================================
 
-import {
-  normalizeCurrency,
-  coerceNumber,
-} from '../client'
 import { linkedinAdsClient } from '@/services/integrations/shared/base-client'
 import {
   LinkedInCampaign,

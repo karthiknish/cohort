@@ -40,7 +40,6 @@ interface ActivityItemProps {
   showReactions: string | null
   comments: ActivityComment[]
   onSelectionChange: (id: string, checked: boolean) => void
-  onClick: (activity: EnhancedActivity, e: React.MouseEvent) => void
   onTogglePin: (id: string) => void
   onMarkAsRead: (id: string) => void
   onAddReaction: (id: string, emoji: string) => void
@@ -56,7 +55,6 @@ export function ActivityItem({
   showReactions,
   comments,
   onSelectionChange,
-  onClick,
   onTogglePin,
   onMarkAsRead,
   onAddReaction,
@@ -67,21 +65,25 @@ export function ActivityItem({
 }: ActivityItemProps) {
   const Icon = ACTIVITY_ICONS[activity.type]
   const colorClass = ACTIVITY_COLORS[activity.type]
+  const mobileCheckboxId = `activity-select-mobile-${activity.id}`
+  const desktopCheckboxId = `activity-select-desktop-${activity.id}`
 
   return (
     <div className={cn('relative group', !activity.isRead && 'bg-muted/30')}>
       {/* Selection checkbox with larger touch target */}
       <div className="absolute left-[-32px] sm:left-[-34px] top-3 sm:top-4">
-        <div className="sm:hidden p-2 -m-2 cursor-pointer" onClick={() => onSelectionChange(activity.id, !isSelected)}>
+        <label htmlFor={mobileCheckboxId} className="sm:hidden block p-2 -m-2 cursor-pointer">
           <Checkbox
+            id={mobileCheckboxId}
             checked={isSelected}
             onCheckedChange={(checked) =>
               onSelectionChange(activity.id, checked as boolean)
             }
             aria-label={`Select ${activity.description}`}
           />
-        </div>
+        </label>
         <Checkbox
+          id={desktopCheckboxId}
           checked={isSelected}
           onCheckedChange={(checked) =>
             onSelectionChange(activity.id, checked as boolean)
@@ -107,9 +109,8 @@ export function ActivityItem({
 
       {/* Activity content */}
       <div
-        onClick={(e) => onClick(activity, e)}
         className={cn(
-          'flex flex-col gap-1 rounded-lg border p-3 transition-colors cursor-pointer',
+          'flex flex-col gap-1 rounded-lg border p-3 transition-colors',
           activity.isRead
             ? 'border-transparent bg-transparent hover:bg-muted/50 hover:border-muted'
             : 'border-primary/20 bg-primary/5 hover:bg-primary/10',
@@ -118,25 +119,32 @@ export function ActivityItem({
       >
         <div className="flex items-start justify-between gap-2 sm:gap-4">
           <div className="space-y-1 min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
-                {ACTIVITY_LABELS[activity.type]}
-              </Badge>
-              {!activity.isRead && (
-                <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5">
-                  New
+            <button
+              type="button"
+              onClick={() => onViewDetails(activity)}
+              className="block min-w-0 rounded-md text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
+              aria-label={`Open activity ${activity.description}`}
+            >
+              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                <Badge variant="outline" className="h-5 px-1.5 py-0 text-[10px]">
+                  {ACTIVITY_LABELS[activity.type]}
                 </Badge>
-              )}
-              <span className="text-xs text-muted-foreground">
-                {format(new Date(activity.timestamp), 'h:mm a')}
-              </span>
-            </div>
-            <p className="text-sm font-medium leading-none">
-              {activity.description}
-            </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {activity.entityName}
-            </p>
+                {!activity.isRead && (
+                  <Badge variant="default" className="h-5 px-1.5 py-0 text-[10px]">
+                    New
+                  </Badge>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(activity.timestamp), 'h:mm a')}
+                </span>
+              </div>
+              <p className="mt-1 text-sm font-medium leading-none hover:text-primary">
+                {activity.description}
+              </p>
+              <p className="mt-1 truncate text-xs text-muted-foreground">
+                {activity.entityName}
+              </p>
+            </button>
 
             {/* Reactions */}
             {activity.reactions && activity.reactions.length > 0 && (
@@ -190,6 +198,7 @@ export function ActivityItem({
                   size="icon"
                   className="h-9 w-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={(e) => e.stopPropagation()}
+                  aria-label="Add reaction"
                 >
                   <Heart className="h-4 w-4" />
                 </Button>
@@ -251,6 +260,7 @@ export function ActivityItem({
                   size="icon"
                   className="h-9 w-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={(e) => e.stopPropagation()}
+                  aria-label="More activity actions"
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>

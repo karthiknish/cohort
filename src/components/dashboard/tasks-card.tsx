@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo } from 'react'
 import Link from 'next/link'
 import { CircleCheck, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -21,7 +21,7 @@ export function TasksCard({ tasks, loading }: TasksCardProps) {
           <CardTitle className="text-base">Upcoming Tasks</CardTitle>
           <CardDescription>Priority items for this week</CardDescription>
         </div>
-        <Button asChild variant="ghost" size="icon" className="h-8 w-8" title="Manage tasks">
+        <Button asChild variant="ghost" size="icon" className="h-8 w-8" title="Manage tasks" aria-label="Manage tasks">
           <Link href="/dashboard/tasks">
             <Calendar className="h-4 w-4" />
             <span className="sr-only">Manage tasks</span>
@@ -61,17 +61,14 @@ export function TasksCard({ tasks, loading }: TasksCardProps) {
 }
 
 const TaskItem = memo(function TaskItem({ task }: { task: DashboardTaskItem }) {
-  const priorityDotClass = useMemo(
-    () =>
-      task.priority === 'urgent'
-        ? 'bg-rose-500'
-        : task.priority === 'high'
-          ? 'bg-orange-500'
-          : task.priority === 'medium'
-            ? 'bg-yellow-500'
-            : 'bg-slate-400',
-    [task.priority]
-  )
+  const priorityDotClass =
+    task.priority === 'urgent'
+      ? 'bg-rose-500'
+      : task.priority === 'high'
+        ? 'bg-orange-500'
+        : task.priority === 'medium'
+          ? 'bg-yellow-500'
+          : 'bg-slate-400'
 
   return (
     <div className="group flex items-start gap-3 rounded-lg border border-transparent p-3 transition-colors hover:bg-muted/50 hover:border-border">

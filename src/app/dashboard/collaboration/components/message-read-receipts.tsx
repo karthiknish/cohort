@@ -14,6 +14,7 @@ interface MessageReadReceiptsProps {
 }
 
 type ReadStatus = 'sent' | 'delivered' | 'read' | 'read_by_all'
+const EMPTY_READ_BY_NAMES: string[] = []
 
 /**
  * Displays read receipt status for a message
@@ -23,7 +24,7 @@ export function MessageReadReceipts({
   message,
   currentUserId,
   channelMemberCount = 0,
-  readByNames = [],
+  readByNames = EMPTY_READ_BY_NAMES,
   className,
 }: MessageReadReceiptsProps) {
   // Don't show read receipts for own messages or deleted messages
@@ -211,7 +212,6 @@ export function ReadReceiptDetail({
 export function MessageDeliveryStatus({
   message,
   currentUserId,
-  channelMemberCount = 0,
   memberNames,
   className,
 }: {

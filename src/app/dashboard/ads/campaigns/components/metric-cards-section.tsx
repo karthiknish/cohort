@@ -6,7 +6,6 @@ import {
   MousePointerClick,
   Eye,
   TrendingUp,
-  TrendingDown,
   Users
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -47,7 +46,7 @@ function formatCurrency(value: number, currency: string = 'USD'): string {
       currency: currency,
       minimumFractionDigits: 2,
     }).format(value)
-  } catch (err) {
+  } catch {
     // Fallback if currency code is invalid
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -83,7 +82,7 @@ function MetricCard({
   description?: string
 }) {
   const content = (
-    <Card className="group overflow-hidden border-muted/40 shadow-sm transition-all hover:shadow-md">
+    <Card className="group overflow-hidden border-muted/40 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
       <CardContent className="p-4">
         {loading ? (
           <div className="space-y-2">

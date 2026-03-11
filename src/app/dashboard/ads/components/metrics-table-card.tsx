@@ -48,6 +48,11 @@ interface MetricsTableCardProps {
   loadMoreError: string | null
   onRefresh: () => void
   onLoadMore: () => void
+  title?: string
+  description?: string
+  emptyMessage?: string
+  emptyCtaLabel?: string
+  emptyCtaHref?: string
 }
 
 // Column header with tooltip helper
@@ -80,6 +85,11 @@ function MetricsTableCardComponent({
   loadMoreError,
   onRefresh,
   onLoadMore,
+  title = 'Latest synced rows',
+  description = 'Recent normalized records across all connected ad platforms.',
+  emptyMessage = 'No data yet. Once a sync completes, your most recent rows will appear here.',
+  emptyCtaLabel = 'Start a sync',
+  emptyCtaHref = '#connect-ad-platforms',
 }: MetricsTableCardProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
@@ -199,9 +209,9 @@ function MetricsTableCardComponent({
     <Card className="shadow-sm">
       <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <CardTitle className="text-lg">Latest synced rows</CardTitle>
+          <CardTitle className="text-lg">{title}</CardTitle>
           <CardDescription>
-            Recent normalized records across all connected ad platforms.
+            {description}
           </CardDescription>
         </div>
         <Button
@@ -223,7 +233,7 @@ function MetricsTableCardComponent({
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by provider..."
+                placeholder="Search by provider…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 h-10"
@@ -293,9 +303,9 @@ function MetricsTableCardComponent({
           </Alert>
         ) : !hasMetrics ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground">
-            <p>No data yet. Once a sync completes, your most recent rows will appear here.</p>
+            <p>{emptyMessage}</p>
             <Button asChild size="sm" variant="outline">
-              <Link href="#connect-ad-platforms">Start a sync</Link>
+              <Link href={emptyCtaHref}>{emptyCtaLabel}</Link>
             </Button>
           </div>
         ) : filteredMetrics.length === 0 ? (

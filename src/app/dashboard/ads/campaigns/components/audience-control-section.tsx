@@ -22,7 +22,7 @@ import { AudienceDisplaySection } from './audience-display-section'
 import { AudienceEditorSection } from './audience-editor-section'
 import { DemographicSection } from './demographic-section'
 import { LocationTargetingSection } from './location-targeting-section'
-import type { AggregatedTargetingData, TargetingData } from './audience-control-types'
+import type { TargetingData } from './audience-control-types'
 import { findLocationCoordinates, LOCATION_COORDINATES } from './audience-control-utils'
 
 type Insights = {

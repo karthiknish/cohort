@@ -87,6 +87,7 @@ import type * as collaborationMessages_syncAndPins from "../collaborationMessage
 import type * as collaborationTyping from "../collaborationTyping.js";
 import type * as conversationRouting from "../conversationRouting.js";
 import type * as creativesCopy from "../creativesCopy.js";
+import type * as crons from "../crons.js";
 import type * as customFormulas from "../customFormulas.js";
 import type * as debug from "../debug.js";
 import type * as directMessages from "../directMessages.js";
@@ -216,6 +217,7 @@ declare const fullApi: ApiFromModules<{
   collaborationTyping: typeof collaborationTyping;
   conversationRouting: typeof conversationRouting;
   creativesCopy: typeof creativesCopy;
+  crons: typeof crons;
   customFormulas: typeof customFormulas;
   debug: typeof debug;
   directMessages: typeof directMessages;

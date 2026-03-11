@@ -1,5 +1,3 @@
-import type { LucideIcon } from 'lucide-react'
-
 export interface IntegrationStatus {
   providerId: string
   status: string
@@ -23,6 +21,8 @@ export interface MetricRecord {
   providerId: string
   /** The ad account ID this metric belongs to (for multi-account support). */
   accountId?: string | null
+  /** Optional Meta publisher platform or equivalent reporting surface. */
+  publisherPlatform?: string | null
   date: string
   spend: number
   impressions: number

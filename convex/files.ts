@@ -1,7 +1,5 @@
 import type { Id } from './_generated/dataModel'
 import {
-  authenticatedMutation,
-  authenticatedQuery,
   zAuthenticatedMutation,
   zAuthenticatedQuery,
 } from './functions'

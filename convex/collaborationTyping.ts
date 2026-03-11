@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { Errors } from './errors'
-import { workspaceQuery, workspaceMutation } from './functions'
+import { workspaceMutation, workspaceQuery } from './functions'
 
 const typingIndicatorValidator = v.object({
   _id: v.id('collaborationTyping'),
@@ -44,7 +44,6 @@ export const setTyping = workspaceMutation({
     channelType: v.string(),
     clientId: v.union(v.string(), v.null()),
     projectId: v.union(v.string(), v.null()),
-    userId: v.string(),
     name: v.string(),
     role: v.union(v.string(), v.null()),
     isTyping: v.boolean(),
@@ -57,10 +56,6 @@ export const setTyping = workspaceMutation({
     const currentUserId = typeof ctx?.legacyId === 'string' ? ctx.legacyId : null
     if (!currentUserId) {
       throw Errors.auth.unauthorized()
-    }
-
-    if (args.userId !== currentUserId) {
-      throw Errors.auth.forbidden('Cannot set typing state for another user')
     }
 
     const resolvedName =

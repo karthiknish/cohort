@@ -123,7 +123,7 @@ export function DataTable<TData, TValue>({
     })
   }, [searchKey, effectiveSearchValue])
 
-  // eslint_disable-next-line react-hooks/incompatible-library
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = createReactTable({
     data,
     columns,

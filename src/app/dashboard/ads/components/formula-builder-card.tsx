@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react'
 import {
     Plus,
     Trash2,
-    Play,
     Save,
     AlertCircle,
     CheckCircle,
@@ -38,7 +37,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 import type { UseFormulaEditorReturn, FormulaValidationResult } from '../hooks/use-formula-editor'
 import type { MetricTotals } from '../hooks/use-derived-metrics'

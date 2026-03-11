@@ -218,7 +218,7 @@ export function NotificationsDropdown() {
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" disabled={triggerDisabled}>
+        <Button variant="ghost" size="icon" className="relative" disabled={triggerDisabled} aria-label="View notifications">
           <Bell className="h-5 w-5" />
           <span className="sr-only">View notifications</span>
           {unreadCount > 0 && (

@@ -5,8 +5,6 @@ import { toast as sonnerToast } from 'sonner'
 
 import type { ToastProps, ToastVariantProps } from '@/components/ui/toast'
 
-type ToastToDismiss = string
-
 type Toast = ToastProps & {
   id: string
   title?: React.ReactNode
@@ -26,24 +24,12 @@ type ToastState = {
   toasts: Toast[]
 }
 
-const variantToMethod = {
-  default: 'message' as const,
-  destructive: 'error' as const,
-  success: 'success' as const,
-  warning: 'warning' as const,
-  info: 'info' as const,
-  loading: 'loading' as const,
-} as const
-
-type ToastMethod = typeof variantToMethod[keyof typeof variantToMethod]
-
 /**
  * Toast function using Sonner under the hood for robust notifications.
  * Maintains the same API as the legacy implementation for backward compatibility.
  */
 export const toast = ({ ...props }: Omit<Toast, 'id'>) => {
   const id = Math.random().toString(36).slice(2, 9)
-  const method = variantToMethod[props.variant ?? 'default'] ?? 'message'
 
   // Handle undo action (special case for legacy compatibility)
   if (props.onUndo && props.undoLabel) {
@@ -85,7 +71,7 @@ export const toast = ({ ...props }: Omit<Toast, 'id'>) => {
   // Standard toast based on variant
   else {
     if (props.variant === 'loading') {
-      sonnerToast.loading(props.title ?? 'Loading...', {
+      sonnerToast.loading(props.title ?? 'Loading…', {
         id,
         description: props.description,
       })
@@ -124,7 +110,7 @@ export const toast = ({ ...props }: Omit<Toast, 'id'>) => {
 
   const update = (updateProps: Toast) => {
     if (updateProps.variant === 'loading') {
-      sonnerToast.loading(updateProps.title ?? 'Loading...', {
+      sonnerToast.loading(updateProps.title ?? 'Loading…', {
         id,
         description: updateProps.description,
       })

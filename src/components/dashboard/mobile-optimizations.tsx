@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { ChevronUp, ChevronDown, X, Filter, SlidersHorizontal } from 'lucide-react'
+import { ChevronUp, ChevronDown, X, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
@@ -91,9 +91,9 @@ export function MobileCollapsible({
       >
         <span>{title}</span>
         {!isMobile && (
-          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+          <span aria-hidden="true" className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md">
             {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
+          </span>
         )}
       </button>
       {shouldShow && (
@@ -299,6 +299,7 @@ export function ResponsiveGrid({
     <div
       className={cn(
         'grid gap-4',
+        gridClasses[mobileCols],
         `sm:${gridClasses[tabletCols]} lg:${gridClasses[desktopCols]}`,
         className
       )}
@@ -336,7 +337,7 @@ export function MobileStickyHeader({
     >
       <div className="flex h-14 items-center gap-3 px-4">
         {onBack && (
-          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
+          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0" aria-label="Go back">
             ←
           </Button>
         )}
@@ -373,7 +374,6 @@ export function PullToRefresh({
   const [touchStart, setTouchStart] = useState(0)
   const [touchCurrent, setTouchCurrent] = useState(0)
   const [isPulling, setIsPulling] = useState(false)
-  const [shouldRefresh, setShouldRefresh] = useState(false)
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (window.scrollY === 0) {
@@ -397,9 +397,7 @@ export function PullToRefresh({
     if (isPulling) {
       const diff = touchCurrent - touchStart
       if (diff > threshold) {
-        setShouldRefresh(true)
         await onRefresh()
-        setShouldRefresh(false)
       }
     }
     setTouchStart(0)

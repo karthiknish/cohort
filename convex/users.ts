@@ -1,7 +1,6 @@
 import { mutation, query, internalQuery, internalMutation } from './_generated/server'
 import { v } from 'convex/values'
 import {
-  authenticatedMutation,
   authenticatedQuery,
   zAuthenticatedMutation,
   zAuthenticatedQuery,
@@ -19,6 +18,24 @@ function normalizeEmail(value: string | null | undefined) {
   const trimmed = value.trim()
   if (!trimmed) return { email: null, emailLower: null }
   return { email: trimmed, emailLower: trimmed.toLowerCase() }
+}
+
+function pickMostRecentlyUpdated<T extends { updatedAtMs: number | null; createdAtMs: number | null }>(rows: T[]) {
+  const [firstRow, ...restRows] = rows
+  if (!firstRow) {
+    return null
+  }
+
+  let best = firstRow
+  for (const row of restRows) {
+    const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
+    const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
+    if (rowUpdated > bestUpdated) {
+      best = row
+    }
+  }
+
+  return best
 }
  
 const userZ = z.object({
@@ -61,18 +78,7 @@ export const _getByEmailInternal = internalQuery({
       .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
-    if (rows.length === 0) return null
-
-    let best = rows[0]!
-    for (const row of rows) {
-      const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
-      const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
-      if (rowUpdated > bestUpdated) {
-        best = row
-      }
-    }
-
-    return best
+    return pickMostRecentlyUpdated(rows)
   },
 })
 
@@ -92,16 +98,9 @@ export const _updateUserRoleStatus = internalMutation({
       .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
-    if (matches.length === 0) throw Errors.resource.notFound('User', args.email)
+    const best = pickMostRecentlyUpdated(matches)
 
-    let best = matches[0]!
-    for (const row of matches) {
-      const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
-      const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
-      if (rowUpdated > bestUpdated) {
-        best = row
-      }
-    }
+    if (!best) throw Errors.resource.notFound('User', args.email)
 
     await ctx.db.patch(best._id, {
       role: args.role,
@@ -154,16 +153,9 @@ export const getByEmail = zAuthenticatedQuery({
       .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
-    if (rows.length === 0) throw Errors.resource.notFound('User', args.email)
+    const best = pickMostRecentlyUpdated(rows)
 
-    let best = rows[0]!
-    for (const row of rows) {
-      const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
-      const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
-      if (rowUpdated > bestUpdated) {
-        best = row
-      }
-    }
+    if (!best) throw Errors.resource.notFound('User', args.email)
 
     return {
       legacyId: best.legacyId,
@@ -209,7 +201,6 @@ export const listWorkspaceMembers = zAuthenticatedQuery({
         .unique(),
     ])
 
-    // Combine results, avoiding duplicates
     const allRows = agencyAdmin
       ? [agencyAdmin, ...membersByAgency.filter((r) => r.legacyId !== agencyAdmin.legacyId)]
       : membersByAgency
@@ -272,18 +263,6 @@ export const listDMParticipants = zAuthenticatedQuery({
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 200, 1), 500)
     const role = args.currentUserRole?.toLowerCase()
-
-    if (role === 'admin') {
-      const rows = await ctx.db.query('users').take(limit)
-      return rows
-        .filter((row) => row.status !== 'disabled' && row.status !== 'suspended' && row.legacyId !== args.currentUserId)
-        .map((row) => ({
-          id: row.legacyId,
-          name: row.name ?? row.email ?? 'Unnamed user',
-          email: row.email ?? undefined,
-          role: row.role ?? undefined,
-        }))
-    }
 
     const [membersByAgency, agencyAdmin] = await Promise.all([
       ctx.db
@@ -379,16 +358,9 @@ export const getNotificationPreferencesByEmail = internalQuery({
       .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
-    if (rows.length === 0) throw Errors.auth.userNotFound()
+    const best = pickMostRecentlyUpdated(rows)
 
-    let best = rows[0]!
-    for (const row of rows) {
-      const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
-      const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
-      if (rowUpdated > bestUpdated) {
-        best = row
-      }
-    }
+    if (!best) throw Errors.auth.userNotFound()
 
     return {
       notificationPreferences: best.notificationPreferences ?? null,
@@ -611,16 +583,9 @@ export const getUserByEmailPublic = internalQuery({
       .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
       .collect()
 
-    if (rows.length === 0) return { found: false, user: null }
+    const best = pickMostRecentlyUpdated(rows)
 
-    let best = rows[0]!
-    for (const row of rows) {
-      const bestUpdated = best.updatedAtMs ?? best.createdAtMs ?? 0
-      const rowUpdated = row.updatedAtMs ?? row.createdAtMs ?? 0
-      if (rowUpdated > bestUpdated) {
-        best = row
-      }
-    }
+    if (!best) return { found: false, user: null }
 
     return { 
       found: true, 

@@ -2,10 +2,10 @@
 
 import { useCallback, useMemo, useState } from 'react'
 
-import { UnifiedMessagePane, type MessagePaneHeaderInfo } from './unified-message-pane'
-import type { UnifiedMessage } from './message-list'
-
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
+import type { UnifiedMessage } from './message-list'
+import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
+import { UnifiedMessagePane } from './unified-message-pane'
 
 function toUnifiedMessage(msg: DirectMessage): UnifiedMessage {
   return {

@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useCallback, useRef } from 'react'
-import { TaskRecord } from '@/types/tasks'
+import { useCallback, useEffect, useRef } from 'react'
+
+import type { TaskRecord } from '@/types/tasks'
 
 type KeyboardNavigationOptions = {
   tasks: TaskRecord[]
@@ -104,28 +105,31 @@ export function useTaskKeyboardNavigation({
     }
   }, [getSelectedTaskById, onStatusChange])
 
-  // Keyboard shortcuts definition
-  const shortcuts: ShortcutAction[] = [
-    { key: 'j', description: 'Move down', action: selectNext },
-    { key: 'k', description: 'Move up', action: selectPrevious },
-    { key: 'ArrowDown', description: 'Move down', action: selectNext },
-    { key: 'ArrowUp', description: 'Move up', action: selectPrevious },
-    { key: 'Home', description: 'First task', action: selectFirst },
-    { key: 'End', description: 'Last task', action: selectLast },
-    { key: 'Enter', description: 'Edit task', action: editSelected, condition: () => !!selectedTaskId },
-    { key: 'e', description: 'Edit task', action: editSelected, condition: () => !!selectedTaskId },
-    { key: 'Backspace', description: 'Delete task', action: deleteSelected, condition: () => !!selectedTaskId },
-    { key: 'Delete', description: 'Delete task', action: deleteSelected, condition: () => !!selectedTaskId },
-    { key: 's', description: 'Cycle status', action: cycleStatus, condition: () => !!selectedTaskId },
-    { key: 'n', description: 'New task', action: () => onQuickAdd?.(), condition: () => !!onQuickAdd },
-    { key: 'c', description: 'Focus search', action: () => {
-      const el = document.getElementById('task-search')
-      if (el) el.focus()
-    }},
-  ]
-
   useEffect(() => {
     if (!enabled) return
+
+    const shortcuts: ShortcutAction[] = [
+      { key: 'j', description: 'Move down', action: selectNext },
+      { key: 'k', description: 'Move up', action: selectPrevious },
+      { key: 'ArrowDown', description: 'Move down', action: selectNext },
+      { key: 'ArrowUp', description: 'Move up', action: selectPrevious },
+      { key: 'Home', description: 'First task', action: selectFirst },
+      { key: 'End', description: 'Last task', action: selectLast },
+      { key: 'Enter', description: 'Edit task', action: editSelected, condition: () => !!selectedTaskId },
+      { key: 'e', description: 'Edit task', action: editSelected, condition: () => !!selectedTaskId },
+      { key: 'Backspace', description: 'Delete task', action: deleteSelected, condition: () => !!selectedTaskId },
+      { key: 'Delete', description: 'Delete task', action: deleteSelected, condition: () => !!selectedTaskId },
+      { key: 's', description: 'Cycle status', action: cycleStatus, condition: () => !!selectedTaskId },
+      { key: 'n', description: 'New task', action: () => onQuickAdd?.(), condition: () => !!onQuickAdd },
+      {
+        key: 'c',
+        description: 'Focus search',
+        action: () => {
+          const el = document.getElementById('task-search')
+          if (el) el.focus()
+        },
+      },
+    ]
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if typing in an input, textarea, or contenteditable
@@ -157,7 +161,7 @@ export function useTaskKeyboardNavigation({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [enabled, shortcuts, selectNext, selectPrevious, selectFirst, selectLast, editSelected, deleteSelected, cycleStatus, onQuickAdd])
+  }, [enabled, selectNext, selectPrevious, selectFirst, selectLast, editSelected, deleteSelected, cycleStatus, selectedTaskId, onQuickAdd])
 
   return {
     selectedTask: getSelectedTaskById(),

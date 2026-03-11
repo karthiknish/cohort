@@ -117,7 +117,7 @@ export function SetupAlerts({
                 {loadingMetaAccountOptions ? (
                   <>
                     <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                    Loading...
+                    Loading…
                   </>
                 ) : (
                   'Reload accounts'

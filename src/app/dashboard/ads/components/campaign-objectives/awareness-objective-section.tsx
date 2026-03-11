@@ -55,7 +55,7 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
                   type="button"
                   onClick={() => onChange({ optimizationGoal: option.value })}
                   disabled={disabled}
-                  className={`flex items-start gap-3 p-3 rounded-lg border text-left transition-all ${
+                  className={`flex items-start gap-3 p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
                     formData.optimizationGoal === option.value
                       ? 'border-purple-500 bg-purple-500/5'
                       : 'border-border hover:border-purple-500/50'

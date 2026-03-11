@@ -1,23 +1,23 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
-import { BarChart3, Plus, Trash2, Users, Check } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Progress } from '@/components/ui/progress'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
+import {
+  CreatePollDialogFooter,
+  CreatePollDialogHeader,
+  CreatePollDialogTrigger,
+  CreatePollFormFields,
+  CreatePollSettings,
+  PollCardFooterActions,
+  PollCardHeader,
+  PollOptionRow,
+  QuickPollTrigger,
+} from './message-polls-sections'
 
 export interface PollOption {
   id: string
@@ -138,155 +138,48 @@ export function PollCard({
     }
   }, [onEndPoll, poll.id, toast])
 
-  const isExpired = poll.endTime && new Date(poll.endTime) < new Date()
+  const isExpired = typeof poll.endTime === 'string' ? new Date(poll.endTime) < new Date() : false
 
   return (
     <div className={cn('border rounded-lg overflow-hidden bg-muted/30', className)}>
-      {/* Header */}
-      <div className="p-3 border-b bg-muted/50">
-        <div className="flex items-start gap-2">
-          <BarChart3 className="h-5 w-5 text-primary mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="font-medium">{poll.question}</p>
-            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-              <span>{totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}</span>
-              {poll.endTime && (
-                <>
-                  <span>•</span>
-                  <span className={cn(isExpired && 'text-red-500')}>
-                    {isExpired ? 'Ended' : `Ends ${new Date(poll.endTime).toLocaleString()}`}
-                  </span>
-                </>
-              )}
-              {poll.anonymous && (
-                <>
-                  <span>•</span>
-                  <span>Anonymous</span>
-                </>
-              )}
-              {poll.multipleChoice && (
-                <>
-                  <span>•</span>
-                  <span>Multiple choices</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <PollCardHeader isExpired={isExpired} poll={poll} totalVotes={totalVotes} />
 
-      {/* Options */}
       <div className="p-3 space-y-2">
         {sortedOptions.map((option, index) => {
           const voteCount = option.voters.length
           const percentage = totalVotes > 0 ? (voteCount / totalVotes) * 100 : 0
           const isSelected = selectedOptions.includes(option.id)
-          const hasUserVoted = option.voters.includes(userId ?? '')
-
-          // Determine if we show results or voting UI
           const showOptionResults = showResults || hasVoted || isExpired || !canVote
 
           return (
-            <div
+            <PollOptionRow
               key={option.id}
-              className={cn(
-                'relative p-3 rounded-lg border transition-colors',
-                !showOptionResults && 'hover:bg-background cursor-pointer',
-                isSelected && 'border-primary bg-primary/5',
-                showOptionResults && index === 0 && percentage > 0 && 'border-primary/50'
-              )}
-              onClick={() => !showOptionResults && handleToggleOption(option.id)}
-            >
-              {/* Progress bar background (shown in results mode) */}
-              {showOptionResults && percentage > 0 && (
-                <div
-                  className="absolute inset-0 bg-primary/5 rounded-lg -z-10"
-                  style={{ width: `${percentage}%` }}
-                />
-              )}
-
-              <div className="flex items-start gap-3">
-                {/* Checkbox/Radio (only in voting mode) */}
-                {!showOptionResults && (
-                  <div className="pt-0.5">
-                    <Checkbox
-                      checked={isSelected}
-                      onChange={() => handleToggleOption(option.id)}
-                    />
-                  </div>
-                )}
-
-                {/* Winner indicator */}
-                {showOptionResults && index === 0 && voteCount > 0 && voteCount > (sortedOptions[1]?.voters.length ?? 0) && (
-                  <Check className="h-4 w-4 text-primary" />
-                )}
-
-                {/* Option text */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{option.text}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {/* Progress bar */}
-                    {showOptionResults && (
-                      <div className="flex-1">
-                        <Progress value={percentage} className="h-2" />
-                      </div>
-                    )}
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {showOptionResults ? (
-                        <>
-                          {voteCount} {voteCount === 1 ? 'vote' : 'votes'} ({percentage.toFixed(0)}%)
-                        </>
-                      ) : (
-                        <>
-                          {voteCount} {voteCount === 1 ? 'vote' : 'votes'}
-                        </>
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+              canVote={canVote}
+              handleToggleOption={handleToggleOption}
+              hasLeadingWinner={index === 0}
+              isSelected={isSelected}
+              option={option}
+              percentage={percentage}
+              showOptionResults={showOptionResults}
+              sortedOptions={sortedOptions}
+              voteCount={voteCount}
+            />
           )
         })}
       </div>
 
-      {/* Footer actions */}
-      {(canVote && !hasVoted && !isExpired) || canEnd ? (
-        <div className="p-3 border-t bg-muted/50 flex items-center justify-between">
-          {canVote && !hasVoted && !isExpired && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleVote}
-              disabled={selectedOptions.length === 0 || isVoting}
-            >
-              {isVoting ? 'Submitting...' : 'Submit Vote'}
-            </Button>
-          )}
-
-          {canEnd && !isExpired && onEndPoll && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleEndPoll}
-            >
-              End Poll
-            </Button>
-          )}
-
-          {hasVoted && !showResults && (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setShowResults(true)}
-            >
-              View Results
-            </Button>
-          )}
-        </div>
-      ) : null}
+      <PollCardFooterActions
+        canEnd={canEnd && !!onEndPoll}
+        canVote={canVote}
+        hasVoted={hasVoted}
+        isExpired={isExpired}
+        isVoting={isVoting}
+        onEndPoll={handleEndPoll}
+        onShowResults={() => setShowResults(true)}
+        onVote={handleVote}
+        selectedOptionsCount={selectedOptions.length}
+        showResults={showResults}
+      />
     </div>
   )
 }
@@ -409,127 +302,29 @@ export function CreatePollDialog({
   }, [question, options, multipleChoice, anonymous, workspaceId, userId, onCreate, toast])
 
   const defaultTrigger = (
-    <DialogTrigger asChild>
-      <Button variant="outline" size="sm" className="gap-2">
-        <BarChart3 className="h-4 w-4" />
-        Create Poll
-      </Button>
-    </DialogTrigger>
+    <CreatePollDialogTrigger />
   )
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger || defaultTrigger}
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Create Poll
-          </DialogTitle>
-          <DialogDescription>
-            Create a poll to gather team feedback or make decisions.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          {/* Question */}
-          <div className="space-y-2">
-            <Label htmlFor="question">Question *</Label>
-            <Input
-              id="question"
-              placeholder="What do you want to ask?"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              maxLength={200}
-            />
-          </div>
-
-          {/* Options */}
-          <div className="space-y-2">
-            <Label>Options *</Label>
-            <div className="space-y-2">
-              {options.map((option, index) => (
-                <div key={option.id} className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
-                  <Input
-                    placeholder={`Option ${index + 1}`}
-                    value={option.text}
-                    onChange={(e) => handleOptionChange(option.id, e.target.value)}
-                    className="flex-1"
-                  />
-                  {options.length > 2 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleRemoveOption(option.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddOption}
-              className="w-full"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Option
-            </Button>
-          </div>
-
-          {/* Settings */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Allow multiple selections</Label>
-                <p className="text-xs text-muted-foreground">
-                  Users can select more than one option
-                </p>
-              </div>
-              <Checkbox
-                checked={multipleChoice}
-                onCheckedChange={(checked) => setMultipleChoice(checked as boolean)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Anonymous votes</Label>
-                <p className="text-xs text-muted-foreground">
-                  Hide who voted for each option
-                </p>
-              </div>
-              <Checkbox
-                checked={anonymous}
-                onCheckedChange={(checked) => setAnonymous(checked as boolean)}
-              />
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isCreating}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={handleCreate}
-            disabled={isCreating || !question.trim()}
-          >
-            {isCreating ? 'Creating...' : 'Create Poll'}
-          </Button>
-        </DialogFooter>
+        <CreatePollDialogHeader />
+        <CreatePollFormFields
+          onAddOption={handleAddOption}
+          onOptionChange={handleOptionChange}
+          onQuestionChange={setQuestion}
+          onRemoveOption={handleRemoveOption}
+          options={options}
+          question={question}
+        />
+        <CreatePollSettings
+          anonymous={anonymous}
+          multipleChoice={multipleChoice}
+          onAnonymousChange={setAnonymous}
+          onMultipleChoiceChange={setMultipleChoice}
+        />
+        <CreatePollDialogFooter isCreating={isCreating} onCancel={() => setOpen(false)} onCreate={handleCreate} question={question} />
       </DialogContent>
     </Dialog>
   )
@@ -542,12 +337,7 @@ export function QuickPollButton(props: CreatePollDialogProps) {
   return (
     <CreatePollDialog
       {...props}
-      trigger={
-        <Button type="button" variant="ghost" size="icon" className="h-7 w-7">
-          <BarChart3 className="h-4 w-4" />
-          <span className="sr-only">Create poll</span>
-        </Button>
-      }
+      trigger={<QuickPollTrigger />}
     />
   )
 }

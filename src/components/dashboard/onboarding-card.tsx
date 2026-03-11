@@ -68,7 +68,7 @@ export function OnboardingCard() {
           {onboardingSteps.map((step, index) => (
             <div
               key={step.title}
-              className="group relative space-y-3 rounded-lg border border-muted/60 bg-background p-4 transition-all hover:border-primary/40 hover:shadow-sm"
+              className="group relative space-y-3 rounded-lg border border-muted/60 bg-background p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/40 hover:shadow-sm"
             >
               <div className="flex items-start justify-between">
                 <Badge variant="outline" className="text-xs">

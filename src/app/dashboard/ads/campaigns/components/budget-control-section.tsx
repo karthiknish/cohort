@@ -29,13 +29,6 @@ type Props = {
   onReloadCampaign?: () => void | Promise<void>
 }
 
-function unwrapApiErrorMessage(payload: unknown): string | null {
-  const rec = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
-  const error = rec && typeof rec.error === 'string' ? rec.error : null
-  const message = rec && typeof rec.message === 'string' ? rec.message : null
-  return error || message || null
-}
-
 function parseBudgetMode(providerId: string, budgetType?: string | null): BudgetUiMode | null {
   const raw = typeof budgetType === 'string' ? budgetType.trim().toLowerCase() : ''
 

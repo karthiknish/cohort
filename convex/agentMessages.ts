@@ -1,5 +1,4 @@
 import { v } from 'convex/values'
-import { Errors } from './errors'
 import { workspaceQuery, workspaceMutation } from './functions'
 
 const paramScalarValidator = v.union(v.null(), v.boolean(), v.number(), v.string())

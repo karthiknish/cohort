@@ -13,7 +13,7 @@ import type {
 
 import { enrichSummaryWithMetrics, getEfficiencyBreakdown } from './efficiency'
 import { analyzeAllTrends, getTrendChartData } from './trends'
-import { analyzeFunnel, getFunnelChartData, calculateFunnelEfficiency } from './funnel'
+import { analyzeFunnel, getFunnelChartData } from './funnel'
 import { PROVIDER_COLORS, GRAYS } from '@/lib/colors'
 import { runBenchmarkAnalysis, getBenchmarkChartData, calculateBenchmarkScore } from './benchmarks'
 import { calculateOptimalAllocation, generateBudgetInsights, projectBudgetImpact } from './budget'

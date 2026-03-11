@@ -1,0 +1,138 @@
+react-doctor v0.0.30
+
+✔ Select projects to scan › cohorts
+Scanning uncommitted changes
+
+Scanning /Users/karthik/React-projects/cohort...
+
+- Detecting framework. Found Next.js.
+[32m✔[39m Detecting framework. Found Next.js.
+- Detecting React version. Found React ^19.2.4.
+[32m✔[39m Detecting React version. Found React ^19.2.4.
+- Detecting language. Found TypeScript.
+[32m✔[39m Detecting language. Found TypeScript.
+- Detecting React Compiler. Found React Compiler.
+[32m✔[39m Detecting React Compiler. Found React Compiler.
+- Scanning 277 changed source files.
+[32m✔[39m Scanning 277 changed source files.
+- Loaded react-doctor config.
+[32m✔[39m Loaded react-doctor config.
+
+- Running lint checks...
+[32m✔[39m Running lint checks.
+  ⚠ 3 setState calls in a single useEffect — consider using useReducer or deriving state (9)
+    Combine into useReducer: `const [state, dispatch] = useReducer(reducer, initialState)`
+    src/app/dashboard/proposals/components/deck-progress-overlays.tsx: 77, 92
+    src/components/dashboard/mobile-optimizations.tsx: 470
+    src/components/tasks/task-time-tracking.tsx: 48
+    src/components/projects/create-milestone-dialog.tsx: 73
+    src/app/dashboard/ads/campaigns/components/create-creative-dialog.tsx: 197
+    src/app/dashboard/activity/page.tsx: 560
+    src/components/ppt-viewer.tsx: 147
+    src/app/admin/features/components/feature-form-dialog.tsx: 97
+
+  ⚠ Component "AuthProvider" has 5 useState calls — consider useReducer for related state (26)
+    Group related state: `const [state, dispatch] = useReducer(reducer, { field1, field2, ... })`
+    src/contexts/auth-context.tsx: 78
+    src/app/dashboard/ads/campaigns/[providerId]/[campaignId]/creative/[creativeId]/components/creative-social-preview.tsx: 56
+    src/app/dashboard/ads/campaigns/components/campaign-ads-section.tsx: 559
+    src/app/page.client.tsx: 15
+    src/app/settings/components/profile-card.tsx: 23
+    src/components/dashboard/advanced-filter.tsx: 86
+    src/components/tasks/task-comments.tsx: 59
+    src/app/dashboard/collaboration/components/image-preview-modal.tsx: 35
+    src/app/dashboard/ads/campaigns/[providerId]/[campaignId]/page.tsx: 122
+    src/app/dashboard/ads/components/audience-builder-dialog.tsx: 61
+    src/app/dashboard/proposals/components/proposal-template-selector.tsx: 58
+    src/components/agent-mode/agent-mode-panel.tsx: 88
+    src/app/dashboard/collaboration/components/message-polls.tsx: 202
+    src/components/projects/create-milestone-dialog.tsx: 58
+    src/components/client-workspace-selector.tsx: 61
+    src/app/dashboard/meetings/components/in-site-meeting-room-chat.tsx: 31
+    src/app/admin/users/page.tsx: 88
+    src/components/dashboard/global-search.tsx: 75
+    src/components/dashboard/ad-connections-card.tsx: 118
+    src/app/dashboard/ads/campaigns/components/create-creative-dialog.tsx: 85
+    src/app/dashboard/collaboration/components/message-pane.tsx: 114
+    src/app/dashboard/ads/components/campaign-management-card.tsx: 136
+    src/app/dashboard/activity/page.tsx: 221
+    src/components/ppt-viewer.tsx: 30
+    src/app/admin/features/components/feature-form-dialog.tsx: 67
+    src/app/dashboard/ads/campaigns/components/audience-control-section.tsx: 58
+
+  ⚠ Component "AuthProvider" is 368 lines — consider breaking it into smaller focused components (32)
+    Extract logical sections into focused components: `<UserHeader />`, `<UserActions />`, etc.
+    src/contexts/auth-context.tsx: 78
+    src/app/admin/page.tsx: 89
+    src/app/dashboard/ads/campaigns/[providerId]/[campaignId]/creative/[creativeId]/components/creative-social-preview.tsx: 50
+    src/app/dashboard/ads/campaigns/components/campaign-ads-section.tsx: 559
+    src/components/tasks/task-kanban.tsx: 64
+    src/app/settings/components/profile-card.tsx: 21
+    src/app/dashboard/proposals/components/proposal-step-content.tsx: 52
+    src/app/dashboard/collaboration/components/unified-inbox.tsx: 118
+    src/app/dashboard/ads/campaigns/components/insights-charts-section.tsx: 118
+    src/app/dashboard/proposals/components/proposal-submitted-panel.tsx: 41
+    src/components/tasks/task-comments.tsx: 59
+    src/app/dashboard/collaboration/components/image-preview-modal.tsx: 30
+    src/app/dashboard/ads/campaigns/[providerId]/[campaignId]/page.tsx: 122
+    src/app/dashboard/collaboration/components/notification-settings.tsx: 72
+    src/app/dashboard/ads/components/audience-builder-dialog.tsx: 61
+    src/app/dashboard/proposals/components/proposal-template-selector.tsx: 54
+    src/app/dashboard/collaboration/components/unified-message-pane.tsx: 90
+    src/components/agent-mode/agent-mode-panel.tsx: 62
+    src/app/dashboard/proposals/page.tsx: 41
+    src/components/client-workspace-selector.tsx: 61
+    src/app/dashboard/meetings/components/in-site-meeting-room-chat.tsx: 31
+    src/app/admin/users/page.tsx: 88
+    src/app/dashboard/collaboration/components/rich-composer.tsx: 50
+    src/app/dashboard/proposals/components/proposal-analytics-card.tsx: 86
+    src/app/dashboard/ads/campaigns/components/create-creative-dialog.tsx: 77
+    src/app/dashboard/collaboration/components/message-pane.tsx: 74
+    src/app/dashboard/ads/components/campaign-management-card.tsx: 125
+    src/app/dashboard/ads/campaigns/[providerId]/[campaignId]/creative/[creativeId]/components/creative-editor-tabs.tsx: 55
+    src/app/dashboard/activity/page.tsx: 221
+    src/components/ppt-viewer.tsx: 30
+    src/app/admin/features/components/feature-form-dialog.tsx: 61
+    src/app/dashboard/ads/campaigns/components/audience-control-section.tsx: 58
+
+  ⚠ Inline render function "renderMedia()" — extract to a separate component for proper reconciliation (7)
+    Extract to a named component: `const ListItem = ({ item }) => <div>{item.name}</div>`
+    src/app/dashboard/ads/campaigns/[providerId]/[campaignId]/creative/[creativeId]/components/creative-social-preview.tsx: 222, 282, 332, 393, 505
+    src/components/notifications-dropdown.tsx: 271
+    src/app/dashboard/projects/components/gantt-view.tsx: 138
+
+  ⚠ useState initialized from prop "defaultOpen" — if this value should stay in sync with the prop, derive it during render instead
+    Remove useState and compute the value inline: `const value = transform(propName)`
+    src/components/dashboard/mobile-optimizations.tsx: 69
+
+  ⚠ "recharts" is a heavy library — use React.lazy() or next/dynamic for code splitting (5)
+    Use `const Component = dynamic(() => import('library'), { ssr: false })` from next/dynamic or React.lazy()
+    src/app/dashboard/ads/campaigns/components/insights-charts-section.tsx: 17
+    src/components/dashboard/performance-chart.tsx: 71
+    src/components/ui/recharts-dynamic.tsx: 3
+    src/components/dashboard/interactive-chart.tsx: 4
+    src/app/dashboard/ads/components/insights-charts-card.tsx: 21
+
+  ⚠ useEffect simulating an event handler — move logic to an actual event handler instead (2)
+    Move the conditional logic into onClick, onChange, or onSubmit handlers directly
+    src/components/agent-mode/agent-mode-panel.tsx: 124
+    src/app/dashboard/activity/page.tsx: 579
+
+  ┌────────────────────────────────────────────────────┐
+  │ ┌─────┐                                            │
+  │ │ ◠ ◠ │                                            │
+  │ │  ▽  │                                            │
+  │ └─────┘                                            │
+  │ React Doctor (www.react.doctor)                    │
+  │                                                    │
+  │ 95 / 100  Great                                    │
+  │                                                    │
+  │ ████████████████████████████████████████████████░░ │
+  │                                                    │
+  │ ⚠ 82 warnings  across 47/277 files  in 8.0s        │
+  └────────────────────────────────────────────────────┘
+
+  Full diagnostics written to /var/folders/qv/31ctyblx1c919qntl1_ckm1h0000gn/T/react-doctor-3cdf7804-28df-4697-9c88-27d0c0baa798
+
+  Share your results: https://www.react.doctor/share?p=cohorts&s=95&w=82&f=47
+

@@ -1,6 +1,6 @@
 // Collaboration hook types and interfaces
 
-import type { CollaborationAttachment, CollaborationMessage, CollaborationReaction } from '@/types/collaboration'
+import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 import type { Channel } from '../types'
 
 export type ChannelSummary = {

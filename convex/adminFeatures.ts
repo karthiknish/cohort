@@ -1,9 +1,20 @@
 import { v } from 'convex/values'
-import { adminQuery, adminMutation, type AuthenticatedQueryCtx, type AuthenticatedMutationCtx } from './functions'
-import { Errors } from './errors'
+
+import { Errors, isAppError } from './errors'
+import { adminMutation, adminQuery, type AuthenticatedMutationCtx, type AuthenticatedQueryCtx } from './functions'
 
 function nowMs() {
   return Date.now()
+}
+
+function throwAdminFeaturesError(operation: string, error: unknown, context?: Record<string, unknown>): never {
+  console.error(`[adminFeatures:${operation}]`, context ?? {}, error)
+
+  if (isAppError(error)) {
+    throw error
+  }
+
+  throw Errors.base.internal('Admin feature operation failed')
 }
 
 const referenceValidator = v.object({
@@ -14,20 +25,28 @@ const referenceValidator = v.object({
 export const listFeatures = adminQuery({
   args: {},
   handler: async (ctx: AuthenticatedQueryCtx) => {
-    const rows = await ctx.db.query('platformFeatures').order('desc').collect()
+    try {
+      const rows = await ctx.db
+        .query('platformFeatures')
+        .withIndex('by_createdAtMs', (q) => q)
+        .order('desc')
+        .collect()
 
-    return {
-      features: rows.map((row) => ({
-        id: row._id,
-        title: row.title,
-        description: row.description,
-        status: row.status,
-        priority: row.priority,
-        imageUrl: row.imageUrl,
-        references: row.references,
-        createdAtMs: row.createdAtMs,
-        updatedAtMs: row.updatedAtMs,
-      })),
+      return {
+        features: rows.map((row) => ({
+          id: row._id,
+          title: row.title,
+          description: row.description,
+          status: row.status,
+          priority: row.priority,
+          imageUrl: row.imageUrl,
+          references: row.references,
+          createdAtMs: row.createdAtMs,
+          updatedAtMs: row.updatedAtMs,
+        })),
+      }
+    } catch (error) {
+      throwAdminFeaturesError('listFeatures', error)
     }
   },
 })
@@ -47,21 +66,25 @@ export const createFeature = adminMutation({
     references: v.array(referenceValidator),
   },
   handler: async (ctx: AuthenticatedMutationCtx, args) => {
-    const timestamp = nowMs()
+    try {
+      const timestamp = nowMs()
 
-    const id = await ctx.db.insert('platformFeatures', {
-      legacyId: null,
-      title: args.title,
-      description: args.description,
-      status: args.status,
-      priority: args.priority,
-      imageUrl: args.imageUrl,
-      references: args.references,
-      createdAtMs: timestamp,
-      updatedAtMs: timestamp,
-    })
+      const id = await ctx.db.insert('platformFeatures', {
+        legacyId: null,
+        title: args.title,
+        description: args.description,
+        status: args.status,
+        priority: args.priority,
+        imageUrl: args.imageUrl,
+        references: args.references,
+        createdAtMs: timestamp,
+        updatedAtMs: timestamp,
+      })
 
-    return { id }
+      return { id }
+    } catch (error) {
+      throwAdminFeaturesError('createFeature', error, { title: args.title })
+    }
   },
 })
 
@@ -87,51 +110,59 @@ export const bulkUpsertFeatures = adminMutation({
     ),
   },
   handler: async (ctx: AuthenticatedMutationCtx, args) => {
-    for (const feature of args.features) {
-      const existing = await ctx.db
-        .query('platformFeatures')
-        .withIndex('by_legacyId', (q) => q.eq('legacyId', feature.legacyId))
-        .unique()
+    try {
+      for (const feature of args.features) {
+        const existing = await ctx.db
+          .query('platformFeatures')
+          .withIndex('by_legacyId', (q) => q.eq('legacyId', feature.legacyId))
+          .unique()
 
-      const payload = {
-        legacyId: feature.legacyId,
-        title: feature.title,
-        description: feature.description,
-        status: feature.status,
-        priority: feature.priority,
-        imageUrl: feature.imageUrl,
-        references: feature.references,
-        createdAtMs: feature.createdAtMs,
-        updatedAtMs: feature.updatedAtMs,
+        const payload = {
+          legacyId: feature.legacyId,
+          title: feature.title,
+          description: feature.description,
+          status: feature.status,
+          priority: feature.priority,
+          imageUrl: feature.imageUrl,
+          references: feature.references,
+          createdAtMs: feature.createdAtMs,
+          updatedAtMs: feature.updatedAtMs,
+        }
+
+        if (existing) {
+          await ctx.db.patch(existing._id, payload)
+        } else {
+          await ctx.db.insert('platformFeatures', payload)
+        }
       }
 
-      if (existing) {
-        await ctx.db.patch(existing._id, payload)
-      } else {
-        await ctx.db.insert('platformFeatures', payload)
-      }
+      return { ok: true, upserted: args.features.length }
+    } catch (error) {
+      throwAdminFeaturesError('bulkUpsertFeatures', error, { count: args.features.length })
     }
-
-    return { ok: true, upserted: args.features.length }
   },
 })
 
 export const getFeature = adminQuery({
   args: { id: v.id('platformFeatures') },
   handler: async (ctx: AuthenticatedQueryCtx, args) => {
-    const row = await ctx.db.get(args.id)
-    if (!row) return null
+    try {
+      const row = await ctx.db.get(args.id)
+      if (!row) return null
 
-    return {
-      id: row._id,
-      title: row.title,
-      description: row.description,
-      status: row.status,
-      priority: row.priority,
-      imageUrl: row.imageUrl,
-      references: row.references,
-      createdAtMs: row.createdAtMs,
-      updatedAtMs: row.updatedAtMs,
+      return {
+        id: row._id,
+        title: row.title,
+        description: row.description,
+        status: row.status,
+        priority: row.priority,
+        imageUrl: row.imageUrl,
+        references: row.references,
+        createdAtMs: row.createdAtMs,
+        updatedAtMs: row.updatedAtMs,
+      }
+    } catch (error) {
+      throwAdminFeaturesError('getFeature', error, { id: args.id })
     }
   },
 })
@@ -154,37 +185,45 @@ export const updateFeature = adminMutation({
     references: v.optional(v.array(referenceValidator)),
   },
   handler: async (ctx: AuthenticatedMutationCtx, args) => {
-    const existing = await ctx.db.get(args.id)
-    if (!existing) {
-      throw Errors.resource.notFound('Feature')
+    try {
+      const existing = await ctx.db.get(args.id)
+      if (!existing) {
+        throw Errors.resource.notFound('Feature')
+      }
+
+      const patch: Record<string, unknown> = {
+        updatedAtMs: nowMs(),
+      }
+
+      if (args.title !== undefined) patch.title = args.title
+      if (args.description !== undefined) patch.description = args.description
+      if (args.status !== undefined) patch.status = args.status
+      if (args.priority !== undefined) patch.priority = args.priority
+      if (args.imageUrl !== undefined) patch.imageUrl = args.imageUrl
+      if (args.references !== undefined) patch.references = args.references
+
+      await ctx.db.patch(args.id, patch)
+
+      return { ok: true }
+    } catch (error) {
+      throwAdminFeaturesError('updateFeature', error, { id: args.id })
     }
-
-    const patch: Record<string, unknown> = {
-      updatedAtMs: nowMs(),
-    }
-
-    if (args.title !== undefined) patch.title = args.title
-    if (args.description !== undefined) patch.description = args.description
-    if (args.status !== undefined) patch.status = args.status
-    if (args.priority !== undefined) patch.priority = args.priority
-    if (args.imageUrl !== undefined) patch.imageUrl = args.imageUrl
-    if (args.references !== undefined) patch.references = args.references
-
-    await ctx.db.patch(args.id, patch)
-
-    return { ok: true }
   },
 })
 
 export const deleteFeature = adminMutation({
   args: { id: v.id('platformFeatures') },
   handler: async (ctx: AuthenticatedMutationCtx, args) => {
-    const existing = await ctx.db.get(args.id)
-    if (!existing) {
-      throw Errors.resource.notFound('Feature')
-    }
+    try {
+      const existing = await ctx.db.get(args.id)
+      if (!existing) {
+        throw Errors.resource.notFound('Feature')
+      }
 
-    await ctx.db.delete(args.id)
-    return { ok: true }
+      await ctx.db.delete(args.id)
+      return { ok: true }
+    } catch (error) {
+      throwAdminFeaturesError('deleteFeature', error, { id: args.id })
+    }
   },
 })

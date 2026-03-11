@@ -15,8 +15,6 @@ export const getCurrentUser = query({
 
 // Type exports for better TypeScript integration
 // Use: import type { Session, User } from '@/convex/auth'
-import type { GenericCtx } from "@convex-dev/better-auth/utils";
-import type { DataModel } from "./_generated/dataModel";
 import { createAuth as _createAuth } from "./betterAuth/auth";
 
 export type Auth = ReturnType<typeof _createAuth>;

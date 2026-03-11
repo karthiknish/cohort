@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useRef } from 'react'
 import { useMutation } from 'convex/react'
+import { useCallback, useEffect, useRef } from 'react'
 
 import { usePreview } from '@/contexts/preview-context'
 import { collaborationApi } from '@/lib/convex-api'
@@ -9,13 +9,54 @@ import type { Channel } from '../types'
 import { TYPING_TIMEOUT_MS, TYPING_UPDATE_INTERVAL_MS } from './constants'
 
 interface UseTypingOptions {
-  userId: string | null
   workspaceId: string | null
   selectedChannel: Channel | null
   resolveSenderDetails: () => { senderName: string; senderRole: string | null }
 }
 
-export function useTyping({ userId, workspaceId, selectedChannel, resolveSenderDetails }: UseTypingOptions) {
+type TypingUpdateRequest = {
+  workspaceId: string
+  channelId: string
+  channelType: Channel['type']
+  clientId: string | null
+  projectId: string | null
+  name: string
+  role: string | null
+  isTyping: boolean
+  ttlMs: number
+}
+
+export function buildTypingUpdateRequest({
+  workspaceId,
+  selectedChannel,
+  senderName,
+  senderRole,
+  isTyping,
+}: {
+  workspaceId: string | null
+  selectedChannel: Channel | null
+  senderName: string
+  senderRole: string | null
+  isTyping: boolean
+}): TypingUpdateRequest | null {
+  if (!workspaceId || !selectedChannel || !senderName) {
+    return null
+  }
+
+  return {
+    workspaceId,
+    channelId: selectedChannel.id,
+    channelType: selectedChannel.type,
+    clientId: selectedChannel.clientId ?? null,
+    projectId: selectedChannel.projectId ?? null,
+    name: senderName,
+    role: senderRole,
+    isTyping,
+    ttlMs: TYPING_TIMEOUT_MS,
+  }
+}
+
+export function useTyping({ workspaceId, selectedChannel, resolveSenderDetails }: UseTypingOptions) {
   const { isPreviewMode } = usePreview()
   const selectedChannelId = selectedChannel?.id ?? null
   const composerFocusedRef = useRef(false)
@@ -27,33 +68,30 @@ export function useTyping({ userId, workspaceId, selectedChannel, resolveSenderD
 
   const sendTypingUpdate = useCallback(
     async (isTyping: boolean) => {
-      if (isPreviewMode || !userId || !workspaceId || !selectedChannel) {
+      if (isPreviewMode) {
         return
       }
 
       const { senderName, senderRole } = resolveSenderDetails()
-      if (!senderName) {
+      const request = buildTypingUpdateRequest({
+        workspaceId,
+        selectedChannel,
+        senderName,
+        senderRole,
+        isTyping,
+      })
+
+      if (!request) {
         return
       }
 
       try {
-        await setTyping({
-          workspaceId,
-          channelId: selectedChannel.id,
-          channelType: selectedChannel.type,
-          clientId: selectedChannel.clientId ?? null,
-          projectId: selectedChannel.projectId ?? null,
-          userId,
-          name: senderName,
-          role: senderRole,
-          isTyping,
-          ttlMs: TYPING_TIMEOUT_MS,
-        })
+        await setTyping(request)
       } catch (error) {
         console.warn('[collaboration] failed to update typing status', error)
       }
     },
-    [isPreviewMode, resolveSenderDetails, selectedChannel, setTyping, userId, workspaceId]
+    [isPreviewMode, resolveSenderDetails, selectedChannel, setTyping, workspaceId]
   )
 
   const stopTyping = useCallback(() => {

@@ -237,7 +237,7 @@ export function SystemHealthView() {
                     disabled={refreshing}
                 >
                     <RefreshCw className={cn("mr-2 h-4 w-4", refreshing && "animate-spin")} />
-                    {refreshing ? 'Checking...' : 'Refresh'}
+                    {refreshing ? 'Checking…' : 'Refresh'}
                 </Button>
             </div>
 
@@ -285,7 +285,7 @@ export function SystemHealthView() {
 
                         return (
                             <Card key={name} className={cn(
-                                "overflow-hidden transition-all border-muted/60",
+                                "overflow-hidden transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] border-muted/60",
                                 check.status === 'error' && "border-destructive/30 bg-destructive/5",
                                 isWarning && "border-amber-200 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20"
                             )}>

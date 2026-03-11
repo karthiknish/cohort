@@ -209,7 +209,7 @@ export function ImageUploader({
           )}
           <div className="text-center">
             <p className="text-sm font-medium text-foreground">
-              {isUploading ? 'Uploading...' : placeholder}
+              {isUploading ? 'Uploading…' : placeholder}
             </p>
             <p className="text-xs text-muted-foreground">
               Drag and drop or click to browse

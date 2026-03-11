@@ -279,7 +279,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
               <Label htmlFor="milestone-description">Notes</Label>
               <Textarea
                 id="milestone-description"
-                placeholder="Optional context or acceptance criteria..."
+                placeholder="Optional context or acceptance criteria…"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}

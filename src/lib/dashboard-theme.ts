@@ -22,7 +22,7 @@ export const DASHBOARD_THEME = {
     destructive: 'bg-destructive/10 text-destructive border-destructive/20',
   },
   buttons: {
-    base: 'rounded-xl font-bold uppercase tracking-widest text-[11px] shadow-sm transition-all active:scale-[0.98]',
+    base: 'rounded-xl font-bold uppercase tracking-widest text-[11px] shadow-sm transition-[transform,box-shadow,background-color,color] active:scale-[0.98]',
     primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
     outline: 'border-muted/40 bg-background hover:bg-muted/5 hover:text-primary',
     ghost: 'hover:bg-muted/5 hover:text-primary',
@@ -38,7 +38,7 @@ export const DASHBOARD_THEME = {
   },
   stats: {
     container: 'grid gap-4 sm:grid-cols-2 lg:grid-cols-4',
-    card: 'overflow-hidden border-muted/50 bg-background shadow-sm transition-all hover:shadow-md',
+    card: 'overflow-hidden border-muted/50 bg-background shadow-sm transition-[box-shadow,background-color,border-color] hover:shadow-md',
     label: 'text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80',
     value: 'text-2xl font-bold text-foreground',
     description: 'text-xs text-muted-foreground',
@@ -72,6 +72,7 @@ export const PAGE_ICONS = {
   tasks: 'ListTodo',
   analytics: 'BarChart3',
   ads: 'Target',
+  socials: 'Share2',
   meetings: 'Video',
   collaboration: 'MessageSquare',
   proposals: 'FileText',
@@ -101,6 +102,10 @@ export const PAGE_TITLES: Record<string, { title: string; description: string }>
   ads: {
     title: 'Ad Platforms',
     description: 'Connect and manage advertising accounts.',
+  },
+  socials: {
+    title: 'Socials',
+    description: 'Connect Meta business accounts to monitor Facebook and Instagram performance.',
   },
   meetings: {
     title: 'Meetings',

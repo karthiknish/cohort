@@ -9,12 +9,6 @@ import { useClientContext } from '@/contexts/client-context'
 import type { MentionItem } from '@/components/agent-mode/mention-dropdown'
 import { projectsApi, usersApi } from '@/lib/convex-api'
 
-interface Project {
-  id: string
-  name: string
-  status?: string
-}
-
 interface Team {
   id: string
   name: string

@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import {
   Check,
   Copy,
@@ -35,7 +36,21 @@ import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+
+const METRIC_SKELETON_KEYS = ['metric-1', 'metric-2', 'metric-3', 'metric-4', 'metric-5', 'metric-6'] as const
+
+function toStableStringItems(items: string[]) {
+  const counts = new Map<string, number>()
+  return items.map((value, index) => {
+    const occurrence = (counts.get(value) ?? 0) + 1
+    counts.set(value, occurrence)
+    return {
+      value,
+      index,
+      key: `${value}::${occurrence}`,
+    }
+  })
+}
 
 export function CreativeEditorTabs(props: {
   providerId: string
@@ -99,10 +114,13 @@ export function CreativeEditorTabs(props: {
     metricsLoading,
     metricsError,
     performanceSummary,
-    efficiencyScore,
     onRefreshPerformance,
     algorithmicInsights,
   } = props
+  const editableHeadlineItems = useMemo(() => toStableStringItems(editedHeadlines), [editedHeadlines])
+  const headlineItems = useMemo(() => toStableStringItems(creative.headlines ?? []), [creative.headlines])
+  const editableDescriptionItems = useMemo(() => toStableStringItems(editedDescriptions), [editedDescriptions])
+  const descriptionItems = useMemo(() => toStableStringItems(creative.descriptions ?? []), [creative.descriptions])
 
   return (
     <div className="lg:col-span-7 flex flex-col gap-6">
@@ -164,23 +182,23 @@ export function CreativeEditorTabs(props: {
             <CardContent className="space-y-3">
               {isEditing ? (
                 editedHeadlines.length > 0 ? (
-                  editedHeadlines.map((headline, i) => (
-                    <div key={i} className="group relative flex items-center gap-2">
+                  editableHeadlineItems.map((headlineItem) => (
+                    <div key={headlineItem.key} className="group relative flex items-center gap-2">
                       <Input
-                        value={headline}
-                        onChange={(e) => onUpdateHeadline(i, e.target.value)}
-                        placeholder="Enter headline..."
+                        value={headlineItem.value}
+                        onChange={(e) => onUpdateHeadline(headlineItem.index, e.target.value)}
+                        placeholder="Enter headline…"
                         className="flex-1 bg-background border-muted focus-visible:ring-primary/20"
                       />
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                        onClick={() => onRemoveHeadline(i)}
+                        onClick={() => onRemoveHeadline(headlineItem.index)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                      {i === 0 && (
+                      {headlineItem.index === 0 && (
                         <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-full" />
                       )}
                     </div>
@@ -194,19 +212,19 @@ export function CreativeEditorTabs(props: {
                   </div>
                 )
               ) : creative.headlines && creative.headlines.length > 0 ? (
-                creative.headlines.map((headline, i) => (
-                  <div key={i} className="group flex items-start justify-between gap-3 p-3 rounded-xl border bg-background hover:border-primary/20 transition-colors">
+                headlineItems.map((headlineItem) => (
+                  <div key={headlineItem.key} className="group flex items-start justify-between gap-3 p-3 rounded-xl border bg-background hover:border-primary/20 transition-colors">
                     <div className="flex gap-3">
-                      <span className="mt-0.5 text-[10px] font-bold text-muted-foreground/50">{i + 1}</span>
-                      <p className="text-sm font-medium">{headline}</p>
+                      <span className="mt-0.5 text-[10px] font-bold text-muted-foreground/50">{headlineItem.index + 1}</span>
+                      <p className="text-sm font-medium">{headlineItem.value}</p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => onCopy(headline, `headline-${i}`)}
+                      onClick={() => onCopy(headlineItem.value, `headline-${headlineItem.index}`)}
                     >
-                      {copiedField === `headline-${i}` ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedField === `headline-${headlineItem.index}` ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
                 ))
@@ -259,24 +277,24 @@ export function CreativeEditorTabs(props: {
             <CardContent className="space-y-4">
               {isEditing ? (
                 editedDescriptions.length > 0 ? (
-                  editedDescriptions.map((desc, i) => (
-                    <div key={i} className="group relative flex items-start gap-2">
+                  editableDescriptionItems.map((descriptionItem) => (
+                    <div key={descriptionItem.key} className="group relative flex items-start gap-2">
                       <Textarea
-                        value={desc}
-                        onChange={(e) => onUpdateDescription(i, e.target.value)}
-                        placeholder="Enter primary text..."
+                        value={descriptionItem.value}
+                        onChange={(e) => onUpdateDescription(descriptionItem.index, e.target.value)}
+                        placeholder="Enter primary text…"
                         className="flex-1 min-h-[100px] bg-background border-muted focus-visible:ring-primary/20 resize-none"
                       />
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive mt-1"
-                        onClick={() => onRemoveDescription(i)}
+                        onClick={() => onRemoveDescription(descriptionItem.index)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                       <div className="absolute bottom-2 right-12 text-[10px] text-muted-foreground">
-                        {desc.length} chars
+                        {descriptionItem.value.length} chars
                       </div>
                     </div>
                   ))
@@ -289,19 +307,19 @@ export function CreativeEditorTabs(props: {
                   </div>
                 )
               ) : creative.descriptions && creative.descriptions.length > 0 ? (
-                creative.descriptions.map((desc, i) => (
-                  <div key={i} className="group flex items-start justify-between gap-3 p-4 rounded-xl border bg-background hover:border-primary/20 transition-colors">
+                descriptionItems.map((descriptionItem) => (
+                  <div key={descriptionItem.key} className="group flex items-start justify-between gap-3 p-4 rounded-xl border bg-background hover:border-primary/20 transition-colors">
                     <div className="flex gap-3">
-                      <span className="mt-0.5 text-[10px] font-bold text-muted-foreground/50">{i + 1}</span>
-                      <p className="text-sm leading-relaxed">{desc}</p>
+                      <span className="mt-0.5 text-[10px] font-bold text-muted-foreground/50">{descriptionItem.index + 1}</span>
+                      <p className="text-sm leading-relaxed">{descriptionItem.value}</p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => onCopy(desc, `desc-${i}`)}
+                      onClick={() => onCopy(descriptionItem.value, `desc-${descriptionItem.index}`)}
                     >
-                      {copiedField === `desc-${i}` ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedField === `desc-${descriptionItem.index}` ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
                 ))
@@ -386,7 +404,7 @@ export function CreativeEditorTabs(props: {
                   ) : creative.landingPageUrl ? (
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs truncate text-primary font-medium underline underline-offset-4">{creative.landingPageUrl}</p>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onCopy(creative.landingPageUrl ?? '', 'landing')}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onCopy(creative.landingPageUrl ?? '', 'landing')} aria-label="Copy landing page URL">
                         {copiedField === 'landing' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
                       </Button>
                     </div>
@@ -423,7 +441,7 @@ export function CreativeEditorTabs(props: {
                       <SelectItem value="30">Last 30 days</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRefreshPerformance} disabled={metricsLoading}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRefreshPerformance} disabled={metricsLoading} aria-label="Refresh performance metrics">
                     <RefreshCw className={cn("h-4 w-4", metricsLoading && "animate-spin")} />
                   </Button>
                 </div>
@@ -452,7 +470,7 @@ export function CreativeEditorTabs(props: {
                 </div>
               ) : metricsLoading && !performanceSummary ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />)}
+                  {METRIC_SKELETON_KEYS.map((metricKey) => <div key={metricKey} className="h-20 rounded-xl bg-muted animate-pulse" />)}
                 </div>
               ) : performanceSummary ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -519,8 +537,8 @@ export function CreativeEditorTabs(props: {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
-                  {algorithmicInsights.map((insight, idx) => (
-                    <div key={idx} className="group relative p-5 rounded-2xl bg-gradient-to-br from-background to-muted/20 border border-muted shadow-sm hover:border-primary/20 transition-all">
+                  {algorithmicInsights.map((insight) => (
+                    <div key={`${insight.title}-${insight.message}-${insight.suggestion}`} className="group relative p-5 rounded-2xl bg-gradient-to-br from-background to-muted/20 border border-muted shadow-sm hover:border-primary/20 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]">
                       <div className="flex items-center justify-between gap-4 mb-2">
                         <p className="font-bold text-sm tracking-tight">{insight.title}</p>
                         {typeof insight.score === 'number' ? (
@@ -543,7 +561,7 @@ export function CreativeEditorTabs(props: {
                         <p className="text-xs font-medium">{insight.suggestion}</p>
                       </div>
 
-                      <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100">
+                      <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100" aria-label="Add recommendation to draft">
                         <Plus className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -568,7 +586,7 @@ export function CreativeEditorTabs(props: {
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Creative ID</p>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-mono truncate">{creative.creativeId}</p>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onCopy(creative.creativeId, 'creativeId')}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onCopy(creative.creativeId, 'creativeId')} aria-label="Copy creative ID">
                       {copiedField === 'creativeId' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
                     </Button>
                   </div>
@@ -577,7 +595,7 @@ export function CreativeEditorTabs(props: {
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Campaign ID</p>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-mono truncate">{creative.campaignId}</p>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onCopy(creative.campaignId, 'campaignId')}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onCopy(creative.campaignId, 'campaignId')} aria-label="Copy campaign ID">
                       {copiedField === 'campaignId' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
                     </Button>
                   </div>
@@ -598,7 +616,7 @@ export function CreativeEditorTabs(props: {
                         <p className="text-xs truncate text-primary">{creative.imageUrl}</p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onCopy(creative.imageUrl ?? '', 'imageUrl')}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onCopy(creative.imageUrl ?? '', 'imageUrl')} aria-label="Copy source image URL">
                       {copiedField === 'imageUrl' ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
@@ -615,7 +633,7 @@ export function CreativeEditorTabs(props: {
                         <p className="text-xs truncate text-primary">{creative.videoUrl}</p>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onCopy(creative.videoUrl ?? '', 'videoUrl')}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onCopy(creative.videoUrl ?? '', 'videoUrl')} aria-label="Copy source video URL">
                       {copiedField === 'videoUrl' ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </Button>
                   </div>

@@ -5,7 +5,6 @@
 import { formatCurrency } from '../utils'
 import type {
   AdMetricsSummary,
-  EnrichedMetricsSummary,
   AlgorithmicInsight,
   TrendResult,
   FunnelAnalysis,
@@ -30,9 +29,7 @@ export function generateEfficiencyInsights(summary: AdMetricsSummary): Algorithm
     totalClicks,
     totalConversions,
     averageRoaS,
-    averageCpc,
     efficiencyScore,
-    cpa,
     roi,
   } = enriched
 

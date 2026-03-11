@@ -32,7 +32,6 @@ interface UseSendMessageOptions {
 
 export function useSendMessage({
   workspaceId,
-  ensureSessionToken,
   currentUserId,
   channels,
   selectedChannelId,
@@ -193,7 +192,6 @@ interface UseFetchMessagesOptions {
 
 export function useFetchMessages({
   workspaceId,
-  ensureSessionToken,
   channels,
   setMessagesByChannel,
 }: UseFetchMessagesOptions) {

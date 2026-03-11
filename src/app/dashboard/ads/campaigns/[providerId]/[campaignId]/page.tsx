@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useAction } from 'convex/react'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 
 import { type DateRange } from '@/app/dashboard/ads/components/date-range-picker'
 import { Card, CardContent } from '@/components/ui/card'
@@ -81,19 +81,6 @@ type CampaignInsightsResponse = {
   currency?: string
 }
 
-function unwrapApiData(payload: unknown): unknown {
-  const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
-  if (!record) return payload
-
-  // `createApiHandler` wraps successful responses as `{ success: true, data: ... }`.
-  // Some legacy handlers may still return `{ data: ... }`.
-  if ('success' in record && record.success === true && 'data' in record) {
-    return record.data
-  }
-
-  return 'data' in record ? record.data : payload
-}
-
 function toIsoDateOnly(date: Date): string {
   return date.toISOString().split('T')[0]!
 }
@@ -132,9 +119,12 @@ function isProviderId(value: string): value is ProviderId {
 // ============================================================================
 // MAIN PAGE COMPONENT
 // ============================================================================
-export default function CampaignInsightsPage() {
+function CampaignInsightsPageContent() {
   const params = useParams<{ providerId: string; campaignId: string }>()
-  const searchParams = useSearchParams()
+  const searchParams = useMemo(
+    () => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : ''),
+    []
+  )
   const { selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { user } = useAuth()
@@ -574,5 +564,13 @@ export default function CampaignInsightsPage() {
         />
       )}
     </div>
+  )
+}
+
+export default function CampaignInsightsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[320px] rounded-xl border border-muted/50 bg-muted/20" aria-busy="true" />}>
+      <CampaignInsightsPageContent />
+    </Suspense>
   )
 }

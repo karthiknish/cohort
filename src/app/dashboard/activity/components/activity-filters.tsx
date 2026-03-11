@@ -95,7 +95,7 @@ export function ActivityFilters({
         </svg>
         <Input
           id="activity-search"
-          placeholder="Search activity... (⌘K)"
+          placeholder="Search activity… (⌘K)"
           className="pl-9"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}

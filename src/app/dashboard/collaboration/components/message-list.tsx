@@ -1,15 +1,18 @@
 'use client'
 
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
-import { LoaderCircle, RefreshCw, Smile } from 'lucide-react'
-import EmojiPicker, { type EmojiClickData, Theme } from 'emoji-picker-react'
-
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Separator } from '@/components/ui/separator'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import type { CollaborationMessage, CollaborationMention } from '@/types/collaboration'
+import { useMessageListRenderContext } from './message-list-render-context'
+import {
+  ChannelMessageCard,
+  DirectMessageCard,
+  MessageDateSeparator,
+  MessageListEmptyState,
+  MessageListLoadMoreButton,
+  MessageListLoadingState,
+} from './message-list-sections'
+import type { MessageListRenderers } from './message-list-sections'
 
 export interface UnifiedMessage {
   id: string
@@ -103,23 +106,11 @@ export interface MessageListProps {
   focusThreadId?: string | null
 }
 
-function formatTime(ms: number): string {
-  const date = new Date(ms)
-  return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-}
+const EMPTY_REACTION_PENDING_BY_MESSAGE: Record<string, string | null> = {}
 
 function formatDate(ms: number): string {
   const date = new Date(ms)
   return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
 }
 
 function groupMessagesByDate(messages: UnifiedMessage[]): Map<string, UnifiedMessage[]> {
@@ -146,7 +137,7 @@ export function MessageList({
   hasMore,
   onLoadMore,
   onToggleReaction,
-  reactionPendingByMessage = {},
+  reactionPendingByMessage = EMPTY_REACTION_PENDING_BY_MESSAGE,
   renderMessageExtras,
   renderMessageActions,
   renderMessageContent,
@@ -166,6 +157,7 @@ export function MessageList({
   focusMessageId,
   focusThreadId,
 }: MessageListProps) {
+  const renderContext = useMessageListRenderContext()
   const scrollRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prependSnapshotRef = useRef<{ scrollTop: number; scrollHeight: number } | null>(null)
@@ -189,6 +181,25 @@ export function MessageList({
     groupMessagesByDate(sortedMessages),
     [sortedMessages]
   )
+  const effectiveRenderMessageExtras = renderMessageExtras ?? renderContext?.renderMessageExtras
+  const effectiveRenderMessageActions = renderMessageActions ?? renderContext?.renderMessageActions
+  const effectiveRenderMessageContent = renderMessageContent ?? renderContext?.renderMessageContent
+  const effectiveRenderMessageAttachments = renderMessageAttachments ?? renderContext?.renderMessageAttachments
+  const effectiveRenderMessageFooter = renderMessageFooter ?? renderContext?.renderMessageFooter
+  const effectiveRenderThreadSection = renderThreadSection ?? renderContext?.renderThreadSection
+  const effectiveRenderEditForm = renderEditForm ?? renderContext?.renderEditForm
+  const effectiveRenderDeletedInfo = renderDeletedInfo ?? renderContext?.renderDeletedInfo
+  const effectiveRenderMessageWrapper = renderMessageWrapper ?? renderContext?.renderMessageWrapper
+  const renderers: MessageListRenderers = {
+    renderMessageActions: effectiveRenderMessageActions,
+    renderMessageAttachments: effectiveRenderMessageAttachments,
+    renderMessageContent: effectiveRenderMessageContent,
+    renderMessageExtras: effectiveRenderMessageExtras,
+    renderMessageFooter: effectiveRenderMessageFooter,
+    renderThreadSection: effectiveRenderThreadSection,
+    renderEditForm: effectiveRenderEditForm,
+    renderDeletedInfo: effectiveRenderDeletedInfo,
+  }
 
   const requestLoadOlder = useCallback(() => {
     const container = scrollRef.current
@@ -333,35 +344,11 @@ export function MessageList({
   const isChannel = variant === 'channel'
 
   if (isLoading && messages.length === 0) {
-    return (
-      <div className="flex-1 overflow-y-auto min-h-0 p-4">
-        {loadingSkeleton || (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className={cn('flex gap-2', i % 2 === 0 && 'justify-end')}>
-                <div className="h-10 w-10 rounded-full bg-muted animate-pulse shrink-0" />
-                <div className="space-y-2">
-                  <div className="h-4 w-32 bg-muted animate-pulse rounded" />
-                  <div className="h-16 w-48 bg-muted animate-pulse rounded-lg" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    )
+    return <MessageListLoadingState loadingSkeleton={loadingSkeleton} />
   }
 
   if (messages.length === 0 && !isLoading) {
-    return (
-      <div className="flex-1 overflow-y-auto min-h-0 p-4">
-        {emptyState || (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground">No messages yet</p>
-          </div>
-        )}
-      </div>
-    )
+    return <MessageListEmptyState emptyState={emptyState} />
   }
 
   return (
@@ -372,313 +359,63 @@ export function MessageList({
     >
       <div className={cn('p-4', isChannel && 'space-y-4')}>
         {hasMore && (
-          <div className="flex justify-center pb-4">
-            <Button variant="ghost" size="sm" onClick={requestLoadOlder} disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <LoaderCircle className="h-3.5 w-3.5 animate-spin mr-2" />
-                  Loading...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-3.5 w-3.5 mr-2" />
-                  Load older messages
-                </>
-              )}
-            </Button>
-          </div>
+          <MessageListLoadMoreButton disabled={isLoading} isLoading={isLoading} onLoadMore={requestLoadOlder} />
         )}
 
         <div className={cn('space-y-6', isChannel && 'space-y-1')}>
           {Array.from(groupedMessages.entries()).map(([date, msgs]) => (
             <div key={date}>
-              <div className="flex items-center gap-2 mb-4">
-                <Separator className="flex-1" />
-                <span className="text-xs text-muted-foreground font-medium">
-                  {date}
-                </span>
-                <Separator className="flex-1" />
-              </div>
+              <MessageDateSeparator date={date} />
               
               <div className={cn('space-y-3', isChannel && 'space-y-1')}>
                 {msgs.map((message) => {
-                  const isOwn = message.senderId === currentUserId
-                  const isPendingThis = localReactionPending?.startsWith(message.id) || 
-                    reactionPendingByMessage[message.id]
                   const isEditing = editingMessageId === message.id
                   const isDeleting = deletingMessageId === message.id
                   const isUpdating = updatingMessageId === message.id
                   
                   if (isChannel) {
+                    const content = (
+                      <ChannelMessageCard
+                        currentUserId={currentUserId}
+                        highlighted={message.id === highlightedMessageId}
+                        isDeleting={isDeleting}
+                        isEditing={isEditing}
+                        isUpdating={isUpdating}
+                        localReactionPending={localReactionPending}
+                        message={message}
+                        onReact={handleReaction}
+                        reactionPendingByMessage={reactionPendingByMessage}
+                        renderers={renderers}
+                        showAvatars={showAvatars}
+                      />
+                    )
+
                     return (
-                      <div
-                        key={message.id}
-                        data-message-id={message.id}
-                        data-thread-root-id={message.threadRootId ?? message.id}
-                        className={cn(
-                          "group relative flex items-start gap-3 px-6 py-2.5 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none",
-                          !message.deleted && "hover:bg-muted/5",
-                          message.id === highlightedMessageId && 'bg-primary/10 ring-1 ring-primary/30 rounded-lg'
-                        )}
-                      >
-                        {showAvatars && (
-                          <div className="shrink-0 pt-1">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback className="text-xs bg-muted">
-                                {getInitials(message.senderName)}
-                              </AvatarFallback>
-                            </Avatar>
-                          </div>
-                        )}
-                        
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">{message.senderName}</span>
-                            {message.senderRole && (
-                              <span className="text-xs text-muted-foreground">({message.senderRole})</span>
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              {formatTime(message.createdAtMs)}
-                            </span>
-                            {message.edited && !message.deleted && (
-                              <span className="text-xs text-muted-foreground">(edited)</span>
-                            )}
-                          </div>
-                          
-                          {/* Message content, edit form, or deleted info */}
-                          {isEditing && renderEditForm ? (
-                            renderEditForm(message)
-                          ) : message.deleted ? (
-                            renderDeletedInfo ? (
-                              renderDeletedInfo(message)
-                            ) : (
-                              <p className="text-sm italic text-muted-foreground">Message removed</p>
-                            )
-                          ) : (
-                            <>
-                              {renderMessageContent ? (
-                                renderMessageContent(message)
-                              ) : (
-                                <p className="text-sm whitespace-pre-wrap break-words">
-                                  {message.content}
-                                </p>
-                              )}
-                              
-                              {renderMessageAttachments?.(message)}
-                            </>
-                          )}
-                          
-                          {/* Reactions (not shown when editing or deleted) */}
-                          {!isEditing && !message.deleted && message.reactions && message.reactions.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {message.reactions.map((reaction) => {
-                                const isPending = localReactionPending === `${message.id}-${reaction.emoji}` ||
-                                  reactionPendingByMessage[message.id] === reaction.emoji
-                                
-                                return (
-                                  <button
-                                    key={reaction.emoji}
-                                    type="button"
-                                    onClick={() => handleReaction(message.id, reaction.emoji)}
-                                    disabled={!!isPendingThis || isDeleting || isUpdating}
-                                    className={cn(
-                                      'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs transition-all',
-                                      reaction.userIds.includes(currentUserId ?? '')
-                                        ? 'bg-primary/10 border border-primary/20'
-                                        : 'bg-muted hover:bg-muted/80'
-                                    )}
-                                  >
-                                    {isPending ? (
-                                      <LoaderCircle className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      <span>{reaction.emoji}</span>
-                                    )}
-                                    <span className="text-muted-foreground">{reaction.count}</span>
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          )}
-                          
-                          {renderMessageExtras?.(message)}
-                          
-                          {/* Thread section for channel messages */}
-                          {!isEditing && !message.deleted && renderThreadSection?.(message)}
-                          
-                          {renderMessageFooter?.(message)}
-                        </div>
-                        
-                        {/* Action buttons (not shown when editing or deleted) */}
-                        {!isEditing && !message.deleted && (
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" disabled={isDeleting || isUpdating}>
-                                  <Smile className="h-3 w-3" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <EmojiPicker
-                                  onEmojiClick={(emojiData: EmojiClickData) => {
-                                    handleReaction(message.id, emojiData.emoji)
-                                  }}
-                                  theme={Theme.LIGHT}
-                                  width={300}
-                                  height={350}
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            
-                            {renderMessageActions?.(message)}
-                          </div>
-                        )}
-                        
-                        {/* Deleting overlay */}
-                        {isDeleting && (
-                          <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
-                            <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" />
-                          </div>
-                        )}
-                      </div>
+                      <Fragment key={message.id}>
+                        {effectiveRenderMessageWrapper ? effectiveRenderMessageWrapper(message, content) : content}
+                      </Fragment>
                     )
                   }
 
                   const messageContent = (
-                    <div
-                      key={message.id}
-                      data-message-id={message.id}
-                      data-thread-root-id={message.threadRootId ?? message.id}
-                      className={cn(
-                        'group relative flex gap-2 animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none',
-                        isOwn && 'justify-end'
-                      )}
-                    >
-                      {showAvatars && !isOwn && (
-                        <Avatar className="h-8 w-8 shrink-0">
-                          <AvatarFallback className="text-xs bg-muted">
-                            {getInitials(message.senderName)}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      
-                      <div className={cn('max-w-[70%] flex flex-col', isOwn && 'items-end')}>
-                        <div className={cn(
-                          'rounded-lg px-3 py-2 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
-                          message.deleted
-                            ? 'border border-dashed border-muted/60 bg-background/70 text-muted-foreground'
-                            : isOwn
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'bg-muted shadow-sm'
-                        )}>
-                          {isEditing && renderEditForm ? (
-                            renderEditForm(message)
-                          ) : message.deleted ? (
-                            renderDeletedInfo ? (
-                              renderDeletedInfo(message)
-                            ) : (
-                              <p className="text-sm italic text-muted-foreground">Message removed</p>
-                            )
-                          ) : renderMessageContent ? (
-                            renderMessageContent(message)
-                          ) : (
-                            <p className="text-sm whitespace-pre-wrap break-words">
-                              {message.content}
-                            </p>
-                          )}
-                        </div>
-                        
-                        <div className={cn(
-                          'flex items-center gap-1 mt-1',
-                          isOwn && 'justify-end'
-                        )}>
-                          <span className="text-[10px] text-muted-foreground">
-                            {formatTime(message.createdAtMs)}
-                          </span>
-                          {message.edited && !message.deleted && (
-                            <span className="text-[10px] text-muted-foreground">(edited)</span>
-                          )}
-                        </div>
-                        
-                        {!isEditing && !message.deleted && renderMessageAttachments?.(message)}
-                        
-                        {!isEditing && !message.deleted && message.reactions && message.reactions.length > 0 && (
-                          <div className={cn('flex flex-wrap gap-1 mt-1', isOwn && 'justify-end')}>
-                            {message.reactions.map((reaction) => {
-                              const isPending = localReactionPending === `${message.id}-${reaction.emoji}` ||
-                                reactionPendingByMessage[message.id] === reaction.emoji
-                              
-                              return (
-                                <button
-                                  key={reaction.emoji}
-                                  type="button"
-                                  onClick={() => handleReaction(message.id, reaction.emoji)}
-                                  disabled={!!isPendingThis}
-                                  className={cn(
-                                    'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs transition-all',
-                                    reaction.userIds.includes(currentUserId ?? '')
-                                      ? 'bg-primary/10 border border-primary/20'
-                                      : 'bg-muted hover:bg-muted/80'
-                                  )}
-                                >
-                                  {isPending ? (
-                                    <LoaderCircle className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <span>{reaction.emoji}</span>
-                                  )}
-                                  <span className="text-muted-foreground">{reaction.count}</span>
-                                </button>
-                              )
-                            })}
-                          </div>
-                        )}
-                        
-                        {renderMessageExtras?.(message)}
-                        {renderMessageFooter?.(message)}
-                        
-                        {!isEditing && !message.deleted && (
-                          <div className={cn('flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity', isOwn && 'justify-end')}>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
-                                  <Smile className="h-3 w-3" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <EmojiPicker
-                                  onEmojiClick={(emojiData: EmojiClickData) => {
-                                    handleReaction(message.id, emojiData.emoji)
-                                  }}
-                                  theme={Theme.LIGHT}
-                                  width={300}
-                                  height={350}
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            
-                            {renderMessageActions?.(message)}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {showAvatars && isOwn && (
-                        <Avatar className="h-8 w-8 shrink-0">
-                          <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                            {getInitials(message.senderName)}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-
-                      {isDeleting && (
-                        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/80">
-                          <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" />
-                        </div>
-                      )}
-                    </div>
+                    <DirectMessageCard
+                      currentUserId={currentUserId}
+                      isDeleting={isDeleting}
+                      isEditing={isEditing}
+                      localReactionPending={localReactionPending}
+                      message={message}
+                      onReact={handleReaction}
+                      reactionPendingByMessage={reactionPendingByMessage}
+                      renderers={renderers}
+                      showAvatars={showAvatars}
+                    />
                   )
                   
-                  return renderMessageWrapper 
-                    ? renderMessageWrapper(message, messageContent)
-                    : messageContent
+                  return (
+                    <Fragment key={message.id}>
+                      {effectiveRenderMessageWrapper ? effectiveRenderMessageWrapper(message, messageContent) : messageContent}
+                    </Fragment>
+                  )
                 })}
               </div>
             </div>

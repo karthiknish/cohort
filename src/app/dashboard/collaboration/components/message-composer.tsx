@@ -164,7 +164,7 @@ export function MessageComposer({
         />
 
         <div className="space-y-3">
-          <div className="w-full rounded-lg border border-muted/40 bg-background shadow-sm transition-all focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20">
+          <div className="w-full rounded-lg border border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20">
             {replyingToMessage && (
               <ReplyIndicator message={replyingToMessage} onCancel={onCancelReply} />
             )}
@@ -187,7 +187,7 @@ export function MessageComposer({
             <Button
               onClick={onSend}
               disabled={isSendDisabled}
-              className="inline-flex h-8 items-center gap-2 text-xs transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
+              className="inline-flex h-8 items-center gap-2 text-xs transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
             >
               {sending ? (
                 <LoaderCircle className="h-3.5 w-3.5 animate-spin" />

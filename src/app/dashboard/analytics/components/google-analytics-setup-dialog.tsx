@@ -113,7 +113,7 @@ export function GoogleAnalyticsSetupDialog({
             {loadingProperties ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Loading...
+                Loading…
               </>
             ) : (
               'Reload properties'
@@ -127,7 +127,7 @@ export function GoogleAnalyticsSetupDialog({
             {initializing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                Saving…
               </>
             ) : (
               'Use property'

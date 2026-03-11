@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { Play, Pause, Volume2, VolumeX, Maximize2, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { LazyImage } from '@/components/ui/lazy-image'
 import { cn } from '@/lib/utils'
 import type { CollaborationAttachment } from '@/types/collaboration'
 
@@ -19,7 +20,6 @@ interface GifGalleryItemProps {
  */
 export function GifGalleryItem({
   attachment,
-  index,
   className,
   onPreview,
 }: GifGalleryItemProps) {
@@ -72,11 +72,10 @@ export function GifGalleryItem({
   if (!isGif && !isVideo) {
     return (
       <div className={cn('relative group rounded-lg overflow-hidden', className)}>
-        <img
+        <LazyImage
           src={attachment.url}
           alt={attachment.name}
           className="w-full h-auto object-cover"
-          loading="lazy"
         />
         {onPreview && (
           <button
@@ -216,16 +215,12 @@ export function GifThumbnail({
 }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  const imgRef = useRef<HTMLImageElement>(null)
 
   const isGif = attachment.type?.includes('gif') || attachment.name.toLowerCase().endsWith('.gif')
 
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true)
-    if (!isLoaded && imgRef.current) {
-      imgRef.current.src = attachment.url
-    }
-  }, [attachment.url, isLoaded])
+  }, [])
 
   const handleLoad = useCallback(() => {
     setIsLoaded(true)
@@ -233,11 +228,10 @@ export function GifThumbnail({
 
   if (!isGif) {
     return (
-      <img
+      <LazyImage
         src={attachment.url}
         alt={attachment.name}
         className={cn('w-full h-auto object-cover rounded-lg', className)}
-        loading="lazy"
       />
     )
   }
@@ -249,13 +243,11 @@ export function GifThumbnail({
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Static thumbnail - using first frame or poster */}
-      <img
-        ref={imgRef}
-        src={isHovered ? attachment.url : attachment.url}
+      <LazyImage
+        src={attachment.url}
         alt={attachment.name}
         className={cn('w-full h-auto object-cover transition-opacity', isLoaded && 'opacity-100')}
         onLoad={handleLoad}
-        loading="lazy"
       />
 
       {/* GIF badge */}

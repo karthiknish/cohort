@@ -11,6 +11,7 @@ import {
   Mail,
   MoreVertical,
   Pencil,
+  Plus,
   Reply,
   Send,
   Share2,
@@ -39,12 +40,13 @@ import type { ClientTeamMember } from '@/types/clients'
 import type { PendingAttachment } from '../hooks/types'
 import { MessageAttachments } from './message-attachments'
 import { PendingAttachmentsList } from './message-composer'
+import { MessageContent } from './message-content'
 import { DeletedMessageInfo, DeletingOverlay, MessageEditForm } from './message-item-parts'
 import { collaborationToUnifiedMessage, type UnifiedMessage } from './message-list'
-import { MessageContent } from './message-content'
+import { useMessageListRenderContext } from './message-list-render-context'
 import { MessageReactions } from './message-reactions'
 import { RichComposer } from './rich-composer'
-import type { MessagePaneHeaderInfo } from './unified-message-pane'
+import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
 
 function getInitials(name: string): string {
   return name
@@ -217,10 +219,10 @@ type UnifiedThreadReplyCardProps = {
   onToggleReaction: (messageId: string, emoji: string) => void
   onStartEdit?: (message: UnifiedMessage) => void
   onRequestDelete?: (messageId: string) => void
-  renderEditForm: (message: UnifiedMessage) => ReactNode
-  renderDeletedInfo: (message: UnifiedMessage) => ReactNode
-  renderMessageContent: (message: UnifiedMessage) => ReactNode
-  renderMessageAttachments: (message: UnifiedMessage) => ReactNode
+  renderEditForm?: (message: UnifiedMessage) => ReactNode
+  renderDeletedInfo?: (message: UnifiedMessage) => ReactNode
+  renderMessageContent?: (message: UnifiedMessage) => ReactNode
+  renderMessageAttachments?: (message: UnifiedMessage) => ReactNode
 }
 
 export function UnifiedThreadReplyCard({
@@ -238,17 +240,22 @@ export function UnifiedThreadReplyCard({
   renderMessageContent,
   renderMessageAttachments,
 }: UnifiedThreadReplyCardProps) {
+  const renderContext = useMessageListRenderContext()
   const message = collaborationToUnifiedMessage(reply)
   const canManageMessage = Boolean(currentUserId && message.senderId === currentUserId)
   const isEditing = editingMessageId === message.id
   const isDeleting = activeDeletingMessageId === message.id
   const isUpdating = messageUpdatingId === message.id
+  const effectiveRenderEditForm = renderEditForm ?? renderContext?.renderEditForm
+  const effectiveRenderDeletedInfo = renderDeletedInfo ?? renderContext?.renderDeletedInfo
+  const effectiveRenderMessageContent = renderMessageContent ?? renderContext?.renderMessageContent
+  const effectiveRenderMessageAttachments = renderMessageAttachments ?? renderContext?.renderMessageAttachments
 
   return (
     <div
       key={reply.id}
       className={cn(
-        'group relative rounded-md border border-muted/40 bg-muted/15 px-3 py-2 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+        'group relative rounded-md border border-muted/40 bg-muted/15 px-3 py-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
         !message.deleted && 'hover:border-primary/20 hover:bg-muted/25',
       )}
     >
@@ -268,13 +275,17 @@ export function UnifiedThreadReplyCard({
         </div>
 
         {isEditing ? (
-          renderEditForm(message)
+          effectiveRenderEditForm?.(message) ?? null
         ) : message.deleted ? (
-          renderDeletedInfo(message)
+          effectiveRenderDeletedInfo?.(message) ?? <p className="text-sm italic text-muted-foreground">Message removed</p>
         ) : (
           <>
-            {renderMessageContent(message)}
-            {renderMessageAttachments(message)}
+            {effectiveRenderMessageContent ? (
+              effectiveRenderMessageContent(message)
+            ) : (
+              <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+            )}
+            {effectiveRenderMessageAttachments?.(message)}
           </>
         )}
 
@@ -366,6 +377,12 @@ export function UnifiedConversationHeader({ header }: { header: MessagePaneHeade
         </div>
 
         <div className="flex items-center gap-1">
+          {header.primaryActionLabel && header.onPrimaryAction ? (
+            <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={header.onPrimaryAction} aria-label={header.primaryActionLabel}>
+              <Plus className="h-3.5 w-3.5" />
+              {header.primaryActionLabel}
+            </Button>
+          ) : null}
           {header.isArchived ? (
             <Badge variant="secondary" className="text-xs">
               <Archive className="mr-1 h-3 w-3" />
@@ -382,7 +399,7 @@ export function UnifiedConversationHeader({ header }: { header: MessagePaneHeade
           {header.onArchive || header.onMute || header.onExport ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Conversation actions">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -487,7 +504,7 @@ export function UnifiedComposerSection({
       />
       <div
         className={cn(
-          'w-full rounded-lg border border-muted/40 bg-background shadow-sm transition-all focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20',
+          'w-full rounded-lg border border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20',
           (isComposerFocused || hasPendingAttachments) && 'border-primary/30 shadow-md shadow-primary/5',
         )}
       >
@@ -523,7 +540,7 @@ export function UnifiedComposerSection({
           onClick={onSend}
           disabled={(!messageInput.trim() && !hasPendingAttachments) || isSending || uploadingAttachments}
           size="sm"
-          className="transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
+          className="transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
         >
           {isSending || uploadingAttachments ? (
             <LoaderCircle className="h-4 w-4 animate-spin" />

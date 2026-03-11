@@ -119,7 +119,7 @@ function ProposalHistoryComponent({
               <Button 
                 onClick={onCreateNew} 
                 disabled={!canCreate || isCreating || isGenerating}
-                className="shadow-sm hover:shadow-md transition-all"
+                className="shadow-sm hover:shadow-md transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
               >
                 {isCreating ? (
                   <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
@@ -152,7 +152,7 @@ function ProposalHistoryComponent({
                 <div
                   key={proposal.id}
                   className={cn(
-                    'group relative rounded-xl border bg-card p-5 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm hover:border-primary/20',
+                    'group relative rounded-xl border bg-card p-5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm hover:border-primary/20',
                     isActiveDraft && 'border-primary shadow-[0_0_0_1px_rgba(var(--primary),0.05)] bg-primary/[0.01]'
                   )}
                 >
@@ -242,7 +242,7 @@ function ProposalHistoryComponent({
                             ) : (
                               <FileText className="mr-2 h-3.5 w-3.5 text-primary" />
                             )}
-                            {isDeckPreparing ? 'Preparing...' : 'Generate Deck'}
+                            {isDeckPreparing ? 'Preparing…' : 'Generate Deck'}
                           </Button>
                         ) : null}
 

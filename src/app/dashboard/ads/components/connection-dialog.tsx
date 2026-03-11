@@ -344,7 +344,7 @@ export const ConnectionDialog = memo(function ConnectionDialog({
           {isInProgress && (
             <Button variant="outline" disabled>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Connecting...
+              Connecting…
             </Button>
           )}
 

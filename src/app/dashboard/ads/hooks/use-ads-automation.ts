@@ -6,9 +6,9 @@ import { useMutation } from 'convex/react'
 import { useAuth } from '@/contexts/auth-context'
 import { useToast } from '@/components/ui/use-toast'
 import { adsIntegrationsApi } from '@/lib/convex-api'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 
 import type { IntegrationStatus, ProviderAutomationFormState } from '../components/types'
-import { parseApiError } from '../components/types'
 import {
   DEFAULT_SYNC_FREQUENCY_MINUTES,
   DEFAULT_TIMEFRAME_DAYS,
@@ -16,7 +16,6 @@ import {
   normalizeTimeframe,
   formatProviderName,
 } from '../components/utils'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
 import {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
@@ -101,8 +100,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
       }
     })
     setAutomationDraft(nextDraft)
-  // eslint_disable-next-line react-hooks/exhaustive-deps
-  }, [automationStatusesKey])
+  }, [automationStatuses, automationStatusesKey])
 
   // Handlers
   const updateAutomationDraft = useCallback(
@@ -175,7 +173,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
         setSavingSettings((prev) => ({ ...prev, [providerId]: false }))
       }
     },
-    [automationDraft, toast, user?.agencyId, updateAutomationSettings, onRefresh]
+    [automationDraft, onRefresh, toast, updateAutomationSettings, user?.agencyId, user?.id]
   )
 
   const toggleAdvanced = useCallback((providerId: string) => {
@@ -221,7 +219,7 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
         setSyncingProvider(null)
       }
     },
-    [toast, user?.agencyId, requestManualSync, onRefresh]
+    [onRefresh, requestManualSync, toast, user?.agencyId, user?.id]
   )
 
   return {

@@ -88,7 +88,7 @@ export function FeatureKanbanBoard({
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, status)}
             className={cn(
-              'flex flex-col rounded-xl border bg-muted/30 transition-all min-h-[500px]',
+              'flex flex-col rounded-xl border bg-muted/30 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] min-h-[500px]',
               isDropTarget && !isDraggedFromThis && 'border-primary bg-primary/5 ring-2 ring-primary/20'
             )}
           >

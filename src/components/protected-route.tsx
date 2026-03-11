@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useConvexAuth } from 'convex/react'
-import Link from 'next/link'
 import { LoaderCircle } from 'lucide-react'
-import { useAuth } from '@/contexts/auth-context'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
+
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/auth-context'
 import { SESSION_EXPIRES_COOKIE } from '@/lib/auth-server'
 
 interface ProtectedRouteProps {
@@ -111,23 +112,6 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
       cancelAnimationFrame(frameId)
     }
   }, [isAwaitingAuthRestore, loading])
-
-  // Wait for auth to settle and handle pending status
-  useEffect(() => {
-    if (user) {
-      const timeoutId = setTimeout(() => {
-        if (user.status !== 'active' && window.location.pathname !== '/dashboard') {
-          router.push('/dashboard')
-        }
-      }, 200)
-      
-      return () => {
-        clearTimeout(timeoutId)
-      }
-    }
-
-    return undefined
-  }, [user, isAwaitingAuthRestore])
 
   // Handle blocked user with retry mechanism
   const handleBlockedSignOut = useCallback(() => {

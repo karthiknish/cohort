@@ -1,24 +1,12 @@
 import {
-  authenticatedMutation,
-  authenticatedQuery,
-  adminMutation,
-  adminQuery,
-  workspaceQuery,
-  workspaceMutation,
   zAuthenticatedMutation,
   zAdminMutation,
   zWorkspaceQuery,
-  zWorkspaceQueryActive,
-  zWorkspaceMutation,
-  zWorkspacePaginatedQuery,
   zWorkspacePaginatedQueryActive,
   applyManualPagination,
   getPaginatedResponse,
-  type AuthenticatedQueryCtx,
-  type AuthenticatedMutationCtx,
 } from './functions'
 import { z } from 'zod/v4'
-import { v } from 'convex/values'
 import { internal } from './_generated/api'
 
 import { Errors } from './errors'
@@ -700,8 +688,6 @@ export const bulkUpdate = zAuthenticatedMutation({
   },
   returns: z.object({ ok: z.boolean(), results: z.array(bulkTaskResultZ), tasks: z.array(taskZ) }),
   handler: async (ctx, args) => {
-    const idSet = new Set(args.ids)
-
     const results: Array<{ id: string; success: boolean; error?: string }> = []
     const tasks: Array<{
       legacyId: string

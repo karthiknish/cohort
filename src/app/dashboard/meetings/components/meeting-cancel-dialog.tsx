@@ -41,7 +41,7 @@ export function MeetingCancelDialog(props: MeetingCancelDialogProps) {
             disabled={Boolean(cancellingMeetingId)}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {cancellingMeetingId ? 'Cancelling...' : 'Cancel meeting'}
+            {cancellingMeetingId ? 'Cancelling…' : 'Cancel meeting'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

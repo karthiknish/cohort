@@ -137,7 +137,7 @@ function EfficiencyScoreMini({ score }: { score: number }) {
         />
         <circle
           className={cn(
-            'transition-all duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
+            'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
             score > 70 ? 'stroke-emerald-500' : score > 40 ? 'stroke-amber-500' : 'stroke-red-500'
           )}
           strokeWidth="3"
@@ -298,8 +298,8 @@ export function AdInsightsWidget({
         ) : (
           <>
             <div className="divide-y">
-              {insights.map((insight, idx) => (
-                <CompactInsightItem key={idx} insight={insight} />
+              {insights.map((insight) => (
+                <CompactInsightItem key={`${insight.level}-${insight.title}-${insight.message}`} insight={insight} />
               ))}
             </div>
             <Button asChild variant="ghost" size="sm" className="w-full mt-2">

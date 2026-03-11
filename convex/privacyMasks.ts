@@ -191,7 +191,6 @@ export const setRealName = zWorkspaceMutation({
     realName: z.string(),
   },
   handler: async (ctx, args) => {
-    const currentUserId = ctx.user._id
     const currentUserRole = ctx.user.role
 
     if (currentUserRole !== 'admin') {
@@ -224,7 +223,6 @@ export const removeMask = zWorkspaceMutation({
     maskLegacyId: z.string(),
   },
   handler: async (ctx, args) => {
-    const currentUserId = ctx.user._id
     const currentUserRole = ctx.user.role
 
     if (currentUserRole !== 'admin') {

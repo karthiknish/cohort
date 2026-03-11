@@ -1,6 +1,7 @@
 'use client'
 
 import { Circle } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -98,28 +99,25 @@ export function UserAvatarWithPresence({
     lg: 'bottom-1 right-1',
   }
 
-  return (
-    <div
-      className={cn('relative inline-flex flex-shrink-0', className)}
-      onClick={onClick}
-    >
+  const clickable = typeof onClick === 'function'
+  const wrapperClassName = cn(
+    'relative inline-flex flex-shrink-0',
+    clickable && 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2',
+    className
+  )
+
+  const content = (
+    <>
       {/* Avatar */}
-      <div
+      <Avatar
         className={cn(
           sizeClasses[size],
           'rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary ring-2 ring-background'
         )}
       >
-        {src ? (
-          <img
-            src={src}
-            alt={alt}
-            className="h-full w-full rounded-full object-cover"
-          />
-        ) : (
-          <span>{fallback}</span>
-        )}
-      </div>
+        {src ? <AvatarImage src={src} alt={alt} className="object-cover" /> : null}
+        <AvatarFallback>{fallback}</AvatarFallback>
+      </Avatar>
 
       {/* Presence indicator */}
       {status !== 'offline' && (
@@ -134,8 +132,18 @@ export function UserAvatarWithPresence({
           )}
         />
       )}
-    </div>
+    </>
   )
+
+  if (clickable) {
+    return (
+      <button type="button" className={wrapperClassName} onClick={onClick} aria-label={`Open profile for ${alt}`}>
+        {content}
+      </button>
+    )
+  }
+
+  return <div className={wrapperClassName}>{content}</div>
 }
 
 interface ChannelPresenceListProps {
@@ -181,17 +189,10 @@ export function ChannelPresenceList({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="relative">
-                  <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium text-primary ring-2 ring-background">
-                    {member.avatarUrl ? (
-                      <img
-                        src={member.avatarUrl}
-                        alt={member.name}
-                        className="h-full w-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <span>{member.name.charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
+                  <Avatar className="h-7 w-7 rounded-full bg-primary/10 text-[10px] font-medium text-primary ring-2 ring-background">
+                    {member.avatarUrl ? <AvatarImage src={member.avatarUrl} alt={member.name} className="object-cover" /> : null}
+                    <AvatarFallback>{member.name.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
                   <span
                     className={cn(
                       'absolute bottom-0 right-0 h-2 w-2 rounded-full ring-1 ring-background',

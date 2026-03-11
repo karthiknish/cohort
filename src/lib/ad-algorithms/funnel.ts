@@ -21,7 +21,7 @@ export type FunnelStageName = typeof FUNNEL_STAGES[number]
  * Build funnel analysis from metrics summary
  */
 export function analyzeFunnel(summary: AdMetricsSummary): FunnelAnalysis {
-  const { totalImpressions, totalClicks, totalConversions, totalRevenue, totalSpend } = summary
+  const { totalImpressions, totalClicks, totalConversions, totalSpend } = summary
 
   // Build funnel stages
   const stageValues = [

@@ -128,7 +128,7 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
                     {attachment.size && <Badge variant="secondary" className="text-[11px]">{attachment.size}</Badge>}
                   </div>
                   <Button asChild variant="ghost" size="sm" className="h-8 gap-1">
-                    <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                    <a href={attachment.url} target="_blank" rel="noopener noreferrer" aria-label={`Download ${attachment.name}`}>
                       <Download className="h-4 w-4" />
                       Download
                     </a>
@@ -165,7 +165,7 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
                     Preview
                   </Button>
                   <Button asChild variant="ghost" size="icon" className="h-8 w-8">
-                    <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                    <a href={attachment.url} target="_blank" rel="noopener noreferrer" aria-label={`Download ${attachment.name}`}>
                       <Download className="h-4 w-4" />
                       <span className="sr-only">Download {attachment.name}</span>
                     </a>
@@ -192,7 +192,7 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 {attachment.size && <span>{attachment.size}</span>}
                 <Button asChild variant="ghost" size="icon" className="h-7 w-7">
-                  <a href={attachment.url} target="_blank" rel="noopener noreferrer">
+                  <a href={attachment.url} target="_blank" rel="noopener noreferrer" aria-label={`Download ${attachment.name}`}>
                     <Download className="h-4 w-4" />
                     <span className="sr-only">Download {attachment.name}</span>
                   </a>

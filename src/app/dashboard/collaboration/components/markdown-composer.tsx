@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState } from 'react'
 import { Eye, EyeOff, Type } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { InlineCode } from './code-block'
-
 interface MarkdownPreviewProps {
   value: string
   onChange: (value: string) => void
@@ -31,10 +31,6 @@ export function MarkdownPreview({
 }: MarkdownPreviewProps) {
   const [showPreview, setShowPreview] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
-
-  const renderedMarkdown = useMemo(() => {
-    return parseMarkdown(value)
-  }, [value])
 
   const charCount = value.length
   const remaining = maxLength - charCount
@@ -97,10 +93,7 @@ export function MarkdownPreview({
         // Preview mode
         <div className="p-4 min-h-[120px] max-h-[400px] overflow-y-auto">
           {value ? (
-            <div
-              className="prose prose-sm dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: renderedMarkdown }}
-            />
+            <MarkdownPreviewContent value={value} />
           ) : (
             <p className="text-sm text-muted-foreground italic">
               Nothing to preview...
@@ -135,10 +128,7 @@ export function MarkdownPreview({
           <TabsContent value="preview" className="mt-0">
             <div className="p-4 min-h-[120px] max-h-[400px] overflow-y-auto">
               {value ? (
-                <div
-                  className="prose prose-sm dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: renderedMarkdown }}
-                />
+                <MarkdownPreviewContent value={value} />
               ) : (
                 <p className="text-sm text-muted-foreground italic">
                   Nothing to preview...
@@ -171,62 +161,43 @@ export function MarkdownPreview({
   )
 }
 
-/**
- * Simple markdown parser for preview
- * Supports: bold, italic, code, links, mentions, lists, blockquotes, headers
- */
-function parseMarkdown(text: string): string {
-  if (!text) return ''
-
-  let html = text
-
-  // Escape HTML tags first
-  html = html.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
-  // Code blocks (must be before inline code)
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
-    return `<pre class="bg-muted p-3 rounded-lg overflow-x-auto my-2"><code class="text-sm font-mono">${code}</code></pre>`
-  })
-
-  // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded text-sm font-mono bg-muted">$1</code>')
-
-  // Bold
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-
-  // Italic
-  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-
-  // Links
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary hover:underline" target="_blank" rel="noopener noreferrer">$1</a>')
-
-  // Mentions (@username)
-  html = html.replace(/@(\w+)/g, '<span class="px-1 py-0.5 rounded bg-primary/10 text-primary font-medium">@$1</span>')
-
-  // Hashtags
-  html = html.replace(/#(\w+)/g, '<span class="text-primary">#$1</span>')
-
-  // Blockquotes
-  html = html.replace(/^> (.+)$/gm, '<blockquote class="border-l-4 border-muted-foreground/30 pl-3 italic my-2">$1</blockquote>')
-
-  // Unordered lists
-  html = html.replace(/^[\-*] (.+)$/gm, '<li class="ml-4">$1</li>')
-  html = html.replace(/(<li.*<\/li>\n?)+/g, '<ul class="list-disc list-inside my-2">$&</ul>')
-
-  // Ordered lists
-  html = html.replace(/^\d+\. (.+)$/gm, '<li class="ml-4">$1</li>')
-  html = html.replace(/(<li.*<\/li>\n?)+/g, '<ol class="list-decimal list-inside my-2">$&</ol>')
-
-  // Headers
-  html = html.replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-3 mb-1">$1</h3>')
-  html = html.replace(/^## (.+)$/gm, '<h2 class="text-xl font-semibold mt-3 mb-1">$1</h2>')
-  html = html.replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-3 mb-1">$1</h1>')
-
-  // Line breaks
-  html = html.replace(/\n\n/g, '</p><p class="my-2">')
-  html = html.replace(/\n/g, '<br />')
-
-  return `<p class="my-0">${html}</p>`
+function MarkdownPreviewContent({ value }: { value: string }) {
+  return (
+    <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ node: _node, ...props }) => (
+            <a
+              {...props}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline underline-offset-2 hover:no-underline"
+            />
+          ),
+          code: ({ node: _node, className, children, ...props }) => {
+            if (!className) {
+              return (
+                <code
+                  className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono"
+                  {...props}
+                >
+                  {children}
+                </code>
+              )
+            }
+            return (
+              <code className={className} {...props}>
+                {children}
+              </code>
+            )
+          },
+        }}
+      >
+        {value}
+      </ReactMarkdown>
+    </div>
+  )
 }
 
 /**

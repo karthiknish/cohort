@@ -31,7 +31,7 @@ import { cn, formatCurrency } from '@/lib/utils'
 import { calculateBenchmarks } from '@/lib/metrics'
 import { KPI_THEMES, type KpiTheme } from '@/lib/themes'
 
-import type { DerivedMetrics, GrowthRateResult, CustomKPIs } from '../hooks/use-derived-metrics'
+import type { DerivedMetrics } from '../hooks/use-derived-metrics'
 import type { MetricRecord } from './types'
 
 // =============================================================================
@@ -134,7 +134,7 @@ function KpiTile({ label, value, format, icon, trend, benchmark, invertTrend, th
         <div
             className={cn(
                 'group relative flex flex-col gap-3 rounded-xl border p-5 overflow-hidden',
-                'transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
+                'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
                 'hover:shadow-xl hover:shadow-black/5 hover:scale-[1.02] hover:-translate-y-0.5',
                 styles.bg, styles.border, styles.glow,
                 hasAnomaly && 'ring-2 ring-amber-500/50 ring-offset-2 ring-offset-background'
@@ -197,7 +197,7 @@ function KpiTile({ label, value, format, icon, trend, benchmark, invertTrend, th
                         variant="secondary"
                         className={cn(
                             'flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full',
-                            'transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+                            'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
                             'group-hover:scale-110',
                             trendStatus === 'up' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/50',
                             trendStatus === 'down' && 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/50'

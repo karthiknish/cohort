@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown"
 import type { Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
-import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism"
+import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { Check, Copy } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button"
 import { LazyImage } from "@/components/ui/lazy-image"
 import type { CollaborationMention } from "@/types/collaboration"
 
-import { isLikelyImageUrl } from "../utils"
 import { MENTION_PROTOCOL } from "../utils/mentions"
 import { highlightText, hasHighlightTerms } from "./search-highlighter"
 

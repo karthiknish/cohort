@@ -13,6 +13,8 @@ import { TaskRow } from './task-row'
 import { TaskViewDialog } from './task-view-dialog'
 import type { TaskParticipant } from './task-types'
 
+const EMPTY_TASK_PARTICIPANTS: TaskParticipant[] = []
+
 export type TaskListProps = {
   tasks: TaskRecord[]
   viewMode: 'grid' | 'list'
@@ -38,17 +40,6 @@ export type TaskListProps = {
   participants?: TaskParticipant[]
 }
 
-function shouldIgnoreTaskOpen(target: EventTarget | null, currentTarget?: HTMLElement | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-
-  const interactiveAncestor = target.closest('button, a, input, textarea, select, label, [role="button"], [role="menuitem"], [role="checkbox"], [data-radix-collection-item], [data-no-task-open="true"]')
-
-  if (!interactiveAncestor) return false
-  if (currentTarget && interactiveAncestor === currentTarget) return false
-
-  return true
-}
-
 export function TaskList({
   tasks,
   viewMode,
@@ -71,7 +62,7 @@ export function TaskList({
   userId = null,
   userName = null,
   userRole = null,
-  participants = [],
+  participants = EMPTY_TASK_PARTICIPANTS,
 }: TaskListProps) {
   'use no memo'
 
@@ -85,8 +76,8 @@ export function TaskList({
     <div
       className={viewMode === 'grid' ? 'col-span-full space-y-6 px-6 py-6' : 'space-y-6 px-6 py-6'}
     >
-      {Array.from({ length: 4 }).map((_, idx) => (
-        <div key={idx} className="space-y-3">
+      {['task-skeleton-1', 'task-skeleton-2', 'task-skeleton-3', 'task-skeleton-4'].map((skeletonKey) => (
+        <div key={skeletonKey} className="space-y-3">
           <Skeleton className="h-5 w-3/4" />
           <Skeleton className="h-4 w-full" />
           <div className="flex flex-wrap gap-3">
@@ -177,26 +168,11 @@ export function TaskList({
           !error &&
           tasks.map((task) =>
             viewMode === 'grid' ? (
-              <div
-                key={task.id}
-                role="button"
-                tabIndex={0}
-                aria-label={`View task ${task.title}`}
-                className="h-full outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 rounded-[1.35rem]"
-                onClick={(event) => {
-                  if (shouldIgnoreTaskOpen(event.target, event.currentTarget)) return
-                  openTask(task)
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter' && event.key !== ' ') return
-                  if (shouldIgnoreTaskOpen(event.target, event.currentTarget)) return
-                  event.preventDefault()
-                  openTask(task)
-                }}
-              >
+              <div key={task.id} className="h-full rounded-[1.35rem]">
                 <TaskCard
                   task={task}
                   isPendingUpdate={pendingStatusUpdates.has(task.id)}
+                  onOpen={openTask}
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onQuickStatusChange={onQuickStatusChange}
@@ -205,26 +181,11 @@ export function TaskList({
                 />
               </div>
             ) : (
-              <div
-                key={task.id}
-                role="button"
-                tabIndex={0}
-                aria-label={`View task ${task.title}`}
-                className="outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
-                onClick={(event) => {
-                  if (shouldIgnoreTaskOpen(event.target, event.currentTarget)) return
-                  openTask(task)
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter' && event.key !== ' ') return
-                  if (shouldIgnoreTaskOpen(event.target, event.currentTarget)) return
-                  event.preventDefault()
-                  openTask(task)
-                }}
-              >
+              <div key={task.id}>
                 <TaskRow
                   task={task}
                   isPendingUpdate={pendingStatusUpdates.has(task.id)}
+                  onOpen={openTask}
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onQuickStatusChange={onQuickStatusChange}

@@ -48,7 +48,7 @@ export function AnalyticsCharts({
     return (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Users vs Sessions Chart */}
-            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
                 <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
                     <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-primary" />
@@ -126,7 +126,7 @@ export function AnalyticsCharts({
             </Card>
 
             {/* Revenue Trend Chart */}
-            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
                 <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
                     <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -196,7 +196,7 @@ export function AnalyticsCharts({
             </Card>
 
             {/* Conversions Chart */}
-            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
                 <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
                     <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-blue-500" />
@@ -258,7 +258,7 @@ export function AnalyticsCharts({
             </Card>
 
             {/* Conversion Rate Chart */}
-            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
                 <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
                     <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full bg-orange-500" />

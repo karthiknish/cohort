@@ -48,13 +48,8 @@ function toNameLower(value: string) {
 }
 
 async function loadWorkspaceUsers(ctx: CollaborationChannelCtx, workspaceId: string) {
-  if (ctx.user.role === 'admin') {
-    const rows = await ctx.db.query('users').take(1000)
-    return rows.filter((row) => row.status !== 'disabled' && row.status !== 'suspended')
-  }
-
   const [membersByAgency, agencyAdmin] = await Promise.all([
-    ctx.db.query('users').withIndex('by_agencyId', (q) => q.eq('agencyId', workspaceId)).take(500),
+    ctx.db.query('users').withIndex('by_agencyId', (q) => q.eq('agencyId', workspaceId)).take(1000),
     ctx.db.query('users').withIndex('by_legacyId', (q) => q.eq('legacyId', workspaceId)).unique(),
   ])
 

@@ -20,7 +20,7 @@ export function QuickActionCard({
 }: QuickActionCardProps) {
   return (
     <Link href={href} className="group">
-      <Card className="border-muted/60 bg-card transition-all hover:border-primary/30 hover:shadow-md">
+      <Card className="border-muted/60 bg-card transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/30 hover:shadow-md">
         <CardContent className="flex items-center gap-3 p-4">
           <div className="rounded-lg p-2 transition-colors text-muted-foreground group-hover:bg-muted group-hover:text-foreground">
             <Icon className="h-5 w-5" />

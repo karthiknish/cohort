@@ -38,7 +38,7 @@ export function OfflineIndicator() {
 
   return (
     <div className={cn(
-      'fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg transition-all',
+      'fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
       'bg-gray-500 text-white'
     )}>
       <WifiOff className="h-4 w-4" />

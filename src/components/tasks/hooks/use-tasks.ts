@@ -1,13 +1,13 @@
 'use client'
 
+import { useMutation, useQuery } from 'convex/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useQuery, useMutation } from 'convex/react'
 
-import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useToast } from '@/components/ui/use-toast'
 import { tasksApi } from '@/lib/convex-api'
-import { TaskAttachment, TaskRecord, TaskStatus } from '@/types/tasks'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { getPreviewTasks } from '@/lib/preview-data'
+import type { TaskAttachment, TaskRecord, TaskStatus } from '@/types/tasks'
 import { formatStatusLabel } from '../task-types'
 
 export type UseTasksOptions = {
@@ -196,7 +196,7 @@ export function useTasks({
 
     setTasks(rows.map(mapConvexTaskToTaskRecord))
     setError(null)
-  }, [convexTasksQuery, isPreviewMode, userId, workspaceId])
+  }, [clientId, convexTasksQuery, isPreviewMode, userId, workspaceId])
 
   const handleLoadMore = useCallback(async () => {
     // Realtime query returns the current dataset; no cursor pagination.

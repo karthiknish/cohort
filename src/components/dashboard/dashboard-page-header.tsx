@@ -3,7 +3,6 @@
 import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME, PAGE_TITLES, getIconContainerClasses, getStatCardClasses } from '@/lib/dashboard-theme'
 import { LucideIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ReactNode } from 'react'
 

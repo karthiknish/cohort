@@ -1,10 +1,10 @@
-import { useMemo } from 'react'
 import { useQuery } from 'convex/react'
+import { useMemo } from 'react'
 
 import { useAuth } from '@/contexts/auth-context'
 import { usePreview } from '@/contexts/preview-context'
-import { getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
 import { adsIntegrationsApi } from '@/lib/convex-api'
+import { getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
 
 export type IntegrationStatusSummary = {
   totalTargets: number
@@ -111,7 +111,7 @@ export function useIntegrationStatusSummary(options: { clientIds: string[] }) {
       loading: false,
       error: null,
     }
-  }, [isPreviewMode, previewSummary, stableClientIds.length, statusesByClient, user?.id, workspaceId])
+  }, [stableClientIds.length, statusesByClient, user?.id, workspaceId])
 
-  return useMemo(() => liveSummary, [liveSummary])
+  return isPreviewMode ? previewSummary : liveSummary
 }

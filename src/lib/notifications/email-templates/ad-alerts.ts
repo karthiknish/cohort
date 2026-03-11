@@ -1,5 +1,5 @@
 import { wrapEmailTemplate } from './utils'
-import { EMAIL_COLORS, SEMANTIC_COLORS } from '@/lib/colors'
+import { EMAIL_COLORS } from '@/lib/colors'
 import type { AlertResult } from '../../alerts/types'
 
 export interface AdAlertsTemplateParams {

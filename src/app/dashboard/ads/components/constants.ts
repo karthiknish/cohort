@@ -164,7 +164,7 @@ export const TOAST_TITLES = {
   NO_SETTINGS: 'No settings to save',
   META_SETUP_FAILED: 'Meta setup failed',
   TIKTOK_SETUP_FAILED: 'TikTok setup failed',
-  CONNECTING: 'Connecting...',
+  CONNECTING: 'Connecting…',
 } as const
 
 // =============================================================================
@@ -172,9 +172,9 @@ export const TOAST_TITLES = {
 // =============================================================================
 
 export const CONNECTION_STEPS = {
-  REDIRECTING: 'Redirecting to login...',
-  AUTHENTICATING: 'Authenticating with platform...',
-  FETCHING_ACCOUNTS: 'Fetching your ad accounts...',
+  REDIRECTING: 'Redirecting to login…',
+  AUTHENTICATING: 'Authenticating with platform…',
+  FETCHING_ACCOUNTS: 'Fetching your ad accounts…',
   SELECTING_ACCOUNT: 'Selecting default account...',
   SYNCING_DATA: 'Starting initial data sync...',
   COMPLETE: 'Connection complete!',

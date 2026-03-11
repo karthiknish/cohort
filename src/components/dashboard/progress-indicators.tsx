@@ -141,7 +141,6 @@ export function ProgressIndicators({
                   operation={op}
                   isCollapsed={collapsedOps.has(op.id)}
                   onToggleCollapse={() => toggleCollapsed(op.id)}
-                  onDismiss={() => onDismiss?.(op.id)}
                 />
               ))}
             </CardContent>
@@ -169,24 +168,13 @@ interface OperationItemProps {
   operation: Operation
   isCollapsed: boolean
   onToggleCollapse: () => void
-  onDismiss: () => void
 }
 
 function OperationItem({
   operation,
   isCollapsed,
   onToggleCollapse,
-  onDismiss,
 }: OperationItemProps) {
-  const statusColors = {
-    pending: 'text-muted-foreground',
-    running: 'text-primary',
-    paused: 'text-amber-600',
-    completed: 'text-emerald-600',
-    failed: 'text-red-600',
-    cancelled: 'text-muted-foreground',
-  }
-
   const statusBadges: Record<OperationStatus, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
     pending: { variant: 'secondary', label: 'Pending' },
     running: { variant: 'default', label: 'Running' },

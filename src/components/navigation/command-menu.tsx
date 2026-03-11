@@ -18,6 +18,7 @@ import {
   CircleHelp,
   Keyboard,
   Plus,
+  Share2,
 } from 'lucide-react'
 
 import {
@@ -42,6 +43,7 @@ const navigationItems = [
   { name: 'Activity', href: '/dashboard/activity', icon: Activity, description: 'Recent activity feed' },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, description: 'Performance insights' },
   { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad platform integrations' },
+  { name: 'Socials', href: '/dashboard/socials', icon: Share2, description: 'Meta social insights & AI suggestions' },
   { name: 'Meetings', href: '/dashboard/meetings', icon: Video, description: 'Schedule and run meetings' },
   { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare, description: 'Task management' },
   { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Create proposals' },
@@ -94,7 +96,7 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search pages, actions, or type a command..." />
+        <CommandInput placeholder="Search pages, actions, or type a command…" />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
 

@@ -204,7 +204,7 @@ export function createApiHandler<
         const rateLimitKey = createRateLimitKey(req.nextUrl.pathname, identifier)
 
         // Prefer Convex-backed rate limiting (falls back to in-memory if Convex unavailable)
-        const result = await checkConvexRateLimit(rateLimitKey, options.rateLimit)
+        const result = await checkConvexRateLimit(rateLimitKey, config)
         
         if (!result.allowed) {
           return NextResponse.json(

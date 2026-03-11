@@ -3,7 +3,7 @@
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
 import { Badge } from '@/components/ui/badge'
-import { STATUS_ICONS, formatStatusLabel, STATUS_ACCENT_COLORS } from './utils'
+import { formatStatusLabel, STATUS_ACCENT_COLORS } from './utils'
 import { ProjectCard } from './project-card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -51,7 +51,7 @@ export function ProjectKanban({ projects, pendingStatusUpdates, onUpdateStatus, 
                   ) : (
                     <div className="space-y-4">
                       {items.map((project) => (
-                        <div key={project.id} className="transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none active:scale-[0.98]">
+                        <div key={project.id} className="transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none active:scale-[0.98]">
                           <ProjectCard
                             project={project}
                             onDelete={onDelete}

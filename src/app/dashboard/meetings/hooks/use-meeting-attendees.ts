@@ -1,7 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import { type KeyboardEvent, useCallback, useMemo, useState } from 'react'
 
 import { useToast } from '@/components/ui/use-toast'
 import {
@@ -18,6 +17,7 @@ import type { WorkspaceMember } from '../types'
 type UseMeetingAttendeesOptions = {
   workspaceMembers: WorkspaceMember[]
   platformUsers: WorkspaceMember[]
+  organizerId?: string | null
   organizerEmail?: string | null
 }
 

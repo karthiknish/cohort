@@ -16,45 +16,52 @@ function throwDeprecated(): never {
   )
 }
 
-export async function writeDerivedMetrics(_options: { workspaceId: string; metrics: DerivedMetricInput[] }): Promise<{ written: number }> {
+export async function writeDerivedMetrics(options: { workspaceId: string; metrics: DerivedMetricInput[] }): Promise<{ written: number }> {
+  void options
   throwDeprecated()
 }
 
-export async function writeDerivedMetric(_options: { workspaceId: string; metric: DerivedMetricInput }): Promise<void> {
+export async function writeDerivedMetric(options: { workspaceId: string; metric: DerivedMetricInput }): Promise<void> {
+  void options
   throwDeprecated()
 }
 
-export async function queryDerivedMetrics(_options: DerivedMetricsQueryOptions): Promise<DerivedMetricsQueryResult> {
+export async function queryDerivedMetrics(options: DerivedMetricsQueryOptions): Promise<DerivedMetricsQueryResult> {
+  void options
   throwDeprecated()
 }
 
-export async function getDerivedMetricsByDateRange(_options: {
+export async function getDerivedMetricsByDateRange(options: {
   workspaceId: string
   providerId?: string
   startDate: string
   endDate: string
 }): Promise<DerivedMetricRecord[]> {
+  void options
   throwDeprecated()
 }
 
-export async function getLatestDerivedMetrics(_options: {
+export async function getLatestDerivedMetrics(options: {
   workspaceId: string
   providerId?: string
   limit?: number
 }): Promise<DerivedMetricRecord[]> {
+  void options
   throwDeprecated()
 }
 
-export async function deleteDerivedMetricsBeforeDate(_options: { workspaceId: string; cutoffDate: string }): Promise<{ deleted: number }> {
+export async function deleteDerivedMetricsBeforeDate(options: { workspaceId: string; cutoffDate: string }): Promise<{ deleted: number }> {
+  void options
   throwDeprecated()
 }
 
-export async function deleteDerivedMetric(_options: {
+export async function deleteDerivedMetric(options: {
   workspaceId: string
   providerId: string
   date: string
   metricId: string
   campaignId?: string
 }): Promise<void> {
+  void options
   throwDeprecated()
 }

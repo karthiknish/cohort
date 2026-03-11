@@ -1,4 +1,4 @@
-import { action, internalAction, internalQuery } from './_generated/server'
+import { internalAction } from './_generated/server'
 import { internal } from './_generated/api'
 import { v } from 'convex/values'
 
@@ -7,7 +7,7 @@ import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
 import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
 import type { NormalizedMetric } from '@/types/integrations'
-import { Errors, asErrorMessage, withErrorHandling } from './errors'
+import { Errors, withErrorHandling } from './errors'
 
 function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
   if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
@@ -172,6 +172,7 @@ export const processClaimedJob = internalAction({
           providerId: metric.providerId,
           clientId,
           accountId: metric.accountId ?? null,
+          publisherPlatform: metric.publisherPlatform ?? null,
           date: metric.date,
           spend: metric.spend,
           impressions: metric.impressions,

@@ -1,13 +1,9 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { MessageSquare, Calendar as CalendarIcon, Paperclip } from 'lucide-react'
-import { format, parseISO, isValid } from 'date-fns'
+import { MessageSquare } from 'lucide-react'
+import { format } from 'date-fns'
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
@@ -15,26 +11,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
-import { PendingAttachmentsList } from '@/app/dashboard/collaboration/components/message-composer'
-import { cn } from '@/lib/utils'
 import { useSmartDefaults } from '@/hooks/use-smart-defaults'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
-import type { TaskPriority, TaskRecord } from '@/types/tasks'
+import type { TaskRecord } from '@/types/tasks'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useConvex, useMutation } from 'convex/react'
 import { filesApi, tasksApi } from '@/lib/convex-api'
@@ -43,7 +24,8 @@ import {
   type PendingTaskAttachment,
   uploadTaskAttachment,
 } from '@/services/task-attachments'
-import { isFutureTaskDueDateValue, isTaskDueDateDisabled } from './task-types'
+import { TaskCreationModalFormFields } from './task-creation-modal-form'
+import { isFutureTaskDueDateValue } from './task-types'
 
 interface TaskCreationModalProps {
   isOpen: boolean
@@ -235,16 +217,10 @@ export function TaskCreationModal({
   }
 
   const handleDateSelect = (date: Date | undefined) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      dueDate: date ? format(date, 'yyyy-MM-dd') : ''
+      dueDate: date ? format(date, 'yyyy-MM-dd') : '',
     }))
-  }
-
-  const getSelectedDate = () => {
-    if (!formData.dueDate) return undefined
-    const date = parseISO(formData.dueDate)
-    return isValid(date) ? date : undefined
   }
 
   return (
@@ -265,152 +241,26 @@ export function TaskCreationModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Task Title *</Label>
-            <Input
-              id="title"
-              placeholder="Enter task title..."
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              placeholder="Enter task description..."
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              rows={3}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="priority">Priority</Label>
-              <Select
-                value={formData.priority}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value as TaskPriority }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dueDate">Due Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !formData.dueDate && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.dueDate ? (
-                      format(parseISO(formData.dueDate), 'PPP')
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={getSelectedDate()}
-                    disabled={isTaskDueDateDisabled}
-                    onSelect={handleDateSelect}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Client</Label>
-              <div className="px-3 py-2 bg-muted rounded-md text-sm">
-                {contextInfo.clientName || 'None'}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Project</Label>
-              <div className="px-3 py-2 bg-muted rounded-md text-sm">
-                {formData.projectName || 'None'}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Assigned To</Label>
-            <div className="px-3 py-2 bg-muted rounded-md text-sm">
-              {formData.assignedTo.length > 0 ? `${formData.assignedTo.length} user(s)` : 'Unassigned'}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Attachments</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                disabled={isLoading}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Paperclip className="h-4 w-4" />
-                Attach files
-              </Button>
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(event) => {
-                handleAddAttachments(event.target.files)
-                event.currentTarget.value = ''
-              }}
-            />
-
-            {pendingAttachments.length > 0 ? (
-              <PendingAttachmentsList
-                attachments={pendingAttachments}
-                uploading={isLoading}
-                onRemove={handleRemoveAttachment}
-              />
-            ) : (
-              <p className="text-xs text-muted-foreground">Add up to 10 files (max 15MB each).</p>
-            )}
-          </div>
-
-          {error && (
-            <div className="text-sm text-destructive">{error}</div>
-          )}
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading || !formData.title.trim()}>
-              {isLoading ? 'Creating...' : 'Create Task'}
-            </Button>
-          </div>
+          <TaskCreationModalFormFields
+            title={formData.title}
+            description={formData.description}
+            priority={formData.priority}
+            dueDate={formData.dueDate}
+            projectName={formData.projectName}
+            clientName={contextInfo.clientName}
+            assigneeCount={formData.assignedTo.length}
+            error={error}
+            isLoading={isLoading}
+            pendingAttachments={pendingAttachments}
+            fileInputRef={fileInputRef}
+            onTitleChange={(value) => setFormData((prev) => ({ ...prev, title: value }))}
+            onDescriptionChange={(value) => setFormData((prev) => ({ ...prev, description: value }))}
+            onPriorityChange={(value) => setFormData((prev) => ({ ...prev, priority: value }))}
+            onDateSelect={handleDateSelect}
+            onAddAttachments={handleAddAttachments}
+            onRemoveAttachment={handleRemoveAttachment}
+            onCancel={onClose}
+          />
         </form>
       </DialogContent>
     </Dialog>

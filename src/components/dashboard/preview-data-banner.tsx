@@ -15,7 +15,7 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-lg border transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+        'relative overflow-hidden rounded-lg border transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
         isPreviewMode
           ? 'border-primary/50 bg-gradient-to-r from-primary/10 via-primary/5 to-violet-500/10'
           : 'border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-orange-500/10',
@@ -61,7 +61,7 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
             variant={isPreviewMode ? 'outline' : 'default'}
             onClick={togglePreviewMode}
             className={cn(
-              'gap-2 transition-all',
+              'gap-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
               isPreviewMode
                 ? 'border-primary/40 text-primary hover:bg-primary/10 hover:text-primary'
                 : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0'

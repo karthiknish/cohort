@@ -10,7 +10,7 @@ import { TrafficObjectiveSection } from './traffic-objective-section'
 import { EngagementObjectiveSection } from './engagement-objective-section'
 import { AwarenessObjectiveSection } from './awareness-objective-section'
 import { AppPromotionSection } from './app-promotion-section'
-import { CampaignObjective, CampaignFormData, ObjectiveComponentProps } from './types'
+import { CampaignObjective, ObjectiveComponentProps } from './types'
 
 interface ObjectiveRendererProps extends ObjectiveComponentProps {
   objective?: CampaignObjective

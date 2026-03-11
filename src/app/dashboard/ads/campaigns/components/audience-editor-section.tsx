@@ -74,7 +74,7 @@ export function AudienceEditorSection({
             </Tooltip>
           </TooltipProvider>
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7">
+            <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Toggle interests section">
               <ChevronDown
                 className={cn(
                   'h-4 w-4 text-muted-foreground transition-transform',
@@ -90,7 +90,7 @@ export function AudienceEditorSection({
           {editingSection === 'interests' && (
             <div className="flex gap-2">
               <Input
-                placeholder="Add new interest..."
+                placeholder="Add new interest…"
                 value={newInterest}
                 onChange={(event) => setNewInterest(event.target.value)}
                 className="flex-1 h-8 text-sm"

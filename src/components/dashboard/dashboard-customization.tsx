@@ -5,12 +5,6 @@ import { GripVertical, X, ChevronDown, ChevronUp, Eye, EyeOff, Settings2 } from 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -170,24 +164,6 @@ export function DashboardCustomization({
     () => availableWidgets.filter((w) => !activeWidgets.some((aw) => aw.id === w.id)),
     [availableWidgets, activeWidgets]
   )
-
-  // Group widgets by category
-  const widgetsByCategory = useMemo(() => {
-    const grouped: Record<string, DashboardWidget[]> = {
-      analytics: [],
-      tasks: [],
-      collaboration: [],
-      projects: [],
-      admin: [],
-    }
-    visibleWidgets.forEach((widget) => {
-      const category = widget.category as keyof typeof grouped
-      if (grouped[category]) {
-        grouped[category].push(widget)
-      }
-    })
-    return grouped
-  }, [visibleWidgets])
 
   const handleMoveUp = useCallback((index: number) => {
     if (index === 0) return
@@ -406,8 +382,6 @@ export function DashboardCustomization({
 export function DraggableWidget({
   widget,
   isEditing,
-  onCollapse,
-  onRemove,
   children,
 }: {
   widget: DashboardWidget
@@ -419,7 +393,7 @@ export function DraggableWidget({
   return (
     <div
       className={cn(
-        'relative group rounded-lg border bg-background transition-all',
+        'relative group rounded-lg border bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
         isEditing && 'ring-2 ring-primary/20',
         widget.collapsed && 'overflow-hidden'
       )}

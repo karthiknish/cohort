@@ -1,10 +1,11 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useConvexAuth, useQuery } from 'convex/react'
 
-import { AuthUser, SignUpData, authService } from '@/services/auth'
 import { authClient } from '@/lib/auth-client'
+import { authService } from '@/services/auth'
+import type { AuthUser, SignUpData } from '@/services/auth'
 import { api } from '../../convex/_generated/api'
 
 export type AuthErrorCode =
@@ -71,7 +72,7 @@ export function useAuth() {
 }
 
 interface AuthProviderProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
@@ -121,7 +122,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Update user when Convex data changes
   useEffect(() => {
-    if (!convexUser || !user) return
+    if (!convexUser) return
 
     // Merge Convex user data (role, status, agencyId) with Better Auth user
     setUser((prev) => {
@@ -135,16 +136,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       currentUserRef.current = updated
       return updated
     })
-  }, [convexUser, user?.id])
-
-  useEffect(() => {
-    if (convexAuthLoading || isConvexAuthenticated) return
-
-    setUser(null)
-    currentUserRef.current = null
-    lastAppliedUserKeyRef.current = 'anonymous'
-    setBetterAuthUserId(null)
-  }, [convexAuthLoading, isConvexAuthenticated])
+  }, [convexUser])
 
   // Listen to Better Auth session changes
   useEffect(() => {
@@ -386,7 +378,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return token.trim().length > 0 ? token : null
   }, [])
 
-  const value = React.useMemo<AuthContextType>(
+  const value = useMemo<AuthContextType>(
     () => ({
       user,
       loading,

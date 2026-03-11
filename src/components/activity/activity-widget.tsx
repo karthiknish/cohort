@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { useCallback, useMemo } from 'react'
-import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { Clock, CircleCheck, MessageSquare, Briefcase, RefreshCw, MoreHorizontal, Filter, User, FileText } from 'lucide-react'
+import { useRouter, usePathname } from 'next/navigation'
+import { Clock, CircleCheck, MessageSquare, Briefcase, Filter, User, FileText } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
 import {
@@ -96,14 +96,20 @@ function ActivityItem({ activity }: ActivityItemProps) {
 export function ActivityWidget() {
   const { selectedClient } = useClientContext()
   const { activities, loading, error, retry, isRealTime } = useRealtimeActivity()
-  const { config, updateConfig } = useActivityNotifications(activities)
-  const searchParams = useSearchParams()
+  useActivityNotifications(activities)
   const router = useRouter()
   const pathname = usePathname()
 
+  const readFilterFromUrl = useCallback((key: 'activityType' | 'dateRange') => {
+    if (typeof window === 'undefined') {
+      return null
+    }
+    return new URLSearchParams(window.location.search).get(key)
+  }, [])
+
   // Get filter values from URL params
-  const activityType = searchParams.get('activityType') || 'all'
-  const dateRange = searchParams.get('dateRange') || '7d'
+  const activityType = readFilterFromUrl('activityType') || 'all'
+  const dateRange = readFilterFromUrl('dateRange') || '7d'
 
   // Filter activities based on URL params
   const filteredActivities = useMemo(() => {
@@ -144,7 +150,7 @@ export function ActivityWidget() {
 
   // Update URL params when filters change
   const updateFilters = useCallback((newActivityType: string, newDateRange: string) => {
-    const newParams = new URLSearchParams(searchParams.toString())
+    const newParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
 
     if (newActivityType === 'all') {
       newParams.delete('activityType')
@@ -161,7 +167,7 @@ export function ActivityWidget() {
     const queryString = newParams.toString()
     const newUrl = queryString ? `${pathname}?${queryString}` : pathname
     router.push(newUrl)
-  }, [searchParams, pathname, router])
+  }, [pathname, router])
 
   const handleRefresh = () => {
     retry()

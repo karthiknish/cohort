@@ -50,11 +50,6 @@ import { after } from 'next/server'
 export async function logAuditAction(entry: Omit<AuditLogEntry, 'timestamp'>) {
   after(async () => {
     try {
-      const logEntry: AuditLogEntry = {
-        ...entry,
-        timestamp: new Date(),
-      }
-
       // 1. Log to Convex for permanent record
       const convex = getConvexClient()
       if (convex) {

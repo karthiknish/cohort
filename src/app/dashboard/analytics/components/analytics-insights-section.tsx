@@ -64,7 +64,7 @@ export function AnalyticsInsightsSection({
     return (
         <>
             {/* Recommended Actions Card */}
-            <Card className="overflow-hidden border-primary/30 bg-primary/5 shadow-sm transition-all hover:bg-primary/[0.07] hover:shadow-md">
+            <Card className="overflow-hidden border-primary/30 bg-primary/5 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-primary/[0.07] hover:shadow-md">
                 <CardHeader className="border-b border-primary/10 bg-primary/[0.03] py-4">
                     <div className="flex items-center gap-2">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary shadow-sm">
@@ -92,7 +92,7 @@ export function AnalyticsInsightsSection({
                                     <div
                                         key={`${group.providerId}-${suggestion.level}-${suggestion.title}`}
                                         className={cn(
-                                            "relative overflow-hidden rounded-xl border p-4 shadow-sm transition-all hover:shadow-md",
+                                            "relative overflow-hidden rounded-xl border p-4 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md",
                                             suggestion.level === 'success' && "border-emerald-500/30 bg-emerald-500/5",
                                             suggestion.level === 'warning' && "border-amber-500/30 bg-amber-500/5",
                                             suggestion.level === 'critical' && "border-red-500/30 bg-red-500/5",
@@ -130,7 +130,7 @@ export function AnalyticsInsightsSection({
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="mt-4 flex items-center gap-2.5 rounded-xl bg-background/60 p-2.5 text-xs font-bold text-foreground shadow-sm transition-all hover:bg-background/80">
+                                        <div className="mt-4 flex items-center gap-2.5 rounded-xl bg-background/60 p-2.5 text-xs font-bold text-foreground shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-background/80">
                                             <ArrowRight className="h-3.5 w-3.5 shrink-0 text-primary" />
                                             <span className="line-clamp-1">{suggestion.suggestion}</span>
                                         </div>
@@ -143,7 +143,7 @@ export function AnalyticsInsightsSection({
             </Card>
 
             {/* AI-Powered Insights Card */}
-            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-all hover:shadow-md">
+            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
                 <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
                     <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
@@ -157,7 +157,7 @@ export function AnalyticsInsightsSection({
                             type="button"
                             onClick={onRefreshInsights}
                             disabled={insightsLoading || insightsRefreshing}
-                            className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm transition-all hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
+                            className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
                         >
                             <RefreshCw className={`h-3 w-3 transition-transform duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:rotate-180 ${insightsRefreshing ? 'animate-spin' : ''}`} />
                             Refresh
@@ -188,8 +188,8 @@ export function AnalyticsInsightsSection({
                         />
                     ) : (
                         insights.map((insight) => (
-                            <div key={insight.providerId} className="group relative overflow-hidden rounded-xl border border-muted/30 bg-muted/5 p-5 transition-all hover:bg-muted/10">
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 transition-all group-hover:bg-primary" />
+                            <div key={insight.providerId} className="group relative overflow-hidden rounded-xl border border-muted/30 bg-muted/5 p-5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/10">
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] group-hover:bg-primary" />
                                 <div className="flex items-center gap-2.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
                                     <TrendingUp className="h-3.5 w-3.5" />
                                     <span>{formatInsightProviderLabel(insight.providerId)}</span>

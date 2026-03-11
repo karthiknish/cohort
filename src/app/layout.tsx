@@ -40,8 +40,6 @@ export const metadata: Metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   themeColor: '#ffffff',
 }
 
@@ -65,9 +63,15 @@ export default function RootLayout({
           <GoogleAnalyticsScript />
         </Suspense>
         <AppProviders>
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[1200] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-md"
+          >
+            Skip to main content
+          </a>
           <div className="flex min-h-screen flex-col">
             <SiteHeader />
-            <main className="flex-1">
+            <main id="main-content" className="flex-1">
               <MotionProvider>{children}</MotionProvider>
             </main>
             <SiteFooter />

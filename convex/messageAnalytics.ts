@@ -1,5 +1,4 @@
 import { z } from 'zod/v4'
-import { Errors } from './errors'
 import {
   zWorkspaceQuery,
   zWorkspaceQueryActive,
@@ -306,10 +305,9 @@ export const getWorkspaceAnalytics = zWorkspaceQuery({
 
     const items = await ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_sender_createdAtMs', (q) =>
-        q.eq('workspaceId', args.workspaceId)
+      .withIndex('by_workspace_createdAtMs', (q) =>
+        q.eq('workspaceId', args.workspaceId).gte('createdAtMs', cutoffMs)
       )
-      .filter((q) => q.gte(q.field('createdAtMs'), cutoffMs))
       .collect()
 
     const stats = {
@@ -363,21 +361,23 @@ export const getAverageResponseTime = zWorkspaceQuery({
   handler: async (ctx, args) => {
     const days = args.days ?? 30
     const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000
+    const conversationType = args.conversationType
 
-    let q = ctx.db
-      .query('messageAnalytics')
-      .withIndex('by_workspace_conversationType_responseTime', (q) =>
-        q.eq('workspaceId', args.workspaceId)
-      )
-
-    if (args.conversationType) {
-      q = q.filter((q) => q.eq(q.field('conversationType'), args.conversationType))
-    }
-
-    const items = await q
-      .filter((q) => q.gte(q.field('createdAtMs'), cutoffMs))
-      .filter((q) => q.neq(q.field('responseTimeMs'), null))
-      .collect()
+    const items = conversationType
+      ? await ctx.db
+          .query('messageAnalytics')
+          .withIndex('by_workspace_conversationType_createdAtMs', (q) =>
+            q.eq('workspaceId', args.workspaceId).eq('conversationType', conversationType).gte('createdAtMs', cutoffMs)
+          )
+          .filter((q) => q.neq(q.field('responseTimeMs'), null))
+          .collect()
+      : await ctx.db
+          .query('messageAnalytics')
+          .withIndex('by_workspace_createdAtMs', (q) =>
+            q.eq('workspaceId', args.workspaceId).gte('createdAtMs', cutoffMs)
+          )
+          .filter((q) => q.neq(q.field('responseTimeMs'), null))
+          .collect()
 
     if (items.length === 0) return { avgMs: 0, count: 0 }
 
@@ -399,10 +399,9 @@ export const getEngagementMetrics = zWorkspaceQuery({
 
     const items = await ctx.db
       .query('messageAnalytics')
-      .withIndex('by_workspace_sender_createdAtMs', (q) =>
-        q.eq('workspaceId', args.workspaceId)
+      .withIndex('by_workspace_createdAtMs', (q) =>
+        q.eq('workspaceId', args.workspaceId).gte('createdAtMs', cutoffMs)
       )
-      .filter((q) => q.gte(q.field('createdAtMs'), cutoffMs))
       .collect()
 
     return {

@@ -303,7 +303,7 @@ export async function readResponsePayloadSafe(response: Response): Promise<unkno
             }
             try {
                 return JSON.parse(text)
-            } catch (parseError) {
+            } catch {
                 console.error('[Response Parser] Failed to parse JSON:', text.slice(0, 500))
                 return null
             }

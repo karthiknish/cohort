@@ -4,7 +4,6 @@
 
 import type {
   MetricDataPoint,
-  TimeSeriesPoint,
   TrendResult,
   AnomalyPoint,
 } from './types'
@@ -16,14 +15,13 @@ function linearRegression(points: number[]): { slope: number; intercept: number;
   const n = points.length
   if (n < 2) return { slope: 0, intercept: points[0] || 0, r2: 0 }
 
-  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0
 
   for (let i = 0; i < n; i++) {
     sumX += i
     sumY += points[i]!
     sumXY += i * points[i]!
     sumX2 += i * i
-    sumY2 += points[i]! * points[i]!
   }
 
   const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)

@@ -1,17 +1,16 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import {
   MessageSquare,
   ChevronDown,
   ChevronRight,
   Users,
   Clock,
-  CheckCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn, formatRelativeTime } from '@/lib/utils'
 import type { CollaborationMessage } from '@/types/collaboration'
 
@@ -94,6 +93,13 @@ function ThreadCard({
     (r) => !r.readBy || r.readBy.length === 0
   ).length
 
+  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onClick()
+    }
+  }
+
   return (
     <div
       className={cn(
@@ -102,6 +108,10 @@ function ThreadCard({
         unreadCount > 0 && 'border-primary/50 bg-primary/5'
       )}
       onClick={onClick}
+      onKeyDown={handleCardKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-expanded={isExpanded}
     >
       {/* Thread header - always visible */}
       <div className="p-3">
@@ -191,7 +201,7 @@ function ThreadCard({
 
       {/* Expanded thread content */}
       {isExpanded && children && (
-        <div className="border-t bg-muted/30" onClick={(e) => e.stopPropagation()}>
+        <div className="border-t bg-muted/30">
           {children}
         </div>
       )}

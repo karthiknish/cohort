@@ -1,13 +1,13 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import type { ProposalFormData } from '@/lib/proposals'
 import {
-    proposalSteps,
-    createInitialProposalFormState,
-    stepErrorPaths,
-    validateProposalStep,
     collectStepValidationErrors,
+    createInitialProposalFormState,
     hasCompletedAnyStepData,
+    proposalSteps,
+    validateProposalStep,
+    stepErrorPaths,
 } from '../utils/form-steps'
 
 export interface UseProposalWizardOptions {
@@ -49,7 +49,8 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
     const [manualErrors, setManualErrors] = useState<Record<string, string>>({})
 
     const steps = proposalSteps
-    const step = steps[currentStep]
+    const step = steps[currentStep] ?? steps[0]!
+    const stepId = step.id
     const isFirstStep = currentStep === 0
     const isLastStep = currentStep === steps.length - 1
 
@@ -72,6 +73,10 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
 
     const toggleArrayValue = useCallback((path: string[], value: string) => {
         setFormState((prev) => {
+            const field = path.at(-1)
+            if (!field) {
+                return prev
+            }
             const updated = structuredClone(prev) as typeof prev
             let target: Record<string, unknown> = updated as unknown as Record<string, unknown>
             path.slice(0, -1).forEach((key) => {
@@ -80,7 +85,6 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
                     target = next as Record<string, unknown>
                 }
             })
-            const field = path[path.length - 1]!
             const array = Array.isArray(target[field]) ? (target[field] as string[]) : []
             target[field] = array.includes(value) ? array.filter((item) => item !== value) : [...array, value]
             return updated
@@ -105,6 +109,10 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
 
     const updateField = useCallback((path: string[], value: string) => {
         setFormState((prev) => {
+            const field = path.at(-1)
+            if (!field) {
+                return prev
+            }
             const updated = structuredClone(prev) as typeof prev
             let target: Record<string, unknown> = updated as unknown as Record<string, unknown>
             path.slice(0, -1).forEach((key) => {
@@ -113,7 +121,7 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
                     target = next as Record<string, unknown>
                 }
             })
-            target[path[path.length - 1]!] = value
+            target[field] = value
             return updated
         })
         clearErrors(path.join('.'))
@@ -133,14 +141,14 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
     }, [])
 
     const stepErrors = useMemo(
-        () => collectStepValidationErrors(step!.id, formState),
-        [formState, step!.id]
+        () => collectStepValidationErrors(stepId, formState),
+        [formState, stepId]
     )
 
     const validationErrors = useMemo(() => {
         const next: Record<string, string> = { ...manualErrors }
 
-        stepErrorPaths[step!.id].forEach((key) => {
+        stepErrorPaths[stepId].forEach((key) => {
             if (stepErrors[key]) {
                 next[key] = stepErrors[key]
             } else {
@@ -149,23 +157,23 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
         })
 
         return next
-    }, [manualErrors, step!.id, stepErrors])
+    }, [manualErrors, stepErrors, stepId])
 
     const handleNext = useCallback(() => {
-        if (!validateProposalStep(step!.id, formState)) {
+        if (!validateProposalStep(stepId, formState)) {
             const message = 'Please complete the required fields before continuing.'
             toast({ title: 'Complete required fields', description: message, variant: 'destructive' })
-            const stepErrors = collectStepValidationErrors(step!.id, formState)
+            const stepErrors = collectStepValidationErrors(stepId, formState)
             setManualErrors((prev) => ({ ...prev, ...stepErrors }))
             return
         }
-        clearErrors(stepErrorPaths[step!.id])
+        clearErrors(stepErrorPaths[stepId])
         if (!isLastStep) {
             setCurrentStep((prev) => prev + 1)
         } else if (onSubmit) {
             void onSubmit()
         }
-    }, [step!.id, formState, isLastStep, onSubmit, clearErrors, toast])
+    }, [clearErrors, formState, isLastStep, onSubmit, stepId, toast])
 
     const handleBack = useCallback(() => {
         if (!isFirstStep) {
@@ -184,7 +192,7 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
         formState,
         validationErrors,
         steps,
-        step: step!,
+        step,
         isFirstStep,
         isLastStep,
         hasPersistableData,

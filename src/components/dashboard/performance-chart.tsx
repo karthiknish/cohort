@@ -1,7 +1,6 @@
 'use client'
 
 import { memo, useMemo } from 'react'
-import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Info } from 'lucide-react'
 
@@ -61,13 +60,8 @@ function formatCurrencyValueFull(value: number, currency: string = 'USD'): strin
   }
 }
 
-const ChartPlaceholder = () => (
-  <div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />
-)
-
 import {
   ChartContainer,
-  ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
@@ -80,7 +74,6 @@ import {
   CartesianGrid,
   XAxis,
   YAxis,
-  ResponsiveContainer,
   Tooltip as RechartsTooltip,
 } from 'recharts'
 

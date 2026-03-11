@@ -195,9 +195,12 @@ export function ProposalAnalyticsCard() {
   const summary = isPreviewMode
     ? previewSummary
     : (summaryRes as { summary?: ProposalAnalyticsSummary } | undefined)?.summary
-  const timeSeries = isPreviewMode
-    ? previewTimeSeries
-    : (timeSeriesRes as { timeseries?: ProposalAnalyticsTimeSeriesPoint[] } | undefined)?.timeseries ?? []
+  const timeSeries = useMemo(
+    () => isPreviewMode
+      ? previewTimeSeries
+      : (timeSeriesRes as { timeseries?: ProposalAnalyticsTimeSeriesPoint[] } | undefined)?.timeseries ?? [],
+    [isPreviewMode, previewTimeSeries, timeSeriesRes]
+  )
   const byClient = isPreviewMode
     ? previewByClient
     : (byClientRes as { byClient?: ProposalAnalyticsByClient[] } | undefined)?.byClient ?? []
@@ -430,7 +433,7 @@ export function ProposalAnalyticsCard() {
                     title={`${point.date}: ${totalGenerations} generations, ${totalFailures} failures`}
                   >
                     <div
-                      className="relative w-full rounded-t bg-primary/20 transition-all hover:bg-primary/30"
+                      className="relative w-full rounded-t bg-primary/20 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-primary/30"
                       style={{ height: `${Math.max(height, 4)}%` }}
                     >
                       {failureHeight > 0 && (

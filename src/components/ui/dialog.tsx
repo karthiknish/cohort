@@ -1,6 +1,6 @@
-import * as React from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
+import * as React from 'react'
 
 import { interactiveTransitionClass, surfaceMotionClasses } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
@@ -38,7 +38,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-[1100] grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border border-border bg-background p-6 shadow-lg outline-none sm:rounded-xl max-h-[85vh] overflow-y-auto',
+        'focus-ring fixed left-1/2 top-1/2 z-[1100] grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border border-border bg-background p-6 shadow-lg sm:rounded-xl max-h-[85vh] overflow-y-auto',
         surfaceMotionClasses.modalContent,
         className
       )}
@@ -47,7 +47,7 @@ const DialogContent = React.forwardRef<
       {children}
       <DialogPrimitive.Close
         className={cn(
-          'absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+          'focus-ring absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100',
           interactiveTransitionClass
         )}
       >

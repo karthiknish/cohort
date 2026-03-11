@@ -12,15 +12,19 @@ export async function getFeatures(): Promise<FeatureItem[]> {
   throw new ServiceUnavailableError('Feature list must be loaded via server API')
 }
 
-export async function createFeature(_input: CreateFeatureInput): Promise<FeatureItem> {
+export async function createFeature(input: CreateFeatureInput): Promise<FeatureItem> {
+  void input
   throw new ServiceUnavailableError('Feature creation must be done via server API')
 }
 
-export async function updateFeature(_id: string, _input: UpdateFeatureInput): Promise<void> {
+export async function updateFeature(id: string, input: UpdateFeatureInput): Promise<void> {
+  void id
+  void input
   throw new ServiceUnavailableError('Feature updates must be done via server API')
 }
 
-export async function deleteFeature(_id: string): Promise<void> {
+export async function deleteFeature(id: string): Promise<void> {
+  void id
   throw new ServiceUnavailableError('Feature deletion must be done via server API')
 }
 

@@ -1,10 +1,9 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { format, isToday, isYesterday } from 'date-fns'
-import { Calendar, Search, RefreshCw, X, Clock } from 'lucide-react'
+import { Calendar, Search, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -29,7 +28,6 @@ interface ActivityListProps {
   onMarkAsRead: (id: string) => void
   onAddReaction: (id: string, emoji: string) => void
   onAddComment: (activityId: string, text: string) => void
-  onActivityClick: (activity: EnhancedActivity, e: React.MouseEvent) => void
   onViewDetails: (activity: EnhancedActivity) => void
   selectedActivities: Set<string>
   onSelectionChange: (id: string, checked: boolean) => void
@@ -55,7 +53,6 @@ export function ActivityList({
   onMarkAsRead,
   onAddReaction,
   onAddComment,
-  onActivityClick,
   onViewDetails,
   selectedActivities,
   onSelectionChange,
@@ -107,7 +104,6 @@ export function ActivityList({
         case 'pinned':
           matchesStatus = activity.isPinned === true
           break
-        case 'all':
         default:
           matchesStatus = true
       }
@@ -155,10 +151,9 @@ export function ActivityList({
       if (isToday(date)) key = 'Today'
       else if (isYesterday(date)) key = 'Yesterday'
 
-      if (!groups[key]) {
-        groups[key] = []
-      }
-      groups[key]!.push(activity)
+      const group = groups[key] ?? []
+      group.push(activity)
+      groups[key] = group
     })
 
     return groups
@@ -254,19 +249,22 @@ export function ActivityList({
             </div>
           ) : (
             <div className="space-y-8">
-              {groupKeys.map((dateGroup) => (
+              {groupKeys.map((dateGroup) => {
+                const dateGroupActivities = groupedActivities[dateGroup] ?? []
+
+                return (
                 <div key={dateGroup} className="relative">
                   <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-2 border-b">
                     <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
                       {dateGroup}
                       <Badge variant="outline" className="ml-1">
-                        {groupedActivities[dateGroup]!.length}
+                        {dateGroupActivities.length}
                       </Badge>
                     </h3>
                   </div>
                   <div className="ml-2 space-y-4 sm:space-y-6 border-l-2 border-muted pl-4 sm:pl-6 pb-2">
-                    {groupedActivities[dateGroup]!.map((activity) => (
+                    {dateGroupActivities.map((activity) => (
                       <ActivityItem
                         key={activity.id}
                         activity={activity}
@@ -274,7 +272,6 @@ export function ActivityList({
                         showReactions={showReactions}
                         comments={comments[activity.id] || []}
                         onSelectionChange={onSelectionChange}
-                        onClick={onActivityClick}
                         onTogglePin={onTogglePin}
                         onMarkAsRead={onMarkAsRead}
                         onAddReaction={onAddReaction}
@@ -286,7 +283,7 @@ export function ActivityList({
                     ))}
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
 

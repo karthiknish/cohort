@@ -1,22 +1,19 @@
-import { useState, useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { useAuth } from '@/contexts/auth-context'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { proposalGenerationApi, proposalsApi } from '@/lib/convex-api'
-import { refreshProposalDraft } from '@/services/proposals'
-import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
-import type { ProposalFormData } from '@/lib/proposals'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import type { ProposalFormData } from '@/lib/proposals'
 import {
-    trackProposalSubmitted,
-    trackAiGenerationStarted,
     trackAiGenerationCompleted,
     trackAiGenerationFailed,
-    trackDeckGenerationStarted,
-    trackDeckGenerationCompleted,
-    trackDeckGenerationFailed,
+    trackAiGenerationStarted,
+    trackProposalSubmitted,
 } from '@/services/proposal-analytics'
+import { refreshProposalDraft } from '@/services/proposals'
+import type { ProposalPresentationDeck } from '@/types/proposals'
 import { createInitialProposalFormState, stepErrorPaths } from '../utils/form-steps'
 import type { SubmissionSnapshot } from './use-proposal-drafts'
 
@@ -77,6 +74,7 @@ export interface UseProposalSubmissionOptions {
 export interface UseProposalSubmissionReturn {
     // State
     isSubmitting: boolean
+    isRecheckingDeck: boolean
     submitted: boolean
     isPresentationReady: boolean
     presentationDeck: ProposalPresentationDeck | null
@@ -378,7 +376,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         } finally {
             setIsSubmitting(false)
         }
-    }, [draftId, formState, currentStep, ensureDraftId, refreshProposals, selectedClientId, selectedClient, toast, clearErrors, setAutosaveStatus, setDraftId, setFormState, setCurrentStep, workspaceId, convexUpdateProposal, generateProposalDeck])
+    }, [activeConvexProposal, clearErrors, convexUpdateProposal, currentStep, draftId, ensureDraftId, formState, generateProposalDeck, getIdToken, refreshProposals, selectedClient, selectedClientId, setAutosaveStatus, setCurrentStep, setDraftId, setFormState, toast, workspaceId])
 
     const handleContinueEditingFromSnapshot = useCallback(async () => {
         if (!lastSubmissionSnapshot) {
@@ -567,6 +565,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
 
     return {
         isSubmitting,
+        isRecheckingDeck,
         submitted,
         isPresentationReady,
         presentationDeck,

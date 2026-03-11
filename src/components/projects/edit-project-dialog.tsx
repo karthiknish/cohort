@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useReducer } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 import { useMutation } from 'convex/react'
-import { Calendar as CalendarIcon, LoaderCircle, Plus, Tag, X, CircleAlert } from 'lucide-react'
+import { CircleAlert, LoaderCircle } from 'lucide-react'
 import { format, parseISO, isValid } from 'date-fns'
 
 import { projectsApi } from '@/lib/convex-api'
@@ -11,8 +11,6 @@ import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { useToast } from '@/components/ui/use-toast'
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
-import { PROJECT_STATUSES } from '@/types/projects'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -22,24 +20,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
-import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { cn } from '@/lib/utils'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { EditProjectFormFields } from './edit-project-dialog-form'
 
 type EditProjectDialogProps = {
   project: ProjectRecord | null
@@ -73,7 +56,7 @@ type EditProjectState = {
   validationErrors: Record<string, string>
 }
 
-type EditProjectAction =
+export type EditProjectAction =
   | { type: 'initFromProject'; project: ProjectRecord }
   | { type: 'setLoading'; value: boolean }
   | { type: 'setError'; value: string | null }
@@ -153,238 +136,6 @@ function editProjectReducer(state: EditProjectState, action: EditProjectAction):
   }
 }
 
-type EditProjectFormFieldsProps = {
-  loading: boolean
-  name: string
-  description: string
-  status: ProjectStatus
-  clientId: string
-  startDate: Date | undefined
-  endDate: Date | undefined
-  tags: string[]
-  tagInput: string
-  validationErrors: Record<string, string>
-  clients: Array<{ id: string; name: string }>
-  onDispatch: React.Dispatch<EditProjectAction>
-  onAddTag: () => void
-  onRemoveTag: (tag: string) => void
-  onTagKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void
-  formatStatusLabel: (value: ProjectStatus) => string
-}
-
-function EditProjectFormFields({
-  loading,
-  name,
-  description,
-  status,
-  clientId,
-  startDate,
-  endDate,
-  tags,
-  tagInput,
-  validationErrors,
-  clients,
-  onDispatch,
-  onAddTag,
-  onRemoveTag,
-  onTagKeyDown,
-  formatStatusLabel,
-}: EditProjectFormFieldsProps) {
-  return (
-    <div className="mt-6 space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="edit-project-name">
-          Project name <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="edit-project-name"
-          placeholder="e.g., Q1 Marketing Campaign"
-          value={name}
-          onChange={(e) => onDispatch({ type: 'setName', value: e.target.value })}
-          disabled={loading}
-          aria-invalid={!!validationErrors.name}
-          aria-describedby={validationErrors.name ? 'name-error' : undefined}
-        />
-        {validationErrors.name && (
-          <p id="name-error" className="text-xs text-destructive">{validationErrors.name}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="edit-project-description">
-          Description
-          <span className="ml-2 text-xs text-muted-foreground">({description.length}/2000)</span>
-        </Label>
-        <Textarea
-          id="edit-project-description"
-          placeholder="Brief overview of the project goals and scope..."
-          value={description}
-          onChange={(e) => onDispatch({ type: 'setDescription', value: e.target.value })}
-          disabled={loading}
-          rows={3}
-          aria-invalid={!!validationErrors.description}
-        />
-        {validationErrors.description && (
-          <p className="text-xs text-destructive">{validationErrors.description}</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="edit-project-status">Status</Label>
-          <Select
-            value={status}
-            onValueChange={(value: ProjectStatus) => onDispatch({ type: 'setStatus', value })}
-            disabled={loading}
-          >
-            <SelectTrigger id="edit-project-status">
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              {PROJECT_STATUSES.map((optionStatus) => (
-                <SelectItem key={optionStatus} value={optionStatus}>
-                  {formatStatusLabel(optionStatus)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="edit-project-client">Client / Workspace</Label>
-          <Select
-            value={clientId}
-            onValueChange={(value) => onDispatch({ type: 'setClientId', value })}
-            disabled={loading}
-          >
-            <SelectTrigger id="edit-project-client">
-              <SelectValue placeholder="Select client" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No client</SelectItem>
-              {clients.map((client) => (
-                <SelectItem key={client.id} value={client.id}>
-                  {client.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Start date</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  'w-full justify-start text-left font-normal',
-                  !startDate && 'text-muted-foreground'
-                )}
-                disabled={loading}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, 'PPP') : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={startDate}
-                onSelect={(value) => onDispatch({ type: 'setStartDate', value })}
-                initialFocus
-                disabled={(date: Date) => date < new Date('1900-01-01')}
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        <div className="space-y-2">
-          <Label>End date</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  'w-full justify-start text-left font-normal',
-                  !endDate && 'text-muted-foreground',
-                  validationErrors.endDate && 'border-destructive text-destructive'
-                )}
-                disabled={loading}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, 'PPP') : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={endDate}
-                onSelect={(value) => onDispatch({ type: 'setEndDate', value })}
-                initialFocus
-                disabled={(date: Date) =>
-                  (startDate ? date < startDate : false) || date < new Date('1900-01-01')
-                }
-              />
-            </PopoverContent>
-          </Popover>
-          {validationErrors.endDate && (
-            <p className="text-xs text-destructive">{validationErrors.endDate}</p>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="edit-project-tags">Tags</Label>
-        <div className="flex gap-2">
-          <Input
-            id="edit-project-tags"
-            placeholder="Add a tag..."
-            value={tagInput}
-            onChange={(e) => onDispatch({ type: 'setTagInput', value: e.target.value })}
-            onKeyDown={onTagKeyDown}
-            disabled={loading || tags.length >= 10}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={onAddTag}
-            disabled={loading || !tagInput.trim() || tags.length >= 10}
-            aria-label="Add tag"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-2">
-            {tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="gap-1 pr-1">
-                <Tag className="h-3 w-3" />
-                {tag}
-                <button
-                  type="button"
-                  onClick={() => onRemoveTag(tag)}
-                  className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20"
-                  disabled={loading}
-                  aria-label={`Remove tag ${tag}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        )}
-        <p className="text-xs text-muted-foreground">
-          {tags.length}/10 tags. Press Enter or click + to add.
-        </p>
-      </div>
-    </div>
-  )
-}
-
 export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdated }: EditProjectDialogProps) {
   const { user } = useAuth()
   const workspaceId = user?.agencyId ?? null
@@ -394,6 +145,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
   const { toast } = useToast()
 
   const [state, dispatch] = useReducer(editProjectReducer, INITIAL_EDIT_PROJECT_STATE)
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false)
   const {
     loading,
     error,
@@ -578,64 +330,95 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
       .join(' ')
   }
 
-  const handleClose = useCallback(() => {
-    if (hasChanges && !loading) {
-      const confirmed = window.confirm('You have unsaved changes. Are you sure you want to close?')
-      if (!confirmed) return
+  const requestClose = useCallback(() => {
+    if (loading) return
+
+    if (hasChanges) {
+      setDiscardDialogOpen(true)
+      return
     }
+
     onOpenChange(false)
   }, [hasChanges, loading, onOpenChange])
+
+  const handleDialogOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen) {
+      onOpenChange(true)
+      return
+    }
+
+    requestClose()
+  }, [onOpenChange, requestClose])
+
+  const handleConfirmDiscard = useCallback(() => {
+    setDiscardDialogOpen(false)
+    onOpenChange(false)
+  }, [onOpenChange])
 
   if (!project) return null
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[540px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Edit project</DialogTitle>
-            <DialogDescription>
-              Update project details. Changes will be saved when you click Save.
-            </DialogDescription>
-          </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+        <DialogContent className="sm:max-w-[540px]">
+          <form onSubmit={handleSubmit}>
+            <DialogHeader>
+              <DialogTitle>Edit project</DialogTitle>
+              <DialogDescription>
+                Update project details. Changes will be saved when you click Save.
+              </DialogDescription>
+            </DialogHeader>
 
-          {error && (
-            <Alert variant="destructive" className="mt-4">
-              <CircleAlert className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+            {error && (
+              <Alert variant="destructive" className="mt-4">
+                <CircleAlert className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-          <EditProjectFormFields
-            loading={loading}
-            name={name}
-            description={description}
-            status={status}
-            clientId={clientId}
-            startDate={startDate}
-            endDate={endDate}
-            tags={tags}
-            tagInput={tagInput}
-            validationErrors={validationErrors}
-            clients={clients}
-            onDispatch={dispatch}
-            onAddTag={handleAddTag}
-            onRemoveTag={handleRemoveTag}
-            onTagKeyDown={handleTagKeyDown}
-            formatStatusLabel={formatStatusLabel}
-          />
+            <EditProjectFormFields
+              loading={loading}
+              name={name}
+              description={description}
+              status={status}
+              clientId={clientId}
+              startDate={startDate}
+              endDate={endDate}
+              tags={tags}
+              tagInput={tagInput}
+              validationErrors={validationErrors}
+              clients={clients}
+              onDispatch={dispatch}
+              onAddTag={handleAddTag}
+              onRemoveTag={handleRemoveTag}
+              onTagKeyDown={handleTagKeyDown}
+              formatStatusLabel={formatStatusLabel}
+            />
 
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading || !name.trim() || !hasChanges}>
-              {loading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-              {hasChanges ? 'Save changes' : 'No changes'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter className="mt-6">
+              <Button type="button" variant="outline" onClick={requestClose} disabled={loading}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading || !name.trim() || !hasChanges}>
+                {loading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                {hasChanges ? 'Save changes' : 'No changes'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={open && discardDialogOpen}
+        onOpenChange={setDiscardDialogOpen}
+        title="Discard unsaved changes?"
+        description="You have unsaved changes in this project. Closing now will discard them."
+        confirmLabel="Discard changes"
+        cancelLabel="Keep editing"
+        variant="warning"
+        onConfirm={handleConfirmDiscard}
+        onCancel={() => setDiscardDialogOpen(false)}
+      />
+    </>
   )
 }

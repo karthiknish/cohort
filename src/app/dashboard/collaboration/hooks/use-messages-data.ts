@@ -15,14 +15,13 @@ import type { CollaborationAttachment, CollaborationMessage } from '@/types/coll
 
 import type { Channel } from '../types'
 import { extractMentionsFromContent } from '../utils/mentions'
-import type { ChannelSummary, MessagesByChannelState, SendMessageOptions } from './types'
 import { mapCollaborationMessageRow, previewPendingAttachmentToCollaborationAttachment } from './message-mappers'
-import { useRealtimeMessages, useRealtimeTyping } from './use-realtime'
 import { useChannelMessageSearch } from './use-channel-message-search'
+import { useMessageActions } from './use-message-actions'
+import { useRealtimeMessages, useRealtimeTyping } from './use-realtime'
 import { useThreads } from './use-threads'
 import { useTyping } from './use-typing'
-import { useMessageActions } from './use-message-actions'
-import type { PendingAttachment } from './types'
+import type { ChannelSummary, MessagesByChannelState, PendingAttachment, SendMessageOptions } from './types'
 
 interface UseMessagesDataOptions {
   workspaceId: string | null
@@ -257,7 +256,6 @@ export function useMessagesData({
     handleComposerFocus,
     handleComposerBlur,
   } = useTyping({
-    userId: currentUserId,
     workspaceId,
     selectedChannel,
     resolveSenderDetails,

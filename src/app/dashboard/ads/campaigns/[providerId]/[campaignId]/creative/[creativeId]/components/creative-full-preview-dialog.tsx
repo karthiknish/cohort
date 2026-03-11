@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { LazyImage } from '@/components/ui/lazy-image'
 
 export function CreativeFullPreviewDialog(props: {
   open: boolean
@@ -45,11 +46,10 @@ export function CreativeFullPreviewDialog(props: {
               poster={creative.imageUrl || creative.thumbnailUrl}
             />
           ) : creative.imageUrl && !imageLoadFailed ? (
-            <img
+            <LazyImage
               src={creative.imageUrl}
               alt={displayName}
               className="w-full rounded-lg object-contain max-h-[60vh]"
-              loading="lazy"
               decoding="async"
               onError={() => setImageLoadFailed(true)}
             />

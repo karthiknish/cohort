@@ -1,14 +1,13 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { Flag, FlagOff, ChevronDown } from 'lucide-react'
+import { useCallback } from 'react'
+import { Flag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import {
   Tooltip,

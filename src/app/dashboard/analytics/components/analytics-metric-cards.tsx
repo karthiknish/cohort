@@ -30,7 +30,7 @@ export function AnalyticsMetricCards({
 }: AnalyticsMetricCardsProps) {
     return (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+            <Card className="border-muted/30 bg-muted/5 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/10">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
                     <div className="flex items-center gap-2">
                         <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Avg users / day</CardTitle>
@@ -55,7 +55,7 @@ export function AnalyticsMetricCards({
                 </CardContent>
             </Card>
 
-            <Card className="border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+            <Card className="border-muted/30 bg-muted/5 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/10">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
                     <div className="flex items-center gap-2">
                         <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Avg sessions / day</CardTitle>
@@ -80,7 +80,7 @@ export function AnalyticsMetricCards({
                 </CardContent>
             </Card>
 
-            <Card className="border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+            <Card className="border-muted/30 bg-muted/5 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/10">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
                     <div className="flex items-center gap-2">
                         <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Revenue / session</CardTitle>
@@ -105,7 +105,7 @@ export function AnalyticsMetricCards({
                 </CardContent>
             </Card>
 
-            <Card className="border-muted/30 bg-muted/5 shadow-sm transition-all hover:bg-muted/10">
+            <Card className="border-muted/30 bg-muted/5 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/10">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
                     <div className="flex items-center gap-2">
                         <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Sessions / user</CardTitle>

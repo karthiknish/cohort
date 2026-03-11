@@ -4,40 +4,21 @@ import { useState, useCallback, useMemo } from 'react'
 import {
   Line,
   LineChart,
-  Bar,
-  BarChart,
-  Area,
-  AreaChart,
-  Pie,
-  PieChart,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Cell,
 } from 'recharts'
-import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Download, ZoomIn, ZoomOut, RefreshCw, Settings2 } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { formatCurrency } from '@/lib/utils'
 import { useToast } from '@/components/ui/use-toast'
 import { CHART_COLORS, GRAYS } from '@/lib/colors'
+import {
+  InteractiveChartHeader,
+  InteractiveChartRenderer,
+} from './interactive-chart-sections'
 
 export type ChartType = 'line' | 'bar' | 'area' | 'pie'
 export type TimeRange = '7d' | '14d' | '30d' | '90d' | '12m' | 'all'
@@ -48,17 +29,6 @@ export interface ChartDataPoint {
   label?: string
   category?: string
   [key: string]: string | number | undefined
-}
-
-type RechartsTooltipPayloadItem = {
-  name?: string
-  value?: number
-  payload?: Record<string, string | number | undefined>
-}
-
-type RechartsTooltipProps = {
-  active?: boolean
-  payload?: RechartsTooltipPayloadItem[]
 }
 
 interface InteractiveChartProps {
@@ -77,57 +47,7 @@ interface InteractiveChartProps {
   isRefreshing?: boolean
 }
 
-const COLORS = CHART_COLORS.primary
 const DEFAULT_VALUE_FORMATTER = (value: number) => value.toString()
-
-function ChartTooltipContent({
-  active,
-  payload,
-  xAxisKey,
-  dataKey,
-  valueFormatter,
-}: RechartsTooltipProps & {
-  xAxisKey: string
-  dataKey: string
-  valueFormatter: (value: number) => string
-}) {
-  if (!active || !payload?.length || !payload[0]?.payload) return null
-
-  const data = payload[0].payload
-  const labelValue = data[xAxisKey] ?? data.date
-  const numericValue = Number(data[dataKey] ?? 0)
-
-  return (
-    <div className="bg-background border rounded-lg px-3 py-2 shadow-sm">
-      <p className="text-sm font-medium">{String(labelValue ?? '')}</p>
-      <p className="text-lg font-bold">{valueFormatter(Number.isFinite(numericValue) ? numericValue : 0)}</p>
-      {typeof data.category === 'string' && data.category.length > 0 && (
-        <p className="text-xs text-muted-foreground">{data.category}</p>
-      )}
-    </div>
-  )
-}
-
-function PieTooltipContent({
-  active,
-  payload,
-  valueFormatter,
-}: RechartsTooltipProps & {
-  valueFormatter: (value: number) => string
-}) {
-  if (!active || !payload?.length) return null
-
-  const first = payload[0]
-  const name = first?.name ? String(first.name) : 'Unknown'
-  const value = Number(first?.value ?? 0)
-
-  return (
-    <div className="bg-background border rounded-lg px-3 py-2 shadow-sm">
-      <p className="font-medium">{name}</p>
-      <p className="text-lg font-bold">{valueFormatter(Number.isFinite(value) ? value : 0)}</p>
-    </div>
-  )
-}
 
 /**
  * Interactive chart component with multiple chart types and export
@@ -244,233 +164,32 @@ export function InteractiveChart({
     [filteredData, xAxisKey, dataKey, title, timeRange, onExport, toast]
   )
 
-  const renderChart = () => {
-    if (filteredData.length === 0) {
-      return (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-sm text-muted-foreground">No data available for this time range</p>
-        </div>
-      )
-    }
-
-    const commonProps = {
-      data: chartType === 'pie' ? categoryData : filteredData,
-      height,
-      margin: { top: 10, right: 10, left: 10, bottom: 10 },
-    }
-
-    switch (chartType) {
-      case 'line':
-        return (
-          <LineChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.2} />
-            <XAxis
-              dataKey={xAxisKey}
-              tick={{ fontSize: 12 }}
-              stroke="currentColor"
-              strokeOpacity={0.5}
-              tickFormatter={(value) => {
-                const date = new Date(value)
-                return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-              }}
-            />
-            <YAxis
-              tick={{ fontSize: 12 }}
-              stroke="currentColor"
-              strokeOpacity={0.5}
-              tickFormatter={valueFormatter}
-            />
-            <Tooltip
-              content={
-                <ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />
-              }
-            />
-            <Line
-              type="monotone"
-              dataKey={dataKey}
-              stroke={CHART_COLORS.primary[0]}
-              strokeWidth={2}
-              dot={{ fill: CHART_COLORS.primary[0], r: 4 }}
-              activeDot={{ r: 6 }}
-            />
-          </LineChart>
-        )
-
-      case 'bar':
-        return (
-          <BarChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.2} />
-            <XAxis
-              dataKey={xAxisKey}
-              tick={{ fontSize: 12 }}
-              stroke="currentColor"
-              strokeOpacity={0.5}
-              tickFormatter={(value) => {
-                const date = new Date(value)
-                return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-              }}
-            />
-            <YAxis
-              tick={{ fontSize: 12 }}
-              stroke="currentColor"
-              strokeOpacity={0.5}
-              tickFormatter={valueFormatter}
-            />
-            <Tooltip
-              content={
-                <ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />
-              }
-            />
-            <Bar dataKey={dataKey} fill={CHART_COLORS.primary[0]} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        )
-
-      case 'area':
-        return (
-          <AreaChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.2} />
-            <XAxis
-              dataKey={xAxisKey}
-              tick={{ fontSize: 12 }}
-              stroke="currentColor"
-              strokeOpacity={0.5}
-            />
-            <YAxis
-              tick={{ fontSize: 12 }}
-              stroke="currentColor"
-              strokeOpacity={0.5}
-              tickFormatter={valueFormatter}
-            />
-            <Tooltip
-              content={
-                <ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />
-              }
-            />
-            <Area
-              type="monotone"
-              dataKey={dataKey}
-              stroke={CHART_COLORS.primary[0]}
-              fill={CHART_COLORS.primary[0]}
-              fillOpacity={0.3}
-            />
-          </AreaChart>
-        )
-
-      case 'pie':
-        return (
-          <PieChart {...commonProps}>
-            <Pie
-              data={categoryData}
-              dataKey="value"
-              name="Share"
-              cx="50%"
-              cy="50%"
-              innerRadius={40}
-              outerRadius={80}
-              paddingAngle={2}
-              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-              labelLine={false}
-            >
-              {categoryData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip content={<PieTooltipContent valueFormatter={valueFormatter} />} />
-          </PieChart>
-        )
-
-      default:
-        return null
-    }
-  }
-
   return (
     <Card className={cn('chart-container', className)}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div className="flex-1 min-w-0">
-          <CardTitle>{title}</CardTitle>
-          {description && (
-            <CardDescription className="mt-1">{description}</CardDescription>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Chart type selector */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                {chartType === 'line' && 'Line Chart'}
-                {chartType === 'bar' && 'Bar Chart'}
-                {chartType === 'area' && 'Area Chart'}
-                {chartType === 'pie' && 'Pie Chart'}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setChartType('line')}>Line Chart</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setChartType('bar')}>Bar Chart</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setChartType('area')}>Area Chart</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setChartType('pie')}>Pie Chart</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Time range selector */}
-          <Select value={timeRange} onValueChange={(v) => setTimeRange(v as TimeRange)}>
-            <SelectTrigger className="w-[100px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="14d">Last 14 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="12m">Last 12 months</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Actions */}
-          {showRefresh && onRefresh && (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onRefresh}
-              disabled={isRefreshing}
-            >
-              <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
-            </Button>
-          )}
-
-          {showExport && onExport && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Download className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  Export as CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('json')}>
-                  Export as JSON
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('png')}>
-                  Export as Image
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </CardHeader>
+      <InteractiveChartHeader
+        chartType={chartType}
+        description={description}
+        handleExport={handleExport}
+        isRefreshing={isRefreshing}
+        onRefresh={onRefresh}
+        setChartType={setChartType}
+        setTimeRange={setTimeRange}
+        showExport={showExport && !!onExport}
+        showRefresh={showRefresh}
+        timeRange={timeRange}
+        title={title}
+      />
 
       <CardContent className="pt-4">
-        <ResponsiveContainer width="100%" height={height}>
-          {renderChart() ?? (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              No data available
-            </div>
-          )}
-        </ResponsiveContainer>
+        <InteractiveChartRenderer
+          categoryData={categoryData}
+          chartType={chartType}
+          dataKey={dataKey}
+          filteredData={filteredData}
+          height={height}
+          valueFormatter={valueFormatter}
+          xAxisKey={xAxisKey}
+        />
       </CardContent>
     </Card>
   )

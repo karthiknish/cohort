@@ -50,6 +50,8 @@
   --motion-distance-sm: 8px;
   --motion-distance-md: 12px;
   --motion-scale-subtle: 0.98;
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
 }
 
 
@@ -219,9 +221,17 @@ h6 {
     animation: spin-slow 2s linear infinite;
   }
 
-  /* Improved focus-visible ring for better accessibility */
+  /* Focus-visible ring tokens for consistent keyboard affordances */
   .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply focus-visible:outline-none focus-visible:ring-[var(--focus-ring-width)] focus-visible:ring-ring/50 focus-visible:ring-offset-[var(--focus-ring-offset)] focus-visible:ring-offset-background;
+  }
+
+  .focus-ring-subtle {
+    @apply focus-visible:outline-none focus-visible:ring-[var(--focus-ring-width)] focus-visible:ring-ring/20 focus-visible:ring-offset-[var(--focus-ring-offset)] focus-visible:ring-offset-background;
+  }
+
+  .focus-ring-primary {
+    @apply focus-visible:outline-none focus-visible:ring-[var(--focus-ring-width)] focus-visible:ring-primary/30 focus-visible:ring-offset-[var(--focus-ring-offset)] focus-visible:ring-offset-background;
   }
 
   /* Better scrollbar styling */
@@ -281,7 +291,7 @@ h6 {
 
   /* Premium Driver.js / Onboarding Tour styling */
   .cohorts-tour-popover {
-    @apply !bg-background !backdrop-blur-md !border !border-primary/20 !shadow-2xl !rounded-xl !p-0 !overflow-hidden !max-w-[320px] transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none;
+    @apply !bg-background !backdrop-blur-md !border !border-primary/20 !shadow-2xl !rounded-xl !p-0 !overflow-hidden !max-w-[320px] transition-[transform,opacity,box-shadow] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none;
   }
 
   .cohorts-tour-popover .driver-popover-title {
@@ -301,7 +311,7 @@ h6 {
   .cohorts-tour-popover .driver-popover-btn {
     font-family: var(--font-sans), sans-serif;
     text-shadow: none !important;
-    @apply !text-sm !font-semibold !leading-tight !tracking-normal !rounded-md !px-3 !py-1.5 !transition-all !duration-200 !shadow-none !border !filter-none !backdrop-blur-none !antialiased;
+    @apply !text-sm !font-semibold !leading-tight !tracking-normal !rounded-md !px-3 !py-1.5 !transition-[background-color,color,border-color] !duration-200 !shadow-none !border !filter-none !backdrop-blur-none !antialiased;
   }
 
   .cohorts-tour-popover .driver-popover-next-btn {
@@ -331,7 +341,7 @@ h6 {
   /* Custom animation for tour highlights */
   .driver-active-element {
     box-shadow: 0 0 0 4px rgba(7, 23, 64, 0.1), 0 0 20px rgba(7, 23, 64, 0.2);
-    @apply !transition-all !duration-500;
+    @apply !transition-[box-shadow] !duration-500;
   }
 
   /* Sonner toast container - ensure high z-index */

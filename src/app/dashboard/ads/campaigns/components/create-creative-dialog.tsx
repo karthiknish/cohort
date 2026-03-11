@@ -525,7 +525,7 @@ export function CreateCreativeDialog({
             <Label htmlFor="body">Primary Text</Label>
             <Textarea
               id="body"
-              placeholder="Enter your main ad copy here..."
+              placeholder="Enter your main ad copy here…"
               value={body}
               onChange={(e) => setBody(e.target.value)}
               disabled={loading}
@@ -616,7 +616,7 @@ export function CreateCreativeDialog({
                     disabled={loading || uploadingImage}
                     className="absolute inset-0 opacity-0 cursor-pointer"
                   />
-                  <Button type="button" variant="outline" size="icon" disabled={loading || uploadingImage}>
+                  <Button type="button" variant="outline" size="icon" disabled={loading || uploadingImage} aria-label="Upload creative image">
                     {uploadingImage ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
@@ -720,7 +720,7 @@ export function CreateCreativeDialog({
             </Button>
             <Button type="submit" disabled={loading || !name.trim()}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {loading ? 'Creating...' : 'Create Ad'}
+              {loading ? 'Creating…' : 'Create Ad'}
             </Button>
           </DialogFooter>
         </form>

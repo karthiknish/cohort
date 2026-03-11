@@ -2,10 +2,6 @@ import { v } from 'convex/values'
 import { Errors } from './errors'
 import { workspaceQuery, workspaceMutation } from './functions'
 
-function nowMs() {
-  return Date.now()
-}
-
 const alertRuleConditionValidator = v.object({
   operator: v.union(
     v.literal('gt'),

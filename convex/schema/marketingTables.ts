@@ -171,6 +171,7 @@ export const marketingTables = {
     providerId: v.string(),
     clientId: v.union(v.string(), v.null()),
     accountId: v.union(v.string(), v.null()),
+    publisherPlatform: v.optional(v.union(v.string(), v.null())),
     date: v.string(),
     spend: v.number(),
     impressions: v.number(),

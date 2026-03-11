@@ -4,7 +4,6 @@ import { Search } from 'lucide-react'
 import type { ChangeEvent } from 'react'
 
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
@@ -61,7 +60,7 @@ export function CollaborationChannelList({
                   type="button"
                   onClick={() => onSelectChannel(channel.id)}
                   className={cn(
-                    'flex w-full flex-col gap-1.5 rounded-lg border p-3 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary/20',
+                    'flex w-full flex-col gap-1.5 rounded-lg border p-3 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] outline-none focus-visible:ring-2 focus-visible:ring-primary/20',
                     isSelected
                       ? 'border-primary/20 bg-primary/5 shadow-sm'
                       : 'border-transparent hover:bg-muted/50 hover:border-muted/40'

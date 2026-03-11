@@ -49,7 +49,7 @@ export const adSyncNotification = httpAction(async (ctx, request) => {
       clientId,
       jobType: 'manual-sync',
     })
-  } catch (err) {
+  } catch {
     // Don’t fail the webhook if auth is not wired yet.
     return jsonResponse({ received: true, enqueued: false })
   }

@@ -36,6 +36,22 @@ describe('meeting attendee helpers', () => {
     expect(suggestions.map((suggestion) => suggestion.email)).toEqual(['priya@example.com'])
   })
 
+  it('falls back to organizer id to exclude the current user from suggestions', () => {
+    const suggestions = buildMeetingAttendeeSuggestions({
+      workspaceMembers: [
+        { id: 'current-user', name: 'Alex Morgan', email: 'alex+workspace@example.com', role: 'admin' },
+        { id: '2', name: 'Jordan Lee', email: 'jordan@example.com', role: 'team' },
+      ],
+      platformUsers: [],
+      organizerId: 'current-user',
+      organizerEmail: null,
+      selectedEmails: [],
+      queryValue: 'alex',
+    })
+
+    expect(suggestions.map((suggestion) => suggestion.email)).toEqual([])
+  })
+
   it('treats a draft with only the organizer email as missing participants', () => {
     expect(
       buildMeetingAttendeeDraft({

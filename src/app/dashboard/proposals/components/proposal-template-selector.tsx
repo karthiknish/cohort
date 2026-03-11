@@ -324,7 +324,7 @@ export function ProposalTemplateSelector({
                 id="template-description"
                 value={templateDescription}
                 onChange={(e) => setTemplateDescription(e.target.value)}
-                placeholder="Brief description of when to use this template..."
+                placeholder="Brief description of when to use this template…"
                 rows={2}
               />
             </div>
@@ -363,7 +363,7 @@ export function ProposalTemplateSelector({
               {saving ? (
                 <>
                   <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  Saving…
                 </>
               ) : (
                 <>

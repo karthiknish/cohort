@@ -74,16 +74,6 @@ export interface UseFormulaEditorReturn {
 // CONSTANTS
 // =============================================================================
 
-/** Supported operators and functions in formulas */
-const SUPPORTED_OPERATORS = ['+', '-', '*', '/', '(', ')', '.']
-const SUPPORTED_FUNCTIONS = ['abs', 'min', 'max', 'round', 'floor', 'ceil']
-
-/** Known metric names for validation */
-const KNOWN_METRICS = [
-    'spend', 'impressions', 'clicks', 'conversions', 'revenue',
-    'ctr', 'cpc', 'cpm', 'roas', 'cpa'
-]
-
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================

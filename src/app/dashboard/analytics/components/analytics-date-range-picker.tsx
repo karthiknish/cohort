@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
-import type { DateRange } from '@/app/dashboard/ads/components/date-range-picker'
 
 export interface AnalyticsDateRange {
   start: Date
@@ -109,7 +108,7 @@ export function AnalyticsDateRangePicker({
         <select
           value={currentPreset}
           onChange={(e) => handlePresetSelect(e.target.value as PeriodValue)}
-          className="block w-full min-w-[140px] cursor-pointer appearance-none rounded-xl border border-muted/30 bg-background px-4 py-2.5 pr-10 text-xs font-bold uppercase tracking-wider shadow-sm transition-all hover:border-primary/40 focus:border-primary/60 focus:outline-none focus:ring-4 focus:ring-primary/5"
+          className="block w-full min-w-[140px] cursor-pointer appearance-none rounded-xl border border-muted/30 bg-background px-4 py-2.5 pr-10 text-xs font-bold uppercase tracking-wider shadow-sm transition-[border-color,box-shadow] hover:border-primary/40 focus:border-primary/60 focus:outline-none focus:ring-4 focus:ring-primary/5"
         >
           {PERIOD_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>

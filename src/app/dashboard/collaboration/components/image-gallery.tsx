@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { type KeyboardEvent, useState } from "react"
 import { Download, Image as ImageIcon, ZoomIn } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,15 @@ interface ImageGalleryProps {
     size?: string
   }>
   className?: string
+}
+
+function createPreviewKeyDownHandler(openPreview: () => void) {
+  return (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      openPreview()
+    }
+  }
 }
 
 export function ImageGallery({ images, className }: ImageGalleryProps) {
@@ -35,10 +44,14 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
       <>
         <figure
           className={cn(
-            "group relative max-w-xl overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted my-2",
+            "group relative max-w-xl overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted my-2",
             className
           )}
           onClick={() => handleImageClick(0)}
+          onKeyDown={createPreviewKeyDownHandler(() => handleImageClick(0))}
+          role="button"
+          tabIndex={0}
+          aria-label={`Preview image ${image.name}`}
         >
           <div className="relative aspect-video max-h-96 overflow-hidden">
             <LazyImage
@@ -96,8 +109,12 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
             {images.map((image, index) => (
             <figure
                 key={image.url}
-              className="group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted"
+              className="group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted"
               onClick={() => handleImageClick(index)}
+              onKeyDown={createPreviewKeyDownHandler(() => handleImageClick(index))}
+              role="button"
+              tabIndex={0}
+              aria-label={`Preview image ${image.name}`}
             >
               <div className="relative aspect-square overflow-hidden">
                 <LazyImage
@@ -131,8 +148,12 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
       <>
         <div className={cn("grid grid-cols-2 gap-2 max-w-xl", className)}>
           <figure
-            className="group relative col-span-1 row-span-2 overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted"
+            className="group relative col-span-1 row-span-2 overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted"
             onClick={() => handleImageClick(0)}
+            onKeyDown={createPreviewKeyDownHandler(() => handleImageClick(0))}
+            role="button"
+            tabIndex={0}
+            aria-label={`Preview image ${images[0]!.name}`}
           >
             <div className="relative aspect-[3/4] overflow-hidden">
               <LazyImage
@@ -150,8 +171,12 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
             {images.slice(1, 3).map((image, index) => (
             <figure
                 key={image.url}
-              className="group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted"
+              className="group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted"
               onClick={() => handleImageClick(index + 1)}
+              onKeyDown={createPreviewKeyDownHandler(() => handleImageClick(index + 1))}
+              role="button"
+              tabIndex={0}
+              aria-label={`Preview image ${image.name}`}
             >
               <div className="relative aspect-square overflow-hidden">
                 <LazyImage
@@ -189,8 +214,12 @@ export function ImageGallery({ images, className }: ImageGalleryProps) {
           {displayImages.map((image, index) => (
           <figure
               key={image.url}
-            className="group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-all hover:border-muted"
+            className="group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted"
             onClick={() => handleImageClick(index)}
+            onKeyDown={createPreviewKeyDownHandler(() => handleImageClick(index))}
+            role="button"
+            tabIndex={0}
+            aria-label={`Preview image ${image.name}`}
           >
             <div className="relative aspect-square overflow-hidden">
               <LazyImage

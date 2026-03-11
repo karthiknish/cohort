@@ -454,7 +454,7 @@ export function CreativeSocialPreview(props: {
                 type="button"
                 onClick={() => setAspectRatio('feed')}
                 className={cn(
-                  "h-8 w-8 rounded-md flex items-center justify-center transition-all",
+                  "h-8 w-8 rounded-md flex items-center justify-center transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
                   aspectRatio === 'feed' ? "bg-background shadow-sm" : "hover:bg-muted/50"
                 )}
                 title="Feed (1:1)"
@@ -465,7 +465,7 @@ export function CreativeSocialPreview(props: {
                 type="button"
                 onClick={() => setAspectRatio('reel')}
                 className={cn(
-                  "h-8 w-8 rounded-md flex items-center justify-center transition-all",
+                  "h-8 w-8 rounded-md flex items-center justify-center transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
                   aspectRatio === 'reel' ? "bg-background shadow-sm" : "hover:bg-muted/50"
                 )}
                 title="Reel (9:16)"

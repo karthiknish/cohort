@@ -39,7 +39,7 @@ export function ObjectiveSelector({ value, onChange, disabled }: ObjectiveSelect
             disabled={disabled}
             onClick={() => onChange(objective.objective)}
             className={cn(
-              'relative flex flex-col items-start p-4 rounded-lg border-2 text-left transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+              'relative flex flex-col items-start p-4 rounded-lg border-2 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
               'hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2',
               isSelected
                 ? 'border-primary bg-primary/5 shadow-sm'
@@ -121,7 +121,7 @@ export function CompactObjectiveSelector({ value, onChange, disabled }: CompactO
             disabled={disabled}
             onClick={() => onChange(objective.objective)}
             className={cn(
-              'inline-flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-all',
+              'inline-flex items-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
               isSelected
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-card hover:bg-muted',

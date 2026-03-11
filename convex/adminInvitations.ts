@@ -1,7 +1,8 @@
-import { zAdminQuery, zAdminMutation } from './functions'
-import { Errors } from './errors'
 import { z } from 'zod/v4'
+
 import type { Id } from './_generated/dataModel'
+import { Errors, isAppError } from './errors'
+import { zAdminMutation, zAdminQuery } from './functions'
 
 type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked'
 
@@ -69,6 +70,16 @@ function serializeInvitation(
   }
 }
 
+function throwAdminInvitationsError(operation: string, error: unknown, context?: Record<string, unknown>): never {
+  console.error(`[adminInvitations:${operation}]`, context ?? {}, error)
+
+  if (isAppError(error)) {
+    throw error
+  }
+
+  throw Errors.base.internal('Admin invitation operation failed')
+}
+
 export const listInvitations = zAdminQuery({
   args: {
     status: z.union([
@@ -80,20 +91,28 @@ export const listInvitations = zAdminQuery({
     limit: z.number().optional(),
   },
   handler: async (ctx, args) => {
-    const limit = Math.min(Math.max(args.limit ?? 50, 1), 100)
-    const currentTimeMs = nowMs()
+    try {
+      const limit = Math.min(Math.max(args.limit ?? 50, 1), 100)
+      const currentTimeMs = nowMs()
+      const status = args.status
 
-    const base = args.status
-      ? ctx.db
-          .query('invitations')
-          .withIndex('by_status_createdAtMs', (q) => q.eq('status', args.status!))
-          .order('desc')
-      : ctx.db.query('invitations').order('desc')
+      const base = status
+        ? ctx.db
+            .query('invitations')
+            .withIndex('by_status_createdAtMs', (q) => q.eq('status', status))
+            .order('desc')
+        : ctx.db
+            .query('invitations')
+            .withIndex('by_createdAtMs', (q) => q)
+            .order('desc')
 
-    const rows = await base.take(limit)
+      const rows = await base.take(limit)
 
-    return {
-      invitations: rows.map((row) => serializeInvitation(row, currentTimeMs)),
+      return {
+        invitations: rows.map((row) => serializeInvitation(row, currentTimeMs)),
+      }
+    } catch (error) {
+      throwAdminInvitationsError('listInvitations', error, { status: args.status ?? null, limit: args.limit ?? null })
     }
   },
 })
@@ -108,146 +127,158 @@ export const createInvitation = zAdminMutation({
     invitedByName: z.string().nullable().optional(),
   },
   handler: async (ctx, args) => {
-    const normalized = normalizeEmail(args.email)
+    try {
+      const normalized = normalizeEmail(args.email)
 
-    const existingUser = await ctx.db
-      .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
-      .unique()
+      const existingUser = await ctx.db
+        .query('users')
+        .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
+        .unique()
 
-    if (existingUser) {
-      throw Errors.resource.alreadyExists('User with this email')
+      if (existingUser) {
+        throw Errors.resource.alreadyExists('User with this email')
+      }
+
+      const existingInvites = await ctx.db
+        .query('invitations')
+        .withIndex('by_emailLower_status', (q) =>
+          q.eq('emailLower', normalized.emailLower).eq('status', 'pending')
+        )
+        .take(1)
+
+      if (existingInvites.length > 0) {
+        throw Errors.resource.alreadyExists('Pending invitation for this email')
+      }
+
+      const token = generateToken()
+      const createdAtMs = nowMs()
+      const expiresAtMs = createdAtMs + INVITATION_EXPIRY_MS
+
+      const id = await ctx.db.insert('invitations', {
+        legacyId: null,
+        email: normalized.emailLower,
+        emailLower: normalized.emailLower,
+        role: args.role,
+        name: args.name ?? null,
+        message: args.message ?? null,
+        status: 'pending',
+        invitedBy: args.invitedBy,
+        invitedByName: args.invitedByName ?? null,
+        token,
+        expiresAtMs,
+        createdAtMs,
+        acceptedAtMs: null,
+      })
+
+      const createdInvitation = await ctx.db.get(id)
+      if (!createdInvitation) {
+        throw Errors.resource.notFound('Invitation', String(id))
+      }
+
+      return serializeInvitation(createdInvitation, createdAtMs)
+    } catch (error) {
+      throwAdminInvitationsError('createInvitation', error, { email: args.email, role: args.role })
     }
-
-    const existingInvites = await ctx.db
-      .query('invitations')
-      .withIndex('by_emailLower_status', (q) =>
-        q.eq('emailLower', normalized.emailLower).eq('status', 'pending')
-      )
-      .take(1)
-
-    if (existingInvites.length > 0) {
-      throw Errors.resource.alreadyExists('Pending invitation for this email')
-    }
-
-    const token = generateToken()
-    const createdAtMs = nowMs()
-    const expiresAtMs = createdAtMs + INVITATION_EXPIRY_MS
-
-    const id = await ctx.db.insert('invitations', {
-      legacyId: null,
-      email: normalized.emailLower,
-      emailLower: normalized.emailLower,
-      role: args.role,
-      name: args.name ?? null,
-      message: args.message ?? null,
-      status: 'pending',
-      invitedBy: args.invitedBy,
-      invitedByName: args.invitedByName ?? null,
-      token,
-      expiresAtMs,
-      createdAtMs,
-      acceptedAtMs: null,
-    })
-
-    const createdInvitation = await ctx.db.get(id)
-    if (!createdInvitation) {
-      throw Errors.resource.notFound('Invitation', String(id))
-    }
-
-    return serializeInvitation(createdInvitation, createdAtMs)
   },
 })
 
 export const revokeInvitation = zAdminMutation({
   args: { id: z.string() },
   handler: async (ctx, args) => {
-    const invitationId = args.id as Id<'invitations'>
-    const existing = await ctx.db.get(invitationId)
-    if (!existing) {
-      throw Errors.resource.notFound('Invitation')
-    }
+    try {
+      const invitationId = args.id as Id<'invitations'>
+      const existing = await ctx.db.get(invitationId)
+      if (!existing) {
+        throw Errors.resource.notFound('Invitation')
+      }
 
-    if (existing.status === 'accepted') {
-      throw Errors.validation.invalidState('Accepted invitations cannot be revoked')
-    }
+      if (existing.status === 'accepted') {
+        throw Errors.validation.invalidState('Accepted invitations cannot be revoked')
+      }
 
-    if (existing.status !== 'revoked') {
-      await ctx.db.patch(invitationId, {
-        status: 'revoked',
-        acceptedAtMs: null,
-      })
-    }
+      if (existing.status !== 'revoked') {
+        await ctx.db.patch(invitationId, {
+          status: 'revoked',
+          acceptedAtMs: null,
+        })
+      }
 
-    const updated = await ctx.db.get(invitationId)
-    if (!updated) {
-      throw Errors.resource.notFound('Invitation')
-    }
+      const updated = await ctx.db.get(invitationId)
+      if (!updated) {
+        throw Errors.resource.notFound('Invitation')
+      }
 
-    return serializeInvitation(updated)
+      return serializeInvitation(updated)
+    } catch (error) {
+      throwAdminInvitationsError('revokeInvitation', error, { id: args.id })
+    }
   },
 })
 
 export const resendInvitation = zAdminMutation({
   args: { id: z.string() },
   handler: async (ctx, args) => {
-    const invitationId = args.id as Id<'invitations'>
-    const existing = await ctx.db.get(invitationId)
-    if (!existing) {
-      throw Errors.resource.notFound('Invitation')
-    }
+    try {
+      const invitationId = args.id as Id<'invitations'>
+      const existing = await ctx.db.get(invitationId)
+      if (!existing) {
+        throw Errors.resource.notFound('Invitation')
+      }
 
-    if (existing.status === 'accepted') {
-      throw Errors.validation.invalidState('Accepted invitations do not need a resend')
-    }
+      if (existing.status === 'accepted') {
+        throw Errors.validation.invalidState('Accepted invitations do not need a resend')
+      }
 
-    const existingUser = await ctx.db
-      .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', existing.emailLower))
-      .unique()
+      const existingUser = await ctx.db
+        .query('users')
+        .withIndex('by_emailLower', (q) => q.eq('emailLower', existing.emailLower))
+        .unique()
 
-    if (existingUser) {
-      throw Errors.resource.alreadyExists('User with this email')
-    }
+      if (existingUser) {
+        throw Errors.resource.alreadyExists('User with this email')
+      }
 
-    const pendingInvitations = await ctx.db
-      .query('invitations')
-      .withIndex('by_emailLower_status', (q) => q.eq('emailLower', existing.emailLower).eq('status', 'pending'))
-      .collect()
+      const pendingInvitations = await ctx.db
+        .query('invitations')
+        .withIndex('by_emailLower_status', (q) => q.eq('emailLower', existing.emailLower).eq('status', 'pending'))
+        .collect()
 
-    for (const pendingInvitation of pendingInvitations) {
-      await ctx.db.patch(pendingInvitation._id, {
-        status: 'revoked',
+      for (const pendingInvitation of pendingInvitations) {
+        await ctx.db.patch(pendingInvitation._id, {
+          status: 'revoked',
+          acceptedAtMs: null,
+        })
+      }
+
+      const createdAtMs = nowMs()
+      const expiresAtMs = createdAtMs + INVITATION_EXPIRY_MS
+      const token = generateToken()
+
+      const newInvitationId = await ctx.db.insert('invitations', {
+        legacyId: null,
+        email: existing.emailLower,
+        emailLower: existing.emailLower,
+        role: existing.role,
+        name: existing.name,
+        message: existing.message,
+        status: 'pending',
+        invitedBy: ctx.user.legacyId,
+        invitedByName: ctx.user.name ?? null,
+        token,
+        expiresAtMs,
+        createdAtMs,
         acceptedAtMs: null,
       })
+
+      const resentInvitation = await ctx.db.get(newInvitationId)
+      if (!resentInvitation) {
+        throw Errors.resource.notFound('Invitation', String(newInvitationId))
+      }
+
+      return serializeInvitation(resentInvitation, createdAtMs)
+    } catch (error) {
+      throwAdminInvitationsError('resendInvitation', error, { id: args.id })
     }
-
-    const createdAtMs = nowMs()
-    const expiresAtMs = createdAtMs + INVITATION_EXPIRY_MS
-    const token = generateToken()
-
-    const newInvitationId = await ctx.db.insert('invitations', {
-      legacyId: null,
-      email: existing.emailLower,
-      emailLower: existing.emailLower,
-      role: existing.role,
-      name: existing.name,
-      message: existing.message,
-      status: 'pending',
-      invitedBy: ctx.user.legacyId,
-      invitedByName: ctx.user.name ?? null,
-      token,
-      expiresAtMs,
-      createdAtMs,
-      acceptedAtMs: null,
-    })
-
-    const resentInvitation = await ctx.db.get(newInvitationId)
-    if (!resentInvitation) {
-      throw Errors.resource.notFound('Invitation', String(newInvitationId))
-    }
-
-    return serializeInvitation(resentInvitation, createdAtMs)
   },
 })
 
@@ -276,50 +307,58 @@ export const bulkUpsertInvitations = zAdminMutation({
     ),
   },
   handler: async (ctx, args) => {
-    for (const invitation of args.invitations) {
-      const normalized = normalizeEmail(invitation.email)
+    try {
+      for (const invitation of args.invitations) {
+        const normalized = normalizeEmail(invitation.email)
 
-      const existing = await ctx.db
-        .query('invitations')
-        .withIndex('by_legacyId', (q) => q.eq('legacyId', invitation.legacyId))
-        .unique()
+        const existing = await ctx.db
+          .query('invitations')
+          .withIndex('by_legacyId', (q) => q.eq('legacyId', invitation.legacyId))
+          .unique()
 
-      const payload = {
-        legacyId: invitation.legacyId,
-        email: normalized.emailLower,
-        emailLower: normalized.emailLower,
-        role: invitation.role,
-        name: invitation.name,
-        message: invitation.message,
-        status: invitation.status,
-        invitedBy: invitation.invitedBy,
-        invitedByName: invitation.invitedByName,
-        token: invitation.token,
-        expiresAtMs: invitation.expiresAtMs,
-        createdAtMs: invitation.createdAtMs,
-        acceptedAtMs: invitation.acceptedAtMs,
+        const payload = {
+          legacyId: invitation.legacyId,
+          email: normalized.emailLower,
+          emailLower: normalized.emailLower,
+          role: invitation.role,
+          name: invitation.name,
+          message: invitation.message,
+          status: invitation.status,
+          invitedBy: invitation.invitedBy,
+          invitedByName: invitation.invitedByName,
+          token: invitation.token,
+          expiresAtMs: invitation.expiresAtMs,
+          createdAtMs: invitation.createdAtMs,
+          acceptedAtMs: invitation.acceptedAtMs,
+        }
+
+        if (existing) {
+          await ctx.db.patch(existing._id, payload)
+        } else {
+          await ctx.db.insert('invitations', payload)
+        }
       }
 
-      if (existing) {
-        await ctx.db.patch(existing._id, payload)
-      } else {
-        await ctx.db.insert('invitations', payload)
-      }
+      return { ok: true, upserted: args.invitations.length }
+    } catch (error) {
+      throwAdminInvitationsError('bulkUpsertInvitations', error, { count: args.invitations.length })
     }
-
-    return { ok: true, upserted: args.invitations.length }
   },
 })
 
 export const deleteInvitation = zAdminMutation({
   args: { id: z.string() }, // v.id('invitations') -> z.string() or similar
   handler: async (ctx, args) => {
-    const existing = await ctx.db.get(args.id as Id<'invitations'>)
-    if (!existing) {
-      throw Errors.resource.notFound('Invitation')
-    }
+    try {
+      const existing = await ctx.db.get(args.id as Id<'invitations'>)
+      if (!existing) {
+        throw Errors.resource.notFound('Invitation')
+      }
 
-    await ctx.db.delete(args.id as Id<'invitations'>)
-    return { ok: true }
+      await ctx.db.delete(args.id as Id<'invitations'>)
+      return { ok: true }
+    } catch (error) {
+      throwAdminInvitationsError('deleteInvitation', error, { id: args.id })
+    }
   },
 })

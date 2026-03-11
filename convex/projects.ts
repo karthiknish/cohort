@@ -1,8 +1,4 @@
 import {
-  authenticatedMutation,
-  workspaceMutation,
-  workspaceQuery,
-  workspaceQueryActive,
   zAuthenticatedMutation,
   zWorkspaceMutation,
   zWorkspaceQuery,
@@ -10,7 +6,6 @@ import {
   applyManualPagination,
   getPaginatedResponse,
 } from './functions'
-import { v } from 'convex/values'
 import { z } from 'zod/v4'
 import { internal } from './_generated/api'
 import { Errors } from './errors'

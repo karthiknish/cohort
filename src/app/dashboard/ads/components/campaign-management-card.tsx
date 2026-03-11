@@ -1,81 +1,36 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAction } from 'convex/react'
-import { CircleAlert, Pause, Play, Trash2, DollarSign, RefreshCw, TrendingUp } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
+import { useAction } from 'convex/react'
+import { CircleAlert } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { toast } from '@/components/ui/use-toast'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { DataTableColumnHeader } from '@/components/ui/data-table'
 import { EmptyState } from '@/components/ui/empty-state'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
-import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table'
-import { StateWrapper } from '@/components/ui/state-wrapper'
-import { useClientContext } from '@/contexts/client-context'
+import { toast } from '@/components/ui/use-toast'
+import { formatMoney, getCurrencyInfo, isSupportedCurrency, normalizeCurrencyCode } from '@/constants/currencies'
 import { useAuth } from '@/contexts/auth-context'
-import { formatMoney, normalizeCurrencyCode, getCurrencyInfo, isSupportedCurrency } from '@/constants/currencies'
-import type { DateRange } from './date-range-picker'
+import { useClientContext } from '@/contexts/client-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsCampaignGroupsApi, adsCampaignsApi } from '@/lib/convex-api'
+
+import {
+  BiddingStrategyDialog,
+  BudgetUpdateDialog,
+  CampaignGroupRowActions,
+  CampaignManagementHeader,
+  CampaignManagementTableSection,
+  CampaignRowActions,
+} from './campaign-management-card-sections'
+import type { BiddingDraft, Campaign, CampaignGroup, CampaignManagementView } from './campaign-management-card-types'
+import type { DateRange } from './date-range-picker'
 
 // =============================================================================
 // TYPES
 // =============================================================================
-
-type Campaign = {
-  id: string
-  name: string
-  providerId: string
-  status: string
-  budget?: number
-  budgetType?: string
-  currency?: string
-  objective?: string
-  startTime?: string
-  stopTime?: string
-  biddingStrategy?: {
-    type: string
-    targetCpa?: number
-    targetRoas?: number
-    bidCeiling?: number
-  }
-  schedule?: Array<{
-    dayOfWeek: string
-    startHour: number
-    endHour: number
-  }>
-}
-
-type CampaignGroup = {
-  id: string
-  name: string
-  status: string
-  totalBudget?: number
-  currency?: string
-}
 
 type Props = {
   providerId: string
@@ -163,11 +118,6 @@ function getStatusBadge(status: string) {
   return <Badge variant="outline">{status}</Badge>
 }
 
-function isActive(status: string) {
-  const s = (status || '').toLowerCase()
-  return s === 'enabled' || s === 'enable' || s === 'active'
-}
-
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -201,29 +151,53 @@ export function CampaignManagementCard({
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<CampaignGroup | null>(null)
   const [newBudget, setNewBudget] = useState('')
-  const [newBidding, setNewBidding] = useState({
+  const [newBidding, setNewBidding] = useState<BiddingDraft>({
     type: '',
     value: '',
   })
-  const [view, setView] = useState<'campaigns' | 'groups'>('campaigns')
+  const [view, setView] = useState<CampaignManagementView>('campaigns')
   const [groups, setGroups] = useState<CampaignGroup[]>([])
   const [groupsLoading, setGroupsLoading] = useState(false)
 
   const startDate = useMemo(() => toIsoDateOnly(dateRange.start), [dateRange.start])
   const endDate = useMemo(() => toIsoDateOnly(dateRange.end), [dateRange.end])
 
+  const selectedBudgetTarget = selectedGroup ?? selectedCampaign
   const selectedCurrencyCode = useMemo(
-    () => normalizeCurrencyCode(selectedCampaign?.currency),
-    [selectedCampaign?.currency]
+    () => normalizeCurrencyCode(selectedBudgetTarget?.currency),
+    [selectedBudgetTarget?.currency]
   )
   const selectedCurrencyInfo = useMemo(
     () => (isSupportedCurrency(selectedCurrencyCode) ? getCurrencyInfo(selectedCurrencyCode) : null),
     [selectedCurrencyCode]
   )
-  const selectedCurrencyLabel = useMemo(
-    () => (selectedCurrencyInfo ? `${selectedCurrencyInfo.symbol} ${selectedCurrencyCode}` : selectedCurrencyCode),
-    [selectedCurrencyInfo, selectedCurrencyCode]
-  )
+  const selectedCurrencyLabel = selectedCurrencyInfo
+    ? `${selectedCurrencyInfo.symbol} ${selectedCurrencyCode}`
+    : selectedCurrencyCode
+
+  const openCampaignBudgetDialog = useCallback((campaign: Campaign) => {
+    setSelectedGroup(null)
+    setSelectedCampaign(campaign)
+    setNewBudget(campaign.budget?.toString() || '')
+    setBudgetDialogOpen(true)
+  }, [])
+
+  const openGroupBudgetDialog = useCallback((group: CampaignGroup) => {
+    setSelectedCampaign(null)
+    setSelectedGroup(group)
+    setNewBudget(group.totalBudget?.toString() || '')
+    setBudgetDialogOpen(true)
+  }, [])
+
+  const openCampaignBiddingDialog = useCallback((campaign: Campaign) => {
+    setSelectedGroup(null)
+    setSelectedCampaign(campaign)
+    setNewBidding({
+      type: campaign.biddingStrategy?.type || '',
+      value: (campaign.biddingStrategy?.targetCpa || campaign.biddingStrategy?.targetRoas || campaign.biddingStrategy?.bidCeiling || 0).toString(),
+    })
+    setBiddingDialogOpen(true)
+  }, [])
 
   const fetchCampaigns = useCallback(async () => {
     if (!isConnected || setupRequired) return
@@ -280,6 +254,15 @@ export function CampaignManagementCard({
         setGroupsLoading(false)
       })
   }, [isConnected, listCampaignGroups, providerId, selectedClientId, setupRequired, workspaceId])
+
+  const handleRefresh = useCallback(() => {
+    if (view === 'groups') {
+      void fetchGroups()
+      return
+    }
+
+    void fetchCampaigns()
+  }, [fetchCampaigns, fetchGroups, view])
 
   // Auto-load campaigns on mount when connected
   useEffect(() => {
@@ -574,120 +557,18 @@ export function CampaignManagementCard({
         cell: ({ row }) => {
           const campaign = row.original
           return (
-            <TooltipProvider>
-              <div className="flex items-center justify-end gap-1">
-                {isActive(campaign.status) ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          void handleAction(campaign.id, 'pause')
-                        }}
-                        disabled={actionLoading === campaign.id}
-                        aria-label="Pause campaign"
-                      >
-                        <Pause className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Pause campaign</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          void handleAction(campaign.id, 'enable')
-                        }}
-                        disabled={actionLoading === campaign.id}
-                        aria-label="Enable campaign"
-                      >
-                        <Play className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Enable campaign</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedCampaign(campaign)
-                        setNewBudget(campaign.budget?.toString() || '')
-                        setBudgetDialogOpen(true)
-                      }}
-                      disabled={actionLoading === campaign.id}
-                      aria-label="Update budget"
-                    >
-                      <DollarSign className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Update budget</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedCampaign(campaign)
-                        setNewBidding({
-                          type: campaign.biddingStrategy?.type || '',
-                          value: (campaign.biddingStrategy?.targetCpa || campaign.biddingStrategy?.targetRoas || campaign.biddingStrategy?.bidCeiling || 0).toString(),
-                        })
-                        setBiddingDialogOpen(true)
-                      }}
-                      disabled={actionLoading === campaign.id}
-                      aria-label="Update bidding strategy"
-                    >
-                      <TrendingUp className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Bidding strategy</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void handleAction(campaign.id, 'remove')
-                      }}
-                      disabled={actionLoading === campaign.id}
-                      aria-label="Remove campaign"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Remove campaign</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </TooltipProvider>
+            <CampaignRowActions
+              actionLoading={actionLoading}
+              campaign={campaign}
+              onAction={handleAction}
+              onOpenBiddingDialog={openCampaignBiddingDialog}
+              onOpenBudgetDialog={openCampaignBudgetDialog}
+            />
           )
         },
       },
     ],
-    [actionLoading, handleAction]
+    [actionLoading, handleAction, openCampaignBiddingDialog, openCampaignBudgetDialog]
   )
 
   // Group columns
@@ -728,54 +609,17 @@ export function CampaignManagementCard({
         cell: ({ row }) => {
           const group = row.original
           return (
-            <div className="flex items-center justify-end gap-1">
-              {isActive(group.status) ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    void handleGroupAction(group.id, 'pause')
-                  }}
-                  disabled={actionLoading === group.id}
-                  aria-label="Pause campaign group"
-                >
-                  <Pause className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    void handleGroupAction(group.id, 'enable')
-                  }}
-                  disabled={actionLoading === group.id}
-                  aria-label="Enable campaign group"
-                >
-                  <Play className="h-4 w-4" />
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setSelectedGroup(group)
-                  setNewBudget(group.totalBudget?.toString() || '')
-                  setBudgetDialogOpen(true)
-                }}
-                disabled={actionLoading === group.id}
-                aria-label="Update campaign group budget"
-              >
-                <DollarSign className="h-4 w-4" />
-              </Button>
-            </div>
+            <CampaignGroupRowActions
+              actionLoading={actionLoading}
+              group={group}
+              onAction={handleGroupAction}
+              onOpenBudgetDialog={openGroupBudgetDialog}
+            />
           )
         },
       },
     ],
-    [actionLoading, handleGroupAction]
+    [actionLoading, handleGroupAction, openGroupBudgetDialog]
   )
 
   if (!isConnected) {
@@ -823,135 +667,54 @@ export function CampaignManagementCard({
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div className="flex-1">
-            <CardTitle className="text-lg">Campaign Management</CardTitle>
-            <CardDescription>Manage {providerName} {providerId === 'linkedin' ? (view === 'groups' ? 'campaign groups' : 'campaigns') : 'campaigns'}</CardDescription>
-            {providerId === 'linkedin' && (
-              <Tabs value={view} onValueChange={(v) => setView(v as 'campaigns' | 'groups')} className="mt-4">
-                <TabsList className="grid w-[300px] grid-cols-2">
-                  <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-                  <TabsTrigger value="groups">Group (Ad Sets)</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            )}
-          </div>
-          <Button variant="outline" size="sm" onClick={() => view === 'groups' ? fetchGroups() : fetchCampaigns()} disabled={loading || groupsLoading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${(loading || groupsLoading) ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </CardHeader>
+        <CampaignManagementHeader
+          isRefreshing={loading || groupsLoading}
+          onRefresh={handleRefresh}
+          onViewChange={setView}
+          providerId={providerId}
+          providerName={providerName}
+          view={view}
+        />
         <CardContent>
-          <StateWrapper
-            isLoading={loading || groupsLoading}
-            loadingVariant="skeleton-table"
-            skeletonRows={5}
-            skeletonColumns={view === 'groups' ? 3 : 6}
-            isEmpty={view === 'groups' ? groups.length === 0 : campaigns.length === 0}
-            emptyTitle={`No ${view === 'groups' ? 'campaign groups' : 'campaigns'} found`}
-            emptyDescription={`Connect ${providerName} and create ${view === 'groups' ? 'campaign groups' : 'campaigns'} to see them here.`}
-          >
-            {view === 'groups' ? (
-            <DataTable
-              columns={groupColumns}
-              data={groups}
-              showPagination={false}
-              maxHeight={420}
-              enableVirtualization={groups.length > 50}
-              rowHeight={48}
-              onRowClick={(row) => openInsightsPage(row.id, row.name)}
-              rowClassName="cursor-pointer"
-              getRowId={(row) => row.id}
-            />
-          ) : (
-            <DataTable
-              columns={campaignColumns}
-              data={campaigns}
-              showPagination={false}
-              maxHeight={420}
-              enableVirtualization={campaigns.length > 50}
-              rowHeight={48}
-              onRowClick={(row) => openInsightsPage(row.id, row.name)}
-              rowClassName="cursor-pointer"
-              getRowId={(row) => row.id}
-            />
-            )}
-          </StateWrapper>
+          <CampaignManagementTableSection
+            campaignColumns={campaignColumns}
+            campaigns={campaigns}
+            groupColumns={groupColumns}
+            groups={groups}
+            groupsLoading={groupsLoading}
+            loading={loading}
+            onRowClick={openInsightsPage}
+            providerName={providerName}
+            view={view}
+          />
         </CardContent>
       </Card>
 
-      <Dialog open={budgetDialogOpen} onOpenChange={setBudgetDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update Budget</DialogTitle>
-            <DialogDescription>
-              Update the budget for {selectedGroup?.name || selectedCampaign?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="budget">New Budget ({selectedCurrencyLabel})</Label>
-              <Input
-                id="budget"
-                type="number"
-                step="0.01"
-                value={newBudget}
-                onChange={(e) => setNewBudget(e.target.value)}
-                placeholder={`Enter new budget amount (${selectedCurrencyCode})`}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBudgetDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleBudgetUpdate} disabled={actionLoading !== null}>
-              Update Budget
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <BudgetUpdateDialog
+        currencyCode={selectedCurrencyCode}
+        currencyLabel={selectedCurrencyLabel}
+        isSubmitting={actionLoading !== null}
+        onBudgetChange={setNewBudget}
+        onOpenChange={setBudgetDialogOpen}
+        onSubmit={() => {
+          void handleBudgetUpdate()
+        }}
+        open={budgetDialogOpen}
+        targetName={selectedBudgetTarget?.name}
+        value={newBudget}
+      />
 
-      <Dialog open={biddingDialogOpen} onOpenChange={setBiddingDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bidding Strategy</DialogTitle>
-            <DialogDescription>
-              Update bidding strategy for {selectedCampaign?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="biddingType">Strategy Type</Label>
-              <Input
-                id="biddingType"
-                value={newBidding.type}
-                onChange={(e) => setNewBidding({ ...newBidding, type: e.target.value })}
-                placeholder="e.g. TARGET_CPA, MAXIMIZE_CONVERSIONS"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="biddingValue">Target Value / Bid Ceiling</Label>
-              <Input
-                id="biddingValue"
-                type="number"
-                step="0.01"
-                value={newBidding.value}
-                onChange={(e) => setNewBidding({ ...newBidding, value: e.target.value })}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBiddingDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleBiddingUpdate} disabled={actionLoading !== null}>
-              Update Bidding
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <BiddingStrategyDialog
+        isSubmitting={actionLoading !== null}
+        onChange={setNewBidding}
+        onOpenChange={setBiddingDialogOpen}
+        onSubmit={() => {
+          void handleBiddingUpdate()
+        }}
+        open={biddingDialogOpen}
+        selectedCampaignName={selectedCampaign?.name}
+        value={newBidding}
+      />
 
     </>
   )

@@ -1,9 +1,6 @@
 "use client"
 
 import { memo } from "react"
-import { CircleCheck } from "lucide-react"
-
-import { cn } from "@/lib/utils"
 
 import type { ProposalStepId } from "./proposal-step-content"
 
@@ -40,7 +37,7 @@ function ProposalStepIndicatorComponent({
       
       <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
         <div 
-          className="h-full bg-primary transition-all duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-in-out)] motion-reduce:transition-none"
+          className="h-full bg-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-in-out)] motion-reduce:transition-none"
           style={{ width: `${submitted ? 100 : progress}%` }}
         />
       </div>

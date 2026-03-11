@@ -374,7 +374,7 @@ export default function ActivityPage() {
   const handleRetry = useCallback(() => {
     toast({
       title: 'Refreshing activity',
-      description: 'Syncing latest updates...',
+      description: 'Syncing latest updates…',
     })
     retry()
   }, [toast, retry])
@@ -527,16 +527,6 @@ export default function ActivityPage() {
     })
   }, [toast, user])
 
-  const handleActivityClick = useCallback((activity: EnhancedActivity, e: React.MouseEvent) => {
-    const target = e.target as HTMLElement
-    if (target.closest('button') || target.closest('a')) {
-      return
-    }
-
-    setSelectedActivity(activity)
-    setDetailsModalOpen(true)
-  }, [])
-
   const handleViewDetails = useCallback((activity: EnhancedActivity) => {
     setSelectedActivity(activity)
     setDetailsModalOpen(true)
@@ -574,17 +564,6 @@ export default function ActivityPage() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
-
-  // Error handling
-  useEffect(() => {
-    if (error) {
-      toast({
-        title: 'Activity sync failed',
-        description: `${error}. Please try again.`,
-        variant: 'destructive',
-      })
-    }
-  }, [error, toast])
 
   if (!selectedClient) {
     return (
@@ -812,7 +791,6 @@ export default function ActivityPage() {
             onMarkAsRead={handleMarkAsRead}
             onAddReaction={handleAddReaction}
             onAddComment={handleAddComment}
-            onActivityClick={handleActivityClick}
             onViewDetails={handleViewDetails}
             selectedActivities={selectedActivities}
             onSelectionChange={handleSelectionChange}

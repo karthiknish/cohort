@@ -75,7 +75,7 @@ function ProposalStepContentComponent({
                 value={formState.company.name}
                 onChange={(event) => onUpdateField(['company', 'name'], event.target.value)}
                 className={cn(
-                   "h-10 border-muted/60 bg-background/50 focus:bg-background transition-all",
+                   "h-10 border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
                    validationErrors['company.name'] && "border-destructive/50 ring-destructive/20"
                 )}
               />
@@ -98,7 +98,7 @@ function ProposalStepContentComponent({
                 placeholder="https://acme.com"
                 value={formState.company.website}
                 onChange={(event) => onUpdateField(['company', 'website'], event.target.value)}
-                className="h-10 border-muted/60 bg-background/50 focus:bg-background transition-all"
+                className="h-10 border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
               />
             </div>
           </div>
@@ -116,7 +116,7 @@ function ProposalStepContentComponent({
                 value={formState.company.industry}
                 onChange={(event) => onUpdateField(['company', 'industry'], event.target.value)}
                 className={cn(
-                   "h-10 border-muted/60 bg-background/50 focus:bg-background transition-all",
+                   "h-10 border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
                    validationErrors['company.industry'] && "border-destructive/50 ring-destructive/20"
                 )}
               />
@@ -138,7 +138,7 @@ function ProposalStepContentComponent({
                 placeholder="e.g. 25 employees"
                 value={formState.company.size}
                 onChange={(event) => onUpdateField(['company', 'size'], event.target.value)}
-                className="h-10 border-muted/60 bg-background/50 focus:bg-background transition-all"
+                className="h-10 border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
               />
             </div>
           </div>
@@ -154,7 +154,7 @@ function ProposalStepContentComponent({
               placeholder="List primary offices or regions served"
               value={formState.company.locations}
               onChange={(event) => onUpdateField(['company', 'locations'], event.target.value)}
-              className="min-h-[100px] border-muted/60 bg-background/50 focus:bg-background transition-all resize-none"
+              className="min-h-[100px] border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] resize-none"
             />
           </div>
         </div>
@@ -206,7 +206,7 @@ function ProposalStepContentComponent({
                   <label
                     key={platform}
                     className={cn(
-                      "flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
+                      "flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
                       isSelected 
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm" 
                         : "border-muted/60 bg-background/50 hover:bg-muted/10 hover:border-muted-foreground/30"
@@ -216,7 +216,7 @@ function ProposalStepContentComponent({
                     <Checkbox
                       checked={isSelected}
                       onChange={() => onToggleArrayValue(['marketing', 'platforms'], platform)}
-                      className={cn("h-5 w-5 rounded-md transition-all", isSelected && "ring-2 ring-primary ring-offset-2")}
+                      className={cn("h-5 w-5 rounded-md transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]", isSelected && "ring-2 ring-primary ring-offset-2")}
                     />
                   </label>
                 )
@@ -237,7 +237,7 @@ function ProposalStepContentComponent({
                  if (handle === 'YouTube') Icon = Youtube
 
                  return (
-                  <div key={handle} className="space-y-2 p-3 rounded-xl border border-muted/50 bg-background/40 hover:bg-background/80 transition-all group">
+                  <div key={handle} className="space-y-2 p-3 rounded-xl border border-muted/50 bg-background/40 hover:bg-background/80 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] group">
                     <div className="flex items-center gap-2 mb-1">
                       <Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                       <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">{handle}</Label>
@@ -247,7 +247,7 @@ function ProposalStepContentComponent({
                       placeholder={`@company`}
                       value={formState.marketing.socialHandles[handle] ?? ''}
                       onChange={(event) => onChangeSocialHandle(handle, event.target.value)}
-                      className="h-8 text-xs border-muted/40 bg-transparent focus:bg-background transition-all"
+                      className="h-8 text-xs border-muted/40 bg-transparent focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
                     />
                   </div>
                  )
@@ -272,7 +272,7 @@ function ProposalStepContentComponent({
                   <label
                     key={goal}
                     className={cn(
-                      "flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
+                      "flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
                       isSelected 
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm" 
                         : "border-muted/60 bg-background/50 hover:bg-muted/10 hover:border-muted-foreground/30"
@@ -282,7 +282,7 @@ function ProposalStepContentComponent({
                     <Checkbox
                       checked={isSelected}
                       onChange={() => onToggleArrayValue(['goals', 'objectives'], goal)}
-                      className={cn("h-5 w-5 rounded-md transition-all", isSelected && "ring-2 ring-primary ring-offset-2")}
+                      className={cn("h-5 w-5 rounded-md transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]", isSelected && "ring-2 ring-primary ring-offset-2")}
                     />
                   </label>
                 )
@@ -305,7 +305,7 @@ function ProposalStepContentComponent({
               placeholder="e.g. Marketing Managers at B2B SaaS companies with 50-200 employees"
               value={formState.goals.audience}
               onChange={(event) => onUpdateField(['goals', 'audience'], event.target.value)}
-              className="min-h-[100px] border-muted/60 bg-background/50 focus:bg-background transition-all resize-none shadow-inner"
+              className="min-h-[100px] border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] resize-none shadow-inner"
             />
           </div>
 
@@ -323,7 +323,7 @@ function ProposalStepContentComponent({
                     type="button"
                     onClick={() => onToggleArrayValue(['goals', 'challenges'], challenge)}
                     className={cn(
-                      "px-4 py-2 rounded-full text-xs font-semibold transition-all border",
+                      "px-4 py-2 rounded-full text-xs font-semibold transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] border",
                       isSelected
                         ? "bg-primary text-primary-foreground border-primary shadow-md scale-[1.02]"
                         : "bg-background text-muted-foreground border-muted hover:border-muted-foreground/30 hover:bg-muted/5"
@@ -337,10 +337,10 @@ function ProposalStepContentComponent({
             <div className="pt-2">
               <Input
                 name="customChallenge"
-                placeholder="Other specific challenge..."
+                placeholder="Other specific challenge…"
                 value={formState.goals.customChallenge}
                 onChange={(event) => onUpdateField(['goals', 'customChallenge'], event.target.value)}
-                className="h-10 text-sm border-muted/60 bg-background/50 focus:bg-background transition-all"
+                className="h-10 text-sm border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
               />
             </div>
           </div>
@@ -359,14 +359,24 @@ function ProposalStepContentComponent({
               {scopeOptions.map((service) => {
                 const isSelected = formState.scope.services.includes(service)
                 return (
-                  <label
+                  <div
                     key={service}
                     className={cn(
-                      "flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
+                      "flex cursor-pointer items-center justify-between rounded-xl border p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
                       isSelected 
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm" 
                         : "border-muted/60 bg-background/50 hover:bg-muted/10 hover:border-muted-foreground/30"
                     )}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onToggleArrayValue(['scope', 'services'], service)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        onToggleArrayValue(['scope', 'services'], service)
+                      }
+                    }}
+                    aria-pressed={isSelected}
                   >
                     <div className="space-y-0.5">
                       <span className={cn("text-sm font-semibold", isSelected ? "text-primary" : "text-muted-foreground")}>{service}</span>
@@ -374,9 +384,10 @@ function ProposalStepContentComponent({
                     <Checkbox
                       checked={isSelected}
                       onChange={() => onToggleArrayValue(['scope', 'services'], service)}
-                      className={cn("h-5 w-5 rounded-md transition-all", isSelected && "ring-2 ring-primary ring-offset-2")}
+                      onClick={(event) => event.stopPropagation()}
+                      className={cn("h-5 w-5 rounded-md transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]", isSelected && "ring-2 ring-primary ring-offset-2")}
                     />
-                  </label>
+                  </div>
                 )
               })}
             </div>
@@ -397,7 +408,7 @@ function ProposalStepContentComponent({
               placeholder="e.g. CRO Audit, Landing Page Design, etc."
               value={formState.scope.otherService}
               onChange={(event) => onUpdateField(['scope', 'otherService'], event.target.value)}
-              className="min-h-[100px] border-muted/60 bg-background/50 focus:bg-background transition-all resize-none shadow-inner"
+              className="min-h-[100px] border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] resize-none shadow-inner"
             />
           </div>
         </div>
@@ -417,7 +428,7 @@ function ProposalStepContentComponent({
                     type="button"
                     onClick={() => onUpdateField(['timelines', 'startTime'], option)}
                     className={cn(
-                      "flex items-center justify-between rounded-xl border p-4 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
+                      "flex items-center justify-between rounded-xl border p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
                       isSelected 
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm" 
                         : "border-muted/60 bg-background/50 hover:bg-muted/10"
@@ -440,7 +451,7 @@ function ProposalStepContentComponent({
               placeholder="e.g. Q1 Product Launch, Black Friday Sales, etc."
               value={formState.timelines.upcomingEvents}
               onChange={(event) => onUpdateField(['timelines', 'upcomingEvents'], event.target.value)}
-              className="min-h-[100px] border-muted/60 bg-background/50 focus:bg-background transition-all resize-none shadow-inner"
+              className="min-h-[100px] border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] resize-none shadow-inner"
             />
           </div>
         </div>
@@ -461,7 +472,7 @@ function ProposalStepContentComponent({
                     type="button"
                     onClick={() => onUpdateField(['value', 'proposalSize'], option)}
                     className={cn(
-                      "flex flex-col items-center justify-center gap-2 rounded-2xl border p-6 transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
+                      "flex flex-col items-center justify-center gap-2 rounded-2xl border p-6 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
                       isSelected
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-lg scale-[1.05]"
                         : "border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/5"
@@ -492,7 +503,7 @@ function ProposalStepContentComponent({
                     type="button"
                     onClick={() => onUpdateField(['value', 'engagementType'], option)}
                     className={cn(
-                      "flex items-center justify-between rounded-xl border p-4 transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
+                      "flex items-center justify-between rounded-xl border p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]",
                       isSelected
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm"
                         : "border-muted/60 bg-background/50 hover:bg-muted/10"
@@ -520,7 +531,7 @@ function ProposalStepContentComponent({
                     type="button"
                     onClick={() => onUpdateField(['value', 'presentationTheme'], theme.id)}
                     className={cn(
-                      "group relative flex flex-col gap-2 rounded-xl border p-4 transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
+                      "group relative flex flex-col gap-2 rounded-xl border p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none",
                       isSelected
                         ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-md"
                         : "border-muted/60 bg-background hover:border-muted-foreground/30 hover:shadow-sm"

@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
 import { useCallback } from 'react'
+import Link from 'next/link'
 import {
   ArrowRight,
   ArrowUpRight,
@@ -218,12 +218,7 @@ export default function AdminPage() {
   const derivedResult = derived()
   const stats = derivedResult.stats
   const activities = derivedResult.activities
-  const refreshing = false
   const usageStats = usageStatsRealtime as UsageStats | null
-
-  const fetchDashboardData = useCallback(async () => {
-    // Convex subscriptions are realtime; no manual refresh required.
-  }, [])
 
   const adminSections: AdminSection[] = [
     {
@@ -525,7 +520,7 @@ export default function AdminPage() {
                           >
                             <div
                               className={cn(
-                                "w-full rounded-t-sm transition-all",
+                                "w-full rounded-t-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
                                 i === 6 ? "bg-primary" : "bg-primary/40"
                               )}
                               style={{ height: `${Math.max(height, 4)}%` }}
@@ -596,7 +591,7 @@ export default function AdminPage() {
                           </div>
                           <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-primary rounded-full transition-all"
+                              className="h-full bg-primary rounded-full transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
@@ -629,7 +624,7 @@ export default function AdminPage() {
               {adminSections.map(({ title, description, href, icon: Icon, cta, badge, badgeVariant }) => (
                 <Card
                   key={href}
-                  className="group relative overflow-hidden border-border bg-card transition-all hover:border-primary/20 hover:shadow-md"
+                  className="group relative overflow-hidden border-border bg-card transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/20 hover:shadow-md"
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
@@ -725,7 +720,7 @@ export default function AdminPage() {
                   </div>
                 ) : activities.length > 0 ? (
                   <div className="space-y-4">
-                    {activities.map((activity) => (
+                    {activities.map((activity: RecentActivity) => (
                       <div key={activity.id} className="flex gap-3">
                         <div className={cn(
                           'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',

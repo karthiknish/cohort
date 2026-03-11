@@ -335,7 +335,7 @@ export function FeatureFormDialog({
               id="feature-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe what this feature should accomplish..."
+              placeholder="Describe what this feature should accomplish…"
               rows={3}
               disabled={isSubmitting || isGeneratingDescription}
             />

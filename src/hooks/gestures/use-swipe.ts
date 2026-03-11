@@ -91,7 +91,7 @@ export function useSwipe(handlers: SwipeHandlers, options?: { threshold?: number
     }))
   }, [state.isSwiping, state.startX, state.startY, threshold, preventScroll])
 
-  const handleTouchEnd = useCallback((e: TouchEvent<HTMLElement>) => {
+  const handleTouchEnd = useCallback(() => {
     if (!state.isSwiping) return
     
     const duration = Date.now() - startTimeRef.current

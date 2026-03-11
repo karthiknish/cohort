@@ -166,7 +166,8 @@ export const collaborationTables = {
   })
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_nameLower_legacyId', ['workspaceId', 'nameLower', 'legacyId'])
-    .index('by_workspace_deletedAtMs', ['workspaceId', 'deletedAtMs']),
+    .index('by_workspace_deletedAtMs', ['workspaceId', 'deletedAtMs'])
+    .index('by_workspace_createdAtMs_legacyId', ['workspaceId', 'createdAtMs', 'legacyId']),
 
   projects: defineTable({
     workspaceId: v.string(),

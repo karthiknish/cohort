@@ -24,6 +24,7 @@ import {
   Shield,
   Rocket,
   AlertCircle,
+  Share2,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -67,6 +68,7 @@ const allNavigation: NavItem[] = [
   { name: 'Activity', href: '/dashboard/activity', icon: Activity, description: 'Recent activity' },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, description: 'Performance insights' },
   { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad integrations', roles: ['admin', 'team'] },
+  { name: 'Socials', href: '/dashboard/socials', icon: Share2, description: 'Meta & Instagram insights', roles: ['admin', 'team'] },
   { name: 'Meetings', href: '/dashboard/meetings', icon: Video, description: 'Schedule and run meetings' },
   { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare, description: 'Task management' },
   { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Create proposals', roles: ['admin', 'team'] },
@@ -261,7 +263,7 @@ export function Sidebar() {
     <aside
       id="tour-sidebar"
       className={cn(
-        'hidden h-full border-r bg-background/60 backdrop-blur-sm transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-in-out)] motion-reduce:transition-none lg:flex',
+        'hidden h-full border-r bg-background/60 backdrop-blur-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-in-out)] motion-reduce:transition-none lg:flex',
         collapsed ? 'w-16 flex-col items-center p-3' : 'w-64 flex-col p-4'
       )}
     >
@@ -269,7 +271,7 @@ export function Sidebar() {
         type="button"
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         className={cn(
-          'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:border-primary/40 hover:text-primary hover:bg-muted/50',
+          'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:border-primary/40 hover:text-primary hover:bg-muted/50',
           collapsed && 'mt-2'
         )}
         onClick={toggleCollapsed}
@@ -428,7 +430,7 @@ export function Header() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="sm:h-auto sm:w-auto sm:px-2 sm:py-1.5">
+                <Button variant="ghost" size="icon" className="sm:h-auto sm:w-auto sm:px-2 sm:py-1.5" aria-label="Open account menu">
                   <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
                     <AvatarFallback className="text-xs sm:text-sm">{initials}</AvatarFallback>
                   </Avatar>

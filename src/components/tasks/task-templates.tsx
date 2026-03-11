@@ -13,9 +13,8 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
 import { TaskTemplate, TaskStatus, TaskPriority } from '@/types/tasks'
-import { DEFAULT_TASK_TEMPLATES, formatRecurrenceLabel } from './task-types'
+import { DEFAULT_TASK_TEMPLATES } from './task-types'
 
 type TaskTemplateProps = {
   onSelectTemplate: (template: TaskTemplate) => void
@@ -84,7 +83,7 @@ export function TaskTemplatesDialog({ onSelectTemplate }: TaskTemplateProps) {
                 onClick={() => handleSelectTemplate(template)}
                 className="text-left group"
               >
-                <div className="rounded-lg border border-muted/40 bg-background p-4 transition-all hover:border-primary/40 hover:shadow-md">
+                <div className="rounded-lg border border-muted/40 bg-background p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/40 hover:shadow-md">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">

@@ -42,6 +42,7 @@ import {
 export type TaskRowProps = {
   task: TaskRecord
   isPendingUpdate?: boolean
+  onOpen?: (task: TaskRecord) => void
   onEdit: (task: TaskRecord) => void
   onDelete: (task: TaskRecord) => void
   onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
@@ -52,6 +53,7 @@ export type TaskRowProps = {
 function TaskRowComponent({
   task,
   isPendingUpdate,
+  onOpen,
   onEdit,
   onDelete,
   onQuickStatusChange,
@@ -63,7 +65,7 @@ function TaskRowComponent({
   return (
     <div
       className={cn(
-        'group relative border-b border-slate-200/60 px-6 py-5 transition-all hover:bg-slate-50/80 last:border-0',
+        'group relative border-b border-slate-200/60 px-6 py-5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-slate-50/80 last:border-0',
         isPendingUpdate && 'opacity-75 pointer-events-none',
         selected && 'bg-primary/5'
       )}
@@ -81,12 +83,36 @@ function TaskRowComponent({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex-1 min-w-0 space-y-2.5">
           <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-start gap-2">
-              <p className="max-w-[300px] truncate text-base font-bold text-slate-900 sm:max-w-[450px]">
-                {task.title}
-              </p>
-              {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
-            </div>
+            {onOpen ? (
+              <button
+                type="button"
+                onClick={() => onOpen(task)}
+                className="min-w-0 rounded-md text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
+                aria-label={`View task ${task.title}`}
+              >
+                <div className="flex min-w-0 items-start gap-2">
+                  <p className="max-w-[300px] truncate text-base font-bold text-slate-900 transition-colors hover:text-primary sm:max-w-[450px]">
+                    {task.title}
+                  </p>
+                  {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
+                </div>
+                {task.description && (
+                  <p className="mt-2 max-w-2xl line-clamp-1 text-sm text-slate-600">{task.description}</p>
+                )}
+              </button>
+            ) : (
+              <div className="min-w-0">
+                <div className="flex min-w-0 items-start gap-2">
+                  <p className="max-w-[300px] truncate text-base font-bold text-slate-900 sm:max-w-[450px]">
+                    {task.title}
+                  </p>
+                  {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
+                </div>
+                {task.description && (
+                  <p className="mt-2 max-w-2xl line-clamp-1 text-sm text-slate-600">{task.description}</p>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center justify-end gap-1 shrink-0">
               <Button
@@ -135,11 +161,6 @@ function TaskRowComponent({
               </DropdownMenu>
             </div>
           </div>
-
-          {task.description && (
-            <p className="max-w-2xl line-clamp-1 text-sm text-slate-600">{task.description}</p>
-          )}
-
           <div className="flex flex-wrap items-center gap-2.5 text-[12px]">
             <Badge
               variant="outline"

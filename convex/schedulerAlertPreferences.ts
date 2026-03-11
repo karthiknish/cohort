@@ -1,11 +1,22 @@
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
-import { Errors } from './errors'
+
+import { Errors, isAppError } from './errors'
 
 const preferenceValidator = v.object({
   providerId: v.string(),
   failureThreshold: v.union(v.number(), v.null()),
 })
+
+function throwSchedulerAlertPreferenceError(operation: string, error: unknown, context?: Record<string, unknown>): never {
+  console.error(`[schedulerAlertPreferences:${operation}]`, context ?? {}, error)
+
+  if (isAppError(error)) {
+    throw error
+  }
+
+  throw Errors.base.internal('Scheduler alert preference operation failed')
+}
 
 /**
  * Get a single scheduler alert preference by provider ID.
@@ -15,16 +26,20 @@ export const get = query({
   args: { providerId: v.string() },
   returns: v.union(v.null(), preferenceValidator),
   handler: async (ctx, args) => {
-    const row = await ctx.db
-      .query('schedulerAlertPreferences')
-      .withIndex('by_providerId', (q) => q.eq('providerId', args.providerId))
-      .unique()
+    try {
+      const row = await ctx.db
+        .query('schedulerAlertPreferences')
+        .withIndex('by_providerId', (q) => q.eq('providerId', args.providerId))
+        .unique()
 
-    if (!row) return null
+      if (!row) return null
 
-    return {
-      providerId: row.providerId,
-      failureThreshold: row.failureThreshold,
+      return {
+        providerId: row.providerId,
+        failureThreshold: row.failureThreshold,
+      }
+    } catch (error) {
+      throwSchedulerAlertPreferenceError('get', error, { providerId: args.providerId })
     }
   },
 })
@@ -37,13 +52,21 @@ export const list = query({
   args: {},
   returns: v.record(v.string(), v.object({ failureThreshold: v.union(v.number(), v.null()) })),
   handler: async (ctx) => {
-    const rows = await ctx.db.query('schedulerAlertPreferences').collect()
+    try {
+      const rows = await ctx.db
+        .query('schedulerAlertPreferences')
+        .withIndex('by_updatedAtMs', (q) => q)
+        .order('desc')
+        .collect()
 
-    const result: Record<string, { failureThreshold: number | null }> = {}
-    for (const row of rows) {
-      result[row.providerId] = { failureThreshold: row.failureThreshold }
+      const result: Record<string, { failureThreshold: number | null }> = {}
+      for (const row of rows) {
+        result[row.providerId] = { failureThreshold: row.failureThreshold }
+      }
+      return result
+    } catch (error) {
+      throwSchedulerAlertPreferenceError('list', error)
     }
-    return result
   },
 })
 
@@ -61,35 +84,38 @@ export const upsert = mutation({
     created: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    // Validate threshold
-    if (args.failureThreshold !== null) {
-      if (!Number.isFinite(args.failureThreshold) || args.failureThreshold < 0) {
-        throw Errors.validation.invalidInput('failureThreshold must be a non-negative number or null')
+    try {
+      if (args.failureThreshold !== null) {
+        if (!Number.isFinite(args.failureThreshold) || args.failureThreshold < 0) {
+          throw Errors.validation.invalidInput('failureThreshold must be a non-negative number or null')
+        }
       }
-    }
 
-    const existing = await ctx.db
-      .query('schedulerAlertPreferences')
-      .withIndex('by_providerId', (q) => q.eq('providerId', args.providerId))
-      .unique()
+      const existing = await ctx.db
+        .query('schedulerAlertPreferences')
+        .withIndex('by_providerId', (q) => q.eq('providerId', args.providerId))
+        .unique()
 
-    const now = Date.now()
+      const now = Date.now()
 
-    if (existing) {
-      await ctx.db.patch(existing._id, {
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          failureThreshold: args.failureThreshold,
+          updatedAtMs: now,
+        })
+        return { ok: true as const, created: false }
+      }
+
+      await ctx.db.insert('schedulerAlertPreferences', {
+        providerId: args.providerId,
         failureThreshold: args.failureThreshold,
+        createdAtMs: now,
         updatedAtMs: now,
       })
-      return { ok: true as const, created: false }
+
+      return { ok: true as const, created: true }
+    } catch (error) {
+      throwSchedulerAlertPreferenceError('upsert', error, { providerId: args.providerId })
     }
-
-    await ctx.db.insert('schedulerAlertPreferences', {
-      providerId: args.providerId,
-      failureThreshold: args.failureThreshold,
-      createdAtMs: now,
-      updatedAtMs: now,
-    })
-
-    return { ok: true as const, created: true }
   },
 })

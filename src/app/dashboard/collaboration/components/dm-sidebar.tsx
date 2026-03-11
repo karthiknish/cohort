@@ -96,7 +96,7 @@ export function DMSidebar({
           <Input
             value={searchQuery}
             onChange={handleSearchChange}
-            placeholder="Search conversations..."
+            placeholder="Search conversations…"
             className="pl-9"
           />
         </div>
@@ -138,7 +138,7 @@ export function DMSidebar({
                   type="button"
                   onClick={() => onSelectConversation(conversation)}
                   className={cn(
-                    'w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all',
+                    'w-full flex items-center gap-3 p-3 rounded-lg text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
                     'hover:bg-muted/50',
                     isSelected && 'bg-primary/5 border border-primary/20',
                     hasUnread && !isSelected && 'bg-muted/30'

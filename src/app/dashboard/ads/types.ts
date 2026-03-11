@@ -17,6 +17,7 @@ export interface IntegrationStatusResponse {
 export interface MetricRecord {
     id: string
     providerId: string
+    publisherPlatform?: string | null
     date: string
     spend: number
     impressions: number

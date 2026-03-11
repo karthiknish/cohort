@@ -101,7 +101,7 @@ export function LinkPreviewCard({ url }: LinkPreviewCardProps) {
             {domain ? <p className="text-xs text-muted-foreground">{domain}</p> : null}
           </div>
           {isLoading ? (
-            <p className="text-xs text-muted-foreground">Fetching preview...</p>
+            <p className="text-xs text-muted-foreground">Fetching preview…</p>
           ) : error ? (
             <p className="text-xs text-muted-foreground">Preview unavailable</p>
           ) : description ? (

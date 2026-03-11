@@ -18,12 +18,6 @@ interface UseReadReceiptsOptions {
   enabled?: boolean
 }
 
-interface ReadReceiptsState {
-  unreadCount: number
-  lastReadMessageId: string | null
-  readReceipts: Record<string, string[]> // messageId -> array of userIds
-}
-
 export function useReadReceipts({
   workspaceId,
   userId,

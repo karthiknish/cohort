@@ -149,7 +149,6 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
 
     const hydrationRef = useRef(false)
     const draftIdRef = useRef<string | null>(draftId)
-    const submittedRef = useRef(false)
     const wizardRef = useRef<HTMLDivElement | null>(null)
     const lastBootstrapKeyRef = useRef<string | null>(null)
     const toastRef = useRef(toast)
@@ -456,7 +455,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         return () => {
             cancelled = true
         }
-    }, [proposalsKey, selectedClientId, steps.length])
+    }, [proposals, proposalsKey, selectedClientId, steps.length])
 
     return {
         draftId,

@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { Sparkles } from 'lucide-react'
 
 import {
   Card,

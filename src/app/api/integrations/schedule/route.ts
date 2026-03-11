@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { scheduleIntegrationSync, scheduleSyncsForAllUsers, scheduleSyncsForUser } from '@/lib/integration-auto-sync'
 import { createApiHandler } from '@/lib/api-handler'
-import { ForbiddenError, UnauthorizedError, ValidationError } from '@/lib/api-errors'
+import { ForbiddenError, UnauthorizedError } from '@/lib/api-errors'
 
 const scheduleSchema = z.object({
   force: z.boolean().optional(),

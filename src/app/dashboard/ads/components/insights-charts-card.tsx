@@ -8,9 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -18,12 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { cn, formatCurrency } from '@/lib/utils'
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart'
+import { formatCurrency } from '@/lib/utils'
 import {
   BarChart,
   Bar,
@@ -43,7 +37,7 @@ import {
   Tooltip,
 } from 'recharts'
 import type { PerformanceAnalysis } from '@/lib/ad-algorithms'
-import { PROVIDER_COLORS, CHART_COLORS, GRAYS } from '@/lib/colors'
+import { CHART_COLORS, GRAYS } from '@/lib/colors'
 
 // =============================================================================
 // TYPES
@@ -57,14 +51,6 @@ interface InsightsChartsCardProps {
 // =============================================================================
 // CHART CONFIGS
 // =============================================================================
-
-const providerColors: Record<string, string> = {
-  google: PROVIDER_COLORS.google.DEFAULT,
-  facebook: PROVIDER_COLORS.facebook,
-  meta: PROVIDER_COLORS.meta,
-  linkedin: PROVIDER_COLORS.linkedin,
-  tiktok: GRAYS[900],
-}
 
 const metricColors = CHART_COLORS.metrics
 
@@ -315,8 +301,9 @@ export function InsightsChartsCard({ analysis, loading = false }: InsightsCharts
     }))
   }, [analysis])
 
-  const activeProvider = selectedProvider === 'all' && providers.length > 0
-    ? providers[0]!.id
+  const firstProvider = providers[0]
+  const activeProvider = selectedProvider === 'all' && firstProvider
+    ? firstProvider.id
     : selectedProvider
 
   if (loading) {

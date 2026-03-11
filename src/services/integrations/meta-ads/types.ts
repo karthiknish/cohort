@@ -74,6 +74,7 @@ export type MetaInsightsRow = {
   date_stop?: string
   campaign_id?: string
   campaign_name?: string
+  publisher_platform?: unknown
   adset_id?: string
   adset_name?: string
   ad_id?: string

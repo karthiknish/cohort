@@ -1,6 +1,5 @@
 'use client'
 
-import { ArrowRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -143,7 +142,7 @@ export function CampaignHeader({
           variant="secondary"
           className="font-bold shadow-sm"
         >
-          {refreshing ? 'Refreshing...' : 'Refresh'}
+          {refreshing ? 'Refreshing…' : 'Refresh'}
         </Button>
       </div>
     </div>

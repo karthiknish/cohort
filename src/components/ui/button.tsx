@@ -1,13 +1,43 @@
-import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
+import { Slot } from '@radix-ui/react-slot'
+import { cva, type VariantProps } from 'class-variance-authority'
+import * as React from 'react'
 
-import { interactiveTransitionClass, pressableScaleClass } from "@/lib/animation-system"
-import { cn } from "@/lib/utils"
+import { interactiveTransitionClass, pressableScaleClass } from '@/lib/animation-system'
+import { cn } from '@/lib/utils'
+
+function childrenContainAccessibleText(children: React.ReactNode): boolean {
+  return React.Children.toArray(children).some((child) => {
+    if (typeof child === 'string') {
+      return child.trim().length > 0
+    }
+
+    if (typeof child === 'number') {
+      return true
+    }
+
+    if (!React.isValidElement(child)) {
+      return false
+    }
+
+    const childProps = child.props as { className?: string; children?: React.ReactNode }
+    if (typeof childProps.className === 'string' && childProps.className.includes('sr-only')) {
+      return childrenContainAccessibleText(childProps.children)
+    }
+
+    return childrenContainAccessibleText(childProps.children)
+  })
+}
+
+function hasAccessibleButtonLabel(props: React.ComponentProps<'button'>): boolean {
+  if (typeof props['aria-label'] === 'string' && props['aria-label'].trim().length > 0) return true
+  if (typeof props['aria-labelledby'] === 'string' && props['aria-labelledby'].trim().length > 0) return true
+  if (typeof props.title === 'string' && props.title.trim().length > 0) return true
+  return childrenContainAccessibleText(props.children)
+}
 
 const buttonVariants = cva(
   [
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 aria-invalid:border-destructive",
+    "focus-ring inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 aria-invalid:ring-destructive/20 aria-invalid:border-destructive",
     interactiveTransitionClass,
     pressableScaleClass,
   ].join(' '),
@@ -52,7 +82,11 @@ function Button({
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
   }) {
-  const Comp = asChild ? Slot : "button"
+  const Comp = asChild ? Slot : 'button'
+
+  if (process.env.NODE_ENV !== 'production' && !asChild && typeof size === 'string' && size.startsWith('icon') && !hasAccessibleButtonLabel(props)) {
+    console.warn('Icon-only Button requires an accessible label via aria-label, aria-labelledby, title, or sr-only text.', props)
+  }
 
   return (
     <Comp

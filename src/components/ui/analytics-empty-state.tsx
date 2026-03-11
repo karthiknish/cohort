@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { FileX, BarChart3, TrendingUp, Image, Users, AlertCircle } from 'lucide-react'
+import { FileX, BarChart3, TrendingUp, AlertCircle } from 'lucide-react'
 import { Button } from './button'
 import { cn } from '@/lib/utils'
 

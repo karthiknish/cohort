@@ -1,6 +1,5 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import { Info } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -26,13 +25,8 @@ import {
   Tooltip as RechartsTooltip,
 } from 'recharts'
 
-const ChartPlaceholder = () => (
-  <div className="h-full w-full animate-pulse rounded-lg bg-muted/40" />
-)
-
 import {
   ChartContainer,
-  ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,

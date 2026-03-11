@@ -9,16 +9,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { cn } from '@/lib/utils'
-import { TaskStatus, TaskPriority, TASK_STATUSES, TASK_PRIORITIES } from '@/types/tasks'
-import { formatStatusLabel, formatPriorityLabel } from './task-types'
+import { TaskStatus, TASK_STATUSES } from '@/types/tasks'
+import { formatStatusLabel } from './task-types'
 
 type TaskKanbanBulkToolbarProps = {
   selectedCount: number
@@ -145,7 +137,7 @@ export function TaskKanbanBulkToolbar({
                   <p className="text-xs font-medium">Assign to (comma-separated names)</p>
                   <input
                     type="text"
-                    placeholder="Alice, Bob, ..."
+                    placeholder="Alice, Bob, …"
                     value={assigneeInput}
                     onChange={(e) => setAssigneeInput(e.target.value)}
                     className="w-full h-8 px-2 rounded-md border border-input bg-background text-sm"

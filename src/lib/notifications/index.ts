@@ -154,7 +154,7 @@ export function notifyInfo(options: InfoToastOptions): string | number {
  * Returns a function to dismiss the toast
  */
 export function notifyLoading(options: LoadingToastOptions): string | number {
-  return sonnerToast.loading(options.title ?? 'Loading...', {
+  return sonnerToast.loading(options.title ?? 'Loading…', {
     description: options.description ?? options.message,
     position: options.position,
   })
@@ -416,7 +416,7 @@ export function notifyResourceDeleted(resource: string, name?: string): string |
 export function notifySyncStarted(providerName: string): string | number {
   return notifyInfo({
     title: 'Sync started',
-    message: `Syncing data from ${providerName}...`,
+    message: `Syncing data from ${providerName}…`,
   })
 }
 

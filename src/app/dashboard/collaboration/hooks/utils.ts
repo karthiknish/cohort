@@ -3,7 +3,6 @@
 import type {
   CollaborationAttachment,
   CollaborationMention,
-  CollaborationMessage,
   CollaborationMessageFormat,
   CollaborationReaction,
 } from '@/types/collaboration'

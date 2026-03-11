@@ -18,7 +18,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
 import type { CollaborationMessage } from '@/types/collaboration'
 import { COLLABORATION_REACTIONS } from '@/constants/collaboration-reactions'
 

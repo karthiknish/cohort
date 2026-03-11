@@ -1,16 +1,14 @@
-import { useState, useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
-import { refreshProposalDraft } from '@/services/proposals'
-import { useQuery } from 'convex/react'
-import { proposalsApi } from '@/lib/convex-api'
-import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import {
-    trackDeckGenerationStarted,
     trackDeckGenerationCompleted,
     trackDeckGenerationFailed,
+    trackDeckGenerationStarted,
 } from '@/services/proposal-analytics'
+import { refreshProposalDraft } from '@/services/proposals'
+import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import type { DeckProgressStage } from '../components/deck-progress-overlays'
 
 export interface UseDeckPreparationOptions {
@@ -31,16 +29,12 @@ export interface UseDeckPreparationReturn {
 
 export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckPreparationReturn {
     const {
-        draftId,
         refreshProposals,
-        setPresentationDeck,
-        setAiSuggestions,
         setProposals,
-        presentationDeck,
     } = options
 
     const { toast } = useToast()
-    const { user, getIdToken, isSyncing, authError } = useAuth()
+    const { user, getIdToken } = useAuth()
 
     const workspaceId = user?.agencyId ?? null
 
@@ -68,17 +62,6 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
         anchor.click()
         document.body.removeChild(anchor)
     }, [])
-
-    const canQuery = Boolean(workspaceId && draftId && !isSyncing && !authError)
-    const activeConvexProposal = useQuery(
-        proposalsApi.getByLegacyId,
-        !canQuery
-            ? 'skip'
-            : {
-                workspaceId,
-                legacyId: draftId,
-            }
-    )
 
     const handleDownloadDeck = useCallback(async (proposal: ProposalDraft) => {
         const localDeckUrl = proposal.pptUrl ?? proposal.presentationDeck?.storageUrl ?? proposal.presentationDeck?.pptxUrl ?? null
@@ -223,7 +206,7 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
             setDownloadingDeckId(null)
             setDeckProgressStage(null)
         }
-    }, [downloadingDeckId, draftId, openDeckUrl, refreshProposals, toast, setPresentationDeck, setAiSuggestions, setProposals, activeConvexProposal])
+    }, [downloadingDeckId, getIdToken, openDeckUrl, refreshProposals, setProposals, toast, workspaceId])
 
     return {
         downloadingDeckId,

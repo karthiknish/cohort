@@ -55,7 +55,7 @@ interface SpeechRecognition extends EventTarget {
 const ERROR_MESSAGES: Record<string, string | null> = {
   'not-allowed': 'Microphone access denied. Please allow microphone access in your browser settings.',
   'no-speech': 'No speech detected. Tap the microphone and try speaking again.',
-  'network': 'Network error. Retrying...',
+  'network': 'Network error. Retrying…',
   'audio-capture': 'No microphone found. Please check your audio settings.',
   'aborted': null,
   'service-not-allowed': 'Speech service not available. Try using Chrome browser.',
@@ -77,13 +77,10 @@ let globalIsListening = false
 
 export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInputReturn {
   const {
-    onResult,
-    onError,
     language = 'en-US',
     continuous = false,
     silenceTimeout = 10,
     maxDuration = 60,
-    maxRetries = 2,
   } = options
 
   const [isSupported, setIsSupported] = useState(false)
@@ -256,7 +253,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
         if (finalTranscript.trim()) {
           optionsRef.current.onResult?.(finalTranscript.trim())
         }
-      } catch (err) {
+      } catch {
         const msg = 'Voice input encountered an unexpected error'
         setError(msg)
         setIsListeningState(false)
@@ -296,7 +293,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}): UseVoiceInput
 
     try {
       recognition.start()
-    } catch (err) {
+    } catch {
       const msg = 'Failed to start voice input. Please try again.'
       setError(msg)
       setIsListeningState(false)

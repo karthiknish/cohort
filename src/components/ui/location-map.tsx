@@ -29,6 +29,9 @@ type LocationMapProps = {
   showSelectedList?: boolean
 }
 
+const EMPTY_LOCATIONS: LocationMarker[] = []
+const EMPTY_GEOCODE_RESULTS: GeocodeSearchResult[] = []
+
 const LeafletMap = dynamic(
   () => import('./leaflet-map').then((mod) => mod.LeafletMap),
   { 
@@ -45,8 +48,8 @@ const LeafletMap = dynamic(
 )
 
 export function LocationMap({
-  locations = [],
-  selectedLocations = [],
+  locations = EMPTY_LOCATIONS,
+  selectedLocations = EMPTY_LOCATIONS,
   onLocationSelect,
   onLocationRemove,
   interactive = false,
@@ -58,7 +61,7 @@ export function LocationMap({
   const [searchQuery, setSearchQuery] = useState('')
 
   // Use TanStack Query for geocoding search with built-in debouncing
-  const { data: searchResults = [], isFetching: searching } = useGeocodeSearch(searchQuery, {
+  const { data: searchResults = EMPTY_GEOCODE_RESULTS, isFetching: searching } = useGeocodeSearch(searchQuery, {
     enabled: showSearch,
   })
 
@@ -89,7 +92,7 @@ export function LocationMap({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search for a city, country, or region..."
+              placeholder="Search for a city, country, or region…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-9"
@@ -152,7 +155,7 @@ export function LocationMap({
 }
 
 export function LocationMapPreview({
-  locations = [],
+  locations = EMPTY_LOCATIONS,
   height = '200px',
   className,
 }: {

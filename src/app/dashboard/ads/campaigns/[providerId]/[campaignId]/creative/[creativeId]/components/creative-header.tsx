@@ -18,7 +18,6 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -76,7 +75,7 @@ export function CreativeHeader(props: {
       >
         <div className="flex items-center gap-5">
         <Link href={backUrl} className="group">
-          <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center border border-muted-foreground/10 group-hover:bg-primary/10 group-hover:border-primary/20 transition-all duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none">
+          <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center border border-muted-foreground/10 group-hover:bg-primary/10 group-hover:border-primary/20 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none">
             <ArrowLeft className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
         </Link>
@@ -118,7 +117,7 @@ export function CreativeHeader(props: {
               ) : (
                 <Save className="h-3.5 w-3.5 mr-2" />
               )}
-              {isSaving ? 'Applying...' : 'Apply Changes'}
+              {isSaving ? 'Applying…' : 'Apply Changes'}
             </Button>
           </div>
         ) : (
@@ -140,7 +139,7 @@ export function CreativeHeader(props: {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-muted/50 border border-transparent hover:border-muted-foreground/10 transition-all">
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-muted/50 border border-transparent hover:border-muted-foreground/10 transition-[background-color,border-color]" aria-label="Creative actions">
                   <MoreHorizontal className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>

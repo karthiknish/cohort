@@ -39,7 +39,6 @@ const API_RATE_LIMIT_MAX = parseInteger(process.env.API_RATE_LIMIT_MAX, RATE_LIM
 const API_RATE_LIMIT_WINDOW_MS = parseInteger(process.env.API_RATE_LIMIT_WINDOW_MS, RATE_LIMITS.standard.windowMs)
 
 const PROTECTED_ROUTE_MATCHER = ['/dashboard', '/admin']
-const ADMIN_ONLY_ROUTE_PREFIX = '/admin'
 const AUTH_ROUTE_PREFIX = '/auth'
 
 function isProtectedPath(pathname: string): boolean {

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
-import { Filter, Funnel, X, Save, RotateCcw, Plus } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { Filter, X, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,12 +20,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -68,24 +62,25 @@ interface AdvancedFilterProps {
   className?: string
 }
 
-const PRESET_FILTERS = [
-  { id: 'recent-urgent', label: 'Recent & Urgent', filters: { priority: 'urgent', dateRange: '7d' } },
-  { id: 'my-tasks', label: 'My Tasks', filters: { assignee: 'me', status: ['todo', 'in-progress'] } },
-  { id: 'this-week', label: 'This Week', filters: { dateRange: '7d' } },
-  { id: 'this-month', label: 'This Month', filters: { dateRange: '30d' } },
-]
+const EMPTY_AVAILABLE_FILTERS: Array<{
+  key: string
+  label: string
+  type: 'text' | 'select' | 'multiselect' | 'date' | 'number'
+  options?: Array<{ value: string; label: string }>
+}> = []
+
+const EMPTY_SAVED_FILTERS: FilterConfig[] = []
 
 /**
  * Advanced filtering panel with saved configurations
  */
 export function AdvancedFilter({
-  availableFilters = [],
+  availableFilters = EMPTY_AVAILABLE_FILTERS,
   onFilterChange,
   onSortChange,
   activeFiltersCount = 0,
-  savedFilters = [],
+  savedFilters = EMPTY_SAVED_FILTERS,
   onSaveFilter,
-  onLoadFilter,
   onDeleteFilter,
   className,
 }: AdvancedFilterProps) {
@@ -179,10 +174,12 @@ export function AdvancedFilter({
                 <Label>Saved Filters</Label>
                 <div className="flex flex-wrap gap-2">
                   {savedFilters.map((filter) => (
-                    <Badge
+                    <Button
                       key={filter.id}
+                      type="button"
                       variant="outline"
-                      className="cursor-pointer hover:bg-accent"
+                      size="sm"
+                      className="h-6 rounded-full px-2 text-xs"
                       onClick={() => {
                         setCurrentFilters(filter.filters)
                         if (filter.sortBy) {
@@ -193,7 +190,7 @@ export function AdvancedFilter({
                       }}
                     >
                       {filter.name}
-                    </Badge>
+                    </Button>
                   ))}
                 </div>
                 {onDeleteFilter && (
@@ -282,7 +279,7 @@ export function AdvancedFilter({
                 <div className="flex gap-2">
                   <Select value={sortBy} onValueChange={setSortBy}>
                     <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Sort by..." />
+                      <SelectValue placeholder="Sort by…" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="createdAt">Date Created</SelectItem>
@@ -321,7 +318,7 @@ export function AdvancedFilter({
               {onSaveFilter && (
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Filter name..."
+                    placeholder="Filter name…"
                     value={filterName}
                     onChange={(e) => setFilterName(e.target.value)}
                     className="w-40"
@@ -371,14 +368,16 @@ export function ActiveFiltersBar({
     <div className={cn('flex items-center gap-2 flex-wrap', className)}>
       <span className="text-xs text-muted-foreground">Active filters:</span>
       {entries.map(([key, value]) => (
-        <Badge
-          key={key}
-          variant="secondary"
-          className="gap-1 pr-1"
-          onClick={() => onRemove(key)}
-        >
+        <Badge key={key} variant="secondary" className="gap-1 pr-1">
           {key}: {Array.isArray(value) ? value.join(', ') : value}
-          <X className="h-3 w-3 cursor-pointer hover:text-destructive" />
+          <button
+            type="button"
+            onClick={() => onRemove(key)}
+            className="rounded p-0.5 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Remove ${key} filter`}
+          >
+            <X className="h-3 w-3" />
+          </button>
         </Badge>
       ))}
       <Button

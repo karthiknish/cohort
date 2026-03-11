@@ -20,7 +20,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { FadeIn, FadeInStagger, FadeInItem } from '@/components/ui/animate-in'

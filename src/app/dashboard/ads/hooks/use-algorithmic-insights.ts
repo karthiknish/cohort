@@ -77,7 +77,7 @@ function convertToDataPoints(metrics: MetricRecord[]): MetricDataPoint[] {
 export function useAlgorithmicInsights(
   options: UseAlgorithmicInsightsOptions
 ): UseAlgorithmicInsightsReturn {
-  const { metrics, providerSummaries, loading } = options
+  const { metrics, loading } = options
 
   // Run the full performance analysis
   const analysis = useMemo<PerformanceAnalysis | null>(() => {

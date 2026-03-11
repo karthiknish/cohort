@@ -72,6 +72,16 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
     actions: ['connect ads', 'sync campaigns', 'check ad spend', 'view roas', 'manage campaigns'],
   },
 
+  // Socials
+  {
+    route: '/dashboard/socials',
+    name: 'Socials',
+    description: 'Connect Meta, review Facebook and Instagram performance, and track AI suggestions',
+    keywords: ['socials', 'social', 'instagram', 'facebook', 'meta social', 'paid social', 'social ads', 'instagram ads', 'facebook ads'],
+    aliases: ['social dashboard', 'meta insights', 'instagram insights', 'facebook insights', 'social media insights'],
+    actions: ['connect facebook', 'connect instagram', 'check social insights', 'view social suggestions'],
+  },
+
   // Meetings
   {
     route: '/dashboard/meetings',

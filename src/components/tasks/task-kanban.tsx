@@ -48,6 +48,7 @@ type DraggedTask = {
 }
 
 const EMPTY_SELECTED_TASK_IDS = new Set<string>()
+const EMPTY_TASK_PARTICIPANTS: TaskParticipant[] = []
 
 function shouldIgnoreToggle(target: EventTarget | null, currentTarget?: HTMLElement | null): boolean {
   if (!(target instanceof HTMLElement)) return false
@@ -85,7 +86,7 @@ export function TaskKanban({
   userId = null,
   userName = null,
   userRole = null,
-  participants = [],
+  participants = EMPTY_TASK_PARTICIPANTS,
 }: TaskKanbanProps) {
   const [draggedTask, setDraggedTask] = useState<DraggedTask | null>(null)
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null)
@@ -287,7 +288,7 @@ export function TaskKanban({
                         onDragStart={(e) => handleDragStart(e, task)}
                         onDragEnd={handleDragEnd}
                         className={cn(
-                          "transition-all duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none active:scale-[0.98]",
+                          "transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none active:scale-[0.98]",
                           !bulkActive && !pendingStatusUpdates.has(task.id) && "cursor-grab active:cursor-grabbing",
                           (bulkActive || pendingStatusUpdates.has(task.id)) && "cursor-default"
                         )}
@@ -297,7 +298,7 @@ export function TaskKanban({
                             type="button"
                             onClick={() => toggleCollapsed(task.id)}
                             className={cn(
-                              'flex w-full flex-col gap-3 rounded-[1.35rem] border border-slate-200/80 bg-gradient-to-b from-white via-white to-slate-50/70 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
+                              'flex w-full flex-col gap-3 rounded-[1.35rem] border border-slate-200/80 bg-gradient-to-b from-white via-white to-slate-50/70 p-4 text-left shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
                               pendingStatusUpdates.has(task.id) && 'pointer-events-none opacity-75'
                             )}
                             aria-label={`Expand task ${task.title}`}
