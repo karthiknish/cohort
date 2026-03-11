@@ -71,6 +71,8 @@ export function useMeetingsPageController() {
       ? { workspaceId }
       : 'skip',
   ) as { connected: boolean; linkedAtMs: number | null; scopes: string[] } | undefined
+  const googleWorkspaceStatusLoading = Boolean(workspaceId) && !isPreviewMode && googleWorkspaceStatus === undefined
+  const upcomingMeetingsLoading = Boolean(workspaceId) && !isPreviewMode && meetings === undefined
 
   const workspaceMembers = useQuery(
     usersApi.listWorkspaceMembers,
@@ -181,7 +183,7 @@ export function useMeetingsPageController() {
   )
 
   const scheduleRequiresGoogleWorkspace = editingMeeting ? Boolean(editingMeeting.calendarEventId) : true
-  const scheduleDisabled = isPreviewMode || !canSchedule || scheduling || (scheduleRequiresGoogleWorkspace && !resolvedGoogleWorkspaceStatus?.connected)
+  const scheduleDisabled = isPreviewMode || !canSchedule || scheduling || googleWorkspaceStatusLoading || (scheduleRequiresGoogleWorkspace && !resolvedGoogleWorkspaceStatus?.connected)
 
   const scheduleAttendeeDraft = scheduleAttendees.resolveSubmission()
   const quickAttendeeDraft = quickAttendees.resolveSubmission()
@@ -726,6 +728,7 @@ export function useMeetingsPageController() {
     cancellingMeetingId,
     cancelDialogMeeting,
     resolvedGoogleWorkspaceStatus,
+    googleWorkspaceStatusLoading,
     resolvedActiveInSiteMeeting,
     editingMeeting,
     sharedRoomName,
@@ -746,6 +749,7 @@ export function useMeetingsPageController() {
     scheduleRequiresGoogleWorkspace,
     scheduleDisabled,
     upcomingMeetings,
+    upcomingMeetingsLoading,
     setTitle,
     setDescription,
     setMeetingDate,

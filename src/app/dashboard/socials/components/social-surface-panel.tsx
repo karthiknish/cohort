@@ -7,18 +7,22 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState, NetworkErrorEmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { AlgorithmicInsightsCard } from '@/app/dashboard/ads/components/algorithmic-insights-card'
 import { MetricsTableCard } from '@/app/dashboard/ads/components/metrics-table-card'
 import { PerformanceSummaryCard } from '@/app/dashboard/ads/components/performance-summary-card'
 import { SocialsKpiGrid } from './socials-kpi-grid'
 import type { ProviderSummary, MetricRecord } from '@/app/dashboard/ads/components/types'
 import type { UseAlgorithmicInsightsReturn } from '@/app/dashboard/ads/hooks/use-algorithmic-insights'
+import type { SocialsSurfaceStatus } from './socials-state'
 
 type SocialSurfacePanelProps = {
   surface: 'facebook' | 'instagram'
   items: Array<{ id: string; name: string; subtitle: string }>
+  surfaceStatus: SocialsSurfaceStatus
   itemsLoading: boolean
   itemsError: string | null
+  emptyStateDescription: string
   kpis: Array<{ id: string; label: string; value: string; detail: string }>
   providerSummaries: Record<string, ProviderSummary>
   metrics: MetricRecord[]
@@ -69,8 +73,10 @@ const SURFACE_COPY = {
 export function SocialSurfacePanel({
   surface,
   items,
+  surfaceStatus,
   itemsLoading,
   itemsError,
+  emptyStateDescription,
   kpis,
   providerSummaries,
   metrics,
@@ -89,6 +95,17 @@ export function SocialSurfacePanel({
   const copy = SURFACE_COPY[surface]
   const SurfaceIcon = copy.icon
   const AccentIcon = copy.accentIcon
+  const surfaceStatusLabel = itemsLoading
+    ? 'Loading surfaces…'
+    : surfaceStatus === 'source_required'
+      ? 'Source needed'
+      : surfaceStatus === 'error'
+        ? 'Retry needed'
+        : surfaceStatus === 'ready'
+          ? `${items.length} connected`
+          : surfaceStatus === 'disconnected'
+            ? 'Meta not connected'
+            : 'Waiting for surfaces'
 
   return (
     <div className="space-y-6">
@@ -105,7 +122,7 @@ export function SocialSurfacePanel({
               </div>
             </div>
             <Badge variant="outline" className="w-fit rounded-full px-3 py-1 text-xs">
-              {itemsLoading ? 'Loading surfaces…' : `${items.length} connected`}
+              {surfaceStatusLabel}
             </Badge>
           </div>
         </CardHeader>
@@ -133,12 +150,17 @@ export function SocialSurfacePanel({
                 </div>
               </div>
             ))
+          ) : itemsLoading ? (
+            <div className="grid gap-3 md:col-span-2 md:grid-cols-2 xl:col-span-3 xl:grid-cols-3">
+              {[0, 1, 2].map((slot) => <Skeleton key={slot} className="h-24 w-full rounded-3xl" />)}
+            </div>
           ) : (
             <div className="md:col-span-2 xl:col-span-3">
               <EmptyState
                 icon={Sparkles}
-                title={`No ${copy.title.toLowerCase()} surfaces available yet`}
-                description={copy.emptySurfaceMessage}
+                title={surfaceStatus === 'source_required' ? `Choose a Meta source to load ${copy.title.toLowerCase()} surfaces` : `No ${copy.title.toLowerCase()} surfaces available yet`}
+                description={emptyStateDescription}
+                action={surfaceStatus !== 'source_required' && surfaceStatus !== 'disconnected' ? { label: 'Retry discovery', onClick: onRetryItems } : undefined}
                 variant="card"
                 className="rounded-3xl"
               />

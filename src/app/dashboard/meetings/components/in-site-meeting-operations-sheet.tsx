@@ -4,6 +4,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet'
 
 import type { MeetingProcessingState } from '../types'
 import { formatLocalDateTime } from '../utils'
+import { MeetingAutomationPipeline } from './meeting-automation-pipeline'
 import type { CaptureStatus, LiveKitJoinPayload } from './in-site-meeting-card.shared'
 import {
   MeetingOperationsAlerts,
@@ -43,6 +44,9 @@ type MeetingOperationsSheetProps = {
   canGenerateNotes: boolean
   generatingNotes: boolean
   onGenerateNotes: () => void
+  retryingPostCallProcessing: boolean
+  canRetryPostCallProcessing: boolean
+  onRetryPostCallProcessing: () => void
 }
 
 function formatSyncLabel(timestamp: number | null, timezone: string, emptyLabel: string): string {
@@ -81,6 +85,9 @@ export function InSiteMeetingOperationsSheet(props: MeetingOperationsSheetProps)
     canGenerateNotes,
     generatingNotes,
     onGenerateNotes,
+    retryingPostCallProcessing,
+    canRetryPostCallProcessing,
+    onRetryPostCallProcessing,
   } = props
 
   const transcriptStatus = transcriptProcessingState === 'processing'
@@ -115,6 +122,18 @@ export function InSiteMeetingOperationsSheet(props: MeetingOperationsSheetProps)
             joinConfig={joinConfig}
             markCompleted={markCompleted}
             notesProcessingState={notesProcessingState}
+            retryingPostCallProcessing={retryingPostCallProcessing}
+            transcriptProcessingState={transcriptProcessingState}
+          />
+
+          <MeetingAutomationPipeline
+            captureErrorPresent={Boolean(captureStatus.error)}
+            captureListening={captureStatus.listening}
+            finalizingSession={finalizingSession}
+            hasTranscriptSaved={Boolean(transcriptSavedAt)}
+            inRoom={Boolean(joinConfig)}
+            notesProcessingState={notesProcessingState}
+            summaryReady={Boolean(summaryPreview)}
             transcriptProcessingState={transcriptProcessingState}
           />
 
@@ -132,6 +151,12 @@ export function InSiteMeetingOperationsSheet(props: MeetingOperationsSheetProps)
             captureError={captureStatus.error}
             notesProcessingError={notesProcessingError}
             notesReason={notesReason}
+            canGenerateNotes={canGenerateNotes}
+            canRetryPostCallProcessing={canRetryPostCallProcessing}
+            generatingNotes={generatingNotes}
+            retryingPostCallProcessing={retryingPostCallProcessing}
+            onGenerateNotes={onGenerateNotes}
+            onRetryPostCallProcessing={onRetryPostCallProcessing}
             transcriptProcessingError={transcriptProcessingError}
           />
 
@@ -140,6 +165,7 @@ export function InSiteMeetingOperationsSheet(props: MeetingOperationsSheetProps)
             generatingNotes={generatingNotes}
             notesProcessingState={notesProcessingState}
             onGenerateNotes={onGenerateNotes}
+            postCallProcessingActive={retryingPostCallProcessing || finalizingSession || transcriptProcessingState === 'processing' || notesProcessingState === 'processing'}
             summaryPreview={summaryPreview}
             transcriptLength={transcriptLength}
           />

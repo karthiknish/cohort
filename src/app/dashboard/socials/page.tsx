@@ -3,6 +3,8 @@
 import { useState } from 'react'
 
 import { FadeIn } from '@/components/ui/animate-in'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useSocialsPageController } from './hooks/use-socials-page-controller'
 import { SocialsHeader } from './components/socials-header'
@@ -20,6 +22,8 @@ export default function SocialsPage() {
     metaStatus,
     lastSyncedAt,
     surfaceData,
+    metaSetupState,
+    surfaceAvailability,
     facebookSuggestions,
     instagramSuggestions,
     facebookPages,
@@ -42,6 +46,10 @@ export default function SocialsPage() {
     subtitle: profile.username ? `@${profile.username}` : 'Business profile linked through Meta',
   }))
 
+  const handleScrollToSourceSwitcher = () => {
+    document.getElementById('social-connections-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
     <div className={DASHBOARD_THEME.layout.container}>
       <SocialsHeader
@@ -53,6 +61,7 @@ export default function SocialsPage() {
       <FadeIn>
         <div id="social-surfaces-setup">
           <SocialsConnectionPanel
+            panelId="social-connections-panel"
             selectedClientName={selectedClient?.name ?? null}
             connected={metaConnected}
             accountName={metaStatus?.accountName}
@@ -77,28 +86,60 @@ export default function SocialsPage() {
             }
             facebookPages={facebookPages}
             instagramProfiles={instagramProfiles}
+            metaSetupState={metaSetupState}
+            surfaceAvailability={surfaceAvailability}
             surfaceActorsLoading={surfaceActorsLoading}
+            surfaceActorsError={surfaceActorsError}
+            onRetrySurfaceActors={reloadSurfaceActors}
           />
         </div>
       </FadeIn>
 
       <FadeIn>
         <Tabs value={activeSurface} onValueChange={(value) => setActiveSurface(value as 'facebook' | 'instagram')} className="space-y-6">
-          <TabsList className="h-auto rounded-2xl bg-muted/40 p-1.5">
+          <div className="space-y-3">
+            <TabsList className="h-auto rounded-2xl bg-muted/40 p-1.5">
             <TabsTrigger value="facebook" className="rounded-xl px-4 py-2.5 text-sm font-semibold">
-              Facebook
+              <span className="flex items-center gap-2">
+                <span>Facebook</span>
+                <Badge variant={surfaceAvailability.facebook.status === 'ready' ? 'secondary' : surfaceAvailability.facebook.status === 'loading' ? 'info' : 'outline'} className="rounded-full px-2 py-0.5 text-[10px]">{surfaceAvailability.facebook.status === 'ready' ? `${surfaceAvailability.facebook.count} ready` : surfaceAvailability.facebook.status === 'source_required' ? 'Source needed' : surfaceAvailability.facebook.status === 'error' ? 'Retry needed' : surfaceAvailability.facebook.status === 'disconnected' ? 'Connect Meta' : 'Waiting'}</Badge>
+              </span>
             </TabsTrigger>
             <TabsTrigger value="instagram" className="rounded-xl px-4 py-2.5 text-sm font-semibold">
-              Instagram
+              <span className="flex items-center gap-2">
+                <span>Instagram</span>
+                <Badge variant={surfaceAvailability.instagram.status === 'ready' ? 'secondary' : surfaceAvailability.instagram.status === 'loading' ? 'info' : 'outline'} className="rounded-full px-2 py-0.5 text-[10px]">{surfaceAvailability.instagram.status === 'ready' ? `${surfaceAvailability.instagram.count} ready` : surfaceAvailability.instagram.status === 'source_required' ? 'Source needed' : surfaceAvailability.instagram.status === 'error' ? 'Retry needed' : surfaceAvailability.instagram.status === 'disconnected' ? 'Connect Meta' : 'Waiting'}</Badge>
+              </span>
             </TabsTrigger>
-          </TabsList>
+            </TabsList>
+            <div className="flex flex-col gap-3 rounded-2xl border border-muted/50 bg-muted/[0.03] p-4 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">{metaSetupState.title}</p>
+                <p className="text-sm text-muted-foreground">{metaSetupState.description}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {metaSetupState.switchSourceRecommended ? (
+                  <Button type="button" variant="outline" size="sm" onClick={handleScrollToSourceSwitcher}>
+                    Switch source
+                  </Button>
+                ) : null}
+                {metaConnected && metaSetupState.stage !== 'source_selection' ? (
+                  <Button type="button" variant="outline" size="sm" onClick={reloadSurfaceActors}>
+                    Retry discovery
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </div>
 
           <TabsContent value="facebook" className="mt-0">
             <SocialSurfacePanel
               surface="facebook"
               items={facebookSurfaceItems}
+              surfaceStatus={surfaceAvailability.facebook.status}
               itemsLoading={surfaceActorsLoading}
               itemsError={surfaceActorsError}
+              emptyStateDescription={surfaceAvailability.facebook.emptyMessage}
               kpis={surfaceData.facebook.kpis}
               providerSummaries={surfaceData.facebook.providerSummaries}
               metrics={surfaceData.facebook.metrics}
@@ -120,8 +161,10 @@ export default function SocialsPage() {
             <SocialSurfacePanel
               surface="instagram"
               items={instagramSurfaceItems}
+              surfaceStatus={surfaceAvailability.instagram.status}
               itemsLoading={surfaceActorsLoading}
               itemsError={surfaceActorsError}
+              emptyStateDescription={surfaceAvailability.instagram.emptyMessage}
               kpis={surfaceData.instagram.kpis}
               providerSummaries={surfaceData.instagram.providerSummaries}
               metrics={surfaceData.instagram.metrics}

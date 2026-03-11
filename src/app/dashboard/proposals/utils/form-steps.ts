@@ -1,6 +1,6 @@
 import { createDefaultProposalForm, type ProposalFormData } from '@/lib/proposals'
 import type { ProposalStep } from '../components/proposal-step-indicator'
-import type { ProposalStepId } from '../components/proposal-step-content'
+import type { ProposalStepId } from '../components/proposal-step-types'
 
 export const proposalSteps: ProposalStep[] = [
   {
@@ -46,6 +46,15 @@ export const stepErrorPaths: Record<ProposalStepId, string[]> = {
   scope: ['scope.services'],
   timelines: ['timelines.startTime'],
   value: ['value.proposalSize', 'value.engagementType'],
+}
+
+export const stepRequiredFieldLabels: Record<ProposalStepId, string[]> = {
+  company: ['Company Name', 'Industry / Sector'],
+  marketing: ['Monthly marketing budget'],
+  goals: ['Primary business goals'],
+  scope: ['Services needed'],
+  timelines: ['Preferred start timeline'],
+  value: ['Proposal value', 'Engagement preference'],
 }
 
 export function validateProposalStep(stepId: ProposalStepId, form: ProposalFormData): boolean {

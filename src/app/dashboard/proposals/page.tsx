@@ -2,36 +2,31 @@
 
 import { useRouter } from 'next/navigation'
 import { Suspense, useEffect, useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from '@/components/ui/card'
 import type { ProposalDraft } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/components/ui/use-toast'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
-import { DASHBOARD_THEME, getButtonClasses } from '@/lib/dashboard-theme'
-import { cn } from '@/lib/utils'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { getPreviewProposals } from '@/lib/preview-data'
 import { ProposalStepContent } from './components/proposal-step-content'
-import { ProposalStepIndicator } from './components/proposal-step-indicator'
 import { DashboardSkeleton } from '@/app/dashboard/components/dashboard-skeleton'
 import { ProposalHistory } from './components/proposal-history'
 import { ProposalDeleteDialog } from './components/proposal-delete-dialog'
 import { ProposalWizardHeader } from './components/proposal-wizard-header'
-import { ProposalSubmittedPanel } from './components/proposal-submitted-panel'
-import { ProposalDraftPanel } from './components/proposal-draft-panel'
 import { ProposalGenerationOverlay, DeckProgressOverlay, type DeckProgressStage } from './components/deck-progress-overlays'
-import { ProposalTemplateSelector } from './components/proposal-template-selector'
-import { ProposalVersionHistory } from './components/proposal-version-history'
 import { ProposalMetrics } from './components/proposal-metrics'
+import {
+  ProposalBuilderOverlay,
+  ProposalPageActions,
+  ProposalPreviewModeSection,
+  ProposalStartStateCard,
+} from './components/proposal-page-sections'
+import { stepRequiredFieldLabels } from './utils/form-steps'
 
 // Extracted hooks
 import {
+  useProposalPageInteractions,
   useProposalWizard,
   useProposalDrafts,
   useProposalSubmission,
@@ -201,23 +196,27 @@ function ProposalsPageContent() {
   const activeDeckStage: DeckProgressStage = deckProgressStage ?? 'polling'
   const previewProposals = useMemo(() => getPreviewProposals(selectedClientId ?? null), [selectedClientId])
 
-  const handleSelectTemplate = (templateFormData: ProposalFormData) => {
-    setFormState(templateFormData)
-    setCurrentStep(0)
-    toast({
-      title: 'Template applied',
-      description: 'The template has been applied to your proposal. You can customize it as needed.',
-    })
-  }
-
-  const handleVersionRestored = (restoredFormData: ProposalFormData) => {
-    setFormState(restoredFormData)
-    setCurrentStep(0)
-    toast({
-      title: 'Version restored',
-      description: 'The proposal has been restored to the selected version.',
-    })
-  }
+  const {
+    handleSelectTemplate,
+    handleVersionRestored,
+    handleStartProposal,
+    handleResumeProposalInModal,
+    handleContinueEditingInModal,
+    handlePreviewRefresh,
+    handlePreviewResume,
+    handlePreviewRequestDelete,
+    handlePreviewDownloadDeck,
+    handlePreviewCreateNew,
+  } = useProposalPageInteractions({
+    toast,
+    routerPush: router.push,
+    setIsWizardOpen,
+    setFormState,
+    setCurrentStep,
+    handleCreateNewProposal,
+    handleResumeProposal,
+    handleContinueEditingFromSnapshot,
+  })
 
   const stepContent = useMemo(
     () => (
@@ -234,89 +233,19 @@ function ProposalsPageContent() {
     [formState, handleSocialHandleChange, step.id, summary, toggleArrayValue, updateField, validationErrors]
   )
 
-  const handleStartProposal = async () => {
-    await handleCreateNewProposal()
-    setIsWizardOpen(true)
-  }
-
-  const handleResumeProposalInModal = (proposal: ProposalDraft, forceEdit?: boolean) => {
-    if (proposal.status === 'ready' && !forceEdit) {
-      router.push(`/dashboard/proposals/${proposal.id}/deck`)
-      return
-    }
-    handleResumeProposal(proposal, forceEdit)
-    setIsWizardOpen(true)
-  }
-
-  const handleContinueEditingInModal = async () => {
-    await handleContinueEditingFromSnapshot()
-    setIsWizardOpen(true)
-  }
-
   if (isPreviewMode) {
     const previewDraftId = previewProposals.find((proposal) => proposal.status === 'draft')?.id ?? null
 
     return (
       <div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
-        <div className={DASHBOARD_THEME.layout.header}>
-          <ProposalWizardHeader />
-          <Button disabled className={cn(getButtonClasses('primary'), 'shrink-0 opacity-70')}>
-            <Plus className="mr-2 h-4 w-4" />
-            Preview Mode
-          </Button>
-        </div>
-
-        <Card className="border-dashed border-primary/30 bg-primary/5">
-          <CardHeader>
-            <div className="flex flex-col gap-2">
-              <h3 className="text-lg font-semibold text-foreground">Sample proposal data</h3>
-              <p className="text-sm text-muted-foreground">
-                Preview mode shows representative proposal history, metrics, and deck previews. Editing and generation actions stay read-only.
-              </p>
-            </div>
-          </CardHeader>
-        </Card>
-
-        <ProposalMetrics proposals={previewProposals} isLoading={false} />
-
-        <ProposalHistory
-          proposals={previewProposals}
-          draftId={previewDraftId}
-          isLoading={false}
-          deletingProposalId={null}
-          onRefresh={() => {
-            toast({ title: 'Preview data refreshed', description: 'Showing sample proposal history.' })
-          }}
-          onResume={(proposal: ProposalDraft) => {
-            if (proposal.status === 'ready' || proposal.status === 'sent') {
-              router.push(`/dashboard/proposals/${proposal.id}/deck`)
-              return
-            }
-
-            toast({
-              title: 'Preview mode',
-              description: 'Sample proposals are read-only. Exit preview mode to create or edit live proposals.',
-            })
-          }}
-          onRequestDelete={() => {
-            toast({
-              title: 'Preview mode',
-              description: 'Sample proposals cannot be deleted.',
-            })
-          }}
-          isGenerating={false}
-          downloadingDeckId={null}
-          onDownloadDeck={(proposal: ProposalDraft) => {
-            router.push(`/dashboard/proposals/${proposal.id}/deck`)
-          }}
-          onCreateNew={() => {
-            toast({
-              title: 'Preview mode',
-              description: 'Switch off preview mode to start a real proposal.',
-            })
-          }}
-          canCreate={false}
-          isCreating={false}
+        <ProposalPreviewModeSection
+          previewProposals={previewProposals}
+          previewDraftId={previewDraftId}
+          onRefreshPreview={handlePreviewRefresh}
+          onResume={handlePreviewResume}
+          onRequestDelete={handlePreviewRequestDelete}
+          onDownloadDeck={handlePreviewDownloadDeck}
+          onCreateNew={handlePreviewCreateNew}
         />
       </div>
     )
@@ -326,44 +255,26 @@ function ProposalsPageContent() {
     <div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
       <div className={DASHBOARD_THEME.layout.header}>
         <ProposalWizardHeader />
-        <div className="flex flex-wrap items-center gap-3">
-          <ProposalTemplateSelector
-            currentFormData={formState}
-            onApplyTemplate={handleSelectTemplate}
-          />
-          <ProposalVersionHistory
-            proposalId={draftId}
-            currentFormData={formState}
-            onVersionRestored={handleVersionRestored}
-            disabled={!draftId || isSubmitting}
-          />
-          <Button
-            onClick={handleStartProposal}
-            disabled={!selectedClientId || isCreatingDraft}
-            className={cn(getButtonClasses('primary'), 'shrink-0 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md')}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            New Proposal
-          </Button>
-        </div>
+        <ProposalPageActions
+          currentFormData={formState}
+          draftId={draftId}
+          isSubmitting={isSubmitting}
+          selectedClientId={selectedClientId}
+          isCreatingDraft={isCreatingDraft}
+          onApplyTemplate={handleSelectTemplate}
+          onVersionRestored={handleVersionRestored}
+          onStartProposal={handleStartProposal}
+        />
       </div>
 
       <ProposalMetrics proposals={proposals} isLoading={isLoadingProposals} />
 
       {!isWizardOpen && (
-        <Card className="border-dashed border-primary/30 bg-primary/5">
-          <CardHeader>
-            <div className="flex flex-col gap-2">
-              <h3 className="text-lg font-semibold text-foreground">Start a new proposal</h3>
-              <p className="text-sm text-muted-foreground">Open the full-screen proposal builder to get started.</p>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={handleStartProposal} disabled={!selectedClientId || isCreatingDraft}>
-              Start Proposal
-            </Button>
-          </CardContent>
-        </Card>
+        <ProposalStartStateCard
+          canStart={Boolean(selectedClientId)}
+          isCreatingDraft={isCreatingDraft}
+          onStartProposal={handleStartProposal}
+        />
       )}
 
       <ProposalHistory
@@ -395,70 +306,32 @@ function ProposalsPageContent() {
       <ProposalGenerationOverlay isSubmitting={isSubmitting} isPresentationReady={isPresentationReady} />
       <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)} />
 
-      {isWizardOpen && (
-        <div className="fixed inset-0 z-[2000] isolate bg-background">
-          <div className="flex h-full flex-col overflow-hidden">
-            <div className="flex items-center justify-between border-b border-muted/30 px-6 py-4">
-              <div className="space-y-1">
-                <h2 className="text-xl font-semibold">Proposal Builder</h2>
-                <p className="text-sm text-muted-foreground">Complete the steps to generate your proposal deck.</p>
-              </div>
-              <Button variant="ghost" onClick={() => setIsWizardOpen(false)}>
-                Close
-              </Button>
-            </div>
-            <div className="flex-1 overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
-              <div className="h-full space-y-4">
-                {isBootstrapping ? (
-                  <Card className="border-muted/60 bg-background">
-                    <CardContent className="p-6">
-                      <DashboardSkeleton showStepIndicator />
-                    </CardContent>
-                  </Card>
-                ) : submitted ? (
-                  <Card className="border-muted/60 bg-background">
-                    <CardContent className="p-6">
-                      <ProposalSubmittedPanel
-                        summary={summary}
-                        presentationDeck={presentationDeck}
-                        deckDownloadUrl={deckDownloadUrl}
-                        activeProposalIdForDeck={activeProposalIdForDeck}
-                        canResumeSubmission={canResumeSubmission}
-                        onResumeSubmission={handleContinueEditingInModal}
-                        isSubmitting={isSubmitting}
-                        onRecheckDeck={handleRecheckDeck}
-                        isRecheckingDeck={isRecheckingDeck}
-                      />
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="h-full flex flex-col space-y-4">
-                    <div className="shrink-0">
-                      <ProposalStepIndicator steps={steps} currentStep={currentStep} submitted={submitted} />
-                    </div>
-                    <Card className="flex-1 overflow-auto border-muted/60 bg-background">
-                      <CardContent className="p-4 sm:p-6">
-                        <ProposalDraftPanel
-                          draftId={draftId}
-                          autosaveStatus={autosaveStatus}
-                          stepContent={stepContent}
-                          onBack={handleBack}
-                          onNext={handleNext}
-                          isFirstStep={isFirstStep}
-                          isLastStep={isLastStep}
-                          currentStep={currentStep}
-                          totalSteps={steps.length}
-                          isSubmitting={isSubmitting}
-                        />
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProposalBuilderOverlay
+        open={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        isBootstrapping={isBootstrapping}
+        submitted={submitted}
+        summary={summary}
+        presentationDeck={presentationDeck}
+        deckDownloadUrl={deckDownloadUrl}
+        activeProposalIdForDeck={activeProposalIdForDeck}
+        canResumeSubmission={canResumeSubmission}
+        onResumeSubmission={handleContinueEditingInModal}
+        isSubmitting={isSubmitting}
+        onRecheckDeck={handleRecheckDeck}
+        isRecheckingDeck={isRecheckingDeck}
+        steps={steps}
+        currentStep={currentStep}
+        draftId={draftId}
+        autosaveStatus={autosaveStatus}
+        stepContent={stepContent}
+        onBack={handleBack}
+        onNext={handleNext}
+        isFirstStep={isFirstStep}
+        isLastStep={isLastStep}
+        validationMessages={Object.values(validationErrors)}
+        requiredFieldLabels={stepRequiredFieldLabels[step.id]}
+      />
     </div>
   )
 }

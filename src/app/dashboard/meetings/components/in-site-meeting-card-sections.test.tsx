@@ -28,6 +28,7 @@ describe('meeting room sections', () => {
         meetingEndTimeMs={1760003600000}
         meetingTimezone="UTC"
         joinConfigPresent={true}
+        isMobileViewport={true}
         pipSupported={true}
         pipActive={false}
         canMinimizeRoom={true}
@@ -41,8 +42,12 @@ describe('meeting room sections', () => {
     )
 
     expect(markup).toContain('Weekly client sync')
+    expect(markup).toContain('Room live')
+    expect(markup).toContain('PiP available')
+    expect(markup).toContain('Mobile tray available')
     expect(markup).toContain('Room sidebar')
-    expect(markup).toContain('Picture in Picture')
+    expect(markup).toContain('Enter PiP')
+    expect(markup).toContain('Send to tray')
     expect(markup).toContain('Copy link')
   })
 
@@ -51,15 +56,22 @@ describe('meeting room sections', () => {
       <>
         <MeetingRoomEmptyState inlineJoinError="Room token missing" hasJoinReference={false} />
         <MeetingRoomToolsSection
+          captureErrorPresent={false}
+          captureListening={true}
+          finalizingSession={false}
+          hasTranscriptSaved={true}
           roomAutomationMessage="Transcript capture is active."
           roomAutomationBadge="Listening"
           lastAutoSyncAt={1760000000000}
+          summaryReady={false}
           transcriptProcessingState="idle"
           notesProcessingState="processing"
           meetingTimezone="UTC"
           joinConfigPresent={false}
           isMobileViewport={true}
           isMinimized={false}
+          pipSupported={false}
+          pipActive={false}
           joiningRoom={false}
           isPreviewMeeting={false}
           hasJoinReference={true}
@@ -74,6 +86,10 @@ describe('meeting room sections', () => {
 
     expect(markup).toContain('Run the call here, keep notes in sync automatically.')
     expect(markup).toContain('Room token missing')
+    expect(markup).toContain('Automation pipeline')
+    expect(markup).toContain('1. Capture')
+    expect(markup).toContain('2. Transcript')
+    expect(markup).toContain('3. AI notes')
     expect(markup).toContain('Generating AI notes')
     expect(markup).toContain('Join room')
   })
@@ -112,6 +128,8 @@ describe('meeting room sections', () => {
     )
 
     expect(markup).toContain('Room minimized')
+    expect(markup).toContain('Mobile tray active')
+    expect(markup).toContain('PiP available')
     expect(markup).toContain('Restore')
     expect(markup).toContain('LiveKit Room')
     expect(markup).toContain('Live Canvas Weekly client sync')

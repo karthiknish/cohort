@@ -52,15 +52,22 @@ const baseProps = {
 }
 
 describe('SocialSurfacePanel', () => {
-  it('renders distinct error and empty states for connected surfaces', () => {
+  it('renders loading, error, and empty states for connected surfaces', () => {
+    const loadingMarkup = renderToStaticMarkup(
+      <SocialSurfacePanel {...baseProps} itemsLoading={true} />,
+    )
     const errorMarkup = renderToStaticMarkup(
       <SocialSurfacePanel {...baseProps} itemsError="Meta actor fetch failed" />,
     )
     const emptyMarkup = renderToStaticMarkup(<SocialSurfacePanel {...baseProps} />)
 
+    expect(loadingMarkup).toContain('Loading surfaces…')
+    expect(loadingMarkup).toContain('skeleton-shimmer')
+    expect(loadingMarkup).not.toContain('No facebook surfaces available yet')
     expect(errorMarkup).toContain('Unable to load connected surfaces')
     expect(errorMarkup).toContain('Meta actor fetch failed')
     expect(errorMarkup).toContain('Retry')
     expect(emptyMarkup).toContain('No facebook surfaces available yet')
+    expect(emptyMarkup).toContain('Retry discovery')
   })
 })

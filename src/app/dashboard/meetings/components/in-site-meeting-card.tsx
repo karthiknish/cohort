@@ -41,6 +41,7 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
     setJoinError,
     generatingNotes,
     finalizingSession,
+    retryingPostCallProcessing,
     joinConfig,
     setJoinConfig,
     joiningRoom,
@@ -77,6 +78,7 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
     handleJoinRoom,
     finalizeMeetingAfterRoomExit,
     handleGenerateNotes,
+    handleRetryPostCallProcessing,
     handleOperationsOpenChange,
   } = controller
 
@@ -117,6 +119,7 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
           meetingEndTimeMs={meeting.endTimeMs}
           meetingTimezone={meetingTimezone}
           joinConfigPresent={Boolean(joinConfig)}
+          isMobileViewport={isMobileViewport}
           pipSupported={pipSupported}
           pipActive={pipActive}
           canMinimizeRoom={canMinimizeRoom}
@@ -181,15 +184,22 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
         />
 
         <MeetingRoomToolsSection
+          captureErrorPresent={Boolean(captureStatus.error)}
+          captureListening={captureStatus.listening}
+          finalizingSession={finalizingSession}
+          hasTranscriptSaved={Boolean(transcriptSavedAt)}
           roomAutomationMessage={roomAutomationMessage}
           roomAutomationBadge={roomAutomationBadge}
           lastAutoSyncAt={lastAutoSyncAt}
+          summaryReady={Boolean(summaryPreview)}
           transcriptProcessingState={transcriptProcessingState}
           notesProcessingState={notesProcessingState}
           meetingTimezone={meetingTimezone}
           joinConfigPresent={Boolean(joinConfig)}
           isMobileViewport={isMobileViewport}
           isMinimized={isMinimized}
+          pipSupported={pipSupported}
+          pipActive={pipActive}
           joiningRoom={joiningRoom}
           isPreviewMeeting={isPreviewMeeting}
           hasJoinReference={hasJoinReference}
@@ -227,6 +237,9 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
         canGenerateNotes={canGenerateNotes}
         generatingNotes={generatingNotes}
         onGenerateNotes={handleGenerateNotes}
+        retryingPostCallProcessing={retryingPostCallProcessing}
+        canRetryPostCallProcessing={canPersist && normalizedTranscript.length >= 20}
+        onRetryPostCallProcessing={handleRetryPostCallProcessing}
       />
     </>
   )

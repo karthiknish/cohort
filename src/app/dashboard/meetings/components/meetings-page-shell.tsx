@@ -25,6 +25,7 @@ export function MeetingsPageShell() {
     handleRescheduleMeeting,
     handleScheduleMeeting,
     handleSubmitQuickMeet,
+    googleWorkspaceStatusLoading,
     isPreviewMode,
     meetingDate,
     meetingTime,
@@ -60,6 +61,7 @@ export function MeetingsPageShell() {
     timezone,
     title,
     upcomingMeetings,
+    upcomingMeetingsLoading,
   } = useMeetingsPageContext()
 
   if (resolvedActiveInSiteMeeting) {
@@ -124,14 +126,16 @@ export function MeetingsPageShell() {
       googleWorkspaceCardProps={{
         connected: Boolean(resolvedGoogleWorkspaceStatus?.connected),
         canSchedule: canSchedule && !isPreviewMode,
+        loading: googleWorkspaceStatusLoading,
         onConnect: () => void handleConnectGoogleWorkspace(),
         onDisconnect: () => void handleDisconnectGoogleWorkspace(),
       }}
       meetingsHeaderProps={{
         googleWorkspaceConnected: Boolean(resolvedGoogleWorkspaceStatus?.connected),
+        googleWorkspaceStatusLoading,
         canSchedule,
         quickStarting,
-        quickMeetDisabled: isPreviewMode || !resolvedGoogleWorkspaceStatus?.connected,
+        quickMeetDisabled: isPreviewMode || googleWorkspaceStatusLoading || !resolvedGoogleWorkspaceStatus?.connected,
         onStartQuickMeet: () => setQuickMeetDialogOpen(true),
       }}
       meetingCancelDialogProps={{
@@ -183,6 +187,7 @@ export function MeetingsPageShell() {
       showReadOnlyAccessAlert={!canSchedule}
       upcomingMeetingsCardProps={{
         meetings: upcomingMeetings,
+        loading: upcomingMeetingsLoading,
         canSchedule: canSchedule && !isPreviewMode,
         cancellingMeetingId,
         onOpenInSiteMeeting: openInSiteMeeting,

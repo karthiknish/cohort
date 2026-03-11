@@ -3,10 +3,15 @@ import { Clock3 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 import type { MeetingRecord } from '../types'
-import { UpcomingMeetingItemCard, UpcomingMeetingsEmptyState } from './upcoming-meetings-card-sections'
+import {
+  UpcomingMeetingItemCard,
+  UpcomingMeetingsEmptyState,
+  UpcomingMeetingsLoadingState,
+} from './upcoming-meetings-card-sections'
 
 type UpcomingMeetingsCardProps = {
   meetings: MeetingRecord[]
+  loading?: boolean
   canSchedule: boolean
   cancellingMeetingId: string | null
   onOpenInSiteMeeting: (meeting: MeetingRecord) => void
@@ -18,6 +23,7 @@ type UpcomingMeetingsCardProps = {
 export function UpcomingMeetingsCard(props: UpcomingMeetingsCardProps) {
   const {
     meetings,
+    loading = false,
     canSchedule,
     cancellingMeetingId,
     onOpenInSiteMeeting,
@@ -37,7 +43,9 @@ export function UpcomingMeetingsCard(props: UpcomingMeetingsCardProps) {
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {meetings.length === 0 ? (
+        {loading ? (
+          <UpcomingMeetingsLoadingState />
+        ) : meetings.length === 0 ? (
           <UpcomingMeetingsEmptyState />
         ) : (
           meetings.map((meeting) => (

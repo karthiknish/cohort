@@ -1,14 +1,16 @@
-"use client"
+'use client'
 
-import { ReactNode } from "react"
-import { ChevronLeft, ChevronRight, FileText } from "lucide-react"
+import type { ReactNode } from 'react'
+import { ChevronLeft, ChevronRight, FileText } from 'lucide-react'
 
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+
+import { ProposalStepFeedback } from './proposal-step-feedback'
 
 interface ProposalDraftPanelProps {
   draftId: string | null
-  autosaveStatus: "idle" | "saving" | "saved" | "error"
+  autosaveStatus: 'idle' | 'saving' | 'saved' | 'error'
   stepContent: ReactNode
   onBack: () => void
   onNext: () => void
@@ -17,6 +19,10 @@ interface ProposalDraftPanelProps {
   currentStep: number
   totalSteps: number
   isSubmitting: boolean
+  stepTitle: string
+  stepDescription: string
+  requiredFieldLabels: string[]
+  validationMessages: string[]
 }
 
 export function ProposalDraftPanel({
@@ -30,22 +36,44 @@ export function ProposalDraftPanel({
   currentStep,
   totalSteps,
   isSubmitting,
+  stepTitle,
+  stepDescription,
+  requiredFieldLabels,
+  validationMessages,
 }: ProposalDraftPanelProps) {
+  const autosaveLabel = autosaveStatus === 'saving'
+    ? 'Saving progress…'
+    : autosaveStatus === 'error'
+      ? 'Autosave needs attention'
+      : autosaveStatus === 'saved'
+        ? 'All changes saved'
+        : 'Draft ready to save'
+
   return (
     <>
       <div className="flex items-center justify-between text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 px-1">
         <div className="flex items-center gap-2">
           <div className={cn(
-             "h-1.5 w-1.5 rounded-full transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none",
-             autosaveStatus === "saving" ? "bg-primary animate-pulse" : "bg-emerald-500"
+             'h-1.5 w-1.5 rounded-full transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
+             autosaveStatus === 'saving' ? 'bg-primary animate-pulse' : autosaveStatus === 'error' ? 'bg-destructive' : autosaveStatus === 'idle' ? 'bg-amber-500' : 'bg-emerald-500',
           )} />
-          <span>{autosaveStatus === "saving" ? "Saving progress..." : "All changes saved"}</span>
+          <span>{autosaveLabel}</span>
         </div>
-        <span>Draft #{draftId?.slice(0, 8).toUpperCase() ?? "NEW"}</span>
+        <span>Draft #{draftId?.slice(0, 8).toUpperCase() ?? 'NEW'}</span>
       </div>
 
       <div className="relative min-h-[300px] rounded-xl border border-muted/40 bg-muted/5 p-4 sm:p-6 backdrop-blur-sm shadow-inner transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none">
-        {stepContent}
+        <div className="space-y-5">
+          <ProposalStepFeedback
+            currentStep={currentStep}
+            totalSteps={totalSteps}
+            stepTitle={stepTitle}
+            stepDescription={stepDescription}
+            requiredFieldLabels={requiredFieldLabels}
+            validationMessages={validationMessages}
+          />
+          {stepContent}
+        </div>
       </div>
 
       <div className="flex items-center justify-between pt-4 mt-2 border-t border-muted/20">
@@ -66,8 +94,8 @@ export function ProposalDraftPanel({
             onClick={onNext} 
             disabled={isSubmitting}
             className={cn(
-               "h-10 px-8 font-semibold shadow-lg transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] active:scale-[0.98]",
-               isLastStep && "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
+               'h-10 px-8 font-semibold shadow-lg transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] active:scale-[0.98]',
+               isLastStep && 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
             )}
           >
             {isLastStep ? (
@@ -77,7 +105,7 @@ export function ProposalDraftPanel({
               </span>
             ) : (
               <span className="flex items-center">
-                {isSubmitting ? "Submitting…" : "Continue"}
+                {isSubmitting ? 'Submitting…' : 'Continue'}
                 {!isSubmitting && <ChevronRight className="ml-2 h-4 w-4" />}
               </span>
             )}

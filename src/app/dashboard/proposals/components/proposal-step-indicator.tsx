@@ -2,7 +2,7 @@
 
 import { memo } from "react"
 
-import type { ProposalStepId } from "./proposal-step-content"
+import type { ProposalStepId } from './proposal-step-types'
 
 export interface ProposalStep {
   id: ProposalStepId
@@ -22,6 +22,7 @@ function ProposalStepIndicatorComponent({
   submitted,
 }: ProposalStepIndicatorProps) {
   const progress = ((currentStep + 1) / steps.length) * 100
+  const activeStep = steps[currentStep]
 
   return (
     <div className="space-y-4">
@@ -30,7 +31,7 @@ function ProposalStepIndicatorComponent({
           <span className="text-primary font-bold">Step {currentStep + 1}</span>
           <span className="text-muted-foreground">of {steps.length}</span>
           <span className="mx-1 text-muted-foreground/30">•</span>
-          <span className="text-foreground">{steps[currentStep]!.title}</span>
+          <span className="text-foreground">{activeStep?.title ?? 'Proposal step'}</span>
         </div>
         <span className="text-primary/70">{Math.round(submitted ? 100 : progress)}%</span>
       </div>

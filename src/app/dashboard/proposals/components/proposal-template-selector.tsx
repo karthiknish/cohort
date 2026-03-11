@@ -1,37 +1,24 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { ChevronDown, FileText, LoaderCircle, Save, Star, Trash2 } from 'lucide-react'
-
+import { ChevronDown, FileText } from 'lucide-react'
 
 import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
 import type { ProposalFormData } from '@/lib/proposals'
 import type { ProposalTemplate } from '@/types/proposal-templates'
 import { useAuth } from '@/contexts/auth-context'
 import { useMutation, useQuery } from 'convex/react'
 import { proposalTemplatesApi } from '@/lib/convex-api'
+
+import {
+  ProposalTemplateDropdownContent,
+  ProposalTemplateSaveDialog,
+} from './proposal-template-selector-sections'
 
 interface ProposalTemplateSelectorProps {
   currentFormData: ProposalFormData
@@ -98,6 +85,7 @@ export function ProposalTemplateSelector({
   const [isDefault, setIsDefault] = useState(false)
 
   const loading = templatesRows === undefined
+  const canManageTemplates = Boolean(workspaceId)
 
   const handleApplyTemplate = useCallback((template: ProposalTemplate) => {
     onApplyTemplate(template.formData)
@@ -214,167 +202,34 @@ export function ProposalTemplateSelector({
             <ChevronDown className="h-3 w-3 opacity-50" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72">
-          <DropdownMenuLabel className="flex items-center justify-between">
-            <span>Proposal Templates</span>
-            {loading && <LoaderCircle className="h-3 w-3 animate-spin" />}
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-
-          {templates.length === 0 && !loading && (
-            <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-              <FileText className="mx-auto mb-2 h-8 w-8 opacity-30" />
-              <p>No templates yet</p>
-              <p className="text-xs">Save your current proposal as a template</p>
-            </div>
-          )}
-
-          {templates.map((template) => (
-            <DropdownMenuItem
-              key={template.id}
-              className="flex items-start gap-3 p-3 cursor-pointer"
-              onSelect={(e) => {
-                e.preventDefault()
-                handleApplyTemplate(template)
-              }}
-            >
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{template.name}</span>
-                  {template.isDefault && (
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                  )}
-                </div>
-                {template.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {template.description}
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-1">
-                  {template.industry && (
-                    <Badge variant="secondary" className="text-[10px]">
-                      {template.industry}
-                    </Badge>
-                  )}
-                  {template.tags.slice(0, 2).map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-[10px]">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
-                disabled={deleting === template.id}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleDeleteTemplate(template.id, template.name)
-                }}
-              >
-                {deleting === template.id ? (
-                  <LoaderCircle className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3 w-3" />
-                )}
-              </Button>
-            </DropdownMenuItem>
-          ))}
-
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="gap-2 cursor-pointer"
-            onSelect={(e) => {
-              e.preventDefault()
-              setOpen(false)
-              setSaveDialogOpen(true)
-            }}
-          >
-            <Save className="h-4 w-4" />
-            Save current as template
-          </DropdownMenuItem>
-        </DropdownMenuContent>
+        <ProposalTemplateDropdownContent
+          templates={templates}
+          loading={loading}
+          deletingTemplateId={deleting}
+          canManageTemplates={canManageTemplates}
+          onApplyTemplate={handleApplyTemplate}
+          onDeleteTemplate={handleDeleteTemplate}
+          onOpenSaveDialog={() => {
+            setOpen(false)
+            setSaveDialogOpen(true)
+          }}
+        />
       </DropdownMenu>
 
-      {/* Save Template Dialog */}
-      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Save as Template</DialogTitle>
-            <DialogDescription>
-              Save your current proposal configuration as a reusable template.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="template-name">Template Name *</Label>
-              <Input
-                id="template-name"
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="e.g., E-commerce Growth Package"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="template-description">Description</Label>
-              <Textarea
-                id="template-description"
-                value={templateDescription}
-                onChange={(e) => setTemplateDescription(e.target.value)}
-                placeholder="Brief description of when to use this template…"
-                rows={2}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="template-industry">Industry</Label>
-              <Input
-                id="template-industry"
-                value={templateIndustry}
-                onChange={(e) => setTemplateIndustry(e.target.value)}
-                placeholder="e.g., E-commerce, SaaS, Healthcare"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="is-default"
-                checked={isDefault}
-                onChange={(e) => setIsDefault(e.target.checked)}
-              />
-              <Label htmlFor="is-default" className="text-sm font-normal cursor-pointer">
-                Set as default template for new proposals
-              </Label>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setSaveDialogOpen(false)}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSaveAsTemplate} disabled={saving || !templateName.trim()}>
-              {saving ? (
-                <>
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Template
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ProposalTemplateSaveDialog
+        open={saveDialogOpen}
+        saving={saving}
+        templateName={templateName}
+        templateDescription={templateDescription}
+        templateIndustry={templateIndustry}
+        isDefault={isDefault}
+        onOpenChange={setSaveDialogOpen}
+        onTemplateNameChange={setTemplateName}
+        onTemplateDescriptionChange={setTemplateDescription}
+        onTemplateIndustryChange={setTemplateIndustry}
+        onDefaultChange={setIsDefault}
+        onSave={handleSaveAsTemplate}
+      />
     </>
   )
 }

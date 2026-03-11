@@ -7,6 +7,7 @@ import {
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog'
+import type { LocationMarker } from '@/components/ui/location-map'
 import { toast } from '@/components/ui/use-toast'
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'

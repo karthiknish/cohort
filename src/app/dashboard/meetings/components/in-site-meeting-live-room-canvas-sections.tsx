@@ -120,13 +120,13 @@ export function LiveRoomCanvasOverlay({
         {pipSupported ? (
           <Button type="button" size="sm" variant="secondary" className={chromeClassName} onClick={onTogglePictureInPicture}>
             <PictureInPicture2 className="mr-2 h-3.5 w-3.5" />
-            {pipActive ? 'Exit Picture in Picture' : 'Picture in Picture'}
+            {pipActive ? 'Exit PiP' : 'Enter PiP'}
           </Button>
         ) : null}
         {canMinimize ? (
           <Button type="button" size="sm" variant="secondary" className={cn(chromeClassName, 'md:hidden')} onClick={onToggleMinimize}>
             {isMinimized ? <Maximize2 className="mr-2 h-3.5 w-3.5" /> : <Minimize2 className="mr-2 h-3.5 w-3.5" />}
-            {isMinimized ? 'Expand' : 'Minimize'}
+            {isMinimized ? 'Restore room' : 'Send to tray'}
           </Button>
         ) : null}
       </div>

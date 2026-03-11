@@ -86,6 +86,7 @@ export function MeetingOperationsAutomationCard({
   joinConfig,
   markCompleted,
   notesProcessingState,
+  retryingPostCallProcessing,
   transcriptProcessingState,
 }: {
   autoSyncing: boolean
@@ -93,19 +94,23 @@ export function MeetingOperationsAutomationCard({
   joinConfig: LiveKitJoinPayload | null
   markCompleted: boolean
   notesProcessingState: MeetingProcessingState
+  retryingPostCallProcessing: boolean
   transcriptProcessingState: MeetingProcessingState
 }) {
+  const postCallProcessingActive = retryingPostCallProcessing || finalizingSession || transcriptProcessingState === 'processing' || notesProcessingState === 'processing'
+
   return (
     <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
       <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Automation</p>
       <p className="mt-3 text-sm text-foreground">
-        {finalizingSession || transcriptProcessingState === 'processing' || notesProcessingState === 'processing'
-          ? 'The meeting has ended. Final transcript and AI notes are being wrapped up now.'
+        {postCallProcessingActive
+          ? 'The meeting has ended. Final transcript and AI notes are being wrapped up now. Keep this page open while post-call processing finishes.'
           : 'Capture and meeting summary stay in the background while the room is running.'}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         <Badge variant={joinConfig ? 'secondary' : 'outline'}>{joinConfig ? 'Room live' : 'Waiting to join'}</Badge>
         {autoSyncing ? <Badge variant="outline">Syncing now</Badge> : null}
+        {retryingPostCallProcessing ? <Badge variant="info">Retrying post-call</Badge> : null}
         {transcriptProcessingState === 'processing' ? <Badge variant="info">Transcript finalizing</Badge> : null}
         {notesProcessingState === 'processing' ? <Badge variant="info">AI notes generating</Badge> : null}
         {markCompleted ? <Badge variant="outline">Marked completed</Badge> : null}
@@ -159,11 +164,23 @@ export function MeetingOperationsAlerts({
   captureError,
   notesProcessingError,
   notesReason,
+  canGenerateNotes,
+  canRetryPostCallProcessing,
+  generatingNotes,
+  retryingPostCallProcessing,
+  onGenerateNotes,
+  onRetryPostCallProcessing,
   transcriptProcessingError,
 }: {
   captureError: string | null
   notesProcessingError: string | null
   notesReason: 'ai_not_configured' | 'generation_failed' | null
+  canGenerateNotes: boolean
+  canRetryPostCallProcessing: boolean
+  generatingNotes: boolean
+  retryingPostCallProcessing: boolean
+  onGenerateNotes: () => void
+  onRetryPostCallProcessing: () => void
   transcriptProcessingError: string | null
 }) {
   return (
@@ -178,15 +195,27 @@ export function MeetingOperationsAlerts({
       {transcriptProcessingError ? (
         <Alert className="border-destructive/40 bg-destructive/5">
           <AlertTitle>Transcript finalization failed</AlertTitle>
-          <AlertDescription>{transcriptProcessingError}</AlertDescription>
+          <AlertDescription className="space-y-3">
+            <p>{transcriptProcessingError}</p>
+            {canRetryPostCallProcessing ? (
+              <Button type="button" size="sm" variant="outline" onClick={onRetryPostCallProcessing} disabled={retryingPostCallProcessing}>
+                {retryingPostCallProcessing ? 'Retrying post-call…' : 'Retry post-call processing'}
+              </Button>
+            ) : null}
+          </AlertDescription>
         </Alert>
       ) : null}
 
       {notesReason === 'generation_failed' ? (
         <Alert className="border-destructive/40 bg-destructive/5">
           <AlertTitle>AI summary failed</AlertTitle>
-          <AlertDescription>
-            The last notes generation request failed. Try again after a little more transcript is captured.
+          <AlertDescription className="space-y-3">
+            <p>The last notes generation request failed. Try again after a little more transcript is captured.</p>
+            {canGenerateNotes ? (
+              <Button type="button" size="sm" variant="outline" onClick={onGenerateNotes} disabled={generatingNotes}>
+                {generatingNotes ? 'Retrying AI notes…' : 'Retry AI notes'}
+              </Button>
+            ) : null}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -194,7 +223,14 @@ export function MeetingOperationsAlerts({
       {notesProcessingError ? (
         <Alert className="border-destructive/40 bg-destructive/5">
           <AlertTitle>AI notes generation failed</AlertTitle>
-          <AlertDescription>{notesProcessingError}</AlertDescription>
+          <AlertDescription className="space-y-3">
+            <p>{notesProcessingError}</p>
+            {canGenerateNotes ? (
+              <Button type="button" size="sm" variant="outline" onClick={onGenerateNotes} disabled={generatingNotes}>
+                {generatingNotes ? 'Retrying AI notes…' : 'Retry AI notes'}
+              </Button>
+            ) : null}
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -213,6 +249,7 @@ export function MeetingOperationsSummaryCard({
   generatingNotes,
   notesProcessingState,
   onGenerateNotes,
+  postCallProcessingActive,
   summaryPreview,
   transcriptLength,
 }: {
@@ -220,6 +257,7 @@ export function MeetingOperationsSummaryCard({
   generatingNotes: boolean
   notesProcessingState: MeetingProcessingState
   onGenerateNotes: () => void
+  postCallProcessingActive: boolean
   summaryPreview: string | null
   transcriptLength: number
 }) {
@@ -251,6 +289,7 @@ export function MeetingOperationsSummaryCard({
                 ? 'Generate a meeting summary now, or let it generate automatically when the room ends.'
                 : 'Speak for a bit first so the transcript has enough content for AI notes.'}
           </p>
+          {postCallProcessingActive ? <p className="mt-2 text-xs text-muted-foreground">Post-call processing is running. Keep this page open until transcript finalization and notes generation finish.</p> : null}
         </div>
         {canGenerateNotes ? (
           <Button type="button" size="sm" variant="outline" onClick={onGenerateNotes} disabled={generatingNotes || notesProcessingState === 'processing'}>

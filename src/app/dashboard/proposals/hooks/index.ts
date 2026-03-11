@@ -9,3 +9,5 @@ export type { UseProposalSubmissionOptions, UseProposalSubmissionReturn } from '
 
 export { useDeckPreparation } from './use-deck-preparation'
 export type { UseDeckPreparationOptions, UseDeckPreparationReturn } from './use-deck-preparation'
+
+export { useProposalPageInteractions } from './use-proposal-page-interactions'

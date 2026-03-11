@@ -6,6 +6,7 @@ import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-
 
 type MeetingsHeaderProps = {
   googleWorkspaceConnected: boolean
+  googleWorkspaceStatusLoading?: boolean
   canSchedule: boolean
   quickStarting: boolean
   quickMeetDisabled: boolean
@@ -13,7 +14,22 @@ type MeetingsHeaderProps = {
 }
 
 export function MeetingsHeader(props: MeetingsHeaderProps) {
-  const { googleWorkspaceConnected, canSchedule, quickStarting, quickMeetDisabled, onStartQuickMeet } = props
+  const {
+    googleWorkspaceConnected,
+    googleWorkspaceStatusLoading = false,
+    canSchedule,
+    quickStarting,
+    quickMeetDisabled,
+    onStartQuickMeet,
+  } = props
+
+  const quickMeetDisabledReason = googleWorkspaceStatusLoading
+    ? 'Checking Google Workspace connection'
+    : !canSchedule
+      ? 'Scheduling is unavailable in this workspace'
+      : quickMeetDisabled
+        ? 'Connect Google Workspace to start a meeting with calendar invite support'
+        : undefined
 
   return (
     <div className={DASHBOARD_THEME.layout.header}>
@@ -25,16 +41,21 @@ export function MeetingsHeader(props: MeetingsHeaderProps) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={googleWorkspaceConnected ? 'secondary' : 'outline'}>
-          {googleWorkspaceConnected ? 'Google Workspace Connected' : 'Google Workspace Not Connected'}
-        </Badge>
+        {googleWorkspaceStatusLoading ? (
+          <Badge variant="outline">Checking Google Workspace…</Badge>
+        ) : (
+          <Badge variant={googleWorkspaceConnected ? 'secondary' : 'outline'}>
+            {googleWorkspaceConnected ? 'Google Workspace Connected' : 'Google Workspace Setup Required'}
+          </Badge>
+        )}
         <Button
           className={getButtonClasses('primary')}
           disabled={!canSchedule || quickStarting || quickMeetDisabled}
           onClick={onStartQuickMeet}
+          title={quickMeetDisabledReason}
         >
           {quickStarting ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Video className="mr-2 h-4 w-4" />}
-          Start Cohorts Room
+          {googleWorkspaceStatusLoading ? 'Checking Workspace…' : 'Start Cohorts Room'}
         </Button>
       </div>
     </div>

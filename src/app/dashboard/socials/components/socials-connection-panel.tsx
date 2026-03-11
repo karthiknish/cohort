@@ -9,14 +9,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+
+import {
+  SocialsMetaSetupCard,
+  SocialsMetaSourceSwitcherCard,
+  SocialsSurfaceInventoryCard,
+} from './socials-connection-panel-sections'
+import type { SocialsMetaSetupState, SocialsSurfaceAvailability } from './socials-state'
 
 type MetaAccountOption = {
   id: string
@@ -27,6 +27,7 @@ type MetaAccountOption = {
 }
 
 type SocialsConnectionPanelProps = {
+  panelId?: string
   selectedClientName: string | null
   connected: boolean
   accountName: string | null | undefined
@@ -46,7 +47,11 @@ type SocialsConnectionPanelProps = {
   onInitialize: () => Promise<void>
   facebookPages: Array<{ id: string; name: string; tasks: string[] }>
   instagramProfiles: Array<{ id: string; name: string; username: string | null }>
+  metaSetupState: SocialsMetaSetupState
+  surfaceAvailability: Record<'facebook' | 'instagram', SocialsSurfaceAvailability>
   surfaceActorsLoading: boolean
+  surfaceActorsError: string | null
+  onRetrySurfaceActors: () => void
 }
 
 function formatLastSync(timestamp: string | null): string {
@@ -61,6 +66,7 @@ function formatLastSync(timestamp: string | null): string {
 }
 
 export function SocialsConnectionPanel({
+  panelId,
   selectedClientName,
   connected,
   accountName,
@@ -80,7 +86,11 @@ export function SocialsConnectionPanel({
   onInitialize,
   facebookPages,
   instagramProfiles,
+  metaSetupState,
+  surfaceAvailability,
   surfaceActorsLoading,
+  surfaceActorsError,
+  onRetrySurfaceActors,
 }: SocialsConnectionPanelProps) {
   const surfaceStates = useMemo(
     () => [
@@ -99,9 +109,20 @@ export function SocialsConnectionPanel({
     ],
     [],
   )
+  const shouldShowSourceSwitcher =
+    connected &&
+    (metaNeedsAccountSelection || (metaSetupState.switchSourceRecommended && metaAccountOptions.length > 1))
+  const sourceSwitcherTitle = metaNeedsAccountSelection
+    ? 'Choose the Meta source behind these social insights'
+    : 'Switch Meta source for this workspace'
+  const sourceSwitcherDescription = metaNeedsAccountSelection
+    ? 'The social login is complete. Meta still requires one background source selection before Facebook and Instagram insights can populate here.'
+    : metaSetupState.switchSourceMessage ??
+      'If these surfaces look incomplete, switch to another Meta source and retry discovery.'
+  const sourceConfirmationLabel = metaNeedsAccountSelection ? 'Prepare source' : 'Switch source'
 
   return (
-    <Card className="overflow-hidden border-muted/60 shadow-sm">
+    <Card id={panelId} className="overflow-hidden border-muted/60 shadow-sm">
       <div className="border-b border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(10,102,194,0.35),_transparent_40%),linear-gradient(135deg,_rgba(7,23,64,1),_rgba(12,54,110,0.98)_52%,_rgba(24,112,153,0.94))] px-6 py-6 text-white">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-2xl space-y-4">
@@ -207,50 +228,33 @@ export function SocialsConnectionPanel({
             </Alert>
           ) : null}
 
-          {metaNeedsAccountSelection ? (
-            <div className="rounded-3xl border border-dashed border-primary/25 bg-primary/[0.03] p-5">
-              <div className="mb-4 space-y-1">
-                <h3 className="text-base font-semibold">Choose the Meta source behind these social insights</h3>
-                <p className="text-sm text-muted-foreground">
-                  The social login is complete. Meta still requires one background source selection
-                  before Facebook and Instagram insights can populate here.
-                </p>
-              </div>
-              <div className="flex flex-col gap-3 md:flex-row">
-                <div className="min-w-0 flex-1">
-                  <Select value={selectedMetaAccountId} onValueChange={onSelectAccount}>
-                    <SelectTrigger aria-label="Select Meta source" className="h-11 rounded-2xl">
-                      <SelectValue placeholder={loadingMetaAccountOptions ? 'Loading Meta sources…' : 'Select Meta source'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {metaAccountOptions.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.name}
-                          {account.currency ? ` · ${account.currency}` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => void onReloadAccounts()}
-                  disabled={loadingMetaAccountOptions}
-                  className="h-11 rounded-2xl"
-                >
-                  Reload accounts
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => void onInitialize()}
-                  disabled={!selectedMetaAccountId || initializingMeta}
-                  className="h-11 rounded-2xl"
-                >
-                  {initializingMeta ? 'Preparing account…' : 'Prepare account'}
-                </Button>
-              </div>
-            </div>
+          <SocialsMetaSetupCard
+            setupState={metaSetupState}
+            selectedSourceLabel={accountName}
+            sourceSelectionRequired={metaNeedsAccountSelection}
+            loadingSources={loadingMetaAccountOptions}
+            facebookStatus={surfaceAvailability.facebook.status}
+            instagramStatus={surfaceAvailability.instagram.status}
+            facebookCount={facebookPages.length}
+            instagramCount={instagramProfiles.length}
+            onReloadSources={() => void onReloadAccounts()}
+            onRetryDiscovery={onRetrySurfaceActors}
+          />
+
+          {shouldShowSourceSwitcher ? (
+            <SocialsMetaSourceSwitcherCard
+              title={sourceSwitcherTitle}
+              description={sourceSwitcherDescription}
+              selectedMetaAccountId={selectedMetaAccountId}
+              selectedSourceLabel={accountName}
+              metaAccountOptions={metaAccountOptions.map((account) => ({ id: account.id, name: account.name }))}
+              loadingMetaAccountOptions={loadingMetaAccountOptions}
+              initializingMeta={initializingMeta}
+              onReloadAccounts={() => void onReloadAccounts()}
+              onSelectAccount={onSelectAccount}
+              onConfirmSource={() => void onInitialize()}
+              confirmationLabel={sourceConfirmationLabel}
+            />
           ) : null}
 
           {!connected ? (
@@ -261,55 +265,39 @@ export function SocialsConnectionPanel({
           ) : null}
 
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-3xl border border-muted/50 bg-background p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-semibold text-foreground">Facebook Pages</p>
-                <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-[10px]">
-                  {surfaceActorsLoading ? 'Loading…' : `${facebookPages.length} connected`}
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                {facebookPages.length > 0 ? (
-                  facebookPages.slice(0, 3).map((page) => (
-                    <div key={page.id} className="rounded-2xl border border-muted/50 bg-muted/[0.04] px-3 py-2">
-                      <p className="truncate text-sm font-medium text-foreground">{page.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {page.tasks.length > 0 ? page.tasks.join(', ') : 'Publishing and insight access enabled'}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    {connected ? 'No Facebook Pages surfaced yet from Meta.' : 'Connect Meta to load Pages.'}
-                  </p>
-                )}
-              </div>
-            </div>
+            <SocialsSurfaceInventoryCard
+              title="Facebook Pages"
+              connected={connected}
+              loading={surfaceActorsLoading}
+              error={surfaceActorsError}
+              count={facebookPages.length}
+              status={surfaceAvailability.facebook.status}
+              emptyConnectedMessage={surfaceAvailability.facebook.emptyMessage}
+              emptyDisconnectedMessage="Connect Meta to load Facebook Pages for this workspace."
+              onRetry={onRetrySurfaceActors}
+              items={facebookPages.map((page) => ({
+                id: page.id,
+                name: page.name,
+                subtitle: page.tasks.length > 0 ? page.tasks.join(', ') : 'Publishing and insight access enabled',
+              }))}
+            />
 
-            <div className="rounded-3xl border border-muted/50 bg-background p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-semibold text-foreground">Instagram Profiles</p>
-                <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-[10px]">
-                  {surfaceActorsLoading ? 'Loading…' : `${instagramProfiles.length} connected`}
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                {instagramProfiles.length > 0 ? (
-                  instagramProfiles.slice(0, 3).map((profile) => (
-                    <div key={profile.id} className="rounded-2xl border border-muted/50 bg-muted/[0.04] px-3 py-2">
-                      <p className="truncate text-sm font-medium text-foreground">{profile.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {profile.username ? `@${profile.username}` : 'Business profile linked through Meta'}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    {connected ? 'No Instagram business profiles surfaced yet from Meta.' : 'Connect Meta to load Instagram profiles.'}
-                  </p>
-                )}
-              </div>
-            </div>
+            <SocialsSurfaceInventoryCard
+              title="Instagram Profiles"
+              connected={connected}
+              loading={surfaceActorsLoading}
+              error={surfaceActorsError}
+              count={instagramProfiles.length}
+              status={surfaceAvailability.instagram.status}
+              emptyConnectedMessage={surfaceAvailability.instagram.emptyMessage}
+              emptyDisconnectedMessage="Connect Meta to load Instagram business profiles for this workspace."
+              onRetry={onRetrySurfaceActors}
+              items={instagramProfiles.map((profile) => ({
+                id: profile.id,
+                name: profile.name,
+                subtitle: profile.username ? `@${profile.username}` : 'Business profile linked through Meta',
+              }))}
+            />
           </div>
         </div>
 

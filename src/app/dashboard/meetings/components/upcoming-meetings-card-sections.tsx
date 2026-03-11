@@ -2,6 +2,7 @@ import { Link2, LoaderCircle, Video } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { getButtonClasses } from '@/lib/dashboard-theme'
 
 import type { MeetingRecord } from '../types'
@@ -9,6 +10,10 @@ import { formatLocalDateTime, normalizeMeetingProcessingState, statusVariant } f
 
 export function UpcomingMeetingsEmptyState() {
   return <p className="text-sm text-muted-foreground">No upcoming meetings yet.</p>
+}
+
+export function UpcomingMeetingsLoadingState() {
+  return <div className="space-y-3">{[0, 1, 2].map((slot) => <Skeleton key={slot} className="h-24 w-full rounded-lg" />)}</div>
 }
 
 export function UpcomingMeetingItemCard({

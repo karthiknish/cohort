@@ -31,7 +31,9 @@ import { Button } from '@/components/ui/button'
 import { getButtonClasses } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
 
+import type { MeetingProcessingState } from '../types'
 import { formatLocalDateTime } from '../utils'
+import { MeetingAutomationPipeline } from './meeting-automation-pipeline'
 import { InSiteMeetingLiveRoomCanvas } from './in-site-meeting-live-room-canvas'
 
 type MeetingRoomCanvasProps = ComponentProps<typeof InSiteMeetingLiveRoomCanvas>
@@ -74,6 +76,7 @@ export function MeetingRoomHeroSection({
   meetingEndTimeMs,
   meetingTimezone,
   joinConfigPresent,
+  isMobileViewport,
   pipSupported,
   pipActive,
   canMinimizeRoom,
@@ -91,6 +94,7 @@ export function MeetingRoomHeroSection({
   meetingEndTimeMs: number
   meetingTimezone: string
   joinConfigPresent: boolean
+  isMobileViewport: boolean
   pipSupported: boolean
   pipActive: boolean
   canMinimizeRoom: boolean
@@ -101,6 +105,18 @@ export function MeetingRoomHeroSection({
   onToggleMinimize: () => void
   onCopyLink: () => void
 }) {
+  const roomModeMessage = isMinimized
+    ? 'Mobile tray is active. Restore the full room whenever you want to return to the main call view.'
+    : pipActive
+      ? 'Picture in Picture is active so the call can stay visible while you browse the workspace.'
+      : joinConfigPresent && !pipSupported
+        ? 'This browser keeps the room embedded in Cohorts because Picture in Picture is unavailable here.'
+        : canMinimizeRoom
+          ? 'Minimize the room into the mobile tray to keep the call pinned while you review notes.'
+          : joinConfigPresent
+            ? 'The room is live in Cohorts. Picture in Picture and the mobile tray are available when supported.'
+            : 'Join the room to unlock PiP and mobile tray controls.'
+
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="space-y-3">
@@ -114,28 +130,33 @@ export function MeetingRoomHeroSection({
             Ends {formatLocalDateTime(meetingEndTimeMs, meetingTimezone)}
           </Badge>
           <Badge variant="secondary">{meetingStatus.replace('_', ' ')}</Badge>
+          <Badge variant={joinConfigPresent ? 'secondary' : 'outline'}>{joinConfigPresent ? 'Room live' : 'Waiting to join'}</Badge>
+          {joinConfigPresent ? <Badge variant={pipActive ? 'secondary' : 'outline'}>{pipActive ? 'PiP active' : pipSupported ? 'PiP available' : 'PiP unavailable'}</Badge> : null}
+          {joinConfigPresent ? <Badge variant={isMinimized ? 'secondary' : 'outline'}>{isMinimized ? 'Mobile tray active' : isMobileViewport ? 'Mobile tray available' : 'Mobile tray on mobile'}</Badge> : null}
         </div>
         <div className="max-w-3xl">
           <p className="text-xs uppercase tracking-[0.32em] text-muted-foreground">Cohorts room</p>
           <h2 className="mt-2 text-3xl font-semibold tracking-tight lg:text-[2.75rem]">{meetingTitle}</h2>
         </div>
         {meetingDescription ? <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{meetingDescription}</p> : null}
+        <p className="max-w-2xl text-sm text-muted-foreground">{roomModeMessage}</p>
       </div>
 
-      <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
         <Button type="button" variant="outline" onClick={onOpenSidebar}>
           Room sidebar
         </Button>
-        {joinConfigPresent && pipSupported ? (
-          <Button type="button" variant="outline" onClick={onTogglePictureInPicture}>
+        {joinConfigPresent ? (
+          <Button type="button" variant="outline" onClick={onTogglePictureInPicture} disabled={!pipSupported} title={pipSupported ? undefined : 'Picture in Picture is unavailable in this browser'}>
             <PictureInPicture2 className="mr-2 h-4 w-4" />
-            {pipActive ? 'Exit Picture in Picture' : 'Picture in Picture'}
+            {pipActive ? 'Exit PiP' : pipSupported ? 'Enter PiP' : 'PiP unavailable'}
           </Button>
         ) : null}
         {joinConfigPresent && canMinimizeRoom ? (
           <Button type="button" variant="outline" className="md:hidden" onClick={onToggleMinimize}>
             {isMinimized ? <Maximize2 className="mr-2 h-4 w-4" /> : <Minimize2 className="mr-2 h-4 w-4" />}
-            {isMinimized ? 'Expand room' : 'Minimize room'}
+            {isMinimized ? 'Restore room' : 'Send to tray'}
           </Button>
         ) : null}
         {meetingLink ? (
@@ -144,6 +165,8 @@ export function MeetingRoomHeroSection({
             Copy link
           </Button>
         ) : null}
+        </div>
+        {joinConfigPresent ? <p className="text-xs text-muted-foreground sm:max-w-xs sm:text-right">{isMinimized ? 'The call is pinned to the bottom tray and will keep running while you review meeting details.' : pipActive ? 'Picture in Picture is active. Use the browser mini-player or Exit PiP to return to the full room view.' : !pipSupported ? 'Picture in Picture is unavailable in this browser, so the call will remain embedded inside Cohorts.' : canMinimizeRoom ? 'On mobile, you can send the room to the tray without leaving the call.' : 'Use PiP or the room sidebar to keep the meeting visible while you multitask.'}</p> : null}
       </div>
     </div>
   )
@@ -246,8 +269,12 @@ export function MeetingRoomCanvasSection({
                 <div className="space-y-2">
                   <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Room minimized</p>
                   <h3 className="text-lg font-semibold tracking-tight text-foreground">The call is still running in Cohorts.</h3>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">Mobile tray active</Badge>
+                    <Badge variant={pipActive ? 'secondary' : 'outline'}>{pipActive ? 'PiP active' : pipSupported ? 'PiP available' : 'PiP unavailable'}</Badge>
+                  </div>
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Keep browsing the meeting details while the room stays pinned to the bottom of the screen.
+                    Keep browsing the meeting details while the room stays pinned to the bottom of the screen. Restore the room anytime without dropping the call.
                   </p>
                 </div>
                 <Button type="button" size="sm" variant="outline" onClick={onToggleMinimize}>
@@ -315,15 +342,22 @@ export function MeetingRoomCanvasSection({
 }
 
 export function MeetingRoomToolsSection({
+  captureErrorPresent,
+  captureListening,
+  finalizingSession,
+  hasTranscriptSaved,
   roomAutomationMessage,
   roomAutomationBadge,
   lastAutoSyncAt,
+  summaryReady,
   transcriptProcessingState,
   notesProcessingState,
   meetingTimezone,
   joinConfigPresent,
   isMobileViewport,
   isMinimized,
+  pipSupported,
+  pipActive,
   joiningRoom,
   isPreviewMeeting,
   hasJoinReference,
@@ -332,15 +366,22 @@ export function MeetingRoomToolsSection({
   onToggleMinimize,
   onJoinRoom,
 }: {
+  captureErrorPresent: boolean
+  captureListening: boolean
+  finalizingSession: boolean
+  hasTranscriptSaved: boolean
   roomAutomationMessage: string
   roomAutomationBadge: string
   lastAutoSyncAt: number | null
-  transcriptProcessingState: string
-  notesProcessingState: string
+  summaryReady: boolean
+  transcriptProcessingState: MeetingProcessingState
+  notesProcessingState: MeetingProcessingState
   meetingTimezone: string
   joinConfigPresent: boolean
   isMobileViewport: boolean
   isMinimized: boolean
+  pipSupported: boolean
+  pipActive: boolean
   joiningRoom: boolean
   isPreviewMeeting: boolean
   hasJoinReference: boolean
@@ -359,6 +400,8 @@ export function MeetingRoomToolsSection({
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Badge variant="outline">{roomAutomationBadge}</Badge>
+          {joinConfigPresent ? <Badge variant={pipActive ? 'secondary' : 'outline'}>{pipActive ? 'PiP active' : pipSupported ? 'PiP available' : 'PiP unavailable'}</Badge> : null}
+          {joinConfigPresent ? <Badge variant={isMinimized ? 'secondary' : 'outline'}>{isMinimized ? 'Mobile tray active' : isMobileViewport ? 'Mobile tray available' : 'Mobile tray on mobile'}</Badge> : null}
           {lastAutoSyncAt ? <Badge variant="outline">Last sync {formatLocalDateTime(lastAutoSyncAt, meetingTimezone)}</Badge> : null}
           {transcriptProcessingState === 'processing' ? (
             <Badge variant="info">
@@ -373,6 +416,18 @@ export function MeetingRoomToolsSection({
             </Badge>
           ) : null}
         </div>
+        {joinConfigPresent ? <p className="mt-3 max-w-2xl text-xs text-muted-foreground">{isMinimized ? 'The mobile tray is active. Expand the room anytime to return to the full call layout.' : pipActive ? 'Picture in Picture is active and the call can stay visible while you move around the dashboard.' : !pipSupported ? 'Picture in Picture is unavailable in this browser, so the room stays embedded inside Cohorts.' : isMobileViewport ? 'This phone-sized view supports both PiP and the mobile tray while the room is live.' : 'PiP is ready when supported, and the mobile tray appears automatically on small screens.'}</p> : null}
+        <MeetingAutomationPipeline
+          className="mt-3"
+          captureErrorPresent={captureErrorPresent}
+          captureListening={captureListening}
+          finalizingSession={finalizingSession}
+          hasTranscriptSaved={hasTranscriptSaved}
+          inRoom={joinConfigPresent}
+          notesProcessingState={notesProcessingState}
+          summaryReady={summaryReady}
+          transcriptProcessingState={transcriptProcessingState}
+        />
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -382,7 +437,7 @@ export function MeetingRoomToolsSection({
         {joinConfigPresent && isMobileViewport ? (
           <Button type="button" variant="outline" className="md:hidden" onClick={onToggleMinimize}>
             {isMinimized ? <Maximize2 className="mr-2 h-4 w-4" /> : <Minimize2 className="mr-2 h-4 w-4" />}
-            {isMinimized ? 'Expand room' : 'Minimize room'}
+            {isMinimized ? 'Restore room' : 'Send to tray'}
           </Button>
         ) : null}
         {!joinConfigPresent ? (

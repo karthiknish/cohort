@@ -41,6 +41,7 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
   const [operationsOpen, setOperationsOpen] = useState(false)
   const [generatingNotes, setGeneratingNotes] = useState(false)
   const [finalizingSession, setFinalizingSession] = useState(false)
+  const [retryingPostCallProcessing, setRetryingPostCallProcessing] = useState(false)
   const [joinConfig, setJoinConfig] = useState<LiveKitJoinPayload | null>(null)
   const [joiningRoom, setJoiningRoom] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
@@ -470,6 +471,101 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     }
   }, [applyTranscriptActionResult, canGenerateNotes, normalizedTranscript, submitTranscriptAction, toast])
 
+  const handleRetryPostCallProcessing = useCallback(async () => {
+    if (!canPersist) {
+      toast({
+        variant: 'destructive',
+        title: 'Post-call retry unavailable',
+        description: 'This meeting cannot persist transcript updates in the current environment.',
+      })
+      return
+    }
+
+    if (normalizedTranscript.length < 20) {
+      toast({
+        variant: 'destructive',
+        title: 'Transcript too short',
+        description: 'Capture a little more conversation before retrying post-call processing.',
+      })
+      return
+    }
+
+    if (finalizationInFlightRef.current) {
+      return
+    }
+
+    finalizationInFlightRef.current = true
+    setRetryingPostCallProcessing(true)
+    setMarkCompleted(true)
+    setFinalizingSession(true)
+    setNotesReason(null)
+    setTranscriptSource((current) => current ?? 'livekit-browser-voice')
+    setTranscriptProcessingState('processing')
+    setTranscriptProcessingError(null)
+    setNotesProcessingState('processing')
+    setNotesProcessingError(null)
+    setOperationsOpen(true)
+
+    onMeetingUpdated?.(
+      buildMeetingSnapshot({
+        status: 'completed',
+        transcriptSource: transcriptSource ?? 'livekit-browser-voice',
+        transcriptProcessingState: 'processing',
+        transcriptProcessingError: null,
+        notesProcessingState: 'processing',
+        notesProcessingError: null,
+      }),
+    )
+
+    try {
+      const result = await submitTranscriptAction('finalize-post-meeting', {
+        transcriptText: normalizedTranscript,
+        source: transcriptSource ?? 'livekit-browser-voice',
+        markCompleted: true,
+      })
+
+      lastAutoSyncedTranscriptRef.current = normalizedTranscript
+      applyTranscriptActionResult(result)
+      toast({
+        title: 'Post-call processing retried',
+        description: 'Transcript finalization and AI notes generation are running again.',
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Meeting finalization failed'
+      setTranscriptProcessingState('failed')
+      setTranscriptProcessingError(message)
+      setNotesProcessingState('failed')
+      setNotesProcessingError('AI notes could not be generated because post-call finalization failed.')
+      setFinalizingSession(false)
+      onMeetingUpdated?.(
+        buildMeetingSnapshot({
+          status: 'completed',
+          transcriptProcessingState: 'failed',
+          transcriptProcessingError: message,
+          notesProcessingState: 'failed',
+          notesProcessingError: 'AI notes could not be generated because post-call finalization failed.',
+        }),
+      )
+      toast({
+        variant: 'destructive',
+        title: 'Post-call retry failed',
+        description: message,
+      })
+    } finally {
+      setRetryingPostCallProcessing(false)
+      finalizationInFlightRef.current = false
+    }
+  }, [
+    applyTranscriptActionResult,
+    buildMeetingSnapshot,
+    canPersist,
+    normalizedTranscript,
+    onMeetingUpdated,
+    submitTranscriptAction,
+    toast,
+    transcriptSource,
+  ])
+
   const togglePictureInPicture = useCallback(async () => {
     if (!joinConfig) {
       toast({
@@ -685,6 +781,7 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     setJoinError,
     generatingNotes,
     finalizingSession,
+    retryingPostCallProcessing,
     joinConfig,
     setJoinConfig,
     joiningRoom,
@@ -722,6 +819,7 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     handleJoinRoom,
     finalizeMeetingAfterRoomExit,
     handleGenerateNotes,
+    handleRetryPostCallProcessing,
     handleOperationsOpenChange,
   }
 }

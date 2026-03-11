@@ -11,6 +11,12 @@ import { useAlgorithmicInsights } from '@/app/dashboard/ads/hooks/use-algorithmi
 import type { ProviderSummary } from '@/app/dashboard/ads/components/types'
 import { useAuth } from '@/contexts/auth-context'
 import { adsCreativesApi } from '@/lib/convex-api'
+import type {
+  SocialSurfaceKey,
+  SocialsMetaSetupState,
+  SocialsSurfaceAvailability,
+  SocialsSurfaceStatus,
+} from '../components/socials-state'
 
 type MetaSurfaceActor = {
   id: string
@@ -20,8 +26,6 @@ type MetaSurfaceActor = {
   instagramBusinessAccountName: string | null
   instagramUsername: string | null
 }
-
-type SocialSurfaceKey = 'facebook' | 'instagram'
 
 type SocialSurfaceState = {
   metrics: ReturnType<typeof useAdsMetrics>['processedMetrics']
@@ -234,6 +238,133 @@ export function useSocialsPageController() {
     })
   }, [surfaceActors])
 
+  const metaNeedsAccountSelection = connections.metaNeedsAccountSelection
+  const availableMetaSourceCount = connections.metaAccountOptions.length
+  const selectedSourceName = metaStatus?.accountName ?? null
+
+  const surfaceAvailability = useMemo<Record<SocialSurfaceKey, SocialsSurfaceAvailability>>(() => {
+    const baseStatus = (count: number): SocialsSurfaceStatus => {
+      if (!metaConnected) return 'disconnected'
+      if (metaNeedsAccountSelection) return 'source_required'
+      if (surfaceActorsLoading) return 'loading'
+      if (surfaceActorsError) return 'error'
+      return count > 0 ? 'ready' : 'empty'
+    }
+
+    const facebookCount = facebookPages.length
+    const instagramCount = instagramProfiles.length
+
+    return {
+      facebook: {
+        status: baseStatus(facebookCount),
+        count: facebookCount,
+        emptyMessage: !metaConnected
+          ? 'Connect Meta to load Facebook Pages for this workspace.'
+          : metaNeedsAccountSelection
+            ? 'Choose the Meta source first so Facebook Pages can be discovered for this workspace.'
+            : instagramCount > 0
+              ? `${selectedSourceName ? `${selectedSourceName} loaded Instagram profiles` : 'The selected Meta source loaded Instagram profiles'}, but no Facebook Pages surfaced yet. This often means the wrong source is selected for Pages. Switch source or retry discovery.`
+              : `${selectedSourceName ? `${selectedSourceName} is connected` : 'The selected Meta source is connected'}, but no Facebook Pages surfaced yet. Retry discovery or switch source if you expected Pages here.`,
+      },
+      instagram: {
+        status: baseStatus(instagramCount),
+        count: instagramCount,
+        emptyMessage: !metaConnected
+          ? 'Connect Meta to load Instagram business profiles for this workspace.'
+          : metaNeedsAccountSelection
+            ? 'Choose the Meta source first so Instagram business profiles can be discovered for this workspace.'
+            : facebookCount > 0
+              ? `${selectedSourceName ? `${selectedSourceName} loaded Facebook Pages` : 'The selected Meta source loaded Facebook Pages'}, but no Instagram business profiles surfaced yet. This often means the wrong source is selected for Instagram. Switch source or retry discovery.`
+              : `${selectedSourceName ? `${selectedSourceName} is connected` : 'The selected Meta source is connected'}, but no Instagram business profiles surfaced yet. Retry discovery or switch source if you expected Instagram here.`,
+      },
+    }
+  }, [facebookPages.length, instagramProfiles.length, metaConnected, metaNeedsAccountSelection, selectedSourceName, surfaceActorsError, surfaceActorsLoading])
+
+  const metaSetupState = useMemo<SocialsMetaSetupState>(() => {
+    if (!metaConnected) {
+      return {
+        stage: 'disconnected',
+        title: 'Connect Meta to start social surface discovery',
+        description: 'Authorize Meta once to unlock Facebook Pages, Instagram business profiles, and social performance insights for this workspace.',
+        switchSourceRecommended: false,
+        switchSourceMessage: null,
+      }
+    }
+
+    if (metaNeedsAccountSelection) {
+      return {
+        stage: 'source_selection',
+        title: 'Choose the Meta source behind these social surfaces',
+        description: 'Your Meta login is connected. Select the ad account/source that should power Page and Instagram profile discovery before insights can populate here.',
+        switchSourceRecommended: false,
+        switchSourceMessage: null,
+      }
+    }
+
+    if (surfaceActorsLoading) {
+      return {
+        stage: 'discovering',
+        title: 'Discovering Facebook Pages and Instagram profiles',
+        description: metaStatus?.accountName
+          ? `Pulling connected social surfaces from ${metaStatus.accountName}. Keep this page open while discovery finishes.`
+          : 'Pulling connected social surfaces from the selected Meta source. Keep this page open while discovery finishes.',
+        switchSourceRecommended: false,
+        switchSourceMessage: null,
+      }
+    }
+
+    if (surfaceActorsError) {
+      return {
+        stage: 'recovery',
+        title: 'Surface discovery needs attention',
+        description: 'The selected Meta source could not finish loading Pages and Instagram profiles. Retry discovery or reload available sources to recover.',
+        switchSourceRecommended: availableMetaSourceCount > 1,
+        switchSourceMessage:
+          availableMetaSourceCount > 1
+            ? 'If this source looks wrong for the workspace, switch to another Meta source below before retrying discovery again.'
+            : null,
+      }
+    }
+
+    if (facebookPages.length > 0 && instagramProfiles.length > 0) {
+      return {
+        stage: 'ready',
+        title: 'Facebook and Instagram surfaces are ready',
+        description: 'Both Pages and Instagram business profiles loaded from the selected Meta source. You can switch between surfaces below without leaving setup.',
+        switchSourceRecommended: false,
+        switchSourceMessage: null,
+      }
+    }
+
+    if (facebookPages.length > 0 || instagramProfiles.length > 0) {
+      return {
+        stage: 'partial',
+        title: facebookPages.length > 0 ? 'Facebook is ready, Instagram still needs attention' : 'Instagram is ready, Facebook still needs attention',
+        description: facebookPages.length > 0
+          ? 'Facebook Pages loaded from the selected Meta source, but no Instagram business profiles surfaced yet. Retry discovery or choose another source if Instagram should be available.'
+          : 'Instagram business profiles loaded from the selected Meta source, but no Facebook Pages surfaced yet. Retry discovery or choose another source if Pages should be available.',
+        switchSourceRecommended: availableMetaSourceCount > 1,
+        switchSourceMessage:
+          availableMetaSourceCount > 1
+            ? facebookPages.length > 0
+              ? 'If you expected Instagram here, switch the Meta source below. The current source is only surfacing Facebook Pages.'
+              : 'If you expected Facebook Pages here, switch the Meta source below. The current source is only surfacing Instagram business profiles.'
+            : null,
+      }
+    }
+
+    return {
+      stage: 'connected_empty',
+      title: 'Meta is connected, but no social surfaces have surfaced yet',
+      description: 'The selected Meta source is linked, but no Facebook Pages or Instagram business profiles were discovered yet. Retry discovery or reload sources if you expected them here.',
+      switchSourceRecommended: availableMetaSourceCount > 1,
+      switchSourceMessage:
+        availableMetaSourceCount > 1
+          ? 'If the selected source should have loaded surfaces by now, switch to another Meta source below and retry discovery.'
+          : null,
+    }
+  }, [availableMetaSourceCount, facebookPages.length, instagramProfiles.length, metaConnected, metaNeedsAccountSelection, metaStatus?.accountName, surfaceActorsError, surfaceActorsLoading])
+
   const surfaceData = useMemo<Record<SocialSurfaceKey, SocialSurfaceState>>(
     () => ({
       facebook: {
@@ -286,6 +417,8 @@ export function useSocialsPageController() {
     instagramSuggestions,
     facebookPages,
     instagramProfiles,
+    metaSetupState,
+    surfaceAvailability,
     surfaceActorsLoading,
     surfaceActorsError,
     reloadSurfaceActors,

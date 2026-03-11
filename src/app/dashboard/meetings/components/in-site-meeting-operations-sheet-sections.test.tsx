@@ -9,6 +9,7 @@ vi.mock('@/components/ui/sheet', () => ({
   SheetTitle: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }))
 
+import { MeetingAutomationPipeline } from './meeting-automation-pipeline'
 import {
   MeetingOperationsAlerts,
   MeetingOperationsAttendeesCard,
@@ -37,6 +38,7 @@ describe('meeting operations sheet sections', () => {
           joinConfig={{ roomName: 'room-1', serverUrl: 'wss://lk.example.com', token: 'token' }}
           markCompleted={true}
           notesProcessingState="processing"
+          retryingPostCallProcessing={false}
           transcriptProcessingState="idle"
         />
         <MeetingOperationsSyncCards
@@ -48,6 +50,15 @@ describe('meeting operations sheet sections', () => {
           transcriptStatus="Finalizing transcript now"
           transcriptTruncatedForNotes={true}
         />
+        <MeetingAutomationPipeline
+          captureListening={true}
+          finalizingSession={false}
+          hasTranscriptSaved={true}
+          inRoom={true}
+          notesProcessingState="processing"
+          summaryReady={false}
+          transcriptProcessingState="idle"
+        />
       </>,
     )
 
@@ -57,6 +68,9 @@ describe('meeting operations sheet sections', () => {
     expect(markup).toContain('2 attendees')
     expect(markup).toContain('AI notes generating')
     expect(markup).toContain('Transcript truncated')
+    expect(markup).toContain('Automation pipeline')
+    expect(markup).toContain('Capture → Transcript → AI notes')
+    expect(markup).toContain('Generating')
   })
 
   it('renders alerts, summary states, and live capture', () => {
@@ -66,6 +80,12 @@ describe('meeting operations sheet sections', () => {
           captureError="Microphone unavailable"
           notesProcessingError="Gemini request failed"
           notesReason="generation_failed"
+          canGenerateNotes={true}
+          canRetryPostCallProcessing={true}
+          generatingNotes={false}
+          retryingPostCallProcessing={false}
+          onGenerateNotes={vi.fn()}
+          onRetryPostCallProcessing={vi.fn()}
           transcriptProcessingError="Transcript finalization failed"
         />
         <MeetingOperationsSummaryCard
@@ -73,6 +93,7 @@ describe('meeting operations sheet sections', () => {
           generatingNotes={false}
           notesProcessingState="idle"
           onGenerateNotes={vi.fn()}
+          postCallProcessingActive={true}
           summaryPreview={null}
           transcriptLength={42}
         />
@@ -81,6 +102,7 @@ describe('meeting operations sheet sections', () => {
           generatingNotes={false}
           notesProcessingState="idle"
           onGenerateNotes={vi.fn()}
+          postCallProcessingActive={false}
           summaryPreview="Action items and next steps"
           transcriptLength={42}
         />
@@ -90,8 +112,11 @@ describe('meeting operations sheet sections', () => {
 
     expect(markup).toContain('Capture warning')
     expect(markup).toContain('AI summary failed')
+    expect(markup).toContain('Retry post-call processing')
+    expect(markup).toContain('Retry AI notes')
     expect(markup).toContain('Generate notes')
     expect(markup).toContain('Latest AI summary')
+    expect(markup).toContain('Keep this page open until transcript finalization and notes generation finish.')
     expect(markup).toContain('Discussing scope and timeline')
   })
 })
