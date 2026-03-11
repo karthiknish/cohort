@@ -103,6 +103,7 @@ function CollaborationProjectBanner() {
 
 function CollaborationInboxSection() {
   const {
+    clearMessageFocus,
     collab,
     currentUserId,
     dm,
@@ -208,6 +209,7 @@ function CollaborationInboxSection() {
             sharedFiles: collab.sharedFiles,
             workspaceId,
             onPinnedMessageClick: handleOpenChannelMessage,
+            onClearDeepLink: clearMessageFocus,
             deepLinkMessageId: requestedMessageId,
             deepLinkThreadId: requestedThreadId,
           }}

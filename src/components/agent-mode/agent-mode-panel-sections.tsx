@@ -1,6 +1,13 @@
 'use client'
 
-import { AnimatePresence, m } from 'framer-motion'
+import {
+  useMemo,
+  type ChangeEvent,
+  type ComponentProps,
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import {
   AlertCircle,
   Check,
@@ -19,14 +26,7 @@ import {
   WifiOff,
   X,
 } from 'lucide-react'
-import {
-  type ChangeEvent,
-  type ComponentProps,
-  type KeyboardEvent,
-  type ReactNode,
-  type RefObject,
-  useMemo,
-} from 'react'
+import { AnimatePresence, m } from 'framer-motion'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { VoiceInputButton } from '@/components/ui/voice-input'
 import type { AgentConversationSummary, AgentMessage, ConnectionStatus } from '@/hooks/use-agent-mode'
+import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import type { AgentAttachmentContext } from '@/lib/agent-attachments'
 import { cn } from '@/lib/utils'
 
@@ -696,5 +697,116 @@ export function FailedMessageBanner({
         Retry
       </Button>
     </div>
+  )
+}
+
+export function AgentModePanelShell({
+  attachmentAccept,
+  children,
+  fileInputRef,
+  headerProps,
+  historyPanelProps,
+  onClearError,
+  onDragLeave,
+  onDragOver,
+  onDrop,
+  onFileSelection,
+  rateLimitCountdown,
+}: {
+  attachmentAccept: string
+  children: ReactNode
+  fileInputRef: RefObject<HTMLInputElement | null>
+  headerProps: ComponentProps<typeof AgentModeHeader>
+  historyPanelProps: ComponentProps<typeof AgentHistoryPanel>
+  onClearError?: () => void
+  onDragLeave: (event: React.DragEvent<HTMLDivElement>) => void
+  onDragOver: (event: React.DragEvent<HTMLDivElement>) => void
+  onDrop: (event: React.DragEvent<HTMLDivElement>) => void
+  onFileSelection: (event: ChangeEvent<HTMLInputElement>) => void
+  rateLimitCountdown?: number | null
+}) {
+  return (
+    <m.div
+      initial={{ opacity: 0, y: 0 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 0 }}
+      transition={{ duration: motionDurationSeconds.fast, ease: motionEasing.out }}
+      className="fixed inset-0 z-[9999] flex h-screen flex-col bg-background"
+      onWheel={(event) => event.stopPropagation()}
+      onTouchMove={(event) => event.stopPropagation()}
+      onScroll={(event) => event.stopPropagation()}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={attachmentAccept}
+        multiple
+        className="hidden"
+        onChange={onFileSelection}
+      />
+
+      <AgentModeHeader {...headerProps} />
+
+      <AnimatePresence>
+        {typeof rateLimitCountdown === 'number' && rateLimitCountdown > 0 ? (
+          <RateLimitBanner countdown={rateLimitCountdown} onDismiss={onClearError} />
+        ) : null}
+      </AnimatePresence>
+
+      <AgentHistoryPanel {...historyPanelProps} />
+
+      {children}
+    </m.div>
+  )
+}
+
+export function AgentModePanelContent({
+  dockComposerProps,
+  emptyComposerProps,
+  isConversationLoading,
+  isProcessing,
+  lastFailedMessage,
+  mentionLabels,
+  messages,
+  onRetry,
+  scrollAreaRef,
+  showEmptyState,
+}: {
+  dockComposerProps: AgentComposerSectionProps
+  emptyComposerProps: AgentComposerSectionProps
+  isConversationLoading: boolean
+  isProcessing: boolean
+  lastFailedMessage: string | null
+  mentionLabels: string[]
+  messages: AgentMessage[]
+  onRetry: () => void
+  scrollAreaRef: RefObject<HTMLDivElement | null>
+  showEmptyState: boolean
+}) {
+  if (showEmptyState) {
+    return (
+      <AgentEmptyState>
+        <AgentComposerSection {...emptyComposerProps} />
+      </AgentEmptyState>
+    )
+  }
+
+  return (
+    <>
+      <AgentMessagesSection
+        isConversationLoading={isConversationLoading}
+        isProcessing={isProcessing}
+        mentionLabels={mentionLabels}
+        messages={messages}
+        scrollAreaRef={scrollAreaRef}
+      />
+
+      {!isProcessing ? <FailedMessageBanner lastFailedMessage={lastFailedMessage} onRetry={onRetry} /> : null}
+
+      <AgentComposerSection {...dockComposerProps} />
+    </>
   )
 }

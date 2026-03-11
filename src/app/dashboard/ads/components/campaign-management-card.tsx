@@ -1,15 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { useAction } from 'convex/react'
-import { CircleAlert } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DataTableColumnHeader } from '@/components/ui/data-table'
-import { EmptyState } from '@/components/ui/empty-state'
 import { toast } from '@/components/ui/use-toast'
 import { formatMoney, getCurrencyInfo, isSupportedCurrency, normalizeCurrencyCode } from '@/constants/currencies'
 import { useAuth } from '@/contexts/auth-context'
@@ -18,11 +15,10 @@ import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsCampaignGroupsApi, adsCampaignsApi } from '@/lib/convex-api'
 
 import {
-  BiddingStrategyDialog,
-  BudgetUpdateDialog,
+  CampaignManagementConnectedView,
+  CampaignManagementDisconnectedState,
   CampaignGroupRowActions,
-  CampaignManagementHeader,
-  CampaignManagementTableSection,
+  CampaignManagementSetupState,
   CampaignRowActions,
 } from './campaign-management-card-sections'
 import type { BiddingDraft, Campaign, CampaignGroup, CampaignManagementView } from './campaign-management-card-types'
@@ -623,99 +619,54 @@ export function CampaignManagementCard({
   )
 
   if (!isConnected) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Campaign Management</CardTitle>
-          <CardDescription>Connect {providerName} to manage campaigns</CardDescription>
-        </CardHeader>
-      </Card>
-    )
+    return <CampaignManagementDisconnectedState providerName={providerName} />
   }
 
   if (setupRequired) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Campaign Management</CardTitle>
-          <CardDescription>Finish {providerName} setup before loading campaigns</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={CircleAlert}
-            variant="default"
-            title={setupTitle ?? `Complete ${providerName} setup`}
-            description={
-              setupDescription ??
-              `Finish the remaining ${providerName} configuration step before loading campaigns and controls.`
-            }
-            action={
-              onSetupAction
-                ? {
-                    label: setupActionLabel ?? 'Complete setup',
-                    onClick: onSetupAction,
-                  }
-                : undefined
-            }
-            className="py-10"
-          />
-        </CardContent>
-      </Card>
+      <CampaignManagementSetupState
+        onSetupAction={onSetupAction}
+        providerName={providerName}
+        setupActionLabel={setupActionLabel}
+        setupDescription={setupDescription}
+        setupTitle={setupTitle}
+      />
     )
   }
 
   return (
-    <>
-      <Card>
-        <CampaignManagementHeader
-          isRefreshing={loading || groupsLoading}
-          onRefresh={handleRefresh}
-          onViewChange={setView}
-          providerId={providerId}
-          providerName={providerName}
-          view={view}
-        />
-        <CardContent>
-          <CampaignManagementTableSection
-            campaignColumns={campaignColumns}
-            campaigns={campaigns}
-            groupColumns={groupColumns}
-            groups={groups}
-            groupsLoading={groupsLoading}
-            loading={loading}
-            onRowClick={openInsightsPage}
-            providerName={providerName}
-            view={view}
-          />
-        </CardContent>
-      </Card>
-
-      <BudgetUpdateDialog
-        currencyCode={selectedCurrencyCode}
-        currencyLabel={selectedCurrencyLabel}
-        isSubmitting={actionLoading !== null}
-        onBudgetChange={setNewBudget}
-        onOpenChange={setBudgetDialogOpen}
-        onSubmit={() => {
-          void handleBudgetUpdate()
-        }}
-        open={budgetDialogOpen}
-        targetName={selectedBudgetTarget?.name}
-        value={newBudget}
-      />
-
-      <BiddingStrategyDialog
-        isSubmitting={actionLoading !== null}
-        onChange={setNewBidding}
-        onOpenChange={setBiddingDialogOpen}
-        onSubmit={() => {
-          void handleBiddingUpdate()
-        }}
-        open={biddingDialogOpen}
-        selectedCampaignName={selectedCampaign?.name}
-        value={newBidding}
-      />
-
-    </>
+    <CampaignManagementConnectedView
+      actionLoading={actionLoading}
+      biddingDialogOpen={biddingDialogOpen}
+      budgetDialogOpen={budgetDialogOpen}
+      campaignColumns={campaignColumns}
+      campaigns={campaigns}
+      groupColumns={groupColumns}
+      groups={groups}
+      groupsLoading={groupsLoading}
+      loading={loading}
+      newBidding={newBidding}
+      newBudget={newBudget}
+      onBiddingChange={setNewBidding}
+      onBiddingOpenChange={setBiddingDialogOpen}
+      onBudgetChange={setNewBudget}
+      onBudgetOpenChange={setBudgetDialogOpen}
+      onRefresh={handleRefresh}
+      onRowClick={openInsightsPage}
+      onSubmitBidding={() => {
+        void handleBiddingUpdate()
+      }}
+      onSubmitBudget={() => {
+        void handleBudgetUpdate()
+      }}
+      onViewChange={setView}
+      providerId={providerId}
+      providerName={providerName}
+      selectedCampaignName={selectedCampaign?.name}
+      selectedCurrencyCode={selectedCurrencyCode}
+      selectedCurrencyLabel={selectedCurrencyLabel}
+      selectedTargetName={selectedBudgetTarget?.name}
+      view={view}
+    />
   )
 }

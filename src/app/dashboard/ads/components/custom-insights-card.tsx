@@ -3,8 +3,6 @@
 import { useMemo } from 'react'
 import {
     TrendingUp,
-    TrendingDown,
-    AlertTriangle,
     Zap,
     Target,
     DollarSign,
@@ -14,22 +12,16 @@ import {
 
 import {
     Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { cn, formatCurrency } from '@/lib/utils'
 import { calculateBenchmarks } from '@/lib/metrics'
-import { KPI_THEMES, type KpiTheme } from '@/lib/themes'
+
+import {
+    CustomInsightsCardHeader,
+    CustomInsightsEmptyState,
+    CustomInsightsGrid,
+    CustomInsightsLoadingState,
+    type KpiTileData,
+} from './custom-insights-card-sections'
 
 import type { DerivedMetrics } from '../hooks/use-derived-metrics'
 import type { MetricRecord } from './types'
@@ -44,186 +36,10 @@ interface CustomInsightsCardProps {
     loading?: boolean
 }
 
-interface KpiTileProps {
-    label: string
-    value: number | null
-    format: 'currency' | 'percent' | 'number' | 'ratio'
-    icon: React.ReactNode
-    trend?: number | null
-    benchmark?: number
-    invertTrend?: boolean
-    theme?: KpiTheme
-}
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-function formatValue(value: number | null, format: string): string {
-    if (value === null || !isFinite(value)) return '—'
-
-    switch (format) {
-        case 'currency':
-            return formatCurrency(value)
-        case 'percent':
-            return `${(value * 100).toFixed(2)}%`
-        case 'ratio':
-            return value.toFixed(2)
-        case 'number':
-        default:
-            return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
-    }
-}
-
-function getTrendStatus(trend: number | null | undefined, invertTrend?: boolean): 'up' | 'down' | 'neutral' {
-    if (trend === null || trend === undefined || Math.abs(trend) < 0.01) return 'neutral'
-    const isPositive = trend > 0
-    return invertTrend ? (isPositive ? 'down' : 'up') : (isPositive ? 'up' : 'down')
-}
-
 function isAnomaly(value: number | null, benchmark: number | undefined | null, threshold = 0.5): boolean {
     if (value === null || benchmark === undefined || benchmark === null || benchmark === 0) return false
     const deviation = Math.abs((value - benchmark) / benchmark)
     return deviation > threshold
-}
-
-// Extended theme styles for KPI tiles (adds component-specific glow and gradientBorder)
-const themeStyles = {
-    emerald: {
-        ...KPI_THEMES.emerald,
-        glow: 'shadow-emerald-500/10',
-        gradientBorder: 'before:bg-gradient-to-br before:from-emerald-500/20 before:to-teal-500/20',
-    },
-    blue: {
-        ...KPI_THEMES.blue,
-        glow: 'shadow-blue-500/10',
-        gradientBorder: 'before:bg-gradient-to-br before:from-blue-500/20 before:to-cyan-500/20',
-    },
-    violet: {
-        ...KPI_THEMES.violet,
-        glow: 'shadow-violet-500/10',
-        gradientBorder: 'before:bg-gradient-to-br before:from-violet-500/20 before:to-purple-500/20',
-    },
-    amber: {
-        ...KPI_THEMES.amber,
-        glow: 'shadow-amber-500/10',
-        gradientBorder: 'before:bg-gradient-to-br before:from-amber-500/20 before:to-yellow-500/20',
-    },
-    rose: {
-        ...KPI_THEMES.rose,
-        glow: 'shadow-rose-500/10',
-        gradientBorder: 'before:bg-gradient-to-br before:from-rose-500/20 before:to-pink-500/20',
-    },
-    cyan: {
-        ...KPI_THEMES.cyan,
-        glow: 'shadow-cyan-500/10',
-        gradientBorder: 'before:bg-gradient-to-br before:from-cyan-500/20 before:to-sky-500/20',
-    },
-}
-
-// =============================================================================
-// SUB-COMPONENTS
-// =============================================================================
-
-function KpiTile({ label, value, format, icon, trend, benchmark, invertTrend, theme = 'blue' }: KpiTileProps) {
-    const trendStatus = getTrendStatus(trend ?? null, invertTrend)
-    const hasAnomaly = isAnomaly(value, benchmark ?? null)
-    const styles = themeStyles[theme]
-
-    return (
-        <div
-            className={cn(
-                'group relative flex flex-col gap-3 rounded-xl border p-5 overflow-hidden',
-                'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
-                'hover:shadow-xl hover:shadow-black/5 hover:scale-[1.02] hover:-translate-y-0.5',
-                styles.bg, styles.border, styles.glow,
-                hasAnomaly && 'ring-2 ring-amber-500/50 ring-offset-2 ring-offset-background'
-            )}
-        >
-            {/* Subtle inner glow on hover */}
-            <div className={cn(
-                'absolute inset-0 rounded-xl opacity-0 transition-opacity duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
-                'group-hover:opacity-100 bg-gradient-to-tr from-white/60 to-transparent dark:from-white/10'
-            )} />
-
-            {hasAnomaly && (
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <div className="absolute right-3 top-3 z-10">
-                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50 animate-pulse">
-                                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                                </div>
-                            </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>This metric deviates significantly from benchmark</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            )}
-
-            <div className="relative z-10 flex items-center gap-2.5">
-                <div className={cn(
-                    'flex h-9 w-9 items-center justify-center rounded-xl',
-                    'bg-gradient-to-br shadow-md transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
-                    'group-hover:scale-110 group-hover:shadow-lg',
-                    theme === 'emerald' && 'from-emerald-100 to-teal-100 dark:from-emerald-900/50 dark:to-teal-900/50',
-                    theme === 'blue' && 'from-blue-100 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50',
-                    theme === 'violet' && 'from-violet-100 to-purple-100 dark:from-violet-900/50 dark:to-purple-900/50',
-                    theme === 'amber' && 'from-amber-100 to-orange-100 dark:from-amber-900/50 dark:to-orange-900/50',
-                    theme === 'rose' && 'from-rose-100 to-pink-100 dark:from-rose-900/50 dark:to-pink-900/50',
-                    theme === 'cyan' && 'from-cyan-100 to-sky-100 dark:from-cyan-900/50 dark:to-sky-900/50',
-                )}>
-                    <div className={cn(styles.accent)}>
-                        {icon}
-                    </div>
-                </div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">{label}</span>
-            </div>
-
-            <div className="relative z-10 flex items-end justify-between gap-2">
-                <div className="flex flex-col">
-                    <span className="text-3xl font-bold tracking-tight tabular-nums">{formatValue(value, format)}</span>
-                    <span className="mt-1 text-xs text-muted-foreground/60">
-                        {format === 'currency' && 'Cost per acquisition'}
-                        {format === 'percent' && 'Rate percentage'}
-                        {format === 'ratio' && 'Return multiplier'}
-                    </span>
-                </div>
-
-                {trend !== null && trend !== undefined && Math.abs(trend) >= 0.01 && (
-                    <Badge
-                        variant="secondary"
-                        className={cn(
-                            'flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full',
-                            'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
-                            'group-hover:scale-110',
-                            trendStatus === 'up' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/50',
-                            trendStatus === 'down' && 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/50'
-                        )}
-                    >
-                        {trendStatus === 'up' ? (
-                            <TrendingUp className="h-3.5 w-3.5" />
-                        ) : (
-                            <TrendingDown className="h-3.5 w-3.5" />
-                        )}
-                        {Math.abs(trend * 100).toFixed(1)}%
-                    </Badge>
-                )}
-            </div>
-        </div>
-    )
-}
-
-function InsightsSkeleton() {
-    return (
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full rounded-xl" />
-            ))}
-        </div>
-    )
 }
 
 // =============================================================================
@@ -257,7 +73,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, loading }
     const conversionRateBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'conversionRate')?.value ?? 0.03
     const profitMarginBenchmark = computedBenchmarks?.benchmarks.find((b) => b.metric === 'profitMargin')?.value ?? 0.2
 
-    const kpiData = useMemo(() => {
+    const kpiData = useMemo<KpiTileData[] | null>(() => {
         if (!derivedMetrics) return null
 
         const { kpis, growthWeekOverWeek } = derivedMetrics
@@ -349,50 +165,8 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, loading }
         <Card className="shadow-lg border-muted/80 overflow-hidden">
             {/* Subtle gradient accent at top */}
             <div className="h-1 bg-gradient-to-r from-emerald-500 via-blue-500 to-violet-500" />
-
-            <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between pb-4">
-                <div className="flex flex-col gap-2">
-                    <CardTitle className="flex items-center gap-3 text-xl">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/10 to-blue-500/10">
-                            <Zap className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                        </div>
-                        Custom Insights
-                        {anomalyCount > 0 && (
-                            <Badge className="ml-2 border-amber-500/50 bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
-                                <AlertTriangle className="mr-1.5 h-3.5 w-3.5" />
-                                {anomalyCount} anomal{anomalyCount === 1 ? 'y' : 'ies'}
-                            </Badge>
-                        )}
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                        Real-time calculated metrics and KPIs based on your ad performance
-                    </CardDescription>
-                </div>
-            </CardHeader>
-            <CardContent className="pt-2">
-                {loading ? (
-                    <InsightsSkeleton />
-                ) : !derivedMetrics || !kpiData ? (
-                    <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-muted/60 bg-muted/20 p-12 text-center">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                            <Zap className="h-6 w-6 text-muted-foreground/50" />
-                        </div>
-                        <p className="text-sm text-muted-foreground">No metrics data available to calculate insights.</p>
-                    </div>
-                ) : (
-                    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-                        {kpiData.map((kpi, index) => (
-                            <div
-                                key={kpi.label}
-                                className="animate-in fade-in slide-in-from-bottom-2"
-                                style={{ animationDelay: `${index * 50}ms` }}
-                            >
-                                <KpiTile {...kpi} />
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </CardContent>
+            <CustomInsightsCardHeader anomalyCount={anomalyCount} />
+            {loading ? <CustomInsightsLoadingState /> : !derivedMetrics || !kpiData ? <CustomInsightsEmptyState /> : <CustomInsightsGrid items={kpiData} />}
         </Card>
     )
 }

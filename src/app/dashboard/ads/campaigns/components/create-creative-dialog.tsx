@@ -2,31 +2,25 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAction } from 'convex/react'
-import { Plus, Loader2, Upload, AlertCircle } from 'lucide-react'
+import { Plus } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { toast } from '@/components/ui/use-toast'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsCreativesApi } from '@/lib/convex-api'
+
+import {
+  CreateCreativeDialogForm,
+  CreateCreativeDialogHeader,
+  type CreativeObjectType,
+  type CreativeStatus,
+  type MetaPageActorOption,
+} from './create-creative-dialog-sections'
 
 type Props = {
   workspaceId: string | null
@@ -37,35 +31,6 @@ type Props = {
   availableAdSets?: Array<{ id: string; name: string }>
   onSuccess?: () => void
 }
-
-type MetaPageActorOption = {
-  id: string
-  name: string
-  tasks: string[]
-  instagramBusinessAccountId: string | null
-  instagramBusinessAccountName: string | null
-  instagramUsername: string | null
-}
-
-const CTA_OPTIONS = [
-  { value: 'LEARN_MORE', label: 'Learn More' },
-  { value: 'SHOP_NOW', label: 'Shop Now' },
-  { value: 'SIGN_UP', label: 'Sign Up' },
-  { value: 'CONTACT_US', label: 'Contact Us' },
-  { value: 'GET_QUOTE', label: 'Get Quote' },
-  { value: 'DOWNLOAD', label: 'Download' },
-  { value: 'BOOK_NOW', label: 'Book Now' },
-  { value: 'GET_OFFER', label: 'Get Offer' },
-  { value: 'SEE_MORE', label: 'See More' },
-  { value: 'BUY_NOW', label: 'Buy Now' },
-  { value: 'DONATE_NOW', label: 'Donate Now' },
-  { value: 'APPLY_NOW', label: 'Apply Now' },
-  { value: 'GET_DIRECTIONS', label: 'Get Directions' },
-  { value: 'LIKE_PAGE', label: 'Like Page' },
-  { value: 'WATCH_MORE', label: 'Watch More' },
-  { value: 'LISTEN_NOW', label: 'Listen Now' },
-  { value: 'UPDATE_APP', label: 'Update App' },
-]
 
 function generateCreativeIdempotencyKey(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -98,7 +63,7 @@ export function CreateCreativeDialog({
 
   // Form state
   const [name, setName] = useState('')
-  const [objectType, setObjectType] = useState<'IMAGE' | 'VIDEO' | 'CAROUSEL' | 'DYNAMIC'>('IMAGE')
+  const [objectType, setObjectType] = useState<CreativeObjectType>('IMAGE')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [description, setDescription] = useState('')
@@ -109,7 +74,7 @@ export function CreateCreativeDialog({
   const [videoId, setVideoId] = useState('')
   const [pageId, setPageId] = useState('')
   const [instagramActorId, setInstagramActorId] = useState('')
-  const [status, setStatus] = useState<'ACTIVE' | 'PAUSED'>('PAUSED')
+  const [status, setStatus] = useState<CreativeStatus>('PAUSED')
   const submissionRef = useRef<{ fingerprint: string; key: string } | null>(null)
 
   const resetForm = () => {
@@ -445,285 +410,47 @@ export function CreateCreativeDialog({
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Ad Creative</DialogTitle>
-          <DialogDescription>
-            Create a new ad creative for your {providerId === 'facebook' ? 'Meta' : providerId} campaign.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Basic Info */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Creative Name *</Label>
-            <Input
-              id="name"
-              placeholder="Summer Sale Ad - Variant A"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-
-          {/* Object Type */}
-          <div className="space-y-2">
-            <Label htmlFor="objectType">Ad Format</Label>
-            <Select
-              value={objectType}
-              onValueChange={(value) => setObjectType(value as 'IMAGE' | 'VIDEO' | 'CAROUSEL' | 'DYNAMIC')}
-              disabled={loading}
-            >
-              <SelectTrigger id="objectType">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="IMAGE">Image Ad</SelectItem>
-                <SelectItem value="VIDEO">Video Ad</SelectItem>
-                <SelectItem value="CAROUSEL">Carousel Ad</SelectItem>
-                <SelectItem value="DYNAMIC">Dynamic Ad</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Ad Set Selection */}
-          {availableAdSets && availableAdSets.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="adSet">Ad Set</Label>
-              <Select value={selectedAdSetId} onValueChange={setSelectedAdSetId} disabled={loading}>
-                <SelectTrigger id="adSet">
-                  <SelectValue placeholder="Select an ad set" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableAdSets.map((adSet) => (
-                    <SelectItem key={adSet.id} value={adSet.id}>
-                      {adSet.name || adSet.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                The ad will be created in the selected ad set.
-              </p>
-            </div>
-          )}
-
-          {/* No Ad Sets Warning */}
-          {isMeta && !selectedAdSetId && (!availableAdSets || availableAdSets.length === 0) && (
-            <div className="flex items-start gap-2 p-3 rounded-md bg-amber-500/10 border border-amber-500/20">
-              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-amber-700">No Ad Set Available</p>
-                <p className="text-xs text-amber-600">
-                  You need to create an ad set before creating ads. Please create an ad set first.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Primary Text / Body */}
-          <div className="space-y-2">
-            <Label htmlFor="body">Primary Text</Label>
-            <Textarea
-              id="body"
-              placeholder="Enter your main ad copy here…"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              disabled={loading}
-              rows={3}
-              maxLength={2200}
-            />
-            <p className="text-xs text-muted-foreground text-right">{body.length}/2200</p>
-          </div>
-
-          {/* Headline / Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title">Headline</Label>
-            <Input
-              id="title"
-              placeholder="50% Off Everything"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={loading}
-              maxLength={40}
-            />
-            <p className="text-xs text-muted-foreground text-right">{title.length}/40</p>
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Input
-              id="description"
-              placeholder="Limited time offer"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={loading}
-              maxLength={30}
-            />
-            <p className="text-xs text-muted-foreground text-right">{description.length}/30</p>
-          </div>
-
-          {/* Call to Action */}
-          <div className="space-y-2">
-            <Label htmlFor="cta">Call to Action</Label>
-            <Select value={callToActionType} onValueChange={setCallToActionType} disabled={loading}>
-              <SelectTrigger id="cta">
-                <SelectValue placeholder="Select a call to action" />
-              </SelectTrigger>
-              <SelectContent>
-                {CTA_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Destination URL */}
-          <div className="space-y-2">
-            <Label htmlFor="linkUrl">Destination URL</Label>
-            <Input
-              id="linkUrl"
-              type="url"
-              placeholder="https://yourwebsite.com/offer"
-              value={linkUrl}
-              onChange={(e) => setLinkUrl(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-
-          {/* Image Upload / URL */}
-          {objectType === 'IMAGE' && (
-            <div className="space-y-2">
-              <Label htmlFor="image">Creative Image</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="image"
-                  type="url"
-                  placeholder="https://example.com/image.jpg"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  disabled={loading}
-                  className="flex-1"
-                />
-                <div className="relative">
-                  <Input
-                    id="imageUpload"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    disabled={loading || uploadingImage}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                  />
-                  <Button type="button" variant="outline" size="icon" disabled={loading || uploadingImage} aria-label="Upload creative image">
-                    {uploadingImage ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Upload className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              {imageHash && (
-                <p className="text-xs text-green-600">Image uploaded successfully</p>
-              )}
-            </div>
-          )}
-
-          {/* Video ID */}
-          {objectType === 'VIDEO' && (
-            <div className="space-y-2">
-              <Label htmlFor="videoId">Video ID</Label>
-              <Input
-                id="videoId"
-                placeholder="Enter your Meta video ID"
-                value={videoId}
-                onChange={(e) => setVideoId(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-          )}
-
-          {/* Page selector */}
-          <div className="space-y-2">
-            <Label htmlFor="pageId">Facebook Page *</Label>
-            <Select
-              value={pageId || undefined}
-              onValueChange={handleSelectPage}
-              disabled={loading || loadingPageActors}
-            >
-              <SelectTrigger id="pageId">
-                <SelectValue placeholder={loadingPageActors ? 'Loading pages...' : 'Select a Facebook Page'} />
-              </SelectTrigger>
-              <SelectContent>
-                {metaPageActors.map((actor) => (
-                  <SelectItem key={actor.id} value={actor.id}>
-                    {actor.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {!loadingPageActors && metaPageActors.length === 0 ? (
-              <p className="text-xs text-amber-600">No Facebook Pages found for this integration token.</p>
-            ) : null}
-          </div>
-
-          {/* Instagram selector */}
-          <div className="space-y-2">
-            <Label htmlFor="instagramActorId">Instagram Business Account</Label>
-            <Select
-              value={instagramActorId || '__none__'}
-              onValueChange={(value) => setInstagramActorId(value === '__none__' ? '' : value)}
-              disabled={loading || loadingPageActors || instagramActorOptions.length === 0}
-            >
-              <SelectTrigger id="instagramActorId">
-                <SelectValue placeholder="No linked Instagram account" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">No Instagram account</SelectItem>
-                {instagramActorOptions.map((actor) => (
-                  <SelectItem key={actor.id} value={actor.id}>
-                    {actor.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedPage?.instagramBusinessAccountId ? (
-              <p className="text-xs text-muted-foreground">Linked Instagram account for selected page is preselected.</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Selected page has no linked Instagram business account.</p>
-            )}
-          </div>
-
-          {/* Initial Status */}
-          <div className="space-y-2">
-            <Label htmlFor="status">Initial Status</Label>
-            <Select
-              value={status}
-              onValueChange={(value) => setStatus(value as 'ACTIVE' | 'PAUSED')}
-              disabled={loading}
-            >
-              <SelectTrigger id="status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="PAUSED">Paused (recommended for review)</SelectItem>
-                <SelectItem value="ACTIVE">Active</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading || !name.trim()}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {loading ? 'Creating…' : 'Create Ad'}
-            </Button>
-          </DialogFooter>
-        </form>
+        <CreateCreativeDialogHeader providerId={providerId} />
+        <CreateCreativeDialogForm
+          availableAdSets={availableAdSets}
+          body={body}
+          callToActionType={callToActionType}
+          description={description}
+          imageHash={imageHash}
+          imageUrl={imageUrl}
+          instagramActorId={instagramActorId}
+          instagramActorOptions={instagramActorOptions}
+          isMeta={isMeta}
+          linkUrl={linkUrl}
+          loading={loading}
+          loadingPageActors={loadingPageActors}
+          metaPageActors={metaPageActors}
+          name={name}
+          objectType={objectType}
+          onBodyChange={setBody}
+          onCallToActionTypeChange={setCallToActionType}
+          onClose={() => setOpen(false)}
+          onDescriptionChange={setDescription}
+          onImageUpload={handleImageUpload}
+          onImageUrlChange={setImageUrl}
+          onInstagramActorIdChange={setInstagramActorId}
+          onLinkUrlChange={setLinkUrl}
+          onNameChange={setName}
+          onObjectTypeChange={setObjectType}
+          onPageIdChange={handleSelectPage}
+          onSelectedAdSetIdChange={setSelectedAdSetId}
+          onStatusChange={setStatus}
+          onSubmit={handleSubmit}
+          onTitleChange={setTitle}
+          onVideoIdChange={setVideoId}
+          pageId={pageId}
+          selectedAdSetId={selectedAdSetId}
+          selectedPage={selectedPage}
+          status={status}
+          title={title}
+          uploadingImage={uploadingImage}
+          videoId={videoId}
+        />
       </DialogContent>
     </Dialog>
   )

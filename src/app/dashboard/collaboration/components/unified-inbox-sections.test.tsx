@@ -1,5 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 
+import type { ReactNode } from 'react'
+
 import { describe, expect, it, vi } from 'vitest'
 
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
@@ -12,11 +14,13 @@ vi.mock('./unified-message-pane', () => ({
     placeholder,
     messages,
     participants,
+    statusBanner,
   }: {
     header: { name: string; primaryActionLabel?: string }
     placeholder?: string
     messages: unknown[]
     participants?: Array<{ name: string }>
+    statusBanner?: ReactNode
   }) => (
     <div>
       <span>{header.name}</span>
@@ -24,6 +28,7 @@ vi.mock('./unified-message-pane', () => ({
       <span>{placeholder ?? 'no-placeholder'}</span>
       <span>{participants?.map((participant) => participant.name).join(',') ?? 'no-participants'}</span>
       <span>{messages.length} messages</span>
+      <div>{statusBanner}</div>
     </div>
   ),
 }))
@@ -184,6 +189,7 @@ describe('unified inbox sections', () => {
           messageSearchQuery=""
           messageUpdatingId={null}
           onAddAttachments={vi.fn()}
+          onClearDeepLink={vi.fn()}
           onComposerBlur={vi.fn()}
           onComposerFocus={vi.fn()}
           onDeleteMessage={vi.fn()}
@@ -247,5 +253,59 @@ describe('unified inbox sections', () => {
     expect(markup).toContain('Taylor,Jordan')
     expect(markup).toContain('Message Alex Johnson...')
     expect(markup).toContain('1 messages')
+  })
+
+  it('renders a visible warning when a deep-linked message cannot be resolved', () => {
+    const markup = renderToStaticMarkup(
+      <ChannelConversationPane
+        canLoadMore={false}
+        channelMessages={[channelMessage]}
+        channelMessagesForPane={[channelMessage]}
+        channelParticipants={[{ name: 'Taylor', role: 'manager' }]}
+        mentionParticipants={[{ id: 'user-1', name: 'Taylor', role: 'manager' }]}
+        currentUserId="user-1"
+        currentUserRole="admin"
+        deepLinkMessageId="missing-message"
+        deepLinkThreadId={null}
+        isChannelSearchActive={false}
+        isCurrentChannelLoading={false}
+        loadingMore={false}
+        messageDeletingId={null}
+        messageInput=""
+        messageSearchQuery=""
+        messageUpdatingId={null}
+        onAddAttachments={vi.fn()}
+        onClearDeepLink={vi.fn()}
+        onComposerBlur={vi.fn()}
+        onComposerFocus={vi.fn()}
+        onDeleteMessage={vi.fn()}
+        onEditMessage={vi.fn()}
+        onLoadMore={vi.fn()}
+        onLoadMoreThreadReplies={vi.fn()}
+        onLoadThreadReplies={vi.fn()}
+        onMarkThreadAsRead={vi.fn()}
+        onMessageInputChange={vi.fn()}
+        onMessageSearchChange={vi.fn()}
+        onRemoveAttachment={vi.fn()}
+        onSendMessage={vi.fn()}
+        onToggleReaction={vi.fn()}
+        pendingAttachments={[]}
+        reactionPendingByMessage={{}}
+        searchHighlights={[]}
+        searchingMessages={false}
+        selectedChannel={channel}
+        sending={false}
+        threadErrorsByRootId={{}}
+        threadLoadingByRootId={{}}
+        threadMessagesByRootId={{}}
+        threadNextCursorByRootId={{}}
+        threadUnreadCountsByRootId={{}}
+        uploading={false}
+      />,
+    )
+
+    expect(markup).toContain('Linked message unavailable')
+    expect(markup).toContain('Clear link')
+    expect(markup).toContain('team-agency')
   })
 })

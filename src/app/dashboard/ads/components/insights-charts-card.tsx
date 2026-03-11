@@ -1,22 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Card } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
 import {
   BarChart,
@@ -39,6 +24,13 @@ import {
 import type { PerformanceAnalysis } from '@/lib/ad-algorithms'
 import { CHART_COLORS, GRAYS } from '@/lib/colors'
 
+import {
+  InsightsChartsEmptyState,
+  InsightsChartsHeader,
+  InsightsChartsLoadingState,
+  InsightsChartsTabs,
+} from './insights-charts-card-sections'
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -57,10 +49,6 @@ const metricColors = CHART_COLORS.metrics
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
-
-function ChartSkeleton() {
-  return <Skeleton className="h-full min-h-[280px] w-full rounded-lg" />
-}
 
 function ProviderComparisonChart({ data }: { data: PerformanceAnalysis['chartData']['providerComparison'] }) {
   const chartData = data.map(d => ({
@@ -307,123 +295,17 @@ export function InsightsChartsCard({ analysis, loading = false }: InsightsCharts
     : selectedProvider
 
   if (loading) {
-    return (
-      <Card className="shadow-sm">
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-64" />
-        </CardHeader>
-        <CardContent>
-          <ChartSkeleton />
-        </CardContent>
-      </Card>
-    )
+    return <InsightsChartsLoadingState />
   }
 
   if (!analysis || analysis.summaries.length === 0) {
-    return (
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">Performance Insights</CardTitle>
-          <CardDescription>Visual analysis of your ad performance</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex min-h-[240px] items-center justify-center text-sm text-muted-foreground">
-            Connect ad platforms and sync data to see performance charts.
-          </div>
-        </CardContent>
-      </Card>
-    )
+    return <InsightsChartsEmptyState />
   }
 
   return (
     <Card className="shadow-sm">
-      <CardHeader>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle className="text-lg">Performance Insights</CardTitle>
-            <CardDescription>
-              Visual analysis across {providers.length} platform{providers.length !== 1 ? 's' : ''}
-            </CardDescription>
-          </div>
-          {providers.length > 1 && (
-            <Select value={selectedProvider} onValueChange={setSelectedProvider}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select provider" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Platforms</SelectItem>
-                {providers.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="comparison" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="comparison">Comparison</TabsTrigger>
-            <TabsTrigger value="efficiency">Efficiency</TabsTrigger>
-            <TabsTrigger value="trends">Trends</TabsTrigger>
-            <TabsTrigger value="funnel">Funnel</TabsTrigger>
-            <TabsTrigger value="benchmarks">Benchmarks</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="comparison" className="mt-4">
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Spend vs Revenue by Platform</h4>
-              <p className="text-xs text-muted-foreground">Compare financial performance across connected platforms</p>
-              <ProviderComparisonChart data={analysis.chartData.providerComparison} />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="efficiency" className="mt-4">
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Efficiency Breakdown</h4>
-              <p className="text-xs text-muted-foreground">Multi-dimensional performance analysis</p>
-              <EfficiencyRadarChart
-                data={analysis.chartData.efficiencyBreakdown}
-                providerId={activeProvider}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="trends" className="mt-4">
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Spend Trend Analysis</h4>
-              <p className="text-xs text-muted-foreground">Historical spend with trend line</p>
-              <TrendChart
-                data={analysis.chartData.trendCharts}
-                providerId={activeProvider}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="funnel" className="mt-4">
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Conversion Funnel</h4>
-              <p className="text-xs text-muted-foreground">Impressions → Clicks → Conversions drop-off analysis</p>
-              <FunnelChart
-                data={analysis.chartData.funnelCharts}
-                providerId={activeProvider}
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="benchmarks" className="mt-4">
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Industry Benchmarks</h4>
-              <p className="text-xs text-muted-foreground">How you compare to industry averages</p>
-              <BenchmarkChart
-                data={analysis.chartData.benchmarkCharts}
-                providerId={activeProvider}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
+      <InsightsChartsHeader onSelectedProviderChange={setSelectedProvider} providers={providers} providersCount={providers.length} selectedProvider={selectedProvider} />
+      <InsightsChartsTabs benchmarkChart={<BenchmarkChart data={analysis.chartData.benchmarkCharts} providerId={activeProvider} />} comparisonChart={<ProviderComparisonChart data={analysis.chartData.providerComparison} />} efficiencyChart={<EfficiencyRadarChart data={analysis.chartData.efficiencyBreakdown} providerId={activeProvider} />} funnelChart={<FunnelChart data={analysis.chartData.funnelCharts} providerId={activeProvider} />} trendsChart={<TrendChart data={analysis.chartData.trendCharts} providerId={activeProvider} />} />
     </Card>
   )
 }

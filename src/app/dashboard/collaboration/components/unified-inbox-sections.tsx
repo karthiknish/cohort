@@ -2,8 +2,9 @@
 
 import type { ReactNode } from 'react'
 
-import { Hash, Inbox, MessageCircle, Plus, Search } from 'lucide-react'
+import { AlertCircle, Hash, Inbox, MessageCircle, Plus, Search } from 'lucide-react'
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -224,6 +225,7 @@ export type ChannelConversationPaneProps = {
   messageSearchQuery: string
   messageUpdatingId: string | null
   onAddAttachments: (files: FileList | File[]) => void
+  onClearDeepLink?: () => void
   onComposerBlur: () => void
   onComposerFocus: () => void
   onDeleteMessage: (channelId: string, messageId: string) => void
@@ -252,6 +254,38 @@ export type ChannelConversationPaneProps = {
   uploading: boolean
 }
 
+function hasRequestedDeepLinkTarget(
+  channelMessages: CollaborationMessage[],
+  threadMessagesByRootId: ThreadMessagesState,
+  deepLinkMessageId: string | null,
+  deepLinkThreadId: string | null,
+): boolean {
+  const normalizedMessageId = typeof deepLinkMessageId === 'string' ? deepLinkMessageId.trim() : ''
+  const normalizedThreadId = typeof deepLinkThreadId === 'string' ? deepLinkThreadId.trim() : ''
+
+  if (!normalizedMessageId && !normalizedThreadId) {
+    return false
+  }
+
+  const allMessages = [...channelMessages, ...Object.values(threadMessagesByRootId).flat()]
+
+  return allMessages.some((message) => {
+    if (normalizedMessageId && message.id === normalizedMessageId) {
+      return true
+    }
+
+    if (!normalizedThreadId) {
+      return false
+    }
+
+    const threadRootId = typeof message.threadRootId === 'string' && message.threadRootId.trim().length > 0
+      ? message.threadRootId.trim()
+      : message.id
+
+    return threadRootId === normalizedThreadId || message.parentMessageId === normalizedThreadId || message.id === normalizedThreadId
+  })
+}
+
 export function ChannelConversationPane({
   canLoadMore,
   channelMessages,
@@ -270,6 +304,7 @@ export function ChannelConversationPane({
   messageSearchQuery,
   messageUpdatingId,
   onAddAttachments,
+  onClearDeepLink,
   onComposerBlur,
   onComposerFocus,
   onDeleteMessage,
@@ -297,6 +332,12 @@ export function ChannelConversationPane({
   typingIndicatorText,
   uploading,
 }: ChannelConversationPaneProps) {
+  const showMissingDeepLinkNotice =
+    (Boolean(deepLinkMessageId?.trim()) || Boolean(deepLinkThreadId?.trim())) &&
+    !isCurrentChannelLoading &&
+    !searchingMessages &&
+    !hasRequestedDeepLinkTarget(channelMessages, threadMessagesByRootId, deepLinkMessageId, deepLinkThreadId)
+
   return (
     <UnifiedMessagePane
       header={{
@@ -333,6 +374,20 @@ export function ChannelConversationPane({
       onDeleteMessage={async (messageId: string) => onDeleteMessage(selectedChannel.id, messageId)}
       onEditMessage={async (messageId: string, newContent: string) => onEditMessage(selectedChannel.id, messageId, newContent)}
       participants={mentionParticipants}
+      statusBanner={showMissingDeepLinkNotice ? (
+        <Alert className="mx-4 mt-4 border-amber-300/60 bg-amber-50/80 text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Linked message unavailable</AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p>We couldn&apos;t open the requested message in #{selectedChannel.name}. It may no longer be available in this channel.</p>
+            {onClearDeepLink ? (
+              <Button type="button" variant="outline" size="sm" onClick={onClearDeepLink}>
+                Clear link
+              </Button>
+            ) : null}
+          </AlertDescription>
+        </Alert>
+      ) : null}
       channelMessages={channelMessages}
       threadMessagesByRootId={threadMessagesByRootId}
       threadNextCursorByRootId={threadNextCursorByRootId}

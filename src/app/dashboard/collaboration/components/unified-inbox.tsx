@@ -75,6 +75,7 @@ type UnifiedInboxChannelPaneProps = {
   sharedFiles: CollaborationAttachment[]
   workspaceId?: string | null
   onPinnedMessageClick?: (messageId: string) => void
+  onClearDeepLink?: () => void
   deepLinkMessageId?: string | null
   deepLinkThreadId?: string | null
 }
@@ -182,6 +183,7 @@ export function UnifiedInbox({
     sharedFiles,
     workspaceId,
     onPinnedMessageClick,
+    onClearDeepLink,
     deepLinkMessageId,
     deepLinkThreadId,
   } = channelPane
@@ -415,6 +417,7 @@ export function UnifiedInbox({
           reactionPendingByMessage={reactionPendingByMessage}
           searchHighlights={searchHighlights}
           searchingMessages={searchingMessages}
+          onClearDeepLink={onClearDeepLink}
           selectedChannel={selectedChannel}
           sending={sending}
           threadErrorsByRootId={threadErrorsByRootId}

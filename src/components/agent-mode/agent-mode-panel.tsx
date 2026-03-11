@@ -1,23 +1,17 @@
 'use client'
 
-import type { ChangeEvent, KeyboardEvent } from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
+import { AnimatePresence, domAnimation, LazyMotion } from 'framer-motion'
 
 import type { AgentConversationSummary, AgentMessage, ConnectionStatus } from '@/hooks/use-agent-mode'
 import { useMentionData } from '@/hooks/use-mention-data'
-import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import { AGENT_ATTACHMENT_ACCEPT, type AgentAttachmentContext } from '@/lib/agent-attachments'
 import type { AgentError } from '@/lib/agent-errors'
 
 import {
-  AgentComposerSection,
-  AgentEmptyState,
-  AgentHistoryPanel,
-  AgentMessagesSection,
-  AgentModeHeader,
-  FailedMessageBanner,
-  RateLimitBanner,
+  AgentModePanelContent,
+  AgentModePanelShell,
+  type AgentComposerSectionProps,
 } from './agent-mode-panel-sections'
 import { formatMention, type MentionItem } from './mention-dropdown'
 
@@ -270,145 +264,105 @@ export function AgentModePanel({
   // Check if input is disabled (rate limited or processing)
   const isInputDisabled = isProcessing || isExtractingAttachments || (typeof rateLimitCountdown === 'number' && rateLimitCountdown > 0)
 
+  const sharedComposerProps: Omit<AgentComposerSectionProps, 'layout' | 'disabled' | 'quickSuggestions' | 'onSuggestionClick'> = {
+    inputValue,
+    inputRef,
+    mentionLabels,
+    showMentions,
+    mentionQuery,
+    clients,
+    projects,
+    teams,
+    users,
+    mentionsLoading,
+    pendingAttachments,
+    isDraggingFiles,
+    isExtractingAttachments,
+    onInputChange: handleInputChange,
+    onKeyDown: handleKeyDown,
+    onOpenFilePicker: handleOpenFilePicker,
+    onCloseMentions: () => setShowMentions(false),
+    onSelectMention: handleMentionSelect,
+    onVoiceTranscript: handleVoiceTranscript,
+    onVoiceInterim: handleVoiceInterim,
+    onRemoveAttachment,
+    onSubmit: handleSubmit,
+  }
+
+  const emptyComposerProps: AgentComposerSectionProps = {
+    ...sharedComposerProps,
+    layout: 'centered',
+    disabled: isInputDisabled,
+    quickSuggestions: QUICK_SUGGESTIONS,
+    onSuggestionClick: handleSuggestionClick,
+  }
+
+  const dockComposerProps: AgentComposerSectionProps = {
+    ...sharedComposerProps,
+    layout: 'dock',
+    disabled: isInputDisabled || isConversationLoading,
+  }
+
+  const historyPanelProps = {
+    showHistory,
+    history,
+    isHistoryLoading,
+    conversationId,
+    messagesCount: messages.length,
+    isConversationLoading,
+    loadingConversationId,
+    editingConversationId,
+    editingTitle,
+    setEditingTitle,
+    onSelectConversation,
+    onUpdateConversationTitle,
+    onDeleteConversation,
+    onStartNewChat: handleStartNewChat,
+    onClose: () => setShowHistory(false),
+    onStartEditing: (conversationIdValue: string, title: string) => {
+      setEditingConversationId(conversationIdValue)
+      setEditingTitle(title)
+    },
+    onStopEditing: () => setEditingConversationId(null),
+  }
+
   return (
     <LazyMotion features={domAnimation}>
       <AnimatePresence>
         {isOpen && (
-          <m.div
-            initial={{ opacity: 0, y: 0 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 0 }}
-            transition={{ duration: motionDurationSeconds.fast, ease: motionEasing.out }}
-            className="fixed inset-0 z-[9999] flex flex-col bg-background h-screen"
-            onWheel={(e) => e.stopPropagation()}
-            onTouchMove={(e) => e.stopPropagation()}
-            onScroll={(e) => e.stopPropagation()}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={AGENT_ATTACHMENT_ACCEPT}
-            multiple
-            className="hidden"
-            onChange={handleFileSelection}
-          />
-
-          <AgentModeHeader
-            connectionStatus={connectionStatus}
-            conversationId={conversationId}
-            messagesCount={messages.length}
-            showHistory={showHistory}
-            onClose={onClose}
-            onStartNewChat={handleStartNewChat}
-            onToggleHistory={handleToggleHistory}
-          />
-
-          {/* Rate limit banner */}
-          <AnimatePresence>
-            {typeof rateLimitCountdown === 'number' && rateLimitCountdown > 0 && (
-              <RateLimitBanner countdown={rateLimitCountdown} onDismiss={onClearError} />
-            )}
-          </AnimatePresence>
-
-          <AgentHistoryPanel
-            showHistory={showHistory}
-            history={history}
-            isHistoryLoading={isHistoryLoading}
-            conversationId={conversationId}
-            messagesCount={messages.length}
-            isConversationLoading={isConversationLoading}
-            loadingConversationId={loadingConversationId}
-            editingConversationId={editingConversationId}
-            editingTitle={editingTitle}
-            setEditingTitle={setEditingTitle}
-            onSelectConversation={onSelectConversation}
-            onUpdateConversationTitle={onUpdateConversationTitle}
-            onDeleteConversation={onDeleteConversation}
-            onStartNewChat={handleStartNewChat}
-            onClose={() => setShowHistory(false)}
-            onStartEditing={(conversationIdValue, title) => {
-              setEditingConversationId(conversationIdValue)
-              setEditingTitle(title)
+          <AgentModePanelShell
+            attachmentAccept={AGENT_ATTACHMENT_ACCEPT}
+            fileInputRef={fileInputRef}
+            headerProps={{
+              connectionStatus,
+              conversationId,
+              messagesCount: messages.length,
+              showHistory,
+              onClose,
+              onStartNewChat: handleStartNewChat,
+              onToggleHistory: handleToggleHistory,
             }}
-            onStopEditing={() => setEditingConversationId(null)}
-          />
-
-          {/* Main content */}
-          {showEmptyState ? (
-            <AgentEmptyState>
-              <AgentComposerSection
-                layout="centered"
-                inputValue={inputValue}
-                inputRef={inputRef}
-                mentionLabels={mentionLabels}
-                showMentions={showMentions}
-                mentionQuery={mentionQuery}
-                clients={clients}
-                projects={projects}
-                teams={teams}
-                users={users}
-                mentionsLoading={mentionsLoading}
-                pendingAttachments={pendingAttachments}
-                isDraggingFiles={isDraggingFiles}
-                isExtractingAttachments={isExtractingAttachments}
-                disabled={isInputDisabled}
-                onInputChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                onOpenFilePicker={handleOpenFilePicker}
-                onCloseMentions={() => setShowMentions(false)}
-                onSelectMention={handleMentionSelect}
-                onVoiceTranscript={handleVoiceTranscript}
-                onVoiceInterim={handleVoiceInterim}
-                onRemoveAttachment={onRemoveAttachment}
-                onSubmit={handleSubmit}
-                quickSuggestions={QUICK_SUGGESTIONS}
-                onSuggestionClick={handleSuggestionClick}
-              />
-            </AgentEmptyState>
-          ) : (
-            <>
-              <AgentMessagesSection
-                isConversationLoading={isConversationLoading}
-                isProcessing={isProcessing}
-                mentionLabels={mentionLabels}
-                messages={messages}
-                scrollAreaRef={scrollAreaRef}
-              />
-
-              {!isProcessing ? <FailedMessageBanner lastFailedMessage={lastFailedMessage ?? null} onRetry={handleRetry} /> : null}
-
-              <AgentComposerSection
-                layout="dock"
-                inputValue={inputValue}
-                inputRef={inputRef}
-                mentionLabels={mentionLabels}
-                showMentions={showMentions}
-                mentionQuery={mentionQuery}
-                clients={clients}
-                projects={projects}
-                teams={teams}
-                users={users}
-                mentionsLoading={mentionsLoading}
-                pendingAttachments={pendingAttachments}
-                isDraggingFiles={isDraggingFiles}
-                isExtractingAttachments={isExtractingAttachments}
-                disabled={isInputDisabled || isConversationLoading}
-                onInputChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                onOpenFilePicker={handleOpenFilePicker}
-                onCloseMentions={() => setShowMentions(false)}
-                onSelectMention={handleMentionSelect}
-                onVoiceTranscript={handleVoiceTranscript}
-                onVoiceInterim={handleVoiceInterim}
-                onRemoveAttachment={onRemoveAttachment}
-                onSubmit={handleSubmit}
-              />
-            </>
-          )}
-          </m.div>
+            historyPanelProps={historyPanelProps}
+            onClearError={onClearError}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onFileSelection={handleFileSelection}
+            rateLimitCountdown={rateLimitCountdown}
+          >
+            <AgentModePanelContent
+              dockComposerProps={dockComposerProps}
+              emptyComposerProps={emptyComposerProps}
+              isConversationLoading={isConversationLoading}
+              isProcessing={isProcessing}
+              lastFailedMessage={lastFailedMessage ?? null}
+              mentionLabels={mentionLabels}
+              messages={messages}
+              onRetry={handleRetry}
+              scrollAreaRef={scrollAreaRef}
+              showEmptyState={showEmptyState}
+            />
+          </AgentModePanelShell>
         )}
       </AnimatePresence>
     </LazyMotion>

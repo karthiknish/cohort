@@ -1,45 +1,20 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import {
-    Plus,
-    Trash2,
-    Save,
-    AlertCircle,
-    CheckCircle,
-    Code,
-} from 'lucide-react'
 
 import {
     Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
 } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { cn } from '@/lib/utils'
 
-import type { UseFormulaEditorReturn, FormulaValidationResult } from '../hooks/use-formula-editor'
+import {
+    FormulaBuilderDialog,
+    FormulaBuilderEmptyState,
+    FormulaBuilderHeader,
+    FormulaBuilderList,
+    FormulaBuilderLoadingState,
+} from './formula-builder-card-sections'
+
+import type { CustomFormula, UseFormulaEditorReturn, FormulaValidationResult } from '../hooks/use-formula-editor'
 import type { MetricTotals } from '../hooks/use-derived-metrics'
 
 // =============================================================================
@@ -151,214 +126,45 @@ export function FormulaBuilderCard({
         setOutputMetric(example.output)
     }
 
+    const formulaItems = useMemo<Array<{ formula: CustomFormula; result: number | null }>>(() => {
+        return formulas.map((formula) => {
+            let result: number | null = null
+            if (metricTotals) {
+                const inputs: Record<string, number> = {
+                    spend: metricTotals.spend,
+                    impressions: metricTotals.impressions,
+                    clicks: metricTotals.clicks,
+                    conversions: metricTotals.conversions,
+                    revenue: metricTotals.revenue,
+                }
+                result = executeFormula(formula.formula, inputs)
+            }
+            return { formula, result }
+        })
+    }, [executeFormula, formulas, metricTotals])
+
     return (
         <Card className="shadow-sm">
-            <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div className="flex flex-col gap-1">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                        <Code className="h-5 w-5" />
-                        Formula Builder
-                    </CardTitle>
-                    <CardDescription>
-                        Create custom metrics by combining your ad performance data
-                    </CardDescription>
-                </div>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button size="sm" className="gap-2">
-                            <Plus className="h-4 w-4" />
-                            New Formula
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-lg">
-                        <DialogHeader>
-                            <DialogTitle>Create Custom Formula</DialogTitle>
-                            <DialogDescription>
-                                Define a formula using available metrics. Use +, -, *, / operators.
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="space-y-4 py-4">
-                            {/* Formula Name */}
-                            <div className="space-y-2">
-                                <Label htmlFor="formula-name">Formula Name</Label>
-                                <Input
-                                    id="formula-name"
-                                    placeholder="e.g., Cost per Acquisition"
-                                    value={formulaName}
-                                    onChange={(e) => setFormulaName(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Available Metrics */}
-                            <div className="space-y-2">
-                                <Label>Available Metrics</Label>
-                                <div className="flex flex-wrap gap-2">
-                                    {AVAILABLE_METRICS.map((metric) => (
-                                        <Button
-                                            key={metric.name}
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleInsertMetric(metric.name)}
-                                        >
-                                            {metric.label}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Formula Expression */}
-                            <div className="space-y-2">
-                                <Label htmlFor="formula-expression">Formula Expression</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="formula-expression"
-                                        placeholder="e.g., spend / conversions"
-                                        value={formulaExpression}
-                                        onChange={(e) => setFormulaExpression(e.target.value)}
-                                        className={cn(
-                                            validation && !validation.valid && 'border-red-500'
-                                        )}
-                                    />
-                                    {validation && (
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                            {validation.valid ? (
-                                                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                                            ) : (
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger>
-                                                            <AlertCircle className="h-4 w-4 text-red-500" />
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>{validation.error}</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                {validation?.valid && previewResult !== null && (
-                                    <p className="text-sm text-muted-foreground">
-                                        Preview: <span className="font-medium">{previewResult.toFixed(2)}</span>
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Output Metric Name */}
-                            <div className="space-y-2">
-                                <Label htmlFor="output-metric">Output Metric ID</Label>
-                                <Input
-                                    id="output-metric"
-                                    placeholder="e.g., cpa"
-                                    value={outputMetric}
-                                    onChange={(e) => setOutputMetric(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Example Formulas */}
-                            <div className="space-y-2">
-                                <Label>Quick Examples</Label>
-                                <div className="flex flex-wrap gap-2">
-                                    {EXAMPLE_FORMULAS.map((example) => (
-                                        <Button
-                                            key={example.output}
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleUseExample(example)}
-                                        >
-                                            {example.name}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleSave}
-                                disabled={!validation?.valid || !formulaName.trim() || !outputMetric.trim()}
-                                className="gap-2"
-                            >
-                                <Save className="h-4 w-4" />
-                                Save Formula
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            </CardHeader>
-            <CardContent>
-                {loading || formulasLoading ? (
-                    <div className="space-y-3">
-                        {Array.from({ length: 3 }).map((_, i) => (
-                            <Skeleton key={i} className="h-16 w-full rounded-lg" />
-                        ))}
-                    </div>
-                ) : formulas.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground">
-                        <Code className="h-8 w-8 opacity-50" />
-                        <p>No custom formulas yet. Create one to track custom KPIs.</p>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {formulas.map((formula) => {
-                            // Calculate result if we have metrics
-                            let result: number | null = null
-                            if (metricTotals) {
-                                const inputs: Record<string, number> = {
-                                    spend: metricTotals.spend,
-                                    impressions: metricTotals.impressions,
-                                    clicks: metricTotals.clicks,
-                                    conversions: metricTotals.conversions,
-                                    revenue: metricTotals.revenue,
-                                }
-                                result = executeFormula(formula.formula, inputs)
-                            }
-
-                            return (
-                                <div
-                                    key={formula.formulaId}
-                                    className="flex items-center justify-between rounded-lg border border-muted/60 bg-background p-4"
-                                >
-                                    <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-medium">{formula.name}</span>
-                                            <Badge variant="secondary" className="text-xs">
-                                                {formula.outputMetric}
-                                            </Badge>
-                                        </div>
-                                        <code className="text-xs text-muted-foreground">
-                                            {formula.formula}
-                                        </code>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        {result !== null && (
-                                            <span className="text-lg font-semibold">
-                                                {result.toFixed(2)}
-                                            </span>
-                                        )}
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                            onClick={() => deleteFormula(formula.formulaId)}
-                                            aria-label={`Delete formula ${formula.name}`}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                )}
-            </CardContent>
+            <FormulaBuilderHeader>
+                <FormulaBuilderDialog
+                    availableMetrics={AVAILABLE_METRICS}
+                    dialogOpen={dialogOpen}
+                    exampleFormulas={EXAMPLE_FORMULAS}
+                    formulaExpression={formulaExpression}
+                    formulaName={formulaName}
+                    onDialogOpenChange={setDialogOpen}
+                    onExpressionChange={(event) => setFormulaExpression(event.target.value)}
+                    onFormulaNameChange={(event) => setFormulaName(event.target.value)}
+                    onInsertMetric={handleInsertMetric}
+                    onOutputMetricChange={(event) => setOutputMetric(event.target.value)}
+                    onSave={() => { void handleSave() }}
+                    onUseExample={handleUseExample}
+                    outputMetric={outputMetric}
+                    previewResult={previewResult}
+                    validation={validation}
+                />
+            </FormulaBuilderHeader>
+            {loading || formulasLoading ? <FormulaBuilderLoadingState /> : formulas.length === 0 ? <FormulaBuilderEmptyState /> : <FormulaBuilderList items={formulaItems} onDelete={(formulaId) => { void deleteFormula(formulaId) }} />}
         </Card>
     )
 }

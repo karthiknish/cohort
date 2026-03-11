@@ -1,15 +1,11 @@
 'use client'
 
 import { memo, useCallback, useState } from 'react'
-import { Check, ChevronRight, ExternalLink, Loader2, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog'
 import {
   AlertDialog,
@@ -21,17 +17,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Checkbox } from '@/components/ui/checkbox'
-import { cn } from '@/lib/utils'
-import { PROVIDER_INFO, CONNECTION_STEPS, ERROR_GUIDANCE } from './constants'
+import { ERROR_GUIDANCE, PROVIDER_INFO } from './constants'
+
+import {
+  ConnectionDialogBody,
+  ConnectionDialogFooterActions,
+  ConnectionDialogHeader,
+  type ConnectionStep,
+} from './connection-dialog-sections'
 
 // =============================================================================
 // TYPES
 // =============================================================================
-
-export type ConnectionStep = 'idle' | 'redirecting' | 'authenticating' | 'fetching' | 'selecting' | 'syncing' | 'complete' | 'error'
 
 // =============================================================================
 // ERROR MESSAGE HELPERS
@@ -91,79 +89,6 @@ interface DisconnectDialogProps {
   isDisconnecting: boolean
 }
 
-interface ConnectionProgressProps {
-  step: ConnectionStep
-  providerName: string
-}
-
-// =============================================================================
-// CONNECTION PROGRESS COMPONENT
-// =============================================================================
-
-const STEP_CONFIG: Record<ConnectionStep, { label: string; order: number }> = {
-  idle: { label: 'Ready to connect', order: 0 },
-  redirecting: { label: CONNECTION_STEPS.REDIRECTING, order: 1 },
-  authenticating: { label: CONNECTION_STEPS.AUTHENTICATING, order: 2 },
-  fetching: { label: CONNECTION_STEPS.FETCHING_ACCOUNTS, order: 3 },
-  selecting: { label: CONNECTION_STEPS.SELECTING_ACCOUNT, order: 4 },
-  syncing: { label: CONNECTION_STEPS.SYNCING_DATA, order: 5 },
-  complete: { label: CONNECTION_STEPS.COMPLETE, order: 6 },
-  error: { label: 'Connection failed', order: -1 },
-}
-
-const ConnectionProgress = memo(function ConnectionProgress({ step, providerName }: ConnectionProgressProps) {
-  const steps: ConnectionStep[] = ['redirecting', 'authenticating', 'fetching', 'selecting', 'syncing']
-  const currentOrder = STEP_CONFIG[step].order
-
-  if (step === 'idle' || step === 'error') return null
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        {step === 'complete' ? (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-green-600">
-            <CheckCircle2 className="h-5 w-5" />
-          </div>
-        ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          </div>
-        )}
-        <div>
-          <p className="font-medium">
-            {step === 'complete' ? `${providerName} connected!` : `Connecting to ${providerName}`}
-          </p>
-          <p className="text-sm text-muted-foreground">{STEP_CONFIG[step].label}</p>
-        </div>
-      </div>
-
-      {step !== 'complete' && (
-        <div className="flex items-center gap-1">
-          {steps.map((s, index) => {
-            const stepOrder = STEP_CONFIG[s].order
-            const isComplete = currentOrder > stepOrder
-            const isCurrent = step === s
-
-            return (
-              <div key={s} className="flex items-center">
-                <div
-                  className={cn(
-                    'h-2 w-8 rounded-full transition-colors',
-                    isComplete && 'bg-primary',
-                    isCurrent && 'bg-primary/50',
-                    !isComplete && !isCurrent && 'bg-muted'
-                  )}
-                />
-                {index < steps.length - 1 && <div className="h-[2px] w-1 bg-muted" />}
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-})
-
 // =============================================================================
 // CONNECTION DIALOG COMPONENT
 // =============================================================================
@@ -199,168 +124,14 @@ export const ConnectionDialog = memo(function ConnectionDialog({
 
   const isInProgress = isConnecting && connectionStep !== 'idle' && connectionStep !== 'error' && connectionStep !== 'complete'
   const showPreConnect = connectionStep === 'idle' && !isConnecting && !error
+  const errorGuidance = error ? getErrorGuidance(error) : null
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            {Icon && (
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Icon className="h-5 w-5" />
-              </span>
-            )}
-            <div>
-              <DialogTitle>Connect {providerInfo.name}</DialogTitle>
-              <DialogDescription className="text-sm">
-                {providerInfo.estimatedSetupTime} setup
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          {/* Pre-connection info */}
-          {showPreConnect && (
-            <>
-              <div>
-                <h4 className="mb-2 text-sm font-medium">What you&apos;ll get</h4>
-                <ul className="space-y-1.5">
-                    {providerInfo.benefits.map((benefit) => (
-                      <li key={benefit} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
-                      {benefit}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="mb-2 text-sm font-medium">Requirements</h4>
-                <ul className="space-y-1.5">
-                    {providerInfo.requirements.map((req) => (
-                      <li key={req} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <ChevronRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground/60" />
-                      {req}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {providerInfo.loginMethod === 'redirect' && (
-                <Alert className="border-blue-200 bg-blue-50">
-                  <ExternalLink className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-sm text-blue-800">
-                    You&apos;ll be redirected to {providerInfo.shortName} to log in. After granting access, you&apos;ll return here automatically.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {providerInfo.loginMethod === 'popup' && (
-                <Alert className="border-blue-200 bg-blue-50">
-                  <AlertCircle className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-sm text-blue-800">
-                    A popup window will open for you to log in to {providerInfo.shortName}. Make sure popups are allowed for this site.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </>
-          )}
-
-          {/* Redirecting state - special handling for redirect-based OAuth */}
-          {connectionStep === 'redirecting' && providerInfo.loginMethod === 'redirect' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                  <ArrowRight className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">Redirecting to {providerInfo.shortName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    You&apos;ll be taken to {providerInfo.shortName} to log in
-                  </p>
-                </div>
-              </div>
-              <Alert className="border-blue-200 bg-blue-50">
-                <ExternalLink className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-sm text-blue-800">
-                  After logging in, you&apos;ll be automatically redirected back here to complete setup.
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
-
-          {/* Connection progress - for popup flows and post-redirect steps */}
-          {((isInProgress && !(connectionStep === 'redirecting' && providerInfo.loginMethod === 'redirect')) || connectionStep === 'complete') && (
-            <ConnectionProgress step={connectionStep} providerName={providerInfo.name} />
-          )}
-
-          {/* Error state */}
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>{getErrorGuidance(error)?.title ?? 'Connection failed'}</AlertTitle>
-              <AlertDescription className="space-y-2">
-                <p>{error}</p>
-                {getErrorGuidance(error)?.action && (
-                  <p className="mt-2 text-xs font-medium opacity-90">
-                    {getErrorGuidance(error)?.action}
-                  </p>
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Success state */}
-          {connectionStep === 'complete' && (
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-sm text-green-800">
-                Your {providerInfo.name} account is now connected. We&apos;re syncing your last 90 days of data in the background.
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          {showPreConnect && (
-            <>
-              <Button variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button onClick={handleConnect} disabled={isConnecting}>
-                {providerInfo.loginMethod === 'redirect' ? (
-                  <>
-                    Continue to {providerInfo.shortName}
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </>
-                ) : (
-                  `Connect ${providerInfo.shortName}`
-                )}
-              </Button>
-            </>
-          )}
-
-          {isInProgress && (
-            <Button variant="outline" disabled>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Connecting…
-            </Button>
-          )}
-
-          {error && (
-            <>
-              <Button variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button onClick={onRetry}>Try again</Button>
-            </>
-          )}
-
-          {connectionStep === 'complete' && (
-            <Button onClick={handleClose}>Done</Button>
-          )}
-        </DialogFooter>
+        <ConnectionDialogHeader Icon={Icon} providerInfo={providerInfo} />
+        <ConnectionDialogBody connectionStep={connectionStep} error={error} errorGuidance={errorGuidance} isInProgress={isInProgress} providerInfo={providerInfo} showPreConnect={showPreConnect} />
+        <ConnectionDialogFooterActions connectionStep={connectionStep} error={error} handleClose={handleClose} handleConnect={handleConnect} isConnecting={isConnecting} isInProgress={isInProgress} onRetry={onRetry} providerInfo={providerInfo} showPreConnect={showPreConnect} />
       </DialogContent>
     </Dialog>
   )
@@ -394,6 +165,8 @@ export const DisconnectDialog = memo(function DisconnectDialog({
     onOpenChange(false)
   }, [clearHistoricalData, onConfirm, onOpenChange])
 
+  const checkboxId = `${providerName.replace(/\s+/g, '-').toLowerCase()}-clear-historical-data`
+
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
@@ -409,8 +182,9 @@ export const DisconnectDialog = memo(function DisconnectDialog({
             <p className="pt-2">You can reconnect later to resume syncing.</p>
           </AlertDialogDescription>
           <div className="rounded-md border border-muted/60 p-3">
-            <label className="flex items-start gap-3 text-sm">
+            <label htmlFor={checkboxId} className="flex items-start gap-3 text-sm">
               <Checkbox
+                id={checkboxId}
                 checked={clearHistoricalData}
                 onCheckedChange={(checked) => setClearHistoricalData(Boolean(checked))}
                 disabled={isDisconnecting}
@@ -448,5 +222,6 @@ export const DisconnectDialog = memo(function DisconnectDialog({
 // EXPORTS
 // =============================================================================
 
-export { ConnectionProgress }
-export type { ConnectionDialogProps, DisconnectDialogProps, ConnectionProgressProps }
+export { ConnectionProgress } from './connection-dialog-sections'
+export type { ConnectionDialogProps, DisconnectDialogProps }
+export type { ConnectionStep } from './connection-dialog-sections'

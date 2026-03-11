@@ -33,6 +33,7 @@ type CollaborationDashboardContextValue = {
   selectedCustomChannel: ReturnType<typeof useCollaborationData>['selectedChannel']
   workspaceId: string | null
   workspaceMembers: WorkspaceMember[]
+  clearMessageFocus: () => void
   clearProjectFilter: () => void
   handleCreateChannel: (channel: {
     name: string
@@ -120,6 +121,13 @@ export function CollaborationDashboardProvider({ children }: { children: ReactNo
   const projectParamHandledRef = useRef<string | null>(null)
   const channelParamHandledRef = useRef<string | null>(null)
 
+  const replaceSearchParams = useCallback((mutate: (params: URLSearchParams) => void) => {
+    const params = new URLSearchParams(searchParams.toString())
+    mutate(params)
+    const next = params.toString()
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
+  }, [pathname, router, searchParams])
+
   useEffect(() => {
     if (selectedChannelId === null) {
       clearThreadReplies()
@@ -199,23 +207,30 @@ export function CollaborationDashboardProvider({ children }: { children: ReactNo
   ])
 
   const clearProjectFilter = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('projectId')
-    params.delete('projectName')
-    const next = params.toString()
-    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
-  }, [pathname, router, searchParams])
+    replaceSearchParams((params) => {
+      params.delete('projectId')
+      params.delete('projectName')
+    })
+  }, [replaceSearchParams])
+
+  const clearMessageFocus = useCallback(() => {
+    if (!requestedMessageId && !requestedThreadId) return
+
+    replaceSearchParams((params) => {
+      params.delete('messageId')
+      params.delete('threadId')
+    })
+  }, [replaceSearchParams, requestedMessageId, requestedThreadId])
 
   const handleOpenChannelMessage = useCallback((messageId: string) => {
     const normalizedMessageId = typeof messageId === 'string' ? messageId.trim() : ''
     if (!normalizedMessageId) return
 
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('messageId', normalizedMessageId)
-    params.delete('threadId')
-    const next = params.toString()
-    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
-  }, [pathname, router, searchParams])
+    replaceSearchParams((params) => {
+      params.set('messageId', normalizedMessageId)
+      params.delete('threadId')
+    })
+  }, [replaceSearchParams])
 
   const handleStartNewDM = useCallback(
     async (targetUser: { id: string; name: string; role?: string | null }) => {
@@ -227,22 +242,24 @@ export function CollaborationDashboardProvider({ children }: { children: ReactNo
 
   const handleSelectDM = useCallback(
     (conversation: DirectConversation | null) => {
+      clearMessageFocus()
       dm.selectConversation(conversation)
       if (conversation && collab.selectedChannel) {
         collab.selectChannel(null)
       }
     },
-    [dm, collab],
+    [clearMessageFocus, dm, collab],
   )
 
   const handleSelectChannel = useCallback(
     (channelId: string | null) => {
+      clearMessageFocus()
       collab.selectChannel(channelId)
       if (channelId && dm.selectedConversation) {
         dm.selectConversation(null)
       }
     },
-    [collab, dm],
+    [clearMessageFocus, collab, dm],
   )
 
   const handleCreateChannel = useCallback(
@@ -347,6 +364,7 @@ export function CollaborationDashboardProvider({ children }: { children: ReactNo
         selectedCustomChannel,
         workspaceId,
         workspaceMembers,
+        clearMessageFocus,
         clearProjectFilter,
         handleCreateChannel,
         handleDeleteChannel,
