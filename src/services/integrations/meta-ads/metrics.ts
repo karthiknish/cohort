@@ -159,6 +159,7 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
         'spend',
         'actions',
         'action_values',
+        'account_currency',
       ].join(','),
       time_range: JSON.stringify(timeRange),
       time_increment: '1',
@@ -220,9 +221,15 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
           ? row.publisher_platform.toLowerCase()
           : undefined
 
+      const currency =
+        typeof row?.account_currency === 'string' && row.account_currency.trim().length > 0
+          ? row.account_currency.trim().toUpperCase()
+          : undefined
+
       metrics.push({
         providerId: 'facebook',
         accountId: adAccountId,
+        currency,
         publisherPlatform,
         date: row?.date_start ?? row?.date_stop ?? formatDate(new Date(), 'yyyy-MM-dd'),
         spend,

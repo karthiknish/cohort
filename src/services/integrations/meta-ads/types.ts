@@ -85,6 +85,7 @@ export type MetaInsightsRow = {
   actions?: MetaInsightAction[]
   action_values?: MetaInsightAction[]
   reach?: unknown
+  account_currency?: string
 }
 
 export type MetaApiErrorResponse = {

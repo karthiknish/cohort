@@ -173,10 +173,11 @@ export const processClaimedJob = internalAction({
         workspaceId: args.workspaceId,
         metrics: metrics.map((metric) => {
           // Stamp currency at write time so read-time joins are not required.
-          // Priority: currency on the metric row > integration-level account currency.
+          // Priority: currency on the metric row (e.g. account_currency from Meta Insights)
+          // > integration-level account currency > unknown.
           const providerId = metric.providerId as CanonicalAdsProviderId
           const resolved = resolveMetricCurrency({
-            metricCurrency: null, // individual rows don't carry currency; resolved from integration
+            metricCurrency: metric.currency ?? null,
             integrationCurrency: integration.currency ?? null,
             providerDefaultCurrency: integration.currency ?? null,
           })
@@ -205,6 +206,22 @@ export const processClaimedJob = internalAction({
           }
         }),
       })
+
+      // Self-heal: if the integration has no currency stamped yet, derive it from
+      // the first metric row that carries a per-row currency (e.g. Meta account_currency).
+      // This ensures the read-time fallback in listMetricsWithSummaryV2 works for any
+      // existing null-currency rows that haven't been re-synced yet.
+      if (!integration.currency) {
+        const derivedCurrency = metrics.find((m) => m.currency)?.currency ?? null
+        if (derivedCurrency) {
+          await ctx.runMutation(internal.adsIntegrations.updateIntegrationCredentialsInternal, {
+            workspaceId: args.workspaceId,
+            providerId: args.providerId,
+            clientId,
+            currency: derivedCurrency,
+          })
+        }
+      }
 
       return { metricsInserted: insertResult?.inserted ?? 0 }
     }, 'adSyncWorkerActions:processClaimedJob'),
