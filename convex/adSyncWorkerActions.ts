@@ -1,4 +1,4 @@
-import { internalAction } from './_generated/server'
+import { action, internalAction } from './_generated/server'
 import { internal } from './_generated/api'
 import { v } from 'convex/values'
 
@@ -208,4 +208,165 @@ export const processClaimedJob = internalAction({
 
       return { metricsInserted: insertResult?.inserted ?? 0 }
     }, 'adSyncWorkerActions:processClaimedJob'),
+})
+
+// =============================================================================
+// CRON-DRIVEN PROCESSOR
+// =============================================================================
+
+/**
+ * Processes all queued sync jobs across every workspace.
+ * Registered as a Convex cron so the external HTTP worker is not required.
+ */
+export const processAllQueuedJobs = internalAction({
+  handler: async (ctx): Promise<{ processed: number; failed: number }> => {
+    const workspaceIds = await ctx.runQuery(
+      internal.adsIntegrations.listWorkspacesWithQueuedJobsInternal
+    )
+
+    let processed = 0
+    let failed = 0
+    const MAX_JOBS_PER_WORKSPACE = 5
+
+    for (const workspaceId of workspaceIds) {
+      for (let i = 0; i < MAX_JOBS_PER_WORKSPACE; i++) {
+        const job = await ctx.runMutation(
+          internal.adsIntegrations.claimNextSyncJobInternal,
+          { workspaceId }
+        )
+        if (!job) break
+
+        try {
+          await ctx.runAction(internal.adSyncWorkerActions.processClaimedJob, {
+            workspaceId,
+            jobId: job.id,
+            providerId: job.providerId,
+            clientId: job.clientId,
+            timeframeDays: job.timeframeDays,
+          })
+
+          await ctx.runMutation(internal.adsIntegrations.completeSyncJobInternal, {
+            jobId: job.id,
+          })
+
+          await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+            workspaceId,
+            providerId: job.providerId,
+            clientId: job.clientId,
+            status: 'success',
+            message: null,
+          })
+
+          processed++
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : 'Unknown error'
+
+          await ctx.runMutation(internal.adsIntegrations.failSyncJobInternal, {
+            jobId: job.id,
+            message,
+          })
+
+          await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+            workspaceId,
+            providerId: job.providerId,
+            clientId: job.clientId,
+            status: 'error',
+            message,
+          })
+
+          failed++
+        }
+      }
+    }
+
+    return { processed, failed }
+  },
+})
+
+// =============================================================================
+// MANUAL SYNC ACTION (UI-callable)
+// =============================================================================
+
+/**
+ * Queues and immediately processes a manual sync for the given provider.
+ * Called from the UI when a user triggers a manual refresh.
+ */
+export const runManualSync = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.string(),
+    clientId: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args): Promise<{ synced: boolean }> => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) {
+      throw new Error('Authentication required')
+    }
+
+    const clientId =
+      typeof args.clientId === 'string' && args.clientId.trim().length > 0
+        ? args.clientId.trim()
+        : null
+
+    // Queue a fresh manual-sync job.
+    await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
+      workspaceId: args.workspaceId,
+      providerId: args.providerId,
+      clientId,
+      jobType: 'manual-sync',
+      timeframeDays: 30,
+    })
+
+    // Claim and process the job immediately.
+    const job = await ctx.runMutation(
+      internal.adsIntegrations.claimNextSyncJobInternal,
+      { workspaceId: args.workspaceId }
+    )
+
+    if (!job) {
+      // Another worker claimed it; it will be processed by the cron.
+      return { synced: false }
+    }
+
+    try {
+      await ctx.runAction(internal.adSyncWorkerActions.processClaimedJob, {
+        workspaceId: args.workspaceId,
+        jobId: job.id,
+        providerId: job.providerId,
+        clientId: job.clientId,
+        timeframeDays: job.timeframeDays,
+      })
+
+      await ctx.runMutation(internal.adsIntegrations.completeSyncJobInternal, {
+        jobId: job.id,
+      })
+
+      await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+        workspaceId: args.workspaceId,
+        providerId: job.providerId,
+        clientId: job.clientId,
+        status: 'success',
+        message: null,
+      })
+
+      return { synced: true }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+
+      await ctx.runMutation(internal.adsIntegrations.failSyncJobInternal, {
+        jobId: job.id,
+        message,
+      })
+
+      await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+        workspaceId: args.workspaceId,
+        providerId: job.providerId,
+        clientId: job.clientId,
+        status: 'error',
+        message,
+      })
+
+      throw err
+    }
+  },
 })

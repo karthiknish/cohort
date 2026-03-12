@@ -4,6 +4,7 @@ import {
   type ClaimedSyncJob,
   assertCronKey,
   internalMutation,
+  internalQuery,
   mutation,
   normalizeClientId,
   nowMs,
@@ -275,6 +276,21 @@ export const hasPendingSyncJob = zWorkspaceQuery({
       .first()
 
     return !!running
+  },
+})
+
+export const listWorkspacesWithQueuedJobsInternal = internalQuery({
+  handler: async (ctx): Promise<string[]> => {
+    const queued = await ctx.db
+      .query('adSyncJobs')
+      .withIndex('by_status_processedAt', (q) => q.eq('status', 'queued'))
+      .collect()
+
+    const seen = new Set<string>()
+    for (const job of queued) {
+      seen.add(job.workspaceId)
+    }
+    return [...seen]
   },
 })
 

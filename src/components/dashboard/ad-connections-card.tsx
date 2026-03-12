@@ -58,15 +58,27 @@ interface AdConnectionsCardProps {
   onConnect: (providerId: string, connect: () => Promise<void>) => Promise<void> | void
   onDisconnect: (providerId: string, options?: { clearHistoricalData?: boolean }) => Promise<void> | void
   onOauthRedirect?: (providerId: string) => Promise<void> | void
+  onSyncNow?: (providerId: string) => Promise<void> | void
   onRefresh: () => void
   refreshing: boolean
+  syncingProviders?: Record<string, boolean>
 }
 
 const EMPTY_INTEGRATION_STATUSES: Record<string, IntegrationStatusInfo> = {}
 
+// Sync requests older than this are considered stale (not actively running).
+const STALE_SYNC_THRESHOLD_MS = 30 * 60 * 1000
+
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
+
+function isSyncStale(statusInfo: IntegrationStatusInfo | undefined): boolean {
+  if (statusInfo?.status !== 'pending') return false
+  const requestedAt = statusInfo.lastSyncRequestedAt
+  if (!requestedAt) return false
+  return Date.now() - new Date(requestedAt).getTime() > STALE_SYNC_THRESHOLD_MS
+}
 
 function formatLastSync(dateString: string | null | undefined): string {
   if (!dateString) return 'Never synced'
@@ -86,17 +98,25 @@ function formatLastSync(dateString: string | null | undefined): string {
   return date.toLocaleDateString()
 }
 
-function getStatusBadgeVariant(status: string | undefined, isConnected: boolean): 'default' | 'secondary' | 'destructive' | 'outline' {
+function getStatusBadgeVariant(
+  status: string | undefined,
+  isConnected: boolean,
+  stale?: boolean
+): 'default' | 'secondary' | 'destructive' | 'outline' {
   if (!isConnected) return 'outline'
-  if (status === 'error') return 'destructive'
+  if (status === 'error' || stale) return 'destructive'
   if (status === 'pending') return 'secondary'
   return 'default'
 }
 
-function getStatusLabel(status: string | undefined, isConnected: boolean): string {
+function getStatusLabel(
+  status: string | undefined,
+  isConnected: boolean,
+  stale?: boolean
+): string {
   if (!isConnected) return 'Not connected'
   if (status === 'error') return 'Sync failed'
-  if (status === 'pending') return 'Syncing...'
+  if (status === 'pending') return stale ? 'Sync stalled' : 'Syncing...'
   return 'Connected'
 }
 
@@ -113,8 +133,10 @@ export function AdConnectionsCard({
   onConnect,
   onDisconnect,
   onOauthRedirect,
+  onSyncNow,
   onRefresh,
   refreshing,
+  syncingProviders = {},
 }: AdConnectionsCardProps) {
   // Dialog state
   const [connectDialogOpen, setConnectDialogOpen] = useState(false)
@@ -131,8 +153,9 @@ export function AdConnectionsCard({
         isConnected: Boolean(connectedProviders[provider.id]),
         error: connectionErrors[provider.id],
         statusInfo: integrationStatuses[provider.id],
+        isSyncingNow: Boolean(syncingProviders[provider.id]),
       })),
-    [connectedProviders, connectionErrors, connectingProvider, providers, integrationStatuses]
+    [connectedProviders, connectionErrors, connectingProvider, providers, integrationStatuses, syncingProviders]
   )
 
   // Handle opening connection dialog
@@ -214,6 +237,13 @@ export function AdConnectionsCard({
     [onConnect, onOauthRedirect]
   )
 
+  const handleSyncNow = useCallback(
+    (provider: ProviderConfig) => {
+      void onSyncNow?.(provider.id)
+    },
+    [onSyncNow]
+  )
+
   return (
     <>
       <Card className="shadow-sm">
@@ -245,6 +275,7 @@ export function AdConnectionsCard({
                 onConnect={handleOpenConnectDialog}
                 onReconnect={handleQuickReconnect}
                 onDisconnect={handleOpenDisconnectDialog}
+                onSyncNow={handleSyncNow}
               />
             ))}
           </div>
@@ -292,6 +323,7 @@ type ProviderState = {
   provider: ProviderConfig
   isConnected: boolean
   isConnecting: boolean
+  isSyncingNow?: boolean
   error?: string
   statusInfo?: IntegrationStatusInfo
 }
@@ -301,15 +333,19 @@ const ProviderCard = memo(function ProviderCard({
   onConnect,
   onReconnect,
   onDisconnect,
+  onSyncNow,
 }: {
   state: ProviderState
   onConnect: (provider: ProviderConfig) => void
   onReconnect: (provider: ProviderConfig) => void
   onDisconnect: (provider: ProviderConfig) => void
+  onSyncNow: (provider: ProviderConfig) => void
 }) {
-  const { provider, isConnected, isConnecting, error, statusInfo } = state
+  const { provider, isConnected, isConnecting, isSyncingNow = false, error, statusInfo } = state
   const Icon = provider.icon
   const providerInfo = PROVIDER_INFO[provider.id as keyof typeof PROVIDER_INFO]
+
+  const stale = isSyncStale(statusInfo)
 
   const handleConnectClick = useCallback(() => {
     onConnect(provider)
@@ -323,8 +359,12 @@ const ProviderCard = memo(function ProviderCard({
     onDisconnect(provider)
   }, [onDisconnect, provider])
 
-  const statusVariant = getStatusBadgeVariant(statusInfo?.status, isConnected)
-  const statusLabel = getStatusLabel(statusInfo?.status, isConnected)
+  const handleSyncNowClick = useCallback(() => {
+    onSyncNow(provider)
+  }, [onSyncNow, provider])
+
+  const statusVariant = getStatusBadgeVariant(statusInfo?.status, isConnected, stale)
+  const statusLabel = getStatusLabel(statusInfo?.status, isConnected, stale)
   const lastSyncLabel = formatLastSync(statusInfo?.lastSyncedAt)
   const accountLabel =
     typeof statusInfo?.accountName === 'string' && statusInfo.accountName.length > 0
@@ -346,9 +386,9 @@ const ProviderCard = memo(function ProviderCard({
       {isConnected && (
         <div className={cn(
           'absolute left-0 top-0 h-1 w-full',
-          statusInfo?.status === 'error' && 'bg-destructive',
-          statusInfo?.status === 'pending' && 'bg-amber-400',
-          statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && (theme?.indicator || 'bg-primary')
+          (statusInfo?.status === 'error' || stale) && 'bg-destructive',
+          statusInfo?.status === 'pending' && !stale && 'bg-amber-400',
+          statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && !stale && (theme?.indicator || 'bg-primary')
         )} />
       )}
 
@@ -377,13 +417,13 @@ const ProviderCard = memo(function ProviderCard({
         {/* Status badge and last sync */}
         <div className="flex items-center justify-between">
           <Badge variant={statusVariant} className="rounded-full text-xs">
-            {statusInfo?.status === 'pending' && (
+            {statusInfo?.status === 'pending' && !stale && (
               <Loader2 className="mr-1 h-3 w-3 animate-spin" />
             )}
-            {statusInfo?.status === 'error' && (
+            {(statusInfo?.status === 'error' || stale) && (
               <AlertTriangle className="mr-1 h-3 w-3" />
             )}
-            {isConnected && statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && (
+            {isConnected && statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && !stale && (
               <Check className="mr-1 h-3 w-3" />
             )}
             {statusLabel}
@@ -431,6 +471,16 @@ const ProviderCard = memo(function ProviderCard({
           </Alert>
         )}
 
+        {/* Stale sync alert */}
+        {stale && (
+          <Alert variant="destructive" className="py-2">
+            <AlertTriangle className="h-3 w-3" />
+            <AlertDescription className="text-xs">
+              Sync is taking longer than expected.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Action buttons */}
         <div className="flex gap-2">
           {!isConnected ? (
@@ -452,23 +502,43 @@ const ProviderCard = memo(function ProviderCard({
             </Button>
           ) : (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                disabled={isConnecting}
-                onClick={handleReconnectClick}
-              >
-                {isConnecting ? (
-                  <>
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                    Connecting…
-                  </>
-                ) : (
-                  'Reconnect'
-                )}
-              </Button>
+              {(stale || statusInfo?.status === 'error') ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1"
+                  disabled={isSyncingNow}
+                  onClick={handleSyncNowClick}
+                >
+                  {isSyncingNow ? (
+                    <>
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      Syncing…
+                    </>
+                  ) : (
+                    'Sync now'
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  disabled={isConnecting}
+                  onClick={handleReconnectClick}
+                >
+                  {isConnecting ? (
+                    <>
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      Connecting…
+                    </>
+                  ) : (
+                    'Reconnect'
+                  )}
+                </Button>
+              )}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>

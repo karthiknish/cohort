@@ -100,6 +100,7 @@ export default function AdsPage() {
     integrationStatuses,
     integrationStatusMap,
     automationStatuses,
+    syncingProviders,
     metaSetupMessage,
     googleSetupMessage,
     tiktokSetupMessage,
@@ -122,6 +123,7 @@ export default function AdsPage() {
     handleConnect,
     handleDisconnect,
     handleOauthRedirect,
+    handleSyncNow,
     initializeGoogleIntegration,
     initializeMetaIntegration,
     initializeTikTokIntegration,
@@ -266,6 +268,8 @@ export default function AdsPage() {
                 onConnect={handleConnect}
                 onDisconnect={handleDisconnect}
                 onOauthRedirect={handleOauthRedirect}
+                onSyncNow={handleSyncNow}
+                syncingProviders={syncingProviders}
                 onRefresh={handleManualRefresh}
                 refreshing={metricsLoading}
               />

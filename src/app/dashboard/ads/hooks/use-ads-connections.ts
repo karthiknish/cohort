@@ -94,6 +94,7 @@ export interface UseAdsConnectionsReturn {
   integrationStatuses: IntegrationStatusResponse | null
   integrationStatusMap: Record<string, IntegrationStatusInfo>
   automationStatuses: IntegrationStatus[]
+  syncingProviders: Record<string, boolean>
 
   // Setup messages
   googleSetupMessage: string | null
@@ -120,6 +121,7 @@ export interface UseAdsConnectionsReturn {
   handleConnect: (providerId: string, action: () => Promise<void>) => Promise<void>
   handleDisconnect: (providerId: string, options?: DisconnectOptions) => Promise<void>
   handleOauthRedirect: (providerId: string) => Promise<void>
+  handleSyncNow: (providerId: string) => Promise<void>
   initializeGoogleIntegration: (clientIdOverride?: string | null, accountIdOverride?: string | null) => Promise<void>
   initializeMetaIntegration: (clientIdOverride?: string | null, accountIdOverride?: string | null) => Promise<void>
   initializeTikTokIntegration: (clientIdOverride?: string | null) => Promise<void>
@@ -211,6 +213,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const [connectionErrors, setConnectionErrors] = useState<Record<string, string>>({})
   const [connectedProviders, setConnectedProviders] = useState<Record<string, boolean>>({})
   const [integrationStatuses, setIntegrationStatuses] = useState<IntegrationStatusResponse | null>(null)
+  const [syncingProviders, setSyncingProviders] = useState<Record<string, boolean>>({})
 
   // Setup state
   const [googleSetupMessage, setGoogleSetupMessage] = useState<string | null>(null)
@@ -300,6 +303,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   ]
 
   const initializeAdAccount = useAction(adsIntegrationsApi.initializeAdAccount)
+  const runManualSyncAction = useAction(adsIntegrationsApi.runManualSync)
   const listGoogleAdAccounts = useAction(adsIntegrationsApi.listGoogleAdAccounts)
   const listMetaAdAccounts = useAction(adsIntegrationsApi.listMetaAdAccounts)
   const deleteAdIntegrationMutation = useMutation(adsIntegrationsApi.deleteAdIntegration)
@@ -831,6 +835,32 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     workspaceId,
   ])
 
+  const handleSyncNow = useCallback(async (providerId: string) => {
+    if (!workspaceId) {
+      toast({ variant: 'destructive', title: 'Sync failed', description: ERROR_MESSAGES.SIGN_IN_REQUIRED })
+      return
+    }
+
+    setSyncingProviders((prev) => ({ ...prev, [providerId]: true }))
+
+    try {
+      await runManualSyncAction({
+        workspaceId,
+        providerId,
+        clientId: selectedClientId ?? null,
+      })
+
+      toast({ title: 'Sync complete', description: `${formatProviderName(providerId)} data has been refreshed.` })
+      triggerRefresh()
+    } catch (error: unknown) {
+      logError(error, 'useAdsConnections:handleSyncNow')
+      const message = asErrorMessage(error)
+      toast({ variant: 'destructive', title: 'Sync failed', description: message })
+    } finally {
+      setSyncingProviders((prev) => ({ ...prev, [providerId]: false }))
+    }
+  }, [runManualSyncAction, selectedClientId, toast, triggerRefresh, workspaceId])
+
   return {
     // State
     connectedProviders,
@@ -839,6 +869,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     integrationStatuses,
     integrationStatusMap,
     automationStatuses,
+    syncingProviders,
 
     // Setup messages
     googleSetupMessage,
@@ -865,6 +896,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     handleConnect,
     handleDisconnect,
     handleOauthRedirect,
+    handleSyncNow,
     initializeGoogleIntegration,
     initializeMetaIntegration,
     initializeTikTokIntegration,
