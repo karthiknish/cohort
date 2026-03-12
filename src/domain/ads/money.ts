@@ -74,27 +74,28 @@ export function resolveMetricCurrency(options: {
 /**
  * Determine financial comparability across a collection of currency labels.
  *
- * null / empty entries count as "unknown" and make comparability non-single.
+ * null / undefined entries are treated as "unknown" (legacy rows written before currency
+ * stamping was introduced). Unknown rows do NOT make comparability non-single — only
+ * rows with genuinely DIFFERENT known currencies do.
+ *
+ * - single_currency: all known rows share the same currency (unknowns assumed same)
+ * - mixed_currency: known rows have two or more distinct currencies
+ * - unknown_currency: no known currency in the set at all
  */
 export function assessComparability(
   currencies: Array<string | null | undefined>,
 ): FinancialComparability {
   const unique = new Set<string>()
-  let hasUnknown = false
 
   for (const c of currencies) {
     const cleaned = cleanCurrency(c)
-    if (cleaned) {
-      unique.add(cleaned)
-    } else {
-      hasUnknown = true
-    }
+    if (cleaned) unique.add(cleaned)
   }
 
   if (unique.size === 0) return 'unknown_currency'
   if (unique.size > 1) return 'mixed_currency'
-  // unique.size === 1, but if there are rows without currency we can't confirm single
-  if (hasUnknown) return 'mixed_currency'
+  // unique.size === 1: all identified rows share one currency.
+  // Unknown/null rows are treated as the same currency (legacy unstamped data).
   return 'single_currency'
 }
 

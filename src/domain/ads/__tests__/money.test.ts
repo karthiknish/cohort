@@ -97,10 +97,16 @@ describe('assessComparability', () => {
     expect(assessComparability([null, undefined, null])).toBe('unknown_currency')
   })
 
-  it('returns mixed_currency when some currencies are known and some are null', () => {
-    // A mix of known and unknown cannot be confirmed as single-currency
-    expect(assessComparability(['USD', null])).toBe('mixed_currency')
-    expect(assessComparability([null, 'EUR'])).toBe('mixed_currency')
+  it('returns single_currency when some currencies are known and some are null', () => {
+    // Null/unknown rows are legacy rows without currency stamping — they are assumed
+    // to belong to the same currency as the identified rows when there is only one.
+    expect(assessComparability(['USD', null])).toBe('single_currency')
+    expect(assessComparability([null, 'EUR'])).toBe('single_currency')
+    expect(assessComparability(['INR', null, null, 'INR'])).toBe('single_currency')
+  })
+
+  it('returns mixed_currency when known currencies differ regardless of nulls', () => {
+    expect(assessComparability(['USD', null, 'EUR'])).toBe('mixed_currency')
   })
 
   it('returns single_currency for a single entry', () => {
