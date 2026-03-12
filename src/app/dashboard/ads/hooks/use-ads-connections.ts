@@ -3,21 +3,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAction, useConvexAuth, useMutation, useQuery } from 'convex/react'
-import { SiGoogleads, SiMeta, SiLinkedin, SiTiktok } from 'react-icons/si'
+import { SiGoogleads, SiLinkedin, SiMeta, SiTiktok } from 'react-icons/si'
 
 import { useAuth } from '@/contexts/auth-context'
 import { useClientContext } from '@/contexts/client-context'
 import { usePreview } from '@/contexts/preview-context'
-import { useToast } from '@/components/ui/use-toast'
-import { getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
+import { normalizeAdsProviderId } from '@/domain/ads/provider'
 import { adsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
-
+import { getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
+import { useToast } from '@/components/ui/use-toast'
 
 import type { AdPlatform, IntegrationStatus, IntegrationStatusResponse } from '../components/types'
 
 import { formatProviderName } from '../components/utils'
-import { normalizeProviderId } from '@/lib/themes'
 import {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
@@ -28,7 +27,7 @@ import {
 // Raw providerId values that are genuine ads platforms.
 // This is checked against the raw DB value BEFORE normalization so that
 // analytics-only providers like 'google-analytics' are excluded even though
-// normalizeProviderId maps them to 'google' (which IS a valid ads provider).
+// their canonical form is the same as the ads provider root.
 const RAW_ADS_PROVIDER_IDS = new Set(['google', 'facebook', 'linkedin', 'tiktok'])
 
 
@@ -174,13 +173,13 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     const rows = Array.isArray(convexStatuses) ? convexStatuses : []
 
     // Filter to genuine ads providers on the raw providerId BEFORE normalization.
-    // normalizeProviderId maps 'google-analytics' → 'google', which would otherwise
-    // pass an ADS_PROVIDER_IDS check on the normalized value.
+    // normalizeAdsProviderId returns null for analytics-only providers (e.g. 'google-analytics'),
+    // but we guard with RAW_ADS_PROVIDER_IDS to ensure only known ads platforms pass.
     const seenProviders = new Set<string>()
     const statuses = rows
       .filter((row) => RAW_ADS_PROVIDER_IDS.has(String(row.providerId).trim().toLowerCase()))
       .map((row) => ({
-        providerId: normalizeProviderId(String(row.providerId)),
+        providerId: normalizeAdsProviderId(String(row.providerId)) ?? String(row.providerId).trim().toLowerCase(),
         status: String(row.lastSyncStatus ?? 'never'),
         message: row.lastSyncMessage ?? null,
         lastSyncedAt: typeof row.lastSyncedAtMs === 'number' ? new Date(row.lastSyncedAtMs).toISOString() : null,
@@ -228,6 +227,8 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const [selectedMetaAccountId, setSelectedMetaAccountId] = useState('')
   const [loadingMetaAccountOptions, setLoadingMetaAccountOptions] = useState(false)
 
+  // Reset account selection state when the active client changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: selectedClientId is an intentional trigger; only stable setters are called inside
   useEffect(() => {
     setGoogleAccountOptions([])
     setSelectedGoogleAccountId('')

@@ -8,6 +8,9 @@ import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
 import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
 import type { NormalizedMetric } from '@/types/integrations'
 import { Errors, withErrorHandling } from './errors'
+import { resolveMetricCurrency } from '@/domain/ads/money'
+import { normalizeSurfaceId } from '@/domain/ads/provider'
+import type { CanonicalAdsProviderId } from '@/domain/ads/provider'
 
 function isTokenExpiringSoon(expiresAtMs: number | null | undefined): boolean {
   if (typeof expiresAtMs !== 'number' || !Number.isFinite(expiresAtMs)) return false
@@ -168,22 +171,39 @@ export const processClaimedJob = internalAction({
 
       const insertResult = await ctx.runMutation(internal.adsIntegrations.writeMetricsBatchInternal, {
         workspaceId: args.workspaceId,
-        metrics: metrics.map((metric) => ({
-          providerId: metric.providerId,
-          clientId,
-          accountId: metric.accountId ?? null,
-          publisherPlatform: metric.publisherPlatform ?? null,
-          date: metric.date,
-          spend: metric.spend,
-          impressions: metric.impressions,
-          clicks: metric.clicks,
-          conversions: metric.conversions,
-          revenue: metric.revenue ?? null,
-          campaignId: metric.campaignId,
-          campaignName: metric.campaignName,
-          creatives: metric.creatives,
-          rawPayload: normalizeRawPayload(metric.rawPayload),
-        })),
+        metrics: metrics.map((metric) => {
+          // Stamp currency at write time so read-time joins are not required.
+          // Priority: currency on the metric row > integration-level account currency.
+          const providerId = metric.providerId as CanonicalAdsProviderId
+          const resolved = resolveMetricCurrency({
+            metricCurrency: null, // individual rows don't carry currency; resolved from integration
+            integrationCurrency: integration.currency ?? null,
+            providerDefaultCurrency: integration.currency ?? null,
+          })
+
+          // Canonical surface id derived from publisherPlatform (primarily Meta breakdowns).
+          const surfaceId = normalizeSurfaceId(providerId, metric.publisherPlatform ?? null)
+
+          return {
+            providerId: metric.providerId,
+            clientId,
+            accountId: metric.accountId ?? null,
+            surfaceId,
+            publisherPlatform: metric.publisherPlatform ?? null,
+            currency: resolved.currency,
+            currencySource: resolved.source,
+            date: metric.date,
+            spend: metric.spend,
+            impressions: metric.impressions,
+            clicks: metric.clicks,
+            conversions: metric.conversions,
+            revenue: metric.revenue ?? null,
+            campaignId: metric.campaignId,
+            campaignName: metric.campaignName,
+            creatives: metric.creatives,
+            rawPayload: normalizeRawPayload(metric.rawPayload),
+          }
+        }),
       })
 
       return { metricsInserted: insertResult?.inserted ?? 0 }

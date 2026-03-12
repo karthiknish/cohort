@@ -501,7 +501,12 @@ export class AuthService {
     throw new ServiceUnavailableError('Google Workspace OAuth did not return a URL')
   }
 
-  async startMetaOauth(redirect?: string, clientId?: string | null): Promise<{ url: string }> {
+  async startMetaOauth(
+    redirect?: string,
+    clientId?: string | null,
+    surface?: 'facebook' | 'instagram',
+    entryPoint?: 'socials' | 'ads',
+  ): Promise<{ url: string }> {
     if (redirect && !isValidRedirectUrl(redirect)) {
       throw new ValidationError('Invalid redirect URL')
     }
@@ -511,6 +516,8 @@ export class AuthService {
     const params = new URLSearchParams()
     if (redirect) params.set('redirect', redirect)
     if (clientId) params.set('clientId', clientId)
+    if (surface) params.set('surface', surface)
+    if (entryPoint) params.set('entryPoint', entryPoint)
     const search = params.toString() ? `?${params.toString()}` : ''
 
     const fetchMetaOauthUrl = async () => await fetch(`/api/integrations/meta/oauth/url${search}`, {

@@ -1,6 +1,6 @@
 'use client'
 
-import { Activity, Gauge, MousePointerClick, Wallet } from 'lucide-react'
+import { Eye, TrendingUp, Users, UserPlus } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
@@ -13,10 +13,10 @@ type SocialKpi = {
 }
 
 const KPI_ICONS = {
-  ctr: MousePointerClick,
-  roas: Wallet,
-  cpa: Activity,
-  efficiency: Gauge,
+  reach: Eye,
+  impressions: TrendingUp,
+  engaged_users: Users,
+  follower_growth: UserPlus,
 } as const
 
 type SocialsKpiGridProps = {
@@ -27,7 +27,7 @@ export function SocialsKpiGrid({ items }: SocialsKpiGridProps) {
   return (
     <div className={DASHBOARD_THEME.stats.container}>
       {items.map((item) => {
-        const Icon = KPI_ICONS[item.id as keyof typeof KPI_ICONS] ?? Gauge
+        const Icon = KPI_ICONS[item.id as keyof typeof KPI_ICONS] ?? TrendingUp
 
         return (
           <Card

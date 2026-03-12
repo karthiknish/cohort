@@ -31,7 +31,14 @@ export const GET = createApiHandler(
 
       if (error) {
         console.error('[meta.oauth.callback] OAuth error from Meta:', { error, errorReason, errorDescription })
-        const errorUrl = new URL('/dashboard/ads', appUrl)
+        // Try to decode state to learn entryPoint for the error redirect
+        let errorEntryPoint: 'socials' | 'ads' = 'ads'
+        try {
+          const ctx = validateMetaOAuthState(state ?? '')
+          if (ctx.entryPoint === 'socials') errorEntryPoint = 'socials'
+        } catch { /* ignore state errors during error handling */ }
+        const errorPath = errorEntryPoint === 'socials' ? '/dashboard/socials' : '/dashboard/ads'
+        const errorUrl = new URL(errorPath, appUrl)
         errorUrl.searchParams.set('oauth_error', 'meta_error')
         errorUrl.searchParams.set('provider', 'facebook')
         errorUrl.searchParams.set('message', errorDescription || error)
@@ -50,7 +57,7 @@ export const GET = createApiHandler(
       }
 
       // Validate state to prevent CSRF attacks
-      let context
+      let context: ReturnType<typeof validateMetaOAuthState> | undefined
       try {
         context = validateMetaOAuthState(state ?? '')
       } catch (stateError) {
@@ -73,7 +80,8 @@ export const GET = createApiHandler(
 
       console.log(`[meta.oauth.callback] Successfully completed OAuth for user ${context.state}`)
 
-      let redirectTarget = context.redirect ?? `${appUrl}/dashboard/ads`
+      const defaultSuccessPath = context.entryPoint === 'socials' ? '/dashboard/socials' : '/dashboard/ads'
+      let redirectTarget = context.redirect ?? `${appUrl}${defaultSuccessPath}`
 
       // Standardize success signaling via query parameters
       const url = new URL(redirectTarget, appUrl)
@@ -82,11 +90,15 @@ export const GET = createApiHandler(
       if (context.clientId) {
         url.searchParams.set('clientId', context.clientId)
       }
+      if (context.surface) {
+        url.searchParams.set('surface', context.surface)
+      }
       redirectTarget = url.toString()
 
       // Final safety check on redirect target
       if (!isValidRedirectUrl(redirectTarget)) {
-        return NextResponse.redirect(new URL('/dashboard/ads?oauth_success=true&provider=facebook', req.url))
+        const fallbackPath = context.entryPoint === 'socials' ? '/dashboard/socials' : '/dashboard/ads'
+        return NextResponse.redirect(new URL(`${fallbackPath}?oauth_success=true&provider=facebook`, req.url))
       }
 
       return NextResponse.redirect(new URL(redirectTarget, req.url))

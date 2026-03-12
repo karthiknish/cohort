@@ -8,6 +8,10 @@ import { isValidRedirectUrl } from '@/lib/utils'
 const querySchema = z.object({
   redirect: z.string().optional(),
   clientId: z.string().optional(),
+  /** Which Meta surface the user clicked: 'facebook' | 'instagram'. Forwarded in state. */
+  surface: z.enum(['facebook', 'instagram']).optional(),
+  /** Entry point that initiated login: 'socials' | 'ads'. Used for default redirect. */
+  entryPoint: z.enum(['socials', 'ads']).optional(),
 })
 
 export const POST = createApiHandler(
@@ -30,7 +34,9 @@ export const POST = createApiHandler(
       throw new ServiceUnavailableError('Meta business login is not configured')
     }
 
-    const redirect = query.redirect ?? `${appUrl}/dashboard/ads`
+    // Default redirect depends on entry point: socials goes back to /dashboard/socials
+    const defaultRedirectPath = query.entryPoint === 'socials' ? '/dashboard/socials' : '/dashboard/ads'
+    const redirect = query.redirect ?? `${appUrl}${defaultRedirectPath}`
 
     // Validate redirect URL to prevent Open Redirect vulnerabilities
     if (!isValidRedirectUrl(redirect)) {
@@ -41,7 +47,13 @@ export const POST = createApiHandler(
       ? query.clientId.trim()
       : null
 
-    const statePayload = createMetaOAuthState({ state: auth.uid, redirect, clientId })
+    const statePayload = createMetaOAuthState({
+      state: auth.uid,
+      redirect,
+      clientId,
+      surface: query.surface,
+      entryPoint: query.entryPoint,
+    })
     const loginUrl = buildMetaBusinessLoginUrl({
       businessConfigId,
       appId,

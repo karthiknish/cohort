@@ -11,6 +11,10 @@ interface MetaOAuthContext {
   state: string
   redirect?: string
   clientId?: string | null
+  /** Which Meta surface initiated the login (for routing post-auth). */
+  surface?: 'facebook' | 'instagram'
+  /** Which app entry point initiated the login (determines default redirect). */
+  entryPoint?: 'socials' | 'ads'
   createdAt: number
 }
 

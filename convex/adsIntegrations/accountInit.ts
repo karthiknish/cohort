@@ -179,6 +179,7 @@ export const initializeAdAccount = action({
         clientId,
         accountId: preferredAccount.id,
         accountName: preferredAccount.name,
+        currency: preferredAccount.currency ?? null,
         linkedAtMs,
       })
 
@@ -274,6 +275,7 @@ export const initializeAdAccount = action({
       clientId,
       accountId: preferredAccount.id,
       accountName: preferredAccount.name,
+      currency: preferredAccount.currency ?? null,
       linkedAtMs,
     })
 

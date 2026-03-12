@@ -1,20 +1,21 @@
-import { normalizeProviderId, PROVIDER_IDS } from '@/lib/themes'
+import { normalizeAdsProviderId, isCanonicalAdsProvider } from '@/domain/ads/provider'
 
 import type { MetricRecord, ProviderSummary } from '../components/types'
 
-const ADS_PROVIDER_IDS = new Set<string>([
-  PROVIDER_IDS.GOOGLE,
-  PROVIDER_IDS.FACEBOOK,
-  PROVIDER_IDS.LINKEDIN,
-  PROVIDER_IDS.TIKTOK,
+const NON_ADS_PROVIDER_ALIASES = new Set([
+  'google_analytics',
+  'google-analytics',
+  'googleanalytics',
+  'ga',
+  'ga4',
 ])
-
-const NON_ADS_PROVIDER_ALIASES = new Set(['google_analytics', 'google-analytics', 'googleanalytics', 'ga', 'ga4'])
 
 export type RealtimeMetricRow = {
   providerId?: string | null
   accountId?: string | null
   currency?: string | null
+  currencySource?: string | null
+  surfaceId?: string | null
   publisherPlatform?: string | null
   campaignId?: string | null
   date?: string | null
@@ -27,17 +28,20 @@ export type RealtimeMetricRow = {
 }
 
 export function isAdsProviderId(providerId: string | null | undefined): boolean {
-  const rawProviderId = String(providerId ?? '').trim().toLowerCase()
-  if (!rawProviderId || NON_ADS_PROVIDER_ALIASES.has(rawProviderId)) {
-    return false
-  }
-
-  return ADS_PROVIDER_IDS.has(normalizeProviderId(rawProviderId))
+  const raw = String(providerId ?? '').trim().toLowerCase()
+  if (!raw || NON_ADS_PROVIDER_ALIASES.has(raw)) return false
+  return isCanonicalAdsProvider(raw)
 }
 
 export function mapRealtimeMetricRow(row: RealtimeMetricRow): MetricRecord {
-  const normalizedProviderId = normalizeProviderId(String(row.providerId ?? 'unknown'))
+  const normalizedProviderId =
+    normalizeAdsProviderId(String(row.providerId ?? 'unknown')) ?? String(row.providerId ?? 'unknown')
   const accountId = typeof row.accountId === 'string' ? row.accountId : null
+  const currency = typeof row.currency === 'string' && row.currency.length > 0 ? row.currency : null
+  const currencySource = typeof row.currencySource === 'string' ? row.currencySource : null
+  const surfaceId = typeof row.surfaceId === 'string' && row.surfaceId.length > 0
+    ? row.surfaceId
+    : null
   const publisherPlatform = typeof row.publisherPlatform === 'string' && row.publisherPlatform.length > 0
     ? row.publisherPlatform
     : null
@@ -47,11 +51,16 @@ export function mapRealtimeMetricRow(row: RealtimeMetricRow): MetricRecord {
   const createdAtMs = typeof row.createdAtMs === 'number' ? row.createdAtMs : null
   const date = String(row.date ?? '')
 
+  // Dedup key includes surfaceId (canonical) so Meta surface breakdowns are preserved.
+  const surface = surfaceId ?? publisherPlatform ?? ''
+
   return {
-    id: `${normalizedProviderId}:${accountId ?? ''}:${publisherPlatform ?? ''}:${campaignId ?? ''}:${date}:${createdAtMs ?? ''}`,
+    id: `${normalizedProviderId}:${accountId ?? ''}:${surface}:${campaignId ?? ''}:${date}:${createdAtMs ?? ''}`,
     providerId: normalizedProviderId,
     accountId,
-    currency: typeof row.currency === 'string' ? row.currency : null,
+    currency,
+    currencySource: currencySource as MetricRecord['currencySource'],
+    surfaceId,
     publisherPlatform,
     campaignId,
     date,
@@ -76,7 +85,8 @@ export function buildProviderSummariesFromServer(
       return acc
     }
 
-    const normalizedProviderId = normalizeProviderId(providerId)
+    const normalizedProviderId =
+      normalizeAdsProviderId(providerId) ?? providerId
     const providerSummary = acc[normalizedProviderId] ?? {
       spend: 0,
       impressions: 0,

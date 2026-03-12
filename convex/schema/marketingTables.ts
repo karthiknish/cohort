@@ -171,7 +171,16 @@ export const marketingTables = {
     providerId: v.string(),
     clientId: v.union(v.string(), v.null()),
     accountId: v.union(v.string(), v.null()),
+    /** Canonical surface id (e.g. 'facebook', 'instagram', 'audience_network'). */
+    surfaceId: v.optional(v.union(v.string(), v.null())),
+    /** Legacy: kept as transitional alias for surfaceId on Meta rows. */
     publisherPlatform: v.optional(v.union(v.string(), v.null())),
+    /** Native account currency for this metric row (e.g. 'USD', 'INR'). */
+    currency: v.optional(v.union(v.string(), v.null())),
+    /** How currency was determined: stamped at write time by the sync worker. */
+    currencySource: v.optional(
+      v.union(v.literal('metric'), v.literal('integration'), v.literal('unknown'), v.null()),
+    ),
     date: v.string(),
     spend: v.number(),
     impressions: v.number(),
@@ -201,4 +210,104 @@ export const marketingTables = {
   })
     .index('by_workspace_provider_date', ['workspaceId', 'providerId', 'date'])
     .index('by_workspace_date', ['workspaceId', 'date']),
+
+  // ==========================================================================
+  // SOCIAL ORGANIC METRICS
+  // Separate from adMetrics — these rows come from Page/Profile Insights APIs,
+  // not from ad-account reporting. No spend/ROAS/CPA fields.
+  // ==========================================================================
+
+  /**
+   * Daily aggregated organic metrics per surface entity (Page or IG profile).
+   * Dedup key: workspaceId + clientId + surface + entityId + date.
+   */
+  socialMetricsDaily: defineTable({
+    workspaceId: v.string(),
+    clientId: v.union(v.string(), v.null()),
+    /** 'facebook' | 'instagram' */
+    surface: v.string(),
+    /** Facebook Page ID or Instagram Business Account ID */
+    entityId: v.string(),
+    entityName: v.union(v.string(), v.null()),
+    /** ISO date string YYYY-MM-DD */
+    date: v.string(),
+    // Delivery
+    impressions: v.number(),
+    reach: v.number(),
+    // Engagement
+    engagedUsers: v.number(),
+    reactions: v.optional(v.number()),
+    comments: v.optional(v.number()),
+    shares: v.optional(v.number()),
+    saves: v.optional(v.number()),
+    // Growth
+    followerCount: v.optional(v.number()),
+    followerDelta: v.optional(v.number()),
+    /** Derived: engagedUsers / reach (null when reach = 0) */
+    engagementRate: v.optional(v.union(v.number(), v.null())),
+    /** Raw API payload for debugging */
+    rawPayload: v.optional(jsonLayer2Validator),
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_surface_date', ['workspaceId', 'surface', 'date'])
+    .index('by_workspace_client_surface_entity_date', ['workspaceId', 'clientId', 'surface', 'entityId', 'date']),
+
+  /**
+   * Post/media-level organic performance.
+   * Dedup key: workspaceId + clientId + surface + contentId.
+   */
+  socialContentMetrics: defineTable({
+    workspaceId: v.string(),
+    clientId: v.union(v.string(), v.null()),
+    /** 'facebook' | 'instagram' */
+    surface: v.string(),
+    /** Facebook Post ID or Instagram Media ID */
+    contentId: v.string(),
+    entityId: v.string(),
+    entityName: v.union(v.string(), v.null()),
+    /** Post publish date ISO string */
+    publishedAt: v.union(v.string(), v.null()),
+    contentType: v.union(v.string(), v.null()),
+    contentUrl: v.union(v.string(), v.null()),
+    message: v.union(v.string(), v.null()),
+    impressions: v.number(),
+    reach: v.number(),
+    engagedUsers: v.number(),
+    reactions: v.optional(v.number()),
+    comments: v.optional(v.number()),
+    shares: v.optional(v.number()),
+    saves: v.optional(v.number()),
+    videoViews: v.optional(v.number()),
+    engagementRate: v.optional(v.union(v.number(), v.null())),
+    rawPayload: v.optional(jsonLayer2Validator),
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_surface_entity', ['workspaceId', 'surface', 'entityId'])
+    .index('by_workspace_client_surface', ['workspaceId', 'clientId', 'surface']),
+
+  /**
+   * Social sync job queue — separate from adSyncJobs.
+   */
+  socialSyncJobs: defineTable({
+    workspaceId: v.string(),
+    clientId: v.union(v.string(), v.null()),
+    /** 'facebook' | 'instagram' | null = both */
+    surface: v.union(v.string(), v.null()),
+    jobType: v.union(
+      v.literal('initial-backfill'),
+      v.literal('scheduled-sync'),
+      v.literal('manual-sync')
+    ),
+    timeframeDays: v.number(),
+    status: v.union(v.literal('queued'), v.literal('running'), v.literal('success'), v.literal('error')),
+    createdAtMs: v.number(),
+    startedAtMs: v.union(v.number(), v.null()),
+    processedAtMs: v.union(v.number(), v.null()),
+    errorMessage: v.union(v.string(), v.null()),
+  })
+    .index('by_workspace_status_createdAt', ['workspaceId', 'status', 'createdAtMs'])
+    .index('by_workspace_client_surface_status', ['workspaceId', 'clientId', 'surface', 'status'])
+    .index('by_status_processedAt', ['status', 'processedAtMs']),
 }

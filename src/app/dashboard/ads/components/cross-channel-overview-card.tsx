@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
-import { normalizeProviderId } from '@/lib/themes'
+import { normalizeAdsProviderId } from '@/domain/ads/provider'
 
 import type { MetricRecord, MetricsSummary, SummaryCard, Totals } from './types'
 import type { DateRange } from './date-range-picker'
@@ -30,7 +30,7 @@ interface CrossChannelOverviewCardProps {
 export function CrossChannelOverviewCard({
   processedMetrics,
   serverSideSummary,
-  currency = 'USD',
+  currency,
   hasMetricData,
   initialMetricsLoading,
   metricsLoading,
@@ -43,14 +43,14 @@ export function CrossChannelOverviewCard({
   const summaryProviders = useMemo(() => {
     if (!serverSideSummary?.providers) return []
     return Object.keys(serverSideSummary.providers)
-      .map((providerId) => normalizeProviderId(providerId))
+      .map((providerId) => normalizeAdsProviderId(providerId) ?? providerId)
       .sort()
   }, [serverSideSummary])
 
   // Get unique providers from the data
   const availableProviders = useMemo(() => {
     const providers = new Set<string>([
-      ...processedMetrics.map((m) => normalizeProviderId(m.providerId)),
+      ...processedMetrics.map((m) => normalizeAdsProviderId(m.providerId) ?? m.providerId),
       ...summaryProviders,
     ])
     return Array.from(providers).sort()
@@ -59,13 +59,13 @@ export function CrossChannelOverviewCard({
   // Filter metrics by selected providers
   const filteredMetrics = useMemo(() => {
     if (selectedProviders.length === 0) return processedMetrics
-    return processedMetrics.filter((m) => selectedProviders.includes(normalizeProviderId(m.providerId)))
+    return processedMetrics.filter((m) => selectedProviders.includes(normalizeAdsProviderId(m.providerId) ?? m.providerId))
   }, [processedMetrics, selectedProviders])
 
   const normalizedServerProviders = useMemo(() => {
     if (!serverSideSummary?.providers) return {}
     return Object.entries(serverSideSummary.providers).reduce<Record<string, Totals>>((acc, [providerId, totals]) => {
-      const normalized = normalizeProviderId(providerId)
+      const normalized = normalizeAdsProviderId(providerId) ?? providerId
       const current = acc[normalized] ?? { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
       current.spend += Number(totals.spend ?? 0)
       current.impressions += Number(totals.impressions ?? 0)
@@ -85,7 +85,7 @@ export function CrossChannelOverviewCard({
 
       return selectedProviders.reduce<Totals>(
         (acc, providerId) => {
-          const p = normalizedServerProviders[normalizeProviderId(providerId)]
+          const p = normalizedServerProviders[normalizeAdsProviderId(providerId) ?? providerId]
           if (!p) return acc
           acc.spend += p.spend
           acc.impressions += p.impressions
@@ -112,7 +112,10 @@ export function CrossChannelOverviewCard({
   }, [filteredMetrics, normalizedServerProviders, selectedProviders, serverSideSummary])
 
   // Calculate summary cards from filtered metrics
+  // fmtMoney guards financial values when currency is unknown (mixed-currency selection).
+
   const summaryCards: SummaryCard[] = useMemo(() => {
+    const fmtMoney = (amount: number) => currency ? formatCurrency(amount, currency) : 'Multi-currency'
     const hasData = filteredMetrics.length > 0 || filteredTotals.spend > 0 || filteredTotals.impressions > 0
     const averageCpc = filteredTotals.clicks > 0 ? filteredTotals.spend / filteredTotals.clicks : 0
     const roas = filteredTotals.spend > 0 ? filteredTotals.revenue / filteredTotals.spend : 0
@@ -124,7 +127,7 @@ export function CrossChannelOverviewCard({
       {
         id: 'spend',
         label: 'Total Spend',
-        value: formatCurrency(filteredTotals.spend, currency),
+        value: fmtMoney(filteredTotals.spend),
         helper: hasData ? 'All selected platforms combined' : 'Connect a platform to populate',
       },
       {
@@ -142,13 +145,13 @@ export function CrossChannelOverviewCard({
       {
         id: 'avg-cpc',
         label: 'Avg CPC',
-        value: filteredTotals.clicks > 0 ? formatCurrency(averageCpc, currency) : '—',
+        value: filteredTotals.clicks > 0 ? fmtMoney(averageCpc) : '—',
         helper: filteredTotals.clicks > 0 ? 'What each click cost on average' : 'Need click data to calculate',
       },
       {
         id: 'cpa',
         label: 'CPA',
-        value: cpa > 0 ? formatCurrency(cpa, currency) : '—',
+        value: cpa > 0 ? fmtMoney(cpa) : '—',
         helper: cpa > 0 ? 'Spend ÷ conversions (lower is better)' : 'Needs spend and conversions data',
       },
       {

@@ -13,13 +13,14 @@ import { getPreviewAdsMetrics } from '@/lib/preview-data'
 
 import { DEFAULT_DATE_RANGE_DAYS, ERROR_MESSAGES } from '../components/constants'
 import type { DateRange } from '../components/date-range-picker'
-import type { MetricRecord, MetricsSummary, ProviderSummary } from '../components/types'
+import type { MetricRecord, MetricsSummary, ProviderSummary, AdsInsightsSummary } from '../components/types'
 import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
 
 import {
   buildProviderSummariesFromServer,
   isAdsProviderId,
   mapRealtimeMetricRow,
+  type RealtimeMetricRow,
 } from './use-ads-metrics.helpers'
 
 function isAuthError(error: unknown): boolean {
@@ -42,6 +43,8 @@ export interface UseAdsMetricsReturn {
   processedMetrics: MetricRecord[]
   providerSummaries: Record<string, ProviderSummary>
   serverSideSummary: MetricsSummary | null
+  /** V2 currency-aware insights summary. Use this for financial display. */
+  adsInsightsSummary: AdsInsightsSummary | null
   hasMetricData: boolean
   
   // Loading states
@@ -92,6 +95,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
   const [visibleCount, setVisibleCount] = useState(METRICS_PAGE_SIZE)
   
   const [serverSideSummary, setServerSideSummary] = useState<MetricsSummary | null>(null)
+  const [adsInsightsSummary, setAdsInsightsSummary] = useState<AdsInsightsSummary | null>(null)
   
   const [dateRange, setDateRange] = useState<DateRange>(() => ({
     start: startOfDay(subDays(new Date(), DEFAULT_DATE_RANGE_DAYS - 1)),
@@ -189,16 +193,32 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
         }
   )
 
+  const metricsRealtimeV2 = useQuery(
+    api.adsMetrics.listMetricsWithSummaryV2,
+    isPreviewMode || !workspaceId || !canQueryConvex
+      ? 'skip'
+      : {
+          workspaceId,
+          clientId: selectedClientId ?? null,
+          startDate: dateRange.start.toISOString().split('T')[0],
+          endDate: dateRange.end.toISOString().split('T')[0],
+          limit: 1000,
+          aggregate: true,
+        }
+  )
+
   // Compute the full metric list from Convex (or preview)
   const metricsSource = useMemo(() => {
     if (isPreviewMode) return getPreviewAdsMetrics() as MetricRecord[]
     if (!workspaceId || !canQueryConvex) return [] as MetricRecord[]
 
-    const rows = Array.isArray(metricsRealtime?.metrics) ? metricsRealtime.metrics : []
-    return rows.filter((row) => isAdsProviderId(row.providerId)).map((row) => mapRealtimeMetricRow(row))
-  }, [isPreviewMode, metricsRealtime, canQueryConvex, workspaceId])
+    // Prefer V2 rows (carry surfaceId, currencySource); fall back to V1 if V2 not yet available.
+    const v2Rows = Array.isArray(metricsRealtimeV2?.metrics) ? metricsRealtimeV2.metrics : null
+    const v1Rows = Array.isArray(metricsRealtime?.metrics) ? metricsRealtime.metrics : []
+    const rows = (v2Rows ?? v1Rows) as RealtimeMetricRow[]
+    return rows.filter((row: RealtimeMetricRow) => isAdsProviderId(row.providerId)).map((row: RealtimeMetricRow) => mapRealtimeMetricRow(row))
+  }, [isPreviewMode, metricsRealtime, metricsRealtimeV2, canQueryConvex, workspaceId])
 
-  // Keep local pagination state but page client-side.
   const isConvexLoading =
     !isPreviewMode && Boolean(workspaceId && canQueryConvex) && metricsRealtime === undefined
 
@@ -222,6 +242,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
       setMetrics([])
       setNextCursor(null)
       setServerSideSummary(null)
+      setAdsInsightsSummary(null)
       return
     }
 
@@ -236,10 +257,14 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     const summary = !isPreviewMode && metricsRealtime?.summary ? metricsRealtime.summary : null
     setServerSideSummary(summary)
 
+    // Populate V2 currency-aware insights summary.
+    const v2Summary = !isPreviewMode && metricsRealtimeV2?.summary ? metricsRealtimeV2.summary : null
+    setAdsInsightsSummary(v2Summary as AdsInsightsSummary | null)
+
     const firstPage = metricsSource.slice(0, METRICS_PAGE_SIZE)
     setMetrics(firstPage)
     setNextCursor(metricsSource.length > METRICS_PAGE_SIZE ? 'more' : null)
-  }, [canQueryConvex, isConvexLoading, isPreviewMode, metricsRealtime, metricsSource, workspaceId])
+  }, [canQueryConvex, isConvexLoading, isPreviewMode, metricsRealtime, metricsRealtimeV2, metricsSource, workspaceId])
 
   // Keep nextCursor in sync with current visible count.
   useEffect(() => {
@@ -288,6 +313,7 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     processedMetrics,
     providerSummaries,
     serverSideSummary,
+    adsInsightsSummary,
     hasMetricData,
     
     // Loading states

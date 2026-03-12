@@ -1,73 +1,53 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { SocialSurfacePanel } from './social-surface-panel'
 
-vi.mock('@/app/dashboard/ads/components/algorithmic-insights-card', () => ({
-  AlgorithmicInsightsCard: () => <div>Insights mock</div>,
-}))
-
-vi.mock('@/app/dashboard/ads/components/metrics-table-card', () => ({
-  MetricsTableCard: () => <div>Metrics mock</div>,
-}))
-
-vi.mock('@/app/dashboard/ads/components/performance-summary-card', () => ({
-  PerformanceSummaryCard: () => <div>Summary mock</div>,
-}))
-
-vi.mock('./socials-kpi-grid', () => ({
-  SocialsKpiGrid: () => <div>KPI mock</div>,
-}))
-
-const baseProps = {
-  surface: 'facebook' as const,
-  items: [],
-  itemsLoading: false,
-  itemsError: null,
-  kpis: [],
-  providerSummaries: {},
-  metrics: [],
-  initialMetricsLoading: false,
-  metricsLoading: false,
-  metricError: null,
-  nextCursor: null,
-  loadingMore: false,
-  loadMoreError: null,
-  onRefresh: vi.fn(),
-  onRetryItems: vi.fn(),
-  onLoadMore: vi.fn(),
-  onExport: vi.fn(),
-  suggestions: {
-    analysis: null,
-    insights: [],
-    providerInsights: {},
-    budgetSuggestions: [],
-    globalEfficiencyScore: 0,
-    providerEfficiencyScores: {},
-    hasCriticalInsights: false,
-    hasWarningInsights: false,
-    insightCounts: { success: 0, warning: 0, info: 0, critical: 0 },
-  },
-}
+const organicKpis = [
+  { id: 'reach', label: 'Reach', value: '12.3K', detail: '45K total impressions this period' },
+  { id: 'impressions', label: 'Impressions', value: '45K', detail: 'Avg 3.7x per person reached' },
+  { id: 'engaged_users', label: 'Engaged Users', value: '1.2K', detail: '9.76% engagement rate' },
+  { id: 'follower_growth', label: 'Follower Growth', value: '+250', detail: '5,000 total followers this period' },
+]
 
 describe('SocialSurfacePanel', () => {
-  it('renders loading, error, and empty states for connected surfaces', () => {
-    const loadingMarkup = renderToStaticMarkup(
-      <SocialSurfacePanel {...baseProps} itemsLoading={true} />,
+  it('renders loading skeleton when overviewLoading is true', () => {
+    const markup = renderToStaticMarkup(
+      <SocialSurfacePanel
+        surface="facebook"
+        kpis={[]}
+        overviewLoading={true}
+        connected={true}
+      />,
     )
-    const errorMarkup = renderToStaticMarkup(
-      <SocialSurfacePanel {...baseProps} itemsError="Meta actor fetch failed" />,
-    )
-    const emptyMarkup = renderToStaticMarkup(<SocialSurfacePanel {...baseProps} />)
+    expect(markup).not.toContain('Facebook not connected')
+  })
 
-    expect(loadingMarkup).toContain('Loading surfaces…')
-    expect(loadingMarkup).toContain('skeleton-shimmer')
-    expect(loadingMarkup).not.toContain('No facebook surfaces available yet')
-    expect(errorMarkup).toContain('Unable to load connected surfaces')
-    expect(errorMarkup).toContain('Meta actor fetch failed')
-    expect(errorMarkup).toContain('Retry')
-    expect(emptyMarkup).toContain('No facebook surfaces available yet')
-    expect(emptyMarkup).toContain('Retry discovery')
+  it('renders organic KPI grid when connected and data loaded', () => {
+    const markup = renderToStaticMarkup(
+      <SocialSurfacePanel
+        surface="facebook"
+        kpis={organicKpis}
+        overviewLoading={false}
+        connected={true}
+      />,
+    )
+    expect(markup).toContain('Facebook organic performance')
+    expect(markup).toContain('Reach')
+    expect(markup).toContain('12.3K')
+  })
+
+  it('renders empty state when not connected', () => {
+    const markup = renderToStaticMarkup(
+      <SocialSurfacePanel
+        surface="instagram"
+        kpis={[]}
+        overviewLoading={false}
+        connected={false}
+      />,
+    )
+    expect(markup).toContain('Instagram not connected')
+    expect(markup).toContain('Connect Instagram')
   })
 })

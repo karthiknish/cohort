@@ -2,10 +2,8 @@
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
 
-import { normalizeCurrencyCode } from '@/constants/currencies'
 import { extractErrorCode, logError } from '@/lib/convex-errors'
 import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
-import { normalizeProviderId } from '@/lib/themes'
 
 function isAuthError(error: unknown): boolean {
   const code = extractErrorCode(error)
@@ -66,6 +64,7 @@ export default function AdsPage() {
     processedMetrics,
     providerSummaries,
     serverSideSummary,
+    adsInsightsSummary,
     hasMetricData,
     metricsLoading,
     initialMetricsLoading,
@@ -134,150 +133,27 @@ export default function AdsPage() {
   })
 
   const { displayCurrency, providerCurrencyMap } = useMemo(() => {
-    const normalizeAccountId = (value: string | null | undefined): string => {
-      if (!value) return ''
-      return value.trim().toLowerCase().replace(/^act_/, '').replace(/\s+/g, '')
-    }
+    // Derive display currency from the V2 currency-aware summary.
+    // Only expose a single currency total when all rows are on the same currency.
+    // For mixed-currency selections, consumers receive null and show "Mixed currencies".
+    const financialTotals = adsInsightsSummary?.financialTotals
+    const primaryCurrency =
+      financialTotals?.comparability === 'single_currency'
+        ? (financialTotals.primaryCurrency ?? null)
+        : null
 
-    const makeProviderAccountKey = (providerId: string, accountId: string | null | undefined) =>
-      `${normalizeProviderId(providerId)}|${normalizeAccountId(accountId)}`
-
-    const integrationStatusesList = integrationStatuses?.statuses ?? []
-    const providerAccountCurrency = new Map<string, string>()
-    const providerDefaultCurrency = new Map<string, string>()
-
-    integrationStatusesList.forEach((status) => {
-      if (typeof status.currency !== 'string' || status.currency.trim().length === 0) {
-        return
-      }
-      const normalizedCurrency = normalizeCurrencyCode(status.currency)
-      const normalizedProvider = normalizeProviderId(status.providerId)
-      const accountKey = makeProviderAccountKey(normalizedProvider, status.accountId)
-      providerAccountCurrency.set(accountKey, normalizedCurrency)
-      if (!providerDefaultCurrency.has(normalizedProvider)) {
-        providerDefaultCurrency.set(normalizedProvider, normalizedCurrency)
-      }
-    })
-
-    const selectedMetaAccountCurrency = metaAccountOptions.find((account) => account.id === selectedMetaAccountId)?.currency
-      ?? metaAccountOptions.find((account) => account.isActive)?.currency
-      ?? metaAccountOptions[0]?.currency
-    const selectedGoogleAccountCurrency = googleAccountOptions.find((account) => account.id === selectedGoogleAccountId)?.currencyCode
-      ?? googleAccountOptions.find((account) => !account.isManager)?.currencyCode
-      ?? googleAccountOptions[0]?.currencyCode
-
-    if (selectedMetaAccountCurrency) {
-      providerDefaultCurrency.set(
-        normalizeProviderId('facebook'),
-        normalizeCurrencyCode(selectedMetaAccountCurrency),
-      )
-    }
-    if (selectedGoogleAccountCurrency) {
-      providerDefaultCurrency.set(
-        normalizeProviderId('google'),
-        normalizeCurrencyCode(selectedGoogleAccountCurrency),
-      )
-    }
-
-    // Build per-provider currency map from integration statuses (most authoritative)
-    // then supplement with metric voting for any providers not yet in the map.
-    const computedProviderCurrencyMap: Record<string, string> = {}
-    providerDefaultCurrency.forEach((currency, providerId) => {
-      computedProviderCurrencyMap[providerId] = currency
-    })
-
-    const metricCurrencyVotes = new Map<string, number>()
-    const providerCurrencyVotes = new Map<string, Map<string, number>>()
-    processedMetrics.forEach((metric) => {
-      const normalizedProvider = normalizeProviderId(metric.providerId)
-      const accountKey = makeProviderAccountKey(normalizedProvider, metric.accountId)
-      const candidateCurrency =
-        (typeof metric.currency === 'string' && metric.currency.trim().length > 0
-          ? normalizeCurrencyCode(metric.currency)
-          : null) ??
-        providerAccountCurrency.get(accountKey) ??
-        providerDefaultCurrency.get(normalizedProvider)
-
-      if (!candidateCurrency) return
-      metricCurrencyVotes.set(
-        candidateCurrency,
-        (metricCurrencyVotes.get(candidateCurrency) ?? 0) + 1
-      )
-
-      const providerVotes = providerCurrencyVotes.get(normalizedProvider) ?? new Map<string, number>()
-      providerVotes.set(candidateCurrency, (providerVotes.get(candidateCurrency) ?? 0) + 1)
-      providerCurrencyVotes.set(normalizedProvider, providerVotes)
-    })
-
-    providerCurrencyVotes.forEach((votes, providerId) => {
-      if (!computedProviderCurrencyMap[providerId]) {
-        const topProviderCurrency = Array.from(votes.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
-        if (topProviderCurrency) {
-          computedProviderCurrencyMap[providerId] = topProviderCurrency
-        }
-      }
-    })
-
-    // 1. Best source: currency directly from a linked integration status (set after account init)
-    const statusCurrencies = integrationStatusesList
-      .filter((s) => typeof s.currency === 'string' && s.currency.trim().length > 0)
-      .map((s) => normalizeCurrencyCode(s.currency as string))
-    const uniqueStatusCurrencies = Array.from(new Set(statusCurrencies))
-    if (uniqueStatusCurrencies.length === 1) {
-      return {
-        displayCurrency: uniqueStatusCurrencies[0],
-        providerCurrencyMap: computedProviderCurrencyMap,
-      }
-    }
-
-    // 2. Vote from metric records (populated once a sync completes)
-    const topMetricCurrency = Array.from(metricCurrencyVotes.entries())
-      .sort((a, b) => b[1] - a[1])[0]?.[0]
-    if (topMetricCurrency) {
-      return {
-        displayCurrency: topMetricCurrency,
-        providerCurrencyMap: computedProviderCurrencyMap,
-      }
-    }
-
-    // 3. Multi-provider: if all statuses agree on a currency, use it
-    if (uniqueStatusCurrencies.length > 1) {
-      // Take the most common one from the status list
-      const statusVotes = new Map<string, number>()
-      for (const c of statusCurrencies) statusVotes.set(c, (statusVotes.get(c) ?? 0) + 1)
-      const topStatus = Array.from(statusVotes.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
-      if (topStatus) {
-        return {
-          displayCurrency: topStatus,
-          providerCurrencyMap: computedProviderCurrencyMap,
+    // Build per-provider currency map from the V2 provider summaries.
+    const map: Record<string, string> = {}
+    if (adsInsightsSummary?.providers) {
+      for (const p of adsInsightsSummary.providers) {
+        if (p.financialTotals.primaryCurrency) {
+          map[p.providerId] = p.financialTotals.primaryCurrency
         }
       }
     }
 
-    // 4. Use any currency from the computed provider map (integration status or metric voting)
-    const providerCurrencies = Object.values(computedProviderCurrencyMap)
-    if (providerCurrencies.length > 0) {
-      const votes = new Map<string, number>()
-      for (const c of providerCurrencies) votes.set(c, (votes.get(c) ?? 0) + 1)
-      const topProviderCurrency = Array.from(votes.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
-      if (topProviderCurrency) {
-        return { displayCurrency: topProviderCurrency, providerCurrencyMap: computedProviderCurrencyMap }
-      }
-    }
-
-    // 5. Fall back to account options (only populated during account selection flow)
-    return {
-      displayCurrency: normalizeCurrencyCode(selectedMetaAccountCurrency ?? selectedGoogleAccountCurrency),
-      providerCurrencyMap: computedProviderCurrencyMap,
-    }
-  }, [
-    integrationStatuses?.statuses,
-    processedMetrics,
-    googleAccountOptions,
-    metaAccountOptions,
-    selectedGoogleAccountId,
-    selectedMetaAccountId,
-  ])
+    return { displayCurrency: primaryCurrency, providerCurrencyMap: map }
+  }, [adsInsightsSummary])
 
   const hasAnyAdIntegration =
     !isPreviewMode &&
@@ -329,6 +205,10 @@ export default function AdsPage() {
   // Loading state - let the loading.tsx handle the skeleton UI
   const isInitialLoading = initialMetricsLoading && !integrationStatuses
   if (isInitialLoading) return <div className={DASHBOARD_THEME.layout.container}><Skeleton className="h-8 w-48" /></div>
+
+  // Components expect currency?: string (undefined = not yet known / mixed).
+  // null from the V2 summary means mixed or unknown — pass undefined so components show fallback.
+  const activeCurrency = displayCurrency ?? undefined
 
   const showWorkflow =
     !isPreviewMode &&
@@ -468,7 +348,7 @@ export default function AdsPage() {
         <CrossChannelOverviewCard
           processedMetrics={processedMetrics}
           serverSideSummary={serverSideSummary}
-          currency={displayCurrency}
+          currency={activeCurrency}
           hasMetricData={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}
@@ -481,7 +361,7 @@ export default function AdsPage() {
       <FadeIn>
         <PerformanceSummaryCard
           providerSummaries={providerSummaries}
-          currency={displayCurrency}
+          currency={activeCurrency}
           providerCurrencies={providerCurrencyMap}
           hasMetrics={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
@@ -507,7 +387,7 @@ export default function AdsPage() {
         <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
           <InsightsChartsCard
             analysis={algorithmicInsights.analysis}
-            currency={displayCurrency}
+            currency={activeCurrency}
             loading={metricsLoading || initialMetricsLoading}
           />
         </Suspense>
@@ -518,7 +398,7 @@ export default function AdsPage() {
           <ComparisonViewCard
             periodComparison={periodComparison}
             providerComparison={providerComparison}
-            currency={displayCurrency}
+            currency={activeCurrency}
             loading={metricsLoading || initialMetricsLoading}
           />
         </Suspense>
@@ -529,7 +409,7 @@ export default function AdsPage() {
           <CustomInsightsCard
             derivedMetrics={hasMetricData ? derivedMetrics : null}
             processedMetrics={processedMetrics}
-            currency={displayCurrency}
+            currency={activeCurrency}
             loading={metricsLoading || initialMetricsLoading}
           />
         </Suspense>
@@ -548,7 +428,7 @@ export default function AdsPage() {
       <FadeIn>
         <MetricsTableCard
           processedMetrics={processedMetrics}
-          currency={displayCurrency}
+          currency={activeCurrency}
           hasMetrics={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}

@@ -10,49 +10,46 @@ vi.mock('next/link', () => ({
 import { SocialsConnectionPanel } from './socials-connection-panel'
 
 describe('SocialsConnectionPanel', () => {
-  it('renders separate Facebook and Instagram connect actions', () => {
+  it('renders separate Facebook and Instagram connect buttons', () => {
     const markup = renderToStaticMarkup(
       <SocialsConnectionPanel
         panelId="social-connections-panel"
         selectedClientName="Acme"
         connected={false}
         accountName={null}
-        lastSyncedAt={null}
-        metaSetupMessage={null}
-        metaNeedsAccountSelection={false}
-        metaAccountOptions={[]}
-        selectedMetaAccountId=""
-        loadingMetaAccountOptions={false}
+        lastSyncedAtMs={null}
         connectingProvider={null}
-        initializingMeta={false}
+        connectionError={null}
         onConnectFacebook={vi.fn(async () => undefined)}
         onConnectInstagram={vi.fn(async () => undefined)}
         onDisconnect={vi.fn(async () => undefined)}
-        onRefresh={vi.fn()}
-        onReloadAccounts={vi.fn(async () => [])}
-        onSelectAccount={vi.fn()}
-        onInitialize={vi.fn(async () => undefined)}
-        facebookPages={[]}
-        instagramProfiles={[]}
-        metaSetupState={{
-          stage: 'disconnected',
-          title: 'Connect Facebook or Instagram to start social surface discovery',
-          description: 'Choose either login button to begin the Meta Business authorization used for social surfaces.',
-          switchSourceRecommended: false,
-          switchSourceMessage: null,
-        }}
-        surfaceAvailability={{
-          facebook: { status: 'disconnected', count: 0, emptyMessage: 'Connect Facebook to begin.' },
-          instagram: { status: 'disconnected', count: 0, emptyMessage: 'Connect Instagram to begin.' },
-        }}
-        surfaceActorsLoading={false}
-        surfaceActorsError={null}
-        onRetrySurfaceActors={vi.fn()}
-      />, 
+        onRequestSync={vi.fn()}
+      />,
     )
 
-    expect(markup).toContain('Continue with Facebook')
-    expect(markup).toContain('Continue with Instagram')
-    expect(markup).toContain('Both buttons complete the same Meta Business authorization today')
+    expect(markup).toContain('Connect Facebook')
+    expect(markup).toContain('Connect Instagram')
+  })
+
+  it('shows Reconnect when already connected', () => {
+    const markup = renderToStaticMarkup(
+      <SocialsConnectionPanel
+        panelId="social-connections-panel"
+        selectedClientName={null}
+        connected={true}
+        accountName="My Business Account"
+        lastSyncedAtMs={Date.now()}
+        connectingProvider={null}
+        connectionError={null}
+        onConnectFacebook={vi.fn(async () => undefined)}
+        onConnectInstagram={vi.fn(async () => undefined)}
+        onDisconnect={vi.fn(async () => undefined)}
+        onRequestSync={vi.fn()}
+      />,
+    )
+
+    expect(markup).toContain('Reconnect Facebook')
+    expect(markup).toContain('Reconnect Instagram')
+    expect(markup).toContain('My Business Account')
   })
 })

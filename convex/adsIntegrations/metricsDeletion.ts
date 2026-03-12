@@ -40,7 +40,16 @@ const metricInputValidator = v.object({
   providerId: v.string(),
   clientId: v.optional(v.union(v.string(), v.null())),
   accountId: v.optional(v.union(v.string(), v.null())),
+  /** Canonical surface id stamped at write time (replaces publisherPlatform as canonical field). */
+  surfaceId: v.optional(v.union(v.string(), v.null())),
+  /** Legacy alias: accepted for backward compat with existing callers. */
   publisherPlatform: v.optional(v.union(v.string(), v.null())),
+  /** Native account currency stamped at write time by the sync worker. */
+  currency: v.optional(v.union(v.string(), v.null())),
+  /** How currency was determined ('metric' | 'integration' | 'unknown'). */
+  currencySource: v.optional(
+    v.union(v.literal('metric'), v.literal('integration'), v.literal('unknown'), v.null()),
+  ),
   date: v.string(),
   spend: v.number(),
   impressions: v.number(),
@@ -61,12 +70,20 @@ export const writeMetricsBatchInternal = internalMutation({
   handler: async (ctx, args): Promise<{ ok: boolean; inserted: number }> => {
     const timestamp = nowMs()
     for (const metric of args.metrics) {
+      // surfaceId is canonical; publisherPlatform is the legacy alias.
+      // Accept both for backward compat, preferring surfaceId when present.
+      const surfaceId = metric.surfaceId ?? metric.publisherPlatform ?? null
+      const publisherPlatform = metric.publisherPlatform ?? metric.surfaceId ?? null
+
       await ctx.db.insert('adMetrics', {
         workspaceId: args.workspaceId,
         providerId: metric.providerId,
         clientId: normalizeClientId(metric.clientId ?? null),
         accountId: normalizeClientId(metric.accountId ?? null),
-        publisherPlatform: normalizeClientId(metric.publisherPlatform ?? null),
+        surfaceId: normalizeClientId(surfaceId),
+        publisherPlatform: normalizeClientId(publisherPlatform),
+        currency: typeof metric.currency === 'string' ? metric.currency.trim().toUpperCase() : null,
+        currencySource: metric.currencySource ?? null,
         date: metric.date,
         spend: metric.spend,
         impressions: metric.impressions,

@@ -13,7 +13,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatProviderName, normalizeProviderId } from '@/lib/themes'
+import { formatProviderName } from '@/lib/themes'
+import { normalizeAdsProviderId } from '@/domain/ads/provider'
 import { cn, formatCurrency } from '@/lib/utils'
 
 import type { ProviderSummary } from './types'
@@ -118,7 +119,7 @@ export function PerformanceSummaryCard({
         ) : (
           <div className="grid gap-5 md:grid-cols-3">
             {Object.entries(providerSummaries).map(([providerId, summary], index) => {
-              const providerCurrency = providerCurrencies?.[normalizeProviderId(providerId)] ?? currency
+              const providerCurrency = providerCurrencies?.[normalizeAdsProviderId(providerId) ?? providerId] ?? currency
               const ctr = summary.impressions > 0 ? (summary.clicks / summary.impressions) * 100 : null
               const cpc = summary.clicks > 0 ? summary.spend / summary.clicks : null
               const cpa = summary.conversions > 0 ? summary.spend / summary.conversions : null

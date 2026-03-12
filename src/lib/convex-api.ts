@@ -268,3 +268,14 @@ export const analyticsInsightsApi = {
 export const creativesCopyApi = {
   generateCopy: looseApi.creativesCopy.generateCopy,
 }
+
+export const socialsIntegrationsApi = {
+  getStatus: looseApi.socialIntegrations.getStatus,
+  requestManualSync: looseApi.socialIntegrations.requestManualSync,
+}
+
+export const socialMetricsApi = {
+  listOverview: looseApi.socialMetrics.listOverview,
+  listTimeSeries: looseApi.socialMetrics.listTimeSeries,
+  listContent: looseApi.socialMetrics.listContent,
+}

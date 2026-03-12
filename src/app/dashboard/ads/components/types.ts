@@ -22,9 +22,13 @@ export interface MetricRecord {
   providerId: string
   /** The ad account ID this metric belongs to (for multi-account support). */
   accountId?: string | null
-  /** Optional account currency inferred from the linked integration. */
+  /** Native account currency for this metric row (native account currency). */
   currency?: string | null
-  /** Optional Meta publisher platform or equivalent reporting surface. */
+  /** How the currency was determined ('metric' | 'integration' | 'unknown'). */
+  currencySource?: string | null
+  /** Canonical surface id (e.g. 'facebook', 'instagram', 'audience_network'). */
+  surfaceId?: string | null
+  /** Legacy: Meta publisher platform or equivalent reporting surface. */
   publisherPlatform?: string | null
   /** Campaign identifier used for dedup and drill-down. */
   campaignId?: string | null
@@ -62,6 +66,53 @@ export type Totals = {
 export type MetricsSummary = {
   totals: Totals
   providers: Record<string, Totals>
+  count: number
+}
+
+// =============================================================================
+// V2 CURRENCY-AWARE SUMMARY TYPES
+// =============================================================================
+
+export type FinancialComparability = 'single_currency' | 'mixed_currency' | 'unknown_currency'
+
+export type DeliveryTotals = {
+  impressions: number
+  clicks: number
+  conversions: number
+}
+
+/**
+ * Currency-aware financial totals from the V2 read model.
+ * Check `comparability` before displaying aggregate spend/revenue/ROAS/CPA.
+ */
+export type FinancialTotals = {
+  comparability: FinancialComparability
+  totalsByCurrency: Record<string, { spend: number; revenue: number }>
+  /** Non-null only when comparability === 'single_currency'. */
+  primaryCurrency: string | null
+  /** Non-null only when comparability === 'single_currency'. */
+  spend: number | null
+  /** Non-null only when comparability === 'single_currency'. */
+  revenue: number | null
+}
+
+export type ProviderInsightsSummary = {
+  providerId: string
+  accountIds: string[]
+  currencies: string[]
+  deliveryTotals: DeliveryTotals
+  financialTotals: FinancialTotals
+}
+
+/**
+ * V2 insights summary contract. Replaces the plain-numeric MetricsSummary for financial display.
+ * DeliveryTotals are always valid; FinancialTotals require comparability === 'single_currency'.
+ */
+export type AdsInsightsSummary = {
+  deliveryTotals: DeliveryTotals
+  financialTotals: FinancialTotals
+  providers: ProviderInsightsSummary[]
+  warnings: string[]
   count: number
 }
 

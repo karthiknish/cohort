@@ -48,7 +48,22 @@ export interface NormalizedMetric {
   clientId?: string | null
   /** The ad account ID this metric belongs to (for multi-account support). */
   accountId?: string | null
-  /** Optional Meta publisher platform or equivalent reporting surface. */
+  /**
+   * Native account currency for this metric row (e.g. 'USD', 'INR').
+   * Stamped at write time by the sync worker from the integration account currency.
+   */
+  currency?: string | null
+  /**
+   * How the currency was determined: 'metric' | 'integration' | 'unknown'.
+   * Stamped at write time alongside currency.
+   */
+  currencySource?: string | null
+  /**
+   * Canonical surface id (e.g. 'facebook', 'instagram', 'audience_network').
+   * Canonical field going forward — publisherPlatform is the legacy alias.
+   */
+  surfaceId?: string | null
+  /** Legacy: Meta publisher platform or equivalent reporting surface. */
   publisherPlatform?: string | null
   date: string
   spend: number
