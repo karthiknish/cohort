@@ -2,6 +2,7 @@ import {
   zAuthenticatedMutation,
   zAdminMutation,
   zWorkspaceQuery,
+  zWorkspaceQueryActive,
   zWorkspacePaginatedQueryActive,
   applyManualPagination,
   getPaginatedResponse,
@@ -281,6 +282,37 @@ export const listByClient = zWorkspacePaginatedQueryActive({
       items: result.items.map(mapTaskRow),
       nextCursor: result.nextCursor,
     }
+  },
+})
+
+/**
+ * Returns workspace-wide active tasks that are either:
+ *  - Assigned to the given userId (stored in the assignedTo array), OR
+ *  - Not assigned to anyone (assignedTo is empty or null)
+ *
+ * Excludes completed and archived tasks.
+ * Used by the "For You" page to show user-relevant tasks without a client filter.
+ */
+export const listForUser = zWorkspaceQueryActive({
+  args: { userId: z.string() },
+  returns: z.array(taskZ),
+  handler: async (ctx, args) => {
+    // Full workspace scan — no per-assignee index exists, so we scan and filter in JS.
+    // Taking 500 as a practical cap; workspaces rarely exceed this in active tasks.
+    const rows = await ctx.db
+      .query('tasks')
+      .withIndex('by_workspace_createdAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+      .order('desc')
+      .take(500)
+
+    return rows
+      .filter((t) => {
+        if (t.status === 'completed' || t.status === 'archived') return false
+        const assigned = t.assignedTo ?? []
+        return assigned.length === 0 || assigned.includes(args.userId)
+      })
+      .slice(0, 100)
+      .map(mapTaskRow)
   },
 })
 

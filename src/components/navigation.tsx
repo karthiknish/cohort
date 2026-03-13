@@ -19,7 +19,6 @@ import {
   Video,
   ChevronLeft,
   ChevronRight,
-  Activity,
   Users,
   Shield,
   Rocket,
@@ -63,9 +62,8 @@ type NavItem = {
 
 // Define navigation items with role-based access
 const allNavigation: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home, description: 'Overview and stats' },
+  { name: 'For You', href: '/for-you', icon: Home, description: 'Your workspace overview' },
   { name: 'Clients', href: '/dashboard/clients', icon: Users, description: 'Manage workspaces', roles: ['admin', 'team'] },
-  { name: 'Activity', href: '/dashboard/activity', icon: Activity, description: 'Recent activity' },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, description: 'Performance insights' },
   { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad integrations', roles: ['admin', 'team'] },
   { name: 'Socials', href: '/dashboard/socials', icon: Share2, description: 'Meta & Instagram insights', roles: ['admin', 'team'] },
@@ -98,7 +96,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
 
   // Persist last visited dashboard tab
   useEffect(() => {
-    if (pathname.startsWith('/dashboard')) {
+    if (pathname.startsWith('/dashboard') || pathname === '/for-you') {
       localStorage.setItem('cohorts_last_tab', pathname)
     }
   }, [pathname])

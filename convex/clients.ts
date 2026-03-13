@@ -441,3 +441,86 @@ export const bulkUpsert = zAuthenticatedMutation({
     return { upserted }
   },
 })
+
+/**
+ * Returns a lightweight summary for every active client in the workspace:
+ * open task count, active project count, and the soonest upcoming meeting timestamp.
+ * Intended for the Jira-style client overview grid on the activity/for-you page.
+ */
+export const getClientSummaries = zWorkspaceQueryActive({
+  args: { workspaceId: z.string() },
+  returns: z.array(
+    z.object({
+      legacyId: z.string(),
+      name: z.string(),
+      accountManager: z.string(),
+      teamMembersCount: z.number(),
+      openTaskCount: z.number(),
+      activeProjectCount: z.number(),
+      nextMeetingMs: z.number().nullable(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    // Fetch all active clients for the workspace
+    const clients = await ctx.db
+      .query('clients')
+      .withIndex('by_workspace_nameLower_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+      .collect()
+
+    const now = Date.now()
+    const results = []
+
+    for (const client of clients) {
+      // Open tasks: status not in ['completed', 'archived']
+      const allClientTasks = await ctx.db
+        .query('tasks')
+        .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('clientId', client.legacyId)
+        )
+        .collect()
+
+      const openTaskCount = allClientTasks.filter(
+        (t) => t.status !== 'completed' && t.status !== 'archived' && t.deletedAtMs == null
+      ).length
+
+      // Active projects
+      const activeProjects = await ctx.db
+        .query('projects')
+        .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('clientId', client.legacyId)
+        )
+        .filter((q) => q.eq(q.field('status'), 'active'))
+        .collect()
+
+      const activeProjectCount = activeProjects.filter((p) => p.deletedAtMs == null).length
+
+      // Next upcoming meeting (scheduled or in_progress, future startTimeMs)
+      const upcomingMeetings = await ctx.db
+        .query('meetings')
+        .withIndex('by_workspace_client_startTimeMs', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('clientId', client.legacyId).gte('startTimeMs', now)
+        )
+        .order('asc')
+        .take(1)
+
+      const firstMeeting = upcomingMeetings[0]
+      const nextMeetingMs =
+        firstMeeting !== undefined &&
+        (firstMeeting.status === 'scheduled' || firstMeeting.status === 'in_progress')
+          ? firstMeeting.startTimeMs
+          : null
+
+      results.push({
+        legacyId: client.legacyId,
+        name: client.name,
+        accountManager: client.accountManager,
+        teamMembersCount: client.teamMembers.length,
+        openTaskCount,
+        activeProjectCount,
+        nextMeetingMs,
+      })
+    }
+
+    return results
+  },
+})

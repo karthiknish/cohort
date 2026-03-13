@@ -66,11 +66,11 @@ function HomePageContent() {
     }
     if (typeof window !== 'undefined') {
       const lastTab = window.localStorage.getItem('cohorts_last_tab')
-      if (lastTab?.startsWith('/dashboard')) {
+      if (lastTab?.startsWith('/dashboard') || lastTab === '/for-you') {
         return lastTab
       }
     }
-    return '/dashboard'
+    return '/for-you'
   }, [getRedirectParam])
 
   // Session sync is now handled by Better Auth and our unified server helpers

@@ -30,6 +30,7 @@ export const clientsApi = {
   list: looseApi.clients.list,
   countActive: looseApi.clients.countActive,
   getByLegacyId: looseApi.clients.getByLegacyId,
+  getClientSummaries: looseApi.clients.getClientSummaries,
   create: looseApi.clients.create,
   addTeamMember: looseApi.clients.addTeamMember,
   removeTeamMember: looseApi.clients.removeTeamMember,
@@ -51,6 +52,7 @@ export const notificationsApi = {
 export const tasksApi = {
   list: looseApi.tasks.list,
   listByClient: looseApi.tasks.listByClient,
+  listForUser: looseApi.tasks.listForUser,
   createTask: looseApi.tasks.createTask,
   patchTask: looseApi.tasks.patchTask,
   bulkPatchTasks: looseApi.tasks.bulkPatchTasks,
