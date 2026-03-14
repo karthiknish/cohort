@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -76,6 +78,12 @@ export function CampaignHeader({
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
       <div className="space-y-4">
+        <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground hover:text-foreground">
+          <Link href="/dashboard/ads">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Ads
+          </Link>
+        </Button>
 
         <div>
           {loading ? (

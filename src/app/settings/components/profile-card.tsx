@@ -1,6 +1,6 @@
 'use client'
 
-import { ChangeEvent, FormEvent, useCallback, useMemo, useRef, useState, useEffect } from 'react'
+import { type ChangeEvent, type FormEvent, useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { LoaderCircle, ImagePlus, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useConvex } from 'convex/react'
 
@@ -13,6 +13,13 @@ import { useToast } from '@/components/ui/use-toast'
 import { settingsApi, filesApi } from '@/lib/convex-api'
 import { getAvatarInitials } from './utils'
 import { validateFile } from '@/lib/utils'
+
+function isPhoneValid(phone: string): boolean {
+  const trimmed = phone.trim()
+  if (!trimmed) return true // optional field
+  // Accepts formats: +1 (555) 555-5555, 555-555-5555, +44 7911 123456, etc.
+  return /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]{6,14}$/.test(trimmed)
+}
 
 interface ProfileCardProps {
   onPhoneChange?: (phone: string) => void
@@ -32,6 +39,7 @@ export function ProfileCard({
   const [profileNameDraft, setProfileNameDraft] = useState<string | null>(null)
   const [profilePhoneDraft, setProfilePhoneDraft] = useState<string | null>(null)
   const [profileError, setProfileError] = useState<string | null>(null)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
   const [savingProfile, setSavingProfile] = useState(false)
   const [avatarPreviewOverride, setAvatarPreviewOverride] = useState<string | null | undefined>(undefined)
   const [avatarError, setAvatarError] = useState<string | null>(null)
@@ -69,7 +77,7 @@ export function ProfileCard({
   }, [profileName, user?.email, user?.name])
 
   const isProfileNameValid = profileName.trim().length >= 2
-  const canSaveProfile = Boolean(user) && hasProfileChanges && isProfileNameValid && !savingProfile
+  const canSaveProfile = Boolean(user) && hasProfileChanges && isProfileNameValid && !phoneError && !savingProfile
 
   const handleProfileSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -84,6 +92,11 @@ export function ProfileCard({
 
       if (nextName.length < 2) {
         setProfileError('Enter a name with at least two characters.')
+        return
+      }
+
+      if (!isPhoneValid(nextPhone)) {
+        setPhoneError('Enter a valid phone number (e.g. +1 555 000 1234).')
         return
       }
 
@@ -314,11 +327,27 @@ export function ProfileCard({
                 value={profilePhone}
                 onChange={(event) => {
                   setProfilePhoneDraft(event.target.value)
+                  setPhoneError(null)
                   setProfileError(null)
                 }}
-                placeholder="Add a contact number"
+                onBlur={() => {
+                  if (profilePhone.trim() && !isPhoneValid(profilePhone)) {
+                    setPhoneError('Enter a valid phone number (e.g. +1 555 000 1234).')
+                  } else {
+                    setPhoneError(null)
+                  }
+                }}
+                placeholder="+1 555 000 1234"
                 autoComplete="tel"
+                aria-describedby={phoneError ? 'phone-error' : 'phone-hint'}
+                aria-invalid={phoneError ? true : undefined}
+                className={phoneError ? 'border-destructive focus-visible:ring-destructive' : ''}
               />
+              {phoneError ? (
+                <p id="phone-error" className="text-xs text-destructive">{phoneError}</p>
+              ) : (
+                <p id="phone-hint" className="text-xs text-muted-foreground">Include country code for international numbers.</p>
+              )}
             </div>
           </div>
           {profileError ? <p className="text-sm text-destructive">{profileError}</p> : null}

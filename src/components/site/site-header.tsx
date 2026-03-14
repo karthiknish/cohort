@@ -3,12 +3,18 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
-import { LogOut } from 'lucide-react'
+import { LogOut, User, LayoutDashboard, ChevronDown } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/contexts/auth-context'
-
-const marketingLinks: { name: string; href: string }[] = []
 
 export function SiteHeader() {
   const { user, loading, signOut } = useAuth()
@@ -33,28 +39,62 @@ export function SiteHeader() {
           <Image src="/logo.svg" alt="Cohorts" width={80} height={80} className="h-20 w-20" priority />
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex">
-          {marketingLinks.map((link) => (
-            <Link key={link.name} href={link.href} className="transition hover:text-primary">
-              {link.name}
-            </Link>
-          ))}
-        </nav>
-
         <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => {
-              void handleSignOut()
-            }}
-            disabled={signingOut || loading || !user}
-            aria-label="Sign out"
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
+          {/* Mobile sign-out icon */}
+          {user && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={handleSignOut}
+              disabled={signingOut || loading}
+              aria-label="Sign out"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          )}
+
+          {/* Desktop user menu */}
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hidden items-center gap-2 md:flex"
+                  disabled={loading}
+                >
+                  <User className="h-4 w-4" />
+                  <span className="max-w-[140px] truncate text-sm">
+                    {user.name ?? user.email}
+                  </span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
+                  {user.email}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard" className="flex items-center gap-2">
+                    <LayoutDashboard className="h-4 w-4" />
+                    Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="flex items-center gap-2 text-destructive focus:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" />
+                  {signingOut ? 'Signing out…' : 'Sign out'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </header>
