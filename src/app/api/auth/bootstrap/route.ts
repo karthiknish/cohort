@@ -3,7 +3,7 @@ import { ConvexHttpClient } from 'convex/browser'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { UnauthorizedError, NotFoundError } from '@/lib/api-errors'
-import { api } from '../../../../../convex/_generated/api'
+import { api } from '/_generated/api'
 
 const DEFAULT_USER_ROLE = 'client'
 const DEFAULT_USER_STATUS = 'pending'

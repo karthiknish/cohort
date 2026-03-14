@@ -8,7 +8,7 @@ import {
   getPaginatedResponse,
 } from './functions'
 import { z } from 'zod/v4'
-import { internal } from './_generated/api'
+import { internal } from '/_generated/api'
 
 import { Errors } from './errors'
 import { resolveTaskNotificationRecipientUserIds } from './notificationTargeting'

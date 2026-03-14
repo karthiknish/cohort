@@ -1,6 +1,6 @@
 import { ConvexHttpClient } from 'convex/browser'
 
-import { api } from '../../convex/_generated/api'
+import { api } from '/_generated/api'
 
 const CACHE_TTL_MS = 5 * 60 * 1000
 

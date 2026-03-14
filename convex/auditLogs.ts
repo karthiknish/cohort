@@ -1,5 +1,5 @@
 import { internalMutation, mutation } from './_generated/server'
-import { internal } from './_generated/api'
+import { internal } from '/_generated/api'
 import { v } from 'convex/values'
 import { z } from 'zod/v4'
 import { Errors } from './errors'

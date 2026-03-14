@@ -1,11 +1,8 @@
 import type { Metadata } from 'next'
-import TermsPageClient from './page.client'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | Cohorts',
-  description: 'Read the terms and conditions for using the Cohorts platform.',
+  title: 'Terms of Service',
+  description: 'Terms of service for the Cohort platform.',
 }
 
-export default function TermsPage() {
-  return <TermsPageClient />
-}
+export { default } from '@/features/marketing/terms/page'

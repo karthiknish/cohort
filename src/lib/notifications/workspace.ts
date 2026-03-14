@@ -3,7 +3,7 @@
 import { ConvexHttpClient } from 'convex/browser'
 import { nanoid } from 'nanoid'
 
-import { api } from '../../../convex/_generated/api'
+import { api } from '/_generated/api'
 import type { CollaborationMessage } from '@/types/collaboration'
 import type { TaskRecord } from '@/types/tasks'
 import type { ProjectRecord } from '@/types/projects'

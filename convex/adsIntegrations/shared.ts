@@ -1,5 +1,5 @@
 import { action, internalMutation, mutation, query, internalQuery } from '../_generated/server'
-import type { Id } from '../_generated/dataModel'
+import type { Id } from '/_generated/dataModel'
 import { v } from 'convex/values'
 import { z } from 'zod/v4'
 import { Errors, withErrorHandling } from '../errors'

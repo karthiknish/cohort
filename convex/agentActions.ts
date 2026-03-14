@@ -1,6 +1,6 @@
 "use node"
 
-import { api } from './_generated/api'
+import { api } from '/_generated/api'
 import { action } from './_generated/server'
 import {
   SYSTEM_PROMPT,

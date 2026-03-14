@@ -17,7 +17,7 @@
     "start": "bun --bun next start",
     "lint": "eslint",
     "typecheck": "bun --bun tsc -p tsconfig.json --noEmit",
-    "test": "bun test"
+    "test": "vitest run"
   },
   "dependencies": {
     "@convex-dev/better-auth": "0.10.10",

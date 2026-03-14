@@ -1,7 +1,7 @@
 import { action, internalMutation } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from './errors'
-import { api, internal } from './_generated/api'
+import { api, internal } from '/_generated/api'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {

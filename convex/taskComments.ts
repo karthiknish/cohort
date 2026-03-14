@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { internal } from './_generated/api'
+import { internal } from '/_generated/api'
 import { Errors } from './errors'
 import { workspaceQuery, workspaceMutation, authenticatedMutation } from './functions'
 import { resolveMentionRecipientUserIds, resolveTaskNotificationRecipientUserIds } from './notificationTargeting'

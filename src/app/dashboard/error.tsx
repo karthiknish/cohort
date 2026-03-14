@@ -4,9 +4,9 @@ import { useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, RefreshCw, Home, Copy, Code2, FileJson } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/shared/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Badge } from '@/shared/ui/badge'
 
 interface DashboardErrorProps {
   error: Error & { digest?: string; componentStack?: string }
@@ -254,7 +254,10 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
                   </summary>
                   <div className="max-h-64 overflow-auto space-y-2 mt-2">
                     {renderLogs.slice(-20).reverse().map((log, i) => (
-                      <div key={i} className="text-[10px] font-mono border-b border-purple-500/20 pb-1 last:border-0">
+                      <div
+                        key={`${log.name ?? 'unknown'}-${log.timestamp ?? 'no-time'}-${log.renderCount ?? i}`}
+                        className="text-[10px] font-mono border-b border-purple-500/20 pb-1 last:border-0"
+                      >
                         <div className="flex justify-between text-purple-700 dark:text-purple-300">
                           <span>{log.name ?? 'Unknown'} #{log.renderCount ?? '-'}</span>
                           <span>{log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '--:--:--'}</span>

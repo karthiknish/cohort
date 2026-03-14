@@ -259,10 +259,10 @@ v.record(v.string(), v.number())  // { [key: string]: number }
 import { query, mutation, action, internalQuery, internalMutation, internalAction } from "./_generated/server";
 
 // API references
-import { api, internal } from "./_generated/api";
+import { api, internal } from '/_generated/api';
 
 // Types
-import { Doc, Id } from "./_generated/dataModel";
+import { Doc, Id } from '/_generated/dataModel';
 
 // Validators
 import { v } from "convex/values";
@@ -272,5 +272,5 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 
 // Components
-import { components } from "./_generated/api";
+import { components } from '/_generated/api';
 ```

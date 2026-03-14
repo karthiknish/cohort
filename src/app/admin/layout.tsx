@@ -15,12 +15,12 @@ import {
   AlertCircle,
 } from 'lucide-react'
 
-import { ProtectedRoute } from '@/components/protected-route'
-import { NavigationProvider } from '@/contexts/navigation-context'
-import { AgentMode } from '@/components/agent-mode'
+import { ProtectedRoute } from '@/shared/components/protected-route'
+import { NavigationProvider } from '@/shared/contexts/navigation-context'
+import { AgentMode } from '@/shared/components/agent-mode'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import { WorkspaceProviders } from '@/components/providers/workspace-providers'
+import { Button } from '@/shared/ui/button'
+import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -28,7 +28,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb'
+} from '@/shared/ui/breadcrumb'
 
 const adminNavItems = [
   {

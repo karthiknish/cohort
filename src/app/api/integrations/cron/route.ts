@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { after } from 'next/server'
 import { ConvexHttpClient } from 'convex/browser'
-import { api } from '../../../../../convex/_generated/api'
+import { api } from '/_generated/api'
 
 import {
   scheduleIntegrationSync,

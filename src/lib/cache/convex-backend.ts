@@ -1,7 +1,7 @@
 import { createHash } from 'crypto'
 import { ConvexHttpClient } from 'convex/browser'
 
-import { api } from '../../../convex/_generated/api'
+import { api } from '/_generated/api'
 import type { CacheBackend } from './cache-manager'
 
 export type ConvexCacheBackendOptions = {

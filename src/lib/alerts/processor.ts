@@ -4,7 +4,7 @@
 
 import { cache } from 'react'
 import { ConvexHttpClient } from 'convex/browser'
-import { api, internal } from '../../../convex/_generated/api'
+import { api, internal } from '/_generated/api'
 import { evaluateAlerts, formatAlertsForEmail } from './evaluator'
 import { sendTransactionalEmail } from '../notifications'
 import type { AlertRule, AlertEvaluationInput, DailyMetricData } from './types'

@@ -1,5 +1,5 @@
 import { buildProjectTasksRoute } from '../../../../src/lib/project-routes'
-import { api } from '../../../_generated/api'
+import { api } from '/_generated/api'
 import {
   asNonEmptyString,
   asRecord,

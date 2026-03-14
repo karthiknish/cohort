@@ -1,13 +1,13 @@
-import { Sidebar, Header } from '@/components/navigation'
-import { ProtectedRoute } from '@/components/protected-route'
-import { NavigationProvider } from '@/contexts/navigation-context'
-import { NavigationBreadcrumbs } from '@/components/navigation/breadcrumbs'
+import { Sidebar, Header } from '@/shared/layout/navigation'
+import { ProtectedRoute } from '@/shared/components/protected-route'
+import { NavigationProvider } from '@/shared/contexts/navigation-context'
+import { NavigationBreadcrumbs } from '@/shared/layout/navigation/breadcrumbs'
 
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { ClientAccessGate } from '@/components/dashboard/client-access-gate'
-import { PreviewDataBanner } from '@/components/dashboard/preview-data-banner'
-import { AgentMode } from '@/components/agent-mode'
-import { WorkspaceProviders } from '@/components/providers/workspace-providers'
+import { ScrollArea } from '@/shared/ui/scroll-area'
+import { ClientAccessGate } from '@/features/dashboard/home/components/client-access-gate'
+import { PreviewDataBanner } from '@/features/dashboard/home/components/preview-data-banner'
+import { AgentMode } from '@/shared/components/agent-mode'
+import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
 
 export default function DashboardLayout({
   children,

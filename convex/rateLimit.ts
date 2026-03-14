@@ -1,5 +1,5 @@
 import { RateLimiter, MINUTE } from "@convex-dev/rate-limiter";
-import { components } from "./_generated/api";
+import { components } from '/_generated/api';
 
 export const rateLimiter = new RateLimiter(components.rateLimiter, {
   // Mirrors the presets in src/lib/rate-limiter.ts

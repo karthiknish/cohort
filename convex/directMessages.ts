@@ -1,5 +1,5 @@
 import { z } from 'zod/v4'
-import type { Id } from './_generated/dataModel'
+import type { Id } from '/_generated/dataModel'
 import { Errors } from './errors'
 import {
   zWorkspaceMutation,

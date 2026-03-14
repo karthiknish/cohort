@@ -1,11 +1,8 @@
 import type { Metadata } from 'next'
-import HomePageClient from './page.client'
 
 export const metadata: Metadata = {
-  title: 'Cohorts | Agency Operations Platform',
-  description: 'Manage campaigns, clients, proposals, collaboration, and analytics from one AI-native workspace.',
+  title: 'Cohort',
+  description: 'Collaborative workspace for campaigns, projects, and client delivery.',
 }
 
-export default function HomePage() {
-  return <HomePageClient />
-}
+export { default } from '@/features/marketing/home/page'

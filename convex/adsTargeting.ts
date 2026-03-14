@@ -1,5 +1,5 @@
 import { action } from './_generated/server'
-import { internal } from './_generated/api'
+import { internal } from '/_generated/api'
 import { v } from 'convex/values'
 import { ErrorCode, Errors, isAppError, withErrorHandling } from './errors'
 

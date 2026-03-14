@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { buildAdminUserPage } from '../src/app/admin/lib/admin-user-list'
+import { buildAdminUserPage } from '../src/features/admin/lib/admin-user-list'
 import { Errors, isAppError } from './errors'
 import { applyManualPagination, adminMutation, adminPaginatedQuery, adminQuery } from './functions'
 

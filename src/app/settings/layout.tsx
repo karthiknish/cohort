@@ -1,10 +1,10 @@
-import { Sidebar, Header } from '@/components/navigation'
-import { ProtectedRoute } from '@/components/protected-route'
-import { NavigationProvider } from '@/contexts/navigation-context'
-import { NavigationBreadcrumbs } from '@/components/navigation/breadcrumbs'
-import { AgentMode } from '@/components/agent-mode'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { WorkspaceProviders } from '@/components/providers/workspace-providers'
+import { Sidebar, Header } from '@/shared/layout/navigation'
+import { ProtectedRoute } from '@/shared/components/protected-route'
+import { NavigationProvider } from '@/shared/contexts/navigation-context'
+import { NavigationBreadcrumbs } from '@/shared/layout/navigation/breadcrumbs'
+import { AgentMode } from '@/shared/components/agent-mode'
+import { ScrollArea } from '@/shared/ui/scroll-area'
+import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (

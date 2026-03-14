@@ -1,5 +1,5 @@
 import { mergeProposalForm } from '../../../../src/lib/proposals'
-import { api } from '../../../_generated/api'
+import { api } from '/_generated/api'
 import type { ActionCtx } from '../../../_generated/server'
 import {
   extractClientNameFromProposalRequest,

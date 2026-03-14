@@ -1,5 +1,5 @@
 import { action } from './_generated/server'
-import { api } from './_generated/api'
+import { api } from '/_generated/api'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from './errors'
 import { optimizeMetaImageUrl } from '../src/services/integrations/meta-ads'

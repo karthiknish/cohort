@@ -1,5 +1,5 @@
 import { action } from './_generated/server'
-import { internal } from './_generated/api'
+import { internal } from '/_generated/api'
 import { v } from 'convex/values'
 
 import { appendMetaAuthParams, calculateMetaAdsInsights, coerceNumber, META_API_BASE } from '@/services/integrations/meta-ads'

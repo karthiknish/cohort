@@ -1,6 +1,6 @@
 "use node"
 
-import { api } from './_generated/api'
+import { api } from '/_generated/api'
 import { Errors } from './errors'
 import { zWorkspaceAction } from './functions'
 import { enforceGeminiActionRateLimit } from './geminiRateLimit'

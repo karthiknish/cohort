@@ -1,5 +1,5 @@
 import { httpAction } from './_generated/server'
-import { internal } from './_generated/api'
+import { internal } from '/_generated/api'
 
 function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {

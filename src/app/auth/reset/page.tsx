@@ -1,11 +1,8 @@
 import type { Metadata } from 'next'
-import ResetPasswordPageClient from './page.client'
 
 export const metadata: Metadata = {
-  title: 'Reset Password | Cohorts',
-  description: 'Set a new password for your Cohorts account using a secure reset link.',
+  title: 'Reset Password',
+  description: 'Set a new password for your Cohort account.',
 }
 
-export default function ResetPasswordPage() {
-  return <ResetPasswordPageClient />
-}
+export { default } from '@/features/auth/reset/page'

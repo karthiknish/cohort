@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/shared/ui/skeleton'
 
 const STAT_CARDS = ['stat-1', 'stat-2', 'stat-3', 'stat-4']
 const FEATURE_CARDS = ['feature-1', 'feature-2', 'feature-3']

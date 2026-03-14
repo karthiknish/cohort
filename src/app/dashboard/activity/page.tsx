@@ -1,5 +1,1 @@
-import { permanentRedirect } from 'next/navigation'
-
-export default function ActivityPage() {
-  permanentRedirect('/for-you')
-}
+export { default } from '@/features/dashboard/activity/page'

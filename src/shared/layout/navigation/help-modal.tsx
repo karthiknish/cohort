@@ -1,0 +1,471 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useMutation, useQuery, useConvexAuth } from 'convex/react'
+import Link from 'next/link'
+import {
+  BarChart3,
+  CheckSquare,
+  FileText,
+  MessageSquare,
+  Home,
+  Briefcase,
+  Megaphone,
+  Video,
+  Users,
+  Keyboard,
+  ArrowRight,
+  Sparkles,
+  CircleHelp,
+} from 'lucide-react'
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog'
+import { Button } from '@/shared/ui/button'
+import { Badge } from '@/shared/ui/badge'
+import { ScrollArea } from '@/shared/ui/scroll-area'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
+import { useAuth } from '@/shared/contexts/auth-context'
+import { KeyboardShortcutBadge, useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
+import { onboardingApi } from '@/lib/convex-api'
+import { useOnboardingTour } from '@/shared/hooks/use-onboarding-tour'
+
+interface HelpModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  showWelcome?: boolean
+}
+
+const navigationGuide = [
+  {
+    name: 'Dashboard',
+    href: '/dashboard',
+    icon: Home,
+    description: 'Your home base with key metrics, workspace comparison, quick actions, and recent activity.',
+    tips: ['Use the client selector to filter by workspace', 'Compare multiple clients if you are an admin'],
+  },
+  {
+    name: 'Clients',
+    href: '/dashboard/clients',
+    icon: Users,
+    description: 'Manage your client workspaces, add new clients, and configure workspace settings.',
+    tips: ['Click a client to see detailed information', 'Use the search to quickly find clients'],
+  },
+  {
+    name: 'Analytics',
+    href: '/dashboard/analytics',
+    icon: BarChart3,
+    description: 'Deep dive into performance data across all your connected ad platforms.',
+    tips: ['Filter by platform and date range', 'Check AI-generated insights for quick recommendations'],
+  },
+  {
+    name: 'Ads',
+    href: '/dashboard/ads',
+    icon: Megaphone,
+    description: 'Connect and manage your ad platform integrations (Google, Meta, LinkedIn, TikTok).',
+    tips: ['Connect platforms to sync metrics automatically', 'Monitor sync status and refresh data'],
+  },
+  {
+    name: 'Meetings',
+    href: '/dashboard/meetings',
+    icon: Video,
+    description: 'Schedule native meeting rooms, invite attendees through Calendar, and review transcript-driven notes.',
+    tips: ['Connect Google Workspace first', 'Client users can join and review notes in read-only mode'],
+  },
+  {
+    name: 'Tasks',
+    href: '/dashboard/tasks',
+    icon: CheckSquare,
+    description: 'Track and manage tasks for you and your team across all client projects.',
+    tips: ['Assign tasks to team members', 'Set priorities and due dates'],
+  },
+  {
+    name: 'Proposals',
+    href: '/dashboard/proposals',
+    icon: FileText,
+    description: 'Create AI-powered proposals and pitch decks for new and existing clients.',
+    tips: ['Use templates to speed up creation', 'Generate professional slide decks instantly'],
+  },
+  {
+    name: 'Collaboration',
+    href: '/dashboard/collaboration',
+    icon: MessageSquare,
+    description: 'Team chat with project channels, file sharing, and message threading.',
+    tips: ['Use markdown and code blocks in messages', 'React to messages and create threads'],
+  },
+  {
+    name: 'Projects',
+    href: '/dashboard/projects',
+    icon: Briefcase,
+    description: 'Organize work into projects linked to clients for better tracking.',
+    tips: ['Link tasks and messages to projects', 'Track project progress and deadlines'],
+  },
+]
+
+const getKeyboardShortcuts = () => [
+  { combo: 'mod+k', description: 'Open quick navigation' },
+  { combo: '?', description: 'Show help & shortcuts' },
+  { combo: 'escape', description: 'Close dialogs and modals' },
+  { combo: 'mod+/', description: 'Toggle AI assistant' },
+]
+
+const gettingStartedSteps = [
+  {
+    title: 'Select or create a client workspace',
+    description: 'Use the dropdown in the header to switch between client workspaces or create a new one.',
+    action: { label: 'Go to Clients', href: '/dashboard/clients' },
+  },
+  {
+    title: 'Connect your ad platforms',
+    description: 'Link Google Ads, Meta, LinkedIn, or TikTok to automatically sync campaign performance.',
+    action: { label: 'Setup Integrations', href: '/dashboard/ads' },
+  },
+  {
+    title: 'Create your first task',
+    description: 'Capture an immediate priority and assign ownership so your team can execute quickly.',
+    action: { label: 'Open Tasks', href: '/dashboard/tasks?new=true' },
+  },
+  {
+    title: 'Create a proposal',
+    description: 'Use AI to generate professional proposals and pitch decks in minutes.',
+    action: { label: 'Create Proposal', href: '/dashboard/proposals' },
+  },
+]
+
+export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModalProps) {
+  const defaultTab = showWelcome ? 'welcome' : 'navigation'
+  const { startTour } = useOnboardingTour()
+
+  const keyboardShortcuts = getKeyboardShortcuts()
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden p-0 z-[1100]">
+        <DialogHeader className="px-6 pt-6">
+          <DialogTitle className="flex items-center gap-2">
+            <CircleHelp className="h-5 w-5 text-primary" />
+            {showWelcome ? 'Welcome to Cohorts' : 'Help & Navigation'}
+          </DialogTitle>
+          <DialogDescription>
+            {showWelcome
+              ? 'Get started with your agency workspace in a few simple steps.'
+              : 'Learn how to navigate and make the most of your workspace.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <Tabs key={defaultTab} defaultValue={defaultTab} className="flex-1">
+          <div className="px-6">
+            <TabsList className="grid w-full grid-cols-3">
+              {showWelcome && <TabsTrigger value="welcome">Get Started</TabsTrigger>}
+              <TabsTrigger value="navigation">Navigation</TabsTrigger>
+              <TabsTrigger value="shortcuts">Shortcuts</TabsTrigger>
+              {!showWelcome && <TabsTrigger value="tips">Tips</TabsTrigger>}
+            </TabsList>
+          </div>
+
+          <ScrollArea className="h-[400px] px-6 pb-6">
+            {showWelcome && (
+              <TabsContent value="welcome" className="mt-4 space-y-4">
+                <div className="pt-2 flex flex-col gap-2">
+                  <Button
+                    onClick={() => {
+                      onOpenChange(false)
+                      startTour()
+                    }}
+                    className="w-full bg-gradient-to-r from-primary to-primary/80"
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Launch Interactive Tour
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      localStorage.setItem('cohorts_welcome_seen', 'true')
+                      onOpenChange(false)
+                    }}
+                    className="w-full text-muted-foreground"
+                  >
+                    Skip to dashboard
+                  </Button>
+                </div>
+
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
+                      <Sparkles className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h4 className="font-semibold text-foreground">Quick tip</h4>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        Press <KeyboardShortcutBadge combo="mod+k" /> to quickly navigate across pages.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {gettingStartedSteps.map((step, index) => (
+                    <div
+                      key={step.title}
+                      className="group flex items-start gap-4 rounded-lg border border-muted/60 p-4 transition hover:border-primary/40 hover:bg-muted/30"
+                    >
+                      <Badge variant="secondary" className="shrink-0">
+                        {index + 1}
+                      </Badge>
+                      <div className="flex-1 space-y-1">
+                        <h4 className="font-medium text-foreground">{step.title}</h4>
+                        <p className="text-sm text-muted-foreground">{step.description}</p>
+                      </div>
+                      <Button asChild size="sm" variant="ghost" className="shrink-0">
+                        <Link href={step.action.href} onClick={() => onOpenChange(false)}>
+                          {step.action.label}
+                          <ArrowRight className="ml-1 h-3 w-3" />
+                        </Link>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            )}
+
+            <TabsContent value="navigation" className="mt-4 space-y-3">
+              {navigationGuide.map((item) => {
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => onOpenChange(false)}
+                    className="group flex items-start gap-3 rounded-lg border border-muted/60 p-3 transition hover:border-primary/40 hover:bg-muted/30"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-foreground group-hover:text-primary">
+                          {item.name}
+                        </h4>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </TabsContent>
+
+            <TabsContent value="shortcuts" className="mt-4 space-y-4">
+              <div className="rounded-lg border border-muted/60 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Keyboard className="h-4 w-4" />
+                  Keyboard Shortcuts
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Use these shortcuts to navigate faster.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {keyboardShortcuts.map((shortcut) => (
+                  <div
+                    key={shortcut.description}
+                    className="flex items-center justify-between rounded-lg border border-muted/40 px-4 py-3"
+                  >
+                    <span className="text-sm text-foreground">{shortcut.description}</span>
+                    <KeyboardShortcutBadge combo={shortcut.combo} />
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+
+            {!showWelcome && (
+              <TabsContent value="tips" className="mt-4 space-y-4">
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <h4 className="font-semibold text-foreground">Pro tips for power users</h4>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Get more done with these helpful features.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-muted/60 p-4">
+                    <h5 className="font-medium text-foreground">Client Comparison</h5>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Admin users can compare multiple clients side-by-side on the dashboard.
+                      Select multiple workspaces from the filter bar.
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-muted/60 p-4">
+                    <h5 className="font-medium text-foreground">AI-Powered Features</h5>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Use AI to generate proposals, get performance insights, and create
+                      professional pitch decks automatically.
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-muted/60 p-4">
+                    <h5 className="font-medium text-foreground">Markdown in Chat</h5>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Use markdown formatting in collaboration messages including code blocks
+                      with syntax highlighting.
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-muted/60 p-4">
+                    <h5 className="font-medium text-foreground">Quick Search</h5>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      The search bar in the header searches across clients, tasks, and campaigns.
+                      Use it to quickly find what you need.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+            )}
+          </ScrollArea>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function useHelpModal() {
+  const [open, setOpen] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false)
+  const { user } = useAuth()
+  const userId = user?.id
+  const userCreatedAt = user?.createdAt
+
+  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth()
+
+  const onboardingState = useQuery(
+    onboardingApi.getByUserId,
+    userId && isConvexAuthenticated ? { userId } : 'skip'
+  ) as {
+    welcomeSeenAtMs?: number | null
+    welcomeSeen?: boolean
+    onboardingTourCompleted?: boolean
+    onboardingTourCompletedAtMs?: number | null
+  } | null | undefined
+
+  const upsertOnboarding = useMutation(onboardingApi.upsert)
+
+  useEffect(() => {
+    if (!userId) return
+
+    const uid = userId
+    const createdAt = userCreatedAt
+
+    let cancelled = false
+
+    async function run() {
+      // Wait for onboarding state to load before making decisions
+      // onboardingState is undefined while loading, null if no record exists
+      if (onboardingState === undefined) return
+
+      // Local fallback cache (kept for fast repeat loads)
+      const hasSeenWelcomeLocal = typeof window !== 'undefined'
+        ? window.localStorage.getItem('cohorts_welcome_seen')
+        : null
+
+      let hasSeenWelcomeRemote = Boolean(onboardingState?.welcomeSeen || onboardingState?.welcomeSeenAtMs)
+      const onboardingTourCompleted = Boolean(onboardingState?.onboardingTourCompleted)
+      const onboardingTourCompletedAtMs = onboardingState?.onboardingTourCompletedAtMs ?? null
+
+      const persistWelcomeSeen = async (): Promise<boolean> => {
+        return upsertOnboarding({
+          userId: uid,
+          onboardingTourCompleted,
+          onboardingTourCompletedAtMs,
+          welcomeSeen: true,
+          welcomeSeenAtMs: Date.now(),
+        })
+          .then(() => true)
+          .catch((error) => {
+            console.warn('Failed to persist onboarding state', error)
+            return false
+          })
+      }
+
+      // Backfill remote state if the user already saw the welcome (local-only legacy)
+      if (hasSeenWelcomeLocal && !hasSeenWelcomeRemote) {
+        const persisted = await persistWelcomeSeen()
+        if (persisted) {
+          hasSeenWelcomeRemote = true
+        }
+      }
+
+      // Auto-open only for genuinely new users who have not completed onboarding
+      const created = createdAt ? new Date(createdAt) : new Date()
+      const now = new Date()
+      const isNewUser = (now.getTime() - created.getTime()) < 24 * 60 * 60 * 1000
+
+      const shouldShowWelcome = !hasSeenWelcomeRemote && !hasSeenWelcomeLocal && isNewUser
+
+      if (!cancelled && shouldShowWelcome) {
+        setShowWelcome(true)
+        setOpen(true)
+      }
+
+      if (!cancelled && !shouldShowWelcome && hasSeenWelcomeLocal && !hasSeenWelcomeRemote) {
+        await persistWelcomeSeen()
+      }
+    }
+
+    void run()
+
+    return () => {
+      cancelled = true
+    }
+  }, [userId, userCreatedAt, onboardingState, upsertOnboarding])
+
+  const markWelcomeSeen = async () => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('cohorts_welcome_seen', '1')
+      }
+    } catch {
+      // Ignore localStorage failures.
+    }
+
+    if (!userId) return
+
+    const onboardingTourCompleted = Boolean(onboardingState?.onboardingTourCompleted)
+    const onboardingTourCompletedAtMs = onboardingState?.onboardingTourCompletedAtMs ?? null
+
+    await upsertOnboarding({
+      userId,
+      onboardingTourCompleted,
+      onboardingTourCompletedAtMs,
+      welcomeSeen: true,
+      welcomeSeenAtMs: Date.now(),
+    }).catch((error) => {
+      console.warn('Failed to persist onboarding completion', error)
+    })
+  }
+
+  const onOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+
+    if (!nextOpen && showWelcome && userId) {
+      setShowWelcome(false)
+      void markWelcomeSeen()
+    }
+  }
+
+  useKeyboardShortcut({
+    combo: 'shift+?',
+    callback: () => {
+      setShowWelcome(false)
+      setOpen(true)
+    },
+  })
+
+  return { open, setOpen, onOpenChange, showWelcome, setShowWelcome }
+}

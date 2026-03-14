@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/shared/ui/skeleton'
 
 /**
  * Settings page loading skeleton for streaming SSR.

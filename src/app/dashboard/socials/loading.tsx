@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/shared/ui/skeleton'
 
 const KPI_CARDS = ['kpi-reach', 'kpi-impressions', 'kpi-engagement', 'kpi-clicks']
 

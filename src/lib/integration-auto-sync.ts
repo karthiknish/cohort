@@ -2,7 +2,7 @@ import { cache } from 'react'
 import { differenceInMinutes } from 'date-fns'
 import { ConvexHttpClient } from 'convex/browser'
 
-import { api } from '../../convex/_generated/api'
+import { api } from '/_generated/api'
 import {
   enqueueSyncJob,
   getAdIntegration,

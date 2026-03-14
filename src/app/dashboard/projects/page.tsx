@@ -1,12 +1,1 @@
-'use client'
-
-import { ProjectsPageProvider } from './components/projects-page-provider'
-import { ProjectsPageShell } from './components/projects-page-shell'
-
-export default function ProjectsPage() {
-  return (
-    <ProjectsPageProvider>
-      <ProjectsPageShell />
-    </ProjectsPageProvider>
-  )
-}
+export { default } from '@/features/dashboard/projects/page'

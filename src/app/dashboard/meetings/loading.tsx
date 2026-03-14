@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/shared/ui/skeleton'
 
 const ROOMS = ['room-1', 'room-2', 'room-3', 'room-4', 'room-5', 'room-6']
 const AVATARS = ['av-1', 'av-2', 'av-3']

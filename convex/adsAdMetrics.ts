@@ -1,6 +1,6 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
-import { internal } from './_generated/api'
+import { internal } from '/_generated/api'
 
 import { runDerivedMetricsPipeline } from '@/lib/metrics'
 import type { GoogleAdMetric } from '@/services/integrations/google-ads'

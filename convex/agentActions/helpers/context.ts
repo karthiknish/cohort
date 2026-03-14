@@ -1,4 +1,4 @@
-import { api } from '../../_generated/api'
+import { api } from '/_generated/api'
 import type { ActionCtx } from '../../_generated/server'
 
 import type { AgentRequestContextType } from '../types'

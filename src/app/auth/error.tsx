@@ -4,8 +4,8 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { Lock, RefreshCw, Copy, Code2 } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/shared/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 
 export default function AuthError({
   error,

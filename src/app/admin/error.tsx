@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect } from 'react'
+import Link from 'next/link'
 import { ShieldAlert, RefreshCw, Home, Copy, Code2 } from 'lucide-react'
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/shared/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Badge } from '@/shared/ui/badge'
 
 export default function AdminError({
   error,
@@ -105,10 +106,10 @@ export default function AdminError({
               Try again
             </Button>
             <Button variant="outline" asChild className="w-full">
-              <a href="/dashboard">
+              <Link href="/dashboard">
                 <Home className="mr-2 h-4 w-4" />
                 Back to dashboard
-              </a>
+              </Link>
             </Button>
           </div>
         </CardContent>

@@ -2,7 +2,7 @@ import { z } from 'zod/v4'
 
 import { Errors } from './errors'
 import { zWorkspaceMutation, zWorkspaceQuery } from './functions'
-import type { Doc } from './_generated/dataModel'
+import type { Doc } from '/_generated/dataModel'
 
 const meetingStatusValues = ['scheduled', 'in_progress', 'completed', 'cancelled'] as const
 const meetingStatusZ = z.enum(meetingStatusValues)

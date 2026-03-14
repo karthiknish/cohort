@@ -13,7 +13,7 @@ export interface AuthResult {
 import { ApiError } from './api-errors'
 import { ConvexHttpClient } from 'convex/browser'
 import { convexSiteUrl, getToken as getNextJsToken } from './auth-server'
-import { api } from '../../convex/_generated/api'
+import { api } from '/_generated/api'
 
 class AuthenticationError extends ApiError {
   constructor(message: string, status = 401) {

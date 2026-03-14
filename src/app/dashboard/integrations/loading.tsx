@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/shared/ui/skeleton'
 
 const STEPS = ['step-1', 'step-2', 'step-3']
 const PLATFORMS = ['platform-1', 'platform-2', 'platform-3']

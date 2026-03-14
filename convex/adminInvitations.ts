@@ -1,6 +1,6 @@
 import { z } from 'zod/v4'
 
-import type { Id } from './_generated/dataModel'
+import type { Id } from '/_generated/dataModel'
 import { Errors, isAppError } from './errors'
 import { zAdminMutation, zAdminQuery } from './functions'
 

@@ -17,7 +17,7 @@ import {
 import { checkConvexRateLimit } from './rate-limiter-convex'
 import { sanitizeInput } from './utils'
 import { logger } from './logger'
-import { api } from '../../convex/_generated/api'
+import { api } from '/_generated/api'
 
 // Lazy-init Convex client for idempotency
 let _convexClient: ConvexHttpClient | null = null

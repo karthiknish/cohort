@@ -6,7 +6,7 @@ import {
   buildClientSummaryPrompt,
   buildFallbackClientSummary,
   parseClientSummaryResponse,
-} from '@/app/dashboard/utils/client-summary'
+} from '@/features/dashboard/home/lib/client-summary'
 import {
   buildGeminiRateLimitKey,
   formatGeminiRateLimitMessage,

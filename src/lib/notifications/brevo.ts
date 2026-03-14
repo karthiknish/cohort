@@ -8,7 +8,7 @@ import { cache } from 'react'
 import * as Brevo from '@getbrevo/brevo'
 import { ConvexHttpClient } from 'convex/browser'
 
-import { internal } from '@/../convex/_generated/api'
+import { internal } from '/_generated/api'
 import { RETRY_CONFIG, sleep, calculateBackoffDelay } from './config'
 import {
   projectCreatedTemplate,

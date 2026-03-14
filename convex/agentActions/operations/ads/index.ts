@@ -1,4 +1,4 @@
-import { api } from '../../../_generated/api'
+import { api } from '/_generated/api'
 import {
   asNonEmptyString,
   asNumber,

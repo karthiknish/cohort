@@ -2,7 +2,7 @@
 // Keep this indirection so app code can import via `@/lib/convex-api`.
 //
 // Note: app call sites still rely on permissive function ref typing.
-import { api as generatedApi } from '../../convex/_generated/api'
+import { api as generatedApi } from '/_generated/api'
 
 export const api = generatedApi
 const looseApi = api as ReturnType<typeof JSON.parse>

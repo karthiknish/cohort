@@ -1,6 +1,6 @@
 import { ConvexHttpClient } from 'convex/browser'
 
-import { api } from '../../convex/_generated/api'
+import { api } from '/_generated/api'
 
 const ALERT_WEBHOOK_URL = process.env.SCHEDULER_ALERT_WEBHOOK_URL
 const DEFAULT_FAILURE_THRESHOLD = Number(process.env.SCHEDULER_ALERT_FAILURE_THRESHOLD ?? '3')

@@ -28,6 +28,21 @@
       }
     ],
     "paths": {
+      "@/app/*": [
+        "./src/app/*"
+      ],
+      "@/features/*": [
+        "./src/features/*"
+      ],
+      "@/shared/*": [
+        "./src/shared/*"
+      ],
+      "@convex/*": [
+        "./convex/*"
+      ],
+      "/_generated/*": [
+        "./convex/_generated/*"
+      ],
       "@/*": [
         "./src/*"
       ]
@@ -35,15 +50,17 @@
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.mts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.mts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     ".next",
-    "convex"
+    "convex",
+    "**/*.test.ts",
+    "**/*.test.tsx"
   ]
 }

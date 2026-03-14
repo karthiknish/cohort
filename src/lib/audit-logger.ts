@@ -1,6 +1,6 @@
 import { ConvexHttpClient } from 'convex/browser'
 
-import { api } from '../../convex/_generated/api'
+import { api } from '/_generated/api'
 import { logger } from './logger'
 
 export type AuditAction = 

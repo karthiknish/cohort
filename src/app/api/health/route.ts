@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { apiError, apiSuccess, createApiHandler } from '@/lib/api-handler'
 import { buildConfiguredServiceChecks, type ServiceCheck } from '@/lib/health/service-checks'
 import type { AuthResult } from '@/lib/server-auth'
-import { api as convexApi } from '../../../../convex/_generated/api'
+import { api as convexApi } from '/_generated/api'
 
 export const GET = createApiHandler(
   {

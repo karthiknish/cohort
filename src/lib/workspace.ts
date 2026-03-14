@@ -1,6 +1,6 @@
 import { cache } from 'react'
 import { ConvexHttpClient } from 'convex/browser'
-import { internal } from '../../convex/_generated/api'
+import { internal } from '/_generated/api'
 
 import { ValidationError } from './api-errors'
 

@@ -1,5 +1,5 @@
 import { z } from 'zod/v4'
-import type { Doc } from './_generated/dataModel'
+import type { Doc } from '/_generated/dataModel'
 import { Errors, isAppError } from './errors'
 import {
   applyManualPagination,

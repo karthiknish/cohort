@@ -1,5 +1,5 @@
 import type { TaskAttachment } from '@/types/tasks'
-import type { PendingAttachment } from '@/app/dashboard/collaboration/hooks/types'
+import type { PendingAttachment } from '@/features/dashboard/collaboration/hooks/types'
 
 const ALLOWED_TASK_ATTACHMENT_MIME_TYPES = new Set<string>([
   'image/png',

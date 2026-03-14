@@ -1,5 +1,5 @@
 import type { ActionCtx } from './_generated/server'
-import { api } from './_generated/api'
+import { api } from '/_generated/api'
 import { Errors } from './errors'
 import {
   buildGeminiRateLimitKey,

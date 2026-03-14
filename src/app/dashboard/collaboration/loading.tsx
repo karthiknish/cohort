@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@/shared/ui/skeleton'
 
 const CHANNELS = ['ch-1', 'ch-2', 'ch-3', 'ch-4']
 const DMS = ['dm-1', 'dm-2', 'dm-3']
