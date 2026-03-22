@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/shared/ui/data-table', () => ({
   DataTable: ({ data }: { data: Array<{ providerId: string }> }) => <div>rows:{data.length}:{data[0]?.providerId}</div>,
+  VirtualizedDataTable: ({ data }: { data: Array<{ providerId: string }> }) => <div>rows:{data.length}:{data[0]?.providerId}</div>,
   DataTableColumnHeader: ({ title }: { title: string }) => <div>{title}</div>,
 }))
 

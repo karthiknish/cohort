@@ -32,6 +32,7 @@ vi.mock('@/shared/ui/use-toast', () => ({
 
 vi.mock('@/shared/ui/data-table', () => ({
   DataTable: ({ data }: { data: unknown[] }) => <div>Rows: {data.length}</div>,
+  VirtualizedDataTable: ({ data }: { data: unknown[] }) => <div>Rows: {data.length}</div>,
   DataTableColumnHeader: ({ title }: { title: string }) => <span>{title}</span>,
 }))
 

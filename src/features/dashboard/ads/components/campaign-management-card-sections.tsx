@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { DataTable } from '@/shared/ui/data-table'
+import { VirtualizedDataTable } from '@/shared/ui/data-table'
 import {
   Dialog,
   DialogContent,
@@ -229,24 +229,20 @@ function CampaignManagementTableSection({
       emptyDescription={`Connect ${providerName} and create ${showingGroups ? 'campaign groups' : 'campaigns'} to see them here.`}
     >
       {showingGroups ? (
-        <DataTable
+        <VirtualizedDataTable
           columns={groupColumns}
           data={groups}
-          showPagination={false}
           maxHeight={420}
-          enableVirtualization={groups.length > 50}
           rowHeight={48}
           onRowClick={(row) => onRowClick(row.id, row.name)}
           rowClassName="cursor-pointer"
           getRowId={(row) => row.id}
         />
       ) : (
-        <DataTable
+        <VirtualizedDataTable
           columns={campaignColumns}
           data={campaigns}
-          showPagination={false}
           maxHeight={420}
-          enableVirtualization={campaigns.length > 50}
           rowHeight={48}
           onRowClick={(row) => onRowClick(row.id, row.name)}
           rowClassName="cursor-pointer"

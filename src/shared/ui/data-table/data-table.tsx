@@ -30,7 +30,25 @@ import { cn } from '@/lib/utils'
 
 import { DataTablePagination } from './data-table-pagination'
 
-interface DataTableProps<TData, TValue> {
+const DEFAULT_TABLE_MAX_HEIGHT = '520px'
+
+function getLoadingRowIds(loadingRows: number) {
+  return Array.from({ length: loadingRows }, (_, slotIndex) => `loading-row-${slotIndex + 1}`)
+}
+
+function getLoadingCellKey<TData, TValue>(column: ColumnDef<TData, TValue>, columnIndex: number) {
+  if ('id' in column && typeof column.id === 'string') {
+    return column.id
+  }
+
+  if ('accessorKey' in column && typeof column.accessorKey === 'string') {
+    return column.accessorKey
+  }
+
+  return `column-${columnIndex + 1}`
+}
+
+export interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   searchKey?: string
@@ -176,6 +194,7 @@ export function DataTable<TData, TValue>({
   })
 
   const rows = table.getRowModel().rows
+  const loadingRowIds = React.useMemo(() => getLoadingRowIds(loadingRows), [loadingRows])
 
   const shouldVirtualize = enableVirtualization && !manualPagination
   const virtualParentRef = React.useRef<HTMLDivElement | null>(null)
@@ -186,15 +205,17 @@ export function DataTable<TData, TValue>({
     overscan,
   })
   const virtualItems = shouldVirtualize ? virtualizer.getVirtualItems() : []
-  const paddingTop = shouldVirtualize && virtualItems.length > 0 ? virtualItems[0]!.start : 0
-  const paddingBottom = shouldVirtualize && virtualItems.length > 0
-    ? virtualizer.getTotalSize() - (virtualItems[virtualItems.length - 1]!.end ?? 0)
+  const firstVirtualItem = virtualItems.at(0)
+  const lastVirtualItem = virtualItems.at(-1)
+  const paddingTop = shouldVirtualize && firstVirtualItem ? firstVirtualItem.start : 0
+  const paddingBottom = shouldVirtualize && lastVirtualItem
+    ? virtualizer.getTotalSize() - lastVirtualItem.end
     : 0
 
   React.useEffect(() => {
     if (!shouldVirtualize) return
     virtualizer.measure()
-  }, [rows.length, shouldVirtualize, virtualizer])
+  }, [shouldVirtualize, virtualizer])
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -204,7 +225,7 @@ export function DataTable<TData, TValue>({
           'rounded-md border',
           (maxHeight || shouldVirtualize) && 'overflow-auto'
         )}
-        style={maxHeight ? { maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight } : shouldVirtualize ? { maxHeight: '520px' } : undefined}
+        style={maxHeight ? { maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight } : shouldVirtualize ? { maxHeight: DEFAULT_TABLE_MAX_HEIGHT } : undefined}
       >
         <Table wrapperClassName={shouldVirtualize ? 'overflow-visible' : undefined}>
           <TableHeader className={stickyHeader ? 'sticky top-0 bg-background z-10' : undefined}>
@@ -226,10 +247,10 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {loading ? (
               // Loading skeleton
-              Array.from({ length: loadingRows }).map((_, index) => (
-                <TableRow key={`loading-${index}`}>
-                  {columns.map((_, colIndex) => (
-                    <TableCell key={`loading-cell-${colIndex}`}>
+              loadingRowIds.map((rowId) => (
+                <TableRow key={rowId}>
+                  {columns.map((column, columnIndex) => (
+                    <TableCell key={`${rowId}-${getLoadingCellKey(column, columnIndex)}`}>
                       <div className="h-4 w-full animate-pulse rounded bg-muted" />
                     </TableCell>
                   ))}
@@ -244,7 +265,11 @@ export function DataTable<TData, TValue>({
                     </TableRow>
                   )}
                   {virtualItems.map((virtualRow) => {
-                    const row = rows[virtualRow.index]!
+                    const row = rows[virtualRow.index]
+                    if (!row) {
+                      return null
+                    }
+
                     return (
                       <TableRow
                         key={row.id}

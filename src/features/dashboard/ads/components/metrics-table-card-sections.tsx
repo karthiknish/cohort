@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { DataTable, DataTableColumnHeader } from '@/shared/ui/data-table'
+import { DataTableColumnHeader, VirtualizedDataTable } from '@/shared/ui/data-table'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -55,17 +55,17 @@ export function MetricsTableFilters({ availableProviders, hasActiveFilters, onCl
 
 export function MetricsTableBody({ columns, emptyCtaHref, emptyCtaLabel, emptyMessage, filteredMetrics, hasMetrics, hasActiveFilters, initialMetricsLoading, metricError, onClearFilters, processedMetrics }: { columns: ColumnDef<MetricRecord>[]; emptyCtaHref: string; emptyCtaLabel: string; emptyMessage: string; filteredMetrics: MetricRecord[]; hasMetrics: boolean; hasActiveFilters: boolean; initialMetricsLoading: boolean; metricError: string | null; onClearFilters: () => void; processedMetrics: MetricRecord[] }) {
   if (hasActiveFilters && hasMetrics) {
-    return <><p className="mb-4 text-sm text-muted-foreground">Showing {filteredMetrics.length} of {processedMetrics.length} rows</p>{renderMetricsTableState({ columns, emptyCtaHref, emptyCtaLabel, emptyMessage, filteredMetrics, hasMetrics, initialMetricsLoading, metricError, onClearFilters })}</>
+    return <><p className="mb-4 text-sm text-muted-foreground">Showing {filteredMetrics.length} of {processedMetrics.length} rows</p><MetricsTableState columns={columns} emptyCtaHref={emptyCtaHref} emptyCtaLabel={emptyCtaLabel} emptyMessage={emptyMessage} filteredMetrics={filteredMetrics} hasMetrics={hasMetrics} initialMetricsLoading={initialMetricsLoading} metricError={metricError} onClearFilters={onClearFilters} /></>
   }
-  return renderMetricsTableState({ columns, emptyCtaHref, emptyCtaLabel, emptyMessage, filteredMetrics, hasMetrics, initialMetricsLoading, metricError, onClearFilters })
+  return <MetricsTableState columns={columns} emptyCtaHref={emptyCtaHref} emptyCtaLabel={emptyCtaLabel} emptyMessage={emptyMessage} filteredMetrics={filteredMetrics} hasMetrics={hasMetrics} initialMetricsLoading={initialMetricsLoading} metricError={metricError} onClearFilters={onClearFilters} />
 }
 
-function renderMetricsTableState({ columns, emptyCtaHref, emptyCtaLabel, emptyMessage, filteredMetrics, hasMetrics, initialMetricsLoading, metricError, onClearFilters }: { columns: ColumnDef<MetricRecord>[]; emptyCtaHref: string; emptyCtaLabel: string; emptyMessage: string; filteredMetrics: MetricRecord[]; hasMetrics: boolean; initialMetricsLoading: boolean; metricError: string | null; onClearFilters: () => void }) {
+function MetricsTableState({ columns, emptyCtaHref, emptyCtaLabel, emptyMessage, filteredMetrics, hasMetrics, initialMetricsLoading, metricError, onClearFilters }: { columns: ColumnDef<MetricRecord>[]; emptyCtaHref: string; emptyCtaLabel: string; emptyMessage: string; filteredMetrics: MetricRecord[]; hasMetrics: boolean; initialMetricsLoading: boolean; metricError: string | null; onClearFilters: () => void }) {
   if (initialMetricsLoading) return <div className="space-y-2">{[0, 1, 2, 3, 4, 5].map((slot) => <Skeleton key={slot} className="h-10 w-full rounded" />)}</div>
   if (metricError) return <Alert variant="destructive"><AlertTitle>Unable to load metrics</AlertTitle><AlertDescription>{metricError}</AlertDescription></Alert>
   if (!hasMetrics) return <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground"><p>{emptyMessage}</p><Button asChild size="sm" variant="outline"><Link href={emptyCtaHref}>{emptyCtaLabel}</Link></Button></div>
   if (filteredMetrics.length === 0) return <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground"><p>No rows match your filters.</p><Button size="sm" variant="outline" onClick={onClearFilters}>Clear filters</Button></div>
-  return <DataTable columns={columns} data={filteredMetrics} showPagination={false} maxHeight={320} stickyHeader enableVirtualization={filteredMetrics.length > 50} rowHeight={44} getRowId={(row) => row.id} />
+  return <VirtualizedDataTable columns={columns} data={filteredMetrics} maxHeight={320} stickyHeader rowHeight={44} getRowId={(row) => row.id} />
 }
 
 export function MetricsTableLoadMore({ hasMetrics, loadMoreError, loadingMore, nextCursor, onLoadMore }: { hasMetrics: boolean; loadMoreError: string | null; loadingMore: boolean; nextCursor: string | null; onLoadMore: () => void }) {

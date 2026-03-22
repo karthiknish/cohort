@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/shared/ui/data-table', () => ({
   DataTable: ({ data }: { data: unknown[] }) => <div>Rows: {data.length}</div>,
+  VirtualizedDataTable: ({ data }: { data: unknown[] }) => <div>Rows: {data.length}</div>,
 }))
 
 vi.mock('@/shared/ui/state-wrapper', () => ({
