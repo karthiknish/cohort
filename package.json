@@ -2,6 +2,10 @@
   "name": "cohorts",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "bun@1.3.6",
+  "engines": {
+    "bun": ">=1.3.6"
+  },
   "scripts": {
     "dev": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 bun --bun next dev",
     "dev:local": "convex dev --local & bun --bun next dev",
@@ -20,7 +24,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@convex-dev/better-auth": "0.10.10",
+    "@convex-dev/better-auth": "0.11.3",
     "@convex-dev/rate-limiter": "^0.3.2",
     "@getbrevo/brevo": "^3.0.1",
     "@google-cloud/local-auth": "^3.0.1",
@@ -60,7 +64,7 @@
     "@types/uuid": "^10.0.0",
     "agentation": "^2.3.2",
     "axios": "^1.13.6",
-    "better-auth": "^1.4.18",
+    "better-auth": "^1.5.5",
     "cheerio": "^1.0.0-rc.12",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -108,8 +112,8 @@
     "@types/react-dom": "^19.2.3",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^16.1.6",
-    "next": "^16.1.6",
+    "eslint-config-next": "^16.2.1",
+    "next": "^16.2.1",
     "typescript": "^5",
     "vitest": "^4.0.18"
   },

@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // reactCompiler: true, // Temporarily disabled - causes build issues with _global-error
+  logging: {
+    browserToTerminal: true,
+  },
   turbopack: {
     root: process.cwd(),
   },

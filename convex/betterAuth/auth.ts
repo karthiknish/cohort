@@ -9,6 +9,10 @@ import type { DataModel } from '/_generated/dataModel';
 import authConfig from "../auth.config";
 import schema from "./schema";
 
+type ConvexCompatibleBetterAuthOptions = BetterAuthOptions & {
+  baseURL?: string;
+};
+
 // Better Auth Component
 export const authComponent = createClient<DataModel, typeof schema>(
   components.betterAuth,
@@ -51,7 +55,7 @@ function buildTrustedOrigins(): string[] {
 }
 
 // Better Auth Options
-export const createAuthOptions = (ctx: GenericCtx<DataModel>): BetterAuthOptions => {
+export const createAuthOptions = (ctx: GenericCtx<DataModel>): ConvexCompatibleBetterAuthOptions => {
   // Access env vars at runtime for Convex compatibility
   const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL;
   const baseURL = process.env.BETTER_AUTH_URL || siteUrl;
