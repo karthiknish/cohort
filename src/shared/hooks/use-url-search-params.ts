@@ -11,7 +11,12 @@ function dispatchLocationChange() {
     return
   }
 
-  window.dispatchEvent(new Event(LOCATION_CHANGE_EVENT))
+  // Defer via queueMicrotask so this never fires synchronously inside a React
+  // render/insertion-effect phase, which would violate the rule that
+  // useInsertionEffect must not schedule updates.
+  queueMicrotask(() => {
+    window.dispatchEvent(new Event(LOCATION_CHANGE_EVENT))
+  })
 }
 
 function ensureHistoryPatched() {

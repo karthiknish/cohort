@@ -258,7 +258,7 @@ export function ActivityList({
                     <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
                       {dateGroup}
-                      <Badge variant="outline" className="ml-1">
+                      <Badge variant="secondary" className="ml-1 rounded-full">
                         {dateGroupActivities.length}
                       </Badge>
                     </h3>

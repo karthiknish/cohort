@@ -12,7 +12,7 @@ import { notificationsApi } from '@/lib/convex-api'
 import { getPreviewActivity } from '@/lib/preview-data'
 import type { Activity } from '@/types/activity'
 
-export function useRealtimeActivity(limitCount = 20) {
+export function useRealtimeActivity(limitCount = 20, preferPreviewData = false) {
   const { user } = useAuth()
   const { selectedClient } = useClientContext()
   const { isPreviewMode } = usePreview()
@@ -23,8 +23,9 @@ export function useRealtimeActivity(limitCount = 20) {
   const [hasMore, setHasMore] = useState(false)
   const [currentLimit, setCurrentLimit] = useState(limitCount)
 
+  const usePreviewData = isPreviewMode || preferPreviewData
   const convexEnabled =
-    !isPreviewMode && Boolean(user?.agencyId) && Boolean(selectedClient?.id)
+    !usePreviewData && Boolean(user?.agencyId) && Boolean(selectedClient?.id)
 
   const convexActivities = useQuery(
     api.activity.listForClient,
@@ -45,14 +46,14 @@ export function useRealtimeActivity(limitCount = 20) {
 
   // Handle preview mode
   useEffect(() => {
-    if (!isPreviewMode) return
+    if (!usePreviewData) return
 
     const previewActivities = getPreviewActivity(selectedClient?.id ?? null)
     setActivities(previewActivities.slice(0, currentLimit))
     setLoading(false)
     setError(null)
     setHasMore(previewActivities.length > currentLimit)
-  }, [isPreviewMode, selectedClient?.id, currentLimit])
+  }, [usePreviewData, selectedClient?.id, currentLimit])
 
   // Convex realtime path
   useEffect(() => {

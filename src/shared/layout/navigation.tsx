@@ -96,7 +96,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
 
   // Persist last visited dashboard tab
   useEffect(() => {
-    if (pathname.startsWith('/dashboard') || pathname === '/for-you') {
+    if (pathname.startsWith('/dashboard')) {
       localStorage.setItem('cohorts_last_tab', pathname)
     }
   }, [pathname])

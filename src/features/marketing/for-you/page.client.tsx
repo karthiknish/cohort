@@ -3,26 +3,23 @@
 import { useConvexAuth, useQuery } from 'convex/react'
 import {
   ArrowUpRight,
-  Download,
+  LayoutDashboard,
   RefreshCw,
   Zap,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
-import { useToast } from '@/shared/ui/use-toast'
 import { FadeIn, FadeInStagger } from '@/shared/ui/animate-in'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { analyticsIntegrationsApi, meetingIntegrationsApi, meetingsApi, projectsApi } from '@/lib/convex-api'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { DASHBOARD_THEME, getButtonClasses } from '@/lib/dashboard-theme'
-import { getPreviewProjects } from '@/lib/preview-data'
+import { getPreviewClients, getPreviewProjects } from '@/lib/preview-data'
 import { cn, getWorkspaceId } from '@/lib/utils'
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 
@@ -31,32 +28,26 @@ import { useIntegrationStatusSummary } from '@/features/dashboard/home/hooks/use
 import { getPreviewGoogleWorkspaceStatus, getPreviewMeetings } from '@/features/dashboard/meetings/lib/preview-data'
 import type { MeetingRecord } from '@/features/dashboard/meetings/types'
 import { ActivityStats } from '@/features/dashboard/activity/components/activity-stats'
-import { ActivityDetailsModal } from '@/features/dashboard/activity/components/activity-details-modal'
-import { ActivityFilters } from '@/features/dashboard/activity/components/activity-filters'
-import { ActivityList } from '@/features/dashboard/activity/components/activity-list'
 import { buildActivityHubModel, type FeatureSpace, type GoogleAnalyticsStatusSummary, type HubTone, type SpotlightItem } from '@/features/dashboard/activity/for-you'
 import { useRealtimeActivity } from '@/features/dashboard/activity/hooks/use-realtime-activity'
-import type { ActivityType, DateRangeOption, EnhancedActivity, SortOption, StatusFilter } from '@/features/dashboard/activity/types'
+import type { ActivityType, EnhancedActivity } from '@/features/dashboard/activity/types'
 import { ClientsSummarySection } from '@/features/dashboard/home/components/clients-summary-section'
 import { MyTasksSection } from '@/features/dashboard/home/components/my-tasks-section'
 
-const toneClasses: Record<HubTone, { badge: string; border: string }> = {
-  neutral: {
-    badge: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200',
-    border: 'border-slate-200/80 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700',
-  },
-  success: {
-    badge: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300',
-    border: 'border-emerald-200/80 hover:border-emerald-300 dark:border-emerald-900/60 dark:hover:border-emerald-800',
-  },
-  warning: {
-    badge: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300',
-    border: 'border-amber-200/80 hover:border-amber-300 dark:border-amber-900/60 dark:hover:border-amber-800',
-  },
-  critical: {
-    badge: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300',
-    border: 'border-rose-200/80 hover:border-rose-300 dark:border-rose-900/60 dark:hover:border-rose-800',
-  },
+const toneBorder: Record<HubTone, string> = {
+  neutral: 'border-slate-200/80 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700',
+  success: 'border-emerald-200/80 hover:border-emerald-300 dark:border-emerald-900/60 dark:hover:border-emerald-800',
+  warning: 'border-amber-200/80 hover:border-amber-300 dark:border-amber-900/60 dark:hover:border-amber-800',
+  critical: 'border-rose-200/80 hover:border-rose-300 dark:border-rose-900/60 dark:hover:border-rose-800',
+}
+
+type BadgeVariant = 'secondary' | 'success' | 'warning' | 'destructive' | 'info' | 'default'
+
+const toneToVariant: Record<HubTone, BadgeVariant> = {
+  neutral: 'secondary',
+  success: 'success',
+  warning: 'warning',
+  critical: 'destructive',
 }
 
 function isProjectStatus(value: unknown): value is ProjectStatus {
@@ -93,51 +84,6 @@ function mapProjectRows(rows: unknown[] | undefined): ProjectRecord[] {
   })
 }
 
-function exportActivitiesToCsv(activities: EnhancedActivity[]):
-  | { ok: true }
-  | { ok: false; error: unknown } {
-  let url: string | null = null
-
-  try {
-    const dataToExport = activities.map((activity) => ({
-      type: activity.type,
-      description: activity.description,
-      entity: activity.entityName,
-      timestamp: activity.timestamp,
-      user: activity.userName || 'System',
-    }))
-
-    const csvContent = [
-      ['Type', 'Description', 'Entity', 'Timestamp', 'User'].join(','),
-      ...dataToExport.map((row) =>
-        [
-          row.type,
-          `"${row.description}"`,
-          `"${row.entity}"`,
-          row.timestamp,
-          row.user,
-        ].join(',')
-      ),
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    url = URL.createObjectURL(blob)
-
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `activity-export-${new Date().toISOString().split('T')[0]}.csv`
-    link.click()
-
-    return { ok: true }
-  } catch (error) {
-    return { ok: false, error }
-  } finally {
-    if (url) {
-      URL.revokeObjectURL(url)
-    }
-  }
-}
-
 function SpotlightList({ items }: { items: SpotlightItem[] }) {
   if (items.length === 0) {
     return (
@@ -155,12 +101,12 @@ function SpotlightList({ items }: { items: SpotlightItem[] }) {
           href={item.href}
           className={cn(
             'group rounded-xl border bg-background/70 p-4 transition-[colors,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-sm',
-            toneClasses[item.tone].border,
+            toneBorder[item.tone],
           )}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-2">
-              <Badge variant="outline" className={cn('rounded-full text-[11px] capitalize', toneClasses[item.tone].badge)}>
+              <Badge variant={toneToVariant[item.tone]} className="rounded-full text-[11px] capitalize">
                 {item.badge}
               </Badge>
               <div>
@@ -183,7 +129,7 @@ function FeatureSpaceCard({ space }: { space: FeatureSpace }) {
       href={space.href}
       className={cn(
         'group rounded-2xl border bg-background/70 p-4 transition-[colors,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md',
-        toneClasses[space.tone].border,
+        toneBorder[space.tone],
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -191,7 +137,7 @@ function FeatureSpaceCard({ space }: { space: FeatureSpace }) {
           <p className="text-sm font-semibold text-foreground">{space.title}</p>
           <p className="text-xs text-muted-foreground">{space.subtitle}</p>
         </div>
-        <Badge variant="outline" className={cn('rounded-full text-[11px]', toneClasses[space.tone].badge)}>
+        <Badge variant={toneToVariant[space.tone]} className="rounded-full text-[11px]">
           {space.badge}
         </Badge>
       </div>
@@ -242,11 +188,11 @@ function PinnedSectionCard({
           <Link
             key={item.id}
             href={item.href}
-            className={cn('group block rounded-xl border bg-background/80 p-4 transition-colors', toneClasses[item.tone].border)}
+            className={cn('group block rounded-xl border bg-background/80 p-4 transition-colors', toneBorder[item.tone])}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <Badge variant="outline" className={cn('rounded-full text-[11px]', toneClasses[item.tone].badge)}>
+                <Badge variant={toneToVariant[item.tone]} className="rounded-full text-[11px]">
                   {item.badge}
                 </Badge>
                 <p className="mt-2 text-sm font-semibold text-foreground">{item.title}</p>
@@ -267,38 +213,24 @@ function PinnedSectionCard({
 }
 
 export default function ForYouPage() {
-  const { selectedClient } = useClientContext()
-  const { toast } = useToast()
-  const { activities, loading, error, retry, hasMore, loadMore, markAsRead } = useRealtimeActivity(20)
+  const { clients, loading: clientsLoading } = useClientContext()
 
-  // Local state for enhanced features
-  const [searchQuery, setSearchQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState<ActivityType | 'all'>('all')
-  const [sortBy, setSortBy] = useState<SortOption>('newest')
-  const [dateRange, setDateRange] = useState<DateRangeOption>('all')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [selectedActivities, setSelectedActivities] = useState<Set<string>>(new Set())
-  const [pinnedActivities, setPinnedActivities] = useState<Set<string>>(new Set())
-  const [activityReactions, setActivityReactions] = useState<
-    Record<string, Array<{ emoji: string; count: number; users: string[] }>>
-  >({})
-  const [activityComments, setActivityComments] = useState<
-    Record<string, Array<{ id: string; userId: string; userName: string; text: string; timestamp: string }>>
-  >({})
-  const [selectedActivity, setSelectedActivity] = useState<EnhancedActivity | null>(null)
-  const [detailsModalOpen, setDetailsModalOpen] = useState(false)
-
-  // Get current user name for comments
   const { user } = useAuth()
-  const currentUserName = user?.name || 'You'
-  const selectedClientId = selectedClient?.id ?? null
   const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
   const { isPreviewMode } = usePreview()
   const workspaceId = getWorkspaceId(user)
   const timezone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', [])
   const canQueryConvex = isConvexAuthenticated && !isConvexLoading && !!user?.id && !!workspaceId
-  const { metrics, rawTasks, taskSummary, proposals } = useDashboardData({ selectedClientId })
-  const { summary: integrationSummary } = useIntegrationStatusSummary({ clientIds: selectedClientId ? [selectedClientId] : [] })
+  const shouldUseSampleData = isPreviewMode || (!clientsLoading && clients.length === 0) || !canQueryConvex
+  const resolvedClients = useMemo(
+    () => (shouldUseSampleData ? getPreviewClients() : clients),
+    [shouldUseSampleData, clients]
+  )
+  const { activities, loading, retry } = useRealtimeActivity(20, shouldUseSampleData)
+  const workspaceClientIds = useMemo(() => resolvedClients.map((client) => client.id), [resolvedClients])
+  const workspaceScopeName = resolvedClients.length === 1 ? (resolvedClients[0]?.name ?? 'your workspace') : 'your workspace'
+  const { metrics, rawTasks, taskSummary, proposals } = useDashboardData({ selectedClientId: null, preferPreviewData: shouldUseSampleData })
+  const { summary: integrationSummary } = useIntegrationStatusSummary({ clientIds: workspaceClientIds })
 
   const projectsRealtime = useQuery(
     projectsApi.list,
@@ -306,7 +238,7 @@ export default function ForYouPage() {
       ? 'skip'
       : {
           workspaceId,
-          clientId: selectedClientId ?? undefined,
+          clientId: undefined,
           limit: 50,
         }
   ) as unknown[] | undefined
@@ -317,7 +249,7 @@ export default function ForYouPage() {
       ? 'skip'
       : {
           workspaceId,
-          clientId: selectedClientId ?? null,
+          clientId: null,
           includePast: false,
           limit: 20,
         }
@@ -334,7 +266,7 @@ export default function ForYouPage() {
       ? 'skip'
       : {
           workspaceId,
-          clientId: selectedClientId ?? null,
+          clientId: null,
         }
   ) as GoogleAnalyticsStatusSummary | null | undefined
 
@@ -344,28 +276,28 @@ export default function ForYouPage() {
       ...a,
       type: a.type as ActivityType,
       isRead: a.isRead ?? false,
-      isPinned: pinnedActivities.has(a.id),
-      reactions: activityReactions[a.id] || [],
+      isPinned: false,
+      reactions: [],
     }))
-  }, [activities, pinnedActivities, activityReactions])
+  }, [activities])
 
   const projects = useMemo(() => {
-    if (isPreviewMode) return getPreviewProjects(selectedClientId)
+    if (shouldUseSampleData) return getPreviewProjects(null)
     return mapProjectRows(projectsRealtime)
-  }, [isPreviewMode, projectsRealtime, selectedClientId])
+  }, [shouldUseSampleData, projectsRealtime])
 
   const meetings = useMemo(() => {
-    if (isPreviewMode) return getPreviewMeetings(selectedClientId, timezone)
+    if (shouldUseSampleData) return getPreviewMeetings(null, timezone)
     return meetingsRealtime ?? []
-  }, [isPreviewMode, meetingsRealtime, selectedClientId, timezone])
+  }, [shouldUseSampleData, meetingsRealtime, timezone])
 
   const resolvedGoogleWorkspaceStatus = useMemo(() => {
-    if (isPreviewMode) return getPreviewGoogleWorkspaceStatus()
+    if (shouldUseSampleData) return getPreviewGoogleWorkspaceStatus()
     return googleWorkspaceStatus ?? { connected: false, linkedAtMs: null, scopes: [] }
-  }, [googleWorkspaceStatus, isPreviewMode])
+  }, [googleWorkspaceStatus, shouldUseSampleData])
 
   const resolvedGoogleAnalyticsStatus = useMemo<GoogleAnalyticsStatusSummary | null>(() => {
-    if (isPreviewMode) {
+    if (shouldUseSampleData) {
       const hasPreviewAnalytics = metrics.some((metric) => metric.providerId === 'google-analytics')
       if (!hasPreviewAnalytics) return null
 
@@ -381,11 +313,11 @@ export default function ForYouPage() {
     }
 
     return googleAnalyticsStatus ?? null
-  }, [googleAnalyticsStatus, isPreviewMode, metrics])
+  }, [googleAnalyticsStatus, shouldUseSampleData, metrics])
 
   const activityHub = useMemo(() => {
     return buildActivityHubModel({
-      selectedClientName: selectedClient?.name ?? 'your workspace',
+      selectedClientName: workspaceScopeName,
       activities: enhancedActivities,
       taskSummary,
       tasks: rawTasks,
@@ -407,223 +339,42 @@ export default function ForYouPage() {
     rawTasks,
     resolvedGoogleAnalyticsStatus,
     resolvedGoogleWorkspaceStatus.connected,
-    selectedClient?.name,
+    workspaceScopeName,
     taskSummary,
   ])
 
-  // Apply date range filter (in addition to other filters)
-  const dateFilteredActivities = useMemo(() => {
-    if (dateRange === 'all') return enhancedActivities
-    // Date filtering is handled within ActivityList for simplicity
-    return enhancedActivities
-  }, [enhancedActivities, dateRange])
+  const spotlightItems = useMemo(
+    () => activityHub.spotlightTabs.flatMap((tab) => tab.items).slice(0, 6),
+    [activityHub.spotlightTabs]
+  )
 
-  // Handlers
   const handleRetry = useCallback(() => {
-    toast({
-      title: 'Refreshing activity',
-      description: 'Syncing latest updates…',
-    })
     retry()
-  }, [toast, retry])
-
-  const handleMarkAsRead = useCallback((id: string) => {
-    void markAsRead([id])
-    toast({
-      title: 'Activity marked as read',
-      description: 'This activity has been marked as read.',
-    })
-  }, [toast, markAsRead])
-
-  const handleMarkAllAsRead = useCallback(() => {
-    const unreadIds = enhancedActivities.filter((a) => !a.isRead).map((a) => a.id)
-    if (unreadIds.length === 0) return
-    void markAsRead(unreadIds)
-    toast({
-      title: 'All activities marked as read',
-      description: `${unreadIds.length} activities marked as read.`,
-    })
-  }, [enhancedActivities, toast, markAsRead])
-
-  const handleTogglePin = useCallback((id: string) => {
-    setPinnedActivities((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(id)) {
-        newSet.delete(id)
-        toast({
-          title: 'Activity unpinned',
-          description: 'The activity has been removed from your pinned items.',
-        })
-      } else {
-        newSet.add(id)
-        toast({
-          title: 'Activity pinned',
-          description: 'The activity has been pinned to the top of your feed.',
-        })
-      }
-      return newSet
-    })
-  }, [toast])
-
-  const handleSelectAll = useCallback(() => {
-    setSelectedActivities((prev) => {
-      if (prev.size === enhancedActivities.length) {
-        return new Set()
-      }
-      return new Set(enhancedActivities.map((a) => a.id))
-    })
-  }, [enhancedActivities])
-
-  const handleSelectionChange = useCallback((id: string, checked: boolean) => {
-    setSelectedActivities((prev) => {
-      const next = new Set(prev)
-      if (checked) {
-        next.add(id)
-      } else {
-        next.delete(id)
-      }
-      return next
-    })
-  }, [])
-
-  const handleBulkDismiss = useCallback(() => {
-    setSelectedActivities(new Set())
-    toast({
-      title: 'Activities dismissed',
-      description: `${selectedActivities.size} activities have been dismissed.`,
-    })
-  }, [selectedActivities.size, toast])
-
-  const handleClearAllPins = useCallback(() => {
-    setPinnedActivities(new Set())
-    toast({
-      title: 'All pins cleared',
-      description: 'All pinned activities have been unpinned.',
-    })
-  }, [toast])
-
-  const handleExport = useCallback(async () => {
-    const result = exportActivitiesToCsv(enhancedActivities)
-
-    if (result.ok) {
-      toast({
-        title: 'Export successful',
-        description: 'Activity data has been downloaded.',
-      })
-      return
-    }
-
-    logError(result.error, 'ForYouPage.handleExport')
-    toast({
-      title: 'Export failed',
-      description: asErrorMessage(result.error),
-      variant: 'destructive',
-    })
-  }, [enhancedActivities, toast])
-
-  const handleAddReaction = useCallback((id: string, emoji: string) => {
-    setActivityReactions((prev) => {
-      const existing = prev[id] || []
-      const existingReaction = existing.find((r) => r.emoji === emoji)
-
-      if (existingReaction) {
-        return {
-          ...prev,
-          [id]: existing.filter((r) => r.emoji !== emoji),
-        }
-      }
-
-      return {
-        ...prev,
-        [id]: [...existing, { emoji, count: 1, users: ['currentUser'] }],
-      }
-    })
-  }, [])
-
-  const handleAddComment = useCallback((activityId: string, text: string) => {
-    const newComment = {
-      id: `comment-${Date.now()}`,
-      userId: user?.id || 'current',
-      userName: user?.name || 'You',
-      text,
-      timestamp: new Date().toISOString(),
-    }
-    setActivityComments((prev) => ({
-      ...prev,
-      [activityId]: [...(prev[activityId] || []), newComment],
-    }))
-    toast({
-      title: 'Comment added',
-      description: 'Your comment has been added.',
-    })
-  }, [toast, user])
-
-  const handleViewDetails = useCallback((activity: EnhancedActivity) => {
-    setSelectedActivity(activity)
-    setDetailsModalOpen(true)
-  }, [])
-
-  const handleClearAllFilters = useCallback(() => {
-    setSearchQuery('')
-    setTypeFilter('all')
-    setDateRange('all')
-    setStatusFilter('all')
-  }, [])
-
-  // Listen for custom event to clear filters
-  useEffect(() => {
-    const handler = () => handleClearAllFilters()
-    window.addEventListener('clear-activity-filters', handler)
-    return () => window.removeEventListener('clear-activity-filters', handler)
-  }, [handleClearAllFilters])
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        document.getElementById('activity-search')?.focus()
-      }
-      if (e.key === 'Escape') {
-        setSearchQuery('')
-        setTypeFilter('all')
-        setStatusFilter('all')
-        setDateRange('all')
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [retry])
 
   const unreadCount = enhancedActivities.filter((a) => !a.isRead).length
 
   return (
-    <div className={DASHBOARD_THEME.layout.container}>
+    <div className={cn(DASHBOARD_THEME.layout.container, 'w-full')}>
       {/* Client summaries — always visible (admin/team only) */}
       <ClientsSummarySection />
 
       {/* My tasks — always visible, independent of client selection */}
       <MyTasksSection />
 
-      {/* Workspace pulse — shows workspace-wide data; activity stream requires a client */}
-      {!selectedClient ? (
-        <div className="rounded-xl border border-dashed bg-muted/20 p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            Select a client workspace from the top bar to see the workspace pulse, activity stream, and recommended spaces.
-          </p>
-        </div>
-      ) : (
-        <>
+      {/* Workspace-wide summary — independent of client selection */}
+      <>
           {/* Header */}
           <div className={DASHBOARD_THEME.layout.header}>
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-primary">
                   <Zap aria-hidden="true" className="mr-1 h-3.5 w-3.5" />
-                  Live workspace
+                  Personal summary
                 </Badge>
-                <Badge variant="outline" className="rounded-full">{selectedClient.name}</Badge>
+                <Badge variant="secondary" className="rounded-full">
+                  {resolvedClients.length > 0 ? `${resolvedClients.length} client${resolvedClients.length === 1 ? '' : 's'}` : 'Workspace-wide'}
+                </Badge>
               </div>
               <h1 className={cn(DASHBOARD_THEME.layout.title, 'mt-3 text-balance')}>{activityHub.heroTitle}</h1>
               <p className={cn(DASHBOARD_THEME.layout.subtitle, 'mt-1')}>
@@ -645,9 +396,11 @@ export default function ForYouPage() {
                 <RefreshCw className={cn('mr-2 h-4 w-4', loading && DASHBOARD_THEME.animations.spin)} />
                 Refresh
               </Button>
-              <Button variant="outline" size="sm" onClick={handleExport} title="Export activity data" className={getButtonClasses('outline')}>
-                <Download className="mr-2 h-4 w-4" />
-                Export
+              <Button asChild variant="default" size="sm" className={getButtonClasses('primary')}>
+                <Link href="/dashboard">
+                  <LayoutDashboard aria-hidden="true" className="mr-2 h-4 w-4" />
+                  Go to Dashboard
+                </Link>
               </Button>
             </div>
           </div>
@@ -680,7 +433,7 @@ export default function ForYouPage() {
             <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'pb-4')}>
               <CardTitle className="text-base text-balance">Workspace Pulse</CardTitle>
               <CardDescription>
-                A live overview across tasks, projects, meetings, proposals, collaboration, ads, and analytics.
+                A quick read on what needs attention and where momentum is building.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
@@ -688,7 +441,7 @@ export default function ForYouPage() {
                 <ActivityStats activities={enhancedActivities} />
                 <div className="grid gap-3 sm:grid-cols-3">
                   {activityHub.featureSpaces.slice(0, 3).map((space) => (
-                    <div key={space.id} className={cn('rounded-xl border bg-muted/30 p-4', toneClasses[space.tone].border)}>
+                    <div key={space.id} className={cn('rounded-xl border bg-muted/30 p-4', toneBorder[space.tone])}>
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{space.title}</p>
                       <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{space.metric}</p>
                       <p className="mt-1 text-xs text-muted-foreground">{space.secondary}</p>
@@ -701,9 +454,9 @@ export default function ForYouPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-foreground">Needs Attention</p>
-                    <p className="text-xs text-muted-foreground">Top actions and blockers for the selected workspace.</p>
+                    <p className="text-xs text-muted-foreground">Top actions and blockers across your workspace.</p>
                   </div>
-                  <Badge variant="outline" className="rounded-full">{activityHub.priorityItems.length}</Badge>
+                  <Badge variant="secondary" className="rounded-full">{activityHub.priorityItems.length}</Badge>
                 </div>
 
                 <div className="mt-4 space-y-3">
@@ -711,11 +464,11 @@ export default function ForYouPage() {
                     <Link
                       key={item.id}
                       href={item.href}
-                      className={cn('group block rounded-xl border bg-background/80 p-3 transition-colors', toneClasses[item.tone].border)}
+                      className={cn('group block rounded-xl border bg-background/80 p-3 transition-colors', toneBorder[item.tone])}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <Badge variant="outline" className={cn('rounded-full text-[11px]', toneClasses[item.tone].badge)}>
+                          <Badge variant={toneToVariant[item.tone]} className="rounded-full text-[11px]">
                             {item.badge}
                           </Badge>
                           <p className="mt-2 text-sm font-semibold text-foreground">{item.title}</p>
@@ -749,7 +502,7 @@ export default function ForYouPage() {
               </div>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {activityHub.featureSpaces.map((space) => (
+              {activityHub.featureSpaces.slice(0, 4).map((space) => (
                 <FeatureSpaceCard key={space.id} space={space} />
               ))}
             </CardContent>
@@ -759,112 +512,23 @@ export default function ForYouPage() {
           <FadeIn as="div">
             <Card className={DASHBOARD_THEME.cards.base}>
             <CardHeader className={DASHBOARD_THEME.cards.header}>
-              <CardTitle className="text-base text-balance">Worked On</CardTitle>
-              <CardDescription>Browse live work by priority, unread updates, deadlines, meetings, and performance.</CardDescription>
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <CardTitle className="text-base text-balance">Next Up</CardTitle>
+                  <CardDescription>A short list of the most relevant live items across the workspace.</CardDescription>
+                </div>
+                <Button asChild variant="ghost" size="sm" className="w-fit">
+                  <Link href="/dashboard/tasks">Open tasks</Link>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="worked-on" className="w-full">
-                <TabsList className="h-auto w-full flex-wrap justify-start gap-2 bg-transparent p-0">
-                  {activityHub.spotlightTabs.map((tab) => (
-                    <TabsTrigger key={tab.id} value={tab.id} className="rounded-full border bg-background px-3 py-1.5 text-xs">
-                      {tab.label}
-                      <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[11px] leading-none">{tab.count}</span>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-
-                {activityHub.spotlightTabs.map((tab) => (
-                  <TabsContent key={tab.id} value={tab.id}>
-                    <SpotlightList items={tab.items} />
-                  </TabsContent>
-                ))}
-              </Tabs>
-            </CardContent>
-            </Card>
-          </FadeIn>
-
-          {/* Activity stream */}
-          <FadeIn as="div">
-            <Card className={DASHBOARD_THEME.cards.base}>
-            <CardHeader className={DASHBOARD_THEME.cards.header}>
-              <CardTitle className="text-base text-balance">Activity Stream</CardTitle>
-              <CardDescription>
-                The detailed live timeline stays here, with filters and bulk actions for triage.
-              </CardDescription>
-            </CardHeader>
-            <div className="border-b px-6 pb-4 pt-4">
-              <ActivityFilters
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                typeFilter={typeFilter}
-                onTypeFilterChange={setTypeFilter}
-                dateRange={dateRange}
-                onDateRangeChange={setDateRange}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                sortBy={sortBy}
-                onSortChange={setSortBy}
-                selectedCount={selectedActivities.size}
-                totalCount={enhancedActivities.length}
-                onSelectAll={handleSelectAll}
-                onClearSelection={() => setSelectedActivities(new Set())}
-                onBulkDismiss={handleBulkDismiss}
-                onMarkAllAsRead={handleMarkAllAsRead}
-                onClearAllPins={handleClearAllPins}
-              />
-            </div>
-
-            <CardContent className="p-0">
-              <ActivityList
-                activities={dateFilteredActivities}
-                loading={loading}
-                error={error}
-                hasMore={hasMore}
-                searchQuery={searchQuery}
-                typeFilter={typeFilter}
-                dateRange={dateRange}
-                statusFilter={statusFilter}
-                sortBy={sortBy}
-                onRetry={handleRetry}
-                onLoadMore={loadMore}
-                onTogglePin={handleTogglePin}
-                onMarkAsRead={handleMarkAsRead}
-                onAddReaction={handleAddReaction}
-                onAddComment={handleAddComment}
-                onViewDetails={handleViewDetails}
-                selectedActivities={selectedActivities}
-                onSelectionChange={handleSelectionChange}
-                onSelectAll={handleSelectAll}
-                comments={activityComments}
-                currentUserName={currentUserName}
-              />
+              <SpotlightList items={spotlightItems} />
             </CardContent>
             </Card>
           </FadeIn>
           </FadeInStagger>
-
-          {/* Activity Details Modal */}
-          <ActivityDetailsModal
-            activity={selectedActivity}
-            open={detailsModalOpen}
-            onOpenChange={setDetailsModalOpen}
-            onMarkAsRead={handleMarkAsRead}
-            onTogglePin={handleTogglePin}
-          />
-
-          {/* Keyboard shortcuts hint */}
-          <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-4">
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">⌘&nbsp;K</kbd>
-              <span>Focus search</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">Esc</kbd>
-              <span>Clear filters</span>
-            </span>
-          </div>
-        </>
-      )}
+      </>
     </div>
   )
 }

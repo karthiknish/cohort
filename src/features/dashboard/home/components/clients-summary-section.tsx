@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useMemo } from 'react'
 import { useQuery } from 'convex/react'
 import { useConvexAuth } from 'convex/react'
 import {
@@ -8,18 +9,18 @@ import {
   Briefcase,
   CheckSquare,
   Megaphone,
-  Users,
   Video,
 } from 'lucide-react'
 
-import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { clientsApi } from '@/lib/convex-api'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import { getPreviewClientSummaries } from '@/lib/preview-data'
 import { cn, getWorkspaceId } from '@/lib/utils'
 
 type ClientSummary = {
@@ -60,16 +61,12 @@ function getInitials(name: string): string {
     .join('')
 }
 
-// Deterministic color assignment based on client name
+// Deterministic color assignment — uses same tokens as badge semantic variants
 const AVATAR_COLORS = [
-  'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
-  'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
-  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-  'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-  'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
-  'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
-  'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
-  'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+  'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+  'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  'bg-secondary/80 text-secondary-foreground',
 ]
 
 function avatarColor(name: string): string {
@@ -151,14 +148,6 @@ function ClientSummaryCard({ client }: { client: ClientSummary }) {
         </div>
       </div>
 
-      {/* Team badge */}
-      <div className="mx-4 mb-3">
-        <Badge variant="outline" className="rounded-full text-[10px] text-muted-foreground">
-          <Users className="mr-1 h-3 w-3" />
-          {client.teamMembersCount} member{client.teamMembersCount !== 1 ? 's' : ''}
-        </Badge>
-      </div>
-
       {/* Quick-nav buttons */}
       <div className="mt-auto flex items-center gap-1 border-t border-border/50 p-3">
         <Link
@@ -223,20 +212,35 @@ function ClientCardSkeleton() {
 
 export function ClientsSummarySection() {
   const { user } = useAuth()
+  const { clients } = useClientContext()
+  const { isPreviewMode } = usePreview()
   const { isAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
   const workspaceId = getWorkspaceId(user)
 
   const canQuery = isAuthenticated && !isConvexLoading && !!workspaceId
+  const shouldUsePreviewData = isPreviewMode || !canQuery
 
   const summaries = useQuery(
     clientsApi.getClientSummaries,
-    canQuery ? { workspaceId } : 'skip'
+    shouldUsePreviewData ? 'skip' : { workspaceId }
   ) as ClientSummary[] | undefined
 
-  // Only show to admin and team roles
-  if (!user || (user.role !== 'admin' && user.role !== 'team')) return null
-
-  const isLoading = summaries === undefined
+  const clientContextFallback = useMemo<ClientSummary[]>(
+    () => clients.map((client) => ({
+      legacyId: client.id,
+      name: client.name,
+      accountManager: client.accountManager,
+      teamMembersCount: client.teamMembers.length,
+      openTaskCount: 0,
+      activeProjectCount: 0,
+      nextMeetingMs: null,
+    })),
+    [clients]
+  )
+  const resolvedSummaries = shouldUsePreviewData
+    ? getPreviewClientSummaries()
+    : (summaries && summaries.length > 0 ? summaries : clientContextFallback)
+  const isLoading = !shouldUsePreviewData && summaries === undefined
 
   return (
     <Card className={DASHBOARD_THEME.cards.base}>
@@ -260,7 +264,7 @@ export function ClientsSummarySection() {
               <ClientCardSkeleton key={k} />
             ))}
           </div>
-        ) : summaries.length === 0 ? (
+        ) : resolvedSummaries.length === 0 ? (
           <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
             No clients yet —{' '}
             <Link href="/dashboard/clients" className="font-medium text-primary hover:underline">
@@ -270,7 +274,7 @@ export function ClientsSummarySection() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {summaries.map((client) => (
+            {resolvedSummaries.map((client) => (
               <ClientSummaryCard key={client.legacyId} client={client} />
             ))}
           </div>

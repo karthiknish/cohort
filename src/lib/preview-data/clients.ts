@@ -78,3 +78,50 @@ export function getPreviewMetrics(clientId: string | null): MetricRecord[] {
 
     return records
 }
+
+export type PreviewClientSummary = {
+    legacyId: string
+    name: string
+    accountManager: string
+    teamMembersCount: number
+    openTaskCount: number
+    activeProjectCount: number
+    nextMeetingMs: number | null
+}
+
+export function getPreviewClientSummaries(): PreviewClientSummary[] {
+    const clients = getPreviewClients()
+    const now = typeof window === 'undefined'
+        ? new Date('2024-01-15T12:00:00.000Z')
+        : new Date()
+
+    return [
+        {
+            legacyId: clients[0]?.id ?? 'preview-tech-corp',
+            name: clients[0]?.name ?? 'Tech Corp',
+            accountManager: clients[0]?.accountManager ?? 'Alex Morgan',
+            teamMembersCount: clients[0]?.teamMembers.length ?? 2,
+            openTaskCount: 7,
+            activeProjectCount: 2,
+            nextMeetingMs: new Date(now.getTime() + 2 * 60 * 60 * 1000).getTime(),
+        },
+        {
+            legacyId: clients[1]?.id ?? 'preview-startupxyz',
+            name: clients[1]?.name ?? 'StartupXYZ',
+            accountManager: clients[1]?.accountManager ?? 'Priya Patel',
+            teamMembersCount: clients[1]?.teamMembers.length ?? 2,
+            openTaskCount: 5,
+            activeProjectCount: 1,
+            nextMeetingMs: new Date(now.getTime() + 26 * 60 * 60 * 1000).getTime(),
+        },
+        {
+            legacyId: clients[2]?.id ?? 'preview-retail-store',
+            name: clients[2]?.name ?? 'Retail Store',
+            accountManager: clients[2]?.accountManager ?? 'Taylor Kim',
+            teamMembersCount: clients[2]?.teamMembers.length ?? 2,
+            openTaskCount: 3,
+            activeProjectCount: 1,
+            nextMeetingMs: null,
+        },
+    ]
+}

@@ -126,7 +126,7 @@ export function ActivityItem({
               aria-label={`Open activity ${activity.description}`}
             >
               <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                <Badge variant="outline" className="h-5 px-1.5 py-0 text-[10px]">
+                <Badge variant="secondary" className="h-5 px-1.5 py-0 text-[10px]">
                   {ACTIVITY_LABELS[activity.type]}
                 </Badge>
                 {!activity.isRead && (

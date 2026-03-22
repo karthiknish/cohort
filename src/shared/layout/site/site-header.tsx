@@ -2,23 +2,18 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { LogOut, User, LayoutDashboard, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, LogOut } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu'
 import { useAuth } from '@/shared/contexts/auth-context'
 
 export function SiteHeader() {
   const { user, loading, signOut } = useAuth()
+  const pathname = usePathname()
   const [signingOut, setSigningOut] = useState(false)
+  const showAccountActions = pathname === '/for-you'
 
   const handleSignOut = () => {
     setSigningOut(true)
@@ -41,7 +36,7 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-3">
           {/* Mobile sign-out icon */}
-          {user && (
+          {user && showAccountActions && (
             <Button
               type="button"
               variant="ghost"
@@ -55,45 +50,35 @@ export function SiteHeader() {
             </Button>
           )}
 
-          {/* Desktop user menu */}
-          {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="hidden items-center gap-2 md:flex"
-                  disabled={loading}
-                >
-                  <User className="h-4 w-4" />
-                  <span className="max-w-[140px] truncate text-sm">
-                    {user.name ?? user.email}
-                  </span>
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
+          {/* Desktop account actions */}
+          {user && showAccountActions && (
+            <div className="hidden items-center gap-3 md:flex">
+              <div className="text-right">
+                <p className="max-w-[180px] truncate text-sm font-medium text-foreground">
+                  {user.name ?? user.email}
+                </p>
+                <p className="max-w-[220px] truncate text-xs text-muted-foreground">
                   {user.email}
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard" className="flex items-center gap-2">
-                    <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleSignOut}
-                  disabled={signingOut}
-                  className="flex items-center gap-2 text-destructive focus:text-destructive"
-                >
-                  <LogOut className="h-4 w-4" />
-                  {signingOut ? 'Signing out…' : 'Sign out'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </p>
+              </div>
+              <Button asChild variant="default" size="sm" className="gap-2">
+                <Link href="/dashboard">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Go to Dashboard
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSignOut}
+                disabled={signingOut || loading}
+                className="gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                {signingOut ? 'Signing out…' : 'Sign out'}
+              </Button>
+            </div>
           )}
         </div>
       </div>

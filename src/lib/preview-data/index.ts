@@ -11,7 +11,7 @@ export {
 } from './utils'
 
 // Clients and metrics
-export { getPreviewClients, getPreviewMetrics } from './clients'
+export { getPreviewClients, getPreviewMetrics, getPreviewClientSummaries } from './clients'
 
 // Analytics
 export { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from './analytics'
