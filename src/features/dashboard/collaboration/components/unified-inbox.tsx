@@ -73,8 +73,6 @@ type UnifiedInboxChannelPaneProps = {
   onMarkThreadAsRead: (threadRootId: string, beforeMs?: number) => Promise<void>
   reactionPendingByMessage: ReactionPendingState
   sharedFiles: CollaborationAttachment[]
-  workspaceId?: string | null
-  onPinnedMessageClick?: (messageId: string) => void
   onClearDeepLink?: () => void
   deepLinkMessageId?: string | null
   deepLinkThreadId?: string | null
@@ -181,8 +179,6 @@ export function UnifiedInbox({
     onMarkThreadAsRead,
     reactionPendingByMessage,
     sharedFiles,
-    workspaceId,
-    onPinnedMessageClick,
     onClearDeepLink,
     deepLinkMessageId,
     deepLinkThreadId,
@@ -465,10 +461,7 @@ export function UnifiedInbox({
         <CollaborationSidebar
           channel={selectedChannel}
           channelParticipants={channelParticipants}
-          channelMessages={channelMessages}
           sharedFiles={sharedFiles}
-          workspaceId={workspaceId ?? null}
-          onPinnedMessageClick={onPinnedMessageClick}
           canManageMembers={canManageSelectedChannel}
           onManageMembers={onManageSelectedChannel}
         />

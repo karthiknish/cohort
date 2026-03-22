@@ -11,7 +11,7 @@ vi.mock('@/shared/ui/use-toast', () => ({
 }))
 
 import type { ClientTeamMember } from '@/types/clients'
-import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
+import type { CollaborationAttachment } from '@/types/collaboration'
 
 import type { Channel } from '../types'
 
@@ -20,7 +20,6 @@ import {
   CollaborationSidebarChannelCard,
   CollaborationSidebarContent,
   CollaborationSidebarMobileHeader,
-  CollaborationSidebarPinnedSection,
   CollaborationSidebarRosterSection,
 } from './sidebar-sections'
 
@@ -42,37 +41,6 @@ const participants: ClientTeamMember[] = [
 ]
 
 const sharedFiles: CollaborationAttachment[] = [{ name: 'brief.pdf', url: 'https://example.com/brief.pdf', size: '2 MB', type: 'application/pdf' }]
-
-const pinnedMessages: CollaborationMessage[] = [
-  {
-    id: 'message-1',
-    senderId: 'user-1',
-    senderName: 'Alex Kim',
-    senderRole: 'manager',
-    createdAt: '2026-03-11T12:00:00.000Z',
-    updatedAt: null,
-    content: 'Pin this update',
-    attachments: [],
-    reactions: [],
-    mentions: [],
-    readBy: [],
-    deliveredTo: [],
-    sharedTo: [],
-    channelType: 'team',
-    clientId: null,
-    projectId: null,
-    deletedAt: null,
-    deletedBy: null,
-    isDeleted: false,
-    isEdited: false,
-    isPinned: true,
-    pinnedAt: '2026-03-11T12:10:00.000Z',
-    parentMessageId: null,
-    threadRootId: null,
-    threadReplyCount: 0,
-    threadLastReplyAt: null,
-  },
-]
 
 describe('collaboration sidebar sections', () => {
   it('renders the header, channel card, and roster', () => {
@@ -96,14 +64,11 @@ describe('collaboration sidebar sections', () => {
     const markup = renderToStaticMarkup(
       <>
         <CollaborationSidebarAssetLibrarySection sharedFiles={sharedFiles} />
-        <CollaborationSidebarPinnedSection messages={pinnedMessages} workspaceId="workspace-1" onMessageClick={vi.fn()} />
-        <CollaborationSidebarContent channel={channel} channelParticipants={participants} channelMessages={pinnedMessages} workspaceId="workspace-1" sharedFiles={sharedFiles} canManageMembers={true} onManageMembers={vi.fn()} />
+        <CollaborationSidebarContent channel={channel} channelParticipants={participants} sharedFiles={sharedFiles} canManageMembers={true} onManageMembers={vi.fn()} />
       </>,
     )
 
     expect(markup).toContain('Asset Library')
-    expect(markup).toContain('Pinned Messages (1)')
-    expect(markup).toContain('Pin this update')
     expect(markup).toContain('brief.pdf')
     expect(markup).toContain('Workspace Roster')
     expect(markup).toContain('Internal coordination channel')

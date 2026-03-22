@@ -7,21 +7,15 @@ import { Card, CardContent } from '@/shared/ui/card'
 import { EmptyState } from '@/shared/ui/empty-state'
 import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
-import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
+import type { CollaborationAttachment } from '@/types/collaboration'
 
 import type { Channel } from '../types'
 import { getInitials } from '../utils'
-import { PinnedMessages } from './pinned-messages'
-
-const EMPTY_CHANNEL_MESSAGES: CollaborationMessage[] = []
 
 type CollaborationSidebarContentProps = {
   channel: Channel | null
   channelParticipants: ClientTeamMember[]
-  channelMessages?: CollaborationMessage[]
   sharedFiles: CollaborationAttachment[]
-  workspaceId?: string | null
-  onPinnedMessageClick?: (messageId: string) => void
   canManageMembers?: boolean
   onManageMembers?: () => void
 }
@@ -165,34 +159,10 @@ export function CollaborationSidebarAssetLibrarySection({ sharedFiles }: { share
   )
 }
 
-export function CollaborationSidebarPinnedSection({
-  messages,
-  onMessageClick,
-  workspaceId = null,
-}: {
-  messages: CollaborationMessage[]
-  onMessageClick?: (messageId: string) => void
-  workspaceId?: string | null
-}) {
-  return (
-    <PinnedMessages
-      messages={messages}
-      workspaceId={workspaceId}
-      userId={null}
-      onMessageClick={onMessageClick}
-      showEmptyState={true}
-      className="rounded-2xl border border-border/70 bg-background/80 shadow-sm"
-    />
-  )
-}
-
 export function CollaborationSidebarContent({
   channel,
   channelParticipants,
-  channelMessages = EMPTY_CHANNEL_MESSAGES,
   sharedFiles,
-  workspaceId = null,
-  onPinnedMessageClick,
   canManageMembers = false,
   onManageMembers,
 }: CollaborationSidebarContentProps) {
@@ -200,7 +170,6 @@ export function CollaborationSidebarContent({
     <div className="flex h-full w-full flex-col gap-8 overflow-y-auto bg-muted/5 p-6 text-sm text-muted-foreground">
       <CollaborationSidebarChannelCard channel={channel} canManageMembers={canManageMembers} onManageMembers={onManageMembers} />
       <CollaborationSidebarRosterSection channel={channel} channelParticipants={channelParticipants} />
-      <CollaborationSidebarPinnedSection messages={channelMessages} workspaceId={workspaceId} onMessageClick={onPinnedMessageClick} />
       <CollaborationSidebarAssetLibrarySection sharedFiles={sharedFiles} />
     </div>
   )

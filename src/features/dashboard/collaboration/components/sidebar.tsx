@@ -3,22 +3,16 @@
 import { useId, useState } from 'react'
 
 import type { ClientTeamMember } from '@/types/clients'
-import type { CollaborationMessage } from '@/types/collaboration'
 import type { CollaborationAttachment } from '@/types/collaboration'
 
 import type { Channel } from '../types'
 import { cn } from '@/lib/utils'
 import { CollaborationSidebarContent, CollaborationSidebarMobileHeader } from './sidebar-sections'
 
-const EMPTY_CHANNEL_MESSAGES: CollaborationMessage[] = []
-
 interface CollaborationSidebarProps {
   channel: Channel | null
   channelParticipants: ClientTeamMember[]
-  channelMessages?: CollaborationMessage[]
   sharedFiles: CollaborationAttachment[]
-  workspaceId?: string | null
-  onPinnedMessageClick?: (messageId: string) => void
   canManageMembers?: boolean
   onManageMembers?: () => void
 }
@@ -26,10 +20,7 @@ interface CollaborationSidebarProps {
 export function CollaborationSidebar({
   channel,
   channelParticipants,
-  channelMessages = EMPTY_CHANNEL_MESSAGES,
   sharedFiles,
-  workspaceId = null,
-  onPinnedMessageClick,
   canManageMembers = false,
   onManageMembers,
 }: CollaborationSidebarProps) {
@@ -51,10 +42,7 @@ export function CollaborationSidebar({
           <CollaborationSidebarContent
             channel={channel}
             channelParticipants={channelParticipants}
-            channelMessages={channelMessages}
             sharedFiles={sharedFiles}
-            workspaceId={workspaceId}
-            onPinnedMessageClick={onPinnedMessageClick}
             canManageMembers={canManageMembers}
             onManageMembers={onManageMembers}
           />
@@ -64,10 +52,7 @@ export function CollaborationSidebar({
         <CollaborationSidebarContent
           channel={channel}
           channelParticipants={channelParticipants}
-          channelMessages={channelMessages}
           sharedFiles={sharedFiles}
-          workspaceId={workspaceId}
-          onPinnedMessageClick={onPinnedMessageClick}
           canManageMembers={canManageMembers}
           onManageMembers={onManageMembers}
         />

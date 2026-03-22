@@ -63,10 +63,10 @@ function getInitials(name: string): string {
 
 // Deterministic color assignment — uses same tokens as badge semantic variants
 const AVATAR_COLORS = [
-  'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
-  'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
-  'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-  'bg-secondary/80 text-secondary-foreground',
+  'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100',
+  'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100',
+  'bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-100',
+  'bg-secondary/80 text-foreground',
 ]
 
 function avatarColor(name: string): string {
@@ -94,7 +94,7 @@ function ClientSummaryCard({ client }: { client: ClientSummary }) {
       <div className="flex items-start gap-3 p-4 pb-3">
         <div
           className={cn(
-            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold',
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-md ring-1 ring-black/8 dark:ring-white/10',
             avatarColor(client.name)
           )}
         >

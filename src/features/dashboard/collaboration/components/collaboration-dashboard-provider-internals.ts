@@ -87,7 +87,7 @@ export function useCollaborationDashboardUrlState({
   }, [pathname, router, searchParams])
 
   useEffect(() => {
-    if (!requestedProjectId && !requestedChannelId && !requestedChannelType) {
+    if (!requestedProjectId && !requestedChannelId && !requestedChannelType && !requestedClientId) {
       projectParamHandledRef.current = null
       channelParamHandledRef.current = null
       return
@@ -118,6 +118,11 @@ export function useCollaborationDashboardUrlState({
         ? channels.find((channel) => channel.type === 'team')
         : undefined) ??
       (requestedChannelType === 'client' && requestedClientId
+        ? channels.find(
+            (channel) => channel.type === 'client' && channel.clientId === requestedClientId,
+          )
+        : undefined) ??
+      (requestedClientId
         ? channels.find(
             (channel) => channel.type === 'client' && channel.clientId === requestedClientId,
           )

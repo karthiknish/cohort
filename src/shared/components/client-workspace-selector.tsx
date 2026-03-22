@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { LoaderCircle, Plus, Trash, Building2, Users, Briefcase } from 'lucide-react'
+import { LoaderCircle, Plus, Trash, Building2, Users } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/shared/ui/button'
@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select'
-import { MentionInput, MentionableUser } from '@/shared/ui/mention-input'
+import { MentionInput, type MentionableUser } from '@/shared/ui/mention-input'
 import { api } from '@convex/_generated/api'
 import { useQuery } from 'convex/react'
 
@@ -49,13 +49,14 @@ function parseTeamMembers(input: string): ClientTeamMember[] {
     .filter(Boolean)
     .map((entry) => {
       const parts = entry.split(':')
-      const name = parts[0]!
+      const name = parts[0]?.trim() ?? ''
       const role = parts[1]
       return {
-        name: name.trim(),
+        name,
         role: role ? role.trim() : 'Contributor',
       }
     })
+    .filter((member) => member.name.length > 0)
 }
 
 export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorProps) {
@@ -175,20 +176,22 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
   }
 
   const handleValueChange = useCallback((value: string) => {
-    selectClient(value || null)
+    selectClient(value)
   }, [selectClient])
 
   const selectedClient = useMemo(() => {
-    return clients.find((c) => c.id === selectedClientId)
+    return clients.find((c) => c.id === selectedClientId) ?? clients[0]
   }, [clients, selectedClientId])
 
   const placeholder = hasClients ? 'Select workspace' : 'No workspaces available'
+  const selectValue = hasClients ? selectedClient?.id ?? '' : ''
+  const selectedLabel = selectedClient?.name ?? placeholder
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <div className="relative w-full min-w-[220px]">
         <Select
-          value={hasClients ? selectedClientId ?? '' : ''}
+          value={selectValue}
           onValueChange={handleValueChange}
           disabled={!hasClients}
         >
@@ -205,14 +208,10 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                {selectedClient ? (
-                  <Building2 className="h-3.5 w-3.5" />
-                ) : (
-                  <Briefcase className="h-3.5 w-3.5" />
-                )}
+                <Building2 className="h-3.5 w-3.5" />
               </div>
               <SelectValue placeholder={placeholder}>
-                {selectedClient?.name || placeholder}
+                {selectedLabel}
               </SelectValue>
             </div>
           </SelectTrigger>
@@ -226,20 +225,20 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
               <span>Your Workspaces</span>
             </div>
             {clients.map((client) => (
-              <SelectItem
-                key={client.id}
-                value={client.id}
-                hideIndicator
-                className="cursor-pointer py-2.5 px-3 rounded-md mx-1 my-0.5 transition-colors hover:bg-primary/5 focus:bg-primary/5 data-[state=checked]:bg-primary/10 data-[state=checked]:font-medium"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                    <Building2 className="h-3 w-3" />
+                <SelectItem
+                  key={client.id}
+                  value={client.id}
+                  hideIndicator
+                  className="cursor-pointer py-2.5 px-3 rounded-md mx-1 my-0.5 transition-colors hover:bg-primary/5 focus:bg-primary/5 data-[state=checked]:bg-primary/10 data-[state=checked]:font-medium"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                      <Building2 className="h-3 w-3" />
+                    </div>
+                    <span className="truncate">{client.name}</span>
                   </div>
-                  <span className="truncate">{client.name}</span>
-                </div>
-              </SelectItem>
-            ))}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>

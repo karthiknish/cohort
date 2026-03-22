@@ -46,11 +46,12 @@ export function useCollaborationData(): UseCollaborationDataReturn {
 
   const currentUserId = user?.id ?? null
   const currentUserRole = user?.role ?? null
+  const selectedClientId = selectedClient?.id ?? null
 
   const { projects, projectsLoading } = useProjectsData({
     workspaceId,
     userId,
-    selectedClientId: selectedClient?.id ?? null,
+    selectedClientId,
     isPreviewMode,
   })
 
@@ -117,6 +118,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     customChannels,
     fallbackDisplayName,
     fallbackRole,
+    visibleClientId: selectedClientId,
   })
 
   const {

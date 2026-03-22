@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import type { ProposalDraft } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
@@ -35,19 +35,19 @@ import {
 
 function ProposalsPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const { selectedClientId, selectClient } = useClientContext()
   const { isPreviewMode } = usePreview()
   const [isWizardOpen, setIsWizardOpen] = useState(false)
+  const clientIdParam = searchParams.get('clientId')
 
   // Handle URL params for client selection
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const clientIdParam = new URLSearchParams(window.location.search).get('clientId')
-    if (clientIdParam && clientIdParam !== selectedClientId) {
+    if (clientIdParam) {
       selectClient(clientIdParam)
     }
-  }, [selectedClientId, selectClient])
+  }, [clientIdParam, selectClient])
 
   useEffect(() => {
     if (!isWizardOpen) {
@@ -164,6 +164,7 @@ function ProposalsPageContent() {
     presentationDeck,
   })
   const { downloadingDeckId, deckProgressStage, handleDownloadDeck } = deckPrep
+  const hasSelectedClient = Boolean(selectedClientId)
 
   // Initial load of proposals
   useEffect(() => {
@@ -171,10 +172,10 @@ function ProposalsPageContent() {
       const result = await refreshProposals()
       setProposals(result)
     }
-    if (!isBootstrapping && selectedClientId) {
+    if (!isBootstrapping && hasSelectedClient) {
       void loadProposals()
     }
-  }, [isBootstrapping, selectedClientId, refreshProposals])
+  }, [hasSelectedClient, isBootstrapping, refreshProposals])
 
   // Handle next button with submit
   const handleNext = () => {
@@ -194,7 +195,7 @@ function ProposalsPageContent() {
   }, [formState, lastSubmissionSnapshot, submitted])
 
   const activeDeckStage: DeckProgressStage = deckProgressStage ?? 'polling'
-  const previewProposals = useMemo(() => getPreviewProposals(selectedClientId ?? null), [selectedClientId])
+  const previewProposals = getPreviewProposals(selectedClientId ?? null)
 
   const {
     handleSelectTemplate,

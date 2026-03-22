@@ -63,7 +63,7 @@ export default function ClientsDashboardPageClient({ initialClientId = null }: C
 }
 
 function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClientProps) {
-  const { selectedClient, refreshClients, clients, selectClient, selectedClientId, loading } = useClientContext()
+  const { selectedClient, refreshClients, clients, selectClient, loading } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
@@ -74,10 +74,10 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
 
   // Handle URL param sync
   useEffect(() => {
-    if (initialClientId && initialClientId !== selectedClientId) {
+    if (initialClientId) {
       selectClient(initialClientId)
     }
-  }, [initialClientId, selectedClientId, selectClient])
+  }, [initialClientId, selectClient])
 
   // Onboarding items
   const onboardingItems: OnboardingItem[] = useMemo(() => {

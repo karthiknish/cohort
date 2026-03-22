@@ -72,6 +72,22 @@ function extractRows(convexClients: unknown): unknown[] {
   return []
 }
 
+function resolveSelectedClientId(
+  clients: ClientRecord[],
+  currentSelection: string | null,
+  storedSelection: string | null,
+): string | null {
+  if (currentSelection && clients.some((client) => client.id === currentSelection)) {
+    return currentSelection
+  }
+
+  if (storedSelection && clients.some((client) => client.id === storedSelection)) {
+    return storedSelection
+  }
+
+  return clients[0]?.id ?? null
+}
+
 export function ClientProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading, isSyncing } = useAuth()
 
@@ -82,6 +98,11 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
   const [previewEnabled, setPreviewEnabled] = useState(false)
   const selectionBeforePreviewRef = useRef<string | null>(null)
+
+  // Tracks whether we've completed at least one successful client resolution.
+  // Guards localStorage.removeItem so it never fires on mount before we've
+  // had a chance to read the stored selection back.
+  const hasInitializedRef = useRef(false)
 
   // Use utility to get workspaceId - handles empty string and fallback to user.id
   const workspaceId = getWorkspaceId(user)
@@ -159,6 +180,8 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
   // Single effect for data loading, error handling, and client selection
   useEffect(() => {
+    void retryKey
+
     const frame = requestAnimationFrame(() => {
       // Handle preview mode
       if (previewEnabled) {
@@ -191,6 +214,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       const rows = extractRows(convexClients)
 
       if (rows.length === 0) {
+        setSelectedClientId(null)
         setError('No clients found for this workspace')
         return
       }
@@ -199,8 +223,12 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
       // Sync selected client - use ref to avoid infinite loop
       const clients = mapClients(rows)
+      const currentSelection = selectedClientIdRef.current
       const stored = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null
-      const targetId = stored && clients.some((c) => c.id === stored) ? stored : clients[0]?.id ?? null
+      const targetId = resolveSelectedClientId(clients, currentSelection, stored)
+
+      // Mark as initialized so the persistence effect can safely remove entries
+      hasInitializedRef.current = true
 
       if (targetId !== selectedClientIdRef.current) {
         setSelectedClientId(targetId)
@@ -224,7 +252,13 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
         console.warn('[ClientProvider] failed to persist client selection', e)
       }
-    } else {
+    } else if (hasInitializedRef.current) {
+      // Only clear the stored selection after the first successful client
+      // resolution. Before that, selectedClientId is transiently null on mount
+      // and removing the key here would prevent the loading effect from reading
+      // the previously stored value (causing selection to always reset to
+      // clients[0] on remount, e.g. when navigating between /for-you and
+      // /dashboard/* which use separate ClientProvider instances).
       window.localStorage.removeItem(storageKey)
     }
   }, [previewEnabled, selectedClientId, storageKey, workspaceId])
@@ -327,6 +361,8 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
     const targetClient = clientsRef.current.find((client) => client.id === clientId)
     const targetWorkspaceId = targetClient?.workspaceId ?? workspaceId
+    const remainingClients = clientsRef.current.filter((client) => client.id !== clientId)
+    const fallbackClientId = resolveSelectedClientId(remainingClients, selectedClientIdRef.current, null)
 
     await convexSoftDeleteClient({
       workspaceId: targetWorkspaceId,
@@ -334,7 +370,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       deletedAtMs: Date.now(),
     })
 
-    setSelectedClientId((current) => (current === clientId ? null : current))
+    setSelectedClientId((current) => (current === clientId ? fallbackClientId : current))
   }, [workspaceId, convexSoftDeleteClient])
 
   const selectedClient = useMemo(() => {

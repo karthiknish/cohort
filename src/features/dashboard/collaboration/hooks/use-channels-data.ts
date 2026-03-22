@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 import type { ProjectRecord } from '@/types/projects'
@@ -26,6 +26,7 @@ interface UseChannelsDataOptions {
   customChannels: CustomChannel[]
   fallbackDisplayName: string
   fallbackRole: string
+  visibleClientId?: string | null
 }
 
 export function useChannelsData({
@@ -34,10 +35,16 @@ export function useChannelsData({
   customChannels,
   fallbackDisplayName,
   fallbackRole,
+  visibleClientId = null,
 }: UseChannelsDataOptions) {
   const aggregatedTeamMembers = useMemo(
     () => aggregateTeamMembers(clients, fallbackDisplayName, fallbackRole),
     [clients, fallbackDisplayName, fallbackRole]
+  )
+
+  const visibleClients = useMemo(
+    () => (visibleClientId ? clients.filter((client) => client.id === visibleClientId) : clients),
+    [clients, visibleClientId],
   )
 
   const channels = useMemo<Channel[]>(() => {
@@ -50,7 +57,7 @@ export function useChannelsData({
       teamMembers: aggregatedTeamMembers,
     }
 
-    const clientChannels = clients.map<Channel>((client) => ({
+    const clientChannels = visibleClients.map<Channel>((client) => ({
       id: `client-${client.id}`,
       name: client.name,
       type: 'client',
@@ -93,10 +100,37 @@ export function useChannelsData({
     }))
 
     return [teamChannel, ...customTeamChannels, ...clientChannels, ...projectChannels]
-  }, [aggregatedTeamMembers, clients, customChannels, projects])
+  }, [aggregatedTeamMembers, clients, customChannels, projects, visibleClients])
 
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    if (channels.length === 0) {
+      if (selectedChannelId !== null) {
+        setSelectedChannelId(null)
+      }
+      return
+    }
+
+    if (selectedChannelId === null) {
+      return
+    }
+
+    if (channels.some((channel) => channel.id === selectedChannelId)) {
+      return
+    }
+
+    const preferredClientChannelId = visibleClientId ? `client-${visibleClientId}` : null
+    const fallbackChannelId =
+      (preferredClientChannelId && channels.some((channel) => channel.id === preferredClientChannelId)
+        ? preferredClientChannelId
+        : null) ?? channels[0]?.id ?? null
+
+    if (fallbackChannelId !== selectedChannelId) {
+      setSelectedChannelId(fallbackChannelId)
+    }
+  }, [channels, selectedChannelId, visibleClientId])
 
   const selectedChannel = useMemo(
     () => channels.find((channel) => channel.id === selectedChannelId) ?? null,
