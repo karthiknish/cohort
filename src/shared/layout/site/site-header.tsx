@@ -35,19 +35,25 @@ export function SiteHeader() {
         </Link>
 
         <div className="flex items-center gap-3">
-          {/* Mobile sign-out icon */}
+          {/* Mobile actions */}
           {user && showAccountActions && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={handleSignOut}
-              disabled={signingOut || loading}
-              aria-label="Sign out"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2 md:hidden">
+              <Button asChild variant="default" size="icon" aria-label="Go to Dashboard">
+                <Link href="/dashboard">
+                  <LayoutDashboard className="h-5 w-5" />
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleSignOut}
+                disabled={signingOut || loading}
+                aria-label="Sign out"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </div>
           )}
 
           {/* Desktop account actions */}

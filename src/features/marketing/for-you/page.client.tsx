@@ -427,67 +427,6 @@ export default function ForYouPage() {
           </div>
             </FadeIn>
 
-          {/* Workspace pulse */}
-          <FadeIn as="div">
-            <Card className={DASHBOARD_THEME.cards.base}>
-            <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'pb-4')}>
-              <CardTitle className="text-base text-balance">Workspace Pulse</CardTitle>
-              <CardDescription>
-                A quick read on what needs attention and where momentum is building.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-              <div className="space-y-4">
-                <ActivityStats activities={enhancedActivities} />
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {activityHub.featureSpaces.slice(0, 3).map((space) => (
-                    <div key={space.id} className={cn('rounded-xl border bg-muted/30 p-4', toneBorder[space.tone])}>
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{space.title}</p>
-                      <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{space.metric}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{space.secondary}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border bg-muted/20 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Needs Attention</p>
-                    <p className="text-xs text-muted-foreground">Top actions and blockers across your workspace.</p>
-                  </div>
-                  <Badge variant="secondary" className="rounded-full">{activityHub.priorityItems.length}</Badge>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  {activityHub.priorityItems.length > 0 ? activityHub.priorityItems.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={item.href}
-                      className={cn('group block rounded-xl border bg-background/80 p-3 transition-colors', toneBorder[item.tone])}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <Badge variant={toneToVariant[item.tone]} className="rounded-full text-[11px]">
-                            {item.badge}
-                          </Badge>
-                          <p className="mt-2 text-sm font-semibold text-foreground">{item.title}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
-                        </div>
-                        <ArrowUpRight aria-hidden="true" className="mt-0.5 h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                      </div>
-                    </Link>
-                  )) : (
-                    <div className="rounded-xl border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
-                      All clear — urgent blockers and actions will show here automatically.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-            </Card>
-          </FadeIn>
-
           <FadeIn as="div">
             <Card className={DASHBOARD_THEME.cards.base}>
             <CardHeader className={DASHBOARD_THEME.cards.header}>
