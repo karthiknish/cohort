@@ -27,7 +27,6 @@ import { useDashboardData } from '@/features/dashboard/home/hooks/use-dashboard-
 import { useIntegrationStatusSummary } from '@/features/dashboard/home/hooks/use-integration-status-summary'
 import { getPreviewGoogleWorkspaceStatus, getPreviewMeetings } from '@/features/dashboard/meetings/lib/preview-data'
 import type { MeetingRecord } from '@/features/dashboard/meetings/types'
-import { ActivityStats } from '@/features/dashboard/activity/components/activity-stats'
 import { buildActivityHubModel, type FeatureSpace, type GoogleAnalyticsStatusSummary, type HubTone, type SpotlightItem } from '@/features/dashboard/activity/for-you'
 import { useRealtimeActivity } from '@/features/dashboard/activity/hooks/use-realtime-activity'
 import type { ActivityType, EnhancedActivity } from '@/features/dashboard/activity/types'
