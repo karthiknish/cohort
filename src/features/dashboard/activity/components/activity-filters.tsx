@@ -81,6 +81,7 @@ export function ActivityFilters({
       {/* Search */}
       <div className="relative flex-1 md:max-w-sm">
         <svg
+          aria-hidden="true"
           className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
           fill="none"
           viewBox="0 0 24 24"
@@ -95,6 +96,7 @@ export function ActivityFilters({
         </svg>
         <Input
           id="activity-search"
+          aria-label="Search activity"
           placeholder="Search activity… (⌘K)"
           className="pl-9"
           value={searchQuery}

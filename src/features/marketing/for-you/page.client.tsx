@@ -167,7 +167,7 @@ function SpotlightList({ items }: { items: SpotlightItem[] }) {
                 <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
               </div>
             </div>
-            <ArrowUpRight className="mt-0.5 h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            <ArrowUpRight aria-hidden="true" className="mt-0.5 h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
           </div>
           <p className="mt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{item.meta}</p>
         </Link>
@@ -200,7 +200,7 @@ function FeatureSpaceCard({ space }: { space: FeatureSpace }) {
           <p className="text-2xl font-semibold tracking-tight text-foreground">{space.metric}</p>
           <p className="mt-1 text-xs text-muted-foreground">{space.secondary}</p>
         </div>
-        <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+        <ArrowUpRight aria-hidden="true" className="h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">{space.hint}</p>
@@ -241,7 +241,7 @@ function PinnedSectionCard({
           <Link
             key={item.id}
             href={item.href}
-            className={cn('block rounded-xl border bg-background/80 p-4 transition-colors', toneClasses[item.tone].border)}
+            className={cn('group block rounded-xl border bg-background/80 p-4 transition-colors', toneClasses[item.tone].border)}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -252,7 +252,7 @@ function PinnedSectionCard({
                 <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
                 <p className="mt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{item.meta}</p>
               </div>
-              <ArrowUpRight className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <ArrowUpRight aria-hidden="true" className="mt-0.5 h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </div>
           </Link>
         )) : (
@@ -673,7 +673,7 @@ export default function ForYouPage() {
           {/* Workspace pulse */}
           <Card className={DASHBOARD_THEME.cards.base}>
             <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'pb-4')}>
-              <CardTitle className="text-base">Workspace pulse</CardTitle>
+              <CardTitle className="text-base">Workspace Pulse</CardTitle>
               <CardDescription>
                 A live overview across tasks, projects, meetings, proposals, collaboration, ads, and analytics.
               </CardDescription>
@@ -695,7 +695,7 @@ export default function ForYouPage() {
               <div className="rounded-2xl border bg-muted/20 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Needs attention</p>
+                    <p className="text-sm font-semibold text-foreground">Needs Attention</p>
                     <p className="text-xs text-muted-foreground">Top actions and blockers for the selected workspace.</p>
                   </div>
                   <Badge variant="outline" className="rounded-full">{activityHub.priorityItems.length}</Badge>
@@ -706,7 +706,7 @@ export default function ForYouPage() {
                     <Link
                       key={item.id}
                       href={item.href}
-                      className={cn('block rounded-xl border bg-background/80 p-3 transition-colors', toneClasses[item.tone].border)}
+                      className={cn('group block rounded-xl border bg-background/80 p-3 transition-colors', toneClasses[item.tone].border)}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -716,7 +716,7 @@ export default function ForYouPage() {
                           <p className="mt-2 text-sm font-semibold text-foreground">{item.title}</p>
                           <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
                         </div>
-                        <ArrowUpRight className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                        <ArrowUpRight aria-hidden="true" className="mt-0.5 h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                       </div>
                     </Link>
                   )) : (
@@ -733,7 +733,7 @@ export default function ForYouPage() {
             <CardHeader className={DASHBOARD_THEME.cards.header}>
               <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <CardTitle className="text-base">Recommended spaces</CardTitle>
+                  <CardTitle className="text-base">Recommended Spaces</CardTitle>
                   <CardDescription>Jump straight into the parts of the workspace that matter most right now.</CardDescription>
                 </div>
                 <Button asChild variant="ghost" size="sm" className="w-fit">
@@ -750,7 +750,7 @@ export default function ForYouPage() {
 
           <Card className={DASHBOARD_THEME.cards.base}>
             <CardHeader className={DASHBOARD_THEME.cards.header}>
-              <CardTitle className="text-base">Worked on</CardTitle>
+              <CardTitle className="text-base">Worked On</CardTitle>
               <CardDescription>Browse live work by priority, unread updates, deadlines, meetings, and performance.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -776,12 +776,12 @@ export default function ForYouPage() {
           {/* Activity stream */}
           <Card className={DASHBOARD_THEME.cards.base}>
             <CardHeader className={DASHBOARD_THEME.cards.header}>
-              <div className="border-b px-6 py-4">
-                <p className="text-base font-semibold text-foreground">Activity stream</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  The detailed live timeline stays here, with filters and bulk actions for triage.
-                </p>
-              </div>
+              <CardTitle className="text-base">Activity Stream</CardTitle>
+              <CardDescription>
+                The detailed live timeline stays here, with filters and bulk actions for triage.
+              </CardDescription>
+            </CardHeader>
+            <div className="border-b px-6 pb-4 pt-4">
               <ActivityFilters
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -801,7 +801,7 @@ export default function ForYouPage() {
                 onMarkAllAsRead={handleMarkAllAsRead}
                 onClearAllPins={handleClearAllPins}
               />
-            </CardHeader>
+            </div>
 
             <CardContent className="p-0">
               <ActivityList
