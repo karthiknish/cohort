@@ -48,12 +48,12 @@ function getConvexClient(): ConvexHttpClient | null {
 }
 
 const fetchAlertRules = cache(async (convex: ConvexHttpClient, workspaceId: string) => {
-    const rules = await convex.query(api.alertRules.listEnabled, { workspaceId })
+    const rules = await convex.query(internal.alertRules.listEnabled as unknown as QueryReference, { workspaceId })
     return rules as unknown as AlertRule[]
 })
 
 const fetchCustomFormulas = cache(async (convex: ConvexHttpClient, workspaceId: string) => {
-    return await convex.query(api.customFormulas.listActiveForAlerts, { workspaceId })
+    return await convex.query(internal.customFormulas.listActiveForAlerts as unknown as QueryReference, { workspaceId })
 })
 
 const fetchRecentMetrics = cache(async (convex: ConvexHttpClient, workspaceId: string, limit: number) => {

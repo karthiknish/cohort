@@ -88,10 +88,25 @@ export const list = zWorkspaceQuery({
   },
   returns: z.array(proposalZ),
   handler: async (ctx, args) => {
-    let q = ctx.db
-      .query('proposals')
-      .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
-      .order('desc')
+    const status = typeof args.status === 'string' && args.status.trim() ? args.status.trim() : null
+    const clientId = typeof args.clientId === 'string' && args.clientId.trim() ? args.clientId.trim() : null
+
+    const baseQuery = ctx.db.query('proposals')
+    const indexedQuery = status && clientId
+      ? baseQuery.withIndex('by_workspace_status_clientId_updatedAtMs_legacyId', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('status', status).eq('clientId', clientId)
+        )
+      : status
+        ? baseQuery.withIndex('by_workspace_status_updatedAtMs_legacyId', (q) =>
+            q.eq('workspaceId', args.workspaceId).eq('status', status)
+          )
+        : clientId
+          ? baseQuery.withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
+              q.eq('workspaceId', args.workspaceId).eq('clientId', clientId)
+            )
+          : baseQuery.withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+
+    let q = indexedQuery.order('desc')
 
     const afterUpdatedAtMs = args.afterUpdatedAtMs
     const afterLegacyId = args.afterLegacyId
@@ -103,16 +118,6 @@ export const list = zWorkspaceQuery({
           row.and(row.eq(row.field('updatedAtMs'), afterUpdatedAtMs), row.lt(row.field('legacyId'), afterLegacyId)),
         ),
       )
-    }
-
-    if (typeof args.status === 'string' && args.status.trim()) {
-      const status = args.status.trim()
-      q = q.filter((row) => row.eq(row.field('status'), status))
-    }
-
-    if (typeof args.clientId === 'string' && args.clientId.trim()) {
-      const clientId = args.clientId.trim()
-      q = q.filter((row) => row.eq(row.field('clientId'), clientId))
     }
 
     const rows = await q.take(args.limit)

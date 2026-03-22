@@ -1,10 +1,11 @@
 'use client'
 
 import { createContext, useCallback, useContext, useMemo, useState } from 'react'
-import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 import type { ProjectRecord } from '@/types/projects'
 
 type ProjectContextValue = {
@@ -20,7 +21,7 @@ const ProjectContext = createContext<ProjectContextValue | undefined>(undefined)
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const { selectedClient } = useClientContext()
   const { user } = useAuth()
-  const searchParams = useSearchParams()
+  const searchParams = useUrlSearchParams()
   const router = useRouter()
   const pathname = usePathname()
 

@@ -1,7 +1,7 @@
 import { createHash } from 'crypto'
 import { ConvexHttpClient } from 'convex/browser'
 
-import { api } from '/_generated/api'
+import { internal } from '/_generated/api'
 import type { CacheBackend } from './cache-manager'
 
 export type ConvexCacheBackendOptions = {
@@ -12,6 +12,9 @@ export type ConvexCacheBackendOptions = {
 function hashKey(key: string): string {
   return createHash('sha256').update(key).digest('hex')
 }
+
+type QueryReference = Parameters<ConvexHttpClient['query']>[0]
+type MutationReference = Parameters<ConvexHttpClient['mutation']>[0]
 
 // Lazy-init Convex client
 let _convexClient: ConvexHttpClient | null = null
@@ -35,7 +38,7 @@ export class ConvexCacheBackend implements CacheBackend {
 
     try {
       const keyHash = hashKey(key)
-      const result = await this.client.query(api.serverCache.get, { keyHash })
+      const result = await this.client.query(internal.serverCache.get as unknown as QueryReference, { keyHash })
       return result?.value ?? null
     } catch {
       return null
@@ -53,7 +56,7 @@ export class ConvexCacheBackend implements CacheBackend {
 
     try {
       const keyHash = hashKey(key)
-      await this.client.mutation(api.serverCache.set, {
+      await this.client.mutation(internal.serverCache.set as unknown as MutationReference, {
         keyHash,
         key,
         value,
@@ -69,7 +72,7 @@ export class ConvexCacheBackend implements CacheBackend {
 
     try {
       const keyHash = pattern && !pattern.endsWith('*') ? hashKey(pattern) : undefined
-      await this.client.mutation(api.serverCache.invalidate, {
+      await this.client.mutation(internal.serverCache.invalidate as unknown as MutationReference, {
         pattern,
         keyHash,
       })

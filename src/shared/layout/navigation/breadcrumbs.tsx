@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import {
   ChevronRight,
   Home,
@@ -18,6 +18,7 @@ import {
 import { useState } from 'react'
 
 import { useClientContext } from '@/shared/contexts/client-context'
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 import { isFeatureEnabled } from '@/lib/features'
 import {
   Breadcrumb,
@@ -45,7 +46,7 @@ interface NavBreadcrumbItem {
 
 export function NavigationBreadcrumbs() {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const searchParams = useUrlSearchParams()
   const { selectedClient } = useClientContext()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 

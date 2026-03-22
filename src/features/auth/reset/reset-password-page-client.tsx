@@ -1,8 +1,8 @@
 'use client'
 
-import { Suspense, useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Lock, ArrowLeft, Shield, Check, X, LoaderCircle, CircleCheck } from 'lucide-react'
 
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -87,13 +87,14 @@ function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
   )
 }
 
-function ResetPasswordContent() {
-  const searchParams = useSearchParams()
+type ResetPasswordPageClientProps = {
+  oobCode?: string | null
+}
+
+function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
   const router = useRouter()
   const { toast } = useToast()
   const { verifyPasswordResetCode, confirmPasswordReset } = useAuth()
-
-  const oobCode = searchParams.get('oobCode')
   const [status, setStatus] = useState<'loading' | 'ready' | 'success' | 'error'>('loading')
   const [email, setEmail] = useState<string | null>(null)
   const [verificationError, setVerificationError] = useState<string | null>(null)
@@ -130,7 +131,9 @@ function ResetPasswordContent() {
       })
 
       return () => {
-        frames.forEach((frame) => cancelAnimationFrame(frame))
+        frames.forEach((frame) => {
+          cancelAnimationFrame(frame)
+        })
       }
     }
 
@@ -154,7 +157,9 @@ function ResetPasswordContent() {
 
     return () => {
       active = false
-      frames.forEach((frame) => cancelAnimationFrame(frame))
+      frames.forEach((frame) => {
+        cancelAnimationFrame(frame)
+      })
     }
   }, [oobCode, verifyPasswordResetCode])
 
@@ -427,21 +432,10 @@ function ResetPasswordContent() {
   )
 }
 
-export default function ResetPasswordPage() {
+export default function ResetPasswordPageClient({ oobCode = null }: ResetPasswordPageClientProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12">
-      <Suspense
-        fallback={
-          <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">
-            <div className="flex flex-col items-center gap-4 py-8">
-              <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Loading reset page…</p>
-            </div>
-          </FadeIn>
-        }
-      >
-        <ResetPasswordContent />
-      </Suspense>
+      <ResetPasswordContent oobCode={oobCode} />
     </div>
   )
 }

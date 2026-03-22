@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { Errors } from './errors'
 import { authenticatedMutation, authenticatedQuery } from './functions'
-import { query } from './_generated/server'
+import { internalQuery } from './_generated/server'
 
 function sanitizeString(value: string): string {
   return value.trim()
@@ -44,7 +44,7 @@ const customFormulaValidator = v.object({
  * List active formulas for a workspace (no auth - server-side use).
  * Used by alert processor to evaluate custom formula alerts.
  */
-export const listActiveForAlerts = query({
+export const listActiveForAlerts = internalQuery({
   args: { workspaceId: v.string() },
   returns: v.record(v.string(), v.object({ formula: v.string(), inputs: v.array(v.string()) })),
   handler: async (ctx, args) => {

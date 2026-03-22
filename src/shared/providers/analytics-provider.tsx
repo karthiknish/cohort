@@ -1,16 +1,17 @@
 'use client'
 
 import { useEffect } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 
 import { logPageView, setAnalyticsUserId } from '@/lib/analytics'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 
 const PAGE_VIEW_DEBOUNCE_MS = 300
 
 export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const searchParams = useUrlSearchParams()
   const { user } = useAuth()
   const serializedSearch = searchParams?.toString() ?? ''
 

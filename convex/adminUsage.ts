@@ -57,6 +57,11 @@ type AdminUsageStats = {
   featureUsage: Array<{ feature: string; count: number; trend: number }>
 }
 
+type CachedAdminUsageStats = {
+  stats: AdminUsageStats
+  isFresh: boolean
+}
+
 type AdminUsageStatsDb = QueryCtx['db'] | MutationCtx['db']
 
 function startOfDay(ts: Date) {
@@ -165,17 +170,25 @@ function parseCachedAdminUsageStats(value: string): AdminUsageStats | null {
   }
 }
 
-async function readCachedAdminUsageStats(ctx: { db: AdminUsageStatsDb }) {
+async function readCachedAdminUsageStats(ctx: { db: AdminUsageStatsDb }): Promise<CachedAdminUsageStats | null> {
   const entry = await ctx.db
     .query('serverCache')
     .withIndex('by_keyHash', (q) => q.eq('keyHash', ADMIN_USAGE_CACHE_KEY))
     .unique()
 
-  if (!entry || entry.expiresAtMs <= Date.now()) {
+  if (!entry) {
     return null
   }
 
-  return parseCachedAdminUsageStats(entry.value)
+  const stats = parseCachedAdminUsageStats(entry.value)
+  if (!stats) {
+    return null
+  }
+
+  return {
+    stats,
+    isFresh: entry.expiresAtMs > Date.now(),
+  }
 }
 
 export const refreshStatsCache = internalMutation({
@@ -220,8 +233,12 @@ export const getStats = adminQuery({
   handler: async (ctx) => {
     try {
       const cached = await readCachedAdminUsageStats(ctx)
+      if (cached?.isFresh) {
+        return cached.stats
+      }
+
       if (cached) {
-        return cached
+        return cached.stats
       }
 
       return await computeLiveUsageStats(ctx)

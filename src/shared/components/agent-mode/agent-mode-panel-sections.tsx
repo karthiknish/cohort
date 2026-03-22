@@ -289,6 +289,8 @@ export type AgentComposerSectionProps = {
   onSuggestionClick?: (suggestion: string) => void
 }
 
+const EMPTY_QUICK_SUGGESTIONS: string[] = []
+
 export function AgentComposerSection({
   layout,
   inputValue,
@@ -314,7 +316,7 @@ export function AgentComposerSection({
   onVoiceInterim,
   onRemoveAttachment,
   onSubmit,
-  quickSuggestions = [],
+  quickSuggestions = EMPTY_QUICK_SUGGESTIONS,
   onSuggestionClick,
 }: AgentComposerSectionProps) {
   const isCentered = layout === 'centered'

@@ -1,10 +1,12 @@
 import { z } from 'zod'
 import { ConvexHttpClient } from 'convex/browser'
-import { api } from '/_generated/api'
+import { internal } from '/_generated/api'
 import { recordSchedulerEvent } from '@/lib/scheduler-monitor'
 import { getSchedulerAlertPreference } from '@/lib/scheduler-alert-preferences'
 import { createApiHandler } from '@/lib/api-handler'
 import { UnauthorizedError } from '@/lib/api-errors'
+
+type QueryReference = Parameters<ConvexHttpClient['query']>[0]
 
 const workerSchema = z.object({
   maxJobs: z.number().optional(),
@@ -57,7 +59,7 @@ export const POST = createApiHandler(
   const jobResults: Array<{ workspaceId: string; jobId: string; providerId: string; status: string; error?: string }> = []
 
     // Get workspaces with queued sync jobs directly from Convex
-    const workspaceIds = await convex.query(api.adsIntegrations.listWorkspacesWithQueuedJobs, {
+    const workspaceIds = await convex.query(internal.adsIntegrations.listWorkspacesWithQueuedJobs as unknown as QueryReference, {
       limit: maxWorkspaces,
     })
 
@@ -68,7 +70,7 @@ export const POST = createApiHandler(
 
       // Count queued jobs for this workspace
       const { count: queuedCount } = await convex.query(
-        api.adsIntegrations.countQueuedJobsForWorkspace,
+        internal.adsIntegrations.countQueuedJobsForWorkspace as unknown as QueryReference,
         { workspaceId, limit: Math.min(3, maxJobs - processedJobs) }
       )
 

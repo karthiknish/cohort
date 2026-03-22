@@ -1,6 +1,6 @@
 import { ConvexHttpClient } from 'convex/browser'
 
-import { api } from '/_generated/api'
+import { internal } from '/_generated/api'
 
 const CACHE_TTL_MS = 5 * 60 * 1000
 
@@ -13,6 +13,9 @@ const preferenceCache = new Map<string, CachedPreference>()
 
 // Lazy-init Convex client
 let _convexClient: ConvexHttpClient | null = null
+type QueryReference = Parameters<ConvexHttpClient['query']>[0]
+type MutationReference = Parameters<ConvexHttpClient['mutation']>[0]
+
 function getConvexClient(): ConvexHttpClient | null {
   if (_convexClient) return _convexClient
   const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
@@ -50,7 +53,7 @@ export async function getSchedulerAlertPreference(providerId: string): Promise<S
     return null
   }
 
-  const result = await convex.query(api.schedulerAlertPreferences.get, { providerId })
+  const result = await convex.query(internal.schedulerAlertPreferences.get as unknown as QueryReference, { providerId })
   const preference = toSchedulerAlertPreference(result)
   if (!preference) {
     preferenceCache.delete(providerId)
@@ -67,7 +70,7 @@ export async function listSchedulerAlertPreferences(): Promise<Record<string, Sc
     return {}
   }
 
-  const result = await convex.query(api.schedulerAlertPreferences.list, {})
+  const result = await convex.query(internal.schedulerAlertPreferences.list as unknown as QueryReference, {})
   const normalized: Record<string, SchedulerAlertPreference> = {}
 
   if (result && typeof result === 'object' && !Array.isArray(result)) {
@@ -92,7 +95,7 @@ export async function upsertSchedulerAlertPreference(providerId: string, prefere
     throw new Error('Convex client not available')
   }
 
-  await convex.mutation(api.schedulerAlertPreferences.upsert, {
+  await convex.mutation(internal.schedulerAlertPreferences.upsert as unknown as MutationReference, {
     providerId,
     failureThreshold: preference.failureThreshold,
   })

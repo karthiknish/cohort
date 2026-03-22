@@ -12,7 +12,7 @@ import {
 } from '@/shared/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
 
-import { SortDirection, SortField, StatusFilter, STATUS_FILTERS, SORT_OPTIONS, formatStatusLabel } from './index'
+import { type SortDirection, type SortField, type StatusFilter, STATUS_FILTERS, SORT_OPTIONS, formatStatusLabel } from './utils'
 
 interface ProjectFiltersProps {
   statusFilter: StatusFilter

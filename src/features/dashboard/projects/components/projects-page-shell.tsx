@@ -25,17 +25,15 @@ import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-
 import { cn } from '@/lib/utils'
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 
-import {
-  GanttView,
-  ProjectCard,
-  ProjectFilters,
-  ProjectKanban,
-  ProjectRow,
-  ProjectSearch,
-  RETRY_CONFIG,
-  SummaryCard,
-  ViewModeSelector,
-} from './index'
+import { GanttView } from './gantt-view'
+import { ProjectCard } from './project-card'
+import { ProjectFilters } from './project-filters'
+import { ProjectKanban } from './project-kanban'
+import { ProjectRow } from './project-row'
+import { ProjectSearch } from './project-search'
+import { SummaryCard } from './summary-card'
+import { ViewModeSelector } from './view-mode-selector'
+import { RETRY_CONFIG } from './utils'
 import { useProjectsPageContext } from './projects-page-provider'
 
 export function ProjectsPageShell() {

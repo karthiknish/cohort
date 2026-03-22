@@ -25,7 +25,9 @@ interface ShareMessageButtonProps {
   sharedTo?: Array<'email'>
 }
 
-export function ShareMessageButton({ message, onShare, sharedTo = [] }: ShareMessageButtonProps) {
+const EMPTY_SHARED_TO: Array<'email'> = []
+
+export function ShareMessageButton({ message, onShare, sharedTo = EMPTY_SHARED_TO }: ShareMessageButtonProps) {
   const [isSharing, setIsSharing] = useState(false)
   const [shareError, setShareError] = useState<string | null>(null)
 

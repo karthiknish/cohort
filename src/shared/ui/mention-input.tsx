@@ -482,5 +482,3 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
     )
   }
 )
-
-export default MentionInput

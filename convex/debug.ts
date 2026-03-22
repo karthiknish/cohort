@@ -1,5 +1,4 @@
 import { authenticatedQuery, adminMutation, adminQuery } from './functions'
-import { query } from './_generated/server'
 import { v } from 'convex/values'
 
 function summarizeIdentity(identity: unknown) {
@@ -128,10 +127,9 @@ export const backfillDeletedAtMs = adminMutation({
 })
 
 /**
- * Unauthenticated debug query to inspect raw client data.
- * WARNING: Only use in development! Remove or protect in production.
+ * Admin-only debug query to inspect raw client data.
  */
-export const inspectClients = query({
+export const inspectClients = adminQuery({
   args: { workspaceId: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 10, 1), 50)

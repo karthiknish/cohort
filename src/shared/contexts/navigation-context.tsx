@@ -1,9 +1,9 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 
 import { useClientContext } from '@/shared/contexts/client-context'
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 import { isFeatureEnabled } from '@/lib/features'
 
 type NavigationState = {
@@ -38,7 +38,7 @@ function getClientStorageKey(baseKey: string, clientId: string | null): string {
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   const { selectedClientId } = useClientContext()
-  const searchParams = useSearchParams()
+  const searchParams = useUrlSearchParams()
   const mountedRef = useRef(false)
 
   const [navigationState, setNavigationState] = useState<NavigationState>({
@@ -60,8 +60,9 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       const clientKeys = new Set<string>()
       navKeys.forEach(key => {
         const parts = key.split('.')
-        if (parts.length >= 3) {
-          clientKeys.add(parts[2]!) // clientId
+        const clientId = parts[2]
+        if (parts.length >= 3 && clientId) {
+          clientKeys.add(clientId)
         }
       })
 
@@ -160,7 +161,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     }
 
     return undefined
-  }, [selectedClientId, loadNavigationState])
+  }, [loadNavigationState])
 
   // Initialize on first mount
   useEffect(() => {

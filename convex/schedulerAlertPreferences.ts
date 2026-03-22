@@ -1,4 +1,4 @@
-import { mutation, query } from './_generated/server'
+import { internalMutation, internalQuery } from './_generated/server'
 import { v } from 'convex/values'
 
 import { Errors, isAppError } from './errors'
@@ -22,7 +22,7 @@ function throwSchedulerAlertPreferenceError(operation: string, error: unknown, c
  * Get a single scheduler alert preference by provider ID.
  * No auth required - called from server-side scheduler code.
  */
-export const get = query({
+export const get = internalQuery({
   args: { providerId: v.string() },
   returns: v.union(v.null(), preferenceValidator),
   handler: async (ctx, args) => {
@@ -48,7 +48,7 @@ export const get = query({
  * List all scheduler alert preferences.
  * No auth required - called from server-side scheduler code.
  */
-export const list = query({
+export const list = internalQuery({
   args: {},
   returns: v.record(v.string(), v.object({ failureThreshold: v.union(v.number(), v.null()) })),
   handler: async (ctx) => {
@@ -74,7 +74,7 @@ export const list = query({
  * Upsert a scheduler alert preference.
  * No auth required - called from server-side scheduler code.
  */
-export const upsert = mutation({
+export const upsert = internalMutation({
   args: {
     providerId: v.string(),
     failureThreshold: v.union(v.number(), v.null()),

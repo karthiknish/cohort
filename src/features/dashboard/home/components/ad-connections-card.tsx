@@ -65,6 +65,7 @@ interface AdConnectionsCardProps {
 }
 
 const EMPTY_INTEGRATION_STATUSES: Record<string, IntegrationStatusInfo> = {}
+const EMPTY_SYNCING_PROVIDERS: Record<string, boolean> = {}
 
 // Sync requests older than this are considered stale (not actively running).
 const STALE_SYNC_THRESHOLD_MS = 30 * 60 * 1000
@@ -136,7 +137,7 @@ export function AdConnectionsCard({
   onSyncNow,
   onRefresh,
   refreshing,
-  syncingProviders = {},
+  syncingProviders = EMPTY_SYNCING_PROVIDERS,
 }: AdConnectionsCardProps) {
   // Dialog state
   const [connectDialogOpen, setConnectDialogOpen] = useState(false)

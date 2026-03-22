@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils'
 
 import type { AllocationUser } from '../lib/client-allocation'
 
+const EMPTY_EXCLUDE_NAMES: string[] = []
+
 type UserSearchPickerProps = {
   id?: string
   value: string
@@ -26,7 +28,7 @@ function normalizeName(value: string) {
   return value.trim().toLowerCase()
 }
 
-export function UserSearchPicker({ id, value, onChange, options, placeholder, searchPlaceholder, emptyText, disabled = false, excludeNames = [] }: UserSearchPickerProps) {
+export function UserSearchPicker({ id, value, onChange, options, placeholder, searchPlaceholder, emptyText, disabled = false, excludeNames = EMPTY_EXCLUDE_NAMES }: UserSearchPickerProps) {
   const [open, setOpen] = useState(false)
   const generatedId = useId()
   const triggerId = id ?? `user-search-picker-${generatedId}`

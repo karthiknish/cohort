@@ -4,7 +4,6 @@ import {
   adIntegrationZ,
   internalQuery,
   normalizeClientId,
-  query,
   v,
   z,
   zWorkspaceQuery,
@@ -174,7 +173,7 @@ export const hasPendingGoogleAnalyticsSyncJob = zWorkspaceQuery({
   },
 })
 
-export const listWorkspaceIntegrationIds = query({
+export const listWorkspaceIntegrationIds = internalQuery({
   args: { workspaceId: v.string() },
   handler: async (ctx, args) => {
     const integrations = await ctx.db
@@ -185,7 +184,7 @@ export const listWorkspaceIntegrationIds = query({
   },
 })
 
-export const listAllWorkspacesWithIntegrations = query({
+export const listAllWorkspacesWithIntegrations = internalQuery({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 1000, 1), 5000)

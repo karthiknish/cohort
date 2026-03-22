@@ -2,7 +2,7 @@ import type { Id } from '/_generated/dataModel'
 import { v } from 'convex/values'
 
 import { Errors, isAppError } from './errors'
-import { mutation, query } from './_generated/server'
+import { internalMutation, internalQuery } from './_generated/server'
 
 function nowMs() {
   return Date.now()
@@ -23,7 +23,7 @@ function throwServerCacheError(operation: string, error: unknown, context?: Reco
  * Returns null if not found or expired.
  * Server-side only - no auth required.
  */
-export const get = query({
+export const get = internalQuery({
   args: {
     keyHash: v.string(),
   },
@@ -54,7 +54,7 @@ export const get = query({
  * Set a cache entry.
  * Server-side only - no auth required.
  */
-export const set = mutation({
+export const set = internalMutation({
   args: {
     keyHash: v.string(),
     key: v.string(),
@@ -104,7 +104,7 @@ export const set = mutation({
  * Supports exact key hash, prefix with '*', or '*' for all.
  * Server-side only - no auth required.
  */
-export const invalidate = mutation({
+export const invalidate = internalMutation({
   args: {
     pattern: v.string(),
     keyHash: v.optional(v.string()),
@@ -198,7 +198,7 @@ export const invalidate = mutation({
  * Called periodically by cron or on-demand.
  * Server-side only - no auth required.
  */
-export const cleanupExpired = mutation({
+export const cleanupExpired = internalMutation({
   args: {
     limit: v.optional(v.number()),
   },

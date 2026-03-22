@@ -28,6 +28,8 @@ interface AgentMessageCardProps {
     mentionLabels?: string[]
 }
 
+const EMPTY_MENTION_LABELS: string[] = []
+
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -94,7 +96,7 @@ function getStatusTitle(isSuccess: boolean, action?: string, operation?: string)
 // MAIN COMPONENT
 // =============================================================================
 
-export function AgentMessageCard({ message, mentionLabels = [] }: AgentMessageCardProps) {
+export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS }: AgentMessageCardProps) {
     const { type, content, status, metadata, route } = message
 
     // User messages - simple bubble

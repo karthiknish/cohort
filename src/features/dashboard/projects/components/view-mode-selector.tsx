@@ -5,7 +5,7 @@ import { ChartGantt, Columns3, LayoutGrid, List } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
 
-import type { ViewMode } from './index'
+import type { ViewMode } from './utils'
 
 interface ViewModeSelectorProps {
   viewMode: ViewMode

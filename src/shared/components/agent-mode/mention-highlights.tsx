@@ -9,11 +9,13 @@ type MentionSegment = {
   isMention: boolean
 }
 
+const EMPTY_MENTION_LABELS: string[] = []
+
 function isBoundaryCharacter(value: string | undefined): boolean {
   return !value || /[\s.,!?;:()[\]{}'"/\\|-]/.test(value)
 }
 
-export function splitAgentTextWithMentions(text: string, mentionLabels: string[] = []): MentionSegment[] {
+export function splitAgentTextWithMentions(text: string, mentionLabels: string[] = EMPTY_MENTION_LABELS): MentionSegment[] {
   if (!text) return []
 
   const normalizedLabels = Array.from(
@@ -87,7 +89,7 @@ type AgentMentionTextProps = {
   mentionClassName?: string
 }
 
-export function AgentMentionText({ text, mentionLabels = [], className, mentionClassName }: AgentMentionTextProps) {
+export function AgentMentionText({ text, mentionLabels = EMPTY_MENTION_LABELS, className, mentionClassName }: AgentMentionTextProps) {
   const segments = splitAgentTextWithMentions(text, mentionLabels)
 
   return (

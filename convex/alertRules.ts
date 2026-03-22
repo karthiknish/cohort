@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { Errors } from './errors'
 import { workspaceQuery, workspaceMutation } from './functions'
+import { internalQuery } from './_generated/server'
 
 const alertRuleConditionValidator = v.object({
   operator: v.union(
@@ -38,11 +39,9 @@ const alertRuleValidator = v.object({
 /**
  * List enabled alert rules for a workspace.
  * Used by alert processor to evaluate rules.
- * No auth required - called from server-side code.
+ * Internal query - called from server-side alert processing.
  */
-import { query } from './_generated/server'
-
-export const listEnabled = query({
+export const listEnabled = internalQuery({
   args: { workspaceId: v.string() },
   returns: v.array(alertRuleValidator),
   handler: async (ctx, args) => {

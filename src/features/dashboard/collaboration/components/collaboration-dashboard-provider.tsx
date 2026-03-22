@@ -2,10 +2,11 @@
 
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 import { collaborationChannelsApi, usersApi } from '@/lib/convex-api'
 
 import { useCollaborationData } from '../hooks'
@@ -60,7 +61,7 @@ const CollaborationDashboardContext = createContext<CollaborationDashboardContex
 
 export function CollaborationDashboardProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast()
-  const searchParams = useSearchParams()
+  const searchParams = useUrlSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const [isNewDMDialogOpen, setIsNewDMDialogOpen] = useState(false)

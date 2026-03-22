@@ -2,7 +2,7 @@ import { cache } from 'react'
 import { differenceInMinutes } from 'date-fns'
 import { ConvexHttpClient } from 'convex/browser'
 
-import { api } from '/_generated/api'
+import { internal } from '/_generated/api'
 import {
   enqueueSyncJob,
   getAdIntegration,
@@ -15,6 +15,8 @@ import {
   markGoogleAnalyticsSyncRequested,
 } from '@/lib/analytics-admin'
 import { resolveWorkspaceIdForUser } from '@/lib/workspace'
+
+type QueryReference = Parameters<ConvexHttpClient['query']>[0]
 
 const DEFAULT_SYNC_FREQUENCY_MINUTES = 6 * 60 // every 6 hours
 const DEFAULT_TIMEFRAME_DAYS = 90
@@ -31,16 +33,16 @@ function getConvexClient(): ConvexHttpClient | null {
 
 const listWorkspaceIntegrationIds = cache(async (convex: ConvexHttpClient, workspaceId: string) => {
   const [adsProviderIds, analyticsProviderIds] = await Promise.all([
-    convex.query(api.adsIntegrations.listWorkspaceIntegrationIds, { workspaceId }),
-    convex.query(api.analyticsIntegrations.listWorkspaceIntegrationIds, { workspaceId }),
+    convex.query(internal.adsIntegrations.listWorkspaceIntegrationIds as unknown as QueryReference, { workspaceId }),
+    convex.query(internal.analyticsIntegrations.listWorkspaceIntegrationIds as unknown as QueryReference, { workspaceId }),
   ])
   return Array.from(new Set([...(adsProviderIds ?? []), ...(analyticsProviderIds ?? [])]))
 })
 
 const listAllWorkspacesWithIntegrations = cache(async (convex: ConvexHttpClient, limit: number) => {
   const [adsWorkspaceIds, analyticsWorkspaceIds] = await Promise.all([
-    convex.query(api.adsIntegrations.listAllWorkspacesWithIntegrations, { limit }),
-    convex.query(api.analyticsIntegrations.listAllWorkspacesWithIntegrations, { limit }),
+    convex.query(internal.adsIntegrations.listAllWorkspacesWithIntegrations as unknown as QueryReference, { limit }),
+    convex.query(internal.analyticsIntegrations.listAllWorkspacesWithIntegrations as unknown as QueryReference, { limit }),
   ])
   return Array.from(new Set([...(adsWorkspaceIds ?? []), ...(analyticsWorkspaceIds ?? [])]))
 })
@@ -68,7 +70,7 @@ async function markSyncRequestedForProvider(userId: string, providerId: string) 
 }
 
 function minutesSince(date: Date | null | undefined): number | null {
-  if (!date || !(date instanceof Date) || isNaN(date.getTime())) return null
+  if (!date || !(date instanceof Date) || Number.isNaN(date.getTime())) return null
 
   const now = new Date()
   // Prevent future dates from bypassing rate limits

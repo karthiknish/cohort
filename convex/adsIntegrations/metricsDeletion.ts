@@ -3,11 +3,11 @@ import { internal } from '/_generated/api'
 import {
   Errors,
   assertCronKey,
+  internalQuery,
   internalMutation,
   mutation,
   normalizeClientId,
   nowMs,
-  query,
   v,
 } from './shared'
 
@@ -219,7 +219,7 @@ export const deleteProviderMetrics = mutation({
  * Used by auto-sync scheduler to enumerate integrations.
  * No auth required - called from server-side cron code with cronKey.
  */
-export const listWorkspaceIntegrationIds = query({
+export const listWorkspaceIntegrationIds = internalQuery({
   args: {
     workspaceId: v.string(),
   },
@@ -239,7 +239,7 @@ export const listWorkspaceIntegrationIds = query({
  * Used by the cron scheduler to iterate over all workspaces.
  * No auth required - called from server-side cron code.
  */
-export const listAllWorkspacesWithIntegrations = query({
+export const listAllWorkspacesWithIntegrations = internalQuery({
   args: {
     limit: v.optional(v.number()),
   },
@@ -266,7 +266,7 @@ export const listAllWorkspacesWithIntegrations = query({
  * Used by the worker to find workspaces to process.
  * No auth required - called from server-side cron code.
  */
-export const listWorkspacesWithQueuedJobs = query({
+export const listWorkspacesWithQueuedJobs = internalQuery({
   args: {
     limit: v.optional(v.number()),
   },
@@ -294,7 +294,7 @@ export const listWorkspacesWithQueuedJobs = query({
  * Used by the worker to check if there are jobs to process.
  * No auth required - called from server-side cron code.
  */
-export const countQueuedJobsForWorkspace = query({
+export const countQueuedJobsForWorkspace = internalQuery({
   args: {
     workspaceId: v.string(),
     limit: v.optional(v.number()),
