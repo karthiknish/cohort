@@ -12,8 +12,8 @@ Add these to `.env.local`:
 
 ## Dev
 
-- Start Convex: `npm run convex:dev`
-- Start Next.js: `npm run dev`
+- Start Convex: `bun run convex:dev`
+- Start Next.js: `bun run dev`
 
 ## Migration approach
 

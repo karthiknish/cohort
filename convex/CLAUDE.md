@@ -8,32 +8,32 @@ Built with: Convex (backend), [React/Next.js/Vue/etc.] (frontend)
 
 ```bash
 # Development
-npx convex dev              # Start dev server (watches files, syncs to cloud)
-npx convex dev --once       # Single sync without watching
-npx convex dev --local      # Local development (no cloud)
+bunx convex dev              # Start dev server (watches files, syncs to cloud)
+bunx convex dev --once       # Single sync without watching
+bunx convex dev --local      # Local development (no cloud)
 
 # Deployment
-npx convex deploy           # Deploy to production
-npx convex deploy --cmd "npm run build"  # Deploy with frontend build
+bunx convex deploy           # Deploy to production
+bunx convex deploy --cmd "bun run build"  # Deploy with frontend build
 
 # Running Functions
-npx convex run messages:send '{"body": "hello"}'  # Run with args
-npx convex run myQuery --watch                     # Watch query results
+bunx convex run messages:send '{"body": "hello"}'  # Run with args
+bunx convex run myQuery --watch                     # Watch query results
 
 # Data Management
-npx convex data                          # List tables
-npx convex data messages --limit 50      # View table data
-npx convex import --table tableName path/to/data.json
-npx convex export --path ./backup
+bunx convex data                          # List tables
+bunx convex data messages --limit 50      # View table data
+bunx convex import --table tableName path/to/data.json
+bunx convex export --path ./backup
 
 # Environment Variables
-npx convex env list
-npx convex env set API_KEY "secret123"
+bunx convex env list
+bunx convex env set API_KEY "secret123"
 
 # Utilities
-npx convex dashboard        # Open dashboard
-npx convex logs             # View logs
-npx convex codegen          # Regenerate types
+bunx convex dashboard        # Open dashboard
+bunx convex logs             # View logs
+bunx convex codegen          # Regenerate types
 ```
 
 ## File Structure
@@ -214,8 +214,8 @@ export const getUrl = query({
 ## Testing
 
 ```bash
-npm run test               # Run all tests
-npx convex dev --local     # Use local backend for testing
+bun run test               # Run all tests
+bunx convex dev --local     # Use local backend for testing
 ```
 
 Prefer testing with real Convex backend over mocks when possible.

@@ -72,7 +72,7 @@ A comprehensive Next.js application for marketing agencies to manage clients, tr
 
 1. Install dependencies:
 ```bash
-npm install
+bun install
 ```
 
 2. Set up environment variables:
@@ -84,7 +84,7 @@ cp .env.local.example .env.local
 
 4. Run the development server:
 ```bash
-npm run dev
+bun run dev
 ```
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -137,12 +137,12 @@ src/
 ### Manual Deployment
 1. Build the application:
 ```bash
-npm run build
+bun run build
 ```
 
 2. Start production server:
 ```bash
-npm start
+bun run start
 ```
 
 ### Stripe Setup
@@ -178,11 +178,11 @@ Your Convex endpoints:
 	```
 2. Start Convex in dev (first run will prompt you to log in/link the project):
 	```bash
-	npm run convex:dev
+	bun run convex:dev
 	```
 3. Deploy Convex functions:
 	```bash
-	npm run convex:deploy
+	bun run convex:deploy
 	```
 
 The app is now wired with a `ConvexProvider` (see `src/components/providers/convex-provider.tsx`). Once you start adding Convex functions, you can incrementally replace Firestore-backed API routes/services with Convex queries/mutations.
@@ -205,7 +205,7 @@ Env vars (Next.js):
 - `NEXT_PUBLIC_SITE_URL` (e.g. `http://localhost:3000`)
 - Optional: `NEXT_PUBLIC_USE_BETTER_AUTH=true` (enables client-side syncing of `cohorts_role`/`cohorts_session_expires`)
 
-Env vars (Convex dashboard / `npx convex env set`):
+Env vars (Convex dashboard / `bunx convex env set`):
 - `BETTER_AUTH_SECRET` (>= 32 chars)
 - `SITE_URL` (your site URL, e.g. `http://localhost:3000` in dev)
 
@@ -215,7 +215,7 @@ This project now includes hardened Firestore and Storage rules for production de
 
 1. Install the Firebase CLI and log in:
 	```bash
-	npm install -g firebase-tools
+	bun add -g firebase-tools
 	firebase login
 	```
 2. Configure your service account credentials in the environment (locally via `.env.local`, and in your hosting provider as secrets):
@@ -259,7 +259,7 @@ Sentry is wired into both the client (`sentry.client.config.ts`) and every serve
 	- `SENTRY_DEBUG` (`true` to enable verbose logging)
 2. Rebuild the app so instrumentation is bundled:
 	```bash
-	npm run build
+	bun run build
 	```
 3. Deploy as normal. `withSentryConfig` in `next.config.ts` enables automatic error and trace capture for API routes, server components, and edge handlers.
 

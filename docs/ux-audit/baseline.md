@@ -2,7 +2,7 @@
 
 ### React Doctor
 
-- Command: `npx -y react-doctor@latest . --verbose --diff`
+- Command: `bunx react-doctor@latest . --verbose --diff`
 - Score: `95 / 100`
 - Warnings: `82`
 - Files affected: `47 / 277 changed source files`

@@ -4,7 +4,7 @@
 
 - [ ] `bun --bun tsc -p tsconfig.json --noEmit --pretty false`
 - [ ] targeted lint for touched files passes
-- [ ] `npx -y react-doctor@latest . --verbose --diff` shows no new errors for touched files
+- [ ] `bunx react-doctor@latest . --verbose --diff` shows no new errors for touched files
 
 ### Accessibility gates
 
