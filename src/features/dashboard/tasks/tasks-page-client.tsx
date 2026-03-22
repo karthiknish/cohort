@@ -136,23 +136,30 @@ function TasksPageContent({
     syncToUrl: true,
   })
 
+  const normalizedAction = initialAction ?? null
+  const normalizedClientId = initialClientId ?? null
+  const normalizedClientName = initialClientName ?? null
+  const normalizedProjectId = initialProjectId ?? null
+  const normalizedProjectName = initialProjectName ?? null
+  const normalizedSearchParamsString = initialSearchParamsString ?? ''
+
   const projectFilter = useMemo(() => ({
-    id: initialProjectId,
-    name: initialProjectName,
-  }), [initialProjectId, initialProjectName])
+    id: normalizedProjectId,
+    name: normalizedProjectName,
+  }), [normalizedProjectId, normalizedProjectName])
 
   const routeClientContext = useMemo(() => {
-    if (!initialClientId && !initialClientName) return null
+    if (!normalizedClientId && !normalizedClientName) return null
     return {
-      id: initialClientId,
-      name: initialClientName,
+      id: normalizedClientId,
+      name: normalizedClientName,
     }
-  }, [initialClientId, initialClientName])
+  }, [normalizedClientId, normalizedClientName])
 
   const taskFormClient = selectedClient ?? routeClientContext
   const taskFormClientId = selectedClientId ?? routeClientContext?.id ?? undefined
-  const actionParam = initialAction
-  const searchParamsString = initialSearchParamsString
+  const actionParam = normalizedAction
+  const searchParamsString = normalizedSearchParamsString
 
   // Sync navigation context from URL project filters.
   useEffect(() => {
