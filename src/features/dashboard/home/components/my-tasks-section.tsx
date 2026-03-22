@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from 'convex/react'
 import { useConvexAuth } from 'convex/react'
@@ -209,7 +210,21 @@ function TaskSkeleton() {
 export function MyTasksSection() {
   const { user } = useAuth()
   const { isAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
+  const [currentTimeMs, setCurrentTimeMs] = useState(0)
   const workspaceId = getWorkspaceId(user)
+
+  useEffect(() => {
+    const updateCurrentTime = () => {
+      setCurrentTimeMs(Date.now())
+    }
+
+    updateCurrentTime()
+    const intervalId = window.setInterval(updateCurrentTime, 60_000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [])
 
   const canQuery = isAuthenticated && !isConvexLoading && !!workspaceId && !!user?.id
 
@@ -218,8 +233,6 @@ export function MyTasksSection() {
     canQuery ? { workspaceId, userId: user?.id ?? '' } : 'skip'
   ) as unknown[] | undefined
 
-  const nowMs = Date.now()
-
   const tasks: TaskRecord[] = rawTasks
     ? rawTasks.flatMap((r) => {
         const t = mapConvexTask(r)
@@ -227,7 +240,7 @@ export function MyTasksSection() {
       })
     : []
 
-  const groups = groupTasks(tasks, nowMs)
+  const groups = groupTasks(tasks, currentTimeMs)
   const isLoading = rawTasks === undefined
   const openCount = tasks.length
 
@@ -276,7 +289,7 @@ export function MyTasksSection() {
                 </p>
                 <div className="space-y-2">
                   {group.tasks.map((t) => (
-                    <TaskRow key={t.id} task={t} nowMs={nowMs} />
+                    <TaskRow key={t.id} task={t} nowMs={currentTimeMs} />
                   ))}
                 </div>
               </div>

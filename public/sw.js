@@ -12,6 +12,10 @@ const NEVER_CACHE_PATTERNS = [
   /\?_rsc=/,              // RSC query params
 ]
 
+function logSwError(context, error, details) {
+  console.error(`[sw] ${context}`, error, details || {})
+}
+
 // Check if request should bypass cache
 function shouldBypassCache(request) {
   const url = new URL(request.url)
@@ -38,19 +42,33 @@ function shouldBypassCache(request) {
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)).then(() => self.skipWaiting())
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting())
+      .catch((error) => {
+        logSwError('install failed', error)
+        throw error
+      })
   )
 })
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((key) => caches.delete(key))
+        )
       )
-    ).then(() => self.clients.claim())
+      .then(() => self.clients.claim())
+      .catch((error) => {
+        logSwError('activate failed', error)
+        throw error
+      })
   )
 })
 
@@ -69,7 +87,8 @@ self.addEventListener('fetch', (event) => {
   // For navigations, try network first, then offline fallback
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(async () => {
+      fetch(request).catch(async (error) => {
+        logSwError('navigation request failed', error, { url: request.url })
         const cache = await caches.open(CACHE_NAME)
         const cached = await cache.match(OFFLINE_URL)
         return cached || Response.error()
@@ -88,14 +107,26 @@ self.addEventListener('fetch', (event) => {
       event.respondWith(
         caches.match(request).then((cached) => {
           if (cached) return cached
-          return fetch(request).then((response) => {
-            // Only cache successful responses
-            if (response.ok) {
-              const clone = response.clone()
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
-            }
-            return response
-          }).catch(() => Response.error())
+          return fetch(request)
+            .then((response) => {
+              // Only cache successful responses
+              if (response.ok) {
+                const clone = response.clone()
+                event.waitUntil(
+                  caches
+                    .open(CACHE_NAME)
+                    .then((cache) => cache.put(request, clone))
+                    .catch((error) => {
+                      logSwError('asset cache write failed', error, { url: request.url })
+                    })
+                )
+              }
+              return response
+            })
+            .catch((error) => {
+              logSwError('static asset request failed', error, { url: request.url })
+              return Response.error()
+            })
         })
       )
     }

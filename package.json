@@ -116,7 +116,8 @@
   "reactDoctor": {
     "ignore": {
       "files": [
-        "src/components/ui/data-table/data-table.tsx"
+        "src/components/ui/data-table/data-table.tsx",
+        "src/shared/ui/data-table/data-table.tsx"
       ]
     }
   }

@@ -39,13 +39,15 @@ export function CrossChannelOverviewCard({
   onExport,
 }: CrossChannelOverviewCardProps) {
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
+  const serverSideProviders = serverSideSummary?.providers
+  const serverSideTotals = serverSideSummary?.totals
 
   const summaryProviders = useMemo(() => {
-    if (!serverSideSummary?.providers) return []
-    return Object.keys(serverSideSummary.providers)
+    if (!serverSideProviders) return []
+    return Object.keys(serverSideProviders)
       .map((providerId) => normalizeAdsProviderId(providerId) ?? providerId)
       .sort()
-  }, [serverSideSummary])
+  }, [serverSideProviders])
 
   // Get unique providers from the data
   const availableProviders = useMemo(() => {
@@ -63,8 +65,8 @@ export function CrossChannelOverviewCard({
   }, [processedMetrics, selectedProviders])
 
   const normalizedServerProviders = useMemo(() => {
-    if (!serverSideSummary?.providers) return {}
-    return Object.entries(serverSideSummary.providers).reduce<Record<string, Totals>>((acc, [providerId, totals]) => {
+    if (!serverSideProviders) return {}
+    return Object.entries(serverSideProviders).reduce<Record<string, Totals>>((acc, [providerId, totals]) => {
       const normalized = normalizeAdsProviderId(providerId) ?? providerId
       const current = acc[normalized] ?? { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
       current.spend += Number(totals.spend ?? 0)
@@ -75,12 +77,12 @@ export function CrossChannelOverviewCard({
       acc[normalized] = current
       return acc
     }, {})
-  }, [serverSideSummary?.providers])
+  }, [serverSideProviders])
 
   const filteredTotals: Totals = useMemo(() => {
-    if (serverSideSummary?.totals && serverSideSummary.providers) {
+    if (serverSideTotals && serverSideProviders) {
       if (selectedProviders.length === 0) {
-        return serverSideSummary.totals
+        return serverSideTotals
       }
 
       return selectedProviders.reduce<Totals>(
@@ -109,7 +111,7 @@ export function CrossChannelOverviewCard({
       },
       { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
     )
-  }, [filteredMetrics, normalizedServerProviders, selectedProviders, serverSideSummary])
+  }, [filteredMetrics, normalizedServerProviders, selectedProviders, serverSideProviders, serverSideTotals])
 
   // Calculate summary cards from filtered metrics
   // fmtMoney guards financial values when currency is unknown (mixed-currency selection).

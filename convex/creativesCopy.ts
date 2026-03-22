@@ -4,7 +4,7 @@ import { action } from './_generated/server'
 import { v } from 'convex/values'
 
 import { geminiAI } from '../src/services/gemini'
-import { withErrorHandling } from './errors'
+import { Errors, withErrorHandling } from './errors'
 import { enforceGeminiActionRateLimit } from './geminiRateLimit'
 
 const providerIdValidator = v.union(
@@ -25,6 +25,38 @@ function extractJsonObject(text: string): string | null {
   const end = text.lastIndexOf('}')
   if (start === -1 || end === -1 || end <= start) return null
   return text.slice(start, end + 1)
+}
+
+function parseGeneratedCopyResponse(raw: string, providerId: GenerateCopyInput['providerId']) {
+  const jsonCandidate = extractJsonObject(raw)
+  const payloads = [jsonCandidate, raw].filter(
+    (value, index, values): value is string => typeof value === 'string' && values.indexOf(value) === index
+  )
+
+  let lastError: unknown = null
+
+  for (const payload of payloads) {
+    try {
+      const parsed = JSON.parse(payload) as unknown
+      if (parsed && typeof parsed === 'object') {
+        return parsed as Record<string, unknown>
+      }
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  console.error('[creativesCopy:generateCopy] Failed to parse Gemini response', {
+    providerId,
+    hasJsonCandidate: Boolean(jsonCandidate),
+    rawPreview: raw.slice(0, 500),
+    error: lastError,
+  })
+
+  throw Errors.integration.error('gemini', 'Generated copy response was not valid JSON', {
+    providerId,
+    hasJsonCandidate: Boolean(jsonCandidate),
+  })
 }
 
 function cleanSuggestion(value: string): string {
@@ -182,8 +214,7 @@ export const generateCopy = action({
       const prompt = buildPrompt(input)
       const raw = await geminiAI.generateContent(prompt)
 
-      const jsonCandidate = extractJsonObject(raw)
-      const parsed = jsonCandidate ? JSON.parse(jsonCandidate) : JSON.parse(raw)
+      const parsed = parseGeneratedCopyResponse(raw, args.providerId)
 
       // Validate response has the expected shape
       const validated = {

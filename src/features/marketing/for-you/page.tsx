@@ -19,6 +19,7 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { analyticsIntegrationsApi, meetingIntegrationsApi, meetingsApi, projectsApi } from '@/lib/convex-api'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { DASHBOARD_THEME, getButtonClasses } from '@/lib/dashboard-theme'
 import { getPreviewProjects } from '@/lib/preview-data'
 import { cn, getWorkspaceId } from '@/lib/utils'
@@ -89,6 +90,51 @@ function mapProjectRows(rows: unknown[] | undefined): ProjectRecord[] {
       deletedAt: typeof record?.deletedAtMs === 'number' ? new Date(record.deletedAtMs).toISOString() : null,
     }
   })
+}
+
+function exportActivitiesToCsv(activities: EnhancedActivity[]):
+  | { ok: true }
+  | { ok: false; error: unknown } {
+  let url: string | null = null
+
+  try {
+    const dataToExport = activities.map((activity) => ({
+      type: activity.type,
+      description: activity.description,
+      entity: activity.entityName,
+      timestamp: activity.timestamp,
+      user: activity.userName || 'System',
+    }))
+
+    const csvContent = [
+      ['Type', 'Description', 'Entity', 'Timestamp', 'User'].join(','),
+      ...dataToExport.map((row) =>
+        [
+          row.type,
+          `"${row.description}"`,
+          `"${row.entity}"`,
+          row.timestamp,
+          row.user,
+        ].join(',')
+      ),
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    url = URL.createObjectURL(blob)
+
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `activity-export-${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
+
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, error }
+  } finally {
+    if (url) {
+      URL.revokeObjectURL(url)
+    }
+  }
 }
 
 function SpotlightList({ items }: { items: SpotlightItem[] }) {
@@ -456,38 +502,21 @@ export default function ForYouPage() {
   }, [toast])
 
   const handleExport = useCallback(async () => {
-    const dataToExport = enhancedActivities.map((a) => ({
-      type: a.type,
-      description: a.description,
-      entity: a.entityName,
-      timestamp: a.timestamp,
-      user: a.userName || 'System',
-    }))
+    const result = exportActivitiesToCsv(enhancedActivities)
 
-    const csvContent = [
-      ['Type', 'Description', 'Entity', 'Timestamp', 'User'].join(','),
-      ...dataToExport.map((row) =>
-        [
-          row.type,
-          `"${row.description}"`,
-          `"${row.entity}"`,
-          row.timestamp,
-          row.user,
-        ].join(',')
-      ),
-    ].join('\n')
+    if (result.ok) {
+      toast({
+        title: 'Export successful',
+        description: 'Activity data has been downloaded.',
+      })
+      return
+    }
 
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `activity-export-${new Date().toISOString().split('T')[0]}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
-
+    logError(result.error, 'ForYouPage.handleExport')
     toast({
-      title: 'Export successful',
-      description: 'Activity data has been downloaded.',
+      title: 'Export failed',
+      description: asErrorMessage(result.error),
+      variant: 'destructive',
     })
   }, [enhancedActivities, toast])
 

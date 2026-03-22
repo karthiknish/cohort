@@ -132,11 +132,12 @@ export default function AdminTeamPage() {
   }, [usersOverride, usersPage])
 
   const loading = (user != null && workspaceContext === undefined) || isLoading
+  const clientItems = clientsData?.items
 
   const internalUsers = useMemo(() => users.filter((candidate) => candidate.role !== 'client'), [users])
 
   const allocationSummary = useMemo(() => {
-    const clientRows = Array.isArray(clientsData?.items) ? clientsData.items : []
+    const clientRows = Array.isArray(clientItems) ? clientItems : []
 
     return buildClientAllocationSummary(
       internalUsers.map((record) => ({
@@ -153,7 +154,7 @@ export default function AdminTeamPage() {
         teamMembers: client.teamMembers ?? [],
       }))
     )
-  }, [clientsData?.items, internalUsers])
+  }, [clientItems, internalUsers])
 
   const filteredUsers = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()

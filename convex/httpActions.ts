@@ -28,7 +28,13 @@ export const adSyncNotification = httpAction(async (ctx, request) => {
     }
   }
 
-  const payload = (await request.json().catch(() => null)) as Record<string, unknown> | null
+  let payload: Record<string, unknown> | null = null
+  try {
+    payload = await request.json() as Record<string, unknown>
+  } catch (error) {
+    console.error('[httpActions:adSyncNotification] Invalid JSON payload', error)
+    return jsonResponse({ error: 'Invalid JSON payload' }, 400)
+  }
 
   const workspaceId = typeof payload?.workspaceId === 'string' ? payload.workspaceId : null
   const providerId = typeof payload?.providerId === 'string' ? payload.providerId : null
@@ -49,7 +55,13 @@ export const adSyncNotification = httpAction(async (ctx, request) => {
       clientId,
       jobType: 'manual-sync',
     })
-  } catch {
+  } catch (error) {
+    console.error('[httpActions:adSyncNotification] Failed to enqueue sync job', {
+      workspaceId,
+      providerId,
+      clientId,
+      error,
+    })
     // Don’t fail the webhook if auth is not wired yet.
     return jsonResponse({ received: true, enqueued: false })
   }
