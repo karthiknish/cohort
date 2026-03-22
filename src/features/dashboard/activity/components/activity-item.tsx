@@ -135,7 +135,9 @@ export function ActivityItem({
                   </Badge>
                 )}
                 <span className="text-xs text-muted-foreground">
-                  {format(new Date(activity.timestamp), 'h:mm a')}
+                  <time dateTime={activity.timestamp}>
+                    {format(new Date(activity.timestamp), 'h:mm a')}
+                  </time>
                 </span>
               </div>
               <p className="mt-1 text-sm font-medium leading-none hover:text-primary">
@@ -169,8 +171,8 @@ export function ActivityItem({
             {/* Comments count */}
             {typeof activity.comments === 'number' && activity.comments > 0 && (
               <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                <MessageCircle className="h-3 w-3" />
-                {activity.comments}
+                <MessageCircle aria-hidden="true" className="h-3 w-3" />
+                <span>{activity.comments} comment{activity.comments !== 1 ? 's' : ''}</span>
               </div>
             )}
 
@@ -227,12 +229,12 @@ export function ActivityItem({
                 e.stopPropagation()
                 onTogglePin(activity.id)
               }}
-              title={activity.isPinned ? 'Unpin activity' : 'Pin activity'}
+              aria-label={activity.isPinned ? 'Unpin activity' : 'Pin activity'}
             >
               {activity.isPinned ? (
-                <PinOff className="h-4 w-4 text-amber-500" />
+                <PinOff aria-hidden="true" className="h-4 w-4 text-amber-500" />
               ) : (
-                <Pin className="h-4 w-4" />
+                <Pin aria-hidden="true" className="h-4 w-4" />
               )}
             </Button>
 
@@ -246,9 +248,9 @@ export function ActivityItem({
                   e.stopPropagation()
                   onMarkAsRead(activity.id)
                 }}
-                title="Mark as read"
+                aria-label="Mark as read"
               >
-                <Check className="h-4 w-4" />
+                <Check aria-hidden="true" className="h-4 w-4" />
               </Button>
             )}
 

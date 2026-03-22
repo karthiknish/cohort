@@ -30,23 +30,23 @@ export function ActivityStats({ activities, className }: ActivityStatsProps) {
     <div className={cn('grid grid-cols-2 gap-4 sm:grid-cols-5', className)}>
       <div className="space-y-1">
         <p className="text-xs text-muted-foreground">Today</p>
-        <p className="text-2xl font-semibold">{stats.todayCount}</p>
+        <p className="text-2xl font-semibold tabular-nums">{stats.todayCount}</p>
       </div>
       <div className="space-y-1">
-        <p className="text-xs text-muted-foreground">This Week</p>
-        <p className="text-2xl font-semibold">{stats.weekCount}</p>
+        <p className="text-xs text-muted-foreground">This week</p>
+        <p className="text-2xl font-semibold tabular-nums">{stats.weekCount}</p>
       </div>
       <div className="space-y-1">
         <p className="text-xs text-muted-foreground">Unread</p>
-        <p className="text-2xl font-semibold">{stats.unreadCount}</p>
+        <p className="text-2xl font-semibold tabular-nums">{stats.unreadCount}</p>
       </div>
       <div className="space-y-1">
         <p className="text-xs text-muted-foreground">Pinned</p>
-        <p className="text-2xl font-semibold">{stats.pinnedCount}</p>
+        <p className="text-2xl font-semibold tabular-nums">{stats.pinnedCount}</p>
       </div>
       <div className="space-y-1 sm:col-span-1 col-span-2">
         <p className="text-xs text-muted-foreground">Total</p>
-        <p className="text-2xl font-semibold">{stats.totalCount}</p>
+        <p className="text-2xl font-semibold tabular-nums">{stats.totalCount}</p>
       </div>
     </div>
   )

@@ -5,7 +5,7 @@ import {
   ArrowUpRight,
   Download,
   RefreshCw,
-  Sparkles,
+  Zap,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -15,6 +15,7 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useToast } from '@/shared/ui/use-toast'
+import { FadeIn, FadeInStagger } from '@/shared/ui/animate-in'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -140,8 +141,8 @@ function exportActivitiesToCsv(activities: EnhancedActivity[]):
 function SpotlightList({ items }: { items: SpotlightItem[] }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
-        Nothing urgent here yet — as live work lands, it will show up in this queue.
+      <div className="rounded-xl border border-dashed bg-muted/20 p-5 text-sm text-muted-foreground">
+        No items here yet. Live work will surface in this queue as it arrives.
       </div>
     )
   }
@@ -153,7 +154,7 @@ function SpotlightList({ items }: { items: SpotlightItem[] }) {
           key={item.id}
           href={item.href}
           className={cn(
-            'group rounded-xl border bg-background/70 p-4 transition-colors',
+            'group rounded-xl border bg-background/70 p-4 transition-[colors,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-sm',
             toneClasses[item.tone].border,
           )}
         >
@@ -181,7 +182,7 @@ function FeatureSpaceCard({ space }: { space: FeatureSpace }) {
     <Link
       href={space.href}
       className={cn(
-        'group rounded-2xl border bg-background/70 p-4 transition-colors',
+        'group rounded-2xl border bg-background/70 p-4 transition-[colors,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md',
         toneClasses[space.tone].border,
       )}
     >
@@ -228,7 +229,7 @@ function PinnedSectionCard({
       <CardHeader className={DASHBOARD_THEME.cards.header}>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle className="text-base">{title}</CardTitle>
+            <CardTitle className="text-base text-balance">{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </div>
           <Button asChild variant="ghost" size="sm" className="w-fit">
@@ -607,7 +608,7 @@ export default function ForYouPage() {
 
       {/* Workspace pulse — shows workspace-wide data; activity stream requires a client */}
       {!selectedClient ? (
-        <div className="rounded-xl border border-dashed p-8 text-center">
+        <div className="rounded-xl border border-dashed bg-muted/20 p-8 text-center">
           <p className="text-sm text-muted-foreground">
             Select a client workspace from the top bar to see the workspace pulse, activity stream, and recommended spaces.
           </p>
@@ -619,12 +620,12 @@ export default function ForYouPage() {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-primary">
-                  <Sparkles className="mr-1 h-3.5 w-3.5" />
+                  <Zap aria-hidden="true" className="mr-1 h-3.5 w-3.5" />
                   Live workspace
                 </Badge>
                 <Badge variant="outline" className="rounded-full">{selectedClient.name}</Badge>
               </div>
-              <h1 className={cn(DASHBOARD_THEME.layout.title, 'mt-3')}>{activityHub.heroTitle}</h1>
+              <h1 className={cn(DASHBOARD_THEME.layout.title, 'mt-3 text-balance')}>{activityHub.heroTitle}</h1>
               <p className={cn(DASHBOARD_THEME.layout.subtitle, 'mt-1')}>
                 {activityHub.heroSummary}
               </p>
@@ -651,7 +652,9 @@ export default function ForYouPage() {
             </div>
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-2">
+          <FadeInStagger as="div" className={DASHBOARD_THEME.layout.container} delay={0.05} stagger={0.07}>
+            <FadeIn as="div">
+              <div className="grid gap-6 xl:grid-cols-2">
             <PinnedSectionCard
               title="Upcoming meetings"
               description="Pinned to the top so the next live and scheduled conversations are always first."
@@ -669,11 +672,13 @@ export default function ForYouPage() {
               emptyMessage="No urgent or high-priority tasks are active right now."
             />
           </div>
+            </FadeIn>
 
           {/* Workspace pulse */}
-          <Card className={DASHBOARD_THEME.cards.base}>
+          <FadeIn as="div">
+            <Card className={DASHBOARD_THEME.cards.base}>
             <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'pb-4')}>
-              <CardTitle className="text-base">Workspace Pulse</CardTitle>
+              <CardTitle className="text-base text-balance">Workspace Pulse</CardTitle>
               <CardDescription>
                 A live overview across tasks, projects, meetings, proposals, collaboration, ads, and analytics.
               </CardDescription>
@@ -683,9 +688,9 @@ export default function ForYouPage() {
                 <ActivityStats activities={enhancedActivities} />
                 <div className="grid gap-3 sm:grid-cols-3">
                   {activityHub.featureSpaces.slice(0, 3).map((space) => (
-                    <div key={space.id} className={cn('rounded-xl border p-4', toneClasses[space.tone].border)}>
+                    <div key={space.id} className={cn('rounded-xl border bg-muted/30 p-4', toneClasses[space.tone].border)}>
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{space.title}</p>
-                      <p className="mt-2 text-2xl font-semibold text-foreground">{space.metric}</p>
+                      <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{space.metric}</p>
                       <p className="mt-1 text-xs text-muted-foreground">{space.secondary}</p>
                     </div>
                   ))}
@@ -720,20 +725,22 @@ export default function ForYouPage() {
                       </div>
                     </Link>
                   )) : (
-                    <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-                      Everything looks calm right now — the most important updates will appear here automatically.
+                    <div className="rounded-xl border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
+                      All clear — urgent blockers and actions will show here automatically.
                     </div>
                   )}
                 </div>
               </div>
             </CardContent>
-          </Card>
+            </Card>
+          </FadeIn>
 
-          <Card className={DASHBOARD_THEME.cards.base}>
+          <FadeIn as="div">
+            <Card className={DASHBOARD_THEME.cards.base}>
             <CardHeader className={DASHBOARD_THEME.cards.header}>
               <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <CardTitle className="text-base">Recommended Spaces</CardTitle>
+                  <CardTitle className="text-base text-balance">Recommended Spaces</CardTitle>
                   <CardDescription>Jump straight into the parts of the workspace that matter most right now.</CardDescription>
                 </div>
                 <Button asChild variant="ghost" size="sm" className="w-fit">
@@ -746,11 +753,13 @@ export default function ForYouPage() {
                 <FeatureSpaceCard key={space.id} space={space} />
               ))}
             </CardContent>
-          </Card>
+            </Card>
+          </FadeIn>
 
-          <Card className={DASHBOARD_THEME.cards.base}>
+          <FadeIn as="div">
+            <Card className={DASHBOARD_THEME.cards.base}>
             <CardHeader className={DASHBOARD_THEME.cards.header}>
-              <CardTitle className="text-base">Worked On</CardTitle>
+              <CardTitle className="text-base text-balance">Worked On</CardTitle>
               <CardDescription>Browse live work by priority, unread updates, deadlines, meetings, and performance.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -771,12 +780,14 @@ export default function ForYouPage() {
                 ))}
               </Tabs>
             </CardContent>
-          </Card>
+            </Card>
+          </FadeIn>
 
           {/* Activity stream */}
-          <Card className={DASHBOARD_THEME.cards.base}>
+          <FadeIn as="div">
+            <Card className={DASHBOARD_THEME.cards.base}>
             <CardHeader className={DASHBOARD_THEME.cards.header}>
-              <CardTitle className="text-base">Activity Stream</CardTitle>
+              <CardTitle className="text-base text-balance">Activity Stream</CardTitle>
               <CardDescription>
                 The detailed live timeline stays here, with filters and bulk actions for triage.
               </CardDescription>
@@ -828,7 +839,9 @@ export default function ForYouPage() {
                 currentUserName={currentUserName}
               />
             </CardContent>
-          </Card>
+            </Card>
+          </FadeIn>
+          </FadeInStagger>
 
           {/* Activity Details Modal */}
           <ActivityDetailsModal
@@ -842,7 +855,7 @@ export default function ForYouPage() {
           {/* Keyboard shortcuts hint */}
           <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-4">
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">⌘K</kbd>
+              <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">⌘&nbsp;K</kbd>
               <span>Focus search</span>
             </span>
             <span className="flex items-center gap-1">
