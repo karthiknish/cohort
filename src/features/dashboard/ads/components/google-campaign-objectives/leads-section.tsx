@@ -21,7 +21,7 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="w-4 h-4 text-blue-500" />
+            <Users className="w-4 h-4 text-info" />
             Bidding Strategy
           </CardTitle>
           <CardDescription>
@@ -78,7 +78,7 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <FileText className="w-4 h-4 text-blue-500" />
+            <FileText className="w-4 h-4 text-info" />
             Lead Form Extension
           </CardTitle>
           <CardDescription>
@@ -109,7 +109,7 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Phone className="w-4 h-4 text-blue-500" />
+            <Phone className="w-4 h-4 text-info" />
             Call Extension
           </CardTitle>
           <CardDescription>
@@ -146,10 +146,10 @@ export function GoogleLeadsSection({ formData, onChange, disabled }: GoogleObjec
       </Card>
 
       {/* Tips */}
-      <Card className="border-blue-500/20 bg-blue-500/5">
+      <Card className="border-info/20 bg-info/5">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <Users className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+            <Users className="w-5 h-5 text-info flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Leads Campaign Best Practices</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">

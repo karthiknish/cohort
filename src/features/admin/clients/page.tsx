@@ -420,7 +420,7 @@ export default function AdminClientsPage() {
                         </div>
                       </div>
                       {unmatchedByClientId[client.id] ? (
-                        <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+                        <p className="mt-3 text-xs text-warning">
                           This client still has legacy allocation names that do not match current workspace users.
                         </p>
                       ) : null}

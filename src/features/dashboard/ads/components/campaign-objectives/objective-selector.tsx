@@ -56,7 +56,7 @@ export function ObjectiveSelector({ value, onChange, disabled }: ObjectiveSelect
                 className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: objective.color }}
               >
-                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--primary-foreground)' }}>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
@@ -71,7 +71,7 @@ export function ObjectiveSelector({ value, onChange, disabled }: ObjectiveSelect
             >
               <Icon 
                 className="w-6 h-6" 
-                style={{ color: isSelected ? 'white' : objective.color }}
+                style={{ color: isSelected ? 'var(--primary-foreground)' : objective.color }}
               />
             </div>
             

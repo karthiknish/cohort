@@ -65,7 +65,7 @@ function TaskRowComponent({
   return (
     <div
       className={cn(
-        'group relative border-b border-slate-200/60 px-6 py-5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-slate-50/80 last:border-0',
+        'group relative border-b border-border/60 px-6 py-5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/40 last:border-0',
         isPendingUpdate && 'opacity-75 pointer-events-none',
         selected && 'bg-primary/5'
       )}
@@ -74,9 +74,9 @@ function TaskRowComponent({
       <div
         className={cn(
           "absolute left-0 top-0 bottom-0 w-1 transition-opacity opacity-70 group-hover:opacity-100",
-          task.priority === 'urgent' ? 'bg-red-500' :
-            task.priority === 'high' ? 'bg-orange-500' :
-              task.priority === 'medium' ? 'bg-blue-500' : 'bg-emerald-500'
+          task.priority === 'urgent' ? 'bg-destructive' :
+            task.priority === 'high' ? 'bg-warning' :
+              task.priority === 'medium' ? 'bg-info' : 'bg-success'
         )}
       />
 
@@ -91,25 +91,25 @@ function TaskRowComponent({
                 aria-label={`View task ${task.title}`}
               >
                 <div className="flex min-w-0 items-start gap-2">
-                  <p className="max-w-[300px] truncate text-base font-bold text-slate-900 transition-colors hover:text-primary sm:max-w-[450px]">
+                  <p className="max-w-[300px] truncate text-base font-bold text-foreground transition-colors hover:text-primary sm:max-w-[450px]">
                     {task.title}
                   </p>
                   {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
                 </div>
                 {task.description && (
-                  <p className="mt-2 max-w-2xl line-clamp-1 text-sm text-slate-600">{task.description}</p>
+                  <p className="mt-2 max-w-2xl line-clamp-1 text-sm text-muted-foreground">{task.description}</p>
                 )}
               </button>
             ) : (
               <div className="min-w-0">
                 <div className="flex min-w-0 items-start gap-2">
-                  <p className="max-w-[300px] truncate text-base font-bold text-slate-900 sm:max-w-[450px]">
+                  <p className="max-w-[300px] truncate text-base font-bold text-foreground sm:max-w-[450px]">
                     {task.title}
                   </p>
                   {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
                 </div>
                 {task.description && (
-                  <p className="mt-2 max-w-2xl line-clamp-1 text-sm text-slate-600">{task.description}</p>
+                  <p className="mt-2 max-w-2xl line-clamp-1 text-sm text-muted-foreground">{task.description}</p>
                 )}
               </div>
             )}
@@ -207,7 +207,7 @@ function TaskRowComponent({
               </Badge>
             ) : null}
             <span className={cn('inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-medium', taskPillColors.neutral)}>
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/80 text-slate-500">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-muted-foreground">
                 <User className="h-2.5 w-2.5" />
               </div>
               {(task.assignedTo ?? []).length > 0 ? (task.assignedTo ?? []).join(', ') : 'Unassigned'}

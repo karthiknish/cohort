@@ -6,7 +6,7 @@ import {
   LayoutContextProvider,
   ParticipantTile,
   RoomAudioRenderer,
-} from '@livekit/components-react'
+} from '@/shared/ui/livekit'
 import { LoaderCircle, Maximize2, Minimize2, PictureInPicture2, Radio, Sparkles } from 'lucide-react'
 import type { ComponentProps, ReactNode } from 'react'
 
@@ -86,7 +86,7 @@ export function LiveRoomCanvasOverlay({
   useDarkChrome: boolean
 }) {
   const chromeClassName = useDarkChrome
-    ? 'border-white/15 bg-slate-950/45 text-white hover:bg-slate-900/60'
+    ? 'border-border/60 bg-card/90 text-card-foreground hover:bg-card'
     : 'border border-border/60 bg-background/95'
 
   return (
@@ -96,20 +96,20 @@ export function LiveRoomCanvasOverlay({
           className={cn(
             'pointer-events-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur',
             useDarkChrome
-              ? 'border-rose-400/30 bg-rose-500/15 text-white'
-              : 'border-rose-400/30 bg-rose-500/15 text-rose-50',
+              ? 'border-warning/20 bg-warning/10 text-warning-foreground'
+              : 'border-warning/20 bg-warning/10 text-warning-foreground',
           )}
         >
-          <span className="h-2.5 w-2.5 rounded-full bg-rose-400 shadow-[0_0_0_4px_rgba(251,113,133,0.18)] animate-pulse" />
+          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-warning shadow-[0_0_0_4px_hsl(var(--warning)/0.18)]" />
           <span className={compactBadgeTextColor}>{captureLabel}</span>
         </div>
 
         {useDarkChrome ? (
-          <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-950/45 px-3 py-1.5 text-xs font-medium text-white shadow-sm backdrop-blur">
+          <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/90 px-3 py-1.5 text-xs font-medium text-card-foreground shadow-sm backdrop-blur">
             {autoSyncing || notesProcessingState === 'processing' || finalizingSession || transcriptProcessingState === 'processing' ? (
               <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Sparkles className="h-3.5 w-3.5 text-cyan-200" />
+              <Sparkles className="h-3.5 w-3.5 text-info" />
             )}
             {aiStatusLabel}
           </div>

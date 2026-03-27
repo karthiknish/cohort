@@ -233,7 +233,7 @@ export function TaskCreationModal({
           </DialogTitle>
           <DialogDescription>
             {contextInfo.isAutoPopulated && (
-              <span className="text-xs text-green-600">
+              <span className="text-xs text-success">
                 Auto-populated from current context
               </span>
             )}

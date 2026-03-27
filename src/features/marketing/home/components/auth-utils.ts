@@ -61,23 +61,23 @@ export function calculatePasswordStrength(password: string): PasswordStrength {
   } else if (passedChecks <= 1) {
     score = 1
     label = 'Weak'
-    color = 'bg-red-500'
+    color = 'bg-destructive'
   } else if (passedChecks === 2) {
     score = 2
     label = 'Fair'
-    color = 'bg-orange-500'
+    color = 'bg-warning'
   } else if (passedChecks === 3) {
     score = 3
     label = 'Good'
-    color = 'bg-yellow-500'
+    color = 'bg-info'
   } else if (passedChecks === 4) {
     score = 3
     label = 'Strong'
-    color = 'bg-emerald-500'
+    color = 'bg-success'
   } else {
     score = 4
     label = 'Very Strong'
-    color = 'bg-emerald-600'
+    color = 'bg-success'
   }
 
   return { score, label, color, checks }

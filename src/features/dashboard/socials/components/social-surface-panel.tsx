@@ -1,6 +1,6 @@
 'use client'
 
-import { SiFacebook, SiInstagram } from 'react-icons/si'
+import { Facebook, Instagram } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
@@ -21,7 +21,7 @@ type SocialSurfacePanelProps = {
 const SURFACE_COPY = {
   facebook: {
     title: 'Facebook',
-    icon: SiFacebook,
+    icon: Facebook,
     summaryTitle: 'Facebook organic performance',
     summaryDescription: 'Organic reach, engagement, and follower growth for Facebook Pages in this workspace.',
     emptyMessage: 'Connect Facebook to start syncing organic metrics for this workspace.',
@@ -29,7 +29,7 @@ const SURFACE_COPY = {
   },
   instagram: {
     title: 'Instagram',
-    icon: SiInstagram,
+    icon: Instagram,
     summaryTitle: 'Instagram organic performance',
     summaryDescription: 'Organic reach, engagement, and follower growth for Instagram business profiles in this workspace.',
     emptyMessage: 'Connect Instagram to start syncing organic metrics for this workspace.',

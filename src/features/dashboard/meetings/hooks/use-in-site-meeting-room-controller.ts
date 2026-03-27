@@ -1,6 +1,6 @@
 'use client'
 
-import { useCreateLayoutContext } from '@livekit/components-react'
+import { useCreateLayoutContext } from '@/shared/ui/livekit'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useToast } from '@/shared/ui/use-toast'

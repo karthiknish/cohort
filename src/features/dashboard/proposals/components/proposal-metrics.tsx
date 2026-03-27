@@ -15,33 +15,33 @@ interface ProposalMetricsProps {
 
 function getDefaultStats() {
   return [
-    {
-      label: 'Total Proposals',
-      value: '0',
-      description: 'Drafts and submitted',
-      color: 'text-blue-500',
-      bg: 'bg-blue-500/10',
-    },
-    {
-      label: 'Ready for Pitch',
-      value: '0',
-      description: 'Generated decks',
-      color: 'text-emerald-500',
-      bg: 'bg-emerald-500/10',
-    },
-    {
-      label: 'Sent to Clients',
-      value: '0',
-      description: 'Awaiting approval',
-      color: 'text-purple-500',
-      bg: 'bg-purple-500/10',
-    },
-    {
-      label: 'Pipeline Value',
-      value: '$0',
-      description: 'Estimated total',
-      color: 'text-orange-500',
-      bg: 'bg-orange-500/10',
+      {
+        label: 'Total Proposals',
+        value: '0',
+        description: 'Drafts and submitted',
+        color: 'text-info',
+        bg: 'bg-info/10',
+      },
+      {
+        label: 'Ready for Pitch',
+        value: '0',
+        description: 'Generated decks',
+        color: 'text-success',
+        bg: 'bg-success/10',
+      },
+      {
+        label: 'Sent to Clients',
+        value: '0',
+        description: 'Awaiting approval',
+        color: 'text-warning',
+        bg: 'bg-warning/10',
+      },
+      {
+        label: 'Pipeline Value',
+        value: '$0',
+        description: 'Estimated total',
+        color: 'text-info',
+        bg: 'bg-info/10',
     },
   ] satisfies ProposalMetricStat[]
 }
@@ -97,29 +97,29 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
           label: 'Total Proposals',
           value: total.toString(),
           description: 'Drafts and submitted',
-          color: 'text-blue-500',
-          bg: 'bg-blue-500/10',
+          color: 'text-info',
+          bg: 'bg-info/10',
         },
         {
           label: 'Ready for Pitch',
           value: ready.toString(),
           description: 'Generated decks',
-          color: 'text-emerald-500',
-          bg: 'bg-emerald-500/10',
+          color: 'text-success',
+          bg: 'bg-success/10',
         },
         {
           label: 'Sent to Clients',
           value: sent.toString(),
           description: 'Awaiting approval',
-          color: 'text-purple-500',
-          bg: 'bg-purple-500/10',
+          color: 'text-warning',
+          bg: 'bg-warning/10',
         },
         {
           label: 'Pipeline Value',
           value: formatValue(totalValue),
           description: 'Estimated total',
-          color: 'text-orange-500',
-          bg: 'bg-orange-500/10',
+          color: 'text-info',
+          bg: 'bg-info/10',
         },
       ]
     } catch (error) {

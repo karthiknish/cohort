@@ -46,7 +46,7 @@ function highlightMatch(text: string, query: string): React.ReactNode {
 
     if (isMatch) {
       return (
-        <mark key={key} className="rounded bg-yellow-100 px-0.5 text-slate-900">
+        <mark key={key} className="rounded bg-accent px-0.5 text-accent-foreground">
           {part}
         </mark>
       )
@@ -74,11 +74,11 @@ function TaskCardComponent({
   return (
     <div
       className={cn(
-        'group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-slate-200/80 bg-gradient-to-b from-white via-white to-slate-50/70 p-5 shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
+        'group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-border/70 bg-gradient-to-b from-background via-background to-muted/20 p-5 shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
         isPendingUpdate && 'opacity-75 pointer-events-none',
         selected && 'border-primary/40 ring-2 ring-primary/15 shadow-md',
-        overdue && 'border-red-300/90 bg-red-50/70',
-        dueSoon && !overdue && 'border-amber-300/90 bg-amber-50/70',
+        overdue && 'border-destructive/20 bg-destructive/10',
+        dueSoon && !overdue && 'border-warning/20 bg-warning/10',
         task.parentId && 'ml-4'
       )}
     >
@@ -86,9 +86,9 @@ function TaskCardComponent({
       <div
         className={cn(
           "absolute left-0 top-0 bottom-0 w-1 rounded-l-xl transition-opacity group-hover:opacity-100",
-          task.priority === 'urgent' ? 'bg-red-500' :
-            task.priority === 'high' ? 'bg-orange-500' :
-              task.priority === 'medium' ? 'bg-blue-500' : 'bg-emerald-500'
+          task.priority === 'urgent' ? 'bg-destructive' :
+            task.priority === 'high' ? 'bg-warning' :
+              task.priority === 'medium' ? 'bg-info' : 'bg-success'
         )}
       />
 
@@ -114,7 +114,7 @@ function TaskCardComponent({
         </div>
 
         {task.description && (
-          <p className="min-h-[2.75rem] line-clamp-2 text-sm leading-6 text-slate-600">
+          <p className="min-h-[2.75rem] line-clamp-2 text-sm leading-6 text-muted-foreground">
             {highlightMatch(task.description, searchQuery)}
           </p>
         )}

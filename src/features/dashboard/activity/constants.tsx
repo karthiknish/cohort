@@ -20,15 +20,15 @@ export const ACTIVITY_ICONS: Record<
 
 export const ACTIVITY_COLORS: Record<ActivityType, string> = {
   project_updated:
-    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    'bg-info/10 text-info border border-info/20',
   task_activity:
-    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    'bg-success/10 text-success border border-success/20',
   message_posted:
-    'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    'bg-primary/10 text-primary border border-primary/20',
   client_added:
-    'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+    'bg-secondary/80 text-foreground border border-border/40',
   proposal_created:
-    'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+    'bg-warning/10 text-warning border border-warning/20',
 }
 
 export const REACTION_EMOJIS = ['👍', '❤️', '🎉', '👀', '🔥'] as const

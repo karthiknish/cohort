@@ -95,7 +95,7 @@ export function ActivityItem({
 
       {/* Pinned indicator */}
       {activity.isPinned && (
-        <div className="absolute left-[-52px] sm:left-[-58px] top-4 text-amber-500">
+        <div className="absolute left-[-52px] sm:left-[-58px] top-4 text-warning">
           <Pin className="h-4 w-4" />
         </div>
       )}
@@ -232,7 +232,7 @@ export function ActivityItem({
               aria-label={activity.isPinned ? 'Unpin activity' : 'Pin activity'}
             >
               {activity.isPinned ? (
-                <PinOff aria-hidden="true" className="h-4 w-4 text-amber-500" />
+                <PinOff aria-hidden="true" className="h-4 w-4 text-warning" />
               ) : (
                 <Pin aria-hidden="true" className="h-4 w-4" />
               )}

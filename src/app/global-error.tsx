@@ -26,17 +26,17 @@ export default function GlobalError({
         justifyContent: 'center',
         height: '100vh',
         margin: 0,
-        backgroundColor: '#f9fafb',
-        color: '#111827'
+        backgroundColor: 'hsl(var(--background))',
+        color: 'hsl(var(--foreground))'
       }}>
         <div style={{ textAlign: 'center', padding: '2rem', maxWidth: '400px' }}>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>Something went wrong</h1>
-          <p style={{ color: '#6b7280', marginBottom: '2rem' }}>A critical error occurred. We have been notified and are looking into it.</p>
+          <p style={{ color: 'hsl(var(--muted-foreground))', marginBottom: '2rem' }}>A critical error occurred. We have been notified and are looking into it.</p>
           <button 
             onClick={() => reset()}
             style={{
-              backgroundColor: '#000',
-              color: '#fff',
+              backgroundColor: 'hsl(var(--foreground))',
+              color: 'hsl(var(--background))',
               padding: '0.75rem 1.5rem',
               borderRadius: '0.375rem',
               border: 'none',
@@ -47,7 +47,7 @@ export default function GlobalError({
             Try again
           </button>
           {error.digest && (
-            <div style={{ marginTop: '2rem', fontSize: '0.75rem', fontFamily: 'monospace', color: '#9ca3af' }}>
+            <div style={{ marginTop: '2rem', fontSize: '0.75rem', fontFamily: 'monospace', color: 'hsl(var(--muted-foreground))' }}>
               Error ID: {error.digest}
             </div>
           )}

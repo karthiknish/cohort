@@ -23,7 +23,7 @@ import {
   XAxis,
   YAxis,
   Tooltip as RechartsTooltip,
-} from 'recharts'
+} from '@/shared/ui/recharts-dynamic'
 
 import {
   ChartContainer,

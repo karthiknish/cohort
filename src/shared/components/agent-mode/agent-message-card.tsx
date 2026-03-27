@@ -1,6 +1,6 @@
 'use client'
 
-import { domAnimation, LazyMotion, m } from 'framer-motion'
+import { domAnimation, LazyMotion, m } from '@/shared/ui/motion'
 import {
     AlertCircle,
     ArrowRight,
@@ -108,11 +108,11 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
                     animate={{ opacity: 1, y: 0 }}
                     className="flex justify-end"
                 >
-                    <div className="max-w-[85%] rounded-2xl bg-primary px-4 py-2.5 text-sm text-white">
+                    <div className="max-w-[85%] rounded-2xl bg-primary px-4 py-2.5 text-sm text-primary-foreground">
                         <AgentMentionText
                           text={content}
                           mentionLabels={mentionLabels}
-                          mentionClassName="bg-white/18 text-white ring-white/20"
+                          mentionClassName="bg-primary-foreground/15 text-primary-foreground ring-primary-foreground/20"
                         />
                     </div>
                 </m.div>
@@ -141,28 +141,28 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
                 <div
                     className={cn(
                         'max-w-[90%] overflow-hidden rounded-xl border shadow-sm',
-                        isSuccess && 'border-emerald-200 bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950',
-                        isError && 'border-red-200 bg-red-100 dark:border-red-800 dark:bg-red-950'
+                        isSuccess && 'border-primary/20 bg-primary/10',
+                        isError && 'border-destructive/20 bg-destructive/10'
                     )}
                 >
                     {/* Header */}
                     <div
                         className={cn(
                             'flex items-center gap-2 border-b px-4 py-2.5',
-                            isSuccess && 'border-emerald-200 bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900',
-                            isError && 'border-red-200 bg-red-100 dark:border-red-800 dark:bg-red-900'
+                            isSuccess && 'border-primary/20 bg-primary/10',
+                            isError && 'border-destructive/20 bg-destructive/10'
                         )}
                     >
                         {isSuccess ? (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
                         ) : (
-                            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                            <AlertCircle className="h-4 w-4 text-destructive" />
                         )}
                         <span
                             className={cn(
-                                'text-sm font-medium text-white',
-                                isSuccess && 'text-emerald-700 dark:text-emerald-300',
-                                isError && 'text-red-700 dark:text-red-300'
+                                'text-sm font-medium text-foreground',
+                                isSuccess && 'text-primary',
+                                isError && 'text-destructive'
                             )}
                         >
                             {getStatusTitle(isSuccess, action, operation)}
@@ -171,8 +171,8 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
                             variant="secondary"
                             className={cn(
                                 'ml-auto text-xs',
-                                isSuccess && 'bg-emerald-200 text-emerald-700 dark:bg-emerald-800 dark:text-emerald-300',
-                                isError && 'bg-red-200 text-red-700 dark:bg-red-800 dark:text-red-300'
+                                isSuccess && 'bg-background text-primary',
+                                isError && 'bg-background text-destructive'
                             )}
                         >
                             {getActionIcon(action)}
@@ -182,13 +182,13 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
 
                     {/* Content */}
                     <div className="px-4 py-3">
-                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-white">
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
                           <AgentMentionText
                             text={content}
                             mentionLabels={mentionLabels}
                             mentionClassName={cn(
-                              isSuccess && 'bg-emerald-200/70 text-emerald-950 ring-emerald-300/80',
-                              isError && 'bg-red-200/70 text-red-950 ring-red-300/80'
+                              isSuccess && 'bg-primary/15 text-primary ring-primary/20',
+                              isError && 'bg-destructive/15 text-destructive ring-destructive/20'
                             )}
                           />
                         </p>
@@ -199,9 +199,9 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
                                     <div
                                         key={section.title}
                                         className={cn(
-                                            'rounded-lg border px-3 py-2.5',
-                                            isSuccess && 'border-emerald-300/80 bg-white/60 dark:bg-emerald-950/30',
-                                            isError && 'border-red-300/80 bg-white/60 dark:bg-red-950/30'
+                                            'rounded-lg border border-border/60 bg-background/80 px-3 py-2.5',
+                                            isSuccess && 'border-primary/20',
+                                            isError && 'border-destructive/20'
                                         )}
                                     >
                                         <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -211,15 +211,15 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
                                         {section.type === 'metrics' ? (
                                             <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                                                 {section.items.map((item) => (
-                                                    <div key={item.label} className="rounded-md bg-background/80 px-2.5 py-2 shadow-sm">
+                                                    <div key={item.label} className="rounded-md bg-background px-2.5 py-2 shadow-sm">
                                                         <div className="flex items-center justify-between gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
                                                             <span>{item.label}</span>
                                                             {item.delta ? (
                                                                 <span
                                                                     className={cn(
                                                                         'rounded-full px-1.5 py-0.5 text-[10px] font-semibold normal-case',
-                                                                        item.deltaTone === 'positive' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
-                                                                        item.deltaTone === 'negative' && 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
+                                                                        item.deltaTone === 'positive' && 'bg-primary/10 text-primary',
+                                                                        item.deltaTone === 'negative' && 'bg-destructive/10 text-destructive',
                                                                         item.deltaTone === 'neutral' && 'bg-muted text-muted-foreground'
                                                                     )}
                                                                 >
@@ -238,7 +238,7 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
                                                         <Link
                                                             key={`${item.primary}-${item.secondary ?? ''}`}
                                                             href={item.href}
-                                                            className="block rounded-md bg-background/80 px-2.5 py-2 shadow-sm transition-colors hover:bg-background"
+                                                            className="block rounded-md bg-background px-2.5 py-2 shadow-sm transition-colors hover:bg-muted/40"
                                                         >
                                                             <div className="flex items-start justify-between gap-2">
                                                                 <div>
@@ -253,8 +253,8 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
                                                                 <div
                                                                     className={cn(
                                                                         'mt-2 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                                                                        item.deltaTone === 'positive' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
-                                                                        item.deltaTone === 'negative' && 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
+                                                                        item.deltaTone === 'positive' && 'bg-primary/10 text-primary',
+                                                                        item.deltaTone === 'negative' && 'bg-destructive/10 text-destructive',
                                                                         item.deltaTone === 'neutral' && 'bg-muted text-muted-foreground'
                                                                     )}
                                                                 >
@@ -263,7 +263,7 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
                                                             ) : null}
                                                         </Link>
                                                     ) : (
-                                                        <div key={`${item.primary}-${item.secondary ?? ''}`} className="rounded-md bg-background/80 px-2.5 py-2 shadow-sm">
+                                                        <div key={`${item.primary}-${item.secondary ?? ''}`} className="rounded-md bg-background px-2.5 py-2 shadow-sm">
                                                             <div className="flex items-start justify-between gap-2">
                                                                 <div>
                                                                     <div className="text-sm font-medium text-foreground">{item.primary}</div>
@@ -275,8 +275,8 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
                                                                     <span
                                                                         className={cn(
                                                                             'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                                                                            item.deltaTone === 'positive' && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
-                                                                            item.deltaTone === 'negative' && 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
+                                                                            item.deltaTone === 'positive' && 'bg-primary/10 text-primary',
+                                                                            item.deltaTone === 'negative' && 'bg-destructive/10 text-destructive',
                                                                             item.deltaTone === 'neutral' && 'bg-muted text-muted-foreground'
                                                                         )}
                                                                     >
@@ -327,11 +327,11 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
                     animate={{ opacity: 1, y: 0 }}
                     className="flex justify-start"
                 >
-                    <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-secondary px-4 py-2.5 text-sm text-white">
+                    <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-secondary px-4 py-2.5 text-sm text-secondary-foreground">
                         <AgentMentionText
                           text={content}
                           mentionLabels={mentionLabels}
-                          mentionClassName="bg-white/15 text-white ring-white/20"
+                          mentionClassName="bg-secondary-foreground/15 text-secondary-foreground ring-secondary-foreground/20"
                         />
                     </div>
                 </m.div>

@@ -2,10 +2,10 @@
 
 import { useEffect } from 'react'
 
-import { useTracks, type useCreateLayoutContext } from '@livekit/components-react'
 import { Track } from 'livekit-client'
 
 import { useVoiceInput } from '@/shared/hooks/use-voice-input'
+import { useTracks, type useCreateLayoutContext } from '@/shared/ui/livekit'
 
 import type { CaptureStatus } from './in-site-meeting-card.shared'
 import {

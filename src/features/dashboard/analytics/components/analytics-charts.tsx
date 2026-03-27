@@ -129,7 +129,7 @@ export function AnalyticsCharts({
             <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
                 <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
                     <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <div className="h-2 w-2 rounded-full bg-success" />
                         <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Revenue trend</CardTitle>
                     </div>
                     <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Daily revenue reported by Google Analytics</CardDescription>
@@ -199,7 +199,7 @@ export function AnalyticsCharts({
             <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
                 <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
                     <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-blue-500" />
+                        <div className="h-2 w-2 rounded-full bg-info" />
                         <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Conversions</CardTitle>
                     </div>
                     <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Daily conversion volume for the selected period</CardDescription>
@@ -261,7 +261,7 @@ export function AnalyticsCharts({
             <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
                 <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
                     <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-orange-500" />
+                        <div className="h-2 w-2 rounded-full bg-warning" />
                         <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Conversion rate</CardTitle>
                     </div>
                     <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Daily conversion rate based on sessions</CardDescription>

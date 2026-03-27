@@ -2,7 +2,6 @@ import { Errors } from './errors'
 import {
   zWorkspaceQuery,
   zWorkspaceMutation,
-  zAdminMutation,
 } from './functions'
 import { z } from 'zod/v4'
 
@@ -283,78 +282,5 @@ export const remove = zWorkspaceMutation({
 
     await ctx.db.delete(existing._id)
     return { ok: true }
-  },
-})
-
-export const bulkUpsert = zAdminMutation({
-  args: {
-    proposals: z.array(
-      z.object({
-        workspaceId: z.string(),
-        legacyId: z.string(),
-        ownerId: z.string().nullable(),
-        status: z.string(),
-        stepProgress: z.number(),
-        formData: jsonRecordZ,
-        aiInsights: jsonRecordZ.nullable(),
-        aiSuggestions: z.string().nullable(),
-        pdfUrl: z.string().nullable(),
-        pptUrl: z.string().nullable(),
-        pdfStorageId: z.string().nullable().optional(),
-        pptStorageId: z.string().nullable().optional(),
-        clientId: z.string().nullable(),
-        clientName: z.string().nullable(),
-        agentConversationId: z.string().nullable().optional(),
-        lastAgentInteractionAtMs: z.number().nullable().optional(),
-        presentationDeck: jsonRecordZ.nullable(),
-        createdAtMs: z.number(),
-        updatedAtMs: z.number(),
-        lastAutosaveAtMs: z.number(),
-      })
-    ),
-  },
-  returns: z.object({ upserted: z.number() }),
-  handler: async (ctx, args) => {
-    let upserted = 0
-
-    for (const proposal of args.proposals) {
-      const existing = await ctx.db
-        .query('proposals')
-        .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', proposal.workspaceId).eq('legacyId', proposal.legacyId))
-        .unique()
-
-      const payload = {
-        workspaceId: proposal.workspaceId,
-        legacyId: proposal.legacyId,
-        ownerId: proposal.ownerId,
-        status: proposal.status,
-        stepProgress: proposal.stepProgress,
-        formData: proposal.formData,
-        aiInsights: proposal.aiInsights,
-        aiSuggestions: proposal.aiSuggestions,
-        pdfUrl: proposal.pdfUrl,
-        pptUrl: proposal.pptUrl,
-        pdfStorageId: proposal.pdfStorageId ?? null,
-        pptStorageId: proposal.pptStorageId ?? null,
-        clientId: proposal.clientId,
-        clientName: proposal.clientName,
-        agentConversationId: proposal.agentConversationId ?? null,
-        lastAgentInteractionAtMs: proposal.lastAgentInteractionAtMs ?? null,
-        presentationDeck: proposal.presentationDeck,
-        createdAtMs: proposal.createdAtMs,
-        updatedAtMs: proposal.updatedAtMs,
-        lastAutosaveAtMs: proposal.lastAutosaveAtMs,
-      }
-
-      if (existing) {
-        await ctx.db.patch(existing._id, payload)
-      } else {
-        await ctx.db.insert('proposals', payload)
-      }
-
-      upserted += 1
-    }
-
-    return { upserted }
   },
 })

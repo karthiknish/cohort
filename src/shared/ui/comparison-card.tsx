@@ -108,8 +108,8 @@ export function ComparisonCard({ title, description, metrics, isLoading, classNa
                   <div
                     className={cn(
                       'flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase',
-                      change.type === 'up' && 'bg-emerald-500/10 text-emerald-600',
-                      change.type === 'down' && 'bg-red-500/10 text-red-600',
+                      change.type === 'up' && 'bg-primary/10 text-primary',
+                      change.type === 'down' && 'bg-destructive/10 text-destructive',
                       change.type === 'neutral' && 'bg-muted text-muted-foreground'
                     )}
                   >
@@ -194,12 +194,12 @@ export function SideBySideComparison({
         </CardTitle>
         <div className="flex items-center gap-4 mt-2">
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-blue-500" />
+            <div className="h-2 w-2 rounded-full bg-primary" />
             <span className="text-xs text-muted-foreground">{leftLabel}</span>
           </div>
           <ArrowRight className="h-4 w-4 text-muted-foreground" />
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-emerald-500" />
+            <div className="h-2 w-2 rounded-full bg-secondary-foreground" />
             <span className="text-xs text-muted-foreground">{rightLabel}</span>
           </div>
         </div>
@@ -236,8 +236,8 @@ export function SideBySideComparison({
                   className={cn(
                     'text-[10px] font-bold',
                     metric.diffPercent > 0
-                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                      : 'bg-red-500/10 text-red-600 border-red-500/20'
+                      ? 'bg-primary/10 text-primary border-primary/20'
+                      : 'bg-destructive/10 text-destructive border-destructive/20'
                   )}
                 >
                   {metric.diffPercent > 0 ? '+' : ''}{metric.diffPercent.toFixed(1)}%

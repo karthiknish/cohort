@@ -39,7 +39,7 @@ export function OfflineIndicator() {
   return (
     <div className={cn(
       'fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
-      'bg-gray-500 text-white'
+      'bg-muted-foreground text-background'
     )}>
       <WifiOff className="h-4 w-4" />
       <span className="text-sm font-medium">You are offline • Changes will sync when reconnected</span>
@@ -57,8 +57,8 @@ export function SyncStatusBadge({ showLabel = false }: { showLabel?: boolean }) 
       className={cn(
         'gap-1.5',
         isOnline
-          ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800'
-          : 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800'
+          ? 'bg-success/10 text-success border-success/20'
+          : 'bg-warning/10 text-warning border-warning/20'
       )}
     >
       {isOnline ? (

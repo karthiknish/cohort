@@ -54,13 +54,13 @@ function ClientProposalsCardComponent({ proposals, loading }: ClientProposalsCar
                         <p className="text-xs text-muted-foreground font-medium uppercase truncate">Total</p>
                         <p className="text-lg font-bold">{stats.total}</p>
                     </div>
-                    <div className="bg-emerald-50 rounded-lg p-2 text-center border border-emerald-100">
-                        <p className="text-xs text-emerald-700 font-medium uppercase truncate">Ready</p>
-                        <p className="text-lg font-bold text-emerald-800">{stats.ready}</p>
+                    <div className="rounded-lg border border-success/20 bg-success/10 p-2 text-center">
+                        <p className="truncate text-xs font-medium uppercase text-success">Ready</p>
+                        <p className="text-lg font-bold text-success">{stats.ready}</p>
                     </div>
-                    <div className="bg-orange-50 rounded-lg p-2 text-center border border-orange-100">
-                        <p className="text-xs text-orange-700 font-medium uppercase truncate">Drafts</p>
-                        <p className="text-lg font-bold text-orange-800">{stats.drafts}</p>
+                    <div className="rounded-lg border border-warning/20 bg-warning/10 p-2 text-center">
+                        <p className="truncate text-xs font-medium uppercase text-warning">Drafts</p>
+                        <p className="text-lg font-bold text-warning">{stats.drafts}</p>
                     </div>
                 </div>
 
@@ -86,9 +86,9 @@ function ClientProposalsCardComponent({ proposals, loading }: ClientProposalsCar
                                         variant={proposal.status === 'ready' || proposal.status === 'sent' ? 'default' : 'secondary'}
                                         className={cn(
                                             "text-[9px] h-4 px-1.5 uppercase font-bold tracking-tighter",
-                                            proposal.status === 'ready' && "bg-emerald-500 hover:bg-emerald-500",
-                                            proposal.status === 'sent' && "bg-purple-500 hover:bg-purple-500",
-                                            proposal.status === 'draft' && "bg-orange-100 text-orange-700 border-none shadow-none"
+                                            proposal.status === 'ready' && "bg-success text-success-foreground hover:bg-success",
+                                            proposal.status === 'sent' && "bg-info text-info-foreground hover:bg-info",
+                                            proposal.status === 'draft' && "bg-warning/10 text-warning border-none shadow-none"
                                         )}
                                     >
                                         {proposal.status}

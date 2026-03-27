@@ -24,49 +24,49 @@ export const SORT_OPTIONS: { value: SortField; label: string }[] = [
 ]
 
 export const statusColors: Record<TaskStatus, string> = {
-  todo: 'border-slate-300/80 bg-slate-200/95 text-slate-700 shadow-sm',
-  'in-progress': 'border-sky-200/90 bg-sky-100/95 text-sky-700 shadow-sm',
-  review: 'border-amber-200/90 bg-amber-100/95 text-amber-700 shadow-sm',
-  completed: 'border-emerald-200/90 bg-emerald-100/95 text-emerald-700 shadow-sm',
-  archived: 'border-slate-200/90 bg-slate-100/95 text-slate-500 shadow-sm',
+  todo: 'border-border bg-muted text-muted-foreground shadow-sm',
+  'in-progress': 'border-transparent bg-primary/10 text-primary shadow-sm',
+  review: 'border-transparent bg-accent text-accent-foreground shadow-sm',
+  completed: 'border-transparent bg-primary/10 text-primary shadow-sm',
+  archived: 'border-border bg-background text-muted-foreground shadow-sm',
 }
 
 export const statusLaneColors: Record<TaskStatus, string> = {
-  todo: 'bg-slate-500',
-  'in-progress': 'bg-blue-500',
-  review: 'bg-amber-500',
-  completed: 'bg-emerald-500',
-  archived: 'bg-gray-500',
+  todo: 'bg-muted-foreground',
+  'in-progress': 'bg-primary',
+  review: 'bg-accent-foreground',
+  completed: 'bg-primary',
+  archived: 'bg-muted-foreground/60',
 }
 
 export const priorityColors: Record<TaskPriority, string> = {
-  low: 'border-emerald-200/90 bg-emerald-100/95 text-emerald-700 shadow-sm',
-  medium: 'border-blue-200/90 bg-blue-100/95 text-blue-700 shadow-sm',
-  high: 'border-orange-200/90 bg-orange-100/95 text-orange-700 shadow-sm',
-  urgent: 'border-red-200/90 bg-red-100/95 text-red-700 shadow-sm',
+  low: 'border-transparent bg-secondary text-secondary-foreground shadow-sm',
+  medium: 'border-transparent bg-primary/10 text-primary shadow-sm',
+  high: 'border-transparent bg-accent text-accent-foreground shadow-sm',
+  urgent: 'border-transparent bg-destructive/10 text-destructive shadow-sm',
 }
 
 export const taskPillColors = {
-  count: 'border-slate-200/90 bg-white text-slate-700 shadow-sm',
-  client: 'border-slate-200/90 bg-slate-100/95 text-slate-700 shadow-sm',
-  project: 'border-indigo-200/90 bg-indigo-100/95 text-indigo-700 shadow-sm',
-  neutral: 'border-slate-200/90 bg-slate-100/95 text-slate-700 shadow-sm',
-  subtask: 'border-violet-200/90 bg-violet-100/95 text-violet-700 shadow-sm',
-  comments: 'border-sky-200/90 bg-sky-100/95 text-sky-700 shadow-sm',
-  attachments: 'border-slate-200/90 bg-slate-100/95 text-slate-700 shadow-sm',
-  time: 'border-fuchsia-200/90 bg-fuchsia-100/95 text-fuchsia-700 shadow-sm',
-  recurring: 'border-emerald-200/90 bg-emerald-100/95 text-emerald-700 shadow-sm',
-  shared: 'border-indigo-200/90 bg-indigo-100/95 text-indigo-700 shadow-sm',
-  tag: 'border-slate-200/90 bg-white text-slate-600 shadow-sm',
-  dueSoon: 'border-amber-200/90 bg-amber-100/95 text-amber-700 shadow-sm',
-  overdue: 'border-red-200/90 bg-red-100/95 text-red-700 shadow-sm',
+  count: 'border-border bg-background text-foreground shadow-sm',
+  client: 'border-border bg-muted text-muted-foreground shadow-sm',
+  project: 'border-transparent bg-primary/10 text-primary shadow-sm',
+  neutral: 'border-border bg-muted text-muted-foreground shadow-sm',
+  subtask: 'border-transparent bg-secondary text-secondary-foreground shadow-sm',
+  comments: 'border-transparent bg-accent text-accent-foreground shadow-sm',
+  attachments: 'border-border bg-background text-muted-foreground shadow-sm',
+  time: 'border-transparent bg-primary/10 text-primary shadow-sm',
+  recurring: 'border-transparent bg-secondary text-secondary-foreground shadow-sm',
+  shared: 'border-transparent bg-primary/10 text-primary shadow-sm',
+  tag: 'border-border bg-background text-muted-foreground shadow-sm',
+  dueSoon: 'border-transparent bg-accent text-accent-foreground shadow-sm',
+  overdue: 'border-transparent bg-destructive/10 text-destructive shadow-sm',
 } as const
 
 export const taskInfoPanelClasses = {
-  base: 'rounded-[1.15rem] border border-slate-200/80 bg-slate-50/95 px-3.5 py-3 shadow-sm',
-  icon: 'flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl border border-white/80 bg-white/90 text-slate-600 shadow-sm',
-  label: 'text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500',
-  value: 'text-sm font-semibold leading-tight text-slate-900',
+  base: 'rounded-[1.15rem] border border-border bg-background px-3.5 py-3 shadow-sm',
+  icon: 'flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted text-muted-foreground shadow-sm',
+  label: 'text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground',
+  value: 'text-sm font-semibold leading-tight text-foreground',
 } as const
 
 export const STATUS_ICONS: Record<TaskStatus, typeof Circle> = {
@@ -320,10 +320,10 @@ export function isDueSoon(task: TaskRecord, daysThreshold: number = 3): boolean 
 // Overdue indicator styles
 export function getOverdueIndicatorClass(task: TaskRecord): string {
   if (isOverdue(task)) {
-    return 'bg-red-500/10 border-red-500/30'
+    return 'bg-destructive/10 border-destructive/30'
   }
   if (isDueSoon(task)) {
-    return 'bg-amber-500/10 border-amber-500/30'
+    return 'bg-accent/10 border-accent/30'
   }
   return ''
 }

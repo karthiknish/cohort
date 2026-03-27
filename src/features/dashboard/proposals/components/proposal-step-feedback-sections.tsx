@@ -36,7 +36,7 @@ export function ProposalStepFeedbackHeader({
           <p className="text-sm text-muted-foreground">{stepDescription}</p>
         </div>
       </div>
-      <div className={cn('rounded-xl border px-3 py-2 text-sm', hasErrors ? 'border-destructive/35 bg-destructive/5 text-destructive' : 'border-emerald-500/25 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300')}>
+      <div className={cn('rounded-xl border px-3 py-2 text-sm', hasErrors ? 'border-destructive/35 bg-destructive/5 text-destructive' : 'border-success/25 bg-success/5 text-success')}>
         <div className="flex items-center gap-2">
           {hasErrors ? <CircleAlert className="h-4 w-4" /> : <CircleCheck className="h-4 w-4" />}
           <span className="font-medium">{hasErrors ? `${validationMessageCount} required input${validationMessageCount === 1 ? '' : 's'} still needed` : 'Required inputs complete'}</span>

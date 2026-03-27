@@ -1,7 +1,6 @@
 'use client'
 
-import { ArrowRight, RefreshCw, Unplug } from 'lucide-react'
-import { SiFacebook, SiInstagram, SiMeta } from 'react-icons/si'
+import { ArrowRight, Facebook, Instagram, RefreshCw, Unplug } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -54,8 +53,8 @@ export function SocialsConnectionPanel({
         <Card className={cn('overflow-hidden', DASHBOARD_THEME.cards.base)}>
           <CardContent className="flex flex-col gap-4 p-5">
             <div className="flex items-center gap-3">
-              <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 bg-blue-500/10 text-blue-600 border-blue-500/20')}>
-                <SiFacebook className="h-5 w-5" />
+              <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 bg-info/10 text-info border-info/20')}>
+                <Facebook className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -75,7 +74,7 @@ export function SocialsConnectionPanel({
               disabled={isConnecting}
               className={cn(getButtonClasses('primary'), 'w-full')}
             >
-              <SiFacebook className="mr-2 h-4 w-4" />
+              <Facebook className="mr-2 h-4 w-4" />
               {connected ? 'Reconnect Facebook' : 'Connect Facebook'}
               <ArrowRight className="ml-auto h-4 w-4" />
             </Button>
@@ -86,8 +85,8 @@ export function SocialsConnectionPanel({
         <Card className={cn('overflow-hidden', DASHBOARD_THEME.cards.base)}>
           <CardContent className="flex flex-col gap-4 p-5">
             <div className="flex items-center gap-3">
-              <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 bg-fuchsia-500/10 text-fuchsia-600 border-fuchsia-500/20')}>
-                <SiInstagram className="h-5 w-5" />
+              <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 bg-accent/10 text-accent border-accent/20')}>
+                <Instagram className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -107,7 +106,7 @@ export function SocialsConnectionPanel({
               disabled={isConnecting}
               className={cn(getButtonClasses('primary'), 'w-full')}
             >
-              <SiInstagram className="mr-2 h-4 w-4" />
+              <Instagram className="mr-2 h-4 w-4" />
               {connected ? 'Reconnect Instagram' : 'Connect Instagram'}
               <ArrowRight className="ml-auto h-4 w-4" />
             </Button>
@@ -121,7 +120,7 @@ export function SocialsConnectionPanel({
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
               <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10')}>
-                <SiMeta className="h-5 w-5" />
+                <Facebook className="h-5 w-5" />
               </div>
               <div>
                 <CardTitle className="text-base">Meta Authorization</CardTitle>

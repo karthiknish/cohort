@@ -51,23 +51,23 @@ function calculatePasswordStrength(password: string): PasswordStrength {
   } else if (passedChecks <= 1) {
     score = 1
     label = "Weak"
-    color = "bg-red-500"
+    color = "bg-destructive"
   } else if (passedChecks === 2) {
     score = 2
     label = "Fair"
-    color = "bg-orange-500"
+    color = "bg-warning"
   } else if (passedChecks === 3) {
     score = 3
     label = "Good"
-    color = "bg-yellow-500"
+    color = "bg-warning"
   } else if (passedChecks === 4) {
     score = 3
     label = "Strong"
-    color = "bg-emerald-500"
+    color = "bg-success"
   } else {
     score = 4
     label = "Very Strong"
-    color = "bg-emerald-600"
+    color = "bg-success"
   }
 
   return { score, label, color, checks }
@@ -78,11 +78,11 @@ function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
   return (
     <div className="flex items-center gap-2 text-xs">
       {met ? (
-        <Check className="h-3 w-3 text-emerald-500" />
+        <Check className="h-3 w-3 text-success" />
       ) : (
         <X className="h-3 w-3 text-muted-foreground" />
       )}
-      <span className={cn(met ? "text-emerald-600" : "text-muted-foreground")}>{label}</span>
+      <span className={cn(met ? "text-success" : "text-muted-foreground")}>{label}</span>
     </div>
   )
 }
@@ -216,7 +216,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
       </Link>
 
       <div className="space-y-2 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-4">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Lock className="h-6 w-6 text-primary" />
         </div>
         <h1 className="text-2xl font-semibold text-foreground">Set new password</h1>
@@ -253,7 +253,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
           <FadeInStagger as="div" className="space-y-5">
             {email && (
               <FadeInItem as="div">
-                <div className="rounded-lg border bg-muted/50 px-4 py-3">
+        <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
                   <p className="text-sm text-muted-foreground">
                     Resetting password for <span className="font-medium text-foreground">{email}</span>
                   </p>
@@ -302,10 +302,10 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                     </div>
                     <span className={cn(
                       "font-medium",
-                      passwordStrength.score <= 1 && "text-red-500",
-                      passwordStrength.score === 2 && "text-orange-500",
-                      passwordStrength.score === 3 && "text-emerald-500",
-                      passwordStrength.score >= 4 && "text-emerald-600"
+                      passwordStrength.score <= 1 && "text-destructive",
+                      passwordStrength.score === 2 && "text-warning",
+                      passwordStrength.score === 3 && "text-success",
+                      passwordStrength.score >= 4 && "text-success"
                     )}>
                       {passwordStrength.label}
                     </span>
@@ -349,8 +349,8 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                   placeholder="Re-enter your new password"
                   className={cn(
                     "pl-9 pr-10",
-                    confirmPassword.length > 0 && !passwordsMatch && "border-red-500 focus-visible:ring-red-500",
-                    confirmPassword.length > 0 && passwordsMatch && "border-emerald-500 focus-visible:ring-emerald-500"
+                    confirmPassword.length > 0 && !passwordsMatch && "border-destructive focus-visible:ring-destructive",
+                    confirmPassword.length > 0 && passwordsMatch && "border-success focus-visible:ring-success"
                   )}
                   disabled={submitting}
                 />
@@ -369,7 +369,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
               {confirmPassword.length > 0 && (
                 <p className={cn(
                   "text-xs flex items-center gap-1",
-                  passwordsMatch ? "text-emerald-500" : "text-red-500"
+                  passwordsMatch ? "text-success" : "text-destructive"
                 )}>
                   {passwordsMatch ? (
                     <>
@@ -413,9 +413,9 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
 
       {status === 'success' && (
         <FadeIn as="div" className="space-y-6">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 mb-4">
-              <CircleCheck className="h-6 w-6 text-emerald-600" />
+          <div className="rounded-lg border border-success/20 bg-success/10 p-6 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-success/15">
+              <CircleCheck className="h-6 w-6 text-success" />
             </div>
             <h3 className="font-semibold text-foreground mb-1">Password reset successful</h3>
             <p className="text-sm text-muted-foreground">
@@ -439,5 +439,3 @@ export default function ResetPasswordPageClient({ oobCode = null }: ResetPasswor
     </div>
   )
 }
-
-

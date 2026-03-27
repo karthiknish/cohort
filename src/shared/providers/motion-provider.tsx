@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from 'framer-motion'
+import { AnimatePresence, LazyMotion, MotionConfig, domAnimation, m } from '@/shared/ui/motion'
 import { usePathname } from 'next/navigation'
 
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'

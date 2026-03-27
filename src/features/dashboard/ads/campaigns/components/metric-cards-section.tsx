@@ -105,9 +105,9 @@ function MetricCard({
               className={cn(
                 "rounded-full p-2.5",
                 trend === 'up'
-                  ? "bg-emerald-500/10 text-emerald-600"
+                  ? "bg-success/10 text-success"
                   : trend === 'down'
-                    ? "bg-red-500/10 text-red-600"
+                    ? "bg-destructive/10 text-destructive"
                     : "bg-muted/50 text-muted-foreground/70"
               )}
             >

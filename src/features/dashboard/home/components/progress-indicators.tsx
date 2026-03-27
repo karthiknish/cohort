@@ -287,7 +287,7 @@ function OperationItem({
                   <span
                     className={cn(
                       step.status === 'completed' && 'text-muted-foreground line-through',
-                      step.status === 'failed' && 'text-red-600',
+                      step.status === 'failed' && 'text-destructive',
                       step.status === 'running' && 'font-medium'
                     )}
                   >
@@ -305,7 +305,7 @@ function OperationItem({
 
           {/* Error message */}
           {operation.status === 'failed' && operation.error && (
-            <p className="text-xs text-red-600 bg-red-50 dark:bg-red-950/20 p-2 rounded">
+            <p className="text-xs text-destructive bg-destructive/10 p-2 rounded">
               {operation.error}
             </p>
           )}
@@ -332,8 +332,8 @@ function CompletedOperationItem({ operation, onDismiss }: CompletedOperationItem
   }, [operation.status, onDismiss])
 
   const statusConfig = {
-    completed: { icon: '✓', className: 'bg-emerald-500 text-white' },
-    failed: { icon: '✕', className: 'bg-red-500 text-white' },
+    completed: { icon: '✓', className: 'bg-success text-success-foreground' },
+    failed: { icon: '✕', className: 'bg-destructive text-destructive-foreground' },
     cancelled: { icon: '−', className: 'bg-muted text-muted-foreground' },
   }
 
@@ -376,13 +376,13 @@ function MinimalProgressIndicator({ operation }: MinimalProgressIndicatorProps) 
         <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       )}
       {operation.status === 'completed' && (
-        <div className="h-4 w-4 rounded-full bg-emerald-500 flex items-center justify-center">
-          <span className="text-white text-xs">✓</span>
+        <div className="h-4 w-4 rounded-full bg-success flex items-center justify-center">
+          <span className="text-success-foreground text-xs">✓</span>
         </div>
       )}
       {operation.status === 'failed' && (
-        <div className="h-4 w-4 rounded-full bg-red-500 flex items-center justify-center">
-          <span className="text-white text-xs">✕</span>
+        <div className="h-4 w-4 rounded-full bg-destructive flex items-center justify-center">
+          <span className="text-destructive-foreground text-xs">✕</span>
         </div>
       )}
       <div className="flex-1 min-w-0">
@@ -400,14 +400,14 @@ function StepIndicator({ status }: { status: 'pending' | 'running' | 'completed'
   const config = {
     pending: 'bg-muted-foreground/20',
     running: 'bg-primary animate-pulse',
-    completed: 'bg-emerald-500',
-    failed: 'bg-red-500',
+    completed: 'bg-success',
+    failed: 'bg-destructive',
   }
 
   return (
     <div className={cn('h-3.5 w-3.5 rounded-full', config[status])}>
       {status === 'completed' && (
-        <span className="flex items-center justify-center text-white text-[8px]">✓</span>
+        <span className="flex items-center justify-center text-success-foreground text-[8px]">✓</span>
       )}
     </div>
   )

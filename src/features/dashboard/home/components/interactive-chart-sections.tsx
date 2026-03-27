@@ -15,7 +15,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from 'recharts'
+} from '@/shared/ui/recharts-dynamic'
 import { Download, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'

@@ -362,20 +362,20 @@ export default function AdminPage() {
                   <div className="flex items-center gap-2">
                     {stats?.schedulerHealth === 'healthy' && (
                       <>
-                        <CircleCheck className="h-5 w-5 text-emerald-500" />
-                        <span className="text-2xl font-bold text-emerald-600">Healthy</span>
+                        <CircleCheck className="h-5 w-5 text-success" />
+                        <span className="text-2xl font-bold text-success">Healthy</span>
                       </>
                     )}
                     {stats?.schedulerHealth === 'warning' && (
                       <>
-                        <CircleAlert className="h-5 w-5 text-amber-500" />
-                        <span className="text-2xl font-bold text-amber-600">Warning</span>
+                        <CircleAlert className="h-5 w-5 text-warning" />
+                        <span className="text-2xl font-bold text-warning">Warning</span>
                       </>
                     )}
                     {stats?.schedulerHealth === 'error' && (
                       <>
-                        <CircleAlert className="h-5 w-5 text-red-500" />
-                        <span className="text-2xl font-bold text-red-600">Issues</span>
+                        <CircleAlert className="h-5 w-5 text-destructive" />
+                        <span className="text-2xl font-bold text-destructive">Issues</span>
                       </>
                     )}
                   </div>
@@ -598,10 +598,10 @@ export default function AdminPage() {
                           <div className="flex items-center gap-1 w-16 justify-end">
                             <span className="text-sm font-medium">{feature.count}</span>
                             {feature.trend > 0 && (
-                              <TrendingUp className="h-3 w-3 text-emerald-500" />
+                              <TrendingUp className="h-3 w-3 text-success" />
                             )}
                             {feature.trend < 0 && (
-                              <TrendingDown className="h-3 w-3 text-red-500" />
+                              <TrendingDown className="h-3 w-3 text-destructive" />
                             )}
                           </div>
                         </div>
@@ -724,10 +724,10 @@ export default function AdminPage() {
                       <div key={activity.id} className="flex gap-3">
                         <div className={cn(
                           'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                          activity.type === 'user_joined' && 'bg-emerald-100 text-emerald-600',
-                          activity.type === 'client_created' && 'bg-purple-100 text-purple-600',
-                          activity.type === 'new_user_signup' && 'bg-amber-100 text-amber-600',
-                          activity.type === 'error' && 'bg-red-100 text-red-600',
+                          activity.type === 'user_joined' && 'bg-success/10 text-success',
+                          activity.type === 'client_created' && 'bg-info/10 text-info',
+                          activity.type === 'new_user_signup' && 'bg-warning/10 text-warning',
+                          activity.type === 'error' && 'bg-destructive/10 text-destructive',
                         )}>
                           {activity.type === 'user_joined' && <Users className="h-4 w-4" />}
                           {activity.type === 'client_created' && <ShieldCheck className="h-4 w-4" />}

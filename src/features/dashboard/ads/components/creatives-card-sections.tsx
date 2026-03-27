@@ -51,7 +51,7 @@ function getTypeIcon(type: string) {
 
 function getStatusBadge(status: string) {
   const normalized = status.toLowerCase()
-  if (normalized === 'enabled' || normalized === 'enable' || normalized === 'active') return <Badge variant="default" className="bg-green-500">Active</Badge>
+  if (normalized === 'enabled' || normalized === 'enable' || normalized === 'active') return <Badge variant="default" className="bg-success">Active</Badge>
   if (normalized === 'paused' || normalized === 'disable') return <Badge variant="secondary">Paused</Badge>
   return <Badge variant="outline">{status}</Badge>
 }

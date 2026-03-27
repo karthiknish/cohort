@@ -30,10 +30,10 @@ export function UserPresenceIndicator({
   }
 
   const statusClasses: Record<PresenceStatus, string> = {
-    online: 'bg-emerald-500 fill-emerald-500',
-    away: 'bg-amber-500 fill-amber-500',
-    offline: 'bg-gray-400 fill-gray-400',
-    busy: 'bg-red-500 fill-red-500',
+    online: 'text-success fill-success',
+    away: 'text-warning fill-warning',
+    offline: 'text-muted-foreground fill-muted-foreground',
+    busy: 'text-destructive fill-destructive',
   }
 
   const statusLabels: Record<PresenceStatus, string> = {
@@ -126,9 +126,9 @@ export function UserAvatarWithPresence({
             'absolute rounded-full ring-2 ring-background',
             indicatorSizes[size],
             indicatorPositions[size],
-            status === 'online' && 'bg-emerald-500',
-            status === 'away' && 'bg-amber-500',
-            status === 'busy' && 'bg-red-500'
+            status === 'online' && 'bg-success',
+            status === 'away' && 'bg-warning',
+            status === 'busy' && 'bg-destructive'
           )}
         />
       )}
@@ -196,9 +196,9 @@ export function ChannelPresenceList({
                   <span
                     className={cn(
                       'absolute bottom-0 right-0 h-2 w-2 rounded-full ring-1 ring-background',
-                      member.status === 'online' && 'bg-emerald-500',
-                      member.status === 'away' && 'bg-amber-500',
-                      member.status === 'busy' && 'bg-red-500'
+                      member.status === 'online' && 'bg-success',
+                      member.status === 'away' && 'bg-warning',
+                      member.status === 'busy' && 'bg-destructive'
                     )}
                   />
                 </div>

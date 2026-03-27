@@ -388,7 +388,7 @@ const ProviderCard = memo(function ProviderCard({
         <div className={cn(
           'absolute left-0 top-0 h-1 w-full',
           (statusInfo?.status === 'error' || stale) && 'bg-destructive',
-          statusInfo?.status === 'pending' && !stale && 'bg-amber-400',
+          statusInfo?.status === 'pending' && !stale && 'bg-warning',
           statusInfo?.status !== 'error' && statusInfo?.status !== 'pending' && !stale && (theme?.indicator || 'bg-primary')
         )} />
       )}

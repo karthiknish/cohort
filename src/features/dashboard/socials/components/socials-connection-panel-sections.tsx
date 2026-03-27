@@ -92,7 +92,7 @@ export function SocialsMetaSetupCard(props: {
         <div className="rounded-2xl border border-muted/50 bg-background px-3 py-3">
           <p className={DASHBOARD_THEME.stats.label}>Meta source</p>
           <div className="mt-2 flex items-center gap-2 text-sm text-foreground">
-            {sourceSelectionRequired ? <AlertTriangle className="h-4 w-4 text-amber-500" /> : <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+            {sourceSelectionRequired ? <AlertTriangle className="h-4 w-4 text-warning" /> : <CheckCircle2 className="h-4 w-4 text-success" />}
             <span>{sourceSelectionRequired ? 'Selection still required' : selectedSourceLabel ?? 'Source selected'}</span>
           </div>
         </div>
@@ -113,9 +113,9 @@ export function SocialsMetaSetupCard(props: {
       </div>
 
       {setupState.switchSourceRecommended && setupState.switchSourceMessage ? (
-        <div className="mt-4 rounded-2xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-sm text-foreground">
+        <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/5 px-4 py-3 text-sm text-foreground">
           <div className="flex items-start gap-3">
-            <ArrowRightLeft className="mt-0.5 h-4 w-4 text-amber-600" />
+            <ArrowRightLeft className="mt-0.5 h-4 w-4 text-warning" />
             <div className="space-y-1">
               <p className="font-medium">This may be the wrong Meta source for this workspace.</p>
               <p className="text-muted-foreground">{setupState.switchSourceMessage}</p>

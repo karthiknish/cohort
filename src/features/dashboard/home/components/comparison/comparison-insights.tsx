@@ -28,8 +28,8 @@ export function ComparisonInsights({ insights, loading }: ComparisonInsightsProp
               key={insight.id}
               className={cn(
                 'rounded-lg border p-4 text-sm',
-                insight.tone === 'positive' && 'border-emerald-200 bg-emerald-50/60',
-                insight.tone === 'warning' && 'border-amber-200 bg-amber-50/80',
+                insight.tone === 'positive' && 'border-success/20 bg-success/5',
+                insight.tone === 'warning' && 'border-warning/20 bg-warning/10',
               )}
             >
               <div className="flex items-center gap-2">

@@ -99,7 +99,7 @@ export function TaskTimeTracking({
         <div className="flex items-center gap-2">
           <Clock className={cn(
             'h-4 w-4',
-            isRunning ? 'text-green-500 animate-pulse' : 'text-muted-foreground'
+            isRunning ? 'text-success animate-pulse' : 'text-muted-foreground'
           )} />
           <span className="text-sm font-medium">
             {totalTimeMinutes > 0
@@ -128,7 +128,7 @@ export function TaskTimeTracking({
 
       {/* Active timer display */}
       {isRunning && (
-        <div className="flex items-center gap-2 text-sm font-mono bg-green-500/10 text-green-600 dark:text-green-400 px-3 py-1.5 rounded-lg">
+        <div className="flex items-center gap-2 text-sm font-mono bg-success/10 text-success px-3 py-1.5 rounded-lg">
           <span className="animate-pulse">●</span>
           {formatTime(elapsedSeconds)}
         </div>

@@ -163,7 +163,7 @@ export function AudienceDisplaySection({
             <div className="space-y-4 p-4 rounded-lg border bg-muted/20">
               {aggregatedData.metaPlacements.facebook.length > 0 && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-blue-600">
+                  <div className="flex items-center gap-2 text-info">
                     <Facebook className="h-4 w-4" />
                     <span className="text-xs font-semibold uppercase tracking-wider">Facebook</span>
                   </div>
@@ -183,7 +183,7 @@ export function AudienceDisplaySection({
 
               {aggregatedData.metaPlacements.instagram.length > 0 && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-pink-600">
+                  <div className="flex items-center gap-2 text-accent">
                     <Instagram className="h-4 w-4" />
                     <span className="text-xs font-semibold uppercase tracking-wider">Instagram</span>
                   </div>
@@ -203,7 +203,7 @@ export function AudienceDisplaySection({
 
               {aggregatedData.metaPlacements.messenger.length > 0 && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-blue-400">
+                  <div className="flex items-center gap-2 text-info">
                     <MessageCircle className="h-4 w-4" />
                     <span className="text-xs font-semibold uppercase tracking-wider">Messenger</span>
                   </div>

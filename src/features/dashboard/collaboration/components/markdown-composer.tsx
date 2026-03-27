@@ -150,8 +150,8 @@ export function MarkdownPreview({
         <div
           className={cn(
             'text-xs',
-            isNearLimit && !isAtLimit && 'text-amber-600 dark:text-amber-400',
-            isAtLimit && 'text-red-600 dark:text-red-400'
+            isNearLimit && !isAtLimit && 'text-warning',
+            isAtLimit && 'text-destructive'
           )}
         >
           {charCount}/{maxLength}

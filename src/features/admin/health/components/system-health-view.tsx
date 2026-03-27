@@ -98,10 +98,10 @@ export function SystemHealthView() {
         switch (status) {
             case 'ok':
             case 'healthy':
-                return <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                return <CheckCircle2 className="h-5 w-5 text-success" />
             case 'warning':
             case 'degraded':
-                return <AlertCircle className="h-5 w-5 text-amber-500" />
+                return <AlertCircle className="h-5 w-5 text-warning" />
             default:
                 return <XCircle className="h-5 w-5 text-destructive" />
         }
@@ -111,12 +111,12 @@ export function SystemHealthView() {
         switch (status) {
             case 'ok':
             case 'healthy':
-                return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                return 'bg-success/10 text-success'
             case 'warning':
             case 'degraded':
-                return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                return 'bg-warning/10 text-warning'
             default:
-                return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                return 'bg-destructive/10 text-destructive'
         }
     }
 
@@ -211,10 +211,10 @@ export function SystemHealthView() {
                     <div className={cn(
                         "flex h-12 w-12 items-center justify-center rounded-full",
                         data?.status === 'healthy'
-                            ? "bg-emerald-100 dark:bg-emerald-900/30"
+                            ? "bg-success/10"
                             : data?.status === 'degraded'
-                                ? "bg-amber-100 dark:bg-amber-900/30"
-                                : "bg-red-100 dark:bg-red-900/30"
+                                ? "bg-warning/10"
+                                : "bg-destructive/10"
                     )}>
                         {getStatusIcon(data?.status || 'unhealthy')}
                     </div>
@@ -287,16 +287,16 @@ export function SystemHealthView() {
                             <Card key={name} className={cn(
                                 "overflow-hidden transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] border-muted/60",
                                 check.status === 'error' && "border-destructive/30 bg-destructive/5",
-                                isWarning && "border-amber-200 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20"
+                                isWarning && "border-warning/20 bg-warning/10"
                             )}>
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                                     <div className="flex items-center gap-3">
                                         <div className={cn(
                                             "rounded-lg p-2",
                                             check.status === 'ok'
-                                                ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                                ? "bg-success/10 text-success"
                                                 : isWarning
-                                                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                                    ? "bg-warning/10 text-warning"
                                                     : "bg-destructive/10 text-destructive"
                                         )}>
                                             {getServiceIcon(name)}
@@ -324,7 +324,7 @@ export function SystemHealthView() {
                                             check.status === 'error'
                                                 ? "text-destructive"
                                                 : check.status === 'warning'
-                                                    ? "text-amber-700 dark:text-amber-300"
+                                                    ? "text-warning"
                                                     : "text-muted-foreground"
                                         )}>
                                             {check.message}
@@ -358,10 +358,10 @@ export function SystemHealthView() {
             </div>
 
             {error && data && (
-                <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
+                <Card className="border-warning/20 bg-warning/10">
                     <CardContent className="flex items-center gap-3 py-3">
-                        <AlertCircle className="h-5 w-5 text-amber-600" />
-                        <p className="text-sm text-amber-800 dark:text-amber-200">
+                        <AlertCircle className="h-5 w-5 text-warning" />
+                        <p className="text-sm text-warning">
                             Last refresh failed: {error instanceof Error ? error.message : 'Unknown error'}. Showing cached data.
                         </p>
                     </CardContent>

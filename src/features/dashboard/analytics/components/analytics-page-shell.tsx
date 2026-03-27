@@ -80,13 +80,13 @@ function GoogleAnalyticsConnectionSection() {
   } = useAnalyticsPageContext()
 
   return (
-    <Card className="overflow-hidden border-0 bg-white shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)] transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-[0_1px_3px_0_rgba(60,64,67,0.3),0_2px_8px_4px_rgba(60,64,67,0.1)]">
-      <CardHeader className="flex flex-col gap-4 border-b border-[#dadce0] bg-white py-4 sm:flex-row sm:items-center sm:justify-between">
+    <Card className="overflow-hidden border border-border/60 bg-card shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
+      <CardHeader className="flex flex-col gap-4 border-b border-border/60 bg-card py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <GoogleAnalyticsIcon />
           <div>
-            <CardTitle className="text-sm font-medium tracking-normal text-[#202124]">Google Analytics</CardTitle>
-            <CardDescription className="mt-0.5 text-xs leading-tight text-[#5f6368]">
+            <CardTitle className="text-sm font-medium tracking-normal text-foreground">Google Analytics</CardTitle>
+            <CardDescription className="mt-0.5 text-xs leading-tight text-muted-foreground">
               Import users, sessions, and conversions into your dashboard
             </CardDescription>
           </div>
@@ -98,17 +98,17 @@ function GoogleAnalyticsConnectionSection() {
               className={cn(
                 'inline-flex animate-in fade-in slide-in-from-right-2 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium duration-300',
                 gaLastSyncStatus === 'error'
-                  ? 'bg-[#fce8e6] text-[#c5221f]'
+                  ? 'bg-destructive/10 text-destructive'
                   : gaNeedsPropertySelection
-                    ? 'bg-[#fff8e1] text-[#8d6e00]'
-                    : 'bg-[#e6f4ea] text-[#137333]'
+                    ? 'bg-accent text-accent-foreground'
+                    : 'bg-primary/10 text-primary'
               )}
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
               {gaStatusLabel}{gaAccountLabel ? ` · ${gaAccountLabel}` : ''}
             </div>
           ) : (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-[#fce8e6] px-3 py-1.5 text-xs font-medium text-[#c5221f]">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive">
               <Link2 className="h-3.5 w-3.5" />
               Not connected
             </div>
@@ -121,7 +121,7 @@ function GoogleAnalyticsConnectionSection() {
               size="sm"
               onClick={() => void handleConnectGoogleAnalytics()}
               disabled={gaLoading}
-              className="h-9 rounded-md border-[#dadce0] bg-white text-[#1a73e8] text-sm font-medium transition-colors hover:border-[#dadce0] hover:bg-[#f8f9fa]"
+              className="h-9 rounded-md border-border/60 bg-background text-primary text-sm font-medium transition-colors hover:bg-muted/40"
             >
               {gaLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
               {gaConnected ? 'Reconnect account' : 'Connect Google'}
@@ -133,7 +133,7 @@ function GoogleAnalyticsConnectionSection() {
                 size="sm"
                 onClick={handleOpenGoogleAnalyticsSetup}
                 disabled={gaLoadingProperties || gaInitializingProperty}
-                className="h-9 rounded-md border-[#dadce0] bg-white text-[#5f6368] text-sm font-medium transition-colors hover:border-[#dadce0] hover:bg-[#f8f9fa]"
+                className="h-9 rounded-md border-border/60 bg-background text-muted-foreground text-sm font-medium transition-colors hover:bg-muted/40"
               >
                 {gaNeedsPropertySelection ? 'Select property' : 'Change property'}
               </Button>
@@ -144,7 +144,7 @@ function GoogleAnalyticsConnectionSection() {
                 variant="outline"
                 size="sm"
                 onClick={() => setGaDisconnectDialogOpen(true)}
-                className="h-9 rounded-md border-[#dadce0] bg-white text-[#c5221f] text-sm font-medium transition-colors hover:border-[#f5c6c4] hover:bg-[#fce8e6]"
+                className="h-9 rounded-md border-border/60 bg-background text-destructive text-sm font-medium transition-colors hover:bg-destructive/10"
               >
                 <Unlink className="mr-2 h-4 w-4" />
                 Disconnect
@@ -155,7 +155,7 @@ function GoogleAnalyticsConnectionSection() {
               size="sm"
               onClick={() => void handleSyncGoogleAnalytics()}
               disabled={isSyncPending || gaLoading || !gaConnected || gaNeedsPropertySelection}
-              className="h-9 rounded-md bg-[#1a73e8] text-sm font-medium text-white shadow-none transition-colors hover:bg-[#1557b0]"
+              className="h-9 rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-none transition-colors hover:bg-primary/90"
             >
               {isSyncPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
               Sync data
@@ -164,23 +164,23 @@ function GoogleAnalyticsConnectionSection() {
         </div>
       </CardHeader>
 
-      <CardContent className="bg-[#f8f9fa] px-4 py-3">
+      <CardContent className="bg-muted/20 px-4 py-3">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#e8f0fe]">
-              <TrendingUp className="h-3 w-3 text-[#1a73e8]" />
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10">
+              <TrendingUp className="h-3 w-3 text-primary" />
             </div>
-            <p className="text-xs text-[#5f6368]">
-              Last successful sync: <span className="font-medium text-[#202124]">{gaLastSyncedLabel}</span>
+            <p className="text-xs text-muted-foreground">
+              Last successful sync: <span className="font-medium text-foreground">{gaLastSyncedLabel}</span>
               {' · '}
-              Last sync request: <span className="font-medium text-[#202124]">{gaLastRequestedLabel}</span>
+              Last sync request: <span className="font-medium text-foreground">{gaLastRequestedLabel}</span>
             </p>
           </div>
           {gaNeedsPropertySelection ? (
-            <p className="pl-7 text-xs text-[#8d6e00]">Property selection is required before sync can run.</p>
+            <p className="pl-7 text-xs text-accent-foreground">Property selection is required before sync can run.</p>
           ) : null}
           {gaLastSyncStatus === 'error' && gaLastSyncMessage ? (
-            <p className="pl-7 text-xs text-[#c5221f]">{gaLastSyncMessage}</p>
+            <p className="pl-7 text-xs text-destructive">{gaLastSyncMessage}</p>
           ) : null}
         </div>
       </CardContent>
@@ -277,13 +277,13 @@ function AnalyticsEmptyState() {
   } = useAnalyticsPageContext()
 
   return (
-    <Card className="overflow-hidden border-0 bg-white shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)]">
+    <Card className="overflow-hidden border border-border/60 bg-card shadow-sm">
       <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
-        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#f8f9fa]">
+        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-muted/20">
           <GoogleAnalyticsIcon className="h-12 w-12" />
         </div>
-        <h3 className="mb-2 text-base font-medium text-[#202124]">No analytics data yet</h3>
-        <p className="mb-6 max-w-md text-sm text-[#5f6368]">
+        <h3 className="mb-2 text-base font-medium text-foreground">No analytics data yet</h3>
+        <p className="mb-6 max-w-md text-sm text-muted-foreground">
           Connect your Google Analytics property and sync your data to view users, sessions, conversions, and revenue trends.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -294,13 +294,13 @@ function AnalyticsEmptyState() {
               size="sm"
               onClick={() => void handleConnectGoogleAnalytics()}
               disabled={gaLoading}
-              className="rounded-md border-[#dadce0] bg-white text-[#1a73e8] hover:bg-[#f8f9fa]"
+              className="rounded-md border-border/60 bg-background text-primary hover:bg-muted/40"
             >
               {gaLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
               Link Google Analytics
             </Button>
           ) : gaNeedsPropertySelection ? (
-            <Button type="button" size="sm" onClick={handleOpenGoogleAnalyticsSetup} className="rounded-md bg-[#1a73e8] text-white shadow-none hover:bg-[#1557b0]">
+            <Button type="button" size="sm" onClick={handleOpenGoogleAnalyticsSetup} className="rounded-md bg-primary text-primary-foreground shadow-none hover:bg-primary/90">
               Select property
             </Button>
           ) : (
@@ -309,7 +309,7 @@ function AnalyticsEmptyState() {
               size="sm"
               onClick={() => void handleSyncGoogleAnalytics()}
               disabled={isSyncPending || gaLoading || !gaConnected}
-              className="rounded-md bg-[#1a73e8] text-white shadow-none hover:bg-[#1557b0]"
+              className="rounded-md bg-primary text-primary-foreground shadow-none hover:bg-primary/90"
             >
               {isSyncPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
               Sync data now
@@ -323,13 +323,13 @@ function AnalyticsEmptyState() {
 
 function AnalyticsSyncingState() {
   return (
-    <Card className="overflow-hidden border-0 bg-white shadow-[0_1px_2px_0_rgba(60,64,67,0.3),0_1px_3px_1px_rgba(60,64,67,0.15)]">
+    <Card className="overflow-hidden border border-border/60 bg-card shadow-sm">
       <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
-        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#e8f0fe]">
-          <LoaderCircle className="h-10 w-10 animate-spin text-[#1a73e8]" />
+        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+          <LoaderCircle className="h-10 w-10 animate-spin text-primary" />
         </div>
-        <h3 className="mb-2 text-base font-medium text-[#202124]">Syncing analytics data</h3>
-        <p className="max-w-md text-sm text-[#5f6368]">Importing your Google Analytics data. This may take a moment...</p>
+        <h3 className="mb-2 text-base font-medium text-foreground">Syncing analytics data</h3>
+        <p className="max-w-md text-sm text-muted-foreground">Importing your Google Analytics data. This may take a moment...</p>
       </CardContent>
     </Card>
   )
@@ -427,11 +427,11 @@ function AnalyticsPerformanceSection() {
 
 function GoogleAnalyticsIcon({ className = 'h-8 w-8' }: { className?: string }) {
   return (
-    <div className="flex h-10 w-10 items-center justify-center">
-      <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-        <path d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10z" fill="#F9AB00" />
-        <path d="M12 2C6.477 2 2 6.477 2 12h10V2z" fill="#E37400" />
-        <circle cx="12" cy="12" r="3" fill="#fff" />
+    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+      <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+        <path d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10z" />
+        <path d="M12 2C6.477 2 2 6.477 2 12h10V2z" />
+        <circle cx="12" cy="12" r="3" fill="hsl(var(--background))" />
       </svg>
     </div>
   )

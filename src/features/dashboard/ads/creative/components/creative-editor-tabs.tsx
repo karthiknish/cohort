@@ -228,7 +228,7 @@ export function CreativeEditorTabs(props: {
                       onClick={() => onCopy(headlineItem.value, `headline-${headlineItem.index}`)}
                       aria-label={`Copy headline ${headlineItem.index + 1}`}
                     >
-                      {copiedField === `headline-${headlineItem.index}` ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedField === `headline-${headlineItem.index}` ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
                 ))
@@ -325,7 +325,7 @@ export function CreativeEditorTabs(props: {
                       onClick={() => onCopy(descriptionItem.value, `desc-${descriptionItem.index}`)}
                       aria-label={`Copy primary text ${descriptionItem.index + 1}`}
                     >
-                      {copiedField === `desc-${descriptionItem.index}` ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedField === `desc-${descriptionItem.index}` ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
                 ))
@@ -411,7 +411,7 @@ export function CreativeEditorTabs(props: {
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs truncate text-primary font-medium underline underline-offset-4">{creative.landingPageUrl}</p>
                       <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => onCopy(creative.landingPageUrl ?? '', 'landing')} aria-label="Copy landing page URL">
-                        {copiedField === 'landing' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                        {copiedField === 'landing' ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                       </Button>
                     </div>
                   ) : (
@@ -593,7 +593,7 @@ export function CreativeEditorTabs(props: {
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-mono truncate">{creative.creativeId}</p>
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onCopy(creative.creativeId, 'creativeId')} aria-label="Copy creative ID">
-                      {copiedField === 'creativeId' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                      {copiedField === 'creativeId' ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                     </Button>
                   </div>
                 </div>
@@ -602,7 +602,7 @@ export function CreativeEditorTabs(props: {
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-mono truncate">{creative.campaignId}</p>
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onCopy(creative.campaignId, 'campaignId')} aria-label="Copy campaign ID">
-                      {copiedField === 'campaignId' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                      {copiedField === 'campaignId' ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                     </Button>
                   </div>
                 </div>
@@ -623,7 +623,7 @@ export function CreativeEditorTabs(props: {
                       </div>
                     </div>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onCopy(creative.imageUrl ?? '', 'imageUrl')} aria-label="Copy source image URL">
-                      {copiedField === 'imageUrl' ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedField === 'imageUrl' ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
                 )}
@@ -640,7 +640,7 @@ export function CreativeEditorTabs(props: {
                       </div>
                     </div>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onCopy(creative.videoUrl ?? '', 'videoUrl')} aria-label="Copy source video URL">
-                      {copiedField === 'videoUrl' ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedField === 'videoUrl' ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
                 )}

@@ -29,7 +29,7 @@ export function TasksHeader({
         <p className="text-base text-muted-foreground max-w-2xl">
           Manage and track assignments across teams and clients.
           {retryCount > 0 && (
-            <span className="ml-2 text-amber-600">
+            <span className="ml-2 text-warning">
               (Retrying… {retryCount}/{RETRY_CONFIG.maxRetries})
             </span>
           )}

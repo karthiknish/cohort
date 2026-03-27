@@ -10,9 +10,15 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import * as DialogPrimitive from '@radix-ui/react-dialog'
-
 import { Button } from '@/shared/ui/button'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from '@/shared/ui/dialog-primitives'
 import { LazyImage } from '@/shared/ui/lazy-image'
 import { cn } from '@/lib/utils'
 
@@ -140,16 +146,16 @@ export function ImagePreviewModal({
   }
 
   return (
-    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-[1200] bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" />
-        <DialogPrimitive.Content
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogPortal>
+        <DialogOverlay className="fixed inset-0 z-[1200] bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" />
+        <DialogContent
           className="fixed inset-0 z-[1200] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-0"
           onPointerDownOutside={handleClose}
         >
-          <DialogPrimitive.Title className="sr-only">
+          <DialogTitle className="sr-only">
             Image Preview: {currentImage.name}
-          </DialogPrimitive.Title>
+          </DialogTitle>
       {/* Header */}
       <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent p-4">
         <div className="flex items-center gap-3">
@@ -346,8 +352,8 @@ export function ImagePreviewModal({
         <span className="mx-2">•</span>
         <span>Esc Close</span>
       </div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+        </DialogContent>
+      </DialogPortal>
+    </Dialog>
   )
 }

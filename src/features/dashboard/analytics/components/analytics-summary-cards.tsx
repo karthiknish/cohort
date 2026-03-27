@@ -59,14 +59,14 @@ export function AnalyticsSummaryCards({
             </Card>
 
             <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500/80" />
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-success/80" />
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <div className="flex items-center gap-2">
                         <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Sessions</CardTitle>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/50 transition-colors hover:text-emerald-500" />
+                                    <Info className="h-3 w-3 text-muted-foreground/50 transition-colors hover:text-success" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                     <p className="text-xs">Total sessions recorded for the selected date range</p>
@@ -74,7 +74,7 @@ export function AnalyticsSummaryCards({
                             </Tooltip>
                         </TooltipProvider>
                     </div>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/5 text-emerald-500">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/5 text-success">
                         <Activity className="h-4 w-4" />
                     </div>
                 </CardHeader>
@@ -88,14 +88,14 @@ export function AnalyticsSummaryCards({
             </Card>
 
             <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500/80" />
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-info/80" />
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <div className="flex items-center gap-2">
                         <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Conversions</CardTitle>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/50 transition-colors hover:text-blue-500" />
+                                    <Info className="h-3 w-3 text-muted-foreground/50 transition-colors hover:text-info" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                     <p className="text-xs">Completed conversions imported from Google Analytics</p>
@@ -103,7 +103,7 @@ export function AnalyticsSummaryCards({
                             </Tooltip>
                         </TooltipProvider>
                     </div>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/5 text-blue-500">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-info/5 text-info">
                         <TrendingUp className="h-4 w-4" />
                     </div>
                 </CardHeader>
@@ -117,14 +117,14 @@ export function AnalyticsSummaryCards({
             </Card>
 
             <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500/80" />
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-warning/80" />
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <div className="flex items-center gap-2">
                         <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Revenue</CardTitle>
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/50 transition-colors hover:text-orange-500" />
+                                    <Info className="h-3 w-3 text-muted-foreground/50 transition-colors hover:text-warning" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                     <p className="text-xs">Revenue reported by Google Analytics for the selected period</p>
@@ -132,7 +132,7 @@ export function AnalyticsSummaryCards({
                             </Tooltip>
                         </TooltipProvider>
                     </div>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/5 text-orange-500">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/5 text-warning">
                         <DollarSign className="h-4 w-4" />
                     </div>
                 </CardHeader>

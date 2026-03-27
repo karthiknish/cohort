@@ -143,12 +143,12 @@ function PrintableTaskCard({ task }: { task: TaskRecord }) {
           </div>
 
           {task.description && (
-            <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+            <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">
               {task.description}
             </p>
           )}
 
-          <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
             <span>📅 {task.dueDate ? formatDate(task.dueDate) : 'No due date'}</span>
             <span>👤 {(task.assignedTo ?? []).join(', ') || 'Unassigned'}</span>
             {task.client && <span>🏢 {task.client}</span>}
@@ -156,7 +156,7 @@ function PrintableTaskCard({ task }: { task: TaskRecord }) {
 
           <div className="tasks-print-indicators mt-2">
             {(task.commentCount ?? 0) > 0 && <span>💬 {task.commentCount}</span>}
-            {((task.timeSpentMinutes ?? 0) ?? 0) > 0 && <span>⏱ {Math.floor((task.timeSpentMinutes ?? 0) / 60)}h {(task.timeSpentMinutes ?? 0) % 60}m</span>}
+            {(task.timeSpentMinutes ?? 0) > 0 && <span>⏱ {Math.floor((task.timeSpentMinutes ?? 0) / 60)}h {(task.timeSpentMinutes ?? 0) % 60}m</span>}
             {(task.subtaskCount ?? 0) > 0 && <span>📋 {task.subtaskCount} subtasks</span>}
           </div>
         </div>
@@ -188,7 +188,7 @@ export function PrintTasksButton({ tasks, title }: { tasks: TaskRecord[], title?
                   <h3 class="font-semibold text-sm">${task.title}</h3>
                   <span class="task-print-status ${task.status}">${formatStatusLabel(task.status)}</span>
                 </div>
-                <p class="text-xs text-gray-500">
+                <p class="text-xs text-muted-foreground">
                   📅 ${task.dueDate ? formatDate(task.dueDate) : 'No due date'} •
                   👤 ${(task.assignedTo ?? []).join(', ') || 'Unassigned'}
                 </p>

@@ -69,14 +69,14 @@ function TaskCommentThreadItem({
       <div
         className={cn(
           'rounded-3xl border px-4 py-4 shadow-sm transition-colors',
-          depth === 0 ? 'bg-white/95' : 'bg-slate-50/90',
-          isActiveReply && 'border-sky-300 bg-sky-50/80 shadow-sky-100',
-          isActiveEdit && 'border-amber-300 bg-amber-50/80 shadow-amber-100'
+          depth === 0 ? 'bg-card/95' : 'bg-muted/30',
+          isActiveReply && 'border-primary/30 bg-primary/10 shadow-primary/10',
+          isActiveEdit && 'border-accent/40 bg-accent/20 shadow-accent/10'
         )}
       >
         <div className="flex items-start gap-3">
-          <Avatar className="mt-0.5 h-10 w-10 border border-slate-200 bg-white shadow-sm">
-            <AvatarFallback className="bg-slate-100 text-[11px] font-semibold text-slate-700">
+          <Avatar className="mt-0.5 h-10 w-10 border border-border/60 bg-background shadow-sm">
+            <AvatarFallback className="bg-muted text-[11px] font-semibold text-muted-foreground">
               {getInitials(comment.authorName)}
             </AvatarFallback>
           </Avatar>
@@ -85,19 +85,19 @@ function TaskCommentThreadItem({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="truncate text-sm font-semibold text-slate-900">{comment.authorName}</span>
+                  <span className="truncate text-sm font-semibold text-foreground">{comment.authorName}</span>
                   {comment.authorRole ? (
-                    <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    <span className="rounded-full border border-border/60 bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                       {comment.authorRole}
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-1 text-xs text-slate-500">{formatCommentTimestamp(comment)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{formatCommentTimestamp(comment)}</p>
               </div>
 
               <div className="flex items-center gap-1">
                 {depth === 0 && replies.length > 0 ? (
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                  <span className="rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
                     {replies.length} repl{replies.length === 1 ? 'y' : 'ies'}
                   </span>
                 ) : null}
@@ -105,7 +105,7 @@ function TaskCommentThreadItem({
                 {canManageComment(comment) ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-500" aria-label="Comment actions">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground" aria-label="Comment actions">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -125,7 +125,7 @@ function TaskCommentThreadItem({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
-                  <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-slate-600" onClick={() => onStartReply(comment)}>
+                  <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-muted-foreground" onClick={() => onStartReply(comment)}>
                     <Reply className="mr-1.5 h-3.5 w-3.5" />
                     Reply
                   </Button>
@@ -139,12 +139,12 @@ function TaskCommentThreadItem({
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-slate-600 hover:bg-slate-100 hover:text-slate-900" onClick={() => onStartReply(comment)}>
+              <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-muted-foreground hover:bg-muted/60 hover:text-foreground" onClick={() => onStartReply(comment)}>
                 <Reply className="mr-1.5 h-3.5 w-3.5" />
                 Reply
               </Button>
               {isBusy ? (
-                <span className="inline-flex items-center gap-2 text-xs font-medium text-slate-500">
+                <span className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
                   Updating thread...
                 </span>
@@ -155,7 +155,7 @@ function TaskCommentThreadItem({
       </div>
 
       {replies.length > 0 ? (
-        <div className={cn('space-y-3 border-l border-dashed border-slate-300 pl-4 md:pl-6', depth === 0 && 'ml-5')}>
+        <div className={cn('space-y-3 border-l border-dashed border-border pl-4 md:pl-6', depth === 0 && 'ml-5')}>
           {replies.map((reply) => (
             <TaskCommentThreadItem
               key={reply.id}
@@ -187,23 +187,23 @@ export function TaskCommentsSummaryHeader({
   replyCount: number
   replyTo: TaskComment | null
   editingCommentId: string | null
-}) {
+  }) {
   return (
-    <CardHeader className="border-b border-slate-200/80 pb-4">
+    <CardHeader className="border-b border-border/60 pb-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <CardTitle className="text-base text-slate-950">Conversation</CardTitle>
-          <p className="mt-1 text-sm text-slate-500">
+          <CardTitle className="text-base text-foreground">Conversation</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">
             {commentsCount} comment{commentsCount === 1 ? '' : 's'}
             {replyCount > 0 ? ` • ${replyCount} repl${replyCount === 1 ? 'y' : 'ies'}` : ''}
           </p>
         </div>
         {replyTo ? (
-          <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-700">
+          <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
             Thread reply
           </span>
         ) : editingCommentId ? (
-          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-700">
+          <span className="rounded-full border border-accent/40 bg-accent/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent-foreground">
             Editing
           </span>
         ) : null}
@@ -238,11 +238,11 @@ export function TaskCommentsThreadList({
   return (
     <div className="space-y-4">
       {loading ? (
-        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-500">
+        <div className="rounded-3xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
           Loading comments...
         </div>
       ) : roots.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center text-sm text-slate-500">
+        <div className="rounded-3xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
           No comments yet. Use this thread for decisions, context, and quick handoffs.
         </div>
       ) : (
@@ -301,16 +301,16 @@ export function TaskCommentsComposerSection({
   onAttachClick: () => void
   onComposerChange: (value: string) => void
   onSubmit: () => void
-}) {
+  }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4 shadow-inner shadow-slate-100/60">
+    <div className="rounded-3xl border border-border/60 bg-muted/20 p-4 shadow-inner shadow-black/5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-slate-900">{composerTitle}</p>
-          <p className="mt-1 text-sm text-slate-500">{composerDescription}</p>
+          <p className="text-sm font-semibold text-foreground">{composerTitle}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{composerDescription}</p>
         </div>
         {replyTo || editingCommentId ? (
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-500" onClick={onReset} aria-label="Reset composer">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground" onClick={onReset} aria-label="Reset composer">
             <X className="h-4 w-4" />
           </Button>
         ) : null}
@@ -359,7 +359,7 @@ export function TaskCommentsComposerSection({
             onClick={onAttachClick}
             disabled={isSubmitting || Boolean(editingCommentId)}
             title={editingCommentId ? 'Attachments cannot be changed while editing' : 'Attach files'}
-            className="h-10 w-10 rounded-2xl border-slate-200 bg-white"
+            className="h-10 w-10 rounded-2xl border-border/60 bg-background"
             aria-label={editingCommentId ? 'Attachments cannot be changed while editing' : 'Attach files'}
           >
             <Paperclip className="h-4 w-4" />

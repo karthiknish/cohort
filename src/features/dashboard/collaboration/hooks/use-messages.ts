@@ -258,7 +258,7 @@ export function useFetchMessages({
               senderId: typeof row.senderId === 'string' ? row.senderId : null,
               senderName: typeof row.senderName === 'string' ? row.senderName : 'Unknown teammate',
               senderRole: typeof row.senderRole === 'string' ? row.senderRole : null,
-              content: Boolean(row.deleted || row.deletedAtMs) ? '' : String(row.content ?? ''),
+              content: row.deleted || row.deletedAtMs ? '' : String(row.content ?? ''),
               createdAt: typeof row.createdAtMs === 'number' ? new Date(row.createdAtMs).toISOString() : null,
               updatedAt: typeof row.updatedAtMs === 'number' ? new Date(row.updatedAtMs).toISOString() : null,
               isEdited: Boolean(row.updatedAtMs && row.createdAtMs && row.updatedAtMs !== row.createdAtMs),

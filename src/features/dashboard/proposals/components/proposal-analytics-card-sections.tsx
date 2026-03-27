@@ -86,7 +86,7 @@ function SuccessRateCard({
         <Progress value={Number.parseFloat(value)} className="h-2" />
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
-            <CircleCheck className="h-3 w-3 text-green-500" />
+            <CircleCheck className="h-3 w-3 text-success" />
             {succeededCount} succeeded
           </span>
           <span className="flex items-center gap-1">
@@ -151,9 +151,9 @@ export function ProposalAnalyticsSummaryGrid({ summary, formatDuration }: { summ
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <SummaryStatCard icon={<FileText className="h-5 w-5 text-primary" />} label="Drafts Created" toneClassName="bg-primary/10" value={summary.totalDrafts} />
-      <SummaryStatCard icon={<CircleCheck className="h-5 w-5 text-green-500" />} label="Proposals Submitted" toneClassName="bg-green-500/10" value={summary.totalSubmitted} />
-      <SummaryStatCard icon={<Send className="h-5 w-5 text-blue-500" />} label="Proposals Sent" toneClassName="bg-blue-500/10" value={summary.totalSent} />
-      <SummaryStatCard icon={<Clock className="h-5 w-5 text-amber-500" />} label="Avg. AI Generation" toneClassName="bg-amber-500/10" value={formatDuration(summary.averageAiGenerationTime)} />
+      <SummaryStatCard icon={<CircleCheck className="h-5 w-5 text-success" />} label="Proposals Submitted" toneClassName="bg-success/10" value={summary.totalSubmitted} />
+      <SummaryStatCard icon={<Send className="h-5 w-5 text-info" />} label="Proposals Sent" toneClassName="bg-info/10" value={summary.totalSent} />
+      <SummaryStatCard icon={<Clock className="h-5 w-5 text-warning" />} label="Avg. AI Generation" toneClassName="bg-warning/10" value={formatDuration(summary.averageAiGenerationTime)} />
     </div>
   )
 }
@@ -258,7 +258,7 @@ export function ProposalAnalyticsByClientCard({ byClient }: { byClient: Proposal
               <div className="flex items-center gap-2">
                 <Badge variant="outline">{client.proposalCount} drafts</Badge>
                 {client.submittedCount > 0 ? <Badge variant="secondary">{client.submittedCount} submitted</Badge> : null}
-                {client.sentCount > 0 ? <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">{client.sentCount} sent</Badge> : null}
+                {client.sentCount > 0 ? <Badge className="bg-success/10 text-success hover:bg-success/20">{client.sentCount} sent</Badge> : null}
               </div>
             </div>
           ))}
@@ -273,7 +273,7 @@ export function ProposalAnalyticsEmptyState() {
     <Card>
       <CardContent className="flex flex-col items-center justify-center py-12 text-center">
         <div className="mb-4 rounded-full bg-muted/30 p-4">
-          <TriangleAlert className="h-8 w-8 text-muted-foreground/50" />
+          <TriangleAlert className="h-8 w-8 text-warning/60" />
         </div>
         <h3 className="mb-2 text-lg font-semibold">No Analytics Data</h3>
         <p className="max-w-sm text-sm text-muted-foreground">

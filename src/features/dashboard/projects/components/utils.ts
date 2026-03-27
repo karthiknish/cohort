@@ -14,17 +14,17 @@ export type ViewMode = 'list' | 'grid' | 'board' | 'gantt'
 export const STATUS_FILTERS: StatusFilter[] = ['all', ...PROJECT_STATUSES]
 
 export const STATUS_CLASSES: Record<ProjectStatus, string> = {
-  planning: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-900/40 dark:text-slate-400 dark:border-slate-800',
-  active: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50',
-  on_hold: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/50',
-  completed: 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50',
+  planning: 'bg-muted/50 text-muted-foreground border-muted/40',
+  active: 'bg-success/10 text-success border-success/20',
+  on_hold: 'bg-warning/10 text-warning border-warning/20',
+  completed: 'bg-info/10 text-info border-info/20',
 }
 
 export const STATUS_ACCENT_COLORS: Record<ProjectStatus, string> = {
-  planning: SEMANTIC_COLORS.project.planning,
-  active: SEMANTIC_COLORS.project.active,
-  on_hold: SEMANTIC_COLORS.project.onHold,
-  completed: SEMANTIC_COLORS.project.completed,
+  planning: 'hsl(var(--muted-foreground))',
+  active: 'hsl(var(--success))',
+  on_hold: 'hsl(var(--warning))',
+  completed: 'hsl(var(--info))',
 }
 
 export const STATUS_ICONS: Record<ProjectStatus, React.ComponentType<{ className?: string }>> = {
@@ -183,7 +183,7 @@ export function milestoneStatusColor(status: string): string {
     case 'blocked':
       return SEMANTIC_COLORS.priority.high
     default:
-      return '#6366f1'
+      return SEMANTIC_COLORS.status.pending
   }
 }
 

@@ -30,10 +30,10 @@ interface PriorityConfig {
 
 const PRIORITY_CONFIGS: Record<MessagePriority, PriorityConfig> = {
   none: { value: 'none', label: 'No Priority', color: '', icon: '🏳️' },
-  low: { value: 'low', label: 'Low', color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20', icon: '🔵' },
-  medium: { value: 'medium', label: 'Medium', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', icon: '🟡' },
-  high: { value: 'high', label: 'High', color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20', icon: '🟠' },
-  urgent: { value: 'urgent', label: 'Urgent', color: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20', icon: '🔴' },
+  low: { value: 'low', label: 'Low', color: 'bg-secondary text-secondary-foreground border-secondary/40', icon: '🔵' },
+  medium: { value: 'medium', label: 'Medium', color: 'bg-accent text-accent-foreground border-accent/40', icon: '🟡' },
+  high: { value: 'high', label: 'High', color: 'bg-primary/10 text-primary border-primary/20', icon: '🟠' },
+  urgent: { value: 'urgent', label: 'Urgent', color: 'bg-destructive/10 text-destructive border-destructive/20', icon: '🔴' },
 }
 
 interface MessagePriorityBadgeProps {
@@ -112,10 +112,10 @@ export function MessagePrioritySelector({
               className={cn(
                 'h-4 w-4',
                 priority === 'none' && 'text-muted-foreground',
-                priority === 'low' && 'text-blue-500',
-                priority === 'medium' && 'text-amber-500',
-                priority === 'high' && 'text-orange-500',
-                priority === 'urgent' && 'text-red-500'
+                priority === 'low' && 'text-secondary-foreground',
+                priority === 'medium' && 'text-accent-foreground',
+                priority === 'high' && 'text-primary',
+                priority === 'urgent' && 'text-destructive'
               )}
             />
             {config.label}
@@ -154,10 +154,10 @@ export function MessagePrioritySelector({
                   <Flag
                     className={cn(
                       'h-4 w-4 fill-current',
-                      priority === 'low' && 'text-blue-500',
-                      priority === 'medium' && 'text-amber-500',
-                      priority === 'high' && 'text-orange-500',
-                      priority === 'urgent' && 'text-red-500'
+                      priority === 'low' && 'text-secondary-foreground',
+                      priority === 'medium' && 'text-accent-foreground',
+                      priority === 'high' && 'text-primary',
+                      priority === 'urgent' && 'text-destructive'
                     )}
                   />
                 )}
@@ -199,10 +199,10 @@ interface PriorityFilterProps {
  */
 export function PriorityFilter({ selected, onChange, className }: PriorityFilterProps) {
   const options: Array<{ value: MessagePriority; label: string; color: string }> = [
-    { value: 'urgent', label: 'Urgent', color: 'bg-red-500' },
-    { value: 'high', label: 'High', color: 'bg-orange-500' },
-    { value: 'medium', label: 'Medium', color: 'bg-amber-500' },
-    { value: 'low', label: 'Low', color: 'bg-blue-500' },
+    { value: 'urgent', label: 'Urgent', color: 'bg-destructive' },
+    { value: 'high', label: 'High', color: 'bg-primary' },
+    { value: 'medium', label: 'Medium', color: 'bg-accent' },
+    { value: 'low', label: 'Low', color: 'bg-secondary' },
   ]
 
   const toggle = (value: MessagePriority) => {
@@ -260,9 +260,9 @@ export function PriorityMessageBanner({
     <div
       className={cn(
         'flex items-start gap-3 p-3 rounded-lg border',
-        priority === 'urgent' && 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400',
-        priority === 'high' && 'bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400',
-        priority === 'medium' && 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400',
+        priority === 'urgent' && 'bg-destructive/10 border-destructive/30 text-destructive',
+        priority === 'high' && 'bg-warning/10 border-warning/30 text-warning',
+        priority === 'medium' && 'bg-info/10 border-info/30 text-info',
         className
       )}
     >

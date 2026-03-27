@@ -87,7 +87,7 @@ export function TaskCardHeaderSection({
             aria-label={`View task ${task.title}`}
           >
             <div className="flex items-start gap-2">
-              <h3 className="line-clamp-2 min-w-0 flex-1 text-[1.05rem] font-bold leading-tight text-slate-900 transition-colors group-hover:text-primary hover:text-primary">
+              <h3 className="line-clamp-2 min-w-0 flex-1 text-[1.05rem] font-bold leading-tight text-foreground transition-colors group-hover:text-primary hover:text-primary">
                 {highlightMatch(task.title, searchQuery)}
               </h3>
               {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
@@ -95,7 +95,7 @@ export function TaskCardHeaderSection({
           </button>
         ) : (
           <div className="flex items-start gap-2">
-            <h3 className="line-clamp-2 min-w-0 flex-1 text-[1.05rem] font-bold leading-tight text-slate-900 transition-colors group-hover:text-primary">
+            <h3 className="line-clamp-2 min-w-0 flex-1 text-[1.05rem] font-bold leading-tight text-foreground transition-colors group-hover:text-primary">
               {highlightMatch(task.title, searchQuery)}
             </h3>
             {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
@@ -278,7 +278,7 @@ function TaskCardActionsMenu({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-full border border-transparent text-slate-500 transition-colors hover:border-slate-200 hover:bg-slate-100/90 hover:text-slate-900"
+            className="h-8 w-8 rounded-full border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground"
             aria-label="Task actions"
           >
             <MoreHorizontal className="h-4 w-4" />
@@ -344,7 +344,7 @@ export function TaskCardInfoPanels({
   dueSoon: boolean
 }) {
   return (
-    <div className="mt-auto grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5 border-t border-slate-200/70 pt-4">
+    <div className="mt-auto grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5 border-t border-border/70 pt-4">
       <div className={cn(taskInfoPanelClasses.base, 'flex min-w-0 items-start gap-3')}>
         <div className={cn(taskInfoPanelClasses.icon, 'mt-0.5')}>
           <User className="h-3 w-3" />
@@ -361,23 +361,23 @@ export function TaskCardInfoPanels({
         className={cn(
           taskInfoPanelClasses.base,
           'flex items-start gap-3',
-          overdue && 'border-red-200/90 bg-red-50/95',
-          dueSoon && !overdue && 'border-amber-200/90 bg-amber-50/95'
+          overdue && 'border-destructive/20 bg-destructive/10',
+          dueSoon && !overdue && 'border-warning/20 bg-warning/10'
         )}
       >
         <div
           className={cn(
             taskInfoPanelClasses.icon,
             'mt-0.5',
-            overdue && 'border-red-200/90 bg-white text-red-600',
-            dueSoon && !overdue && 'border-amber-200/90 bg-white text-amber-700'
+            overdue && 'border-destructive/20 bg-background text-destructive',
+            dueSoon && !overdue && 'border-warning/20 bg-background text-warning'
           )}
         >
           <Calendar className="h-3 w-3" />
         </div>
         <div className="min-w-0 space-y-1">
           <p className={taskInfoPanelClasses.label}>Due date</p>
-          <p className={cn(taskInfoPanelClasses.value, !task.dueDate && 'text-slate-500')}>
+          <p className={cn(taskInfoPanelClasses.value, !task.dueDate && 'text-muted-foreground')}>
             {task.dueDate ? formatDate(task.dueDate) : 'No due date'}
           </p>
         </div>
@@ -388,9 +388,9 @@ export function TaskCardInfoPanels({
 
 export function TaskCardOverdueBanner() {
   return (
-    <div className="absolute right-0 top-0 flex items-center gap-1 rounded-bl-lg rounded-tr-lg bg-red-500 px-2 py-0.5">
-      <CalendarX2 className="h-3 w-3 text-white" />
-      <span className="text-[9px] font-bold uppercase text-white">Overdue</span>
+    <div className="absolute right-0 top-0 flex items-center gap-1 rounded-bl-lg rounded-tr-lg bg-destructive px-2 py-0.5 text-destructive-foreground">
+      <CalendarX2 className="h-3 w-3" />
+      <span className="text-[9px] font-bold uppercase">Overdue</span>
     </div>
   )
 }

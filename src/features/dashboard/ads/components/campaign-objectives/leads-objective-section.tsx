@@ -40,7 +40,7 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="w-4 h-4 text-blue-500" />
+            <Users className="w-4 h-4 text-info" />
             Lead Form
           </CardTitle>
           <CardDescription>
@@ -75,10 +75,10 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
                       type="button"
                       onClick={() => onChange({ leadFormId: form.id })}
                       disabled={disabled}
-                      className={`flex items-center justify-between p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
+                  className={`flex items-center justify-between p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
                         formData.leadFormId === form.id
-                          ? 'border-blue-500 bg-blue-500/5'
-                          : 'border-border hover:border-blue-500/50'
+                          ? 'border-info/20 bg-info/10'
+                          : 'border-border hover:border-info/50'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -91,7 +91,7 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
                         </div>
                       </div>
                       {formData.leadFormId === form.id && (
-                        <CheckCircle className="w-5 h-5 text-blue-500" />
+                        <CheckCircle className="w-5 h-5 text-info" />
                       )}
                     </button>
                   ))}
@@ -183,10 +183,10 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
       </Card>
 
       {/* Lead Gen Tips */}
-      <Card className="border-blue-500/20 bg-blue-500/5">
+      <Card className="border-info/20 bg-info/10">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <CheckCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+            <CheckCircle className="w-5 h-5 text-info flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Lead Generation Best Practices</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">

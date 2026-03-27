@@ -29,7 +29,7 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Heart className="w-4 h-4 text-pink-500" />
+            <Heart className="w-4 h-4 text-primary" />
             Engagement Type
           </CardTitle>
           <CardDescription>
@@ -86,8 +86,8 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
                   disabled={disabled}
                   className={`w-full p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
                     formData.postId === post.id
-                      ? 'border-pink-500 bg-pink-500/5'
-                      : 'border-border hover:border-pink-500/50'
+                      ? 'border-primary/20 bg-primary/10'
+                      : 'border-border hover:border-primary/50'
                   }`}
                 >
                   <p className="text-sm font-medium line-clamp-2">{post.message}</p>
@@ -129,8 +129,8 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
                   disabled={disabled}
                   className={`w-full p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
                     formData.eventId === event.id
-                      ? 'border-pink-500 bg-pink-500/5'
-                      : 'border-border hover:border-pink-500/50'
+                      ? 'border-primary/20 bg-primary/10'
+                      : 'border-border hover:border-primary/50'
                   }`}
                 >
                   <p className="text-sm font-medium">{event.name}</p>
@@ -149,7 +149,7 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <ThumbsUp className="w-5 h-5 text-pink-500 mt-0.5" />
+              <ThumbsUp className="w-5 h-5 text-primary mt-0.5" />
               <div>
                 <h4 className="font-medium text-sm">Page Engagement</h4>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -163,10 +163,10 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
       )}
 
       {/* Tips */}
-      <Card className="border-pink-500/20 bg-pink-500/5">
+      <Card className="border-primary/20 bg-primary/10">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <Heart className="w-5 h-5 text-pink-500 flex-shrink-0 mt-0.5" />
+            <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Engagement Campaign Tips</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">

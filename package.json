@@ -19,7 +19,7 @@
     "convex:typecheck": "bun run convex:codegen && bun --bun tsc -p convex/tsconfig.json --noEmit",
     "build": "next build",
     "start": "bun --bun next start",
-    "lint": "eslint",
+    "lint": "oxlint -c .oxlintrc.json",
     "typecheck": "bun --bun tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
@@ -111,9 +111,8 @@
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "^9.39.4",
-    "eslint-config-next": "^16.2.1",
     "next": "^16.2.1",
+    "oxlint": "^1.57.0",
     "typescript": "^5",
     "vitest": "^4.0.18"
   },

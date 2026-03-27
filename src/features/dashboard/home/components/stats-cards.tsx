@@ -63,8 +63,8 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
   const Icon = stat.icon
   const valueClasses = cn(
     'text-3xl font-bold tracking-tight',
-    !loading && stat.emphasis === 'positive' && 'text-emerald-600',
-    !loading && stat.emphasis === 'negative' && 'text-red-600',
+    !loading && stat.emphasis === 'positive' && 'text-success',
+    !loading && stat.emphasis === 'negative' && 'text-destructive',
   )
 
   const cardBody = (
@@ -94,7 +94,7 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
             </div>
           ) : null}
         </div>
-        <div className="rounded-full bg-primary/10 p-3">
+        <div className="rounded-full bg-info/10 p-3">
           <Icon className="h-6 w-6 text-primary" />
         </div>
       </CardContent>
@@ -115,11 +115,11 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
 function getUrgencyDotClass(level: SummaryStat['urgency']): string {
   switch (level) {
     case 'high':
-      return 'bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.12)]'
+      return 'bg-destructive shadow-[0_0_0_4px_hsl(var(--destructive)/0.12)]'
     case 'medium':
-      return 'bg-amber-400 shadow-[0_0_0_4px_rgba(251,191,36,0.16)]'
+      return 'bg-warning shadow-[0_0_0_4px_hsl(var(--warning)/0.16)]'
     case 'low':
-      return 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.14)]'
+      return 'bg-success shadow-[0_0_0_4px_hsl(var(--success)/0.14)]'
     default:
       return 'bg-muted-foreground'
   }

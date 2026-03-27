@@ -10,7 +10,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts'
+} from '@/shared/ui/recharts-dynamic'
 import { Card, CardContent } from '@/shared/ui/card'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/shared/ui/use-toast'

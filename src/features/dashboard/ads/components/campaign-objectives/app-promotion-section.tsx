@@ -18,7 +18,7 @@ export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveC
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <AppWindow className="w-4 h-4 text-cyan-500" />
+            <AppWindow className="w-4 h-4 text-secondary" />
             App Configuration
           </CardTitle>
           <CardDescription>
@@ -146,10 +146,10 @@ export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveC
       </Card>
 
       {/* Tips */}
-      <Card className="border-cyan-500/20 bg-cyan-500/5">
+      <Card className="border-secondary/20 bg-secondary/5">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <Smartphone className="w-5 h-5 text-cyan-500 flex-shrink-0 mt-0.5" />
+            <Smartphone className="w-5 h-5 text-secondary flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <h4 className="font-medium text-sm">App Promotion Tips</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">

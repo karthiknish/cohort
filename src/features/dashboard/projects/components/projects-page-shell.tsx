@@ -67,7 +67,7 @@ function ProjectsHeaderSection() {
         <p className={DASHBOARD_THEME.layout.subtitle}>
           Portfolio overview for {portfolioLabel}.
           {retryCount > 0 ? (
-            <span className="ml-2 text-amber-600">
+            <span className="ml-2 text-warning">
               (Retrying… attempt {retryCount}/{RETRY_CONFIG.maxRetries})
             </span>
           ) : null}
@@ -177,7 +177,7 @@ function ProjectsSummarySection() {
           <div className="min-w-0 flex-1">
             <div className="mb-1.5 flex items-center justify-between">
               <p className={DASHBOARD_THEME.stats.label}>Portfolio Health</p>
-              <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{completionRate}%</span>
+              <span className="text-sm font-bold text-info">{completionRate}%</span>
             </div>
             <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/60">
               <div

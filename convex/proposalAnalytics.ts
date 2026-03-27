@@ -508,12 +508,3 @@ function calculateByClient(events: EventRow[]) {
 
   return Array.from(map.values()).sort((a, b) => b.submissions - a.submissions)
 }
-
-// Public endpoint - no auth required for getting event types
-export const eventTypes = query({
-  args: {},
-  returns: v.array(eventTypeValidator),
-  handler: async () => {
-    return [...EVENT_TYPES]
-  },
-})

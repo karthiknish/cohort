@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
-import { AnimatePresence, domAnimation, LazyMotion } from 'framer-motion'
+import { AnimatePresence, domAnimation, LazyMotion } from '@/shared/ui/motion'
 
 import type { AgentConversationSummary, AgentMessage, ConnectionStatus } from '@/shared/hooks/use-agent-mode'
 import { useMentionData } from '@/shared/hooks/use-mention-data'

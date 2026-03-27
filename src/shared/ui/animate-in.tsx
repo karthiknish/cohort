@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { LazyMotion, domAnimation, m, type HTMLMotionProps, useReducedMotion } from 'framer-motion'
+import { LazyMotion, domAnimation, m, type HTMLMotionProps, useReducedMotion } from '@/shared/ui/motion'
 
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 

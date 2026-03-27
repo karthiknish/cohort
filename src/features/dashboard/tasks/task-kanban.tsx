@@ -150,7 +150,7 @@ export function TaskKanban({
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {columnSkeletonKeys.map((columnKey) => (
-          <div key={columnKey} className="space-y-4 rounded-xl border border-slate-200 bg-slate-100/60 p-4">
+          <div key={columnKey} className="space-y-4 rounded-xl border border-border/60 bg-muted/30 p-4">
             <Skeleton className="h-6 w-32 rounded-lg" />
             <Skeleton className="h-24 w-full rounded-xl" />
             <Skeleton className="h-24 w-full rounded-xl" />
@@ -163,9 +163,9 @@ export function TaskKanban({
   if (error) {
     return (
       <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-8 text-center">
-        <TriangleAlert className="mx-auto h-12 w-12 text-destructive/40" />
+        <TriangleAlert className="mx-auto h-12 w-12 text-destructive" />
         <h3 className="mt-4 text-lg font-semibold text-destructive">Unable to load board</h3>
-        <p className="mt-1 text-sm text-destructive/70">{error}</p>
+        <p className="mt-1 text-sm text-destructive/80">{error}</p>
         <Button
           variant="outline"
           size="sm"
@@ -181,12 +181,12 @@ export function TaskKanban({
 
   if (tasks.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-12 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70">
-          <ListTodo className="h-8 w-8 text-slate-400" />
+      <div className="rounded-xl border border-dashed border-border bg-muted/30 p-12 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-background shadow-sm ring-1 ring-border/60">
+          <ListTodo className="h-8 w-8 text-muted-foreground" />
         </div>
-        <h3 className="mt-4 text-xl font-semibold text-slate-900">No tasks here yet</h3>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-slate-600">
+        <h3 className="mt-4 text-xl font-semibold text-foreground">No tasks here yet</h3>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
           {showEmptyStateFiltered
             ? 'No tasks match the current filters. Try adjusting your search or clearing filters.'
             : emptyStateMessage}
@@ -199,11 +199,11 @@ export function TaskKanban({
     <div className="space-y-6">
       <div className="flex items-center justify-between px-1">
         <div>
-          <div className="flex items-center gap-2.5 font-bold tracking-tight text-slate-900">
+          <div className="flex items-center gap-2.5 font-bold tracking-tight text-foreground">
             <Columns3 className="h-5 w-5 text-primary" />
             <span>Workflow Board</span>
           </div>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-muted-foreground">
             Drag tasks between columns to update status.
           </p>
         </div>
@@ -225,8 +225,8 @@ export function TaskKanban({
                 tabIndex={bulkActive ? -1 : 0}
                 aria-label={`${column.label} task lane`}
                 className={cn(
-                  'group flex min-w-[292px] max-w-[360px] flex-1 flex-col overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/80 shadow-sm transition-colors',
-                  !bulkActive && 'hover:border-slate-300/90 hover:bg-slate-50/85',
+                  'group flex min-w-[292px] max-w-[360px] flex-1 flex-col overflow-hidden rounded-[1.5rem] border border-border/60 bg-gradient-to-b from-background to-muted/20 shadow-sm transition-colors',
+                  !bulkActive && 'hover:border-border hover:bg-muted/25',
                   isDragTarget && 'border-primary/30 bg-primary/10',
                   isDraggingFrom && "opacity-50"
                 )}
@@ -234,12 +234,12 @@ export function TaskKanban({
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, column.status)}
               >
-                <div className="flex items-center justify-between gap-2 border-b border-slate-200/70 bg-white/80 px-4 py-4.5 backdrop-blur-sm">
+                <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-background/80 px-4 py-4.5 backdrop-blur-sm">
                   <div className="flex items-center gap-3">
                     <div
                       className={`h-2.5 w-2.5 rounded-full shadow-sm ${statusLaneColors[column.status]}`}
                     />
-                    <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                       {column.label}
                     </span>
                   </div>
@@ -250,16 +250,16 @@ export function TaskKanban({
                 <div className="flex-1 space-y-4 p-4">
                   {column.items.length === 0 ? (
                     <div className={cn(
-                      'flex h-32 flex-col items-center justify-center rounded-[1.15rem] border border-dashed border-slate-200/80 bg-white/70 p-4 text-center transition-colors',
+                      'flex h-32 flex-col items-center justify-center rounded-[1.15rem] border border-dashed border-border/60 bg-background/70 p-4 text-center transition-colors',
                       isDragTarget && "border-primary/40 bg-primary/5"
                     )}>
                       {draggedTask ? (
                         <>
-                          <GripVertical className="mb-1 h-5 w-5 text-slate-400" />
-                          <p className="text-xs font-medium text-slate-500">Drop to move</p>
+                          <GripVertical className="mb-1 h-5 w-5 text-muted-foreground" />
+                          <p className="text-xs font-medium text-muted-foreground">Drop to move</p>
                         </>
                       ) : (
-                        <p className="text-xs font-medium italic text-slate-500">Drop tasks here</p>
+                        <p className="text-xs font-medium italic text-muted-foreground">Drop tasks here</p>
                       )}
                     </div>
                   ) : (
@@ -287,14 +287,14 @@ export function TaskKanban({
                             type="button"
                             onClick={() => toggleCollapsed(task.id)}
                             className={cn(
-                              'flex w-full flex-col gap-3 rounded-[1.35rem] border border-slate-200/80 bg-gradient-to-b from-white via-white to-slate-50/70 p-4 text-left shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
+                              'flex w-full flex-col gap-3 rounded-[1.35rem] border border-border/60 bg-gradient-to-b from-background via-background to-muted/20 p-4 text-left shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
                               pendingStatusUpdates.has(task.id) && 'pointer-events-none opacity-75'
                             )}
                             aria-label={`Expand task ${task.title}`}
                           >
                             <div className="flex items-start justify-between gap-3">
-                              <h3 className="line-clamp-2 text-base font-bold leading-tight text-slate-900">{task.title}</h3>
-                              <ChevronsUpDown className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                              <h3 className="line-clamp-2 text-base font-bold leading-tight text-foreground">{task.title}</h3>
+                              <ChevronsUpDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                             </div>
                             <div className={cn('inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold', taskPillColors.neutral)}>
                               <Calendar className="h-3.5 w-3.5" />
@@ -330,7 +330,7 @@ export function TaskKanban({
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                className="h-9 rounded-xl text-slate-600 hover:text-slate-900"
+                                className="h-9 rounded-xl text-muted-foreground hover:text-foreground"
                                 onClick={() => toggleCollapsed(task.id)}
                               >
                                 <ChevronsDownUp className="mr-2 h-4 w-4" />
@@ -351,7 +351,7 @@ export function TaskKanban({
 
       {hasMore && (
         <div className="flex justify-center pt-2">
-          <Button variant="ghost" className="h-10 gap-2 rounded-xl px-6 font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900" onClick={onLoadMore} disabled={loadingMore || loading}>
+          <Button variant="ghost" className="h-10 gap-2 rounded-xl px-6 font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground" onClick={onLoadMore} disabled={loadingMore || loading}>
             {loadingMore ? (
               <LoaderCircle className="h-4 w-4 animate-spin text-primary" />
             ) : null}

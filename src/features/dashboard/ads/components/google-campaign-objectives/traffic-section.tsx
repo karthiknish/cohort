@@ -20,7 +20,7 @@ export function GoogleTrafficSection({ formData, onChange, disabled }: GoogleObj
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <ExternalLink className="w-4 h-4 text-amber-500" />
+            <ExternalLink className="w-4 h-4 text-info" />
             Bidding Strategy
           </CardTitle>
           <CardDescription>
@@ -57,7 +57,7 @@ export function GoogleTrafficSection({ formData, onChange, disabled }: GoogleObj
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Link2 className="w-4 h-4 text-amber-500" />
+            <Link2 className="w-4 h-4 text-info" />
             Landing Page
           </CardTitle>
           <CardDescription>
@@ -97,10 +97,10 @@ export function GoogleTrafficSection({ formData, onChange, disabled }: GoogleObj
       </Card>
 
       {/* Tips */}
-      <Card className="border-amber-500/20 bg-amber-500/5">
+      <Card className="border-warning/20 bg-warning/5">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <ExternalLink className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <ExternalLink className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Traffic Campaign Best Practices</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">

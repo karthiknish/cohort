@@ -111,8 +111,8 @@ export function ProgressBar({
   
   const variantColors = {
     default: 'bg-primary',
-    success: 'bg-emerald-500',
-    warning: 'bg-amber-500',
+    success: 'bg-success',
+    warning: 'bg-warning',
     error: 'bg-destructive',
   }
 

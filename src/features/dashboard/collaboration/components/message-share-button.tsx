@@ -79,13 +79,13 @@ export function ShareMessageButton({ message, onShare, sharedTo = EMPTY_SHARED_T
           >
             <Mail className="h-4 w-4" />
             <span>Share via Email</span>
-            {isSharedToEmail && <span className="ml-auto text-xs text-green-600">✓</span>}
+            {isSharedToEmail && <span className="ml-auto text-xs text-success">✓</span>}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       {shareError && (
-        <span className="text-xs text-red-500">{shareError}</span>
+        <span className="text-xs text-destructive">{shareError}</span>
       )}
     </TooltipProvider>
   )
@@ -108,7 +108,7 @@ export function SharedPlatformIcons({ sharedTo }: SharedPlatformIconsProps) {
       <TooltipProvider delayDuration={200}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center justify-center w-5 h-5 text-blue-500">
+            <div className="flex h-5 w-5 items-center justify-center text-info">
               <Mail className="h-4 w-4" />
             </div>
           </TooltipTrigger>

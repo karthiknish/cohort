@@ -135,7 +135,7 @@ export function DashboardFilterBar({
       </div>
 
       {!canCompare && (
-        <p className="basis-full text-xs text-amber-600">
+        <p className="basis-full text-xs text-warning">
           Need admin access to compare multiple workspaces. You can still adjust the period.
         </p>
       )}

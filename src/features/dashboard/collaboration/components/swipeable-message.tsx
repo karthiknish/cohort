@@ -67,13 +67,13 @@ export function SwipeableMessage({
         <div
           className={cn(
             'absolute inset-y-0 z-10 flex items-center gap-2 px-4',
-            pendingAction === 'reply' ? 'left-0 bg-blue-500/20' : 'right-0 bg-red-500/20'
+            pendingAction === 'reply' ? 'left-0 bg-info/10' : 'right-0 bg-destructive/10'
           )}
         >
           {pendingAction === 'reply' && (
             <>
-              <Reply className="h-5 w-5 text-blue-500" />
-              <span className="text-sm text-blue-500 font-medium">Reply</span>
+              <Reply className="h-5 w-5 text-info" />
+              <span className="text-sm font-medium text-info">Reply</span>
               <Button size="sm" variant="ghost" onClick={handleConfirmAction}>
                 <Check className="h-4 w-4" />
               </Button>
@@ -84,8 +84,8 @@ export function SwipeableMessage({
           )}
           {pendingAction === 'delete' && (
             <>
-              <Trash2 className="h-5 w-5 text-red-500" />
-              <span className="text-sm text-red-500 font-medium">Delete</span>
+              <Trash2 className="h-5 w-5 text-destructive" />
+              <span className="text-sm font-medium text-destructive">Delete</span>
               <Button size="sm" variant="ghost" onClick={handleConfirmAction}>
                 <Check className="h-4 w-4" />
               </Button>

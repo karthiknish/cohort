@@ -92,10 +92,10 @@ export function ComparisonTable({ rows, loading, hasSelection }: ComparisonTable
                 <span className={cn(
                   'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset',
                   row.roas !== Number.POSITIVE_INFINITY && row.roas < 1
-                    ? 'bg-rose-50 text-rose-700 ring-rose-600/20'
+                    ? 'bg-destructive/10 text-destructive ring-destructive/20'
                     : row.roas > 2
-                      ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
-                      : 'bg-gray-50 text-gray-600 ring-gray-500/10',
+                      ? 'bg-success/10 text-success ring-success/20'
+                      : 'bg-muted/50 text-muted-foreground ring-border/40',
                 )}>
                   {formatRoas(row.roas)}
                 </span>
@@ -109,4 +109,3 @@ export function ComparisonTable({ rows, loading, hasSelection }: ComparisonTable
     </div>
   )
 }
-

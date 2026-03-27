@@ -22,7 +22,7 @@ export function ProposalHistoryHeader({
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium">{isLoading ? 'Refreshing proposals…' : `${proposalCount} total proposals`}</span>
         {!isLoading && proposalCount > 0 ? (
-          <Badge variant="secondary" className="h-4 bg-primary/5 px-1.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+          <Badge variant="secondary" className="h-4 bg-info/5 px-1.5 text-[10px] font-bold uppercase tracking-wider text-info">
             Active
           </Badge>
         ) : null}
@@ -48,8 +48,8 @@ export function ProposalHistoryEmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-muted/50 bg-muted/5 p-12 text-center">
-      <div className="mb-4 rounded-full bg-primary/10 p-4">
-        <FileText className="h-8 w-8 text-primary/60" />
+      <div className="mb-4 rounded-full bg-info/10 p-4">
+        <FileText className="h-8 w-8 text-info/60" />
       </div>
       <h3 className="mb-2 text-lg font-semibold tracking-tight">No proposals yet</h3>
       <p className="mb-6 max-w-[280px] text-sm text-muted-foreground">
@@ -92,8 +92,8 @@ export function ProposalHistoryRow({
   return (
     <div
       className={cn(
-        'group relative rounded-xl border bg-card p-5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:border-primary/20 hover:shadow-sm',
-        isActiveDraft && 'border-primary bg-primary/[0.01] shadow-[0_0_0_1px_rgba(var(--primary),0.05)]',
+        'group relative rounded-xl border bg-card p-5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:border-info/20 hover:shadow-sm',
+        isActiveDraft && 'border-info bg-info/[0.01] shadow-[0_0_0_1px_hsl(var(--info)/0.05)]',
       )}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -104,15 +104,15 @@ export function ProposalHistoryRow({
               variant={proposal.status === 'ready' ? 'default' : 'outline'}
               className={cn(
                 'h-5 px-2 text-[10px] font-bold uppercase tracking-wider',
-                proposal.status === 'ready' && 'border-none bg-emerald-500 hover:bg-emerald-600',
-                proposal.status === 'sent' && 'border-none bg-purple-500 text-white hover:bg-purple-600',
+                proposal.status === 'ready' && 'border-none bg-success hover:bg-success/90',
+                proposal.status === 'sent' && 'border-none bg-accent text-accent-foreground hover:bg-accent/90',
                 proposal.status === 'draft' && 'border-muted-foreground/30 text-muted-foreground',
               )}
             >
               {proposal.status}
             </Badge>
             {isActiveDraft && proposal.status !== 'ready' ? (
-              <Badge variant="secondary" className="h-5 border-none bg-orange-100 px-2 text-[10px] font-bold uppercase tracking-wider text-orange-700 hover:bg-orange-100">
+              <Badge variant="secondary" className="h-5 border-none bg-warning/10 px-2 text-[10px] font-bold uppercase tracking-wider text-warning hover:bg-warning/10">
                 Active draft
               </Badge>
             ) : null}
@@ -157,7 +157,7 @@ export function ProposalHistoryRow({
             </div>
           ) : deckRequestable ? (
             <Button size="sm" variant="outline" onClick={() => onDownloadDeck(proposal)} disabled={isDeckPreparing} className="h-9 border-dashed px-4">
-              {isDeckPreparing ? <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" /> : <FileText className="mr-2 h-3.5 w-3.5 text-primary" />}
+              {isDeckPreparing ? <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" /> : <FileText className="mr-2 h-3.5 w-3.5 text-info" />}
               {isDeckPreparing ? 'Preparing…' : 'Generate Deck'}
             </Button>
           ) : null}

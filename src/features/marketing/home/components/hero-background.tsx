@@ -1,6 +1,6 @@
 'use client'
 
-import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { LazyMotion, domAnimation, m } from '@/shared/ui/motion'
 
 import { motionEasing, motionLoopSeconds } from '@/lib/animation-system'
 
@@ -18,7 +18,7 @@ const orbs = [
     id: 'hero-orb-accent-top',
     size: 220,
     blur: 'blur-2xl',
-    gradient: 'from-fuchsia-400/30 via-primary/20 to-transparent',
+    gradient: 'from-accent/30 via-primary/20 to-transparent',
     initial: { x: 40, y: -60, scale: 0.85 },
     animate: { x: 20, y: -30, scale: 1 },
     delay: 1.5,
@@ -27,7 +27,7 @@ const orbs = [
     id: 'hero-orb-warm-right',
     size: 200,
     blur: 'blur-3xl',
-    gradient: 'from-amber-400/20 via-primary/10 to-transparent',
+    gradient: 'from-warning/20 via-primary/10 to-transparent',
     initial: { x: 140, y: 160, scale: 0.8 },
     animate: { x: 120, y: 130, scale: 0.94 },
     delay: 3,

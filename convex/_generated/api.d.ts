@@ -86,7 +86,6 @@ import type * as collaborationMessages_readTracking from "../collaborationMessag
 import type * as collaborationMessages_shared from "../collaborationMessages/shared.js";
 import type * as collaborationMessages_syncAndPins from "../collaborationMessages/syncAndPins.js";
 import type * as collaborationTyping from "../collaborationTyping.js";
-import type * as conversationRouting from "../conversationRouting.js";
 import type * as creativesCopy from "../creativesCopy.js";
 import type * as crons from "../crons.js";
 import type * as customFormulas from "../customFormulas.js";
@@ -100,10 +99,8 @@ import type * as geminiRateLimit from "../geminiRateLimit.js";
 import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as httpActions from "../httpActions.js";
-import type * as inboxItems from "../inboxItems.js";
 import type * as meetingIntegrations from "../meetingIntegrations.js";
 import type * as meetings from "../meetings.js";
-import type * as messageAnalytics from "../messageAnalytics.js";
 import type * as notificationTargeting from "../notificationTargeting.js";
 import type * as notifications from "../notifications.js";
 import type * as onboardingStates from "../onboardingStates.js";
@@ -219,7 +216,6 @@ declare const fullApi: ApiFromModules<{
   "collaborationMessages/shared": typeof collaborationMessages_shared;
   "collaborationMessages/syncAndPins": typeof collaborationMessages_syncAndPins;
   collaborationTyping: typeof collaborationTyping;
-  conversationRouting: typeof conversationRouting;
   creativesCopy: typeof creativesCopy;
   crons: typeof crons;
   customFormulas: typeof customFormulas;
@@ -233,10 +229,8 @@ declare const fullApi: ApiFromModules<{
   health: typeof health;
   http: typeof http;
   httpActions: typeof httpActions;
-  inboxItems: typeof inboxItems;
   meetingIntegrations: typeof meetingIntegrations;
   meetings: typeof meetings;
-  messageAnalytics: typeof messageAnalytics;
   notificationTargeting: typeof notificationTargeting;
   notifications: typeof notifications;
   onboardingStates: typeof onboardingStates;

@@ -1,7 +1,6 @@
 import { query } from './_generated/server'
 import { v } from 'convex/values'
 import {
-  zAuthenticatedMutation,
   zWorkspaceMutation,
   zWorkspaceQuery,
   zWorkspaceQueryActive,
@@ -333,112 +332,6 @@ export const softDelete = zWorkspaceMutation({
     })
 
     return client.legacyId
-  },
-})
-
-export const upsert = zWorkspaceMutation({
-  args: {
-    workspaceId: z.string(),
-    legacyId: z.string(),
-    name: z.string(),
-    accountManager: z.string(),
-    teamMembers: z.array(
-      z.object({
-        name: z.string(),
-        role: z.string(),
-      })
-    ),
-    createdBy: z.string().nullable(),
-    createdAtMs: z.number(),
-    updatedAtMs: z.number(),
-    deletedAtMs: z.number().nullable(),
-  },
-  returns: z.string(),
-  handler: async (ctx, args) => {
-    const existing = await ctx.db
-      .query('clients')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
-      .unique()
-
-    const payload = {
-      workspaceId: args.workspaceId,
-      legacyId: args.legacyId,
-      name: args.name,
-      nameLower: args.name.toLowerCase(),
-      accountManager: args.accountManager,
-      teamMembers: args.teamMembers,
-      createdBy: args.createdBy,
-      createdAtMs: args.createdAtMs,
-      updatedAtMs: args.updatedAtMs,
-      deletedAtMs: args.deletedAtMs,
-    }
-
-    if (existing) {
-      await ctx.db.patch(existing._id, payload)
-      return args.legacyId
-    }
-
-    await ctx.db.insert('clients', payload)
-    return args.legacyId
-  },
-})
-
-export const bulkUpsert = zAuthenticatedMutation({
-  args: {
-    clients: z.array(
-      z.object({
-        workspaceId: z.string(),
-        legacyId: z.string(),
-        name: z.string(),
-        accountManager: z.string(),
-        teamMembers: z.array(
-          z.object({
-            name: z.string(),
-            role: z.string(),
-          })
-        ),
-        createdBy: z.string().nullable(),
-        createdAtMs: z.number(),
-        updatedAtMs: z.number(),
-        deletedAtMs: z.number().nullable(),
-      })
-    ),
-  },
-  returns: z.object({ upserted: z.number() }),
-  handler: async (ctx, args) => {
-    let upserted = 0
-
-    for (const client of args.clients) {
-      const existing = await ctx.db
-        .query('clients')
-        .withIndex('by_workspace_legacyId', (q) =>
-          q.eq('workspaceId', client.workspaceId).eq('legacyId', client.legacyId)
-        )
-        .unique()
-
-      const payload = {
-        workspaceId: client.workspaceId,
-        legacyId: client.legacyId,
-        name: client.name,
-        nameLower: client.name.toLowerCase(),
-        accountManager: client.accountManager,
-        teamMembers: client.teamMembers,
-        createdBy: client.createdBy,
-        createdAtMs: client.createdAtMs,
-        updatedAtMs: client.updatedAtMs,
-        deletedAtMs: client.deletedAtMs,
-      }
-
-      if (existing) {
-        await ctx.db.patch(existing._id, payload)
-      } else {
-        await ctx.db.insert('clients', payload)
-      }
-
-      upserted += 1
-    }
-
-    return { upserted }
   },
 })
 

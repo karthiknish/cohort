@@ -141,7 +141,7 @@ export function AudienceEditorSection({
                     <div className="flex flex-wrap gap-1.5">
                       {aggregatedData.interests.map((interest) => (
                         <Badge key={interest.id} variant="outline" className="text-xs group">
-                          <Heart className="h-3 w-3 mr-1 text-pink-500" />
+                          <Heart className="h-3 w-3 mr-1 text-accent" />
                           {interest.name}
                           {editingSection === 'interests' && (
                             <button
@@ -170,7 +170,7 @@ export function AudienceEditorSection({
                         <div className="flex flex-wrap gap-1.5">
                           {categorized[category]!.map((interest) => (
                             <Badge key={interest.id} variant="outline" className="text-xs group">
-                              <Heart className="h-3 w-3 mr-1 text-pink-500" />
+                              <Heart className="h-3 w-3 mr-1 text-accent" />
                               {interest.name}
                               {editingSection === 'interests' && (
                                 <button

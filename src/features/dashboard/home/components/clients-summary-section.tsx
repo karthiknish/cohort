@@ -63,9 +63,9 @@ function getInitials(name: string): string {
 
 // Deterministic color assignment — uses same tokens as badge semantic variants
 const AVATAR_COLORS = [
-  'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100',
-  'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100',
-  'bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-100',
+  'bg-success/10 text-success',
+  'bg-warning/10 text-warning',
+  'bg-info/10 text-info',
   'bg-secondary/80 text-foreground',
 ]
 
@@ -75,7 +75,7 @@ function avatarColor(name: string): string {
     hash = (hash * 31 + name.charCodeAt(i)) >>> 0
   }
   const color = AVATAR_COLORS[hash % AVATAR_COLORS.length]
-  return color ?? 'bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300'
+  return color ?? 'bg-muted/50 text-muted-foreground'
 }
 
 function ClientSummaryCard({ client }: { client: ClientSummary }) {
@@ -135,7 +135,7 @@ function ClientSummaryCard({ client }: { client: ClientSummary }) {
             <span
               className={cn(
                 'h-1.5 w-1.5 rounded-full',
-                hasMeeting ? 'bg-emerald-500' : 'bg-muted-foreground/40'
+                hasMeeting ? 'bg-success' : 'bg-muted-foreground/40'
               )}
             />
             <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">

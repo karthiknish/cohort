@@ -28,8 +28,8 @@ export function ProposalDraftStatusStrip({
               : autosaveStatus === 'error'
                 ? 'bg-destructive'
                 : autosaveStatus === 'idle'
-                  ? 'bg-amber-500'
-                  : 'bg-emerald-500',
+                  ? 'bg-warning'
+                  : 'bg-success',
           )}
         />
         <span>{autosaveLabel}</span>
@@ -110,7 +110,7 @@ export function ProposalDraftFooter({
           disabled={isSubmitting}
           className={cn(
             'h-10 px-8 font-semibold shadow-lg transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] active:scale-[0.98]',
-            isLastStep && 'bg-emerald-600 shadow-emerald-500/20 hover:bg-emerald-700',
+            isLastStep && 'bg-success shadow-success/20 hover:bg-success/90',
           )}
         >
           {isLastStep ? (

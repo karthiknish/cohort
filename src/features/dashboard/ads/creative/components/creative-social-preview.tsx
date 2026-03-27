@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import NextImage from 'next/image'
-import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
+import { AnimatePresence, LazyMotion, domAnimation, m } from '@/shared/ui/motion'
 import {
   fadeInUpVariants,
   slideInLeftVariants,
@@ -79,7 +79,7 @@ export function CreativeSocialPreview(props: {
   const renderMedia = () => {
     if (creative.videoUrl && isDirectVideoUrl(creative.videoUrl)) {
       return (
-        <div className={cn("relative bg-black overflow-hidden group/video", mediaAspectClass)}>
+        <div className={cn("relative bg-foreground overflow-hidden group/video", mediaAspectClass)}>
           <video
             ref={videoRef}
             src={creative.videoUrl}
@@ -97,8 +97,8 @@ export function CreativeSocialPreview(props: {
             onClick={togglePlayPause}
             className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/video:opacity-100 transition-opacity duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
           >
-            <div className="h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl">
-              {isPlaying ? <Pause className="h-6 w-6 text-white" /> : <Play className="h-6 w-6 text-white ml-1" />}
+            <div className="h-14 w-14 rounded-full bg-background/40 backdrop-blur-xl border border-background/20 flex items-center justify-center shadow-2xl">
+              {isPlaying ? <Pause className="h-6 w-6 text-background" /> : <Play className="h-6 w-6 text-background ml-1" />}
             </div>
           </button>
         </div>
@@ -107,7 +107,7 @@ export function CreativeSocialPreview(props: {
 
     if (creative.videoUrl) {
       return (
-        <div className={cn("relative bg-black flex items-center justify-center overflow-hidden group", mediaAspectClass)}>
+        <div className={cn("relative bg-foreground flex items-center justify-center overflow-hidden group", mediaAspectClass)}>
           {creative.imageUrl && !imageLoadFailed ? (
             <NextImage
               src={creative.imageUrl}
@@ -122,7 +122,7 @@ export function CreativeSocialPreview(props: {
           ) : (
             <div className="text-muted-foreground flex flex-col items-center">
               <Video className="h-10 w-10 mb-2 opacity-20" />
-              <p className="text-[10px] text-white/40 uppercase tracking-widest font-black">Video Preview</p>
+              <p className="text-[10px] text-background/40 uppercase tracking-widest font-black">Video Preview</p>
             </div>
           )}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none">
@@ -130,13 +130,13 @@ export function CreativeSocialPreview(props: {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             variants={scaleVariants}
-            className="h-14 w-14 rounded-full bg-black/40 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-2xl cursor-pointer"
+            className="h-14 w-14 rounded-full bg-background/40 backdrop-blur-xl border border-background/20 flex items-center justify-center shadow-2xl cursor-pointer"
           >
-              <Video className="h-6 w-6 text-white" />
+              <Video className="h-6 w-6 text-background" />
             </m.div>
           </div>
           <div className="absolute bottom-4 left-4 flex gap-2">
-            <div className="rounded-md bg-black/60 backdrop-blur-md text-white px-2 py-0.5 text-[8px] font-black tracking-widest uppercase border border-white/10">
+            <div className="rounded-md bg-foreground/60 backdrop-blur-md text-background px-2 py-0.5 text-[8px] font-black tracking-widest uppercase border border-background/10">
               4K Stream
             </div>
           </div>
@@ -164,7 +164,7 @@ export function CreativeSocialPreview(props: {
               style={{ imageRendering: 'crisp-edges' }}
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none" />
         </div>
       )
     }
@@ -193,7 +193,7 @@ export function CreativeSocialPreview(props: {
             <div className="bg-background rounded-tr-[2.5rem] rounded-tl-[2.5rem] overflow-hidden">
               <div className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] p-[2px] overflow-hidden shrink-0">
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-warning via-destructive to-primary p-[2px] overflow-hidden shrink-0">
                     <div className="h-full w-full rounded-full bg-background flex items-center justify-center text-[10px] font-black overflow-hidden border border-background">
                       {creative.pageProfileImageUrl && !profileImageError ? (
                         <NextImage
@@ -251,7 +251,7 @@ export function CreativeSocialPreview(props: {
           {activePlatform === 'linkedin' && (
             <div className="bg-background rounded-tr-[2.5rem] rounded-tl-[2.5rem] overflow-hidden text-left">
               <div className="p-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-[#0077b5] flex items-center justify-center text-white font-black text-lg overflow-hidden shrink-0">
+                <div className="h-10 w-10 rounded-lg bg-info flex items-center justify-center text-info-foreground font-black text-lg overflow-hidden shrink-0">
                   {creative.pageProfileImageUrl && !profileImageError ? (
                     <NextImage
                       src={creative.pageProfileImageUrl}
@@ -287,7 +287,7 @@ export function CreativeSocialPreview(props: {
                   <p className="text-[11px] opacity-50 truncate font-medium uppercase tracking-wider">{new URL(creative.landingPageUrl || 'https://learnmore.com').hostname}</p>
                 </div>
                 {creative.callToAction && (
-                  <Button variant="outline" className="h-9 px-4 text-[11px] font-black uppercase tracking-widest border-[#0077b5] text-[#0077b5] hover:bg-[#0077b5]/5 shrink-0 rounded-full">
+                  <Button variant="outline" className="h-9 px-4 text-[11px] font-black uppercase tracking-widest border-info text-info hover:bg-info/10 shrink-0 rounded-full">
                     {formatCTALabel(creative.callToAction)}
                   </Button>
                 )}
@@ -305,7 +305,7 @@ export function CreativeSocialPreview(props: {
             <div className="bg-background rounded-tr-[2.5rem] rounded-tl-[2.5rem] overflow-hidden text-left">
               <div className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-black text-white flex items-center justify-center font-black text-sm overflow-hidden shrink-0">
+                  <div className="h-10 w-10 rounded-full bg-foreground text-background flex items-center justify-center font-black text-sm overflow-hidden shrink-0">
                     {creative.pageProfileImageUrl && !profileImageError ? (
                       <NextImage
                         src={creative.pageProfileImageUrl}
@@ -340,13 +340,13 @@ export function CreativeSocialPreview(props: {
 
                 <div className="space-y-1.5">
                   <p className="text-[13px] font-bold truncate">{creative.headlines?.[0] || displayName}</p>
-                  <p className="text-xs leading-relaxed line-clamp-3 text-black/80">
+                  <p className="text-xs leading-relaxed line-clamp-3 text-foreground/80">
                     {creative.descriptions?.[0] || 'No description available.'}
                   </p>
                 </div>
 
                 {creative.callToAction && (
-                  <Button className="w-full h-10 rounded-xl bg-black text-white hover:bg-black/90 text-[11px] font-black uppercase tracking-widest">
+                  <Button className="w-full h-10 rounded-xl bg-foreground text-background hover:bg-foreground/90 text-[11px] font-black uppercase tracking-widest">
                     {formatCTALabel(creative.callToAction)}
                   </Button>
                 )}
@@ -358,7 +358,7 @@ export function CreativeSocialPreview(props: {
             <div className="bg-background flex flex-col relative">
               {/* Account Header */}
               <div className="p-4 flex items-center gap-3 bg-background z-10">
-                <div className="h-10 w-10 rounded-full bg-[#1877F2] flex items-center justify-center text-white font-black text-lg shadow-inner overflow-hidden shrink-0 border border-black/5">
+                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-lg shadow-inner overflow-hidden shrink-0 border border-border/20">
                   {creative.pageProfileImageUrl && !profileImageError ? (
                     <NextImage
                       src={creative.pageProfileImageUrl}
@@ -375,16 +375,16 @@ export function CreativeSocialPreview(props: {
                   )}
                 </div>
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="text-[13px] font-bold leading-tight truncate text-black/90">{creative.pageName || creative.campaignName || campaignName}</p>
-                  <p className="text-[11px] opacity-60 flex items-center gap-1 font-medium text-black/60">
+                  <p className="text-[13px] font-bold leading-tight truncate text-foreground">{creative.pageName || creative.campaignName || campaignName}</p>
+                  <p className="text-[11px] opacity-60 flex items-center gap-1 font-medium text-muted-foreground">
                     Sponsored · <Globe className="h-2.5 w-2.5" />
                   </p>
                 </div>
-                <MoreHorizontal className="h-5 w-5 opacity-40 shrink-0 text-black" />
+                <MoreHorizontal className="h-5 w-5 opacity-40 shrink-0 text-foreground" />
               </div>
 
               {/* Caption */}
-              <div className="px-4 pb-4 text-[13px] leading-relaxed line-clamp-2 text-black/80 z-10 text-left">
+              <div className="px-4 pb-4 text-[13px] leading-relaxed line-clamp-2 text-foreground/80 z-10 text-left">
                 {creative.descriptions?.[0] || 'No primary text available.'}
               </div>
 
@@ -394,13 +394,13 @@ export function CreativeSocialPreview(props: {
               </div>
 
               {/* CTA Section */}
-              <div className="p-4 bg-[#F0F2F5] border-t border-black/5 flex items-center justify-between z-10">
+              <div className="p-4 bg-muted/40 border-t border-border/20 flex items-center justify-between z-10">
                 <div className="min-w-0 pr-4 space-y-0.5">
                   <p className="text-[9px] uppercase opacity-40 font-black tracking-widest">{new URL(creative.landingPageUrl || `https://${(creative.pageName || campaignName).replace(/\s+/g, '').toLowerCase()}.com`).hostname}</p>
                   <p className="text-sm font-bold truncate tracking-tight">{creative.headlines?.[0] || displayName}</p>
                 </div>
                 {creative.callToAction && (
-                  <Button className="h-9 px-5 text-xs font-black uppercase tracking-widest bg-[#E4E6EB]/50 text-black hover:bg-[#D8DADF] shrink-0 border-none shadow-none rounded-lg">
+                  <Button className="h-9 px-5 text-xs font-black uppercase tracking-widest bg-secondary text-secondary-foreground hover:bg-secondary/80 shrink-0 border-none shadow-none rounded-lg">
                     {formatCTALabel(creative.callToAction)}
                   </Button>
                 )}
@@ -521,7 +521,7 @@ export function CreativeSocialPreview(props: {
           variants={fadeInUpVariants}
           transition={{ ...transitions.slow, delay: 0.2 }}
         >
-          <Card className="border-none bg-gradient-to-br from-primary/[0.08] to-primary/[0.02] shadow-[0_20px_50px_-10px_rgba(var(--primary),0.1)] rounded-[2.5rem] overflow-hidden">
+          <Card className="border border-border/60 bg-card shadow-lg rounded-[2.5rem] overflow-hidden">
             <CardHeader className="pb-4 pt-8 px-8">
               <CardTitle className="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-3 text-primary/80">
                 <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -557,7 +557,7 @@ export function CreativeSocialPreview(props: {
                     initial={{ width: 0 }}
                     animate={{ width: `${efficiencyScore}%` }}
                     transition={{ duration: efficiencyBarDurationSeconds, ease: easings.easeOut }}
-                    className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full shadow-[0_0_20px_rgba(var(--primary),0.5)]"
+                    className="h-full bg-info rounded-full shadow-sm"
                   />
                 </div>
                 <div className="flex justify-between text-[9px] font-black uppercase tracking-widest opacity-30">

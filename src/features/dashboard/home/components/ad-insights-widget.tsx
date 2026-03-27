@@ -96,10 +96,10 @@ function InsightLevelIcon({ level }: { level: AlgorithmicInsight['level'] }) {
 
 function CompactInsightItem({ insight }: { insight: AlgorithmicInsight }) {
   const levelStyles = {
-    success: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30',
-    info: 'text-blue-600 bg-blue-50 dark:bg-blue-950/30',
-    warning: 'text-amber-600 bg-amber-50 dark:bg-amber-950/30',
-    critical: 'text-red-600 bg-red-50 dark:bg-red-950/30',
+    success: 'text-success bg-success/10',
+    info: 'text-info bg-info/10',
+    warning: 'text-warning bg-warning/10',
+    critical: 'text-destructive bg-destructive/10',
   }
 
   return (
@@ -138,7 +138,7 @@ function EfficiencyScoreMini({ score }: { score: number }) {
         <circle
           className={cn(
             'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
-            score > 70 ? 'stroke-emerald-500' : score > 40 ? 'stroke-amber-500' : 'stroke-red-500'
+            score > 70 ? 'stroke-success' : score > 40 ? 'stroke-warning' : 'stroke-destructive'
           )}
           strokeWidth="3"
           strokeDasharray={circumference}
@@ -238,7 +238,7 @@ export function AdInsightsWidget({
       <Card className="shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Lightbulb className="h-4 w-4 text-amber-500" />
+            <Lightbulb className="h-4 w-4 text-warning" />
             Ad Insights
           </CardTitle>
         </CardHeader>
@@ -263,7 +263,7 @@ export function AdInsightsWidget({
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Lightbulb className="h-4 w-4 text-amber-500" />
+            <Lightbulb className="h-4 w-4 text-warning" />
             Ad Insights
             {actionCount > 0 && (
               <Badge
@@ -271,8 +271,8 @@ export function AdInsightsWidget({
                 className={cn(
                   'text-xs',
                   hasCriticalInsights
-                    ? 'border-red-500/50 text-red-600'
-                    : 'border-amber-500/50 text-amber-600'
+                    ? 'border-destructive/50 text-destructive'
+                    : 'border-warning/50 text-warning'
                 )}
               >
                 {actionCount} action{actionCount !== 1 ? 's' : ''}
@@ -292,7 +292,7 @@ export function AdInsightsWidget({
       <CardContent className="space-y-1 pt-0">
         {insights.length === 0 ? (
           <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-            <CircleCheck className="h-4 w-4 text-emerald-500" />
+            <CircleCheck className="h-4 w-4 text-success" />
             <span>All campaigns performing well</span>
           </div>
         ) : (

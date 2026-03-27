@@ -130,7 +130,7 @@ export default function AdminIssuesPage() {
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
       case 'critical': return <Badge variant="destructive">Critical</Badge>
-      case 'high': return <Badge className="bg-orange-500 hover:bg-orange-600">High</Badge>
+      case 'high': return <Badge className="bg-warning/10 text-warning border border-warning/20 hover:bg-warning/20">High</Badge>
       case 'medium': return <Badge variant="secondary">Medium</Badge>
       case 'low': return <Badge variant="outline">Low</Badge>
       default: return <Badge>{severity}</Badge>
@@ -139,9 +139,9 @@ export default function AdminIssuesPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'resolved': return <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-      case 'in-progress': return <Clock className="h-4 w-4 text-blue-500" />
-      case 'open': return <AlertCircle className="h-4 w-4 text-orange-500" />
+      case 'resolved': return <CheckCircle2 className="h-4 w-4 text-success" />
+      case 'in-progress': return <Clock className="h-4 w-4 text-info" />
+      case 'open': return <AlertCircle className="h-4 w-4 text-warning" />
       default: return null
     }
   }

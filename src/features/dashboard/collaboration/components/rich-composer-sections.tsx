@@ -11,7 +11,7 @@ import {
   type RefObject,
 } from 'react'
 
-import EmojiPicker, { Theme, type EmojiClickData } from 'emoji-picker-react'
+import EmojiPicker, { Theme, type EmojiClickData } from '@/shared/ui/emoji-picker'
 import { AtSign, Bold, Code, Italic, List, ListOrdered, Paperclip, Quote, Smile, Upload } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'

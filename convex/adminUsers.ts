@@ -143,53 +143,6 @@ export const listUsers = adminPaginatedQuery({
   },
 })
 
-export const getUserCounts = adminQuery({
-  args: {},
-  returns: v.object({
-    total: v.number(),
-    activeTotal: v.number(),
-    suspendedTotal: v.number(),
-    disabledTotal: v.number(),
-  }),
-  handler: async (ctx) => {
-    try {
-      const [all, activeUsers, suspendedUsers, disabledUsers] = await Promise.all([
-        ctx.db.query('users').withIndex('by_createdAtMs', (q) => q).collect(),
-        ctx.db.query('users').withIndex('by_status_updatedAtMs', (q) => q.eq('status', 'active')).collect(),
-        ctx.db.query('users').withIndex('by_status_updatedAtMs', (q) => q.eq('status', 'suspended')).collect(),
-        ctx.db.query('users').withIndex('by_status_updatedAtMs', (q) => q.eq('status', 'disabled')).collect(),
-      ])
-
-      const total = all.length
-      const activeTotal = activeUsers.length
-      const suspendedTotal = suspendedUsers.length
-      const disabledTotal = disabledUsers.length
-
-      return { total, activeTotal, suspendedTotal, disabledTotal }
-    } catch (error) {
-      throwAdminUsersError('getUserCounts', error)
-    }
-  },
-})
-
-export const setRole = adminMutation({
-  args: { userId: v.id('users'), role: v.string() },
-  returns: v.object({
-    ok: v.literal(true),
-  }),
-  handler: async (ctx, args) => {
-    try {
-      await ctx.db.patch(args.userId, {
-        role: args.role,
-        updatedAtMs: ctx.now,
-      })
-      return { ok: true } as const
-    } catch (error) {
-      throwAdminUsersError('setRole', error, { userId: args.userId, role: args.role })
-    }
-  },
-})
-
 export const updateUserRoleStatus = adminMutation({
   args: {
     legacyId: v.string(),

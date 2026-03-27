@@ -63,12 +63,12 @@ export function TasksCard({ tasks, loading }: TasksCardProps) {
 const TaskItem = memo(function TaskItem({ task }: { task: DashboardTaskItem }) {
   const priorityDotClass =
     task.priority === 'urgent'
-      ? 'bg-rose-500'
+      ? 'bg-destructive'
       : task.priority === 'high'
-        ? 'bg-orange-500'
+        ? 'bg-warning'
         : task.priority === 'medium'
-          ? 'bg-yellow-500'
-          : 'bg-slate-400'
+          ? 'bg-info'
+          : 'bg-muted-foreground/60'
 
   return (
     <div className="group flex items-start gap-3 rounded-lg border border-transparent p-3 transition-colors hover:bg-muted/50 hover:border-border">
@@ -78,8 +78,8 @@ const TaskItem = memo(function TaskItem({ task }: { task: DashboardTaskItem }) {
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="truncate max-w-[120px]">{task.clientName}</span>
           <span>•</span>
-          <span className={cn(
-            task.dueLabel === 'Today' ? 'text-orange-600 font-medium' : ''
+            <span className={cn(
+            task.dueLabel === 'Today' ? 'text-warning font-medium' : ''
           )}>{task.dueLabel}</span>
         </div>
       </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { AlertTriangle, Loader2 } from 'lucide-react'
-import { SiGoogleads } from 'react-icons/si'
+import { Chrome } from 'lucide-react'
 
 import {
   Dialog,
@@ -56,8 +56,8 @@ export function GoogleSetupDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#4285F4]/10 text-[#4285F4]">
-              <SiGoogleads className="h-5 w-5" />
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-info/10 text-info">
+              <Chrome className="h-5 w-5" />
             </span>
             <div>
               <DialogTitle>Complete Google Ads setup</DialogTitle>
@@ -96,7 +96,7 @@ export function GoogleSetupDialog({
               </SelectContent>
             </Select>
             {noAccounts ? (
-              <p className="text-xs text-amber-700">
+              <p className="text-xs text-warning">
                 No Google Ads accounts were found for this token. Verify account permissions, then reload.
               </p>
             ) : null}

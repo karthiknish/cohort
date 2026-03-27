@@ -1,6 +1,6 @@
 'use client'
 
-import { LiveKitRoom } from '@livekit/components-react'
+import { LiveKitRoom } from '@/shared/ui/livekit'
 import {
   AlertTriangle,
   ArrowLeft,

@@ -18,7 +18,7 @@ describe('task form helpers', () => {
   })
 
   it('exposes a dedicated project pill style', () => {
-    expect(taskPillColors.project).toContain('indigo')
+    expect(taskPillColors.project).toContain('bg-primary')
   })
 
   it('merges client members, workspace users, and platform admins for assignment', () => {

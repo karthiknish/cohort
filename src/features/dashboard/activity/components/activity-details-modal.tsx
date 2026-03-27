@@ -82,11 +82,11 @@ export function ActivityDetailsModal({
                     className="flex items-center gap-2 text-sm rounded-lg bg-muted/50 p-2"
                   >
                     <span className="text-muted-foreground">{change.field}:</span>
-                    <span className="line-through text-red-500">
+                    <span className="line-through text-destructive">
                       {change.oldValue}
                     </span>
                     <span>→</span>
-                    <span className="text-green-600">{change.newValue}</span>
+                    <span className="text-success">{change.newValue}</span>
                   </div>
                 ))}
               </div>

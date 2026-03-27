@@ -3,44 +3,39 @@
  * POST /api/integrations/email/send
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest } from '@/lib/server-auth'
 import { z } from 'zod'
+
+import { createApiHandler } from '@/lib/api-handler'
+import { ServiceUnavailableError } from '@/lib/api-errors'
 
 const sendMessageSchema = z.object({
   messageType: z.enum(['task', 'collaboration', 'custom']).default('custom'),
   text: z.string().min(1),
-  metadata: z.object({
-    taskTitle: z.string().optional(),
-    taskDescription: z.string().optional(),
-    assignedTo: z.string().optional(),
-    dueDate: z.string().optional(),
-    senderName: z.string().optional(),
-    conversationUrl: z.string().optional(),
-  }).optional(),
+  metadata: z
+    .object({
+      taskTitle: z.string().optional(),
+      taskDescription: z.string().optional(),
+      assignedTo: z.string().optional(),
+      dueDate: z.string().optional(),
+      senderName: z.string().optional(),
+      conversationUrl: z.string().optional(),
+    })
+    .optional(),
 })
 
-export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request)
-    if (!auth.uid) {
-      return NextResponse.json(
-        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
-    }
-
-    const body = await request.json()
-    const validated = sendMessageSchema.parse(body)
-
-    // Get email webhook URL from environment
+export const POST = createApiHandler(
+  {
+    auth: 'required',
+    bodySchema: sendMessageSchema,
+    rateLimit: 'sensitive',
+    skipIdempotency: true,
+  },
+  async (_request, { body }) => {
+    const validated = body
     const emailWebhookUrl = process.env.EMAIL_WEBHOOK_URL
 
     if (!emailWebhookUrl) {
-      return NextResponse.json(
-        { error: 'Email not configured', code: 'EMAIL_NOT_CONFIGURED' },
-        { status: 400 }
-      )
+      throw new ServiceUnavailableError('Email delivery is not configured')
     }
 
     let emailSubject: string
@@ -67,7 +62,11 @@ export async function POST(request: NextRequest) {
           <blockquote style="border-left: 3px solid #ccc; padding-left: 10px; margin-left: 0;">
             ${validated.text}
           </blockquote>
-          ${validated.metadata?.conversationUrl ? `<p><a href="${validated.metadata.conversationUrl}">View in Dashboard</a></p>` : ''}
+          ${
+            validated.metadata?.conversationUrl
+              ? `<p><a href="${validated.metadata.conversationUrl}">View in Dashboard</a></p>`
+              : ''
+          }
         `
         break
 
@@ -76,7 +75,6 @@ export async function POST(request: NextRequest) {
         emailBody = `<p>${validated.text}</p>`
     }
 
-    // Send email via webhook
     const response = await fetch(emailWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -92,25 +90,12 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text()
-      throw new Error(`Email webhook failed: ${errorText}`)
+      throw new ServiceUnavailableError(`Email webhook failed: ${errorText}`)
     }
 
-    return NextResponse.json({
+    return {
       success: true,
-    })
-  } catch (error) {
-    console.error('[Email API] Error sending message:', error)
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request', details: error.issues, code: 'VALIDATION_ERROR' },
-        { status: 400 }
-      )
+      data: { sent: true },
     }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to send message', code: 'INTERNAL_ERROR' },
-      { status: 500 }
-    )
   }
-}
+)

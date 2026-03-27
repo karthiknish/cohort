@@ -192,39 +192,3 @@ export const invalidate = internalMutation({
     }
   },
 })
-
-/**
- * Clean up expired cache entries.
- * Called periodically by cron or on-demand.
- * Server-side only - no auth required.
- */
-export const cleanupExpired = internalMutation({
-  args: {
-    limit: v.optional(v.number()),
-  },
-  returns: v.object({
-    deleted: v.number(),
-    hasMore: v.boolean(),
-  }),
-  handler: async (ctx, args) => {
-    try {
-      const limit = Math.min(args.limit ?? 500, 1000)
-      const timestamp = nowMs()
-
-      const expired = await ctx.db
-        .query('serverCache')
-        .withIndex('by_expiresAtMs', (q) => q.lt('expiresAtMs', timestamp))
-        .take(limit)
-
-      let deleted = 0
-      for (const entry of expired) {
-        await ctx.db.delete(entry._id)
-        deleted++
-      }
-
-      return { deleted, hasMore: expired.length >= limit }
-    } catch (error) {
-      throwServerCacheError('cleanupExpired', error, { limit: args.limit ?? null })
-    }
-  },
-})

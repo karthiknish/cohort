@@ -21,28 +21,19 @@ type TagManagementProps = {
   className?: string
 }
 
-// Color assignments for tags (consistent colors per tag)
-const TAG_COLORS = [
-  'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-400',
-  'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
-  'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
-  'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
-  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
-  'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
-  'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-400',
-  'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
-  'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
-  'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
-  'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
-  'bg-zinc-100 text-zinc-700 dark:bg-zinc-900/30 dark:text-zinc-400',
+type TagStyle = {
+  chip: string
+  dot: string
+}
+
+// Semantic shadcn token assignments for tags.
+const TAG_STYLES: TagStyle[] = [
+  { chip: 'border-transparent bg-destructive/10 text-destructive dark:bg-destructive/15', dot: 'bg-destructive' },
+  { chip: 'border-transparent bg-primary/10 text-primary dark:bg-primary/15', dot: 'bg-primary' },
+  { chip: 'border-transparent bg-secondary text-secondary-foreground', dot: 'bg-secondary-foreground' },
+  { chip: 'border-transparent bg-accent text-accent-foreground', dot: 'bg-accent-foreground' },
+  { chip: 'border-border bg-background text-foreground', dot: 'bg-foreground' },
+  { chip: 'border-border bg-muted text-muted-foreground', dot: 'bg-muted-foreground' },
 ]
 
 // Get consistent color for a tag based on its name
@@ -51,15 +42,24 @@ function getTagColor(tag: string): string {
   for (let i = 0; i < tag.length; i++) {
     hash = tag.charCodeAt(i) + ((hash << 5) - hash)
   }
-  const color = TAG_COLORS[Math.abs(hash) % TAG_COLORS.length]
-  return color || 'bg-gray-100 text-gray-700'
+  const style = TAG_STYLES[Math.abs(hash) % TAG_STYLES.length]
+  return style?.chip || 'border-border bg-muted text-muted-foreground'
 }
 
 // Get the background color class for a tag (the first part before the space)
 function getTagBgColor(tag: string): string {
   const color = getTagColor(tag)
   const parts = color.split(' ')
-  return parts[0] ?? 'bg-gray-100'
+  return parts[0] ?? 'bg-muted'
+}
+
+function getTagDotColor(tag: string): string {
+  let hash = 0
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const style = TAG_STYLES[Math.abs(hash) % TAG_STYLES.length]
+  return style?.dot || 'bg-muted-foreground'
 }
 
 export function TagManagement({
@@ -201,10 +201,7 @@ export function TagManagement({
                               : 'hover:bg-muted'
                           )}
                         >
-                          <div className={cn(
-                            'h-2 w-2 rounded-full shrink-0',
-                            getTagBgColor(tag)
-                          )} />
+                          <div className={cn('h-2 w-2 rounded-full shrink-0', getTagDotColor(tag))} />
                           <span className="flex-1 truncate">{tag}</span>
                           {isSelected && (
                             <span className="text-xs">✓</span>

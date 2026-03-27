@@ -2,12 +2,11 @@
 
 import type { ReactNode } from 'react'
 
-import EmojiPicker, { Theme } from 'emoji-picker-react'
-import type { EmojiClickData } from 'emoji-picker-react'
 import { LoaderCircle, RefreshCw, Smile } from 'lucide-react'
 
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { Button } from '@/shared/ui/button'
+import EmojiPicker, { Theme, type EmojiClickData } from '@/shared/ui/emoji-picker'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Separator } from '@/shared/ui/separator'
 import { cn } from '@/lib/utils'

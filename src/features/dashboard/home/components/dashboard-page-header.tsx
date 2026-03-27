@@ -103,7 +103,7 @@ export function StatCard({ label, value, description, icon: Icon, variant = 'def
           {trend && (
             <div className={cn(
               'text-xs font-medium mt-1',
-              trend.isPositive ? 'text-emerald-600' : 'text-red-600'
+              trend.isPositive ? 'text-success' : 'text-destructive'
             )}>
               {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}%
             </div>

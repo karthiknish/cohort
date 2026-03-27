@@ -30,11 +30,11 @@ const ACTIVITY_ICONS: Record<string, typeof Briefcase> = {
 }
 
 const ACTIVITY_COLORS: Record<string, string> = {
-  project_updated: 'text-blue-600',
-  task_activity: 'text-green-600',
-  message_posted: 'text-purple-600',
-  client_added: 'text-cyan-600',
-  proposal_created: 'text-indigo-600',
+  project_updated: 'text-info',
+  task_activity: 'text-success',
+  message_posted: 'text-primary',
+  client_added: 'text-info',
+  proposal_created: 'text-warning',
 }
 
 function formatRelativeTime(timestamp: string): string {
@@ -61,7 +61,7 @@ interface ActivityItemProps {
 
 function ActivityItem({ activity }: ActivityItemProps) {
   const Icon = ACTIVITY_ICONS[activity.type] ?? Briefcase
-  const colorClass = ACTIVITY_COLORS[activity.type] ?? 'text-gray-600'
+  const colorClass = ACTIVITY_COLORS[activity.type] ?? 'text-muted-foreground'
 
   return (
     <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
@@ -200,8 +200,8 @@ export function ActivityWidget() {
           <CardTitle className="text-base">Recent Activity</CardTitle>
           {isRealTime && (
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success/60 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
             </span>
           )}
         </div>

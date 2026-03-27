@@ -128,7 +128,7 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
                   onClick={handleCopyLink}
                   className={cn(
                     'gap-1.5 shrink-0',
-                    copied && 'bg-emerald-600 hover:bg-emerald-700'
+                    copied && 'bg-success hover:bg-success/90'
                   )}
                 >
                   {copied ? (

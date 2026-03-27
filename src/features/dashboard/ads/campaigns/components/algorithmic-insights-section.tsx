@@ -19,11 +19,11 @@ interface AlgorithmicInsightsSectionProps {
 
 function InsightBadge({ level }: { level: AlgorithmicInsight['level'] }) {
   const styles = {
-    success: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-    info: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-    warning: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
-    critical: 'bg-red-500/10 text-red-600 border-red-500/20',
-    error: 'bg-red-500/10 text-red-600 border-red-500/20', // Fallback for some API types
+    success: 'bg-success/10 text-success border-success/20',
+    info: 'bg-info/10 text-info border-info/20',
+    warning: 'bg-warning/10 text-warning border-warning/20',
+    critical: 'bg-destructive/10 text-destructive border-destructive/20',
+    error: 'bg-destructive/10 text-destructive border-destructive/20', // Fallback for some API types
   }
 
   return (
@@ -64,9 +64,9 @@ export function AlgorithmicInsightsSection({
                   <circle
                     className={cn(
                       "transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none",
-                      efficiencyScore > 80 ? "stroke-emerald-500" :
-                      efficiencyScore > 60 ? "stroke-yellow-500" :
-                      "stroke-red-500"
+                      efficiencyScore > 80 ? "stroke-success" :
+                      efficiencyScore > 60 ? "stroke-warning" :
+                      "stroke-destructive"
                     )}
                     strokeWidth="8"
                     strokeDasharray={`${2 * Math.PI * 42}`}
@@ -136,10 +136,10 @@ export function AlgorithmicInsightsSection({
                   <div key={`${insight.type}-${insight.title}`} className="group relative flex gap-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]">
                   <div className={cn(
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                    insight.level === 'success' ? "bg-emerald-500/10 text-emerald-600" :
-                    insight.level === 'info' ? "bg-blue-500/10 text-blue-600" :
-                    insight.level === 'warning' ? "bg-yellow-500/10 text-yellow-600" :
-                    "bg-red-500/10 text-red-600"
+                    insight.level === 'success' ? "bg-success/10 text-success" :
+                    insight.level === 'info' ? "bg-info/10 text-info" :
+                    insight.level === 'warning' ? "bg-warning/10 text-warning" :
+                    "bg-destructive/10 text-destructive"
                   )}>
                     {insight.type === 'efficiency' ? <TrendingUp className="h-5 w-5" /> : 
                      insight.type === 'budget' ? <Target className="h-5 w-5" /> :

@@ -129,8 +129,8 @@ function formatDueDate(dueDate: string | null | undefined, nowMs: number): strin
 }
 
 const TONE_HEADER: Record<string, string> = {
-  critical: 'text-rose-600 dark:text-rose-400',
-  warning: 'text-amber-600 dark:text-amber-400',
+  critical: 'text-destructive',
+  warning: 'text-warning',
   neutral: 'text-muted-foreground',
 }
 
@@ -144,7 +144,7 @@ function TaskRow({ task, nowMs }: { task: TaskRecord; nowMs: number }) {
       href={`/dashboard/tasks?taskId=${task.id}`}
       className="group flex items-start gap-3 rounded-xl border border-border/50 bg-background/80 p-3 transition-colors hover:border-border hover:bg-muted/20"
     >
-      <CheckSquare className={cn('mt-0.5 h-4 w-4 shrink-0', isOverdue ? 'text-rose-500' : 'text-muted-foreground/60')} />
+      <CheckSquare className={cn('mt-0.5 h-4 w-4 shrink-0', isOverdue ? 'text-destructive' : 'text-muted-foreground/60')} />
 
       <div className="min-w-0 flex-1 space-y-1.5">
         <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">{task.title}</p>
@@ -176,7 +176,7 @@ function TaskRow({ task, nowMs }: { task: TaskRecord; nowMs: number }) {
 
         {/* Due date */}
         {task.dueDate && (
-          <p className={cn('flex items-center gap-1 text-[11px]', isOverdue ? 'font-medium text-rose-500' : 'text-muted-foreground')}>
+          <p className={cn('flex items-center gap-1 text-[11px]', isOverdue ? 'font-medium text-destructive' : 'text-muted-foreground')}>
             <Clock className="h-3 w-3" />
             {formatDueDate(task.dueDate, nowMs)}
           </p>

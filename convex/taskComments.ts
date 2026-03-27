@@ -55,21 +55,6 @@ export const listForTask = workspaceQuery({
   },
 })
 
-export const getByLegacyId = workspaceQuery({
-  args: { taskLegacyId: v.string(), legacyId: v.string() },
-  returns: v.union(v.null(), taskCommentValidator),
-  handler: async (ctx, args) => {
-    const row = await ctx.db
-      .query('taskComments')
-      .withIndex('by_workspace_task_legacyId', (q) =>
-        q.eq('workspaceId', args.workspaceId).eq('taskLegacyId', args.taskLegacyId).eq('legacyId', args.legacyId)
-      )
-      .unique()
-
-    return row ?? null
-  },
-})
-
 export const create = workspaceMutation({
   args: {
     taskLegacyId: v.string(),
@@ -211,86 +196,6 @@ export const create = workspaceMutation({
     }
 
     return { ok: true } as const
-  },
-})
-
-// Use authenticatedMutation for bulk operations that may span multiple workspaces
-export const bulkUpsert = authenticatedMutation({
-  args: {
-    comments: v.array(
-      v.object({
-        workspaceId: v.string(),
-        taskLegacyId: v.string(),
-        legacyId: v.string(),
-        content: v.string(),
-        format: v.union(v.literal('markdown'), v.literal('plaintext')),
-        authorId: v.union(v.string(), v.null()),
-        authorName: v.union(v.string(), v.null()),
-        authorRole: v.union(v.string(), v.null()),
-        createdAtMs: v.number(),
-        updatedAtMs: v.number(),
-        deleted: v.boolean(),
-        deletedAtMs: v.union(v.number(), v.null()),
-        deletedBy: v.union(v.string(), v.null()),
-        attachments: v.array(attachment),
-        mentions: v.array(mention),
-        parentCommentId: v.union(v.string(), v.null()),
-        threadRootId: v.union(v.string(), v.null()),
-      })
-    ),
-  },
-  returns: v.object({
-    ok: v.literal(true),
-    upserted: v.number(),
-  }),
-  handler: async (ctx, args) => {
-    let upserted = 0
-    for (const comment of args.comments) {
-      // Verify workspace access for each comment
-      if (ctx.user.role !== 'admin' && ctx.agencyId !== comment.workspaceId) {
-        throw Errors.auth.workspaceAccessDenied()
-      }
-
-      const existing = await ctx.db
-        .query('taskComments')
-        .withIndex('by_workspace_task_legacyId', (q) =>
-          q
-            .eq('workspaceId', comment.workspaceId)
-            .eq('taskLegacyId', comment.taskLegacyId)
-            .eq('legacyId', comment.legacyId)
-        )
-        .unique()
-
-      const payload = {
-        workspaceId: comment.workspaceId,
-        taskLegacyId: comment.taskLegacyId,
-        legacyId: comment.legacyId,
-        content: comment.content,
-        format: comment.format,
-        authorId: comment.authorId,
-        authorName: comment.authorName,
-        authorRole: comment.authorRole,
-        createdAtMs: comment.createdAtMs,
-        updatedAtMs: comment.updatedAtMs,
-        deleted: comment.deleted,
-        deletedAtMs: comment.deletedAtMs,
-        deletedBy: comment.deletedBy,
-        attachments: comment.attachments,
-        mentions: comment.mentions,
-        parentCommentId: comment.parentCommentId,
-        threadRootId: comment.threadRootId,
-      }
-
-      if (existing) {
-        await ctx.db.patch(existing._id, payload)
-      } else {
-        await ctx.db.insert('taskComments', payload)
-      }
-
-      upserted += 1
-    }
-
-    return { ok: true as const, upserted }
   },
 })
 

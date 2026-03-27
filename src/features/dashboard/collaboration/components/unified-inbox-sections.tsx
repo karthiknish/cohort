@@ -375,7 +375,7 @@ export function ChannelConversationPane({
       onEditMessage={async (messageId: string, newContent: string) => onEditMessage(selectedChannel.id, messageId, newContent)}
       participants={mentionParticipants}
       statusBanner={showMissingDeepLinkNotice ? (
-        <Alert className="mx-4 mt-4 border-amber-300/60 bg-amber-50/80 text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-100">
+        <Alert className="mx-4 mt-4 border-warning/20 bg-warning/10 text-warning-foreground dark:border-warning/30 dark:bg-warning/10 dark:text-warning-foreground">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Linked message unavailable</AlertTitle>
           <AlertDescription className="space-y-2">

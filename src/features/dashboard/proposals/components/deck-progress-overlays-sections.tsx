@@ -26,7 +26,7 @@ function ProposalGenerationStatusIcon({ isComplete }: { isComplete: boolean }) {
       <div className="absolute inset-0 rounded-full bg-primary/20 blur-3xl" />
       <div className="relative flex h-24 w-24 items-center justify-center rounded-full border-4 border-primary/20 bg-background shadow-xl">
         {isComplete ? (
-          <div className="animate-in zoom-in fill-mode-forwards duration-500 text-emerald-500">
+          <div className="animate-in zoom-in fill-mode-forwards duration-500 text-success">
             <CircleCheck className="h-12 w-12" />
           </div>
         ) : (

@@ -66,52 +66,6 @@ const userZ = z.object({
   updatedAtMs: z.number().nullable(),
 })
 
-// Internal query - no auth required, for CLI/internal use only
-export const _getByEmailInternal = internalQuery({
-  args: { email: v.string() },
-  handler: async (ctx, args) => {
-    const normalized = normalizeEmail(args.email)
-    if (!normalized.emailLower) return null
-
-    const rows = await ctx.db
-      .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
-      .collect()
-
-    return pickMostRecentlyUpdated(rows)
-  },
-})
-
-// Internal mutation - no auth required, for CLI/internal use only
-export const _updateUserRoleStatus = internalMutation({
-  args: {
-    email: v.string(),
-    role: v.string(),
-    status: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const normalized = normalizeEmail(args.email)
-    if (!normalized.emailLower) throw Errors.validation.invalidInput('Invalid email')
-
-    const matches = await ctx.db
-      .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
-      .collect()
-
-    const best = pickMostRecentlyUpdated(matches)
-
-    if (!best) throw Errors.resource.notFound('User', args.email)
-
-    await ctx.db.patch(best._id, {
-      role: args.role,
-      status: args.status,
-      updatedAtMs: nowMs(),
-    })
-
-    return { ok: true, legacyId: best.legacyId, updatedUserId: best._id, duplicateCount: matches.length }
-  },
-})
-
 export const getByLegacyId = zAuthenticatedQuery({
   args: { legacyId: z.string() },
   returns: userZ,
@@ -568,39 +522,6 @@ export const bootstrapUpsert = mutation({
 
     await ctx.db.insert('users', payload)
     return { ok: true, created: true }
-  },
-})
-
-// Public query - no auth required for test user management
-export const getUserByEmailPublic = internalQuery({
-  args: { email: v.string() },
-  handler: async (ctx, args) => {
-    const normalized = normalizeEmail(args.email)
-    if (!normalized.emailLower) return { found: false, user: null }
-
-    const rows = await ctx.db
-      .query('users')
-      .withIndex('by_emailLower', (q) => q.eq('emailLower', normalized.emailLower))
-      .collect()
-
-    const best = pickMostRecentlyUpdated(rows)
-
-    if (!best) return { found: false, user: null }
-
-    return { 
-      found: true, 
-      user: {
-        _id: best._id,
-        legacyId: best.legacyId,
-        email: best.email,
-        name: best.name,
-        role: best.role,
-        status: best.status,
-        agencyId: best.agencyId,
-        createdAtMs: best.createdAtMs,
-        updatedAtMs: best.updatedAtMs,
-      }
-    }
   },
 })
 

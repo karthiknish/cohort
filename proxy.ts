@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server'
 import {
   getClientIdentifier,
   buildRateLimitHeaders,
-  RATE_LIMITS
+  RATE_LIMITS,
+  createRateLimitConfig,
 } from '@/lib/rate-limiter'
 import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
 import { getToken } from '@convex-dev/better-auth/utils'
@@ -71,10 +72,10 @@ export async function proxy(request: NextRequest) {
       )
     }
     const identifier = getClientIdentifier(request)
-    const rateLimit = await checkConvexRateLimit(`api:${identifier}`, {
-      maxRequests: API_RATE_LIMIT_MAX,
-      windowMs: API_RATE_LIMIT_WINDOW_MS,
-    })
+    const rateLimit = await checkConvexRateLimit(
+      `api:${identifier}`,
+      createRateLimitConfig(API_RATE_LIMIT_MAX, API_RATE_LIMIT_WINDOW_MS),
+    )
 
     console.log(`[Proxy] API Request: ${pathname} | ID: ${identifier} | Allowed: ${rateLimit.allowed}`)
 

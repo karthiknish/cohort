@@ -86,7 +86,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency 
                 trend: null,
                 benchmark: cpaBenchmark,
                 invertTrend: true, // Lower is better
-                theme: 'rose' as const,
+                theme: 'destructive' as const,
             },
             {
                 label: 'ROAS',
@@ -95,7 +95,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency 
                 icon: <Zap className="h-4 w-4" />,
                 trend: growthWeekOverWeek.revenue,
                 benchmark: roasBenchmark,
-                theme: 'emerald' as const,
+                theme: 'success' as const,
             },
             {
                 label: 'CTR',
@@ -104,7 +104,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency 
                 icon: <MousePointer className="h-4 w-4" />,
                 trend: growthWeekOverWeek.clicks,
                 benchmark: ctrBenchmark,
-                theme: 'violet' as const,
+                theme: 'accent' as const,
             },
             {
                 label: 'CPC',
@@ -114,7 +114,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency 
                 trend: null,
                 benchmark: cpcBenchmark,
                 invertTrend: true,
-                theme: 'amber' as const,
+                theme: 'warning' as const,
             },
             {
                 label: 'CPM',
@@ -124,7 +124,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency 
                 trend: null,
                 benchmark: cpmBenchmark,
                 invertTrend: true,
-                theme: 'cyan' as const,
+                theme: 'secondary' as const,
             },
             {
                 label: 'Conv. Rate',
@@ -133,7 +133,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency 
                 icon: <Target className="h-4 w-4" />,
                 trend: growthWeekOverWeek.conversions,
                 benchmark: conversionRateBenchmark,
-                theme: 'violet' as const,
+                theme: 'accent' as const,
             },
             {
                 label: 'Profit',
@@ -141,7 +141,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency 
                 format: 'currency' as const,
                 icon: <TrendingUp className="h-4 w-4" />,
                 trend: null,
-                theme: 'emerald' as const,
+                theme: 'success' as const,
             },
             {
                 label: 'Profit Margin',
@@ -150,7 +150,7 @@ export function CustomInsightsCard({ derivedMetrics, processedMetrics, currency 
                 icon: <Zap className="h-4 w-4" />,
                 trend: null,
                 benchmark: profitMarginBenchmark,
-                theme: 'violet' as const,
+                theme: 'accent' as const,
             },
         ]
     }, [derivedMetrics, cpaBenchmark, roasBenchmark, ctrBenchmark, cpcBenchmark, cpmBenchmark, conversionRateBenchmark, profitMarginBenchmark])

@@ -22,11 +22,11 @@ const badgeVariants = cva(
         outline:
           "text-foreground border-muted-foreground/30 [a&]:hover:bg-accent [a&]:hover:text-accent-foreground [a&]:hover:border-accent",
         success:
-          "border-transparent bg-emerald-100 text-emerald-800 [a&]:hover:bg-emerald-200",
+          "border-transparent bg-primary/10 text-primary [a&]:hover:bg-primary/15",
         warning:
-          "border-transparent bg-amber-100 text-amber-800 [a&]:hover:bg-amber-200",
+          "border-transparent bg-accent text-accent-foreground [a&]:hover:bg-accent/90",
         info:
-          "border-transparent bg-blue-100 text-blue-800 [a&]:hover:bg-blue-200",
+          "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
       },
     },
     defaultVariants: {

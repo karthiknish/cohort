@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent } from 'react'
 
-import { useChat, useParticipants } from '@livekit/components-react'
+import { useChat, useParticipants } from '@/shared/ui/livekit'
 import { useConvex, useMutation } from 'convex/react'
 
 import { MAX_ATTACHMENTS } from '@/features/dashboard/collaboration/hooks/constants'

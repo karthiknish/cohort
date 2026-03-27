@@ -1,0 +1,86 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "import", "typescript", "react", "nextjs"],
+  "jsPlugins": [
+    {
+      "name": "convex",
+      "specifier": "@convex-dev/eslint-plugin"
+    },
+    "./oxlint/convex.cjs",
+    "./oxlint/cohort.cjs"
+  ],
+  "ignorePatterns": [
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    ".vercel/**",
+    "convex/_generated/**",
+    "convex/**/_generated/**",
+    "dist/**",
+    "oxlint/**",
+    "scripts/**",
+    "run-admin-script.js",
+    "set-admin-direct.js"
+  ],
+  "env": {
+    "browser": true,
+    "node": true
+  },
+  "rules": {
+    "eslint/no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@/app/*", "@/features/*"],
+            "message": "Shared modules must stay independent of app routes and feature modules."
+          }
+        ]
+      }
+    ],
+    "eslint/no-unused-vars": "off",
+    "eslint/no-useless-escape": "off",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-require-imports": "warn",
+    "react/exhaustive-deps": "warn",
+    "cohort/no-direct-colors": "warn",
+    "cohort/only-shadcn-components": "warn",
+    "cohort/no-ad-hoc-rate-limits": "warn",
+    "convex-unused/no-unused-functions": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["**/convex/**/*.ts"],
+      "rules": {
+        "convex/require-args-validator": ["error", { "ignoreUnusedArguments": true }]
+      }
+    },
+    {
+      "files": [
+        "src/shared/**/*.{ts,tsx}",
+        "src/features/**/*.{ts,tsx}",
+        "src/hooks/**/*.{ts,tsx}",
+        "src/lib/**/*.{ts,tsx}",
+        "src/services/**/*.{ts,tsx}",
+        "src/types/**/*.{ts,tsx}",
+        "src/constants/**/*.{ts,tsx}",
+        "src/config/**/*.{ts,tsx}",
+        "src/app/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "eslint/no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/app/*"],
+                "message": "Import route logic through shared or feature modules, never from src/app."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

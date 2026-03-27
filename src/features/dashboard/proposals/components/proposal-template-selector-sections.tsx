@@ -63,7 +63,7 @@ export function ProposalTemplateDropdownContent(props: {
             <div className="flex-1 space-y-1">
               <div className="flex items-center gap-2">
                 <span className="font-medium">{template.name}</span>
-                {template.isDefault ? <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /> : null}
+                {template.isDefault ? <Star className="h-3 w-3 fill-warning text-warning" /> : null}
               </div>
               {template.description ? <p className="line-clamp-2 text-xs text-muted-foreground">{template.description}</p> : null}
               <div className="flex flex-wrap gap-1">

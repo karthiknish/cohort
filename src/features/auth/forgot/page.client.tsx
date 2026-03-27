@@ -101,12 +101,12 @@ export default function ForgotPasswordPage() {
                       if (emailError) setEmailError(null)
                     }}
                     placeholder="you@example.com"
-                    className={cn("pl-9", emailError && "border-red-500 focus-visible:ring-red-500")}
+                    className={cn("pl-9", emailError && "border-destructive focus-visible:ring-destructive")}
                     disabled={submitting}
                   />
                 </div>
                 {emailError && (
-                  <p className="text-xs text-red-500">{emailError}</p>
+                  <p className="text-xs text-destructive">{emailError}</p>
                 )}
               </FadeInItem>
 
@@ -126,9 +126,9 @@ export default function ForgotPasswordPage() {
           </form>
         ) : (
           <FadeIn as="div" className="space-y-6">
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 mb-4">
-                <CircleCheck className="h-6 w-6 text-emerald-600" />
+            <div className="rounded-lg border border-border bg-muted/40 p-6 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <CircleCheck className="h-6 w-6 text-primary" />
               </div>
               <h3 className="font-semibold text-foreground mb-1">Check your email</h3>
               <p className="text-sm text-muted-foreground mb-4">
@@ -174,5 +174,4 @@ export default function ForgotPasswordPage() {
     </div>
   )
 }
-
 

@@ -1,4 +1,4 @@
-import type { Transition, Variants } from 'framer-motion'
+import type { Transition, Variants } from '@/shared/ui/motion'
 
 import { motionDurationSeconds, motionEasing, motionLoopSeconds } from '@/lib/animation-system'
 

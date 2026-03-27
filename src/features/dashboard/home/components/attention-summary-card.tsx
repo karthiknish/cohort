@@ -70,7 +70,7 @@ export function AttentionSummaryCard({ taskSummary, proposals, integrationSummar
             {urgentTasks > 0 ? (
               <AlertTriangle className="h-4 w-4 text-destructive" />
             ) : (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <CheckCircle2 className="h-4 w-4 text-success" />
             )}
           </div>
           <div className="mt-2 space-y-1">

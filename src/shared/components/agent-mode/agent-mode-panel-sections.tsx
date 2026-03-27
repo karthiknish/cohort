@@ -26,7 +26,7 @@ import {
   WifiOff,
   X,
 } from 'lucide-react'
-import { AnimatePresence, m } from 'framer-motion'
+import { AnimatePresence, m } from '@/shared/ui/motion'
 
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -58,14 +58,14 @@ function HistorySkeleton() {
 
 function AttachmentStatusBadge({ attachment }: { attachment: AgentAttachmentContext }) {
   if (attachment.extractionStatus === 'ready') {
-    return <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Ready</span>
+    return <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">Ready</span>
   }
 
   if (attachment.extractionStatus === 'limited') {
-    return <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Limited</span>
+    return <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">Limited</span>
   }
 
-  return <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700">Needs Review</span>
+  return <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">Needs Review</span>
 }
 
 function AttachmentDropzone({
@@ -131,7 +131,7 @@ function AttachmentList({
                 </div>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">{attachment.excerpt}</p>
                 {attachment.errorMessage ? (
-                  <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-amber-700">
+                  <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-warning">
                     <AlertCircle className="h-3.5 w-3.5" />
                     <span>{attachment.errorMessage}</span>
                   </div>
@@ -165,8 +165,8 @@ function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
       exit={{ opacity: 0, y: -10 }}
       className={cn(
         'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium',
-        status === 'retrying' && 'bg-amber-100 text-amber-700',
-        status === 'disconnected' && 'bg-red-100 text-red-700',
+        status === 'retrying' && 'bg-warning/10 text-warning',
+        status === 'disconnected' && 'bg-destructive/10 text-destructive',
       )}
     >
       {status === 'retrying' ? (
@@ -190,14 +190,14 @@ export function RateLimitBanner({ countdown, onDismiss }: { countdown: number; o
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="flex items-center justify-between gap-3 border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm"
-    >
-      <div className="flex items-center gap-2 text-amber-700">
+    className="flex items-center justify-between gap-3 border border-warning/20 bg-warning/10 px-4 py-2.5 text-sm"
+  >
+      <div className="flex items-center gap-2 text-warning">
         <Clock className="h-4 w-4 shrink-0" />
         <span>Too many requests. Please wait <strong>{countdown}s</strong>...</span>
       </div>
       {onDismiss ? (
-        <Button variant="ghost" size="sm" onClick={onDismiss} className="h-7 px-2 text-amber-700 hover:text-amber-800">
+        <Button variant="ghost" size="sm" onClick={onDismiss} className="h-7 px-2 text-warning hover:text-warning/80">
           Dismiss
         </Button>
       ) : null}
@@ -689,12 +689,12 @@ export function FailedMessageBanner({
   if (!lastFailedMessage) return null
 
   return (
-    <div className="flex items-center justify-between gap-3 border-t bg-red-50 px-4 py-2.5">
-      <div className="flex items-center gap-2 text-sm text-red-700">
+    <div className="flex items-center justify-between gap-3 border-t bg-destructive/10 px-4 py-2.5">
+      <div className="flex items-center gap-2 text-sm text-destructive">
         <WifiOff className="h-4 w-4 shrink-0" />
         <span>Message failed to send</span>
       </div>
-      <Button variant="outline" size="sm" onClick={onRetry} className="h-8 gap-2 border-red-200 text-red-700 hover:bg-red-100">
+      <Button variant="outline" size="sm" onClick={onRetry} className="h-8 gap-2 border-destructive/20 text-destructive hover:bg-destructive/10">
         <RefreshCw className="h-3.5 w-3.5" />
         Retry
       </Button>

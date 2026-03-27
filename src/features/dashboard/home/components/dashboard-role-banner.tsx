@@ -41,19 +41,19 @@ export function DashboardRoleBanner({ userRole, userDisplayName }: DashboardRole
   if (userRole === 'client') {
     return (
       <FadeIn>
-        <Card className="border-green-200 bg-green-50">
+        <Card className="border-success/20 bg-success/5">
           <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-              <Trophy className="h-5 w-5 text-green-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/10">
+              <Trophy className="h-5 w-5 text-success" />
             </div>
             <div className="flex-1">
-              <p className="font-medium text-green-900">Welcome, {userDisplayName?.split(' ')[0] || 'Client'}!</p>
-              <p className="text-sm text-green-700">
+              <p className="font-medium text-success-foreground">Welcome, {userDisplayName?.split(' ')[0] || 'Client'}!</p>
+              <p className="text-sm text-success-foreground/80">
                 View your project progress, proposals, and collaborate with your team.
               </p>
             </div>
             <Link href="/dashboard/collaboration">
-              <Button variant="outline" size="sm" className="border-green-300 text-green-700 hover:bg-green-100">
+              <Button variant="outline" size="sm" className="border-success/20 text-success hover:bg-success/10">
                 Messages <ArrowUpRight className="ml-1 h-3 w-3" />
               </Button>
             </Link>

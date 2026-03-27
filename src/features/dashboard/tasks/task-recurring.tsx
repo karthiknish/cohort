@@ -99,7 +99,7 @@ export function RecurrenceEditor({
       </div>
 
       {value !== 'none' && (
-        <div className="flex items-start gap-2 p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded-md text-xs text-blue-700 dark:text-blue-300">
+        <div className="flex items-start gap-2 rounded-md bg-info/10 p-2 text-xs text-info">
           <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
           <p>
             New tasks will be created automatically based on this recurrence pattern.
@@ -126,7 +126,7 @@ export function RecurrenceBadge({
     <Badge
       variant="outline"
       className={cn(
-        'gap-1 bg-green-50/50 text-green-600 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800',
+        'gap-1 border-success/20 bg-success/10 text-success',
         className
       )}
     >

@@ -35,7 +35,7 @@ describe('custom insights card sections', () => {
             trend: -0.12,
             benchmark: 20,
             invertTrend: true,
-            theme: 'rose',
+            theme: 'destructive',
           },
         ]}
       />,
@@ -44,6 +44,6 @@ describe('custom insights card sections', () => {
     expect(markup).toContain('CPA')
     expect(markup).toContain('£42')
     expect(markup).toContain('12.0%')
-    expect(markup).toContain('ring-amber-500/50')
+    expect(markup).toContain('ring-warning/50')
   })
 })

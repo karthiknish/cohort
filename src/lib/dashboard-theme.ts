@@ -17,8 +17,8 @@ export const DASHBOARD_THEME = {
     base: 'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest',
     primary: 'bg-primary/10 text-primary border border-primary/20',
     secondary: 'bg-muted/50 text-muted-foreground border-muted/40',
-    success: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-    warning: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+    success: 'bg-success/10 text-success border border-success/20',
+    warning: 'bg-warning/10 text-warning border border-warning/20',
     destructive: 'bg-destructive/10 text-destructive border-destructive/20',
   },
   buttons: {
@@ -136,8 +136,8 @@ export const PAGE_TITLES: Record<string, { title: string; description: string }>
 export function getStatCardClasses(variant: 'default' | 'success' | 'warning' | 'destructive' = 'default') {
   const variants = {
     default: '',
-    success: 'border-emerald-500/20 bg-emerald-500/5',
-    warning: 'border-amber-500/20 bg-amber-500/5',
+    success: 'border-success/20 bg-success/5',
+    warning: 'border-warning/20 bg-warning/5',
     destructive: 'border-destructive/20 bg-destructive/5',
   }
   return cn(DASHBOARD_THEME.stats.card, variants[variant])
@@ -157,20 +157,20 @@ export function getIconContainerClasses(size: 'small' | 'medium' | 'large' = 'me
 
 export function getPriorityBadgeClasses(priority: 'low' | 'medium' | 'high' | 'critical') {
   const colors = {
-    low: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-    medium: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-    high: 'bg-orange-500/10 text-orange-600 border-orange-500/20',
-    critical: 'bg-red-500/10 text-red-600 border-red-500/20',
+    low: 'bg-info/10 text-info border-info/20',
+    medium: 'bg-warning/10 text-warning border-warning/20',
+    high: 'bg-warning/10 text-warning border-warning/20',
+    critical: 'bg-destructive/10 text-destructive border-destructive/20',
   }
   return cn(DASHBOARD_THEME.badges.base, colors[priority])
 }
 
 export function getStatusBadgeClasses(status: 'active' | 'inactive' | 'pending' | 'completed' | 'error') {
   const colors = {
-    active: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+    active: 'bg-success/10 text-success border-success/20',
     inactive: 'bg-muted/50 text-muted-foreground border-muted/40',
-    pending: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-    completed: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+    pending: 'bg-warning/10 text-warning border-warning/20',
+    completed: 'bg-info/10 text-info border-info/20',
     error: 'bg-destructive/10 text-destructive border-destructive/20',
   }
   return cn(DASHBOARD_THEME.badges.base, colors[status])
@@ -178,10 +178,10 @@ export function getStatusBadgeClasses(status: 'active' | 'inactive' | 'pending' 
 
 export function getChannelTypeBadgeClasses(type: 'team' | 'client' | 'project' | 'direct') {
   const colors = {
-    team: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-    client: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-    project: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-    direct: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20',
+    team: 'bg-secondary text-secondary-foreground border-secondary/40',
+    client: 'bg-info/10 text-info border-info/20',
+    project: 'bg-success/10 text-success border-success/20',
+    direct: 'bg-muted/50 text-muted-foreground border-muted/40',
   }
   return cn(DASHBOARD_THEME.badges.base, colors[type])
 }

@@ -273,11 +273,11 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
             className="object-contain"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900 p-8">
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-background to-muted p-8">
             <div className="text-center">
-              <p className="text-lg font-medium text-white mb-2">Slide {currentSlide + 1}</p>
+              <p className="mb-2 text-lg font-medium text-foreground">Slide {currentSlide + 1}</p>
               {currentSlideData?.textContent && (
-                <p className="text-sm text-slate-300 max-w-lg">{currentSlideData.textContent}</p>
+                <p className="max-w-lg text-sm text-muted-foreground">{currentSlideData.textContent}</p>
               )}
             </div>
           </div>

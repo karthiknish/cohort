@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, KeyboardEvent, MouseEvent } from 'react'
-import type { EmojiClickData } from 'emoji-picker-react'
+import type { EmojiClickData } from '@/shared/ui/emoji-picker'
 
 import type { ClientTeamMember } from '@/types/clients'
 

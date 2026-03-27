@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { useCallback, useMemo } from 'react'
 
 import { Badge } from '@/shared/ui/badge'
+import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { FadeIn, FadeInStagger } from '@/shared/ui/animate-in'
@@ -34,10 +35,10 @@ import { ClientsSummarySection } from '@/features/dashboard/home/components/clie
 import { MyTasksSection } from '@/features/dashboard/home/components/my-tasks-section'
 
 const toneBorder: Record<HubTone, string> = {
-  neutral: 'border-slate-200/80 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700',
-  success: 'border-emerald-200/80 hover:border-emerald-300 dark:border-emerald-900/60 dark:hover:border-emerald-800',
-  warning: 'border-amber-200/80 hover:border-amber-300 dark:border-amber-900/60 dark:hover:border-amber-800',
-  critical: 'border-rose-200/80 hover:border-rose-300 dark:border-rose-900/60 dark:hover:border-rose-800',
+  neutral: 'border-border/80 hover:border-border',
+  success: 'border-primary/20 hover:border-primary/40',
+  warning: 'border-accent/20 hover:border-accent/40',
+  critical: 'border-destructive/20 hover:border-destructive/40',
 }
 
 type BadgeVariant = 'secondary' | 'success' | 'warning' | 'destructive' | 'info' | 'default'
@@ -228,7 +229,7 @@ export default function ForYouPage() {
   const { activities, loading, retry } = useRealtimeActivity(20, shouldUseSampleData)
   const workspaceClientIds = useMemo(() => resolvedClients.map((client) => client.id), [resolvedClients])
   const workspaceScopeName = resolvedClients.length === 1 ? (resolvedClients[0]?.name ?? 'your workspace') : 'your workspace'
-  const { metrics, rawTasks, taskSummary, proposals } = useDashboardData({ selectedClientId: null, preferPreviewData: shouldUseSampleData })
+  const { metrics, metricsError, rawTasks, taskSummary, tasksError, proposals, proposalsError } = useDashboardData({ selectedClientId: null, preferPreviewData: shouldUseSampleData })
   const { summary: integrationSummary } = useIntegrationStatusSummary({ clientIds: workspaceClientIds })
 
   const projectsRealtime = useQuery(
@@ -352,9 +353,21 @@ export default function ForYouPage() {
   }, [retry])
 
   const unreadCount = enhancedActivities.filter((a) => !a.isRead).length
+  const dashboardErrors = [metricsError, tasksError, proposalsError].filter(Boolean) as string[]
 
   return (
     <div className={cn(DASHBOARD_THEME.layout.container, 'w-full')}>
+      {dashboardErrors.length > 0 ? (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTitle>Workspace data is partially unavailable</AlertTitle>
+          <AlertDescription className="space-y-1">
+            {dashboardErrors.map((message) => (
+              <p key={message}>{message}</p>
+            ))}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {/* Client summaries — always visible (admin/team only) */}
       <ClientsSummarySection />
 

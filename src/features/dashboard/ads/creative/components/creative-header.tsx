@@ -1,4 +1,4 @@
-import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { LazyMotion, domAnimation, m } from '@/shared/ui/motion'
 import {
   fadeInDownVariants,
   transitions,
@@ -33,9 +33,9 @@ import { cn } from '@/lib/utils'
 
 function getStatusVariant(status: string): string {
   const s = status.toLowerCase()
-  if (s === 'enabled' || s === 'enable' || s === 'active') return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-  if (s === 'paused' || s === 'disable') return 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-  if (s === 'deleted' || s === 'removed') return 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+  if (s === 'enabled' || s === 'enable' || s === 'active') return 'bg-success/10 text-success border-success/20'
+  if (s === 'paused' || s === 'disable') return 'bg-warning/10 text-warning border-warning/20'
+  if (s === 'deleted' || s === 'removed') return 'bg-destructive/10 text-destructive border-destructive/20'
   return 'bg-muted/50 text-muted-foreground border-muted'
 }
 
@@ -103,7 +103,7 @@ export function CreativeHeader(props: {
         <div className="flex items-center gap-2">
         {isEditing ? (
           <div className="flex items-center gap-3 p-1 rounded-2xl bg-muted/30 border border-muted-foreground/10">
-            <Button variant="ghost" size="sm" onClick={onCancelEditing} disabled={isSaving} className="h-8 px-4 text-xs font-semibold rounded-xl hover:bg-rose-500/10 hover:text-rose-500">
+            <Button variant="ghost" size="sm" onClick={onCancelEditing} disabled={isSaving} className="h-8 px-4 text-xs font-semibold rounded-xl hover:bg-destructive/10 hover:text-destructive">
               <X className="h-3.5 w-3.5 mr-2" />
               Discard
             </Button>
@@ -173,9 +173,9 @@ export function CreativeHeader(props: {
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="my-2" />
-                <DropdownMenuItem className="gap-3 py-2.5 rounded-xl cursor-pointer text-rose-500 focus:bg-rose-500/10 focus:text-rose-600">
-                  <div className="h-8 w-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
-                    <Trash2 className="h-4 w-4 text-rose-500" />
+                <DropdownMenuItem className="gap-3 py-2.5 rounded-xl cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive">
+                  <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                    <Trash2 className="h-4 w-4 text-destructive" />
                   </div>
                   <span className="font-semibold text-sm">Delete Asset</span>
                 </DropdownMenuItem>

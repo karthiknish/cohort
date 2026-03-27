@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react'
 import { format, subDays, differenceInDays, startOfDay, endOfDay } from 'date-fns'
 import { CalendarIcon, ChevronDown, X } from 'lucide-react'
-import { DateRange as DayPickerRange } from 'react-day-picker'
 
 import { Button } from '@/shared/ui/button'
 import {
@@ -13,6 +12,11 @@ import {
 } from '@/shared/ui/popover'
 import { Calendar } from '@/shared/ui/calendar'
 import { cn } from '@/lib/utils'
+
+type DayPickerRange = {
+  from: Date
+  to: Date
+}
 
 export interface AnalyticsDateRange {
   start: Date
@@ -73,7 +77,7 @@ export function AnalyticsDateRangePicker({
     to: value.end,
   }
 
-  const handleSelect = (range: DayPickerRange | undefined) => {
+  const handleSelect = (range: Partial<DayPickerRange> | undefined) => {
     if (range?.from && range?.to) {
       const newRange: AnalyticsDateRange = {
         start: startOfDay(range.from),

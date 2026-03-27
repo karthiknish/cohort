@@ -93,10 +93,10 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
   if (isUserNotFoundError) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center bg-muted/40 p-4">
-        <Card className="max-w-lg border-muted/60">
+          <Card className="max-w-lg border-muted/60">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10">
-              <RefreshCw className="h-8 w-8 text-amber-500 animate-spin" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-warning/10">
+              <RefreshCw className="h-8 w-8 text-warning animate-spin" />
             </div>
             <CardTitle className="text-xl">Setting up your account...</CardTitle>
             <CardDescription>
@@ -127,10 +127,10 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
   if (isAuthError) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center bg-muted/40 p-4">
-        <Card className="max-w-lg border-muted/60">
+          <Card className="max-w-lg border-muted/60">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-500/10">
-              <AlertTriangle className="h-8 w-8 text-orange-500" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-warning/10">
+              <AlertTriangle className="h-8 w-8 text-warning" />
             </div>
             <CardTitle className="text-xl">Session expired</CardTitle>
             <CardDescription>
@@ -195,10 +195,10 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
 
           {/* React error info */}
           {reactErrorInfo && (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+            <div className="rounded-lg border border-warning/20 bg-warning/10 p-3">
               <div className="flex items-center gap-2 mb-1">
-                <FileJson className="h-3 w-3 text-amber-700 dark:text-amber-400" />
-                <span className="text-xs font-semibold text-amber-900 dark:text-amber-100">React Error Info</span>
+                <FileJson className="h-3 w-3 text-warning" />
+                <span className="text-xs font-semibold text-warning">React Error Info</span>
               </div>
               <p className="text-xs text-muted-foreground">{reactErrorInfo.hint}</p>
             </div>
@@ -237,7 +237,7 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
 
               {/* Show component stack if available */}
               {componentStack && (
-                <details className="rounded-lg border border-blue-500/40 bg-blue-500/10 p-3">
+                <details className="rounded-lg border border-info/20 bg-info/10 p-3">
                   <summary className="cursor-pointer p-2 text-xs font-medium text-muted-foreground hover:text-foreground">
                     View Component Stack
                   </summary>
@@ -248,7 +248,7 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
               )}
               {/* Show render history in development if available */}
               {isDev && renderLogs.length > 0 && (
-                <details className="rounded-lg border border-purple-500/40 bg-purple-500/10 p-3">
+                <details className="rounded-lg border border-info/20 bg-info/10 p-3">
                   <summary className="cursor-pointer p-2 text-xs font-medium text-muted-foreground hover:text-foreground">
                     View Render History (Last {renderLogs.length} renders)
                   </summary>
@@ -256,9 +256,9 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
                     {renderLogs.slice(-20).reverse().map((log, i) => (
                       <div
                         key={`${log.name ?? 'unknown'}-${log.timestamp ?? 'no-time'}-${log.renderCount ?? i}`}
-                        className="text-[10px] font-mono border-b border-purple-500/20 pb-1 last:border-0"
+                        className="text-[10px] font-mono border-b border-info/20 pb-1 last:border-0"
                       >
-                        <div className="flex justify-between text-purple-700 dark:text-purple-300">
+                        <div className="flex justify-between text-info">
                           <span>{log.name ?? 'Unknown'} #{log.renderCount ?? '-'}</span>
                           <span>{log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '--:--:--'}</span>
                         </div>

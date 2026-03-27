@@ -242,8 +242,8 @@ function TodayMarker({ start, dayWidth }: { start: Date; dayWidth: number }) {
   const left = offsetDays * dayWidth
   return (
     <div className="pointer-events-none absolute inset-y-0" style={{ left }}>
-      <div className="absolute inset-y-0 w-px bg-amber-500" />
-      <div className="absolute -top-6 -ml-8 rounded-md bg-amber-500 px-2 py-1 text-[11px] font-medium text-amber-50 shadow">
+      <div className="absolute inset-y-0 w-px bg-warning" />
+      <div className="absolute -top-6 -ml-8 rounded-md bg-warning px-2 py-1 text-[11px] font-medium text-warning-foreground shadow">
         Today
       </div>
     </div>

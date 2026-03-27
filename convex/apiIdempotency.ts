@@ -152,27 +152,3 @@ export const release = mutation({
     return { ok: true }
   },
 })
-
-/**
- * Cleanup old idempotency records (called by scheduled job).
- */
-export const cleanupOldRecords = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const cutoff = Date.now() - IDEMPOTENCY_TTL_MS
-
-    // Get old records in batches
-    const oldRecords = await ctx.db
-      .query('apiIdempotency')
-      .filter((q) => q.lt(q.field('createdAtMs'), cutoff))
-      .take(500)
-
-    let deleted = 0
-    for (const record of oldRecords) {
-      await ctx.db.delete(record._id)
-      deleted++
-    }
-
-    return { deleted }
-  },
-})

@@ -1,21 +1,4 @@
-export const COLORS = {
-  primary: {
-    DEFAULT: '#071740',
-    foreground: '#f9fafb',
-  },
-  secondary: {
-    DEFAULT: '#1e293b',
-    foreground: '#f9fafb',
-  },
-  accent: {
-    DEFAULT: '#facc15',
-    foreground: '#0f172a',
-  },
-  destructive: {
-    DEFAULT: '#dc2626',
-    foreground: '#ffffff',
-    border: '#b91c1c',
-  },
+const SEMANTIC_SWATCHES = {
   success: {
     DEFAULT: '#16a34a',
     foreground: '#ffffff',
@@ -41,6 +24,47 @@ export const COLORS = {
     bg: '#eff6ff',
     text: '#1e40af',
   },
+} as const
+
+export const SEMANTIC_COLOR_TOKENS = {
+  success: {
+    DEFAULT: 'hsl(var(--success))',
+    foreground: 'hsl(var(--success-foreground))',
+    border: 'hsl(var(--success-border))',
+  },
+  warning: {
+    DEFAULT: 'hsl(var(--warning))',
+    foreground: 'hsl(var(--warning-foreground))',
+    border: 'hsl(var(--warning-border))',
+  },
+  info: {
+    DEFAULT: 'hsl(var(--info))',
+    foreground: 'hsl(var(--info-foreground))',
+    border: 'hsl(var(--info-border))',
+  },
+} as const
+
+export const COLORS = {
+  primary: {
+    DEFAULT: '#071740',
+    foreground: '#f9fafb',
+  },
+  secondary: {
+    DEFAULT: '#1e293b',
+    foreground: '#f9fafb',
+  },
+  accent: {
+    DEFAULT: '#facc15',
+    foreground: '#0f172a',
+  },
+  destructive: {
+    DEFAULT: '#dc2626',
+    foreground: '#ffffff',
+    border: '#b91c1c',
+  },
+  success: SEMANTIC_SWATCHES.success,
+  warning: SEMANTIC_SWATCHES.warning,
+  info: SEMANTIC_SWATCHES.info,
   background: {
     DEFAULT: '#f9fafb',
     card: '#ffffff',
@@ -128,30 +152,30 @@ export const PROVIDER_COLORS = {
 
 export const SEMANTIC_COLORS = {
   status: {
-    active: '#10b981',
+    active: SEMANTIC_SWATCHES.success.DEFAULT,
     inactive: '#6b7280',
-    pending: '#f59e0b',
+    pending: SEMANTIC_SWATCHES.warning.DEFAULT,
     error: '#dc2626',
-    success: '#16a34a',
-    warning: '#f59e0b',
-    info: '#3b82f6',
+    success: SEMANTIC_SWATCHES.success.DEFAULT,
+    warning: SEMANTIC_SWATCHES.warning.DEFAULT,
+    info: SEMANTIC_SWATCHES.info.DEFAULT,
   },
   priority: {
     low: '#3b82f6',
-    medium: '#f59e0b',
+    medium: SEMANTIC_SWATCHES.warning.DEFAULT,
     high: '#f97316',
     critical: '#dc2626',
   },
   project: {
     planning: '#64748b',
-    active: '#10b981',
-    onHold: '#f59e0b',
-    completed: '#3b82f6',
+    active: SEMANTIC_SWATCHES.success.DEFAULT,
+    onHold: SEMANTIC_SWATCHES.warning.DEFAULT,
+    completed: SEMANTIC_SWATCHES.info.DEFAULT,
   },
   severity: {
     critical: '#dc2626',
-    warning: '#f59e0b',
-    info: '#3b82f6',
+    warning: SEMANTIC_SWATCHES.warning.DEFAULT,
+    info: SEMANTIC_SWATCHES.info.DEFAULT,
   },
 } as const
 
@@ -225,15 +249,15 @@ export const EMAIL_COLORS = {
     dark: '#0f172a',
   },
   success: {
-    bg: '#ecfdf5',
+    bg: SEMANTIC_SWATCHES.success.bg,
     border: '#bbf7d0',
-    text: '#15803d',
+    text: SEMANTIC_SWATCHES.success.border,
     darkText: '#166534',
   },
   info: {
-    bg: '#eff6ff',
+    bg: SEMANTIC_SWATCHES.info.bg,
     border: '#bfdbfe',
-    text: '#1d4ed8',
+    text: SEMANTIC_SWATCHES.info.text,
     darkText: '#1e3a8a',
   },
   error: {
@@ -243,9 +267,9 @@ export const EMAIL_COLORS = {
     darkText: '#991b1b',
   },
   warning: {
-    bg: '#fffbeb',
+    bg: SEMANTIC_SWATCHES.warning.bg,
     border: '#fde68a',
-    text: '#b45309',
+    text: SEMANTIC_SWATCHES.warning.text,
     darkText: '#92400e',
   },
 } as const

@@ -1,6 +1,6 @@
 'use client'
 
-import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { LazyMotion, domAnimation, m } from '@/shared/ui/motion'
 import {
   CircleCheck,
   Copy,
@@ -234,7 +234,7 @@ function ProposalDeckReadyState({
 
       <div className="mt-auto flex items-center justify-between border-t border-muted/40 pt-6">
         <div className="flex items-center gap-2 text-[11px] font-bold text-muted-foreground">
-          <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+          <div className="h-2 w-2 rounded-full bg-success shadow-[0_0_8px_hsl(var(--success)/0.5)]" />
           AUTHENTICATED & VERIFIED
         </div>
         {onRecheckDeck && (presentationDeck.status === 'pending' || presentationDeck.status === 'processing') ? (
@@ -303,7 +303,7 @@ export function ProposalAssetDeliveryCard({
                 variant="outline"
                 className={cn(
                   'h-6 rounded-lg px-2.5 text-[10px] font-bold uppercase tracking-[0.1em]',
-                  presentationDeck.status === 'ready' ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-primary/20 bg-primary/5 text-primary',
+                  presentationDeck.status === 'ready' ? 'border-success/20 bg-success/10 text-success' : 'border-primary/20 bg-primary/5 text-primary',
                 )}
               >
                 {presentationDeck.status}

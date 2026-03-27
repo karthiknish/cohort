@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAction, useConvexAuth, useMutation, useQuery } from 'convex/react'
-import { SiGoogleads, SiLinkedin, SiMeta, SiTiktok } from 'react-icons/si'
 
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
@@ -23,6 +22,7 @@ import {
   TOAST_TITLES,
   PROVIDER_IDS,
 } from '../components/constants'
+import { PROVIDER_ICON_MAP } from '@/features/dashboard/ads/constants'
 
 // Raw providerId values that are genuine ads platforms.
 // This is checked against the raw DB value BEFORE normalization so that
@@ -276,28 +276,28 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
        id: PROVIDER_IDS.GOOGLE,
        name: 'Google Ads',
        description: 'Import campaign performance, budgets, and ROAS insights directly from Google Ads.',
-       icon: SiGoogleads,
+       icon: PROVIDER_ICON_MAP.google!,
        mode: 'oauth',
      },
     {
       id: PROVIDER_IDS.FACEBOOK,
       name: 'Meta Ads Manager',
       description: 'Pull spend, results, and creative breakdowns from Meta and Instagram campaigns.',
-      icon: SiMeta,
+      icon: PROVIDER_ICON_MAP.facebook!,
       mode: 'oauth',
     },
      {
        id: PROVIDER_IDS.LINKEDIN,
        name: 'LinkedIn Ads',
        description: 'Sync lead-gen form results and campaign analytics from LinkedIn.',
-       icon: SiLinkedin,
+       icon: PROVIDER_ICON_MAP.linkedin!,
        connect: () => connectLinkedInAdsAccount(),
      },
     {
       id: PROVIDER_IDS.TIKTOK,
       name: 'TikTok Ads',
       description: 'Bring in spend, engagement, and conversion insights from TikTok campaign flights.',
-      icon: SiTiktok,
+      icon: PROVIDER_ICON_MAP.tiktok!,
       mode: 'oauth',
     },
   ]

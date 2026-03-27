@@ -126,7 +126,7 @@ export function CollaborationSidebarAssetLibrarySection({ sharedFiles }: { share
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 border-b border-muted/20 pb-2.5">
-        <div className="h-2 w-2 rounded-full bg-emerald-500/60" />
+        <div className="h-2 w-2 rounded-full bg-success/60" />
         <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Asset Library</p>
       </div>
       {sharedFiles.length === 0 ? (

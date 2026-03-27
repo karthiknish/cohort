@@ -103,7 +103,7 @@ function formatCampaignDateRange(startTime?: string, stopTime?: string): string 
 function getStatusBadge(status: string) {
   const statusLower = status.toLowerCase()
   if (statusLower === 'enabled' || statusLower === 'enable' || statusLower === 'active') {
-    return <Badge variant="default" className="bg-green-500">Active</Badge>
+    return <Badge variant="default" className="bg-success">Active</Badge>
   }
   if (statusLower === 'paused' || statusLower === 'disable') {
     return <Badge variant="secondary">Paused</Badge>

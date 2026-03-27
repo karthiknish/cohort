@@ -52,7 +52,7 @@ export function GoogleAnalyticsSetupDialog({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F9AB00]/10 text-[#E37400]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/10 text-warning">
               <BarChart3 className="h-5 w-5" />
             </span>
             <div>
@@ -96,7 +96,7 @@ export function GoogleAnalyticsSetupDialog({
             </Select>
 
             {noProperties ? (
-              <p className="text-xs text-amber-700">
+              <p className="text-xs text-warning">
                 No properties were found for this Google account. Verify Analytics access, then reload.
               </p>
             ) : null}

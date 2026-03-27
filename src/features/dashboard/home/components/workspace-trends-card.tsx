@@ -61,7 +61,7 @@ export function WorkspaceTrendsCard({ summaries, periodDays, mixedCurrencies }: 
         {insights.roasLeader && (
           <div className="rounded-xl border bg-card p-3">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-amber-500" /> ROAS leader
+              <Trophy className="h-4 w-4 text-warning" /> ROAS leader
             </p>
             <p className="mt-1 text-sm font-semibold">{insights.roasLeader.clientName}</p>
             <p className="text-xs text-muted-foreground">{formatRoas(insights.roasLeader.roas)} ROAS</p>

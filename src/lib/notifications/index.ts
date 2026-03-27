@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * Centralized Notification System
  *
@@ -13,7 +15,7 @@
  * - Dismissal handling
  */
 
-import { toast as sonnerToast } from 'sonner'
+import { toast as sonnerToast } from '@/shared/ui/sonner'
 import * as React from 'react'
 
 // =============================================================================
@@ -227,8 +229,7 @@ export function dismissAllToasts(): void {
 // RE-EXPORT SONNER FOR DIRECT USE
 // =============================================================================
 
-export { toast } from 'sonner'
-export type { ToastT } from 'sonner'
+export { toast } from '@/shared/ui/sonner'
 
 // =============================================================================
 // EMAIL NOTIFICATIONS (Brevo)

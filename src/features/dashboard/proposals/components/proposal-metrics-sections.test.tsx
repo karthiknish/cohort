@@ -8,8 +8,8 @@ const stat = {
   label: 'Total Proposals',
   value: '12',
   description: 'Drafts and submitted',
-  color: 'text-blue-500',
-  bg: 'bg-blue-500/10',
+  color: 'text-info',
+  bg: 'bg-info/10',
 }
 
 describe('proposal metrics sections', () => {

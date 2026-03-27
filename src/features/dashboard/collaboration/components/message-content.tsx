@@ -5,12 +5,11 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react"
 import ReactMarkdown from "react-markdown"
 import type { Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
-import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { Check, Copy } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/shared/ui/button"
+import { CodeSyntaxHighlighter } from "@/shared/ui/code-syntax-highlighter"
 import { LazyImage } from "@/shared/ui/lazy-image"
 import type { CollaborationMention } from "@/types/collaboration"
 
@@ -77,7 +76,7 @@ function CopyButton({ code }: { code: string }) {
       title={copied ? "Copied!" : "Copy code"}
     >
       {copied ? (
-        <Check className="h-3.5 w-3.5 text-green-500" />
+        <Check className="h-3.5 w-3.5 text-success" />
       ) : (
         <Copy className="h-3.5 w-3.5" />
       )}
@@ -144,23 +143,7 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
             </span>
             <CopyButton code={codeString} />
           </div>
-          <SyntaxHighlighter
-            style={oneLight}
-            language={normalizedLang}
-            PreTag="div"
-            customStyle={{
-              margin: 0,
-              padding: "1rem",
-              background: "transparent",
-              fontSize: "13px",
-              lineHeight: "1.5",
-            }}
-            codeTagProps={{
-              className: "font-mono",
-            }}
-          >
-            {codeString}
-          </SyntaxHighlighter>
+          <CodeSyntaxHighlighter language={normalizedLang} code={codeString} />
         </span>
       )
     },

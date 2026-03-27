@@ -2,7 +2,7 @@
 
 import { useMemo, type ChangeEvent, type KeyboardEvent, type MouseEvent, type RefObject } from 'react'
 
-import type { ReceivedChatMessage } from '@livekit/components-react'
+import type { ReceivedChatMessage } from '@/shared/ui/livekit'
 import { Download, File, ImageIcon, LoaderCircle, MessageSquareText, Paperclip, Send, X } from 'lucide-react'
 
 import type { PendingAttachment } from '@/features/dashboard/collaboration/hooks/types'
@@ -48,8 +48,8 @@ export function MeetingChatAttachmentCard({ attachment, isLocal }: { attachment:
       target="_blank"
       rel="noreferrer"
       className={cn(
-        'flex items-center gap-3 rounded-2xl border px-3 py-2 transition hover:border-white/30 hover:bg-white/10',
-        isLocal ? 'border-primary-foreground/20 bg-primary-foreground/10' : 'border-border/70 bg-black/5',
+        'flex items-center gap-3 rounded-2xl border px-3 py-2 transition hover:border-border/80 hover:bg-muted/40',
+        isLocal ? 'border-primary-foreground/20 bg-primary-foreground/10' : 'border-border/70 bg-muted/20',
       )}
     >
       <div
@@ -141,13 +141,13 @@ export function MeetingChatLauncherButton({ unreadCount, onOpen }: { unreadCount
       type="button"
       size="sm"
       variant="secondary"
-      className="border border-white/15 bg-slate-950/65 text-white shadow-sm backdrop-blur hover:bg-slate-900/75"
+      className="border border-border/60 bg-card text-foreground shadow-sm backdrop-blur hover:bg-muted/40"
       onClick={onOpen}
     >
       <MessageSquareText className="mr-2 h-4 w-4" />
       Meeting chat
       {unreadCount > 0 ? (
-        <Badge variant="secondary" className="ml-2 rounded-full border border-white/15 bg-white/10 text-white">
+        <Badge variant="secondary" className="ml-2 rounded-full border border-border/60 bg-muted/30 text-foreground">
           {unreadCount}
         </Badge>
       ) : null}
@@ -238,17 +238,17 @@ export function MeetingChatPanel({
   uploadingFiles,
 }: MeetingChatPanelProps) {
   return (
-    <div className="flex h-[24rem] w-full flex-col overflow-hidden rounded-[28px] border border-white/15 bg-slate-950/82 text-white shadow-2xl backdrop-blur-xl">
-      <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-3">
+    <div className="flex h-[24rem] w-full flex-col overflow-hidden rounded-[28px] border border-border/60 bg-card text-foreground shadow-2xl backdrop-blur-xl">
+      <div className="flex items-start justify-between gap-3 border-b border-border/60 px-4 py-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-slate-300">Meeting chat</p>
-          <p className="mt-1 text-sm text-slate-100">Only people currently in the room receive these messages.</p>
+          <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Meeting chat</p>
+          <p className="mt-1 text-sm text-foreground">Only people currently in the room receive these messages.</p>
         </div>
         <Button
           type="button"
           size="icon"
           variant="ghost"
-          className="h-8 w-8 text-slate-200 hover:bg-white/10 hover:text-white"
+          className="h-8 w-8 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           onClick={onClose}
         >
           <X className="h-4 w-4" />
@@ -268,7 +268,7 @@ export function MeetingChatPanel({
               />
             ))
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-5 text-sm text-slate-300">
+            <div className="rounded-2xl border border-dashed border-border/60 bg-muted/30 px-4 py-5 text-sm text-muted-foreground">
               No messages yet. Say hello to everyone in the room.
             </div>
           )}
@@ -276,7 +276,7 @@ export function MeetingChatPanel({
         </div>
       </ScrollArea>
 
-      <div className="border-t border-white/10 px-4 py-3">
+      <div className="border-t border-border/60 px-4 py-3">
         <input
           ref={fileInputRef}
           type="file"
@@ -290,14 +290,14 @@ export function MeetingChatPanel({
             {pendingAttachments.map((attachment) => (
               <div
                 key={attachment.id}
-                className="flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-xs text-slate-100"
+                className="flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground"
               >
                 <Paperclip className="h-3.5 w-3.5 shrink-0" />
                 <span className="max-w-[10rem] truncate">{attachment.name}</span>
-                <span className="text-slate-400">{attachment.sizeLabel}</span>
+                <span className="text-muted-foreground">{attachment.sizeLabel}</span>
                 <button
                   type="button"
-                  className="rounded-full p-0.5 text-slate-300 transition hover:bg-white/10 hover:text-white"
+                  className="rounded-full p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
                   onClick={() => onRemoveAttachment(attachment.id)}
                 >
                   <X className="h-3.5 w-3.5" />
@@ -308,8 +308,8 @@ export function MeetingChatPanel({
           </div>
         ) : null}
         {showMentionResults && mentionResults.length > 0 ? (
-          <div className="mb-3 overflow-hidden rounded-2xl border border-white/10 bg-black/25 shadow-lg">
-            <p className="border-b border-white/10 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400">
+          <div className="mb-3 overflow-hidden rounded-2xl border border-border/60 bg-popover/95 shadow-lg backdrop-blur">
+            <p className="border-b border-border/60 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
               Mention someone in the room
             </p>
             <div className="max-h-52 overflow-y-auto p-2">
@@ -323,18 +323,18 @@ export function MeetingChatPanel({
                     onClick={() => onSelectMention(candidate)}
                     className={cn(
                       'flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm transition',
-                      isActive ? 'bg-white/10 text-white' : 'text-slate-200 hover:bg-white/5',
+                      isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                     )}
                   >
-                    <Avatar className="h-8 w-8 shrink-0 border border-white/10">
+                    <Avatar className="h-8 w-8 shrink-0 border border-border/60">
                       {candidate.avatarUrl ? <AvatarImage src={candidate.avatarUrl} alt={candidate.label} /> : null}
-                      <AvatarFallback className="bg-white/10 text-[11px] font-semibold text-white">{getMeetingChatInitials(candidate.label)}</AvatarFallback>
+                      <AvatarFallback className="bg-muted text-[11px] font-semibold text-foreground">{getMeetingChatInitials(candidate.label)}</AvatarFallback>
                     </Avatar>
                     <span className="min-w-0 flex-1 truncate">{candidate.label}</span>
                     {!candidate.isLocal ? (
-                      <span className="text-[11px] text-slate-400">@{candidate.identity}</span>
+                      <span className="text-[11px] text-muted-foreground">@{candidate.identity}</span>
                     ) : (
-                      <span className="text-[11px] text-slate-400">You</span>
+                      <span className="text-[11px] text-muted-foreground">You</span>
                     )}
                   </button>
                 )
@@ -351,19 +351,19 @@ export function MeetingChatPanel({
           placeholder="Send a message to everyone in the room… Type @ to mention someone."
           autoGrow
           rows={2}
-          className="min-h-[76px] border-white/10 bg-white/5 text-white placeholder:text-slate-400 hover:border-white/20 focus-visible:border-white/25 focus-visible:ring-white/10"
+          className="min-h-[76px] border-border/60 bg-background/95 text-foreground placeholder:text-muted-foreground hover:border-border/80 focus-visible:border-ring focus-visible:ring-ring/20"
         />
         <div className="mt-3 flex items-center justify-between gap-3">
           <div className="space-y-1">
-            <p className="text-[11px] text-slate-400">Press Enter to send. Shift+Enter adds a new line.</p>
-            <p className="text-[11px] text-slate-500">Type @ to mention people in the room. Share up to {maxAttachments} files per message.</p>
+            <p className="text-[11px] text-muted-foreground">Press Enter to send. Shift+Enter adds a new line.</p>
+            <p className="text-[11px] text-muted-foreground">Type @ to mention people in the room. Share up to {maxAttachments} files per message.</p>
           </div>
           <div className="flex items-center gap-2">
             <Button
               type="button"
               size="icon"
               variant="ghost"
-              className="h-9 w-9 border border-white/10 text-slate-200 hover:bg-white/10 hover:text-white"
+              className="h-9 w-9 border border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground"
               disabled={uploadingFiles}
               onClick={() => fileInputRef.current?.click()}
             >
@@ -373,7 +373,7 @@ export function MeetingChatPanel({
             <Button
               type="button"
               size="sm"
-              className="min-w-[110px] bg-white text-slate-950 hover:bg-slate-100"
+              className="min-w-[110px] bg-primary text-primary-foreground hover:bg-primary/90"
               disabled={!canSend || isSending || uploadingFiles}
               onClick={onSend}
             >

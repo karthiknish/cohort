@@ -408,7 +408,7 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
 
   return (
     <>
-      <Card className="overflow-hidden border-slate-200/80 bg-white/95 shadow-sm">
+      <Card className="overflow-hidden border-border/60 bg-background/95 shadow-sm">
         <TaskCommentsSummaryHeader
           commentsCount={comments.length}
           replyCount={threaded.replyCount}

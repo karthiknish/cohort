@@ -18,7 +18,7 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Eye className="w-4 h-4 text-purple-500" />
+            <Eye className="w-4 h-4 text-info" />
             Awareness Strategy
           </CardTitle>
           <CardDescription>
@@ -57,11 +57,11 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
                   disabled={disabled}
                   className={`flex items-start gap-3 p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
                     formData.optimizationGoal === option.value
-                      ? 'border-purple-500 bg-purple-500/5'
-                      : 'border-border hover:border-purple-500/50'
+                      ? 'border-info/20 bg-info/10'
+                      : 'border-border hover:border-info/50'
                   }`}
                 >
-                  <option.icon className="w-5 h-5 text-purple-500 mt-0.5" />
+                  <option.icon className="w-5 h-5 text-info mt-0.5" />
                   <div>
                     <p className="font-medium text-sm">{option.label}</p>
                     <p className="text-xs text-muted-foreground">{option.desc}</p>
@@ -140,10 +140,10 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
       </Card>
 
       {/* Tips */}
-      <Card className="border-purple-500/20 bg-purple-500/5">
+      <Card className="border-info/20 bg-info/10">
         <CardContent className="pt-6">
           <div className="flex gap-3">
-            <Eye className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+            <Eye className="w-5 h-5 text-info flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
               <h4 className="font-medium text-sm">Awareness Campaign Tips</h4>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">

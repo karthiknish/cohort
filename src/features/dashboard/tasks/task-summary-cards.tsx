@@ -52,11 +52,11 @@ export const TaskSummaryCards = memo(function TaskSummaryCards({ taskCounts, com
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">Flow Efficiency</p>
-              <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{completionRate}%</span>
+              <span className="text-sm font-bold text-info">{completionRate}%</span>
             </div>
             <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/60">
               <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
+                className="h-full bg-gradient-to-r from-info to-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
                 style={{ width: `${completionRate}%` }}
               />
             </div>

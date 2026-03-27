@@ -158,7 +158,7 @@ export default function SettingsPage() {
           return preferences
         })
         .catch((saveError) => {
-          const message = saveError instanceof Error ? saveError.message : 'Failed to update notification preferences'
+          const message = 'Unable to update notification preferences. Please try again.'
           console.error('[settings/notifications] update failed', saveError)
           if (isMountedRef.current) {
             setNotificationError(message)

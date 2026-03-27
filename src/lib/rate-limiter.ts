@@ -13,6 +13,10 @@ export interface RateLimitConfig {
   windowMs: number
 }
 
+export function createRateLimitConfig(maxRequests: number, windowMs: number): RateLimitConfig {
+  return { maxRequests, windowMs }
+}
+
 export interface RateLimitResult {
   allowed: boolean
   limit: number

@@ -72,9 +72,9 @@ export function SetupAlerts({
   return (
     <>
       {metaSetupMessage && (
-        <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+        <Alert className="border-warning/20 bg-warning/5 text-warning-foreground">
           <AlertTitle className="flex items-center gap-2 text-sm font-semibold">
-            <AlertTriangle className="h-4 w-4" /> Meta setup issue
+            <AlertTriangle className="h-4 w-4 text-warning" /> Meta setup issue
           </AlertTitle>
           <AlertDescription className="mt-1 text-xs leading-relaxed">
             {metaSetupMessage}
@@ -137,16 +137,16 @@ export function SetupAlerts({
             </div>
 
             {!loadingMetaAccountOptions && metaAccountOptions.length === 0 ? (
-              <p className="text-amber-700">No Meta ad accounts found for this token. Verify your Meta Business Manager permissions.</p>
+              <p className="text-warning">No Meta ad accounts found for this token. Verify your Meta Business Manager permissions.</p>
             ) : null}
           </AlertDescription>
         </Alert>
       )}
 
       {tiktokSetupMessage && (
-        <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+        <Alert className="border-warning/20 bg-warning/5 text-warning-foreground">
           <AlertTitle className="flex items-center gap-2 text-sm font-semibold">
-            <AlertTriangle className="h-4 w-4" /> TikTok setup issue
+            <AlertTriangle className="h-4 w-4 text-warning" /> TikTok setup issue
           </AlertTitle>
           <AlertDescription className="mt-1 text-xs leading-relaxed">
             {tiktokSetupMessage}

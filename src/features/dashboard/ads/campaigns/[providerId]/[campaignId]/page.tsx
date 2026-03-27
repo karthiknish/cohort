@@ -491,8 +491,8 @@ function CampaignInsightsPageContent() {
       />
 
       {campaignError && !isPreviewMode && (
-        <Card className="border-red-500/20 bg-red-500/5">
-          <CardContent className="flex items-center gap-3 p-4 text-sm font-bold text-red-600">
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardContent className="flex items-center gap-3 p-4 text-sm font-bold text-destructive">
             <span>{campaignError}</span>
             <button type="button" onClick={() => void loadCampaign()} className="underline">Retry</button>
           </CardContent>

@@ -57,14 +57,14 @@ export const FEATURE_PRIORITY_LABELS: Record<FeaturePriority, string> = {
 }
 
 export const FEATURE_STATUS_COLORS: Record<FeatureStatus, string> = {
-  backlog: 'bg-slate-100 text-slate-700',
-  planned: 'bg-blue-100 text-blue-700',
-  in_progress: 'bg-amber-100 text-amber-700',
-  completed: 'bg-emerald-100 text-emerald-700',
+  backlog: 'bg-muted/50 text-muted-foreground',
+  planned: 'bg-info/10 text-info border border-info/20',
+  in_progress: 'bg-warning/10 text-warning border border-warning/20',
+  completed: 'bg-success/10 text-success border border-success/20',
 }
 
 export const FEATURE_PRIORITY_COLORS: Record<FeaturePriority, string> = {
-  low: 'border-slate-300 text-slate-600',
-  medium: 'border-amber-300 text-amber-600',
-  high: 'border-red-300 text-red-600',
+  low: 'border-info/20 text-info',
+  medium: 'border-warning/20 text-warning',
+  high: 'border-destructive/20 text-destructive',
 }

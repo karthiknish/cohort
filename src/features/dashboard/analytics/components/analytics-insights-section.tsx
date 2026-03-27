@@ -93,10 +93,10 @@ export function AnalyticsInsightsSection({
                                         key={`${group.providerId}-${suggestion.level}-${suggestion.title}`}
                                         className={cn(
                                             "relative overflow-hidden rounded-xl border p-4 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md",
-                                            suggestion.level === 'success' && "border-emerald-500/30 bg-emerald-500/5",
-                                            suggestion.level === 'warning' && "border-amber-500/30 bg-amber-500/5",
-                                            suggestion.level === 'critical' && "border-red-500/30 bg-red-500/5",
-                                            suggestion.level === 'info' && "border-blue-500/30 bg-blue-500/5"
+                                            suggestion.level === 'success' && "border-success/20 bg-success/10",
+                                            suggestion.level === 'warning' && "border-warning/20 bg-warning/10",
+                                            suggestion.level === 'critical' && "border-destructive/20 bg-destructive/10",
+                                            suggestion.level === 'info' && "border-info/20 bg-info/10"
                                         )}
                                     >
                                         <div className="flex items-start justify-between gap-4">
@@ -104,10 +104,10 @@ export function AnalyticsInsightsSection({
                                                 <div className="flex items-center gap-2">
                                                     <div className={cn(
                                                         "flex h-6 w-6 items-center justify-center rounded-lg",
-                                                        suggestion.level === 'success' && "bg-emerald-500/10 text-emerald-600",
-                                                        suggestion.level === 'warning' && "bg-amber-500/10 text-amber-600",
-                                                        suggestion.level === 'critical' && "bg-red-500/10 text-red-600",
-                                                        suggestion.level === 'info' && "bg-blue-500/10 text-blue-600"
+                                                        suggestion.level === 'success' && "bg-success/10 text-success",
+                                                        suggestion.level === 'warning' && "bg-warning/10 text-warning",
+                                                        suggestion.level === 'critical' && "bg-destructive/10 text-destructive",
+                                                        suggestion.level === 'info' && "bg-info/10 text-info"
                                                     )}>
                                                         {suggestion.level === 'success' && <CircleCheck className="h-3.5 w-3.5" />}
                                                         {suggestion.level === 'warning' && <TriangleAlert className="h-3.5 w-3.5" />}
@@ -147,7 +147,7 @@ export function AnalyticsInsightsSection({
                 <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
                     <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                            <div className="h-2 w-2 rounded-full bg-success" />
                             <div>
                                 <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">AI-powered insight brief</CardTitle>
                                 <CardDescription className="mt-1 text-xs font-medium text-muted-foreground/60">Narrative analysis generated from the selected property&apos;s synced users, sessions, conversions, and revenue.</CardDescription>
@@ -166,7 +166,7 @@ export function AnalyticsInsightsSection({
                 </CardHeader>
                 <CardContent className="pt-6 space-y-4">
                     {insightsError && (
-                        <Alert variant="destructive" className="rounded-xl border-red-500/20 bg-red-500/5">
+                        <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/10">
                             <TriangleAlert className="h-4 w-4" />
                             <AlertTitle className="text-xs font-bold uppercase tracking-wider">Insight generation failed</AlertTitle>
                             <AlertDescription className="text-xs font-medium opacity-80">{insightsError.message}</AlertDescription>

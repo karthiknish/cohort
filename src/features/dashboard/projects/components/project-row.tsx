@@ -64,9 +64,9 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
       <div
         className={cn(
           "absolute left-0 top-0 bottom-0 w-1 rounded-l-xl transition-opacity opacity-70 group-hover:opacity-100",
-          project.status === 'active' ? 'bg-emerald-500' :
-            project.status === 'planning' ? 'bg-slate-500' :
-              project.status === 'on_hold' ? 'bg-amber-500' : 'bg-blue-500'
+          project.status === 'active' ? 'bg-success' :
+            project.status === 'planning' ? 'bg-muted-foreground/60' :
+              project.status === 'on_hold' ? 'bg-warning' : 'bg-info'
         )}
       />
 
@@ -135,19 +135,19 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] text-muted-foreground/70">
             <span className="inline-flex items-center gap-2 font-medium">
-              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
+              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-success/10 text-success">
                 <ListChecks className="h-3 w-3" />
               </div>
               {formatTaskSummary(project.openTaskCount, project.taskCount)}
             </span>
             <span className="inline-flex items-center gap-2">
-              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-400">
+              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-info/10 text-info">
                 <Calendar className="h-3 w-3" />
               </div>
               <span className="font-medium">{formatDateRange(project.startDate, project.endDate)}</span>
             </span>
             <span className="inline-flex items-center gap-2">
-              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400">
+              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <MessageSquare className="h-3 w-3" />
               </div>
               <span className="tabular-nums">

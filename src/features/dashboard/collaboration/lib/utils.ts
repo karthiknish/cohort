@@ -4,9 +4,9 @@ import type { CollaborationAttachment, CollaborationChannelType, CollaborationMe
 export type ChannelTypeColorMap = Record<CollaborationChannelType, string>
 
 export const CHANNEL_TYPE_COLORS: ChannelTypeColorMap = {
-  client: 'bg-blue-100 text-blue-800',
-  team: 'bg-emerald-100 text-emerald-800',
-  project: 'bg-purple-100 text-purple-800',
+  client: 'bg-info/10 text-info',
+  team: 'bg-success/10 text-success',
+  project: 'bg-accent/10 text-accent',
 }
 
 export function normalizeTeamMembers(members: ClientTeamMember[] = []): ClientTeamMember[] {

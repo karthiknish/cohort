@@ -33,7 +33,7 @@ export function PollCardHeader({
             {poll.endTime ? (
               <>
                 <span>•</span>
-                <span className={cn(isExpired && 'text-red-500')}>
+                <span className={cn(isExpired && 'text-destructive')}>
                   {isExpired ? 'Ended' : `Ends ${new Date(poll.endTime).toLocaleString()}`}
                 </span>
               </>

@@ -3,9 +3,9 @@
 import { Bell, CircleCheck, Folder, MessageSquare } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
+import { toast } from '@/shared/ui/sonner'
 import type { Activity } from '@/types/activity'
 
 interface NotificationConfig {

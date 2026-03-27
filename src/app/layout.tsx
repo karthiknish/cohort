@@ -4,8 +4,8 @@ import { Geist, Geist_Mono, Anybody } from 'next/font/google'
 import { Agentation } from "agentation";
 export const dynamic = 'force-dynamic'
 import './globals.css'
-import '@livekit/components-styles'
 import { cn } from '@/lib/utils'
+import '@/shared/ui/livekit-styles'
 import { SiteHeader } from '@/shared/layout/site/site-header'
 import { SiteFooter } from '@/shared/layout/site/site-footer'
 import { Toaster } from '@/shared/ui/toaster'
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#ffffff',
+  themeColor: 'hsl(var(--background))',
 }
 
 export default function RootLayout({

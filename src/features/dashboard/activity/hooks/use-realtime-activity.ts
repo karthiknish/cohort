@@ -88,8 +88,10 @@ export function useRealtimeActivity(limitCount = 20, preferPreviewData = false) 
           ids,
           action: 'read',
         })
-      } catch {
-        // Silently fail - UI will update on next query refresh
+        setError(null)
+      } catch (error) {
+        console.error('[useRealtimeActivity] failed to mark activities as read', error)
+        setError('Unable to update activity read status. Please try again.')
       }
     },
     [ackMutation, user?.agencyId]

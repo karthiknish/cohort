@@ -16,15 +16,15 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
     <div
       className={cn(
         'relative overflow-hidden rounded-lg border transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
-        isPreviewMode
-          ? 'border-primary/50 bg-gradient-to-r from-primary/10 via-primary/5 to-violet-500/10'
-          : 'border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-orange-500/10',
+          isPreviewMode
+          ? 'border-info/20 bg-gradient-to-r from-info/10 via-info/5 to-success/10'
+          : 'border-warning/20 bg-gradient-to-r from-warning/10 via-warning/5 to-info/10',
         className
       )}
     >
       {/* Animated background pattern */}
       <div className="pointer-events-none absolute inset-0 opacity-30">
-        <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_25%,rgba(255,255,255,0.1)_50%,transparent_75%)] bg-[length:250%_100%] animate-shimmer" />
+        <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_25%,hsl(var(--foreground)/0.1)_50%,transparent_75%)] bg-[length:250%_100%] animate-shimmer" />
       </div>
 
       <div className="relative flex items-center justify-between gap-4 px-4 py-3">
@@ -33,8 +33,8 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
             className={cn(
               'flex h-9 w-9 items-center justify-center rounded-full transition-colors',
               isPreviewMode
-                ? 'bg-primary/20 text-primary'
-                : 'bg-amber-500/20 text-amber-600'
+                ? 'bg-info/10 text-info'
+                : 'bg-warning/10 text-warning'
             )}
           >
             {isPreviewMode ? (
@@ -63,8 +63,8 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
             className={cn(
               'gap-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
               isPreviewMode
-                ? 'border-primary/40 text-primary hover:bg-primary/10 hover:text-primary'
-                : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0'
+                ? 'border-info/20 text-info hover:bg-info/10 hover:text-info'
+                : 'bg-gradient-to-r from-warning to-info hover:from-warning/90 hover:to-info/90 text-warning-foreground border-0'
             )}
           >
             <Eye className="h-3.5 w-3.5" />
@@ -75,7 +75,7 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
 
       {/* Preview mode indicator strip */}
       {isPreviewMode && (
-        <div className="h-1 w-full bg-gradient-to-r from-primary via-violet-500 to-primary animate-pulse" />
+        <div className="h-1 w-full animate-pulse bg-gradient-to-r from-info via-success to-info" />
       )}
     </div>
   )

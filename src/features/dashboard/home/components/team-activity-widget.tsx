@@ -114,26 +114,26 @@ export function TeamActivityWidget({
       <CardContent className="space-y-4 pt-0">
         {/* Summary stats */}
         <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-emerald-500" />
+        <div className="flex items-center gap-1.5">
+            <div className="h-2 w-2 rounded-full bg-success" />
             <span className="text-muted-foreground">
               {stats.onlineCount} online
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-amber-500" />
+            <div className="h-2 w-2 rounded-full bg-warning" />
             <span className="text-muted-foreground">
               {stats.awayCount} away
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-red-500" />
+            <div className="h-2 w-2 rounded-full bg-destructive" />
             <span className="text-muted-foreground">
               {stats.busyCount} busy
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-2 w-2 rounded-full bg-gray-400" />
+            <div className="h-2 w-2 rounded-full bg-muted-foreground/50" />
             <span className="text-muted-foreground">
               {stats.offlineCount} offline
             </span>
@@ -142,13 +142,13 @@ export function TeamActivityWidget({
 
         {/* Top performer badge */}
         {!compact && stats.topPerformer && (
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/10">
-            <TrendingUp className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <div className="flex items-center gap-2 rounded-lg bg-warning/10 p-2">
+            <TrendingUp className="h-4 w-4 text-warning" />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+              <p className="text-xs font-medium text-warning">
                 Top Performer
               </p>
-              <p className="text-xs text-amber-600/70 dark:text-amber-400">
+              <p className="text-xs text-warning/80">
                 {stats.topPerformer.name} • {stats.topPerformer.tasksCompleted} tasks
               </p>
             </div>
@@ -204,10 +204,10 @@ interface TeamMemberItemProps {
 
 function TeamMemberItem({ member, onClick }: TeamMemberItemProps) {
   const statusColors = {
-    online: 'bg-emerald-500',
-    away: 'bg-amber-500',
-    busy: 'bg-red-500',
-    offline: 'bg-gray-400',
+    online: 'bg-success',
+    away: 'bg-warning',
+    busy: 'bg-destructive',
+    offline: 'bg-muted-foreground/50',
   }
 
   return (

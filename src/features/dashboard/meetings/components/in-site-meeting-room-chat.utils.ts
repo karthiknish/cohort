@@ -1,4 +1,4 @@
-import type { ReceivedChatMessage } from '@livekit/components-react'
+import type { ReceivedChatMessage } from '@/shared/ui/livekit'
 
 export type MeetingChatMentionState = {
   active: boolean

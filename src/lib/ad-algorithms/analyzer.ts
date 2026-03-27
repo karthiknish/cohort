@@ -271,7 +271,7 @@ function buildProviderComparisonData(summaries: EnrichedMetricsSummary[]): Provi
   return summaries.map(s => ({
     providerId: s.providerId,
     displayName: names[s.providerId.toLowerCase()] || s.providerId,
-    color: colors[s.providerId.toLowerCase()] || '#6B7280',
+    color: colors[s.providerId.toLowerCase()] || 'hsl(var(--muted-foreground))',
     metrics: {
       spend: s.totalSpend,
       revenue: s.totalRevenue,

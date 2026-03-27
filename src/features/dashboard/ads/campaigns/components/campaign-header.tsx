@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Chrome, Facebook, Linkedin, Music4 } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -9,7 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import { DateRangePicker, type DateRange } from '@/features/dashboard/ads/components/date-range-picker'
 import { cn } from '@/lib/utils'
 import { formatDate, DATE_FORMATS } from '@/lib/dates'
-import { SiFacebook, SiGoogleads, SiTiktok, SiLinkedin } from 'react-icons/si'
 import { formatProviderName, getProviderColor } from '@/lib/themes'
 
 interface Campaign {
@@ -63,13 +62,13 @@ export function CampaignHeader({
     switch (campaign.providerId) {
       case 'facebook':
       case 'meta':
-        return <SiFacebook className={cn("h-3 w-3", colorClass)} />
+        return <Facebook className={cn("h-3 w-3", colorClass)} />
       case 'google':
-        return <SiGoogleads className={cn("h-3 w-3", colorClass)} />
+        return <Chrome className={cn("h-3 w-3", colorClass)} />
       case 'tiktok':
-        return <SiTiktok className={cn("h-3 w-3", colorClass)} />
+        return <Music4 className={cn("h-3 w-3", colorClass)} />
       case 'linkedin':
-        return <SiLinkedin className={cn("h-3 w-3", colorClass)} />
+        return <Linkedin className={cn("h-3 w-3", colorClass)} />
       default:
         return null
     }
@@ -100,7 +99,7 @@ export function CampaignHeader({
                     <AvatarFallback className="text-[10px]">{campaign.accountName?.[0] || '?'}</AvatarFallback>
                   </Avatar>
                 ) : campaign?.providerId === 'facebook' && (
-                  <div className="h-6 w-6 rounded-full bg-blue-500/10 flex items-center justify-center ring-1 ring-blue-500/20 text-blue-600">
+                  <div className="h-6 w-6 rounded-full bg-info/10 flex items-center justify-center ring-1 ring-info/20 text-info">
                     <span className="text-[10px] font-bold">M</span>
                   </div>
                 )}
@@ -119,8 +118,8 @@ export function CampaignHeader({
                   className={cn(
                     'ml-1 px-1.5 py-0 text-[9px] font-black uppercase tracking-tight opacity-70',
                     campaign?.status === 'ACTIVE'
-                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600'
-                      : 'border-yellow-500/30 bg-yellow-500/10 text-yellow-600'
+                      ? 'border-success/20 bg-success/10 text-success'
+                      : 'border-warning/20 bg-warning/10 text-warning'
                   )}
                 >
                   {campaign?.status}

@@ -16,6 +16,15 @@
   --accent-foreground: #0f172a;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --success-border: #15803d;
+  --warning: #f59e0b;
+  --warning-foreground: #78350f;
+  --warning-border: #d97706;
+  --info: #3b82f6;
+  --info-foreground: #ffffff;
+  --info-border: #2563eb;
   --border: #e2e8f0;
   --input: #e2e8f0;
   --ring: #071740;
@@ -35,9 +44,12 @@
   --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #243041;
   --sidebar-ring: #16a34a;
-  --success-bg: #16a34a;
-  --success-text: #ffffff;
-  --success-border: #15803d;
+  --success-bg: var(--success);
+  --success-text: var(--success-foreground);
+  --warning-bg: var(--warning);
+  --warning-text: var(--warning-foreground);
+  --info-bg: var(--info);
+  --info-text: var(--info-foreground);
   --motion-duration-fast: 160ms;
   --motion-duration-normal: 220ms;
   --motion-duration-slow: 280ms;
@@ -52,6 +64,17 @@
   --motion-scale-subtle: 0.98;
   --focus-ring-width: 3px;
   --focus-ring-offset: 2px;
+  --provider-google-rgb: 66 133 244;
+  --provider-facebook-rgb: 6 104 225;
+  --provider-meta-rgb: 6 104 225;
+  --provider-linkedin-rgb: 10 102 194;
+  --provider-tiktok-rgb: 254 44 85;
+  --kpi-emerald-rgb: 22 163 74;
+  --kpi-blue-rgb: 59 130 246;
+  --kpi-violet-rgb: 139 92 246;
+  --kpi-amber-rgb: 245 158 11;
+  --kpi-rose-rgb: 244 63 94;
+  --kpi-cyan-rgb: 6 182 212;
 }
 
 
@@ -73,6 +96,15 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-border: var(--warning-border);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-border: var(--info-border);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -359,21 +391,21 @@ h6 {
     }
 
     &[data-type="success"] {
-      background: var(--success-bg) !important;
-      color: var(--success-text) !important;
+      background: var(--success) !important;
+      color: var(--success-foreground) !important;
       border: 1px solid var(--success-border) !important;
     }
 
     &[data-type="warning"] {
-      background: var(--accent) !important;
-      color: var(--accent-foreground) !important;
-      border: 1px solid color-mix(in srgb, var(--accent) 80%, black) !important;
+      background: var(--warning) !important;
+      color: var(--warning-foreground) !important;
+      border: 1px solid var(--warning-border) !important;
     }
 
     &[data-type="info"] {
-      background: color-mix(in srgb, var(--primary) 80%, white) !important;
-      color: var(--primary-foreground) !important;
-      border: 1px solid var(--primary) !important;
+      background: var(--info) !important;
+      color: var(--info-foreground) !important;
+      border: 1px solid var(--info-border) !important;
     }
   }
 

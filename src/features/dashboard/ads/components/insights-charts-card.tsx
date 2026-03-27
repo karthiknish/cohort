@@ -20,7 +20,7 @@ import {
   Cell,
   Legend,
   Tooltip,
-} from 'recharts'
+} from '@/shared/ui/recharts-dynamic'
 import type { PerformanceAnalysis } from '@/lib/ad-algorithms'
 import { CHART_COLORS, GRAYS } from '@/lib/colors'
 

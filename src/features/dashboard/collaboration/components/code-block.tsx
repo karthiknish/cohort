@@ -138,7 +138,7 @@ export function CodeBlock({
             aria-label={copied ? 'Code copied' : 'Copy code'}
           >
             {copied ? (
-              <Check className="h-4 w-4 text-green-500" />
+              <Check className="h-4 w-4 text-primary" />
             ) : (
               <Copy className="h-4 w-4" />
             )}
@@ -212,42 +212,42 @@ function highlightCode(code: string, language: string): string {
   // Language-specific patterns
   const patterns: Record<string, Array<{ pattern: RegExp; className: string }>> = {
     javascript: [
-      { pattern: /(\/\/.*$)/gm, className: 'text-green-600 dark:text-green-400' }, // Comments
-      { pattern: /(\/\*[\s\S]*?\*\/)/g, className: 'text-green-600 dark:text-green-400' }, // Block comments
-      { pattern: /\b(const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|new|class|extends|import|export|default|from|async|await|try|catch|finally|throw|typeof|instanceof)\b/g, className: 'text-purple-600 dark:text-purple-400' }, // Keywords
-      { pattern: /\b(true|false|null|undefined|NaN|Infinity)\b/g, className: 'text-blue-600 dark:text-blue-400' }, // Literals
-      { pattern: /\b(console|document|window|Array|Object|String|Number|Boolean|Math|Date|JSON|Promise|Map|Set)\b/g, className: 'text-amber-600 dark:text-amber-400' }, // Built-ins
-      { pattern: /("[^"]*"|'[^']*'|`[^`]*`)/g, className: 'text-green-600 dark:text-green-400' }, // Strings
-      { pattern: /\b(\d+\.?\d*)\b/g, className: 'text-blue-600 dark:text-blue-400' }, // Numbers
+      { pattern: /(\/\/.*$)/gm, className: 'text-muted-foreground' },
+      { pattern: /(\/\*[\s\S]*?\*\/)/g, className: 'text-muted-foreground' },
+      { pattern: /\b(const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|new|class|extends|import|export|default|from|async|await|try|catch|finally|throw|typeof|instanceof)\b/g, className: 'text-primary' },
+      { pattern: /\b(true|false|null|undefined|NaN|Infinity)\b/g, className: 'text-secondary-foreground' },
+      { pattern: /\b(console|document|window|Array|Object|String|Number|Boolean|Math|Date|JSON|Promise|Map|Set)\b/g, className: 'text-accent-foreground' },
+      { pattern: /("[^"]*"|'[^']*'|`[^`]*`)/g, className: 'text-foreground' },
+      { pattern: /\b(\d+\.?\d*)\b/g, className: 'text-secondary-foreground' },
     ],
     typescript: [
-      { pattern: /(\/\/.*$)/gm, className: 'text-green-600 dark:text-green-400' },
-      { pattern: /(\/\*[\s\S]*?\*\/)/g, className: 'text-green-600 dark:text-green-400' },
-      { pattern: /\b(const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|new|class|extends|import|export|default|from|async|await|try|catch|finally|throw|typeof|instanceof|interface|type|enum|namespace|module|declare|implements|public|private|protected|readonly|abstract|as)\b/g, className: 'text-purple-600 dark:text-purple-400' },
-      { pattern: /\b(true|false|null|undefined|NaN|Infinity)\b/g, className: 'text-blue-600 dark:text-blue-400' },
-      { pattern: new RegExp('\\b(string|number|boolean|an' + 'y|void|never|unknown|object)\\b', 'g'), className: 'text-cyan-600 dark:text-cyan-400' }, // Types
-      { pattern: /("[^"]*"|'[^']*'|`[^`]*`)/g, className: 'text-green-600 dark:text-green-400' },
-      { pattern: /\b(\d+\.?\d*)\b/g, className: 'text-blue-600 dark:text-blue-400' },
+      { pattern: /(\/\/.*$)/gm, className: 'text-muted-foreground' },
+      { pattern: /(\/\*[\s\S]*?\*\/)/g, className: 'text-muted-foreground' },
+      { pattern: /\b(const|let|var|function|return|if|else|for|while|do|switch|case|break|continue|new|class|extends|import|export|default|from|async|await|try|catch|finally|throw|typeof|instanceof|interface|type|enum|namespace|module|declare|implements|public|private|protected|readonly|abstract|as)\b/g, className: 'text-primary' },
+      { pattern: /\b(true|false|null|undefined|NaN|Infinity)\b/g, className: 'text-secondary-foreground' },
+      { pattern: new RegExp('\\b(string|number|boolean|an' + 'y|void|never|unknown|object)\\b', 'g'), className: 'text-accent-foreground' },
+      { pattern: /("[^"]*"|'[^']*'|`[^`]*`)/g, className: 'text-foreground' },
+      { pattern: /\b(\d+\.?\d*)\b/g, className: 'text-secondary-foreground' },
     ],
     python: [
-      { pattern: /(#.*$)/gm, className: 'text-green-600 dark:text-green-400' }, // Comments
-      { pattern: /\b(def|class|return|if|elif|else|for|while|try|except|finally|with|as|import|from|raise|pass|break|continue|and|or|not|in|is|lambda|yield|global|nonlocal|assert|async|await)\b/g, className: 'text-purple-600 dark:text-purple-400' }, // Keywords
-      { pattern: /\b(True|False|None)\b/g, className: 'text-blue-600 dark:text-blue-400' }, // Literals
-      { pattern: /\b(print|len|range|str|int|float|list|dict|set|tuple|bool|type|isinstance|hasattr|getattr|setattr)\b/g, className: 'text-amber-600 dark:text-amber-400' }, // Built-ins
-      { pattern: /("[^"]*"|'[^']*')/g, className: 'text-green-600 dark:text-green-400' }, // Strings
-      { pattern: /\b(\d+\.?\d*)\b/g, className: 'text-blue-600 dark:text-blue-400' }, // Numbers
+      { pattern: /(#.*$)/gm, className: 'text-muted-foreground' },
+      { pattern: /\b(def|class|return|if|elif|else|for|while|try|except|finally|with|as|import|from|raise|pass|break|continue|and|or|not|in|is|lambda|yield|global|nonlocal|assert|async|await)\b/g, className: 'text-primary' },
+      { pattern: /\b(True|False|None)\b/g, className: 'text-secondary-foreground' },
+      { pattern: /\b(print|len|range|str|int|float|list|dict|set|tuple|bool|type|isinstance|hasattr|getattr|setattr)\b/g, className: 'text-accent-foreground' },
+      { pattern: /("[^"]*"|'[^']*')/g, className: 'text-foreground' },
+      { pattern: /\b(\d+\.?\d*)\b/g, className: 'text-secondary-foreground' },
     ],
     json: [
-      { pattern: /("[\w]+")\s*:/g, className: 'text-purple-600 dark:text-purple-400' }, // Keys
-      { pattern: /:\s*("[^"]*")/g, className: 'text-green-600 dark:text-green-400' }, // String values
-      { pattern: /\b(true|false|null)\b/g, className: 'text-blue-600 dark:text-blue-400' }, // Literals
-      { pattern: /\b(-?\d+\.?\d*)\b/g, className: 'text-blue-600 dark:text-blue-400' }, // Numbers
+      { pattern: /("[\w]+")\s*:/g, className: 'text-primary' },
+      { pattern: /:\s*("[^"]*")/g, className: 'text-foreground' },
+      { pattern: /\b(true|false|null)\b/g, className: 'text-secondary-foreground' },
+      { pattern: /\b(-?\d+\.?\d*)\b/g, className: 'text-secondary-foreground' },
     ],
     sql: [
-      { pattern: /(--.*$)/gm, className: 'text-green-600 dark:text-green-400' }, // Comments
-      { pattern: /\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|AND|OR|NOT|IN|IS|NULL|LIKE|ORDER BY|GROUP BY|HAVING|LIMIT|OFFSET|CREATE|TABLE|DROP|ALTER|INDEX|PRIMARY|KEY|FOREIGN|REFERENCES|UNIQUE|DEFAULT|CHECK)\b/gi, className: 'text-purple-600 dark:text-purple-400' }, // Keywords
-      { pattern: /("[^"]*"|'[^']*')/g, className: 'text-green-600 dark:text-green-400' }, // Strings
-      { pattern: /\b(-?\d+\.?\d*)\b/g, className: 'text-blue-600 dark:text-blue-400' }, // Numbers
+      { pattern: /(--.*$)/gm, className: 'text-muted-foreground' },
+      { pattern: /\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|AND|OR|NOT|IN|IS|NULL|LIKE|ORDER BY|GROUP BY|HAVING|LIMIT|OFFSET|CREATE|TABLE|DROP|ALTER|INDEX|PRIMARY|KEY|FOREIGN|REFERENCES|UNIQUE|DEFAULT|CHECK)\b/gi, className: 'text-primary' },
+      { pattern: /("[^"]*"|'[^']*')/g, className: 'text-foreground' },
+      { pattern: /\b(-?\d+\.?\d*)\b/g, className: 'text-secondary-foreground' },
     ],
   }
 
@@ -263,23 +263,23 @@ function highlightCode(code: string, language: string): string {
 
 function getLanguageColor(language: string): string {
   const colors: Record<string, string> = {
-    javascript: 'text-yellow-400',
-    typescript: 'text-blue-400',
-    python: 'text-blue-400',
-    java: 'text-orange-400',
-    cpp: 'text-blue-400',
-    csharp: 'text-purple-400',
-    ruby: 'text-red-400',
-    go: 'text-cyan-400',
-    rust: 'text-orange-400',
-    php: 'text-purple-400',
-    html: 'text-orange-400',
-    css: 'text-blue-400',
-    json: 'text-yellow-400',
-    sql: 'text-blue-400',
-    bash: 'text-green-400',
-    shell: 'text-green-400',
+    javascript: 'text-primary',
+    typescript: 'text-primary',
+    python: 'text-secondary-foreground',
+    java: 'text-accent-foreground',
+    cpp: 'text-primary',
+    csharp: 'text-secondary-foreground',
+    ruby: 'text-destructive',
+    go: 'text-accent-foreground',
+    rust: 'text-accent-foreground',
+    php: 'text-secondary-foreground',
+    html: 'text-accent-foreground',
+    css: 'text-primary',
+    json: 'text-muted-foreground',
+    sql: 'text-primary',
+    bash: 'text-secondary-foreground',
+    shell: 'text-secondary-foreground',
   }
 
-  return colors[language] || 'text-gray-400'
+  return colors[language] || 'text-muted-foreground'
 }

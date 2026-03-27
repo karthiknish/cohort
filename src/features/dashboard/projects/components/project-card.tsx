@@ -68,9 +68,9 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
       <div
         className={cn(
           "absolute left-0 top-0 bottom-0 w-1 rounded-l-xl transition-opacity group-hover:opacity-100",
-          project.status === 'active' ? 'bg-emerald-500' :
-            project.status === 'planning' ? 'bg-slate-500' :
-              project.status === 'on_hold' ? 'bg-amber-500' : 'bg-blue-500'
+          project.status === 'active' ? 'bg-success' :
+            project.status === 'planning' ? 'bg-muted-foreground/60' :
+              project.status === 'on_hold' ? 'bg-warning' : 'bg-info'
         )}
       />
 
@@ -171,13 +171,13 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
         <div className="grid grid-cols-1 gap-3 pt-1">
           <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
             <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-success/10 text-success">
                 <ListChecks className="h-3.5 w-3.5" />
               </div>
               <span>{project.openTaskCount} active tasks</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-info/10 text-info">
                 <MessageSquare className="h-3.5 w-3.5" />
               </div>
               <span className="tabular-nums">

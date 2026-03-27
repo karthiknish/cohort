@@ -1,6 +1,6 @@
 'use client'
 
-import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { LazyMotion, domAnimation, m } from '@/shared/ui/motion'
 import { useMemo } from 'react'
 
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'

@@ -84,8 +84,8 @@ export function TaskArchiveView({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-emerald-500" />
+              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.byStatus.completed || 0}</p>
@@ -97,8 +97,8 @@ export function TaskArchiveView({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-red-500" />
+              <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-destructive" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.byPriority.urgent || 0}</p>
@@ -110,8 +110,8 @@ export function TaskArchiveView({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-blue-500" />
+              <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-info" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.byPriority.high || 0}</p>
@@ -216,7 +216,7 @@ export function ArchiveToggle({
         variant="ghost"
         size="sm"
         onClick={onUnarchive}
-        className={cn('h-8 gap-1 text-amber-600 hover:text-amber-700', className)}
+        className={cn('h-8 gap-1 text-warning hover:text-warning/80', className)}
       >
         <RotateCcw className="h-3.5 w-3.5" />
         Unarchive
