@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { ArrowRight, Calendar, Layers, Minus, TrendingDown, TrendingUp } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
@@ -57,5 +58,9 @@ export function ComparisonViewLoadingCard() {
 }
 
 export function ComparisonViewCardShell({ currency = 'USD', onTabChange, periodComparison, providerComparison, selectedTab }: { currency?: string; onTabChange: (value: 'period' | 'platform') => void; periodComparison: PeriodComparison | null; providerComparison: ProviderComparison[]; selectedTab: 'period' | 'platform' }) {
-  return <Card className="shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Layers className="h-5 w-5" />Comparison View</CardTitle><CardDescription>Compare performance across periods and platforms</CardDescription></CardHeader><CardContent><Tabs value={selectedTab} onValueChange={(value) => onTabChange(value as 'period' | 'platform')} className="w-full"><TabsList className="grid w-full grid-cols-2"><TabsTrigger value="period" className="gap-2"><Calendar className="h-4 w-4" />Period</TabsTrigger><TabsTrigger value="platform" className="gap-2"><Layers className="h-4 w-4" />Platform</TabsTrigger></TabsList><TabsContent value="period" className="mt-4">{periodComparison ? <PeriodComparisonView comparison={periodComparison} currency={currency} /> : <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground"><Calendar className="h-8 w-8 opacity-50" /><p>Not enough data for period comparison. Need at least two periods of data.</p></div>}</TabsContent><TabsContent value="platform" className="mt-4"><ProviderComparisonView currency={currency} providers={providerComparison} /></TabsContent></Tabs></CardContent></Card>
+  const handleTabChange = useCallback((value: string) => {
+    onTabChange(value as 'period' | 'platform')
+  }, [onTabChange])
+
+  return <Card className="shadow-sm"><CardHeader><CardTitle className="flex items-center gap-2 text-lg"><Layers className="h-5 w-5" />Comparison View</CardTitle><CardDescription>Compare performance across periods and platforms</CardDescription></CardHeader><CardContent><Tabs value={selectedTab} onValueChange={handleTabChange} className="w-full"><TabsList className="grid w-full grid-cols-2"><TabsTrigger value="period" className="gap-2"><Calendar className="h-4 w-4" />Period</TabsTrigger><TabsTrigger value="platform" className="gap-2"><Layers className="h-4 w-4" />Platform</TabsTrigger></TabsList><TabsContent value="period" className="mt-4">{periodComparison ? <PeriodComparisonView comparison={periodComparison} currency={currency} /> : <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground"><Calendar className="h-8 w-8 opacity-50" /><p>Not enough data for period comparison. Need at least two periods of data.</p></div>}</TabsContent><TabsContent value="platform" className="mt-4"><ProviderComparisonView currency={currency} providers={providerComparison} /></TabsContent></Tabs></CardContent></Card>
 }

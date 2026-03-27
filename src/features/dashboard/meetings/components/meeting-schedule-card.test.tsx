@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
+import { createElement } from 'react'
 import { describe, expect, it } from 'vitest'
 
-import { CreateMeetingCard, RescheduleMeetingCard } from './meeting-schedule-card'
+import { CreateMeetingCard, MeetingScheduleCardFrame } from './meeting-schedule-card'
 
 const baseProps = {
   meetingDate: new Date('2026-03-12T09:00:00.000Z'),
@@ -43,9 +44,13 @@ describe('meeting schedule card variants', () => {
 
   it('renders reschedule meeting copy explicitly', () => {
     const markup = renderToStaticMarkup(
-      <RescheduleMeetingCard
+      <MeetingScheduleCardFrame
         {...baseProps}
-        onReset={() => {}}
+        cardTitle="Reschedule Meeting"
+        cardDescription="Update the room."
+        footerAction={createElement('button', { type: 'button' }, 'Cancel Edit')}
+        submitLabel="Save Reschedule"
+        submittingLabel="Saving…"
       />,
     )
 

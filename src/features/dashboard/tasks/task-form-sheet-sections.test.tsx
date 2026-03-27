@@ -21,23 +21,28 @@ const formState: TaskFormState = {
   dueDate: '',
 }
 
+const sharedIds = {
+  title: 'task-title',
+  description: 'task-description',
+  status: 'task-status',
+  priority: 'task-priority',
+  client: 'task-client',
+  project: 'task-project',
+  dueDate: 'task-due-date',
+}
+
+const sharedMentionableUsers = [{ id: 'user-1', name: 'Alex' }]
+const emptyFileInputRef = { current: null }
+
 describe('task form sheet sections', () => {
   it('renders shared sheet fields with helper text', () => {
     const markup = renderToStaticMarkup(
       <TaskSheetFields
-        ids={{
-          title: 'task-title',
-          description: 'task-description',
-          status: 'task-status',
-          priority: 'task-priority',
-          client: 'task-client',
-          project: 'task-project',
-          dueDate: 'task-due-date',
-        }}
+        ids={sharedIds}
         formState={formState}
         setFormState={vi.fn()}
         disabled={false}
-        mentionableUsers={[{ id: 'user-1', name: 'Alex' }]}
+        mentionableUsers={sharedMentionableUsers}
         titlePlaceholder="e.g. Prepare Q4 campaign brief"
         clientPlaceholder="Select a client from the dashboard"
         projectPlaceholder="Open tasks from a project to link them automatically"
@@ -60,7 +65,7 @@ describe('task form sheet sections', () => {
         pendingAttachments={[]}
         onAddAttachments={vi.fn()}
         onRemoveAttachment={vi.fn()}
-        fileInputRef={{ current: null }}
+        fileInputRef={emptyFileInputRef}
       />,
     )
 

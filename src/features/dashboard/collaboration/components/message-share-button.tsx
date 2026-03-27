@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Mail, Share2 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -31,7 +31,7 @@ export function ShareMessageButton({ message, onShare, sharedTo = EMPTY_SHARED_T
   const [isSharing, setIsSharing] = useState(false)
   const [shareError, setShareError] = useState<string | null>(null)
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     if (isSharing) return
 
     setIsSharing(true)
@@ -44,7 +44,11 @@ export function ShareMessageButton({ message, onShare, sharedTo = EMPTY_SHARED_T
       .finally(() => {
         setIsSharing(false)
       })
-  }
+  }, [isSharing, onShare])
+
+  const handleEmailShareClick = useCallback(() => {
+    void handleShare()
+  }, [handleShare])
 
   const isSharedToEmail = sharedTo.includes('email')
 
@@ -73,7 +77,7 @@ export function ShareMessageButton({ message, onShare, sharedTo = EMPTY_SHARED_T
 
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem
-            onClick={() => void handleShare()}
+            onClick={handleEmailShareClick}
             disabled={isSharing || isSharedToEmail}
             className="gap-2"
           >

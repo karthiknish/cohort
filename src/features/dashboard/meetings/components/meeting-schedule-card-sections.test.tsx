@@ -1,8 +1,11 @@
 import { renderToStaticMarkup } from 'react-dom/server'
+import { createElement } from 'react'
 
 import { describe, expect, it } from 'vitest'
 
 import { MeetingScheduleCardFrame } from './meeting-schedule-card-sections'
+
+const FOOTER_ACTION = createElement('button', { type: 'button' }, 'Cancel Edit')
 
 const baseProps = {
   meetingDate: new Date('2026-03-12T09:00:00.000Z'),
@@ -59,7 +62,8 @@ describe('meeting schedule card sections', () => {
         cardDescription="Update the room."
         submitLabel="Save Reschedule"
         submittingLabel="Saving…"
-        footerAction={<button type="button">Cancel Edit</button>}
+        footerAction={FOOTER_ACTION}
+        onReset={console.log}
       />,
     )
 

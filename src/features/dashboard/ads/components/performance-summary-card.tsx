@@ -140,7 +140,6 @@ export function PerformanceSummaryCard({
                 <div
                   key={providerId}
                   className="animate-in fade-in slide-in-from-bottom-2"
-                  style={{ animationDelay: `${index * 75}ms` }}
                 >
                   <Card
                     className={cn(

@@ -3,6 +3,20 @@ import { describe, expect, it } from 'vitest'
 
 import { MetricCardsSection } from './metric-cards-section'
 
+const metrics = {
+  spend: 1234,
+  impressions: 12000,
+  clicks: 320,
+  conversions: 18,
+  revenue: 4567,
+  ctr: 2.67,
+  cpc: 3.86,
+  cpa: 68.56,
+  roas: 3.7,
+  convRate: 5.63,
+  reach: 8200,
+}
+
 describe('MetricCardsSection', () => {
   it('formats spend, cpa, and cpc with the provided currency', () => {
     const markup = renderToStaticMarkup(
@@ -10,19 +24,7 @@ describe('MetricCardsSection', () => {
         loading={false}
         currency="GBP"
         efficiencyScore={87}
-        metrics={{
-          spend: 1234,
-          impressions: 12000,
-          clicks: 320,
-          conversions: 18,
-          revenue: 4567,
-          ctr: 2.67,
-          cpc: 3.86,
-          cpa: 68.56,
-          roas: 3.7,
-          convRate: 5.63,
-          reach: 8200,
-        }}
+        metrics={metrics}
       />,
     )
 

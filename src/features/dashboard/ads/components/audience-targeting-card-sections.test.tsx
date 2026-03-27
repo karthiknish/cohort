@@ -30,6 +30,8 @@ const targeting = [{
   professional: { industries: [{ id: 'ind-1', name: 'Software' }], jobTitles: [{ id: 'job-1', name: 'CMO' }], companySizes: [], seniorities: [] },
 }]
 
+const formatAgeRange = (range: string) => range.replace('AGE_', '').replace('_', '-')
+
 describe('audience targeting card sections', () => {
   it('renders the disconnected state and header', () => {
     const disconnectedMarkup = renderToStaticMarkup(<AudienceTargetingDisconnectedState providerName="Meta Ads" />)
@@ -55,7 +57,6 @@ describe('audience targeting card sections', () => {
   })
 
   it('renders the summary and expanded targeting details', () => {
-    const formatAgeRange = (range: string) => range.replace('AGE_', '').replace('_', '-')
     const onEdit = vi.fn()
     const onToggleExpanded = vi.fn()
     const markup = renderToStaticMarkup(

@@ -24,6 +24,7 @@ const participants: ClientTeamMember[] = [
   { name: 'Alex Kim', role: 'manager', email: 'alex@example.com' } as ClientTeamMember,
   { name: 'Sam Lee', role: 'designer', email: 'sam@example.com' } as ClientTeamMember,
 ]
+const EMPTY_TEXTAREA_REF = { current: null }
 
 describe('rich composer sections', () => {
   it('renders the toolbar actions', () => {
@@ -63,7 +64,7 @@ describe('rich composer sections', () => {
           onKeyDown={vi.fn()}
           onPaste={vi.fn()}
           placeholder="Share an update…"
-          textareaRef={{ current: null }}
+          textareaRef={EMPTY_TEXTAREA_REF}
           value="@a"
         />
         <RichComposerMentionMenu

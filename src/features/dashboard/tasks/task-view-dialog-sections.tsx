@@ -203,7 +203,7 @@ export function TaskViewCommentsTab({
         userName={userName}
         userRole={userRole}
         participants={participants}
-        onCommentCountChange={(count) => onCommentCountChange(count)}
+        onCommentCountChange={onCommentCountChange}
       />
     </TabsContent>
   )

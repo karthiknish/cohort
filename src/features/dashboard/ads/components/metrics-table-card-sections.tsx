@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import type { ChangeEvent } from 'react'
 
 import Link from 'next/link'
@@ -27,6 +28,35 @@ import { cn, formatCurrency } from '@/lib/utils'
 import type { MetricRecord } from './types'
 import { PROVIDER_ICON_MAP, formatDisplayDate, formatProviderName } from './utils'
 
+function ProviderFilterOption({
+  providerId,
+  selectedProviders,
+  toggleProvider,
+}: {
+  providerId: string
+  selectedProviders: string[]
+  toggleProvider: (providerId: string) => void
+}) {
+  const ProviderIcon = PROVIDER_ICON_MAP[providerId]
+  const handleCheckedChange = useCallback(() => {
+    toggleProvider(providerId)
+  }, [providerId, toggleProvider])
+
+  return (
+    <DropdownMenuCheckboxItem
+      key={providerId}
+      checked={selectedProviders.includes(providerId)}
+      onCheckedChange={handleCheckedChange}
+      className="cursor-pointer"
+    >
+      <span className="flex items-center gap-2">
+        {ProviderIcon ? <ProviderIcon className="h-4 w-4" /> : null}
+        {formatProviderName(providerId)}
+      </span>
+    </DropdownMenuCheckboxItem>
+  )
+}
+
 type ProviderOption = string
 
 export function HeaderWithTooltip({ title, tooltip }: { title: string; tooltip: string }) {
@@ -50,7 +80,7 @@ export function MetricsTableHeader({ description, metricsLoading, onRefresh, tit
 }
 
 export function MetricsTableFilters({ availableProviders, hasActiveFilters, onClearFilters, onSearchChange, searchQuery, selectedProviders, toggleProvider }: { availableProviders: ProviderOption[]; hasActiveFilters: boolean; onClearFilters: () => void; onSearchChange: (event: ChangeEvent<HTMLInputElement>) => void; searchQuery: string; selectedProviders: string[]; toggleProvider: (providerId: string) => void }) {
-  return <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Search by provider…" value={searchQuery} onChange={onSearchChange} className="h-10 pl-9" /></div><div className="flex items-center gap-3"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-10 gap-2 px-4"><Filter className="h-4 w-4" />Providers{selectedProviders.length > 0 ? <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-xs">{selectedProviders.length}</Badge> : null}</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48"><DropdownMenuLabel>Filter by Provider</DropdownMenuLabel><DropdownMenuSeparator />{availableProviders.map((providerId) => { const ProviderIcon = PROVIDER_ICON_MAP[providerId]; return <DropdownMenuCheckboxItem key={providerId} checked={selectedProviders.includes(providerId)} onCheckedChange={() => toggleProvider(providerId)} className="cursor-pointer"><span className="flex items-center gap-2">{ProviderIcon ? <ProviderIcon className="h-4 w-4" /> : null}{formatProviderName(providerId)}</span></DropdownMenuCheckboxItem> })}</DropdownMenuContent></DropdownMenu>{hasActiveFilters ? <Button variant="ghost" size="sm" onClick={onClearFilters} className="h-10 gap-1.5 px-3 text-muted-foreground hover:bg-muted/60"><X className="h-4 w-4" />Clear</Button> : null}</div></div>
+  return <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Search by provider…" value={searchQuery} onChange={onSearchChange} className="h-10 pl-9" /></div><div className="flex items-center gap-3"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-10 gap-2 px-4"><Filter className="h-4 w-4" />Providers{selectedProviders.length > 0 ? <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-xs">{selectedProviders.length}</Badge> : null}</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48"><DropdownMenuLabel>Filter by Provider</DropdownMenuLabel><DropdownMenuSeparator />{availableProviders.map((providerId) => <ProviderFilterOption key={providerId} providerId={providerId} selectedProviders={selectedProviders} toggleProvider={toggleProvider} />)}</DropdownMenuContent></DropdownMenu>{hasActiveFilters ? <Button variant="ghost" size="sm" onClick={onClearFilters} className="h-10 gap-1.5 px-3 text-muted-foreground hover:bg-muted/60"><X className="h-4 w-4" />Clear</Button> : null}</div></div>
 }
 
 export function MetricsTableBody({ columns, emptyCtaHref, emptyCtaLabel, emptyMessage, filteredMetrics, hasMetrics, hasActiveFilters, initialMetricsLoading, metricError, onClearFilters, processedMetrics }: { columns: ColumnDef<MetricRecord>[]; emptyCtaHref: string; emptyCtaLabel: string; emptyMessage: string; filteredMetrics: MetricRecord[]; hasMetrics: boolean; hasActiveFilters: boolean; initialMetricsLoading: boolean; metricError: string | null; onClearFilters: () => void; processedMetrics: MetricRecord[] }) {
@@ -61,11 +91,14 @@ export function MetricsTableBody({ columns, emptyCtaHref, emptyCtaLabel, emptyMe
 }
 
 function MetricsTableState({ columns, emptyCtaHref, emptyCtaLabel, emptyMessage, filteredMetrics, hasMetrics, initialMetricsLoading, metricError, onClearFilters }: { columns: ColumnDef<MetricRecord>[]; emptyCtaHref: string; emptyCtaLabel: string; emptyMessage: string; filteredMetrics: MetricRecord[]; hasMetrics: boolean; initialMetricsLoading: boolean; metricError: string | null; onClearFilters: () => void }) {
+  const getRowId = useCallback((row: MetricRecord) => row.id, [])
+
   if (initialMetricsLoading) return <div className="space-y-2">{[0, 1, 2, 3, 4, 5].map((slot) => <Skeleton key={slot} className="h-10 w-full rounded" />)}</div>
   if (metricError) return <Alert variant="destructive"><AlertTitle>Unable to load metrics</AlertTitle><AlertDescription>{metricError}</AlertDescription></Alert>
   if (!hasMetrics) return <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground"><p>{emptyMessage}</p><Button asChild size="sm" variant="outline"><Link href={emptyCtaHref}>{emptyCtaLabel}</Link></Button></div>
   if (filteredMetrics.length === 0) return <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground"><p>No rows match your filters.</p><Button size="sm" variant="outline" onClick={onClearFilters}>Clear filters</Button></div>
-  return <VirtualizedDataTable columns={columns} data={filteredMetrics} maxHeight={320} stickyHeader rowHeight={44} getRowId={(row) => row.id} />
+
+  return <VirtualizedDataTable columns={columns} data={filteredMetrics} maxHeight={320} stickyHeader rowHeight={44} getRowId={getRowId} />
 }
 
 export function MetricsTableLoadMore({ hasMetrics, loadMoreError, loadingMore, nextCursor, onLoadMore }: { hasMetrics: boolean; loadMoreError: string | null; loadingMore: boolean; nextCursor: string | null; onLoadMore: () => void }) {

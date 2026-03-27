@@ -9,6 +9,8 @@ vi.mock('./in-site-meeting-live-room-canvas', () => ({
   InSiteMeetingLiveRoomCanvas: ({ meetingTitle }: { meetingTitle: string }) => <div>Live Canvas {meetingTitle}</div>,
 }))
 
+const JOIN_CONFIG = { token: 'token', serverUrl: 'https://example.com' }
+
 import {
   MeetingRoomCanvasSection,
   MeetingRoomEmptyState,
@@ -104,7 +106,7 @@ describe('meeting room sections', () => {
         hasJoinReference={true}
         inlineJoinError={null}
         isMinimized={true}
-        joinConfig={{ token: 'token', serverUrl: 'https://example.com' }}
+        joinConfig={JOIN_CONFIG}
         joinError="Socket reconnecting"
         layoutContext={null as never}
         meetingTitle="Weekly client sync"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { LoaderCircle, Globe } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -14,6 +14,27 @@ export function RegionalPreferencesCard() {
   const { preferences, loading: preferencesLoading, updateCurrency } = usePreferences()
   const { toast } = useToast()
   const [savingCurrency, setSavingCurrency] = useState(false)
+
+  const handleCurrencyChange = useCallback((value: CurrencyCode) => {
+    setSavingCurrency(true)
+    void updateCurrency(value)
+      .then(() => {
+        toast({
+          title: 'Currency updated',
+          description: `Your default currency has been changed to ${value}.`,
+        })
+      })
+      .catch(() => {
+        toast({
+          title: 'Error',
+          description: 'Failed to update currency preference.',
+          variant: 'destructive',
+        })
+      })
+      .finally(() => {
+        setSavingCurrency(false)
+      })
+  }, [toast, updateCurrency])
 
   return (
     <Card>
@@ -34,26 +55,7 @@ export function RegionalPreferencesCard() {
           </div>
           <CurrencySelect
             value={preferences.currency}
-            onValueChange={(value: CurrencyCode) => {
-              setSavingCurrency(true)
-              void updateCurrency(value)
-                .then(() => {
-                  toast({
-                    title: 'Currency updated',
-                    description: `Your default currency has been changed to ${value}.`,
-                  })
-                })
-                .catch(() => {
-                  toast({
-                    title: 'Error',
-                    description: 'Failed to update currency preference.',
-                    variant: 'destructive',
-                  })
-                })
-                .finally(() => {
-                  setSavingCurrency(false)
-                })
-            }}
+            onValueChange={handleCurrencyChange}
             disabled={preferencesLoading || savingCurrency}
             className="w-[160px]"
           />

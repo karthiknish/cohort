@@ -186,6 +186,11 @@ export function ProposalTemplateSelector({
       })
   }, [deleteTemplate, toast, workspaceId])
 
+  const handleOpenSaveDialog = useCallback(() => {
+    setOpen(false)
+    setSaveDialogOpen(true)
+  }, [])
+
 
   return (
     <>
@@ -209,10 +214,7 @@ export function ProposalTemplateSelector({
           canManageTemplates={canManageTemplates}
           onApplyTemplate={handleApplyTemplate}
           onDeleteTemplate={handleDeleteTemplate}
-          onOpenSaveDialog={() => {
-            setOpen(false)
-            setSaveDialogOpen(true)
-          }}
+          onOpenSaveDialog={handleOpenSaveDialog}
         />
       </DropdownMenu>
 

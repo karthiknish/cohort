@@ -29,6 +29,8 @@ const task: TaskRecord = {
   sharedWith: ['u-2'],
 }
 
+const highlightMatch = (text: string) => text
+
 describe('task card sections', () => {
   it('renders the header context and indicators', () => {
     const markup = renderToStaticMarkup(
@@ -37,7 +39,7 @@ describe('task card sections', () => {
         isPendingUpdate={false}
         onOpen={vi.fn()}
         searchQuery=""
-        highlightMatch={(text) => text}
+        highlightMatch={highlightMatch}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
         onQuickStatusChange={vi.fn()}

@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { TaskCreationModalFormFields } from './task-creation-modal-form'
 
+const EMPTY_FILE_INPUT_REF = { current: null }
+
 describe('TaskCreationModalFormFields', () => {
   it('renders modal form sections and summaries', () => {
     const markup = renderToStaticMarkup(
@@ -17,7 +19,7 @@ describe('TaskCreationModalFormFields', () => {
         error={null}
         isLoading={false}
         pendingAttachments={[]}
-        fileInputRef={{ current: null }}
+        fileInputRef={EMPTY_FILE_INPUT_REF}
         onTitleChange={vi.fn()}
         onDescriptionChange={vi.fn()}
         onPriorityChange={vi.fn()}

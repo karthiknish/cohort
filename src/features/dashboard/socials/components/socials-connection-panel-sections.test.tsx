@@ -8,16 +8,16 @@ import {
   SocialsSurfaceInventoryCard,
 } from './socials-connection-panel-sections'
 
+const setupState = {
+  stage: 'partial' as const,
+  title: 'Facebook is ready, Instagram still needs attention',
+  description: 'Only one surface loaded from the selected Meta source.',
+  switchSourceRecommended: true,
+  switchSourceMessage: 'If you expected Instagram here, switch the Meta source below.',
+}
+
 describe('SocialsMetaSetupCard', () => {
   it('renders switch-source guidance for partial recovery states', () => {
-    const setupState = {
-      stage: 'partial' as const,
-      title: 'Facebook is ready, Instagram still needs attention',
-      description: 'Only one surface loaded from the selected Meta source.',
-      switchSourceRecommended: true,
-      switchSourceMessage: 'If you expected Instagram here, switch the Meta source below.',
-    }
-
     const markup = renderToStaticMarkup(
       <SocialsMetaSetupCard
         setupState={setupState}

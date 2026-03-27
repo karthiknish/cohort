@@ -4,6 +4,11 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { CampaignManagementCard } from './campaign-management-card'
 
+const DATE_RANGE = {
+  start: new Date('2026-01-01T00:00:00.000Z'),
+  end: new Date('2026-01-31T00:00:00.000Z'),
+}
+
 vi.mock('convex/react', () => ({
   useAction: () => vi.fn(async () => []),
 }))
@@ -70,10 +75,7 @@ function renderCard(overrides: Partial<ComponentProps<typeof CampaignManagementC
       providerId="google"
       providerName="Google Ads"
       isConnected
-      dateRange={{
-        start: new Date('2026-01-01T00:00:00.000Z'),
-        end: new Date('2026-01-31T00:00:00.000Z'),
-      }}
+      dateRange={DATE_RANGE}
       {...overrides}
     />,
   )

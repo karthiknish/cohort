@@ -16,6 +16,8 @@ vi.mock('@/shared/ui/location-map', () => ({
 
 import { AudienceBuilderDialogFooter, AudienceBuilderDialogHeader, AudienceBuilderDialogTabs } from './audience-builder-dialog-sections'
 
+const sharedFormData = { name: 'Audience A', description: '', segments: [], locations: [], interests: ['Travel'], genders: [] }
+
 describe('audience builder dialog sections', () => {
   it('renders the dialog header and progress steps', () => {
     const completionSteps = [
@@ -39,7 +41,6 @@ describe('audience builder dialog sections', () => {
   })
 
   it('renders the targeting tab and footer summary', () => {
-    const formData = { name: 'Audience A', description: '', segments: [], locations: [], interests: ['Travel'], genders: [] }
     const onAddInterest = vi.fn()
     const onAddSegment = vi.fn()
     const onAgePreset = vi.fn()
@@ -57,7 +58,7 @@ describe('audience builder dialog sections', () => {
     const tabsMarkup = renderToStaticMarkup(
       <AudienceBuilderDialogTabs
         activeTab="targeting"
-        formData={formData}
+        formData={sharedFormData}
         newInterest=""
         newSegment=""
         onAddInterest={onAddInterest}

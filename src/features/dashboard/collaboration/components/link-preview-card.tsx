@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useCallback, useMemo, type SyntheticEvent } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { ExternalLink, Image as ImageIcon, LoaderCircle } from "lucide-react"
 
@@ -58,6 +58,9 @@ export function LinkPreviewCard({ url }: LinkPreviewCardProps) {
   const description = preview.description?.trim() || ""
   const imageUrl = preview.image?.trim()
   const domain = parsedUrl?.hostname || ""
+  const handleImageError = useCallback((event: SyntheticEvent<HTMLImageElement>) => {
+    event.currentTarget.style.display = "none"
+  }, [])
 
   return (
     <Card className="max-w-xl border-muted/60 bg-muted/10">
@@ -78,9 +81,7 @@ export function LinkPreviewCard({ url }: LinkPreviewCardProps) {
               src={imageUrl}
               alt={title}
               className="h-full w-full object-cover"
-              onError={(event) => {
-                event.currentTarget.style.display = "none"
-              }}
+              onError={handleImageError}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-muted-foreground">

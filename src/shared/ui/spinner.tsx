@@ -108,6 +108,7 @@ export function ProgressBar({
   ...props 
 }: ProgressBarProps) {
   const clampedProgress = Math.min(100, Math.max(0, progress))
+  const progressStyle = React.useMemo(() => ({ width: `${clampedProgress}%` }), [clampedProgress])
   
   const variantColors = {
     default: 'bg-primary',
@@ -131,7 +132,7 @@ export function ProgressBar({
             interactiveTransitionClass,
             variantColors[variant]
           )}
-          style={{ width: `${clampedProgress}%` }}
+          style={progressStyle}
         />
       </div>
     </div>

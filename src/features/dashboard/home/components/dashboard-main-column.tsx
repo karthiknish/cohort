@@ -33,6 +33,8 @@ const PerformanceChart = dynamic(
   }
 )
 
+const activityFallback = <Skeleton className="h-[400px] w-full" />
+
 type DashboardMainColumnProps = {
   userRole?: string | null
   clients: ClientRecord[]
@@ -189,7 +191,7 @@ export function DashboardMainColumn({
               <ClientProposalsCard proposals={proposals} loading={proposalsLoading} />
             </div>
 
-            <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+            <Suspense fallback={activityFallback}>
               <ActivityWidget />
             </Suspense>
 

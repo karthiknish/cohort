@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useCallback, useState } from 'react'
+import { useMemo, useRef, useCallback, useState } from 'react'
 import { Reply, Trash2, Check, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -60,6 +60,9 @@ export function SwipeableMessage({
   }, [])
 
   const swipeOffset = state.isSwiping ? (state.direction === 'right' ? Math.min(state.distance, 80) : state.direction === 'left' ? -Math.min(state.distance, 80) : 0) : 0
+  const transformStyle = useMemo(() => ({
+    transform: showActions ? (pendingAction === 'reply' ? 'translateX(80px)' : 'translateX(-80px)') : `translateX(${swipeOffset}px)`,
+  }), [pendingAction, showActions, swipeOffset])
 
   return (
     <div className="relative overflow-hidden">
@@ -104,9 +107,7 @@ export function SwipeableMessage({
           state.isSwiping && 'transition-none',
           className
         )}
-        style={{
-          transform: showActions ? (pendingAction === 'reply' ? 'translateX(80px)' : 'translateX(-80px)') : `translateX(${swipeOffset}px)`,
-        }}
+        style={transformStyle}
         {...handlers}
       >
         {children}

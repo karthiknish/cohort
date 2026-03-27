@@ -6,6 +6,8 @@ import type { CollaborationMessage } from '@/types/collaboration'
 
 import { ThreadSection } from './thread-section'
 
+const RENDER_REPLY = (message: CollaborationMessage) => <div>{message.content}</div>
+
 const reply: CollaborationMessage = {
   id: 'reply-1', senderId: 'user-2', senderName: 'Sam Lee', createdAt: '2026-03-11T12:30:00.000Z',
   channelType: 'project', clientId: 'client-1', projectId: 'project-1', content: 'Reviewed.', updatedAt: null,
@@ -24,7 +26,7 @@ describe('ThreadSection', () => {
     const loadingMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} isOpen={true} isLoading={true} error={null} replies={[]} />)
     const emptyMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} isOpen={true} isLoading={false} error={null} replies={[]} />)
     const errorMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} isOpen={true} isLoading={false} error="Unable to load replies." replies={[]} />)
-    const loadedMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} isOpen={true} isLoading={false} error={null} replies={[reply]} renderReply={(message) => <div>{message.content}</div>} />)
+    const loadedMarkup = renderToStaticMarkup(<ThreadSection {...baseProps} isOpen={true} isLoading={false} error={null} replies={[reply]} renderReply={RENDER_REPLY} />)
 
     expect(loadingMarkup).toContain('Loading replies…')
     expect(emptyMarkup).toContain('No replies yet')

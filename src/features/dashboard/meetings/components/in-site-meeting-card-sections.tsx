@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { LiveKitRoom } from '@/shared/ui/livekit'
 import {
   AlertTriangle,
@@ -259,6 +260,10 @@ export function MeetingRoomCanvasSection({
   onError: (message: string) => void
   roomPinnedToMobileTray: boolean
 }) {
+  const handleLiveKitError = useCallback((error: { message: string }) => {
+    onError(error.message)
+  }, [onError])
+
   return (
     <div className={cn('relative', roomPinnedToMobileTray ? 'min-h-[168px]' : 'min-h-[420px]')}>
       {joinConfig ? (
@@ -292,9 +297,7 @@ export function MeetingRoomCanvasSection({
             audio
             video
             onDisconnected={onDisconnected}
-            onError={(error) => {
-              onError(error.message)
-            }}
+            onError={handleLiveKitError}
             className={cn(
               roomPinnedToMobileTray
                 ? 'fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 mx-auto w-auto max-w-[calc(100vw-2rem)] md:hidden'

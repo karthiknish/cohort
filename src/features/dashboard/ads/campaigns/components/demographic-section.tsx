@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { ChevronDown, Users } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
@@ -27,6 +28,10 @@ export function DemographicSection({
   expandedSections,
   toggleSection,
 }: DemographicSectionProps) {
+  const handleToggleDemographics = useCallback(() => {
+    toggleSection('demographics')
+  }, [toggleSection])
+
   if (
     aggregatedData.demographics.ageRanges.length === 0 &&
     aggregatedData.demographics.genders.length === 0 &&
@@ -38,7 +43,7 @@ export function DemographicSection({
   return (
     <Collapsible
       open={expandedSections.has('demographics')}
-      onOpenChange={() => toggleSection('demographics')}
+      onOpenChange={handleToggleDemographics}
     >
       <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
         <div className="flex items-center gap-2">

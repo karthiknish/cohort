@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -283,10 +284,12 @@ export function TouchOptimized({
   className,
   minTouchSize = 44,
 }: TouchOptimizedProps) {
+  const touchStyle = useMemo(() => ({ minHeight: minTouchSize, minWidth: minTouchSize }), [minTouchSize])
+
   return (
     <div
       className={cn('inline-block', className)}
-      style={{ minHeight: minTouchSize, minWidth: minTouchSize }}
+      style={touchStyle}
     >
       {children}
     </div>

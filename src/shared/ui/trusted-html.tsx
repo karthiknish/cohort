@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import type { ComponentPropsWithoutRef, ElementType } from 'react'
 
 export type TrustedHtml = {
@@ -22,7 +23,7 @@ export function TrustedHtml<T extends ElementType = 'div'>({
   ...props
 }: TrustedHtmlProps<T>) {
   const Component = (as ?? 'div') as ElementType
-  const dangerousHtml = { __html: html.__html }
+  const dangerousHtml = useMemo(() => ({ __html: html.__html }), [html.__html])
 
   return (
     <Component

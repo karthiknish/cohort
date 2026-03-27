@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Facebook, Instagram } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -49,6 +49,10 @@ export function SocialSurfacePanel({
   const handleScrollToConnections = useCallback(() => {
     document.getElementById('social-connections-panel')?.scrollIntoView({ behavior: 'smooth' })
   }, [])
+  const connectionAction = useMemo(() => ({
+    label: copy.emptyCtaLabel,
+    onClick: handleScrollToConnections,
+  }), [copy.emptyCtaLabel, handleScrollToConnections])
 
   return (
     <div className="space-y-6">
@@ -82,7 +86,7 @@ export function SocialSurfacePanel({
             <EmptyState
               title={`${copy.title} not connected`}
               description={copy.emptyMessage}
-              action={{ label: copy.emptyCtaLabel, onClick: handleScrollToConnections }}
+              action={connectionAction}
               variant="card"
               className="rounded-2xl"
             />

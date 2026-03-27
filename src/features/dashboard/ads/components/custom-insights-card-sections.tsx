@@ -58,5 +58,5 @@ export function CustomInsightsEmptyState() {
 }
 
 export function CustomInsightsGrid({ currency = 'USD', items }: { currency?: string; items: KpiTileData[] }) {
-  return <CardContent className="pt-2"><div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">{items.map((item, index) => <div key={item.label} className="animate-in fade-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms` }}><KpiTile currency={currency} {...item} /></div>)}</div></CardContent>
+  return <CardContent className="pt-2"><div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">{items.map((item) => <div key={item.label} className="animate-in fade-in slide-in-from-bottom-2"><KpiTile currency={currency} {...item} /></div>)}</div></CardContent>
 }

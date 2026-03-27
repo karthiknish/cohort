@@ -32,10 +32,12 @@ import {
   CrossChannelOverviewLoadingState,
 } from './cross-channel-overview-card-sections'
 
+const DATE_RANGE = { from: '2024-01-01', to: '2024-01-31' }
+
 describe('cross channel overview card sections', () => {
   it('renders the header controls and filter chips', () => {
     const markup = renderToStaticMarkup(
-      <CrossChannelOverviewHeader availableProviders={['google_ads']} dateRange={{ from: '2024-01-01', to: '2024-01-31' }} hasMetricData={true} hasProviderFilter={true} onDateRangeChange={vi.fn()} onExport={vi.fn()} onToggleProvider={vi.fn()} selectedProviders={['google_ads']} serverAggregated={true} />,
+      <CrossChannelOverviewHeader availableProviders={['google_ads']} dateRange={DATE_RANGE} hasMetricData={true} hasProviderFilter={true} onDateRangeChange={vi.fn()} onExport={vi.fn()} onToggleProvider={vi.fn()} selectedProviders={['google_ads']} serverAggregated={true} />,
     )
 
     expect(markup).toContain('Cross-channel overview')

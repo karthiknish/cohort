@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Users, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
@@ -161,7 +161,7 @@ export function TeamActivityWidget({
             <TeamMemberItem
               key={member.id}
               member={member}
-              onClick={() => onMemberClick?.(member.id)}
+              onClick={onMemberClick}
             />
           ))}
 
@@ -199,10 +199,14 @@ export function TeamActivityWidget({
 
 interface TeamMemberItemProps {
   member: TeamMember
-  onClick?: () => void
+  onClick?: (memberId: string) => void
 }
 
 function TeamMemberItem({ member, onClick }: TeamMemberItemProps) {
+  const handleClick = useCallback(() => {
+    onClick?.(member.id)
+  }, [member.id, onClick])
+
   const statusColors = {
     online: 'bg-success',
     away: 'bg-warning',
@@ -213,7 +217,7 @@ function TeamMemberItem({ member, onClick }: TeamMemberItemProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={handleClick}
       className="w-full text-left flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
     >
       {/* Status indicator */}

@@ -159,6 +159,10 @@ export function MessageForwardDialog({
     setIncludeAttachments(checked === true)
   }, [])
 
+  const handleForwardMessageChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setForwardMessage(event.target.value)
+  }, [])
+
   const handleCloseClick = useCallback(() => {
     handleOpenChange(false)
   }, [handleOpenChange])
@@ -229,7 +233,7 @@ export function MessageForwardDialog({
               id="message"
               placeholder="Add context or comments before the forwarded message…"
               value={forwardMessage}
-              onChange={(e) => setForwardMessage(e.target.value)}
+              onChange={handleForwardMessageChange}
               rows={3}
               maxLength={500}
             />

@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Button } from '@/shared/ui/button'
 import { getButtonClasses } from '@/lib/dashboard-theme'
 import {
@@ -26,6 +27,21 @@ export function CreateMeetingCard(props: CreateMeetingCardProps) {
 }
 
 export function RescheduleMeetingCard({ onReset, ...props }: RescheduleMeetingCardProps) {
+  const footerAction = useMemo(
+    () => (
+      <Button
+        type="button"
+        variant="outline"
+        className={getButtonClasses('outline')}
+        onClick={onReset}
+        disabled={props.scheduling}
+      >
+        Cancel Edit
+      </Button>
+    ),
+    [onReset, props.scheduling],
+  )
+
   return (
     <MeetingScheduleCardFrame
       {...props}
@@ -33,17 +49,7 @@ export function RescheduleMeetingCard({ onReset, ...props }: RescheduleMeetingCa
       cardDescription="Update time, attendees, and details. Calendar invites and room access stay in sync automatically."
       submittingLabel="Saving…"
       submitLabel="Save Reschedule"
-      footerAction={(
-        <Button
-          type="button"
-          variant="outline"
-          className={getButtonClasses('outline')}
-          onClick={onReset}
-          disabled={props.scheduling}
-        >
-          Cancel Edit
-        </Button>
-      )}
+      footerAction={footerAction}
     />
   )
 }

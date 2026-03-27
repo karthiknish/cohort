@@ -21,6 +21,8 @@ import {
   FormulaBuilderLoadingState,
 } from './formula-builder-card-sections'
 
+const VALIDATION = { valid: true, inputs: ['spend', 'clicks'] }
+
 describe('formula builder card sections', () => {
   it('renders the header and create dialog', () => {
     const headerMarkup = renderToStaticMarkup(<FormulaBuilderHeader><div>actions</div></FormulaBuilderHeader>)
@@ -40,7 +42,7 @@ describe('formula builder card sections', () => {
         onUseExample={vi.fn()}
         outputMetric="cpc"
         previewResult={2.34}
-        validation={{ valid: true, inputs: ['spend', 'clicks'] }}
+        validation={VALIDATION}
       />,
     )
 

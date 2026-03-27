@@ -8,6 +8,8 @@ import {
   ProposalDraftStatusStrip,
 } from './proposal-draft-panel-sections'
 
+const STEP_BODY = <div>Step body</div>
+
 describe('proposal draft panel sections', () => {
   it('renders the autosave status strip', () => {
     const markup = renderToStaticMarkup(
@@ -24,7 +26,7 @@ describe('proposal draft panel sections', () => {
         <ProposalDraftContentShell
           currentStep={1}
           requiredFieldLabels={['Budget']}
-          stepContent={<div>Step body</div>}
+          stepContent={STEP_BODY}
           stepDescription="Describe the current step"
           stepTitle="Step title"
           totalSteps={5}

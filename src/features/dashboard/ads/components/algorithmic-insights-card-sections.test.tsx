@@ -18,6 +18,8 @@ const insight = {
   score: 61,
 }
 
+const providerEfficiencyScores = { meta_ads: 31, google_ads: 44 }
+
 describe('algorithmic insights card sections', () => {
   it('renders loading and empty cards', () => {
     const loadingMarkup = renderToStaticMarkup(<AlgorithmicInsightsLoadingCard title="AI-Powered Insights" compact={false} />)
@@ -52,7 +54,6 @@ describe('algorithmic insights card sections', () => {
 
   it('renders the full variant', () => {
     const onViewAll = vi.fn()
-    const providerEfficiencyScores = { meta_ads: 31, google_ads: 44 }
     const markup = renderToStaticMarkup(
       <AlgorithmicInsightsFullCard
         criticalCount={1}

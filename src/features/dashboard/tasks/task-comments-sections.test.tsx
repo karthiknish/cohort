@@ -33,6 +33,8 @@ const replyComment: TaskComment = {
   threadRootId: 'comment-1',
 }
 
+const canManageComment = () => true
+
 describe('task comment sections', () => {
   it('renders the summary header state', () => {
     const markup = renderToStaticMarkup(
@@ -58,7 +60,7 @@ describe('task comment sections', () => {
         replyToId={null}
         editingCommentId={null}
         deletingCommentId={null}
-        canManageComment={() => true}
+        canManageComment={canManageComment}
         onStartReply={vi.fn()}
         onStartEdit={vi.fn()}
         onRequestDelete={vi.fn()}

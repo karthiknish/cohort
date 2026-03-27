@@ -7,6 +7,10 @@ import { formatStatusLabel, STATUS_ACCENT_COLORS } from './utils'
 import { ProjectCard } from './project-card'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 
+const STATUS_DOT_STYLES = Object.fromEntries(
+  PROJECT_STATUSES.map((status) => [status, { backgroundColor: STATUS_ACCENT_COLORS[status] }])
+) as Record<ProjectStatus, { backgroundColor: string }>
+
 export interface ProjectKanbanProps {
   projects: ProjectRecord[]
   pendingStatusUpdates: Set<string>
@@ -32,7 +36,7 @@ export function ProjectKanban({ projects, pendingStatusUpdates, onUpdateStatus, 
                   <div className="flex items-center gap-3">
                     <div
                       className="h-2.5 w-2.5 rounded-full shadow-sm"
-                      style={{ backgroundColor: STATUS_ACCENT_COLORS[status] }}
+                      style={STATUS_DOT_STYLES[status]}
                     />
                     <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
                       {formatStatusLabel(status)}
