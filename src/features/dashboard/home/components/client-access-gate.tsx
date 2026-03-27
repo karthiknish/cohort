@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type PropsWithChildren } from 'react'
+import { useCallback, useState, type PropsWithChildren } from 'react'
 import Link from 'next/link'
 import { LoaderCircle, RefreshCcw } from 'lucide-react'
 
@@ -14,6 +14,16 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
   const { loading, error, clients, selectedClientId, refreshClients, retryClients } = useClientContext()
   const { isPreviewMode } = usePreview()
   const [refreshing, setRefreshing] = useState(false)
+
+  const handleRetry = useCallback(() => {
+    if (refreshing) return
+    setRefreshing(true)
+
+    retryClients()
+    void Promise.resolve(refreshClients()).finally(() => {
+      setRefreshing(false)
+    })
+  }, [refreshClients, refreshing, retryClients])
 
   // In preview mode, bypass all access gates and show children directly
   if (isPreviewMode) {
@@ -30,17 +40,6 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
   }
 
   if (error) {
-      const handleRetry = () => {
-      if (refreshing) return
-      setRefreshing(true)
-
-        retryClients()
-        void Promise.resolve(refreshClients())
-          .finally(() => {
-            setRefreshing(false)
-          })
-    }
-
     return (
       <Card className="mx-auto max-w-lg border-destructive/40 bg-destructive/5">
         <CardHeader>

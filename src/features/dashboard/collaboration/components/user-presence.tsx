@@ -233,6 +233,12 @@ interface TypingIndicatorProps {
 export function TypingIndicator({ users, className }: TypingIndicatorProps) {
   if (users.length === 0) return null
 
+  const typingDotStyles = [
+    { animationDelay: '0ms' },
+    { animationDelay: '150ms' },
+    { animationDelay: '300ms' },
+  ] as const
+
   const getText = () => {
     if (users.length === 1) {
       return `${users[0]?.name} is typing...`
@@ -246,9 +252,9 @@ export function TypingIndicator({ users, className }: TypingIndicatorProps) {
   return (
     <div className={cn('flex items-center gap-2 text-xs text-muted-foreground', className)}>
       <div className="flex gap-0.5">
-        <span className="animate-bounce" style={{ animationDelay: '0ms' }}>●</span>
-        <span className="animate-bounce" style={{ animationDelay: '150ms' }}>●</span>
-        <span className="animate-bounce" style={{ animationDelay: '300ms' }}>●</span>
+        <span className="animate-bounce" style={typingDotStyles[0]}>●</span>
+        <span className="animate-bounce" style={typingDotStyles[1]}>●</span>
+        <span className="animate-bounce" style={typingDotStyles[2]}>●</span>
       </div>
       <span>{getText()}</span>
     </div>

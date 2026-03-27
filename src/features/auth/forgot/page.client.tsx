@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Mail, CircleCheck, LoaderCircle } from 'lucide-react'
 
@@ -23,12 +23,12 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [emailError, setEmailError] = useState<string | null>(null)
 
-  const validateEmail = (email: string): boolean => {
+  const validateEmail = useCallback((email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     return emailRegex.test(email)
-  }
+  }, [])
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setEmailError(null)
 
@@ -57,7 +57,20 @@ export default function ForgotPasswordPage() {
       .finally(() => {
         setSubmitting(false)
       })
-  }
+  }, [email, resetPassword, submitting, toast, validateEmail])
+
+  const handleEmailChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(event.target.value)
+    setEmailError(null)
+  }, [])
+
+  const handleResetAnotherEmail = useCallback(() => {
+    setSuccess(false)
+  }, [])
+
+  const handleOpenEmailApp = useCallback(() => {
+    window.open('https://mail.google.com', '_blank')
+  }, [])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12">
@@ -96,10 +109,7 @@ export default function ForgotPasswordPage() {
                     autoComplete="email"
                     required
                     value={email}
-                    onChange={(event) => {
-                      setEmail(event.target.value)
-                      if (emailError) setEmailError(null)
-                    }}
+                    onChange={handleEmailChange}
                     placeholder="you@example.com"
                     className={cn("pl-9", emailError && "border-destructive focus-visible:ring-destructive")}
                     disabled={submitting}
@@ -139,7 +149,7 @@ export default function ForgotPasswordPage() {
                 Didn&apos;t receive the email? Check your spam folder or{' '}
                 <button
                   type="button"
-                  onClick={() => setSuccess(false)}
+                  onClick={handleResetAnotherEmail}
                   className="font-medium text-primary hover:underline"
                 >
                   try another email
@@ -150,7 +160,7 @@ export default function ForgotPasswordPage() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => window.open('https://mail.google.com', '_blank')}
+              onClick={handleOpenEmailApp}
             >
               Open email app
             </Button>

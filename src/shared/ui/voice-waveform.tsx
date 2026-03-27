@@ -14,6 +14,31 @@ interface VoiceWaveformProps {
 
 const waveformPulseDurationSeconds = motionDurationSeconds.xslow * 2
 
+function getWaveformAnimateProps(isActive: boolean, height: number) {
+  return {
+    height: isActive ? height : 8,
+    opacity: isActive ? [0.7, 1, 0.7] : 0.3,
+    backgroundColor: isActive ? 'var(--primary)' : 'var(--muted-foreground)',
+  }
+}
+
+function getWaveformTransitionProps(delay: number) {
+  return {
+    height: {
+      type: 'spring' as const,
+      stiffness: 400,
+      damping: 25,
+      mass: 0.5,
+    },
+    opacity: {
+      duration: waveformPulseDurationSeconds,
+      ease: motionEasing.inOut,
+      repeat: Infinity,
+      delay,
+    },
+  }
+}
+
 export function VoiceWaveform({ isActive, barCount = 12, className }: VoiceWaveformProps) {
   const { frequencies } = useAudioAnalyzer(isActive)
 
@@ -42,25 +67,8 @@ export function VoiceWaveform({ isActive, barCount = 12, className }: VoiceWavef
           <m.div
             key={bar.id}
             className="w-2 bg-primary rounded-full transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none"
-            animate={{
-              height: isActive ? bar.height : 8,
-              opacity: isActive ? [0.7, 1, 0.7] : 0.3,
-              backgroundColor: isActive ? 'var(--primary)' : 'var(--muted-foreground)',
-            }}
-            transition={{
-              height: {
-                type: 'spring',
-                stiffness: 400,
-                damping: 25,
-                mass: 0.5,
-              },
-              opacity: {
-                duration: waveformPulseDurationSeconds,
-                ease: motionEasing.inOut,
-                repeat: Infinity,
-                delay: bar.delay,
-              },
-            }}
+            animate={getWaveformAnimateProps(isActive, bar.height)}
+            transition={getWaveformTransitionProps(bar.delay)}
           />
         ))}
       </div>

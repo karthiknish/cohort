@@ -77,6 +77,19 @@ export function CodeBlock({
     return createTrustedHtml(highlightCode(visibleCode, language), 'collaboration-code-block:highlightCode')
   }, [visibleCode, language])
 
+  const handleToggleExpanded = useCallback(() => {
+    setIsExpanded((prev) => !prev)
+  }, [])
+
+  const handleShowMore = useCallback(() => {
+    setIsExpanded(true)
+  }, [])
+
+  const contentStyle = useMemo(
+    () => ({ maxHeight: isExpanded ? undefined : maxHeight }),
+    [isExpanded, maxHeight]
+  )
+
   return (
     <div className={cn('rounded-lg border bg-muted/50 overflow-hidden', className)}>
       {/* Header bar */}
@@ -114,7 +127,7 @@ export function CodeBlock({
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={handleToggleExpanded}
               aria-label={isExpanded ? 'Collapse code block' : 'Expand code block'}
             >
               {isExpanded ? (
@@ -150,7 +163,7 @@ export function CodeBlock({
       {/* Code content */}
       <div
         className={cn('overflow-auto', !isExpanded && 'max-h-[400px]')}
-        style={{ maxHeight: isExpanded ? undefined : maxHeight }}
+        style={contentStyle}
       >
         <pre className="p-4 text-sm">
           <TrustedHtml
@@ -171,7 +184,7 @@ export function CodeBlock({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => setIsExpanded(true)}
+            onClick={handleShowMore}
             className="text-xs"
           >
             Show {lines.length - 10} more lines

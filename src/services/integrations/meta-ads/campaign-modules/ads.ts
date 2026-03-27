@@ -9,7 +9,7 @@ import {
   META_API_BASE,
 } from '../client'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
-import { MetaAdMetric, MetaInsightsResponse } from '../types'
+import type { MetaAdMetric, MetaInsightsResponse } from '../types'
 
 // =============================================================================
 // LIST ADS

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useMutation } from 'convex/react'
 import { AlertCircle, LoaderCircle, MessageSquare } from 'lucide-react'
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -43,26 +43,43 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
 
   const createProblemReport = useMutation(problemReportsApi.create)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleTitleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(event.target.value)
+  }, [])
+
+  const handleDescriptionChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setDescription(event.target.value)
+  }, [])
+
+  const handleSeverityChange = useCallback((value: string) => {
+    if (value === 'low' || value === 'medium' || value === 'high' || value === 'critical') {
+      setSeverity(value)
+    }
+  }, [])
+
+  const handleClose = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
+
+  const handleSubmit = useCallback((event: React.FormEvent) => {
+    event.preventDefault()
     if (!user) return
 
     setSubmitting(true)
 
     void createProblemReport({
-        legacyId: `pr_${Date.now()}_${user.id ?? 'anon'}`,
-        userId: user.id ?? null,
-        userEmail: user.email ?? null,
-        userName: user.name ?? null,
-        workspaceId: selectedClientId || null,
-        title,
-        description,
-        severity,
-        status: 'open',
-        createdAtMs: Date.now(),
-        updatedAtMs: Date.now(),
-      })
-
+      legacyId: `pr_${Date.now()}_${user.id ?? 'anon'}`,
+      userId: user.id ?? null,
+      userEmail: user.email ?? null,
+      userName: user.name ?? null,
+      workspaceId: selectedClientId || null,
+      title,
+      description,
+      severity,
+      status: 'open',
+      createdAtMs: Date.now(),
+      updatedAtMs: Date.now(),
+    })
       .then(() => {
         toast({
           title: 'Report submitted',
@@ -85,7 +102,7 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
       .finally(() => {
         setSubmitting(false)
       })
-  }
+  }, [createProblemReport, description, onOpenChange, selectedClientId, severity, title, toast, user])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -107,7 +124,7 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
               id="title"
               placeholder="Brief summary of the problem"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={handleTitleChange}
               required
               disabled={submitting}
             />
@@ -117,11 +134,7 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
             <Label htmlFor="severity">Severity Level</Label>
             <Select
               value={severity}
-              onValueChange={(value) => {
-                if (value === 'low' || value === 'medium' || value === 'high' || value === 'critical') {
-                  setSeverity(value)
-                }
-              }}
+              onValueChange={handleSeverityChange}
               disabled={submitting}
             >
               <SelectTrigger id="severity">
@@ -142,7 +155,7 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
               id="description"
               placeholder="What happened? What did you expect to happen?"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={handleDescriptionChange}
               className="min-h-[120px]"
               required
               disabled={submitting}
@@ -153,7 +166,7 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
               disabled={submitting}
             >
               Cancel

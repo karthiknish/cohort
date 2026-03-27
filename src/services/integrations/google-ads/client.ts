@@ -4,6 +4,8 @@
 
 import {
   GOOGLE_API_BASE,
+} from './types'
+import type {
   GoogleAdsSearchResponse,
   GoogleAdsResult,
 } from './types'

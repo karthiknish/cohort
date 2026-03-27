@@ -18,11 +18,16 @@ import { AudienceBuilderDialogFooter, AudienceBuilderDialogHeader, AudienceBuild
 
 describe('audience builder dialog sections', () => {
   it('renders the dialog header and progress steps', () => {
+    const completionSteps = [
+      { id: 'basics', label: 'Basics', complete: true },
+      { id: 'locations', label: 'Locations', complete: false },
+    ]
+    const onSelectStep = vi.fn()
     const markup = renderToStaticMarkup(
       <AudienceBuilderDialogHeader
         activeTab="basics"
-        completionSteps={[{ id: 'basics', label: 'Basics', complete: true }, { id: 'locations', label: 'Locations', complete: false }]}
-        onSelectStep={vi.fn()}
+        completionSteps={completionSteps}
+        onSelectStep={onSelectStep}
         providerId="facebook"
       />,
     )
@@ -34,32 +39,49 @@ describe('audience builder dialog sections', () => {
   })
 
   it('renders the targeting tab and footer summary', () => {
+    const formData = { name: 'Audience A', description: '', segments: [], locations: [], interests: ['Travel'], genders: [] }
+    const onAddInterest = vi.fn()
+    const onAddSegment = vi.fn()
+    const onAgePreset = vi.fn()
+    const onDescriptionChange = vi.fn()
+    const onGenderToggle = vi.fn()
+    const onInterestInputChange = vi.fn()
+    const onLocationRemove = vi.fn()
+    const onLocationSelect = vi.fn()
+    const onNameChange = vi.fn()
+    const onRemoveInterest = vi.fn()
+    const onRemoveSegment = vi.fn()
+    const onResetGenders = vi.fn()
+    const onSegmentInputChange = vi.fn()
+    const setActiveTab = vi.fn()
     const tabsMarkup = renderToStaticMarkup(
       <AudienceBuilderDialogTabs
         activeTab="targeting"
-        formData={{ name: 'Audience A', description: '', segments: [], locations: [], interests: ['Travel'], genders: [] }}
+        formData={formData}
         newInterest=""
         newSegment=""
-        onAddInterest={vi.fn()}
-        onAddSegment={vi.fn()}
-        onAgePreset={vi.fn()}
-        onDescriptionChange={vi.fn()}
-        onGenderToggle={vi.fn()}
-        onInterestInputChange={vi.fn()}
-        onLocationRemove={vi.fn()}
-        onLocationSelect={vi.fn()}
-        onNameChange={vi.fn()}
-        onRemoveInterest={vi.fn()}
-        onRemoveSegment={vi.fn()}
-        onResetGenders={vi.fn()}
-        onSegmentInputChange={vi.fn()}
+        onAddInterest={onAddInterest}
+        onAddSegment={onAddSegment}
+        onAgePreset={onAgePreset}
+        onDescriptionChange={onDescriptionChange}
+        onGenderToggle={onGenderToggle}
+        onInterestInputChange={onInterestInputChange}
+        onLocationRemove={onLocationRemove}
+        onLocationSelect={onLocationSelect}
+        onNameChange={onNameChange}
+        onRemoveInterest={onRemoveInterest}
+        onRemoveSegment={onRemoveSegment}
+        onResetGenders={onResetGenders}
+        onSegmentInputChange={onSegmentInputChange}
         providerId="linkedin"
-        setActiveTab={vi.fn()}
+        setActiveTab={setActiveTab}
       />,
     )
 
+    const onCancel = vi.fn()
+    const onCreate = vi.fn()
     const footerMarkup = renderToStaticMarkup(
-      <AudienceBuilderDialogFooter completedCount={2} loading={false} onCancel={vi.fn()} onCreate={vi.fn()} totalSteps={4} />,
+      <AudienceBuilderDialogFooter completedCount={2} loading={false} onCancel={onCancel} onCreate={onCreate} totalSteps={4} />,
     )
 
     expect(tabsMarkup).toContain('Custom Segments')

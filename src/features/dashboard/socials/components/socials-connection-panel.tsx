@@ -1,7 +1,7 @@
 'use client'
 
 import { ArrowRight, Facebook, Instagram, RefreshCw, Unplug } from 'lucide-react'
-
+import { useCallback } from 'react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -45,6 +45,18 @@ export function SocialsConnectionPanel({
 }: SocialsConnectionPanelProps) {
   const isConnecting = connectingProvider !== null
 
+  const handleConnectFacebook = useCallback(() => {
+    void onConnectFacebook()
+  }, [onConnectFacebook])
+
+  const handleConnectInstagram = useCallback(() => {
+    void onConnectInstagram()
+  }, [onConnectInstagram])
+
+  const handleDisconnect = useCallback(() => {
+    void onDisconnect()
+  }, [onDisconnect])
+
   return (
     <div id={panelId} className="space-y-4">
       {/* ── Social Platform Login Cards ── */}
@@ -70,7 +82,7 @@ export function SocialsConnectionPanel({
             </div>
             <Button
               type="button"
-              onClick={() => void onConnectFacebook()}
+              onClick={handleConnectFacebook}
               disabled={isConnecting}
               className={cn(getButtonClasses('primary'), 'w-full')}
             >
@@ -102,7 +114,7 @@ export function SocialsConnectionPanel({
             </div>
             <Button
               type="button"
-              onClick={() => void onConnectInstagram()}
+              onClick={handleConnectInstagram}
               disabled={isConnecting}
               className={cn(getButtonClasses('primary'), 'w-full')}
             >
@@ -173,7 +185,7 @@ export function SocialsConnectionPanel({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => void onDisconnect()}
+              onClick={handleDisconnect}
               disabled={!connected}
               className={cn(getButtonClasses('outline'), 'text-destructive hover:text-destructive')}
             >

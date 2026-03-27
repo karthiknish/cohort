@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import {
   Filter,
   SortAsc,
@@ -75,6 +76,18 @@ export function ActivityFilters({
   className,
 }: ActivityFiltersProps) {
   const hasActiveFilters = typeFilter !== 'all' || dateRange !== 'all' || statusFilter !== 'all' || searchQuery
+  const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => onSearchChange(event.target.value), [onSearchChange])
+  const handleClearSearch = useCallback(() => onSearchChange(''), [onSearchChange])
+  const handleTypeFilterChange = useCallback((value: string) => onTypeFilterChange(value as ActivityType | 'all'), [onTypeFilterChange])
+  const handleDateRangeChange = useCallback((value: string) => onDateRangeChange(value as DateRangeOption), [onDateRangeChange])
+  const handleStatusFilterChange = useCallback((value: string) => onStatusFilterChange(value as StatusFilter), [onStatusFilterChange])
+  const handleSortNewest = useCallback(() => onSortChange('newest'), [onSortChange])
+  const handleSortOldest = useCallback(() => onSortChange('oldest'), [onSortChange])
+  const handleSortType = useCallback(() => onSortChange('type'), [onSortChange])
+  const handleSortEntity = useCallback(() => onSortChange('entity'), [onSortChange])
+  const handleRemoveTypeFilter = useCallback(() => onTypeFilterChange('all'), [onTypeFilterChange])
+  const handleRemoveDateFilter = useCallback(() => onDateRangeChange('all'), [onDateRangeChange])
+  const handleRemoveStatusFilter = useCallback(() => onStatusFilterChange('all'), [onStatusFilterChange])
 
   return (
     <div className={cn('flex flex-col gap-4', className)}>
@@ -100,12 +113,12 @@ export function ActivityFilters({
           placeholder="Search activity… (⌘K)"
           className="pl-9"
           value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
+          onChange={handleSearchChange}
         />
         {searchQuery && (
           <button
             type="button"
-            onClick={() => onSearchChange('')}
+            onClick={handleClearSearch}
             className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
             aria-label="Clear search"
           >
@@ -119,7 +132,7 @@ export function ActivityFilters({
         {/* Type Filter */}
         <Select
           value={typeFilter}
-          onValueChange={(v) => onTypeFilterChange(v as ActivityType | 'all')}
+          onValueChange={handleTypeFilterChange}
         >
           <SelectTrigger className="w-[180px]" aria-label="Filter by type">
             <SelectValue placeholder="Filter by type" />
@@ -137,7 +150,7 @@ export function ActivityFilters({
         {/* Date Range Filter */}
         <Select
           value={dateRange}
-          onValueChange={(v) => onDateRangeChange(v as DateRangeOption)}
+          onValueChange={handleDateRangeChange}
         >
           <SelectTrigger className="w-[140px]" aria-label="Filter by date">
             <SelectValue placeholder="Date range" />
@@ -154,7 +167,7 @@ export function ActivityFilters({
         {/* Status Filter */}
         <Select
           value={statusFilter}
-          onValueChange={(v) => onStatusFilterChange(v as StatusFilter)}
+          onValueChange={handleStatusFilterChange}
         >
           <SelectTrigger className="w-[140px]" aria-label="Filter by status">
             <SelectValue placeholder="Status" />
@@ -181,16 +194,16 @@ export function ActivityFilters({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => onSortChange('newest')}>
+            <DropdownMenuItem onClick={handleSortNewest}>
               <SortDesc className="h-4 w-4 mr-2" />
               Newest first
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onSortChange('oldest')}>
+            <DropdownMenuItem onClick={handleSortOldest}>
               <SortAsc className="h-4 w-4 mr-2" />
               Oldest first
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onSortChange('type')}>Type</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onSortChange('entity')}>
+            <DropdownMenuItem onClick={handleSortType}>Type</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSortEntity}>
               Entity name
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -259,7 +272,7 @@ export function ActivityFilters({
               Type: {ACTIVITY_LABELS[typeFilter]}
               <button
                 type="button"
-                onClick={() => onTypeFilterChange('all')}
+                onClick={handleRemoveTypeFilter}
                 className="hover:bg-muted-foreground/20 rounded-full p-0.5"
                 aria-label="Remove type filter"
               >
@@ -272,7 +285,7 @@ export function ActivityFilters({
               Date: {dateRange}
               <button
                 type="button"
-                onClick={() => onDateRangeChange('all')}
+                onClick={handleRemoveDateFilter}
                 className="hover:bg-muted-foreground/20 rounded-full p-0.5"
                 aria-label="Remove date filter"
               >
@@ -285,7 +298,7 @@ export function ActivityFilters({
               Status: {statusFilter}
               <button
                 type="button"
-                onClick={() => onStatusFilterChange('all')}
+                onClick={handleRemoveStatusFilter}
                 className="hover:bg-muted-foreground/20 rounded-full p-0.5"
                 aria-label="Remove status filter"
               >
@@ -298,7 +311,7 @@ export function ActivityFilters({
               Search: &ldquo;{searchQuery}&rdquo;
               <button
                 type="button"
-                onClick={() => onSearchChange('')}
+                onClick={handleClearSearch}
                 className="hover:bg-muted-foreground/20 rounded-full p-0.5"
                 aria-label="Clear search"
               >

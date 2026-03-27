@@ -35,6 +35,11 @@ vi.mock('./in-site-meeting-card', () => ({
   MeetingRoomPage: ({ meeting }: { meeting: { legacyId: string } }) => <div>Meeting Room {meeting.legacyId}</div>,
 }))
 
+const noop = vi.fn()
+const emptyProps = {} as never
+const rescheduleMeetingCardProps = { onReset: noop } as never
+const sharedMeeting = { legacyId: 'meeting-1' } as never
+
 import {
   ActiveMeetingRoomSection,
   MeetingsDefaultView,
@@ -45,16 +50,16 @@ describe('meetings page shell sections', () => {
   it('renders the default meetings layout sections', () => {
     const markup = renderToStaticMarkup(
       <MeetingsDefaultView
-        createMeetingCardProps={{} as never}
+        createMeetingCardProps={emptyProps}
         editingMeeting={false}
-        googleWorkspaceCardProps={{} as never}
-        meetingsHeaderProps={{} as never}
-        meetingCancelDialogProps={{} as never}
-        quickMeetDialogProps={{} as never}
-        rescheduleMeetingCardProps={{ onReset: vi.fn() } as never}
+        googleWorkspaceCardProps={emptyProps}
+        meetingsHeaderProps={emptyProps}
+        meetingCancelDialogProps={emptyProps}
+        quickMeetDialogProps={emptyProps}
+        rescheduleMeetingCardProps={rescheduleMeetingCardProps}
         showPreviewMode={true}
         showReadOnlyAccessAlert={true}
-        upcomingMeetingsCardProps={{} as never}
+        upcomingMeetingsCardProps={emptyProps}
       />,
     )
 
@@ -72,13 +77,13 @@ describe('meetings page shell sections', () => {
       <>
         <ActiveMeetingRoomSection
           meetingRoomKey="meeting-1"
-          meeting={{ legacyId: 'meeting-1' } as never}
+          meeting={sharedMeeting}
           canRecord={true}
-          onMeetingUpdated={vi.fn()}
+          onMeetingUpdated={noop}
           fallbackRoomName={null}
-          onClose={vi.fn()}
+          onClose={noop}
         />
-        <SharedRoomLoadingSection sharedRoomName="Room A" onBack={vi.fn()} />
+        <SharedRoomLoadingSection sharedRoomName="Room A" onBack={noop} />
       </>,
     )
 

@@ -119,24 +119,24 @@ export function TagManagement({
     }
   }, [handleAddNewTag])
 
+  const handleNewTagInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setNewTagInput(event.target.value)
+  }, [])
+
+  const handleClearSelection = useCallback(() => {
+    onTagsChange([])
+  }, [onTagsChange])
+
+  const handleTagFilterChange = useCallback((tag: string | null) => {
+    onTagsChange(tag ? [tag] : [])
+    setOpen(false)
+  }, [onTagsChange])
+
   return (
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
       {/* Selected tags */}
       {selectedTags.map((tag) => (
-        <Badge
-          key={tag}
-          className={cn('gap-1 pr-1 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:pr-2', getTagColor(tag))}
-        >
-          <Hash className="h-2.5 w-2.5" />
-          {tag}
-          <button
-            type="button"
-            onClick={(e) => handleRemoveTag(tag, e)}
-            className="ml-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/20 p-0.5"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        <SelectedTagBadge key={tag} tag={tag} onRemove={handleRemoveTag} />
       ))}
 
       {/* Tag picker popover */}
@@ -161,7 +161,7 @@ export function TagManagement({
               <Input
                 placeholder="New tag…"
                 value={newTagInput}
-                onChange={(e) => setNewTagInput(e.target.value)}
+                onChange={handleNewTagInputChange}
                 onKeyDown={handleKeyDown}
                 className="h-8 text-sm"
               />
@@ -187,28 +187,14 @@ export function TagManagement({
                       No tags yet. Create one above!
                     </p>
                   ) : (
-                    sortedAvailableTags.map((tag) => {
-                      const isSelected = selectedTags.includes(tag)
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => handleToggleTag(tag)}
-                          className={cn(
-                            'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm transition-colors',
-                            isSelected
-                              ? 'bg-primary/10 text-primary'
-                              : 'hover:bg-muted'
-                          )}
-                        >
-                          <div className={cn('h-2 w-2 rounded-full shrink-0', getTagDotColor(tag))} />
-                          <span className="flex-1 truncate">{tag}</span>
-                          {isSelected && (
-                            <span className="text-xs">✓</span>
-                          )}
-                        </button>
-                      )
-                    })
+                    sortedAvailableTags.map((tag) => (
+                      <AvailableTagButton
+                        key={tag}
+                        tag={tag}
+                        selected={selectedTags.includes(tag)}
+                        onToggle={handleToggleTag}
+                      />
+                    ))
                   )}
                 </div>
               </ScrollArea>
@@ -248,39 +234,113 @@ export function TagFilter({
       </PopoverTrigger>
       <PopoverContent className="w-48 p-2" align="start">
         <div className="space-y-0.5">
-          <button
-            onClick={() => {
-              onTagChange(null)
-              setOpen(false)
-            }}
-            className={cn(
-              'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm transition-colors',
-              !selectedTag ? 'bg-muted' : 'hover:bg-muted'
-            )}
-          >
-            <span>All tags</span>
-          </button>
+          <TagFilterOptionButton
+            label="All tags"
+            selected={!selectedTag}
+            tag={null}
+            selectedTag={selectedTag}
+            onTagChange={onTagChange}
+          />
           {availableTags.map((tag) => (
-            <button
+            <TagFilterOptionButton
               key={tag}
-              onClick={() => {
-                onTagChange(tag === selectedTag ? null : tag)
-                setOpen(false)
-              }}
-              className={cn(
-                'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm transition-colors',
-                selectedTag === tag ? 'bg-muted' : 'hover:bg-muted'
-              )}
-            >
-              <div className={cn(
-                'h-2 w-2 rounded-full shrink-0',
-                getTagBgColor(tag)
-              )} />
-              <span className="truncate">{tag}</span>
-            </button>
+              label={tag}
+              selected={selectedTag === tag}
+              dotClassName={getTagBgColor(tag)}
+              tag={tag}
+              selectedTag={selectedTag}
+              onTagChange={onTagChange}
+            />
           ))}
         </div>
       </PopoverContent>
     </Popover>
+  )
+}
+
+function SelectedTagBadge({
+  tag,
+  onRemove,
+}: {
+  tag: string
+  onRemove: (tag: string, event: React.MouseEvent) => void
+}) {
+  const handleRemove = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    onRemove(tag, event)
+  }, [onRemove, tag])
+
+  return (
+    <Badge
+      className={cn('gap-1 pr-1 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:pr-2', getTagColor(tag))}
+    >
+      <Hash className="h-2.5 w-2.5" />
+      {tag}
+      <button type="button" onClick={handleRemove} className="ml-0.5 rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/20">
+        <X className="h-3 w-3" />
+      </button>
+    </Badge>
+  )
+}
+
+function AvailableTagButton({
+  tag,
+  selected,
+  onToggle,
+}: {
+  tag: string
+  selected: boolean
+  onToggle: (tag: string) => void
+}) {
+  const handleClick = useCallback(() => {
+    onToggle(tag)
+  }, [onToggle, tag])
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn(
+        'w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+        selected ? 'bg-primary/10 text-primary' : 'hover:bg-muted'
+      )}
+    >
+      <div className={cn('h-2 w-2 rounded-full shrink-0', getTagDotColor(tag))} />
+      <span className="flex-1 truncate">{tag}</span>
+      {selected ? <span className="text-xs">✓</span> : null}
+    </button>
+  )
+}
+
+function TagFilterOptionButton({
+  label,
+  selected,
+  dotClassName,
+  tag,
+  selectedTag,
+  onTagChange,
+}: {
+  label: string
+  selected: boolean
+  dotClassName?: string
+  tag: string | null
+  selectedTag: string | null
+  onTagChange: (tag: string | null) => void
+}) {
+  const handleClick = useCallback(() => {
+    onTagChange(tag === selectedTag ? null : tag)
+  }, [onTagChange, selectedTag, tag])
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn(
+        'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
+        selected ? 'bg-muted' : 'hover:bg-muted'
+      )}
+    >
+      {dotClassName ? <div className={cn('h-2 w-2 shrink-0 rounded-full', dotClassName)} /> : null}
+      <span className="truncate">{label}</span>
+    </button>
   )
 }

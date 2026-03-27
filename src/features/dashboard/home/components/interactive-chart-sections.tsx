@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useMemo } from 'react'
 import {
   Area,
   AreaChart,
@@ -50,6 +51,10 @@ type RechartsTooltipProps = {
 }
 
 const COLORS = CHART_COLORS.primary
+
+const TICK_STYLE = { fontSize: 12 }
+const ACTIVE_DOT_PROPS = { r: 6 }
+const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
 
 export function ChartTooltipContent({
   active,
@@ -123,6 +128,20 @@ export function InteractiveChartHeader({
   timeRange: TimeRange
   title: string
 }) {
+  const handleSetLine = useCallback(() => setChartType('line'), [setChartType])
+  const handleSetBar = useCallback(() => setChartType('bar'), [setChartType])
+  const handleSetArea = useCallback(() => setChartType('area'), [setChartType])
+  const handleSetPie = useCallback(() => setChartType('pie'), [setChartType])
+
+  const handleTimeRangeChange = useCallback(
+    (value: string) => setTimeRange(value as TimeRange),
+    [setTimeRange],
+  )
+
+  const handleExportCsv = useCallback(() => handleExport('csv'), [handleExport])
+  const handleExportJson = useCallback(() => handleExport('json'), [handleExport])
+  const handleExportPng = useCallback(() => handleExport('png'), [handleExport])
+
   return (
     <CardHeader className="flex flex-row items-center justify-between pb-2">
       <div className="min-w-0 flex-1">
@@ -141,14 +160,14 @@ export function InteractiveChartHeader({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setChartType('line')}>Line Chart</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setChartType('bar')}>Bar Chart</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setChartType('area')}>Area Chart</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setChartType('pie')}>Pie Chart</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSetLine}>Line Chart</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSetBar}>Bar Chart</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSetArea}>Area Chart</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSetPie}>Pie Chart</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
+        <Select value={timeRange} onValueChange={handleTimeRangeChange}>
           <SelectTrigger className="w-[100px]">
             <SelectValue />
           </SelectTrigger>
@@ -176,9 +195,9 @@ export function InteractiveChartHeader({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('csv')}>Export as CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('json')}>Export as JSON</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('png')}>Export as Image</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportCsv}>Export as CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportJson}>Export as JSON</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPng}>Export as Image</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}
@@ -212,6 +231,32 @@ export function InteractiveChartRenderer({
   valueFormatter: (value: number) => string
   xAxisKey: string
 }) {
+  const xAxisTickFormatter = useCallback(
+    (value: string) => new Date(value).toLocaleDateString(undefined, DATE_FORMAT_OPTIONS),
+    [],
+  )
+
+  const pieLabelFormatter = useCallback(
+    ({ name, percent }: { name: string; percent: number }) =>
+      `${name}: ${(percent * 100).toFixed(0)}%`,
+    [],
+  )
+
+  const lineDotProps = useMemo(
+    () => ({ fill: CHART_COLORS.primary[0], r: 4 }),
+    [],
+  )
+
+  const tooltipContent = useMemo(
+    () => <ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />,
+    [xAxisKey, dataKey, valueFormatter],
+  )
+
+  const pieTooltipContent = useMemo(
+    () => <PieTooltipContent valueFormatter={valueFormatter} />,
+    [valueFormatter],
+  )
+
   if (filteredData.length === 0) {
     return <InteractiveChartEmptyState />
   }
@@ -226,35 +271,35 @@ export function InteractiveChartRenderer({
     chartType === 'line' ? (
       <LineChart {...commonProps}>
         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.2} />
-        <XAxis dataKey={xAxisKey} tick={{ fontSize: 12 }} stroke="currentColor" strokeOpacity={0.5} tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} />
-        <YAxis tick={{ fontSize: 12 }} stroke="currentColor" strokeOpacity={0.5} tickFormatter={valueFormatter} />
-        <Tooltip content={<ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />} />
-        <Line type="monotone" dataKey={dataKey} stroke={CHART_COLORS.primary[0]} strokeWidth={2} dot={{ fill: CHART_COLORS.primary[0], r: 4 }} activeDot={{ r: 6 }} />
+        <XAxis dataKey={xAxisKey} tick={TICK_STYLE} stroke="currentColor" strokeOpacity={0.5} tickFormatter={xAxisTickFormatter} />
+        <YAxis tick={TICK_STYLE} stroke="currentColor" strokeOpacity={0.5} tickFormatter={valueFormatter} />
+        <Tooltip content={tooltipContent} />
+        <Line type="monotone" dataKey={dataKey} stroke={CHART_COLORS.primary[0]} strokeWidth={2} dot={lineDotProps} activeDot={ACTIVE_DOT_PROPS} />
       </LineChart>
     ) : chartType === 'bar' ? (
       <BarChart {...commonProps}>
         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.2} />
-        <XAxis dataKey={xAxisKey} tick={{ fontSize: 12 }} stroke="currentColor" strokeOpacity={0.5} tickFormatter={(value) => new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} />
-        <YAxis tick={{ fontSize: 12 }} stroke="currentColor" strokeOpacity={0.5} tickFormatter={valueFormatter} />
-        <Tooltip content={<ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />} />
+        <XAxis dataKey={xAxisKey} tick={TICK_STYLE} stroke="currentColor" strokeOpacity={0.5} tickFormatter={xAxisTickFormatter} />
+        <YAxis tick={TICK_STYLE} stroke="currentColor" strokeOpacity={0.5} tickFormatter={valueFormatter} />
+        <Tooltip content={tooltipContent} />
         <Bar dataKey={dataKey} fill={CHART_COLORS.primary[0]} radius={[4, 4, 0, 0]} />
       </BarChart>
     ) : chartType === 'area' ? (
       <AreaChart {...commonProps}>
         <CartesianGrid strokeDasharray="3 3" stroke="currentColor" strokeOpacity={0.2} />
-        <XAxis dataKey={xAxisKey} tick={{ fontSize: 12 }} stroke="currentColor" strokeOpacity={0.5} />
-        <YAxis tick={{ fontSize: 12 }} stroke="currentColor" strokeOpacity={0.5} tickFormatter={valueFormatter} />
-        <Tooltip content={<ChartTooltipContent xAxisKey={xAxisKey} dataKey={dataKey} valueFormatter={valueFormatter} />} />
+        <XAxis dataKey={xAxisKey} tick={TICK_STYLE} stroke="currentColor" strokeOpacity={0.5} />
+        <YAxis tick={TICK_STYLE} stroke="currentColor" strokeOpacity={0.5} tickFormatter={valueFormatter} />
+        <Tooltip content={tooltipContent} />
         <Area type="monotone" dataKey={dataKey} stroke={CHART_COLORS.primary[0]} fill={CHART_COLORS.primary[0]} fillOpacity={0.3} />
       </AreaChart>
     ) : (
       <PieChart {...commonProps}>
-        <Pie data={categoryData} dataKey="value" name="Share" cx="50%" cy="50%" innerRadius={40} outerRadius={80} paddingAngle={2} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+        <Pie data={categoryData} dataKey="value" name="Share" cx="50%" cy="50%" innerRadius={40} outerRadius={80} paddingAngle={2} label={pieLabelFormatter} labelLine={false}>
           {categoryData.map((entry, index) => (
             <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
           ))}
         </Pie>
-        <Tooltip content={<PieTooltipContent valueFormatter={valueFormatter} />} />
+        <Tooltip content={pieTooltipContent} />
       </PieChart>
     )
 

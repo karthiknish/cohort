@@ -166,7 +166,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     }
   }, [fetchTargeting])
 
-  const toggleSection = (section: string) => {
+  const toggleSection = useCallback((section: string) => {
     const next = new Set(expandedSections)
     if (next.has(section)) {
       next.delete(section)
@@ -174,7 +174,15 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
       next.add(section)
     }
     setExpandedSections(next)
-  }
+  }, [expandedSections])
+
+  const handleOpenBuilder = useCallback(() => {
+    setBuilderOpen(true)
+  }, [])
+
+  const handleToggleEditing = useCallback((section: string) => {
+    setEditingSection((current) => (current === section ? null : section))
+  }, [])
 
    const visibleTargeting = useMemo(() => {
      if (targeting.length <= 1) return targeting
@@ -276,6 +284,16 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     }
   }, [visibleTargeting])
 
+  const audienceEditorSection = useMemo(() => (
+    <AudienceEditorSection
+      aggregatedData={aggregatedData}
+      expandedSections={expandedSections}
+      toggleSection={toggleSection}
+      editingSection={editingSection}
+      onToggleEditing={handleToggleEditing}
+    />
+  ), [aggregatedData, editingSection, expandedSections, handleToggleEditing, toggleSection])
+
   if (loading && !hasLoaded) {
     return (
       <Card>
@@ -325,7 +343,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
           </div>
           <p className="text-sm font-medium">No Targeting Data</p>
           <p className="text-xs text-muted-foreground mt-1 mb-4">Create an audience to start targeting</p>
-          <Button variant="outline" onClick={() => setBuilderOpen(true)}>
+            <Button variant="outline" onClick={handleOpenBuilder}>
             <Plus className="h-4 w-4 mr-2" />
             Create Audience
           </Button>
@@ -354,7 +372,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setBuilderOpen(true)}
+                onClick={handleOpenBuilder}
             >
               <Plus className="h-4 w-4 mr-1.5" />
               Create Audience
@@ -381,9 +399,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
             selectedTargetingId={selectedTargetingId}
             onTargetingChange={setSelectedTargetingId}
             editingSection={editingSection}
-            onToggleEditing={(section) =>
-              setEditingSection(editingSection === section ? null : section)
-            }
+              onToggleEditing={handleToggleEditing}
           />
 
           <div className="space-y-3">
@@ -396,17 +412,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
               aggregatedData={aggregatedData}
               expandedSections={expandedSections}
               toggleSection={toggleSection}
-              interestSection={(
-                <AudienceEditorSection
-                  aggregatedData={aggregatedData}
-                  expandedSections={expandedSections}
-                  toggleSection={toggleSection}
-                  editingSection={editingSection}
-                  onToggleEditing={(section) =>
-                    setEditingSection(editingSection === section ? null : section)
-                  }
-                />
-              )}
+                interestSection={audienceEditorSection}
             />
           </div>
         </div>

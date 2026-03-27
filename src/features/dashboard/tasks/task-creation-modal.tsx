@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { MessageSquare } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -15,7 +15,7 @@ import { useSmartDefaults } from '@/shared/hooks/use-smart-defaults'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useToast } from '@/shared/ui/use-toast'
-import type { TaskRecord } from '@/types/tasks'
+import type { TaskPriority, TaskRecord } from '@/types/tasks'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useConvex, useMutation } from 'convex/react'
 import { filesApi, tasksApi } from '@/lib/convex-api'
@@ -62,7 +62,15 @@ export function TaskCreationModal({
   const [pendingAttachments, setPendingAttachments] = useState<PendingTaskAttachment[]>([])
 
   // Form state with smart defaults
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string
+    description: string
+    priority: TaskPriority
+    dueDate: string
+    assignedTo: string[]
+    projectId: string
+    projectName: string
+  }>({
     title: initialData?.title || '',
     description: initialData?.description || '',
     priority: taskDefaults.priority || 'medium',
@@ -72,7 +80,7 @@ export function TaskCreationModal({
     projectName: initialData?.projectName || taskDefaults.projectName || '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.title.trim()) return
 
@@ -204,24 +212,36 @@ export function TaskCreationModal({
       .finally(() => {
         setIsLoading(false)
       })
-  }
+  }, [convex, createTask, defaultDueDate, formData, generateUploadUrl, onClose, onTaskCreated, pendingAttachments, selectedClient, selectedClientId, taskDefaults, toast, user])
 
-  const handleAddAttachments = (files: FileList | null) => {
+  const handleAddAttachments = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return
     const next = buildPendingTaskAttachments(files)
     setPendingAttachments((prev) => [...prev, ...next].slice(0, 10))
-  }
+  }, [])
 
-  const handleRemoveAttachment = (attachmentId: string) => {
+  const handleRemoveAttachment = useCallback((attachmentId: string) => {
     setPendingAttachments((prev) => prev.filter((item) => item.id !== attachmentId))
-  }
+  }, [])
 
-  const handleDateSelect = (date: Date | undefined) => {
+  const handleDateSelect = useCallback((date: Date | undefined) => {
     setFormData((prev) => ({
       ...prev,
       dueDate: date ? format(date, 'yyyy-MM-dd') : '',
     }))
-  }
+  }, [])
+
+  const handleTitleChange = useCallback((value: string) => {
+    setFormData((prev) => ({ ...prev, title: value }))
+  }, [])
+
+  const handleDescriptionChange = useCallback((value: string) => {
+    setFormData((prev) => ({ ...prev, description: value }))
+  }, [])
+
+  const handlePriorityChange = useCallback((value: TaskPriority) => {
+    setFormData((prev) => ({ ...prev, priority: value }))
+  }, [])
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -253,9 +273,9 @@ export function TaskCreationModal({
             isLoading={isLoading}
             pendingAttachments={pendingAttachments}
             fileInputRef={fileInputRef}
-            onTitleChange={(value) => setFormData((prev) => ({ ...prev, title: value }))}
-            onDescriptionChange={(value) => setFormData((prev) => ({ ...prev, description: value }))}
-            onPriorityChange={(value) => setFormData((prev) => ({ ...prev, priority: value }))}
+            onTitleChange={handleTitleChange}
+            onDescriptionChange={handleDescriptionChange}
+            onPriorityChange={handlePriorityChange}
             onDateSelect={handleDateSelect}
             onAddAttachments={handleAddAttachments}
             onRemoveAttachment={handleRemoveAttachment}

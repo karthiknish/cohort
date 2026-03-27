@@ -14,7 +14,7 @@ import {
   META_API_BASE,
 } from './client'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
-import {
+import type {
   MetaAdsOptions,
   MetaAdAccount,
   MetaInsightsResponse,

@@ -1,13 +1,13 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Archive, RotateCcw, Trash2, Calendar, TrendingUp } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { cn, formatRelativeTime } from '@/lib/utils'
-import { TaskRecord } from '@/types/tasks'
+import type { TaskRecord } from '@/types/tasks'
 import { formatDate, formatStatusLabel } from './task-types'
 
 type TaskArchiveViewProps = {
@@ -37,6 +37,14 @@ export function TaskArchiveView({
 
     return { byStatus, byPriority, total: archivedTasks.length }
   }, [archivedTasks])
+
+  const handleRestore = useCallback((task: TaskRecord) => {
+    onRestore?.(task)
+  }, [onRestore])
+
+  const handleDelete = useCallback((task: TaskRecord) => {
+    onPermanentlyDelete?.(task)
+  }, [onPermanentlyDelete])
 
   if (loading) {
     return (
@@ -145,55 +153,67 @@ export function TaskArchiveView({
             <ScrollArea className="h-[400px]">
               <div className="space-y-2 pr-4">
                 {archivedTasks.map((task) => (
-                  <div
+                  <ArchivedTaskRow
                     key={task.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-muted/40 bg-background/50 hover:bg-muted/30 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-sm truncate">{task.title}</h4>
-                        <Badge variant="outline" className="text-[10px]">
-                          {formatStatusLabel(task.status)}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                        <span>Due: {task.dueDate ? formatDate(task.dueDate) : 'No date'}</span>
-                        {task.deletedAt && (
-                          <span>Archived {formatRelativeTime(new Date(task.deletedAt))}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {onRestore && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onRestore(task)}
-                          className="h-8 gap-1"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                          Restore
-                        </Button>
-                      )}
-                      {onPermanentlyDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onPermanentlyDelete(task)}
-                          className="h-8 gap-1 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                    task={task}
+                    onRestore={onRestore ? handleRestore : undefined}
+                    onPermanentlyDelete={onPermanentlyDelete ? handleDelete : undefined}
+                  />
                 ))}
               </div>
             </ScrollArea>
           </CardContent>
         </Card>
       )}
+    </div>
+  )
+}
+
+function ArchivedTaskRow({
+  task,
+  onRestore,
+  onPermanentlyDelete,
+}: {
+  task: TaskRecord
+  onRestore?: (task: TaskRecord) => void
+  onPermanentlyDelete?: (task: TaskRecord) => void
+}) {
+  const handleRestoreClick = useCallback(() => {
+    onRestore?.(task)
+  }, [onRestore, task])
+
+  const handleDeleteClick = useCallback(() => {
+    onPermanentlyDelete?.(task)
+  }, [onPermanentlyDelete, task])
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-muted/40 bg-background/50 p-3 transition-colors hover:bg-muted/30">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <h4 className="truncate text-sm font-medium">{task.title}</h4>
+          <Badge variant="outline" className="text-[10px]">
+            {formatStatusLabel(task.status)}
+          </Badge>
+        </div>
+        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
+          <span>Due: {task.dueDate ? formatDate(task.dueDate) : 'No date'}</span>
+          {task.deletedAt ? <span>Archived {formatRelativeTime(new Date(task.deletedAt))}</span> : null}
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        {onRestore ? (
+          <Button variant="ghost" size="sm" onClick={handleRestoreClick} className="h-8 gap-1">
+            <RotateCcw className="h-3.5 w-3.5" />
+            Restore
+          </Button>
+        ) : null}
+        {onPermanentlyDelete ? (
+          <Button variant="ghost" size="sm" onClick={handleDeleteClick} className="h-8 gap-1 text-destructive hover:text-destructive">
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
+          </Button>
+        ) : null}
+      </div>
     </div>
   )
 }

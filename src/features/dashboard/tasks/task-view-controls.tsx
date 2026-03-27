@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { Columns3, Download, List, LayoutGrid } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
@@ -18,6 +19,18 @@ export function TaskViewControls({
   onExport,
   canExport,
 }: TaskViewControlsProps) {
+  const handleListView = useCallback(() => {
+    onViewModeChange('list')
+  }, [onViewModeChange])
+
+  const handleGridView = useCallback(() => {
+    onViewModeChange('grid')
+  }, [onViewModeChange])
+
+  const handleBoardView = useCallback(() => {
+    onViewModeChange('board')
+  }, [onViewModeChange])
+
   return (
     <div className="flex items-center gap-2">
       <Tooltip>
@@ -41,13 +54,13 @@ export function TaskViewControls({
             <Button
               variant="ghost"
               size="icon"
-                className={cn(
-                  'h-8 w-8 rounded-full',
-                  viewMode === 'list'
+              className={cn(
+                'h-8 w-8 rounded-full',
+                viewMode === 'list'
                   ? 'bg-background text-foreground shadow-sm hover:bg-background'
                   : 'text-muted-foreground hover:bg-background/80 hover:text-foreground'
-                )}
-              onClick={() => onViewModeChange('list')}
+              )}
+              onClick={handleListView}
               aria-label="List view"
             >
               <List className="h-4 w-4" />
@@ -60,13 +73,13 @@ export function TaskViewControls({
             <Button
               variant="ghost"
               size="icon"
-                className={cn(
-                  'h-8 w-8 rounded-full',
-                  viewMode === 'grid'
+              className={cn(
+                'h-8 w-8 rounded-full',
+                viewMode === 'grid'
                   ? 'bg-background text-foreground shadow-sm hover:bg-background'
                   : 'text-muted-foreground hover:bg-background/80 hover:text-foreground'
-                )}
-              onClick={() => onViewModeChange('grid')}
+              )}
+              onClick={handleGridView}
               aria-label="Grid view"
             >
               <LayoutGrid className="h-4 w-4" />
@@ -79,13 +92,13 @@ export function TaskViewControls({
             <Button
               variant="ghost"
               size="sm"
-                className={cn(
-                  'h-8 rounded-full gap-1.5 px-3',
-                  viewMode === 'board'
+              className={cn(
+                'h-8 rounded-full gap-1.5 px-3',
+                viewMode === 'board'
                   ? 'bg-background text-foreground shadow-sm hover:bg-background'
                   : 'text-muted-foreground hover:bg-background/80 hover:text-foreground'
-                )}
-              onClick={() => onViewModeChange('board')}
+              )}
+              onClick={handleBoardView}
               aria-label="Kanban view"
             >
               <Columns3 className="h-4 w-4" />

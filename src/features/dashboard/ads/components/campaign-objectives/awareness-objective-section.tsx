@@ -4,6 +4,7 @@
 
 'use client'
 
+import { useCallback } from 'react'
 import { Label } from '@/shared/ui/label'
 import { Switch } from '@/shared/ui/switch'
 import { Slider } from '@/shared/ui/slider'
@@ -12,6 +13,34 @@ import { Eye, Target, Zap } from 'lucide-react'
 import { ObjectiveComponentProps } from './types'
 
 export function AwarenessObjectiveSection({ formData, onChange, disabled }: ObjectiveComponentProps) {
+  const handleReachClick = useCallback(() => onChange({ optimizationGoal: 'REACH' }), [onChange])
+  const handleImpressionsClick = useCallback(() => onChange({ optimizationGoal: 'IMPRESSIONS' }), [onChange])
+  const handleAdRecallLiftClick = useCallback(() => onChange({ optimizationGoal: 'AD_RECALL_LIFT' }), [onChange])
+
+  const optimizationGoalButtons = [
+    {
+      value: 'REACH' as const,
+      label: 'Reach',
+      desc: 'Maximize unique users who see your ad',
+      icon: Target,
+      onClick: handleReachClick,
+    },
+    {
+      value: 'IMPRESSIONS' as const,
+      label: 'Impressions',
+      desc: 'Maximize total ad views (may reach same users multiple times)',
+      icon: Eye,
+      onClick: handleImpressionsClick,
+    },
+    {
+      value: 'AD_RECALL_LIFT' as const,
+      label: 'Ad Recall Lift',
+      desc: 'Optimize for people likely to remember your ad (requires larger budget)',
+      icon: Zap,
+      onClick: handleAdRecallLiftClick,
+    },
+  ]
+
   return (
     <div className="space-y-6">
       {/* Awareness Strategy */}
@@ -30,43 +59,16 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
           <div className="space-y-2">
             <Label htmlFor="awareness-goal">Optimization Goal</Label>
             <div className="grid grid-cols-1 gap-2">
-              {[
-                { 
-                  value: 'REACH', 
-                  label: 'Reach', 
-                  desc: 'Maximize unique users who see your ad',
-                  icon: Target 
-                },
-                { 
-                  value: 'IMPRESSIONS', 
-                  label: 'Impressions', 
-                  desc: 'Maximize total ad views (may reach same users multiple times)',
-                  icon: Eye 
-                },
-                { 
-                  value: 'AD_RECALL_LIFT', 
-                  label: 'Ad Recall Lift', 
-                  desc: 'Optimize for people likely to remember your ad (requires larger budget)',
-                  icon: Zap 
-                },
-              ].map((option) => (
-                <button
+              {optimizationGoalButtons.map((option) => (
+                <OptimizationGoalButton
                   key={option.value}
-                  type="button"
-                  onClick={() => onChange({ optimizationGoal: option.value })}
+                  active={formData.optimizationGoal === option.value}
                   disabled={disabled}
-                  className={`flex items-start gap-3 p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
-                    formData.optimizationGoal === option.value
-                      ? 'border-info/20 bg-info/10'
-                      : 'border-border hover:border-info/50'
-                  }`}
-                >
-                  <option.icon className="w-5 h-5 text-info mt-0.5" />
-                  <div>
-                    <p className="font-medium text-sm">{option.label}</p>
-                    <p className="text-xs text-muted-foreground">{option.desc}</p>
-                  </div>
-                </button>
+                  icon={option.icon}
+                  label={option.label}
+                  description={option.desc}
+                  onClick={option.onClick}
+                />
               ))}
             </div>
           </div>
@@ -159,5 +161,38 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function OptimizationGoalButton({
+  active,
+  disabled,
+  icon: Icon,
+  label,
+  description,
+  onClick,
+}: {
+  active: boolean
+  disabled: boolean
+  icon: typeof Eye
+  label: string
+  description: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
+        active ? 'border-info/20 bg-info/10' : 'border-border hover:border-info/50'
+      }`}
+    >
+      <Icon className="mt-0.5 h-5 w-5 text-info" />
+      <div>
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+    </button>
   )
 }

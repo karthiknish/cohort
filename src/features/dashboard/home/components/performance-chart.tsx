@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useMemo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { Info } from 'lucide-react'
 
@@ -65,6 +65,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from '@/shared/ui/chart'
+import type { Formatter, NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 
 // Direct Recharts imports to fix rendering issues on pages with many charts
 import {
@@ -111,6 +112,29 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
         dateFormatted: new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
       }))
   }, [metrics])
+
+  const chartMargin = useMemo(() => ({ top: 12, right: 12, left: 0, bottom: 28 }), [])
+  const chartTickStyle = useMemo(() => ({ fontSize: 12 }), [])
+  const activeDot = useMemo(() => ({ r: 5, strokeWidth: 0 }), [])
+  const tooltipCursor = useMemo(() => ({ strokeDasharray: '3 3' }), [])
+  const tooltipFormatter = useCallback<Formatter<ValueType, NameType>>((value, name) => {
+    const normalizedValue = Array.isArray(value) ? value[0] : value
+    const label = chartConfig[String(name) as keyof typeof chartConfig]?.label ?? String(name)
+
+    return (
+      <div className="flex items-center justify-between gap-8">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-mono font-medium">{formatCurrencyValueFull(Number(normalizedValue), currency)}</span>
+      </div>
+    )
+  }, [currency])
+  const tooltipContent = useMemo(() => (
+    <ChartTooltipContent
+      formatter={tooltipFormatter}
+    />
+  ), [tooltipFormatter])
+  const legendContent = useMemo(() => <ChartLegendContent />, [])
+  const yTickFormatter = useCallback((value: number) => formatCurrencyValue(value, currency), [currency])
 
   if (loading) {
     return (
@@ -167,7 +191,7 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
       </div>
       <div className="min-h-0 flex-1">
         <ChartContainer config={chartConfig} className="h-full w-full">
-          <AreaChart data={chartData} margin={{ top: 12, right: 12, left: 0, bottom: 28 }}>
+          <AreaChart data={chartData} margin={chartMargin}>
             <defs>
               <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.3} />
@@ -185,29 +209,20 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
               tickLine={false}
               tickMargin={12}
               height={40}
-              tick={{ fontSize: 12 }}
+              tick={chartTickStyle}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
               tickMargin={8}
-              tickFormatter={(value) => formatCurrencyValue(value, currency)}
-              tick={{ fontSize: 12 }}
+              tickFormatter={yTickFormatter}
+              tick={chartTickStyle}
             />
             <RechartsTooltip
-              cursor={{ strokeDasharray: '3 3' }}
-              content={
-                <ChartTooltipContent
-                  formatter={(value, name) => (
-                    <div className="flex items-center justify-between gap-8">
-                      <span className="text-muted-foreground">{chartConfig[name as keyof typeof chartConfig]?.label}</span>
-                      <span className="font-mono font-medium">{formatCurrencyValueFull(Number(value), currency)}</span>
-                    </div>
-                  )}
-                />
-              }
+              cursor={tooltipCursor}
+              content={tooltipContent}
             />
-            <ChartLegend content={<ChartLegendContent />} />
+            <ChartLegend content={legendContent} />
             <Area
               type="monotone"
               dataKey="revenue"
@@ -215,7 +230,7 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
               strokeWidth={2}
               fill="url(#fillRevenue)"
               dot={false}
-              activeDot={{ r: 5, strokeWidth: 0 }}
+              activeDot={activeDot}
             />
             <Area
               type="monotone"
@@ -224,7 +239,7 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
               strokeWidth={2}
               fill="url(#fillSpend)"
               dot={false}
-              activeDot={{ r: 5, strokeWidth: 0 }}
+              activeDot={activeDot}
             />
           </AreaChart>
         </ChartContainer>

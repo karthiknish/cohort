@@ -1,6 +1,6 @@
 import { ConvexError } from 'convex/values'
 
-import { AppErrorData } from './convex-errors'
+import type { AppErrorData } from './convex-errors'
 import { UnifiedError } from './errors/unified-error'
 
 export type AgentErrorType = 'network' | 'rate-limit' | 'auth' | 'server' | 'validation' | 'unknown'

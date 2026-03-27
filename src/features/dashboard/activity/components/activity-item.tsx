@@ -1,5 +1,7 @@
 'use client'
 
+import { useCallback } from 'react'
+import type { MouseEvent } from 'react'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import {
@@ -67,6 +69,50 @@ export function ActivityItem({
   const colorClass = ACTIVITY_COLORS[activity.type]
   const mobileCheckboxId = `activity-select-mobile-${activity.id}`
   const desktopCheckboxId = `activity-select-desktop-${activity.id}`
+  const handleSelectionChange = useCallback(
+    (checked: boolean | 'indeterminate') => onSelectionChange(activity.id, checked === true),
+    [activity.id, onSelectionChange]
+  )
+  const handleViewDetails = useCallback(() => onViewDetails(activity), [activity, onViewDetails])
+  const handleAddReaction = useCallback(
+    (emoji: string) => onAddReaction(activity.id, emoji),
+    [activity.id, onAddReaction]
+  )
+  const handleReactionMenuOpenChange = useCallback((open: boolean) => onShowReactionsChange(open ? activity.id : null), [activity.id, onShowReactionsChange])
+  const handleStopPropagation = useCallback((event: MouseEvent<HTMLElement>) => {
+    event.stopPropagation()
+  }, [])
+  const handleTogglePin = useCallback(() => onTogglePin(activity.id), [activity.id, onTogglePin])
+  const handleMarkAsRead = useCallback(() => onMarkAsRead(activity.id), [activity.id, onMarkAsRead])
+  const createReactionButtonClickHandler = useCallback(
+    (emoji: string) => (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation()
+      handleAddReaction(emoji)
+      onShowReactionsChange(null)
+    },
+    [handleAddReaction, onShowReactionsChange]
+  )
+  const createReactionMenuItemClickHandler = useCallback(
+    (emoji: string) => () => {
+      handleAddReaction(emoji)
+      onShowReactionsChange(null)
+    },
+    [handleAddReaction, onShowReactionsChange]
+  )
+  const createTogglePinClickHandler = useCallback(
+    () => (event: MouseEvent<HTMLElement>) => {
+      event.stopPropagation()
+      handleTogglePin()
+    },
+    [handleTogglePin]
+  )
+  const createMarkAsReadClickHandler = useCallback(
+    () => (event: MouseEvent<HTMLElement>) => {
+      event.stopPropagation()
+      handleMarkAsRead()
+    },
+    [handleMarkAsRead]
+  )
 
   return (
     <div className={cn('relative group', !activity.isRead && 'bg-muted/30')}>
@@ -76,18 +122,14 @@ export function ActivityItem({
           <Checkbox
             id={mobileCheckboxId}
             checked={isSelected}
-            onCheckedChange={(checked) =>
-              onSelectionChange(activity.id, checked as boolean)
-            }
+            onCheckedChange={handleSelectionChange}
             aria-label={`Select ${activity.description}`}
           />
         </label>
         <Checkbox
           id={desktopCheckboxId}
           checked={isSelected}
-          onCheckedChange={(checked) =>
-            onSelectionChange(activity.id, checked as boolean)
-          }
+          onCheckedChange={handleSelectionChange}
           aria-label={`Select ${activity.description}`}
           className="hidden sm:block"
         />
@@ -121,7 +163,7 @@ export function ActivityItem({
           <div className="space-y-1 min-w-0 flex-1">
             <button
               type="button"
-              onClick={() => onViewDetails(activity)}
+              onClick={handleViewDetails}
               className="block min-w-0 rounded-md text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
               aria-label={`Open activity ${activity.description}`}
             >
@@ -155,10 +197,7 @@ export function ActivityItem({
                   <button
                     key={`${reaction.emoji}-${reaction.count}`}
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onAddReaction(activity.id, reaction.emoji)
-                    }}
+                    onClick={createReactionButtonClickHandler(reaction.emoji)}
                     className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-muted hover:bg-muted/70 text-xs"
                   >
                     <span>{reaction.emoji}</span>
@@ -190,16 +229,14 @@ export function ActivityItem({
             {/* Reactions picker */}
             <DropdownMenu
               open={showReactions === activity.id}
-              onOpenChange={(open) =>
-                onShowReactionsChange(open ? activity.id : null)
-              }
+              onOpenChange={handleReactionMenuOpenChange}
             >
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-9 w-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={handleStopPropagation}
                   aria-label="Add reaction"
                 >
                   <Heart className="h-4 w-4" />
@@ -209,10 +246,7 @@ export function ActivityItem({
                 {REACTION_EMOJIS.map((emoji) => (
                   <DropdownMenuItem
                     key={emoji}
-                    onClick={() => {
-                      onAddReaction(activity.id, emoji)
-                      onShowReactionsChange(null)
-                    }}
+                    onClick={createReactionMenuItemClickHandler(emoji)}
                   >
                     {emoji} Add reaction
                   </DropdownMenuItem>
@@ -225,10 +259,7 @@ export function ActivityItem({
               variant="ghost"
               size="icon"
               className="h-9 w-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => {
-                e.stopPropagation()
-                onTogglePin(activity.id)
-              }}
+              onClick={createTogglePinClickHandler()}
               aria-label={activity.isPinned ? 'Unpin activity' : 'Pin activity'}
             >
               {activity.isPinned ? (
@@ -244,10 +275,7 @@ export function ActivityItem({
                 variant="ghost"
                 size="icon"
                 className="h-9 w-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onMarkAsRead(activity.id)
-                }}
+                onClick={createMarkAsReadClickHandler()}
                 aria-label="Mark as read"
               >
                 <Check aria-hidden="true" className="h-4 w-4" />
@@ -261,7 +289,7 @@ export function ActivityItem({
                   variant="ghost"
                   size="icon"
                   className="h-9 w-9 sm:h-7 sm:w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={handleStopPropagation}
                   aria-label="More activity actions"
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -269,10 +297,7 @@ export function ActivityItem({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onTogglePin(activity.id)
-                  }}
+                  onClick={createTogglePinClickHandler()}
                 >
                   {activity.isPinned ? (
                     <>
@@ -288,16 +313,13 @@ export function ActivityItem({
                 </DropdownMenuItem>
                 {!activity.isRead && (
                   <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onMarkAsRead(activity.id)
-                    }}
+                    onClick={createMarkAsReadClickHandler()}
                   >
                     <Check className="h-4 w-4 mr-2" />
                     Mark as read
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={() => onViewDetails(activity)}>
+                <DropdownMenuItem onClick={handleViewDetails}>
                   View details
                 </DropdownMenuItem>
                 {activity.navigationUrl && (

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, createElement, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Download,
   RefreshCcw,
@@ -55,7 +55,7 @@ type ClientsDashboardPageClientProps = {
 export default function ClientsDashboardPageClient({ initialClientId = null }: ClientsDashboardPageClientProps) {
   return (
     <ClientAccessGate>
-      <Suspense fallback={<ClientsDashboardSkeleton />}>
+      <Suspense fallback={createElement(ClientsDashboardSkeleton)}>
         <ClientsDashboardContent initialClientId={initialClientId} />
       </Suspense>
     </ClientAccessGate>
@@ -124,7 +124,7 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
     clientsData.adStatusLoading,
   ])
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     if (refreshing) return
     setRefreshing(true)
 
@@ -145,9 +145,9 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
       .finally(() => {
         setRefreshing(false)
       })
-  }
+  }, [refreshClients, refreshing, toast])
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     if (!selectedClient) return
 
     const teamMembers = selectedClient?.teamMembers ?? []
@@ -169,7 +169,7 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
       title: 'Export complete',
       description: 'Client overview has been downloaded.',
     })
-  }
+  }, [clientsData.stats, selectedClient, toast])
 
   const teamMembers = useMemo(() => selectedClient?.teamMembers ?? [], [selectedClient?.teamMembers])
   const filteredTeamMembers = useMemo(() => {

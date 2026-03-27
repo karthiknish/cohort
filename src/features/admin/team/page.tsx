@@ -1,6 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import {
   CircleAlert,
@@ -111,6 +112,56 @@ export default function AdminTeamPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<AdminUserRole>('team')
   const [inviteSending, setInviteSending] = useState(false)
+
+  const handleInviteEmailChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setInviteEmail(event.target.value)
+  }, [])
+
+  const handleInviteRoleChange = useCallback((value: string) => {
+    setInviteRole(value as AdminUserRole)
+  }, [])
+
+  const handleCloseInviteDialog = useCallback(() => {
+    setInviteOpen(false)
+  }, [])
+
+  const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value)
+  }, [])
+
+  const handleStatusFilterChange = useCallback((value: string) => {
+    setStatusFilter(value as StatusFilter)
+  }, [])
+
+  const handleRoleFilterChange = useCallback((value: string) => {
+    setRoleFilter(value as RoleFilter)
+  }, [])
+
+  const createRoleChangeHandler = (userId: string) => (value: string) => {
+    handleRoleChange(userId, value as AdminUserRecord['role'])
+  }
+
+  const createAdminToggleHandler = (record: AdminUserRecord) => (event: ChangeEvent<HTMLInputElement>) => {
+    handleAdminToggle(record, event.target.checked)
+  }
+
+  const createStatusActionHandler = (record: AdminUserRecord) => () => {
+    handleStatusAction(record)
+  }
+
+  const handleLoadMore = useCallback(() => {
+    if (loadingMore) return
+    setLoadingMore(true)
+
+    void Promise.resolve()
+      .then(() => loadMore(50))
+      .catch((err: unknown) => {
+        logError(err, 'AdminTeamPage:loadMore')
+      })
+      .finally(() => {
+        setLoadingMore(false)
+      })
+  }, [loadMore, loadingMore])
 
   const users: AdminUserRecord[] = useMemo(() => {
     if (usersOverride) return usersOverride
@@ -250,9 +301,9 @@ export default function AdminTeamPage() {
       })
   }
 
-  const handleInviteUser = () => {
+  const handleInviteUser = useCallback(() => {
     if (!inviteEmail || !user?.id) return
-    
+
     setInviteSending(true)
 
     void createInvitation({
@@ -278,15 +329,15 @@ export default function AdminTeamPage() {
       .finally(() => {
         setInviteSending(false)
       })
-  }
+  }, [createInvitation, inviteEmail, inviteRole, toast, user])
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     if (loading) return
     setStatusFilter('all')
     setRoleFilter('all')
     setSearchTerm('')
     setUsersOverride(null)
-  }
+  }, [loading])
 
   if (!user) {
     return (
@@ -339,12 +390,12 @@ export default function AdminTeamPage() {
                       id="email"
                       placeholder="colleague@company.com"
                       value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
+                      onChange={handleInviteEmailChange}
                     />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="role">Role</Label>
-                    <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AdminUserRole)}>
+                    <Select value={inviteRole} onValueChange={handleInviteRoleChange}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -356,7 +407,7 @@ export default function AdminTeamPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setInviteOpen(false)} disabled={inviteSending}>Cancel</Button>
+                  <Button variant="outline" onClick={handleCloseInviteDialog} disabled={inviteSending}>Cancel</Button>
                   <Button onClick={handleInviteUser} disabled={!inviteEmail || inviteSending}>
                     {inviteSending ? 'Sending…' : 'Send Invitation'}
                   </Button>
@@ -422,10 +473,10 @@ export default function AdminTeamPage() {
               <Input
                 placeholder="Search by name or email"
                 value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
+                onChange={handleSearchChange}
                 className="lg:w-64"
               />
-              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                 <SelectTrigger className="lg:w-40">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -437,7 +488,7 @@ export default function AdminTeamPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as RoleFilter)}>
+              <Select value={roleFilter} onValueChange={handleRoleFilterChange}>
                 <SelectTrigger className="lg:w-40">
                   <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
@@ -498,7 +549,7 @@ export default function AdminTeamPage() {
                           <td className="py-3 pr-3 align-middle">
                             <Select
                               value={record.role}
-                              onValueChange={(value) => handleRoleChange(record.id, value as AdminUserRecord['role'])}
+                              onValueChange={createRoleChangeHandler(record.id)}
                               disabled={savingId === record.id}
                             >
                               <SelectTrigger>
@@ -516,7 +567,7 @@ export default function AdminTeamPage() {
                           <td className="py-3 pr-3 text-center align-middle">
                             <Checkbox
                               checked={record.role === 'admin'}
-                              onChange={(event) => handleAdminToggle(record, event.target.checked)}
+                              onChange={createAdminToggleHandler(record)}
                               disabled={savingId === record.id}
                               aria-label={`Toggle admin role for ${record.name}`}
                             />
@@ -551,7 +602,7 @@ export default function AdminTeamPage() {
                               type="button"
                               variant={record.status === 'active' ? 'destructive' : 'outline'}
                               size="sm"
-                              onClick={() => handleStatusAction(record)}
+                              onClick={createStatusActionHandler(record)}
                               disabled={savingId === record.id}
                               className="inline-flex items-center gap-2"
                             >
@@ -576,19 +627,7 @@ export default function AdminTeamPage() {
                 <Button
                   type="button"
                   variant="outline"
-                   onClick={() => {
-                     if (loadingMore) return
-                     setLoadingMore(true)
-
-                     void Promise.resolve()
-                       .then(() => loadMore(50))
-                       .catch((err: unknown) => {
-                         logError(err, 'AdminTeamPage:loadMore')
-                       })
-                       .finally(() => {
-                         setLoadingMore(false)
-                       })
-                   }}
+                   onClick={handleLoadMore}
 
                   disabled={loadingMore}
                   className="inline-flex items-center gap-2"

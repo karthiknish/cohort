@@ -36,6 +36,17 @@ export function VirtualizedMessageList({
   const estimatedRowHeight = estimateSize()
   const rowSpacing = Math.max(overscan - 1, 0)
   const totalMinHeight = Math.max(messages.length * estimatedRowHeight + Math.max(messages.length - 1, 0) * rowSpacing, 0)
+  const containerStyle = useMemo(() => ({ contain: 'strict' as const }), [])
+  const contentStyle = useMemo(
+    () => ({
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: `${rowSpacing}px`,
+      minHeight: `${totalMinHeight}px`,
+      width: '100%',
+    }),
+    [rowSpacing, totalMinHeight]
+  )
 
   // Handle scroll to bottom for loading more
   const handleScroll = useCallback(
@@ -56,25 +67,14 @@ export function VirtualizedMessageList({
       ref={containerRef}
       className={cn('overflow-y-auto', className)}
       onScroll={handleScroll}
-      style={{ contain: 'strict' }}
+      style={containerStyle}
     >
-      <div
-        style={{
-          minHeight: `${totalMinHeight}px`,
-          width: '100%',
-        }}
-      >
+      <div style={contentStyle}>
         {messages.map((message, index) => {
           if (!message) return null
 
           return (
-            <div
-              key={message.id}
-              data-index={index}
-              style={{
-                marginBottom: index === messages.length - 1 ? 0 : rowSpacing,
-              }}
-            >
+            <div key={message.id} data-index={index}>
               {renderItem(message, index)}
             </div>
           )

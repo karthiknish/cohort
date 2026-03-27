@@ -322,13 +322,13 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
       })
   }, [user?.id, workspaceId, project, name, description, status, clientId, clients, startDate, endDate, tags, hasChanges, validate, toast, onProjectUpdated, onOpenChange, updateProject])
 
-  const formatStatusLabel = (value: ProjectStatus): string => {
+  const formatStatusLabel = useCallback((value: ProjectStatus): string => {
     return value
       .replace('_', ' ')
       .split(' ')
       .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
       .join(' ')
-  }
+  }, [])
 
   const requestClose = useCallback(() => {
     if (loading) return
@@ -354,6 +354,10 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
     setDiscardDialogOpen(false)
     onOpenChange(false)
   }, [onOpenChange])
+
+  const handleCancelDiscard = useCallback(() => {
+    setDiscardDialogOpen(false)
+  }, [])
 
   if (!project) return null
 
@@ -417,7 +421,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
         cancelLabel="Keep editing"
         variant="warning"
         onConfirm={handleConfirmDiscard}
-        onCancel={() => setDiscardDialogOpen(false)}
+        onCancel={handleCancelDiscard}
       />
     </>
   )

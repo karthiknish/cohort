@@ -1,6 +1,6 @@
 'use client'
 
-import type { RefObject } from 'react'
+import { useCallback, type ChangeEvent, type RefObject } from 'react'
 import { LoaderCircle, MoreHorizontal, Paperclip, Pencil, Reply, Send, Trash2, X } from 'lucide-react'
 
 import { MessageAttachments } from '@/features/dashboard/collaboration/components/message-attachments'
@@ -64,6 +64,18 @@ function TaskCommentThreadItem({
   const isActiveEdit = editingCommentId === comment.id
   const isBusy = deletingCommentId === comment.id
 
+  const handleStartReplyClick = useCallback(() => {
+    onStartReply(comment)
+  }, [comment, onStartReply])
+
+  const handleStartEditClick = useCallback(() => {
+    onStartEdit(comment)
+  }, [comment, onStartEdit])
+
+  const handleRequestDeleteClick = useCallback(() => {
+    onRequestDelete(comment)
+  }, [comment, onRequestDelete])
+
   return (
     <div key={comment.id} className="space-y-3">
       <div
@@ -110,22 +122,22 @@ function TaskCommentThreadItem({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-44 rounded-xl">
-                      <DropdownMenuItem onSelect={() => onStartReply(comment)}>
+                      <DropdownMenuItem onSelect={handleStartReplyClick}>
                         <Reply className="h-4 w-4" />
                         Reply
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => onStartEdit(comment)}>
+                      <DropdownMenuItem onSelect={handleStartEditClick}>
                         <Pencil className="h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem variant="destructive" onSelect={() => onRequestDelete(comment)}>
+                      <DropdownMenuItem variant="destructive" onSelect={handleRequestDeleteClick}>
                         <Trash2 className="h-4 w-4" />
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : (
-                  <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-muted-foreground" onClick={() => onStartReply(comment)}>
+                  <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-muted-foreground" onClick={handleStartReplyClick}>
                     <Reply className="mr-1.5 h-3.5 w-3.5" />
                     Reply
                   </Button>
@@ -139,7 +151,7 @@ function TaskCommentThreadItem({
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-muted-foreground hover:bg-muted/60 hover:text-foreground" onClick={() => onStartReply(comment)}>
+              <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-muted-foreground hover:bg-muted/60 hover:text-foreground" onClick={handleStartReplyClick}>
                 <Reply className="mr-1.5 h-3.5 w-3.5" />
                 Reply
               </Button>
@@ -302,6 +314,14 @@ export function TaskCommentsComposerSection({
   onComposerChange: (value: string) => void
   onSubmit: () => void
   }) {
+  const handleFileChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onAddAttachments(event.target.files)
+      event.currentTarget.value = ''
+    },
+    [onAddAttachments]
+  )
+
   return (
     <div className="rounded-3xl border border-border/60 bg-muted/20 p-4 shadow-inner shadow-black/5">
       <div className="flex items-start justify-between gap-3">
@@ -321,10 +341,7 @@ export function TaskCommentsComposerSection({
         type="file"
         multiple
         className="hidden"
-        onChange={(event) => {
-          onAddAttachments(event.target.files)
-          event.currentTarget.value = ''
-        }}
+        onChange={handleFileChange}
       />
 
       {pendingAttachments.length > 0 && !editingCommentId ? (
@@ -392,10 +409,15 @@ export function TaskCommentsDeleteDialog({
   onClose: () => void
   onConfirm: () => void
 }) {
-  return (
-    <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => {
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
       if (!open) onClose()
-    }}>
+    },
+    [onClose]
+  )
+
+  return (
+    <AlertDialog open={Boolean(deleteTarget)} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete comment</AlertDialogTitle>

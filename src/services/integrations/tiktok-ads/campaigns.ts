@@ -6,7 +6,7 @@ import { formatDate } from '@/lib/dates'
 import { coerceNumber } from './client'
 import { tiktokAdsClient } from '@/services/integrations/shared/base-client'
 import { TikTokApiError } from './errors'
-import {
+import type {
   TikTokCampaign,
   TikTokAdMetric,
   TikTokApiErrorResponse,
@@ -313,7 +313,7 @@ export async function fetchTikTokAdMetrics(options: {
 // FETCH CREATIVES
 // =============================================================================
 
-import { TikTokCreative } from './types'
+import type { TikTokCreative } from './types'
 
 export async function fetchTikTokCreatives(options: {
   accessToken: string
@@ -421,7 +421,7 @@ export async function fetchTikTokCreatives(options: {
 // FETCH AUDIENCE TARGETING
 // =============================================================================
 
-import { TikTokAudienceTargeting } from './types'
+import type { TikTokAudienceTargeting } from './types'
 
 export async function fetchTikTokAudienceTargeting(options: {
   accessToken: string

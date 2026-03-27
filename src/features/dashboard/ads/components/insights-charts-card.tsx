@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Card } from '@/shared/ui/card'
 import { formatCurrency } from '@/lib/utils'
 import {
@@ -47,6 +47,15 @@ interface InsightsChartsCardProps {
 
 const metricColors = CHART_COLORS.metrics
 
+const MARGIN_LEFT_80 = { left: 80 }
+const MARGIN_LEFT_80_RIGHT_40 = { left: 80, right: 40 }
+const MARGIN_LEFT_10_RIGHT_10 = { left: 10, right: 10 }
+const TICK_FONT_SIZE_11 = { fontSize: 11 }
+const TICK_FONT_SIZE_10 = { fontSize: 10 }
+const YAXIS_LABEL_PERCENTILE = { value: 'Percentile', angle: -90, position: 'insideLeft', fontSize: 10 }
+const DOMAIN_0_100 = [0, 100]
+const X_AXIS_DATE_LOCALE_OPTIONS: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+
 // =============================================================================
 // SUB-COMPONENTS
 // =============================================================================
@@ -61,20 +70,21 @@ function ProviderComparisonChart({ currency = 'USD', data }: { currency?: string
     fill: d.color,
   }))
 
+  const formatXAxis = useCallback((v: number) => formatCurrency(v, currency), [currency])
+  const tooltipFormatter = useCallback((value: number, name: string) => {
+    if (name === 'spend' || name === 'revenue') return formatCurrency(value, currency)
+    if (name === 'roas') return `${value.toFixed(2)}x`
+    return value
+  }, [currency])
+
   return (
     <div className="h-full min-h-[280px] w-full sm:min-h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} layout="vertical" margin={{ left: 80 }}>
+        <BarChart data={chartData} layout="vertical" margin={MARGIN_LEFT_80}>
           <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-          <XAxis type="number" tickFormatter={(v) => formatCurrency(v, currency)} />
+          <XAxis type="number" tickFormatter={formatXAxis} />
           <YAxis type="category" dataKey="name" width={80} />
-          <Tooltip
-            formatter={(value: number, name: string) => {
-              if (name === 'spend' || name === 'revenue') return formatCurrency(value, currency)
-              if (name === 'roas') return `${value.toFixed(2)}x`
-              return value
-            }}
-          />
+          <Tooltip formatter={tooltipFormatter} />
           <Legend />
           <Bar dataKey="spend" name="Spend" fill={metricColors.spend} radius={[0, 4, 4, 0]} />
           <Bar dataKey="revenue" name="Revenue" fill={metricColors.revenue} radius={[0, 4, 4, 0]} />
@@ -111,8 +121,8 @@ function EfficiencyRadarChart({
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={chartData}>
           <PolarGrid />
-          <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11 }} />
-          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
+          <PolarAngleAxis dataKey="metric" tick={TICK_FONT_SIZE_11} />
+          <PolarRadiusAxis angle={90} domain={DOMAIN_0_100} tick={TICK_FONT_SIZE_10} />
           <Radar
             name="Score"
             dataKey="score"
@@ -137,6 +147,15 @@ function TrendChart({
   providerId: string
 }) {
   const trendData = data[providerId]
+
+  const formatXAxisDate = useCallback(
+    (v: string) => new Date(v).toLocaleDateString('en-US', X_AXIS_DATE_LOCALE_OPTIONS),
+    []
+  )
+  const formatYAxis = useCallback((v: number) => formatCurrency(v, currency), [currency])
+  const labelFormatter = useCallback((v: string) => new Date(v).toLocaleDateString(), [])
+  const tooltipFormatter = useCallback((v: number) => formatCurrency(v, currency), [currency])
+
   if (!trendData || trendData.length === 0) {
     return (
       <div className="flex min-h-[280px] sm:min-h-[320px] items-center justify-center text-sm text-muted-foreground">
@@ -148,17 +167,17 @@ function TrendChart({
   return (
     <div className="h-full min-h-[280px] w-full sm:min-h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={trendData} margin={{ left: 10, right: 10 }}>
+        <LineChart data={trendData} margin={MARGIN_LEFT_10_RIGHT_10}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="date"
-            tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            tick={{ fontSize: 10 }}
+            tickFormatter={formatXAxisDate}
+            tick={TICK_FONT_SIZE_10}
           />
-          <YAxis tickFormatter={(v) => formatCurrency(v, currency)} tick={{ fontSize: 10 }} />
+          <YAxis tickFormatter={formatYAxis} tick={TICK_FONT_SIZE_10} />
           <Tooltip
-            labelFormatter={(v) => new Date(v).toLocaleDateString()}
-            formatter={(v: number) => formatCurrency(v, currency)}
+            labelFormatter={labelFormatter}
+            formatter={tooltipFormatter}
           />
           <Legend />
           <Line
@@ -192,6 +211,19 @@ function FunnelChart({
   providerId: string
 }) {
   const funnelData = data[providerId]
+
+  const formatXAxis = useCallback((v: number) => v.toLocaleString(), [])
+  const tooltipFormatter = useCallback(
+    (value: number, name: string, props: { payload?: { dropOff?: number } }) => {
+      const dropOff = props.payload?.dropOff ?? 0
+      return [
+        `${value.toLocaleString()} (${dropOff.toFixed(1)}% drop-off)`,
+        name
+      ]
+    },
+    []
+  )
+
   if (!funnelData || funnelData.length === 0) {
     return (
       <div className="flex min-h-[280px] sm:min-h-[320px] items-center justify-center text-sm text-muted-foreground">
@@ -203,19 +235,11 @@ function FunnelChart({
   return (
     <div className="h-full min-h-[280px] w-full sm:min-h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={funnelData} layout="vertical" margin={{ left: 80, right: 40 }}>
+        <BarChart data={funnelData} layout="vertical" margin={MARGIN_LEFT_80_RIGHT_40}>
           <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-          <XAxis type="number" tickFormatter={(v) => v.toLocaleString()} />
+          <XAxis type="number" tickFormatter={formatXAxis} />
           <YAxis type="category" dataKey="name" width={80} />
-          <Tooltip
-            formatter={(value: number, name: string, props: { payload?: { dropOff?: number } }) => {
-              const dropOff = props.payload?.dropOff ?? 0
-              return [
-                `${value.toLocaleString()} (${dropOff.toFixed(1)}% drop-off)`,
-                name
-              ]
-            }}
-          />
+          <Tooltip formatter={tooltipFormatter} />
           <Bar dataKey="value" name="Volume" radius={[0, 4, 4, 0]}>
               {funnelData.map((entry) => (
                 <Cell key={`funnel-${entry.name}`} fill={entry.fill} />
@@ -235,6 +259,9 @@ function BenchmarkChart({
   providerId: string
 }) {
   const benchmarkData = data[providerId]
+
+  const tooltipFormatter = useCallback((v: number) => `${v}th percentile`, [])
+
   if (!benchmarkData || benchmarkData.length === 0) {
     return (
       <div className="flex min-h-[280px] sm:min-h-[320px] items-center justify-center text-sm text-muted-foreground">
@@ -253,11 +280,11 @@ function BenchmarkChart({
   return (
     <div className="h-full min-h-[280px] w-full sm:min-h-[320px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} margin={{ left: 10, right: 10 }}>
+        <BarChart data={chartData} margin={MARGIN_LEFT_10_RIGHT_10}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="metric" tick={{ fontSize: 10 }} />
-          <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} label={{ value: 'Percentile', angle: -90, position: 'insideLeft', fontSize: 10 }} />
-          <Tooltip formatter={(v: number) => `${v}th percentile`} />
+          <XAxis dataKey="metric" tick={TICK_FONT_SIZE_10} />
+          <YAxis domain={DOMAIN_0_100} tick={TICK_FONT_SIZE_10} label={YAXIS_LABEL_PERCENTILE} />
+          <Tooltip formatter={tooltipFormatter} />
           <Legend />
           <Bar dataKey="percentile" name="Your Performance" fill={metricColors.efficiency} radius={[4, 4, 0, 0]}>
               {chartData.map((entry) => (
@@ -297,6 +324,27 @@ export function InsightsChartsCard({ analysis, currency = 'USD', loading = false
     ? firstProvider.id
     : selectedProvider
 
+  const benchmarkChart = useMemo(
+    () => <BenchmarkChart data={analysis!.chartData.benchmarkCharts} providerId={activeProvider} />,
+    [analysis, activeProvider]
+  )
+  const comparisonChart = useMemo(
+    () => <ProviderComparisonChart currency={currency} data={analysis!.chartData.providerComparison} />,
+    [analysis, currency]
+  )
+  const efficiencyChart = useMemo(
+    () => <EfficiencyRadarChart data={analysis!.chartData.efficiencyBreakdown} providerId={activeProvider} />,
+    [analysis, activeProvider]
+  )
+  const funnelChart = useMemo(
+    () => <FunnelChart data={analysis!.chartData.funnelCharts} providerId={activeProvider} />,
+    [analysis, activeProvider]
+  )
+  const trendsChart = useMemo(
+    () => <TrendChart currency={currency} data={analysis!.chartData.trendCharts} providerId={activeProvider} />,
+    [analysis, currency, activeProvider]
+  )
+
   if (loading) {
     return <InsightsChartsLoadingState />
   }
@@ -308,7 +356,13 @@ export function InsightsChartsCard({ analysis, currency = 'USD', loading = false
   return (
     <Card className="shadow-sm">
       <InsightsChartsHeader onSelectedProviderChange={setSelectedProvider} providers={providers} providersCount={providers.length} selectedProvider={selectedProvider} />
-      <InsightsChartsTabs benchmarkChart={<BenchmarkChart data={analysis.chartData.benchmarkCharts} providerId={activeProvider} />} comparisonChart={<ProviderComparisonChart currency={currency} data={analysis.chartData.providerComparison} />} efficiencyChart={<EfficiencyRadarChart data={analysis.chartData.efficiencyBreakdown} providerId={activeProvider} />} funnelChart={<FunnelChart data={analysis.chartData.funnelCharts} providerId={activeProvider} />} trendsChart={<TrendChart currency={currency} data={analysis.chartData.trendCharts} providerId={activeProvider} />} />
+      <InsightsChartsTabs
+        benchmarkChart={benchmarkChart}
+        comparisonChart={comparisonChart}
+        efficiencyChart={efficiencyChart}
+        funnelChart={funnelChart}
+        trendsChart={trendsChart}
+      />
     </Card>
   )
 }

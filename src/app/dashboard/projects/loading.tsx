@@ -4,6 +4,9 @@ import { Skeleton } from '@/shared/ui/skeleton'
  * Projects page loading skeleton for streaming SSR.
  */
 export default function ProjectsLoading() {
+  const cardSlots = ['card-1', 'card-2', 'card-3', 'card-4', 'card-5', 'card-6']
+  const avatarSlots = ['avatar-1', 'avatar-2', 'avatar-3']
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -24,8 +27,8 @@ export default function ProjectsLoading() {
 
       {/* Projects grid */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="rounded-lg border p-4 space-y-4">
+        {cardSlots.map((slot) => (
+          <div key={slot} className="space-y-4 rounded-lg border p-4">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-36" />
@@ -49,8 +52,8 @@ export default function ProjectsLoading() {
             {/* Footer */}
             <div className="flex items-center justify-between pt-2 border-t">
               <div className="flex -space-x-2">
-                {Array.from({ length: 3 }).map((_, j) => (
-                  <Skeleton key={j} className="h-7 w-7 rounded-full border-2 border-background" />
+                {avatarSlots.map((slot) => (
+                  <Skeleton key={slot} className="h-7 w-7 rounded-full border-2 border-background" />
                 ))}
               </div>
               <Skeleton className="h-3 w-20" />

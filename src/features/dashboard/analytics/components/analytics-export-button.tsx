@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useCallback, useState, useRef } from 'react'
 import { Download, Loader2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import {
@@ -24,7 +24,7 @@ export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButt
   const [isExporting, setIsExporting] = useState(false)
   const exportTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
-  const handleExport = async (format: 'csv' | 'json') => {
+  const handleExport = useCallback(async (format: 'csv' | 'json') => {
     if (!canExport || isExporting) return
 
     setIsExporting(true)
@@ -58,7 +58,15 @@ export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButt
         variant: 'destructive',
       })
     }
-  }
+  }, [canExport, exportToCSV, exportToJSON, isExporting, toast])
+
+  const handleExportCsv = useCallback(() => {
+    void handleExport('csv')
+  }, [handleExport])
+
+  const handleExportJson = useCallback(() => {
+    void handleExport('json')
+  }, [handleExport])
 
   return (
     <DropdownMenu>
@@ -78,11 +86,11 @@ export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButt
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleExport('csv')}>
+        <DropdownMenuItem onClick={handleExportCsv}>
           <Download className="mr-2 h-4 w-4" />
           Export as CSV
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleExport('json')}>
+        <DropdownMenuItem onClick={handleExportJson}>
           <Download className="mr-2 h-4 w-4" />
           Export as JSON
         </DropdownMenuItem>

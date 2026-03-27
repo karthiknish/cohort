@@ -2,7 +2,7 @@
 
 import type { ColumnDef } from '@tanstack/react-table'
 import { CircleAlert, DollarSign, Pause, Play, RefreshCw, Trash2, TrendingUp } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useCallback, useMemo, type ReactNode } from 'react'
 
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -56,6 +56,12 @@ function ActionTooltipButton({
   )
 }
 
+const pauseIcon = <Pause className="h-4 w-4" />
+const playIcon = <Play className="h-4 w-4" />
+const dollarSignIcon = <DollarSign className="h-4 w-4" />
+const trendingUpIcon = <TrendingUp className="h-4 w-4" />
+const trash2Icon = <Trash2 className="h-4 w-4" />
+
 function CampaignRowActions({
   actionLoading,
   campaign,
@@ -69,45 +75,69 @@ function CampaignRowActions({
   onOpenBiddingDialog: (campaign: Campaign) => void
   onOpenBudgetDialog: (campaign: Campaign) => void
 }) {
+  const isActive = isActiveStatus(campaign.status)
+
+  const handleToggleActive = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation()
+      void onAction(campaign.id, isActive ? 'pause' : 'enable')
+    },
+    [campaign.id, isActive, onAction],
+  )
+
+  const handleOpenBudget = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation()
+      onOpenBudgetDialog(campaign)
+    },
+    [campaign, onOpenBudgetDialog],
+  )
+
+  const handleOpenBidding = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation()
+      onOpenBiddingDialog(campaign)
+    },
+    [campaign, onOpenBiddingDialog],
+  )
+
+  const handleRemove = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation()
+      void onAction(campaign.id, 'remove')
+    },
+    [campaign.id, onAction],
+  )
+
+  const toggleIcon = isActive ? pauseIcon : playIcon
+
   return (
     <TooltipProvider>
       <div className="flex items-center justify-end gap-1">
         <ActionTooltipButton
-          actionLabel={isActiveStatus(campaign.status) ? 'Pause campaign' : 'Enable campaign'}
+          actionLabel={isActive ? 'Pause campaign' : 'Enable campaign'}
           disabled={actionLoading === campaign.id}
-          icon={isActiveStatus(campaign.status) ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          onClick={(event) => {
-            event.stopPropagation()
-            void onAction(campaign.id, isActiveStatus(campaign.status) ? 'pause' : 'enable')
-          }}
+          icon={toggleIcon}
+          onClick={handleToggleActive}
         />
         <ActionTooltipButton
           actionLabel="Update budget"
           disabled={actionLoading === campaign.id}
-          icon={<DollarSign className="h-4 w-4" />}
-          onClick={(event) => {
-            event.stopPropagation()
-            onOpenBudgetDialog(campaign)
-          }}
+          icon={dollarSignIcon}
+          onClick={handleOpenBudget}
         />
         <ActionTooltipButton
           actionLabel="Bidding strategy"
           disabled={actionLoading === campaign.id}
-          icon={<TrendingUp className="h-4 w-4" />}
-          onClick={(event) => {
-            event.stopPropagation()
-            onOpenBiddingDialog(campaign)
-          }}
+          icon={trendingUpIcon}
+          onClick={handleOpenBidding}
         />
         <ActionTooltipButton
           actionLabel="Remove campaign"
           buttonVariant="destructive"
           disabled={actionLoading === campaign.id}
-          icon={<Trash2 className="h-4 w-4" />}
-          onClick={(event) => {
-            event.stopPropagation()
-            void onAction(campaign.id, 'remove')
-          }}
+          icon={trash2Icon}
+          onClick={handleRemove}
         />
       </div>
     </TooltipProvider>
@@ -125,27 +155,41 @@ function CampaignGroupRowActions({
   onAction: (groupId: string, action: 'enable' | 'pause') => Promise<void>
   onOpenBudgetDialog: (group: CampaignGroup) => void
 }) {
+  const isActive = isActiveStatus(group.status)
+
+  const handleToggleActive = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation()
+      void onAction(group.id, isActive ? 'pause' : 'enable')
+    },
+    [group.id, isActive, onAction],
+  )
+
+  const handleOpenBudget = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation()
+      onOpenBudgetDialog(group)
+    },
+    [group, onOpenBudgetDialog],
+  )
+
+  const toggleIcon = isActive ? pauseIcon : playIcon
+
   return (
     <div className="flex items-center justify-end gap-1">
       <Button
         variant="outline"
         size="sm"
-        onClick={(event) => {
-          event.stopPropagation()
-          void onAction(group.id, isActiveStatus(group.status) ? 'pause' : 'enable')
-        }}
+        onClick={handleToggleActive}
         disabled={actionLoading === group.id}
-        aria-label={isActiveStatus(group.status) ? 'Pause campaign group' : 'Enable campaign group'}
+        aria-label={isActive ? 'Pause campaign group' : 'Enable campaign group'}
       >
-        {isActiveStatus(group.status) ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+        {toggleIcon}
       </Button>
       <Button
         variant="outline"
         size="sm"
-        onClick={(event) => {
-          event.stopPropagation()
-          onOpenBudgetDialog(group)
-        }}
+        onClick={handleOpenBudget}
         disabled={actionLoading === group.id}
         aria-label="Update campaign group budget"
       >
@@ -170,6 +214,13 @@ function CampaignManagementHeader({
   providerName: string
   view: CampaignManagementView
 }) {
+  const handleViewChange = useCallback(
+    (value: string) => {
+      onViewChange(value as CampaignManagementView)
+    },
+    [onViewChange],
+  )
+
   return (
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <div className="flex-1">
@@ -178,7 +229,7 @@ function CampaignManagementHeader({
           Manage {providerName} {providerId === 'linkedin' ? (view === 'groups' ? 'campaign groups' : 'campaigns') : 'campaigns'}
         </CardDescription>
         {providerId === 'linkedin' ? (
-          <Tabs value={view} onValueChange={(value) => onViewChange(value as CampaignManagementView)} className="mt-4">
+          <Tabs value={view} onValueChange={handleViewChange} className="mt-4">
             <TabsList className="grid w-[300px] grid-cols-2">
               <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
               <TabsTrigger value="groups">Group (Ad Sets)</TabsTrigger>
@@ -218,6 +269,15 @@ function CampaignManagementTableSection({
   const showingGroups = view === 'groups'
   const tableData = showingGroups ? groups : campaigns
 
+  const handleRowClick = useCallback(
+    (row: { id: string; name: string }) => {
+      onRowClick(row.id, row.name)
+    },
+    [onRowClick],
+  )
+
+  const getRowId = useCallback((row: { id: string }) => row.id, [])
+
   return (
     <StateWrapper
       isLoading={loading || groupsLoading}
@@ -234,9 +294,9 @@ function CampaignManagementTableSection({
           data={groups}
           maxHeight={420}
           rowHeight={48}
-          onRowClick={(row) => onRowClick(row.id, row.name)}
+          onRowClick={handleRowClick}
           rowClassName="cursor-pointer"
-          getRowId={(row) => row.id}
+          getRowId={getRowId}
         />
       ) : (
         <VirtualizedDataTable
@@ -244,9 +304,9 @@ function CampaignManagementTableSection({
           data={campaigns}
           maxHeight={420}
           rowHeight={48}
-          onRowClick={(row) => onRowClick(row.id, row.name)}
+          onRowClick={handleRowClick}
           rowClassName="cursor-pointer"
-          getRowId={(row) => row.id}
+          getRowId={getRowId}
         />
       )}
     </StateWrapper>
@@ -274,6 +334,17 @@ function BudgetUpdateDialog({
   targetName: string | undefined
   value: string
 }) {
+  const handleBudgetChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      onBudgetChange(event.target.value)
+    },
+    [onBudgetChange],
+  )
+
+  const handleCancel = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -289,13 +360,13 @@ function BudgetUpdateDialog({
               type="number"
               step="0.01"
               value={value}
-              onChange={(event) => onBudgetChange(event.target.value)}
+              onChange={handleBudgetChange}
               placeholder={`Enter new budget amount (${currencyCode})`}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
           <Button onClick={onSubmit} disabled={isSubmitting}>
@@ -324,6 +395,24 @@ function BiddingStrategyDialog({
   selectedCampaignName: string | undefined
   value: BiddingDraft
 }) {
+  const handleTypeChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      onChange({ ...value, type: event.target.value })
+    },
+    [onChange, value],
+  )
+
+  const handleValueChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      onChange({ ...value, value: event.target.value })
+    },
+    [onChange, value],
+  )
+
+  const handleCancel = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -337,7 +426,7 @@ function BiddingStrategyDialog({
             <Input
               id="biddingType"
               value={value.type}
-              onChange={(event) => onChange({ ...value, type: event.target.value })}
+              onChange={handleTypeChange}
               placeholder="e.g. TARGET_CPA, MAXIMIZE_CONVERSIONS"
             />
           </div>
@@ -348,13 +437,13 @@ function BiddingStrategyDialog({
               type="number"
               step="0.01"
               value={value.value}
-              onChange={(event) => onChange({ ...value, value: event.target.value })}
+              onChange={handleValueChange}
               placeholder="0.00"
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>
           <Button onClick={onSubmit} disabled={isSubmitting}>
@@ -467,6 +556,17 @@ function CampaignManagementSetupState({
   setupDescription?: string
   setupTitle?: string
 }) {
+  const action = useMemo(
+    () =>
+      onSetupAction
+        ? {
+            label: setupActionLabel ?? 'Complete setup',
+            onClick: onSetupAction,
+          }
+        : undefined,
+    [onSetupAction, setupActionLabel],
+  )
+
   return (
     <Card>
       <CardHeader>
@@ -481,14 +581,7 @@ function CampaignManagementSetupState({
             setupDescription ??
             `Finish the remaining ${providerName} configuration step before loading campaigns and controls.`
           }
-          action={
-            onSetupAction
-              ? {
-                  label: setupActionLabel ?? 'Complete setup',
-                  onClick: onSetupAction,
-                }
-              : undefined
-          }
+          action={action}
           className="py-10"
         />
       </CardContent>

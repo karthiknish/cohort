@@ -1,9 +1,9 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 
 import { Card, CardContent } from '@/shared/ui/card'
-import { TaskStatus } from '@/types/tasks'
+import type { TaskStatus } from '@/types/tasks'
 
 export type TaskSummaryCardsProps = {
   taskCounts: Record<TaskStatus, number>
@@ -35,6 +35,8 @@ const summaryCards: SummaryCardConfig[] = [
 ]
 
 export const TaskSummaryCards = memo(function TaskSummaryCards({ taskCounts, completionRate }: TaskSummaryCardsProps) {
+  const completionBarStyle = useMemo(() => ({ width: `${completionRate}%` }), [completionRate])
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
       {summaryCards.map((card) => (
@@ -57,7 +59,7 @@ export const TaskSummaryCards = memo(function TaskSummaryCards({ taskCounts, com
             <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/60">
               <div
                 className="h-full bg-gradient-to-r from-info to-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
-                style={{ width: `${completionRate}%` }}
+                style={completionBarStyle}
               />
             </div>
           </div>

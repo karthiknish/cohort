@@ -18,8 +18,10 @@
     "convex:codegen": "CONVEX_DEPLOYMENT=dev:grand-sparrow-698 convex codegen",
     "convex:typecheck": "bun run convex:codegen && bun --bun tsc -p convex/tsconfig.json --noEmit",
     "build": "next build",
+    "biome:check": "biome check .",
+    "biome:format": "biome format --write .",
     "start": "bun --bun next start",
-    "lint": "oxlint -c .oxlintrc.json",
+    "lint": "bun run biome:check && oxlint -c .oxlintrc.json",
     "typecheck": "bun --bun tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
@@ -106,6 +108,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.9",
     "@convex-dev/eslint-plugin": "^1.1.1",
     "@types/node": "^25.1.0",
     "@types/react": "^19.2.10",
@@ -118,10 +121,7 @@
   },
   "reactDoctor": {
     "ignore": {
-      "files": [
-        "src/components/ui/data-table/data-table.tsx",
-        "src/shared/ui/data-table/data-table.tsx"
-      ]
+      "files": []
     }
   }
 }

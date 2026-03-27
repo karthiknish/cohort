@@ -17,7 +17,7 @@ import {
   type MutationCtx,
   type ActionCtx,
 } from './_generated/server'
-import { Doc } from '/_generated/dataModel'
+import type { Doc } from '/_generated/dataModel'
 import { api } from '/_generated/api'
 import { v } from 'convex/values'
 import { Errors } from './errors'

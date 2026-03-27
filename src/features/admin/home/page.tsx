@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import {
   ArrowRight,
@@ -218,7 +218,36 @@ export default function AdminPage() {
   const derivedResult = derived()
   const stats = derivedResult.stats
   const activities = derivedResult.activities
-  const usageStats = usageStatsRealtime as UsageStats | null
+
+  const skeletonData = useMemo(() => [
+    { id: 'daily-skeleton-mon', height: 65 },
+    { id: 'daily-skeleton-tue', height: 45 },
+    { id: 'daily-skeleton-wed', height: 80 },
+    { id: 'daily-skeleton-thu', height: 35 },
+    { id: 'daily-skeleton-fri', height: 70 },
+    { id: 'daily-skeleton-sat', height: 55 },
+    { id: 'daily-skeleton-sun', height: 90 },
+  ], [])
+
+  const dailyActiveUsersData = useMemo(() => {
+    if (!usageStatsRealtime?.dailyActiveUsers) return []
+    const maxCount = Math.max(...usageStatsRealtime.dailyActiveUsers.map(d => d.count), 1)
+    return usageStatsRealtime.dailyActiveUsers.map((day) => ({
+      ...day,
+      height: maxCount > 0 ? (day.count / maxCount) * 100 : 0,
+      maxCount,
+    }))
+  }, [usageStatsRealtime])
+
+  const featureUsageData = useMemo(() => {
+    if (!usageStatsRealtime?.featureUsage) return []
+    const maxCount = Math.max(...usageStatsRealtime.featureUsage.map(f => f.count), 1)
+    return usageStatsRealtime.featureUsage.slice(0, 5).map((feature) => ({
+      ...feature,
+      percentage: maxCount > 0 ? (feature.count / maxCount) * 100 : 0,
+      maxCount,
+    }))
+  }, [usageStatsRealtime])
 
   const adminSections: AdminSection[] = [
     {
@@ -410,9 +439,9 @@ export default function AdminPage() {
                   <Skeleton className="h-8 w-20" />
                 ) : (
                   <>
-                    <div className="text-2xl font-bold">{usageStats?.activeUsersWeek ?? 0}</div>
+                    <div className="text-2xl font-bold">{usageStatsRealtime?.activeUsersWeek ?? 0}</div>
                     <p className="text-xs text-muted-foreground">
-                      {usageStats?.activeUsersToday ?? 0} today · {usageStats?.newUsersWeek ?? 0} new
+                      {usageStatsRealtime?.activeUsersToday ?? 0} today · {usageStatsRealtime?.newUsersWeek ?? 0} new
                     </p>
                   </>
                 )}
@@ -430,9 +459,9 @@ export default function AdminPage() {
                   <Skeleton className="h-8 w-20" />
                 ) : (
                   <>
-                    <div className="text-2xl font-bold">{usageStats?.totalProjects ?? 0}</div>
+                    <div className="text-2xl font-bold">{usageStatsRealtime?.totalProjects ?? 0}</div>
                     <p className="text-xs text-muted-foreground">
-                      +{usageStats?.projectsThisWeek ?? 0} this week
+                      +{usageStatsRealtime?.projectsThisWeek ?? 0} this week
                     </p>
                   </>
                 )}
@@ -450,9 +479,9 @@ export default function AdminPage() {
                   <Skeleton className="h-8 w-20" />
                 ) : (
                   <>
-                    <div className="text-2xl font-bold">{usageStats?.tasksCompletedThisWeek ?? 0}</div>
+                    <div className="text-2xl font-bold">{usageStatsRealtime?.tasksCompletedThisWeek ?? 0}</div>
                     <p className="text-xs text-muted-foreground">
-                      {usageStats?.totalTasks ?? 0} total tasks
+                      {usageStatsRealtime?.totalTasks ?? 0} total tasks
                     </p>
                   </>
                 )}
@@ -470,9 +499,9 @@ export default function AdminPage() {
                   <Skeleton className="h-8 w-20" />
                 ) : (
                   <>
-                    <div className="text-2xl font-bold">{usageStats?.agentConversations ?? 0}</div>
+                    <div className="text-2xl font-bold">{usageStatsRealtime?.agentConversations ?? 0}</div>
                     <p className="text-xs text-muted-foreground">
-                      +{usageStats?.agentActionsThisWeek ?? 0} this week
+                      +{usageStatsRealtime?.agentActionsThisWeek ?? 0} this week
                     </p>
                   </>
                 )}
@@ -494,45 +523,25 @@ export default function AdminPage() {
               <CardContent>
                 {usageLoading ? (
                   <div className="flex items-end gap-1 h-32">
-                    {[
-                      { id: 'daily-skeleton-mon', height: 65 },
-                      { id: 'daily-skeleton-tue', height: 45 },
-                      { id: 'daily-skeleton-wed', height: 80 },
-                      { id: 'daily-skeleton-thu', height: 35 },
-                      { id: 'daily-skeleton-fri', height: 70 },
-                      { id: 'daily-skeleton-sat', height: 55 },
-                      { id: 'daily-skeleton-sun', height: 90 },
-                    ].map((day) => (
-                      <Skeleton key={day.id} className="flex-1 h-full" style={{ height: `${day.height}%` }} />
+                    {skeletonData.map((day) => (
+                      <DailyActiveUsersSkeletonBar key={day.id} height={day.height} />
                     ))}
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {/* Simple bar chart */}
                     <div className="flex items-end gap-1 h-24">
-                      {usageStats?.dailyActiveUsers?.map((day, i) => {
-                        const maxCount = Math.max(...(usageStats?.dailyActiveUsers?.map(d => d.count) ?? [1]), 1)
-                        const height = maxCount > 0 ? (day.count / maxCount) * 100 : 0
-                        return (
-                          <div
-                            key={day.date}
-                            className="flex-1 flex flex-col items-center gap-1"
-                          >
-                            <div
-                              className={cn(
-                                "w-full rounded-t-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
-                                i === 6 ? "bg-primary" : "bg-primary/40"
-                              )}
-                              style={{ height: `${Math.max(height, 4)}%` }}
-                              title={`${day.count} users on ${day.date}`}
-                            />
-                          </div>
-                        )
-                      })}
+                      {dailyActiveUsersData.map((day, i) => (
+                        <DailyActiveUsersBar
+                          key={day.date}
+                          day={day}
+                          isLatest={i === 6}
+                        />
+                      ))}
                     </div>
                     {/* Day labels */}
                     <div className="flex gap-1">
-                      {usageStats?.dailyActiveUsers?.map((day) => {
+                      {dailyActiveUsersData.map((day) => {
                         const date = new Date(day.date)
                         const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
                         return (
@@ -575,38 +584,9 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {usageStats?.featureUsage?.slice(0, 5).map((feature) => {
-                      const icon = feature.feature === 'Projects' ? FolderKanban :
-                        feature.feature === 'Tasks' ? CheckSquare :
-                          feature.feature === 'Agent Mode' ? Bot : Activity
-                      const Icon = icon
-                      const maxCount = Math.max(...(usageStats?.featureUsage?.map(f => f.count) ?? [1]), 1)
-                      const percentage = maxCount > 0 ? (feature.count / maxCount) * 100 : 0
-
-                      return (
-                        <div key={feature.feature} className="flex items-center gap-3">
-                          <div className="flex items-center gap-2 w-24">
-                            <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="text-sm truncate">{feature.feature}</span>
-                          </div>
-                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary rounded-full transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                          <div className="flex items-center gap-1 w-16 justify-end">
-                            <span className="text-sm font-medium">{feature.count}</span>
-                            {feature.trend > 0 && (
-                              <TrendingUp className="h-3 w-3 text-success" />
-                            )}
-                            {feature.trend < 0 && (
-                              <TrendingDown className="h-3 w-3 text-destructive" />
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
+                    {featureUsageData.map((feature) => (
+                      <FeatureUsageRow key={feature.feature} feature={feature} />
+                    ))}
                   </div>
                 )}
               </CardContent>
@@ -756,6 +736,80 @@ export default function AdminPage() {
 
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function DailyActiveUsersSkeletonBar({ height }: { height: number }) {
+  const barStyle = useMemo(() => ({ height: `${height}%` }), [height])
+
+  return <Skeleton className="flex-1 h-full" style={barStyle} />
+}
+
+function DailyActiveUsersBar({
+  day,
+  isLatest,
+}: {
+  day: { date: string; height: number; count: number }
+  isLatest: boolean
+}) {
+  const barStyle = useMemo(
+    () => ({ height: `${Math.max(day.height, 4)}%` }),
+    [day.height]
+  )
+
+  return (
+    <div className="flex flex-1 flex-col items-center gap-1">
+      <div
+        className={cn(
+          'w-full rounded-t-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+          isLatest ? 'bg-primary' : 'bg-primary/40'
+        )}
+        style={barStyle}
+        title={`${day.count} users on ${day.date}`}
+      />
+    </div>
+  )
+}
+
+function FeatureUsageRow({
+  feature,
+}: {
+  feature: {
+    feature: string
+    count: number
+    trend: number
+    percentage: number
+  }
+}) {
+  const icon =
+    feature.feature === 'Projects'
+      ? FolderKanban
+      : feature.feature === 'Tasks'
+        ? CheckSquare
+        : feature.feature === 'Agent Mode'
+          ? Bot
+          : Activity
+  const Icon = icon
+  const barStyle = useMemo(() => ({ width: `${feature.percentage}%` }), [feature.percentage])
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex w-24 items-center gap-2">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="truncate text-sm">{feature.feature}</span>
+      </div>
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
+          style={barStyle}
+        />
+      </div>
+      <div className="flex w-16 items-center justify-end gap-1">
+        <span className="text-sm font-medium">{feature.count}</span>
+        {feature.trend > 0 && <TrendingUp className="h-3 w-3 text-success" />}
+        {feature.trend < 0 && <TrendingDown className="h-3 w-3 text-destructive" />}
       </div>
     </div>
   )

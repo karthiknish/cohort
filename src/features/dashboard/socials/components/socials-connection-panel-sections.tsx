@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { AlertTriangle, ArrowRightLeft, CheckCircle2, CopyPlus, LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -57,6 +58,11 @@ export function SocialsMetaSetupCard(props: {
     onReloadSources,
     onRetryDiscovery,
   } = props
+
+  const retryDiscoveryAction = useMemo(
+    () => ({ label: 'Retry discovery', onClick: onRetryDiscovery, icon: RefreshCw }),
+    [onRetryDiscovery]
+  )
 
   return (
     <div className="rounded-2xl border border-muted/50 bg-muted/[0.04] p-5">
@@ -235,6 +241,10 @@ export function SocialsSurfaceInventoryCard(props: {
     onRetry,
     items,
   } = props
+  const retryDiscoveryAction = useMemo(
+    () => ({ label: 'Retry', onClick: onRetry, icon: RefreshCw }),
+    [onRetry],
+  )
 
   return (
     <div className="rounded-2xl border border-muted/50 bg-background p-4">
@@ -250,7 +260,7 @@ export function SocialsSurfaceInventoryCard(props: {
           variant="card"
           title={`Unable to load ${title.toLowerCase()}`}
           description={error}
-          action={{ label: 'Retry discovery', onClick: onRetry, icon: RefreshCw }}
+          action={retryDiscoveryAction}
           className="rounded-2xl px-4 py-6"
         />
       ) : items.length > 0 ? (
@@ -269,7 +279,7 @@ export function SocialsSurfaceInventoryCard(props: {
           icon={connected ? CheckCircle2 : CopyPlus}
           title={status === 'source_required' ? `Choose a Meta source to load ${title.toLowerCase()}` : connected ? `No ${title.toLowerCase()} surfaced yet` : `Connect Meta to load ${title.toLowerCase()}`}
           description={connected ? emptyConnectedMessage : emptyDisconnectedMessage}
-          action={connected && status !== 'source_required' ? { label: 'Retry discovery', onClick: onRetry, icon: RefreshCw } : undefined}
+          action={connected && status !== 'source_required' ? retryDiscoveryAction : undefined}
           variant="card"
           className="rounded-2xl px-4 py-6"
         />

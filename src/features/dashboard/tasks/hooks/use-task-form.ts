@@ -2,7 +2,7 @@
 
 import { useCallback, useState, type FormEvent } from 'react'
 import { useConvex, useMutation } from 'convex/react'
-import { TaskRecord } from '@/types/tasks'
+import type { TaskRecord } from '@/types/tasks'
 import { asErrorMessage } from '@/lib/convex-errors'
 import { filesApi } from '@/lib/convex-api'
 import {
@@ -10,7 +10,8 @@ import {
   type PendingTaskAttachment,
   uploadTaskAttachment,
 } from '@/services/task-attachments'
-import { TaskFormState, buildInitialFormState, isFutureTaskDueDateValue, parseMentionNames } from '../task-types'
+import { buildInitialFormState, isFutureTaskDueDateValue, parseMentionNames } from '../task-types'
+import type { TaskFormState } from '../task-types'
 import type { CreateTaskPayload, UpdateTaskPayload } from './use-tasks'
 
 export type UseTaskFormOptions = {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, type ChangeEvent, type KeyboardEvent, type MouseEvent, type RefObject } from 'react'
+import { useCallback, useMemo, type ChangeEvent, type KeyboardEvent, type MouseEvent, type RefObject } from 'react'
 
 import type { ReceivedChatMessage } from '@/shared/ui/livekit'
 import { Download, File, ImageIcon, LoaderCircle, MessageSquareText, Paperclip, Send, X } from 'lucide-react'
@@ -39,6 +39,76 @@ function formatMessageTime(timestamp: number): string {
 
 function isImageAttachment(attachment: MeetingChatAttachment): boolean {
   return attachment.type.startsWith('image/')
+}
+
+function PendingAttachmentPill({
+  attachment,
+  onRemoveAttachment,
+}: {
+  attachment: PendingAttachment
+  onRemoveAttachment: (attachmentId: string) => void
+}) {
+  const handleRemoveAttachment = useCallback(() => {
+    onRemoveAttachment(attachment.id)
+  }, [attachment.id, onRemoveAttachment])
+
+  return (
+    <div
+      className="flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground"
+      key={attachment.id}
+    >
+      <Paperclip className="h-3.5 w-3.5 shrink-0" />
+      <span className="max-w-[10rem] truncate">{attachment.name}</span>
+      <span className="text-muted-foreground">{attachment.sizeLabel}</span>
+      <button
+        type="button"
+        className="rounded-full p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        onClick={handleRemoveAttachment}
+      >
+        <X className="h-3.5 w-3.5" />
+        <span className="sr-only">Remove {attachment.name}</span>
+      </button>
+    </div>
+  )
+}
+
+function MentionResultButton({
+  candidate,
+  isActive,
+  onMentionMouseDown,
+  onSelectMention,
+}: {
+  candidate: MeetingChatMentionCandidate
+  isActive: boolean
+  onMentionMouseDown: (event: MouseEvent<HTMLButtonElement>) => void
+  onSelectMention: (candidate: MeetingChatMentionCandidate) => void
+}) {
+  const handleSelectMention = useCallback(() => {
+    onSelectMention(candidate)
+  }, [candidate, onSelectMention])
+
+  return (
+    <button
+      type="button"
+      onMouseDown={onMentionMouseDown}
+      onClick={handleSelectMention}
+      className={cn(
+        'flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm transition',
+        isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+      )}
+    >
+      <Avatar className="h-8 w-8 shrink-0 border border-border/60">
+        {candidate.avatarUrl ? <AvatarImage src={candidate.avatarUrl} alt={candidate.label} /> : null}
+        <AvatarFallback className="bg-muted text-[11px] font-semibold text-foreground">{getMeetingChatInitials(candidate.label)}</AvatarFallback>
+      </Avatar>
+      <span className="min-w-0 flex-1 truncate">{candidate.label}</span>
+      {!candidate.isLocal ? (
+        <span className="text-[11px] text-muted-foreground">@{candidate.identity}</span>
+      ) : (
+        <span className="text-[11px] text-muted-foreground">You</span>
+      )}
+    </button>
+  )
 }
 
 export function MeetingChatAttachmentCard({ attachment, isLocal }: { attachment: MeetingChatAttachment; isLocal: boolean }) {
@@ -237,6 +307,10 @@ export function MeetingChatPanel({
   textareaRef,
   uploadingFiles,
 }: MeetingChatPanelProps) {
+  const handleAttachFiles = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [fileInputRef])
+
   return (
     <div className="flex h-[24rem] w-full flex-col overflow-hidden rounded-[28px] border border-border/60 bg-card text-foreground shadow-2xl backdrop-blur-xl">
       <div className="flex items-start justify-between gap-3 border-b border-border/60 px-4 py-3">
@@ -288,22 +362,7 @@ export function MeetingChatPanel({
         {pendingAttachments.length > 0 ? (
           <div className="mb-3 flex flex-wrap gap-2">
             {pendingAttachments.map((attachment) => (
-              <div
-                key={attachment.id}
-                className="flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground"
-              >
-                <Paperclip className="h-3.5 w-3.5 shrink-0" />
-                <span className="max-w-[10rem] truncate">{attachment.name}</span>
-                <span className="text-muted-foreground">{attachment.sizeLabel}</span>
-                <button
-                  type="button"
-                  className="rounded-full p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                  onClick={() => onRemoveAttachment(attachment.id)}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  <span className="sr-only">Remove {attachment.name}</span>
-                </button>
-              </div>
+              <PendingAttachmentPill key={attachment.id} attachment={attachment} onRemoveAttachment={onRemoveAttachment} />
             ))}
           </div>
         ) : null}
@@ -316,27 +375,13 @@ export function MeetingChatPanel({
               {mentionResults.map((candidate, index) => {
                 const isActive = index === highlightedMentionIndex
                 return (
-                  <button
+                  <MentionResultButton
                     key={candidate.id}
-                    type="button"
-                    onMouseDown={onMentionMouseDown}
-                    onClick={() => onSelectMention(candidate)}
-                    className={cn(
-                      'flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm transition',
-                      isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                    )}
-                  >
-                    <Avatar className="h-8 w-8 shrink-0 border border-border/60">
-                      {candidate.avatarUrl ? <AvatarImage src={candidate.avatarUrl} alt={candidate.label} /> : null}
-                      <AvatarFallback className="bg-muted text-[11px] font-semibold text-foreground">{getMeetingChatInitials(candidate.label)}</AvatarFallback>
-                    </Avatar>
-                    <span className="min-w-0 flex-1 truncate">{candidate.label}</span>
-                    {!candidate.isLocal ? (
-                      <span className="text-[11px] text-muted-foreground">@{candidate.identity}</span>
-                    ) : (
-                      <span className="text-[11px] text-muted-foreground">You</span>
-                    )}
-                  </button>
+                    candidate={candidate}
+                    isActive={isActive}
+                    onMentionMouseDown={onMentionMouseDown}
+                    onSelectMention={onSelectMention}
+                  />
                 )
               })}
             </div>
@@ -365,7 +410,7 @@ export function MeetingChatPanel({
               variant="ghost"
               className="h-9 w-9 border border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground"
               disabled={uploadingFiles}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleAttachFiles}
             >
               <Paperclip className="h-4 w-4" />
               <span className="sr-only">Attach files to meeting chat</span>

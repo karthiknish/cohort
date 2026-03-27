@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { Repeat, Calendar, Info } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import {
@@ -18,7 +19,7 @@ import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Badge } from '@/shared/ui/badge'
 import { cn } from '@/lib/utils'
-import { RecurrenceRule } from '@/types/tasks'
+import type { RecurrenceRule } from '@/types/tasks'
 import { formatRecurrenceLabel } from './task-types'
 
 type RecurrenceEditorProps = {
@@ -36,6 +37,24 @@ export function RecurrenceEditor({
   disabled = false,
   showLabel = true,
 }: RecurrenceEditorProps) {
+  const handleRuleChange = useCallback(
+    (nextValue: string) => {
+      onChange(nextValue as RecurrenceRule, endDate)
+    },
+    [endDate, onChange]
+  )
+
+  const handleEndDateChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(value, event.target.value || null)
+    },
+    [onChange, value]
+  )
+
+  const handleRemoveEndDate = useCallback(() => {
+    onChange(value, null)
+  }, [onChange, value])
+
   return (
     <div className="space-y-3">
       {showLabel && (
@@ -49,7 +68,7 @@ export function RecurrenceEditor({
         <Select
           value={value}
           disabled={disabled}
-          onValueChange={(v) => onChange(v as RecurrenceRule, endDate)}
+          onValueChange={handleRuleChange}
         >
           <SelectTrigger className={cn('flex-1', value !== 'none' && 'border-primary/50')}>
             <SelectValue />
@@ -79,14 +98,14 @@ export function RecurrenceEditor({
                 <Input
                   type="date"
                   value={endDate || ''}
-                  onChange={(e) => onChange(value, e.target.value || null)}
+                  onChange={handleEndDateChange}
                   min={new Date().toISOString().split('T')[0]}
                 />
                 {endDate && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onChange(value, null)}
+                    onClick={handleRemoveEndDate}
                     className="w-full h-7 text-xs"
                   >
                     Remove end date

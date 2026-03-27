@@ -4,14 +4,26 @@
 
 'use client'
 
+import { useCallback, type ChangeEvent } from 'react'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Input } from '@/shared/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { AlertCircle, TrendingUp } from 'lucide-react'
-import { CONVERSION_EVENTS, ObjectiveComponentProps } from './types'
+import { CONVERSION_EVENTS } from './types'
+import type { ObjectiveComponentProps } from './types'
 
 export function SalesObjectiveSection({ formData, onChange, disabled }: ObjectiveComponentProps) {
+  const handleConversionEventChange = useCallback(
+    (value: string) => onChange({ conversionEvent: value }),
+    [onChange],
+  )
+
+  const handlePixelIdChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => onChange({ pixelId: event.target.value }),
+    [onChange],
+  )
+
   return (
     <div className="space-y-6">
       {/* Conversion Event Selection */}
@@ -30,7 +42,7 @@ export function SalesObjectiveSection({ formData, onChange, disabled }: Objectiv
             <Label htmlFor="conversion-event">Optimization Event</Label>
             <Select
               value={formData.conversionEvent}
-              onValueChange={(value) => onChange({ conversionEvent: value })}
+              onValueChange={handleConversionEventChange}
               disabled={disabled}
             >
               <SelectTrigger id="conversion-event">
@@ -56,7 +68,7 @@ export function SalesObjectiveSection({ formData, onChange, disabled }: Objectiv
               id="pixel-id"
               placeholder="e.g., 123456789012345"
               value={formData.pixelId || ''}
-              onChange={(e) => onChange({ pixelId: e.target.value })}
+              onChange={handlePixelIdChange}
               disabled={disabled}
             />
             <p className="text-xs text-muted-foreground">

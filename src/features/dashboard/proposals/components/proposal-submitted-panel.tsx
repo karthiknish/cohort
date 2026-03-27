@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import type { ProposalFormData } from '@/lib/proposals'
 import type { ProposalPresentationDeck } from '@/types/proposals'
@@ -33,7 +34,7 @@ export function ProposalSubmittedPanel({
   const { toast } = useToast()
   const viewerHref = deckDownloadUrl ? `/dashboard/proposals/viewer?src=${encodeURIComponent(deckDownloadUrl)}` : null
 
-  const handleCopySummary = () => {
+  const handleCopySummary = useCallback(() => {
     const text = `
 Company: ${summary.company.name}
 Industry: ${summary.company.industry}
@@ -51,15 +52,15 @@ Timeline: ${summary.timelines.startTime}
 
     navigator.clipboard.writeText(text)
     toast({ title: "Summary copied to clipboard" })
-  }
+  }, [summary, toast])
 
-  const handleCopyShareLink = () => {
+  const handleCopyShareLink = useCallback(() => {
     if (activeProposalIdForDeck) {
       const shareLink = `${window.location.origin}/dashboard/proposals/${activeProposalIdForDeck}/deck`
       navigator.clipboard.writeText(shareLink)
       toast({ title: 'Share link copied!' })
     }
-  }
+  }, [activeProposalIdForDeck, toast])
 
   return (
     <ProposalSubmittedPanelLayout

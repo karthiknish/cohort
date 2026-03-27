@@ -3,12 +3,14 @@
 
 import * as React from 'react'
 import {
+  type Header,
   type ColumnDef,
   type ColumnFiltersState,
   type SortingState,
   type VisibilityState,
   type RowSelectionState,
   type PaginationState,
+  type Row,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -31,12 +33,15 @@ import { cn } from '@/lib/utils'
 import { DataTablePagination } from './data-table-pagination'
 
 const DEFAULT_TABLE_MAX_HEIGHT = '520px'
+const EMPTY_SORTING: SortingState = []
+const EMPTY_COLUMN_FILTERS: ColumnFiltersState = []
+const EMPTY_COLUMN_VISIBILITY: VisibilityState = {}
 
 function getLoadingRowIds(loadingRows: number) {
   return Array.from({ length: loadingRows }, (_, slotIndex) => `loading-row-${slotIndex + 1}`)
 }
 
-function getLoadingCellKey<TData, TValue>(column: ColumnDef<TData, TValue>, columnIndex: number) {
+function getLoadingCellKey<TData, TValue>(column: ColumnDef<TData, TValue>) {
   if ('id' in column && typeof column.id === 'string') {
     return column.id
   }
@@ -45,7 +50,69 @@ function getLoadingCellKey<TData, TValue>(column: ColumnDef<TData, TValue>, colu
     return column.accessorKey
   }
 
-  return `column-${columnIndex + 1}`
+  if ('header' in column && typeof column.header === 'string') {
+    return column.header
+  }
+
+  return 'column'
+}
+
+function DataTableHeaderCell<TData, TValue>({ header }: { header: Header<TData, TValue> }) {
+  const width = header.getSize()
+  const style = React.useMemo(() => ({ width }), [width])
+
+  return (
+    <TableHead key={header.id} style={style}>
+      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+    </TableHead>
+  )
+}
+
+function DataTableSpacerRow({ colSpan, height }: { colSpan: number; height: number }) {
+  const style = React.useMemo(() => ({ height: `${height}px` }), [height])
+
+  return (
+    <TableRow>
+      <TableCell colSpan={colSpan} style={style} />
+    </TableRow>
+  )
+}
+
+function DataTableBodyRow<TData>({
+  height,
+  onRowClick,
+  row,
+  rowClassName,
+}: {
+  height?: number
+  onRowClick?: (row: TData) => void
+  row: Row<TData>
+  rowClassName?: string | ((row: TData) => string)
+}) {
+  const style = React.useMemo(
+    () => (height ? { height: `${height}px` } : undefined),
+    [height]
+  )
+
+  const handleClick = React.useCallback(() => {
+    onRowClick?.(row.original)
+  }, [onRowClick, row.original])
+
+  const resolvedClassName =
+    typeof rowClassName === 'function' ? rowClassName(row.original) : rowClassName
+
+  return (
+    <TableRow
+      data-state={row.getIsSelected() && 'selected'}
+      onClick={onRowClick ? handleClick : undefined}
+      className={cn(onRowClick && 'cursor-pointer', resolvedClassName)}
+      style={style}
+    >
+      {row.getVisibleCells().map((cell) => (
+        <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+      ))}
+    </TableRow>
+  )
 }
 
 export interface DataTableProps<TData, TValue> {
@@ -102,9 +169,9 @@ export function DataTable<TData, TValue>({
   onSortingChange,
   manualFiltering = false,
   onColumnFiltersChange,
-  initialSorting = [],
-  initialColumnFilters = [],
-  initialColumnVisibility = {},
+  initialSorting = EMPTY_SORTING,
+  initialColumnFilters = EMPTY_COLUMN_FILTERS,
+  initialColumnVisibility = EMPTY_COLUMN_VISIBILITY,
   stickyHeader = false,
   maxHeight,
   className,
@@ -141,7 +208,7 @@ export function DataTable<TData, TValue>({
     })
   }, [searchKey, effectiveSearchValue])
 
-  // eslint-disable-next-line react-hooks/incompatible-library
+  // react-doctor-disable-next-line react-hooks-js/incompatible-library
   const table = createReactTable({
     data,
     columns,
@@ -211,6 +278,17 @@ export function DataTable<TData, TValue>({
   const paddingBottom = shouldVirtualize && lastVirtualItem
     ? virtualizer.getTotalSize() - lastVirtualItem.end
     : 0
+  const containerStyle = React.useMemo(() => {
+    if (maxHeight) {
+      return { maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight }
+    }
+
+    if (shouldVirtualize) {
+      return { maxHeight: DEFAULT_TABLE_MAX_HEIGHT }
+    }
+
+    return undefined
+  }, [maxHeight, shouldVirtualize])
 
   React.useEffect(() => {
     if (!shouldVirtualize) return
@@ -225,21 +303,14 @@ export function DataTable<TData, TValue>({
           'rounded-md border',
           (maxHeight || shouldVirtualize) && 'overflow-auto'
         )}
-        style={maxHeight ? { maxHeight: typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight } : shouldVirtualize ? { maxHeight: DEFAULT_TABLE_MAX_HEIGHT } : undefined}
+        style={containerStyle}
       >
         <Table wrapperClassName={shouldVirtualize ? 'overflow-visible' : undefined}>
           <TableHeader className={stickyHeader ? 'sticky top-0 bg-background z-10' : undefined}>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} style={{ width: header.getSize() }}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
+                  <DataTableHeaderCell key={header.id} header={header} />
                 ))}
               </TableRow>
             ))}
@@ -249,8 +320,8 @@ export function DataTable<TData, TValue>({
               // Loading skeleton
               loadingRowIds.map((rowId) => (
                 <TableRow key={rowId}>
-                  {columns.map((column, columnIndex) => (
-                    <TableCell key={`${rowId}-${getLoadingCellKey(column, columnIndex)}`}>
+                  {columns.map((column) => (
+                    <TableCell key={`${rowId}-${getLoadingCellKey(column)}`}>
                       <div className="h-4 w-full animate-pulse rounded bg-muted" />
                     </TableCell>
                   ))}
@@ -260,9 +331,7 @@ export function DataTable<TData, TValue>({
               shouldVirtualize ? (
                 <>
                   {paddingTop > 0 && (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} style={{ height: `${paddingTop}px` }} />
-                    </TableRow>
+                    <DataTableSpacerRow colSpan={columns.length} height={paddingTop} />
                   )}
                   {virtualItems.map((virtualRow) => {
                     const row = rows[virtualRow.index]
@@ -271,51 +340,27 @@ export function DataTable<TData, TValue>({
                     }
 
                     return (
-                      <TableRow
+                      <DataTableBodyRow
                         key={row.id}
-                        data-state={row.getIsSelected() && 'selected'}
-                        onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                        className={cn(
-                          onRowClick && 'cursor-pointer',
-                          typeof rowClassName === 'function'
-                            ? rowClassName(row.original)
-                            : rowClassName
-                        )}
-                        style={{ height: `${virtualRow.size}px` }}
-                      >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
+                        onRowClick={onRowClick}
+                        row={row}
+                        rowClassName={rowClassName}
+                        height={virtualRow.size}
+                      />
                     )
                   })}
                   {paddingBottom > 0 && (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} style={{ height: `${paddingBottom}px` }} />
-                    </TableRow>
+                    <DataTableSpacerRow colSpan={columns.length} height={paddingBottom} />
                   )}
                 </>
               ) : (
                 rows.map((row) => (
-                  <TableRow
+                  <DataTableBodyRow
                     key={row.id}
-                    data-state={row.getIsSelected() && 'selected'}
-                    onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                    className={cn(
-                      onRowClick && 'cursor-pointer',
-                      typeof rowClassName === 'function'
-                        ? rowClassName(row.original)
-                        : rowClassName
-                    )}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
+                    onRowClick={onRowClick}
+                    row={row}
+                    rowClassName={rowClassName}
+                  />
                 ))
               )
             ) : (

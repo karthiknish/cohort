@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { memo, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 
 import { Card, CardContent, CardDescription } from '@/shared/ui/card'
@@ -17,6 +17,10 @@ interface StatsCardsProps {
 
 export function StatsCards({ stats, loading, primaryCount = 4 }: StatsCardsProps) {
   const [expanded, setExpanded] = useState(false)
+
+  const handleToggleExpanded = useCallback(() => {
+    setExpanded((current) => !current)
+  }, [])
 
   const { visibleStats, hiddenCount } = useMemo(() => {
     if (!stats || stats.length === 0) {
@@ -49,7 +53,7 @@ export function StatsCards({ stats, loading, primaryCount = 4 }: StatsCardsProps
             variant="ghost"
             size="sm"
             className="text-primary"
-            onClick={() => setExpanded((current) => !current)}
+            onClick={handleToggleExpanded}
           >
             {expanded ? 'Show less' : `Show more (${hiddenCount})`}
           </Button>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -31,6 +31,55 @@ interface ImagePreviewModalProps {
   initialIndex?: number
   isOpen: boolean
   onClose: () => void
+}
+
+interface ThumbnailButtonProps {
+  image: { url: string; name: string }
+  index: number
+  initialIndex: number
+  normalizedIndex: number
+  setIndexOffset: React.Dispatch<React.SetStateAction<number>>
+  setZoom: React.Dispatch<React.SetStateAction<number>>
+  setPosition: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>
+}
+
+function ThumbnailButton({
+  image,
+  index,
+  initialIndex,
+  normalizedIndex,
+  setIndexOffset,
+  setZoom,
+  setPosition,
+}: ThumbnailButtonProps) {
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      setIndexOffset(() => index - initialIndex)
+      setZoom(1)
+      setPosition({ x: 0, y: 0 })
+    },
+    [index, initialIndex, setIndexOffset, setZoom, setPosition]
+  )
+
+  return (
+    <button
+      key={`${image.url}-${image.name}`}
+      className={cn(
+        "h-14 w-14 overflow-hidden rounded-md border-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
+        index === normalizedIndex
+          ? "border-white opacity-100"
+          : "border-transparent opacity-50 hover:opacity-80"
+      )}
+      onClick={handleClick}
+    >
+      <LazyImage
+        src={image.url}
+        alt={image.name}
+        className="h-full w-full object-cover"
+      />
+    </button>
+  )
 }
 
 export function ImagePreviewModal({
@@ -113,6 +162,84 @@ export function ImagePreviewModal({
     setIsDragging(false)
   }, [])
 
+  const handleOnOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) handleClose()
+    },
+    [handleClose]
+  )
+
+  const handleStopPropagation = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+  }, [])
+
+  const handleZoomOutClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      handleZoomOut()
+    },
+    [handleZoomOut]
+  )
+
+  const handleZoomInClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      handleZoomIn()
+    },
+    [handleZoomIn]
+  )
+
+  const handleCloseClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      handleClose()
+    },
+    [handleClose]
+  )
+
+  const handlePreviousClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      handlePrevious()
+    },
+    [handlePrevious]
+  )
+
+  const handleNextClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      handleNext()
+    },
+    [handleNext]
+  )
+
+  const handleImageAreaKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        handleClose()
+      }
+    },
+    [handleClose]
+  )
+
+  const handleImageClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (zoom === 1) {
+        handleZoomIn()
+      }
+    },
+    [zoom, handleZoomIn]
+  )
+
+  const imageStyle = useMemo(
+    () => ({
+      transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
+    }),
+    [zoom, position.x, position.y]
+  )
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return
@@ -146,7 +273,7 @@ export function ImagePreviewModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+    <Dialog open={isOpen} onOpenChange={handleOnOpenChange}>
       <DialogPortal>
         <DialogOverlay className="fixed inset-0 z-[1200] bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" />
         <DialogContent
@@ -176,10 +303,7 @@ export function ImagePreviewModal({
             variant="ghost"
             size="icon"
             className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleZoomOut()
-            }}
+            onClick={handleZoomOutClick}
             disabled={zoom <= 1}
           >
             <ZoomOut className="h-5 w-5" />
@@ -192,10 +316,7 @@ export function ImagePreviewModal({
             variant="ghost"
             size="icon"
             className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleZoomIn()
-            }}
+            onClick={handleZoomInClick}
             disabled={zoom >= 4}
           >
             <ZoomIn className="h-5 w-5" />
@@ -207,7 +328,7 @@ export function ImagePreviewModal({
             size="icon"
             className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
             asChild
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleStopPropagation}
           >
             <a
               href={currentImage.url}
@@ -223,7 +344,7 @@ export function ImagePreviewModal({
             size="icon"
             className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
             asChild
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleStopPropagation}
           >
             <a href={currentImage.url} download={currentImage.name}>
               <Download className="h-5 w-5" />
@@ -235,10 +356,7 @@ export function ImagePreviewModal({
             variant="ghost"
             size="icon"
             className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleClose()
-            }}
+            onClick={handleCloseClick}
           >
             <X className="h-5 w-5" />
             <span className="sr-only">Close</span>
@@ -253,10 +371,7 @@ export function ImagePreviewModal({
             variant="ghost"
             size="icon"
             className="absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/40 text-white hover:bg-black/60"
-            onClick={(e) => {
-              e.stopPropagation()
-              handlePrevious()
-            }}
+            onClick={handlePreviousClick}
           >
             <ChevronLeft className="h-8 w-8" />
             <span className="sr-only">Previous image</span>
@@ -265,10 +380,7 @@ export function ImagePreviewModal({
             variant="ghost"
             size="icon"
             className="absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/40 text-white hover:bg-black/60"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleNext()
-            }}
+            onClick={handleNextClick}
           >
             <ChevronRight className="h-8 w-8" />
             <span className="sr-only">Next image</span>
@@ -279,17 +391,12 @@ export function ImagePreviewModal({
       {/* Image */}
       <div
         className="flex h-full w-full items-center justify-center overflow-hidden p-16"
-        onClick={(e) => e.stopPropagation()}
+        onClick={handleStopPropagation}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            e.preventDefault()
-            handleClose()
-          }
-        }}
+        onKeyDown={handleImageAreaKeyDown}
         role="button"
         tabIndex={0}
         aria-label={`Preview image ${currentImage.name}`}
@@ -302,15 +409,8 @@ export function ImagePreviewModal({
             zoom > 1 ? "cursor-grab" : "cursor-zoom-in",
             isDragging && "cursor-grabbing"
           )}
-          style={{
-            transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
-          }}
-          onClick={(e) => {
-            e.stopPropagation()
-            if (zoom === 1) {
-              handleZoomIn()
-            }
-          }}
+          style={imageStyle}
+          onClick={handleImageClick}
           draggable={false}
         />
       </div>
@@ -319,27 +419,16 @@ export function ImagePreviewModal({
       {hasMultipleImages && (
         <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-center gap-2 bg-gradient-to-t from-black/60 to-transparent p-4">
           {images.map((image, index) => (
-            <button
+            <ThumbnailButton
               key={`${image.url}-${image.name}`}
-              className={cn(
-                "h-14 w-14 overflow-hidden rounded-md border-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
-                index === normalizedIndex
-                  ? "border-white opacity-100"
-                  : "border-transparent opacity-50 hover:opacity-80"
-              )}
-              onClick={(e) => {
-                e.stopPropagation()
-                setIndexOffset(() => index - initialIndex)
-                setZoom(1)
-                setPosition({ x: 0, y: 0 })
-              }}
-            >
-              <LazyImage
-                src={image.url}
-                alt={image.name}
-                className="h-full w-full object-cover"
-              />
-            </button>
+              image={image}
+              index={index}
+              initialIndex={initialIndex}
+              normalizedIndex={normalizedIndex}
+              setIndexOffset={setIndexOffset}
+              setZoom={setZoom}
+              setPosition={setPosition}
+            />
           ))}
         </div>
       )}

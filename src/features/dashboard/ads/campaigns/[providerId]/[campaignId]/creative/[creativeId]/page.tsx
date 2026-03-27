@@ -9,6 +9,8 @@ type CreativeDetailPageProps = {
   searchParams?: RouteSearchParams | Promise<RouteSearchParams>
 }
 
+const CREATIVE_DETAIL_PAGE_FALLBACK = <CreativeDetailPageFallback />
+
 function getFirstSearchParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) {
     return value[0] ?? null
@@ -40,7 +42,7 @@ export default async function CreativeDetailPage({ searchParams }: CreativeDetai
   const resolvedSearchParams = await searchParams
 
   return (
-    <Suspense fallback={<CreativeDetailPageFallback />}>
+    <Suspense fallback={CREATIVE_DETAIL_PAGE_FALLBACK}>
       <CreativeDetailPageClient
         campaignName={getFirstSearchParam(resolvedSearchParams?.campaignName)}
         currency={getFirstSearchParam(resolvedSearchParams?.currency)}

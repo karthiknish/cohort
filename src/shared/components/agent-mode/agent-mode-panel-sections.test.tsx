@@ -22,6 +22,70 @@ vi.mock('./agent-message-card', () => ({
   AgentMessageCard: ({ message }: { message: { content: string } }) => <div>{message.content}</div>,
 }))
 
+const noop = vi.fn()
+const emptyRef = { current: null }
+const emptyArray: [] = []
+const sharedHeaderProps = {
+  connectionStatus: 'connected' as const,
+  conversationId: 'chat-1',
+  messagesCount: 1,
+  showHistory: false,
+  onClose: noop,
+  onStartNewChat: noop,
+  onToggleHistory: noop,
+}
+const sharedHistoryPanelProps = {
+  showHistory: false,
+  history: [] as AgentConversationSummary[],
+  isHistoryLoading: false,
+  conversationId: 'chat-1',
+  messagesCount: 1,
+  isConversationLoading: false,
+  loadingConversationId: null,
+  editingConversationId: null,
+  editingTitle: '',
+  setEditingTitle: noop,
+  onSelectConversation: noop,
+  onUpdateConversationTitle: noop,
+  onDeleteConversation: noop,
+  onStartNewChat: noop,
+  onClose: noop,
+  onStartEditing: noop,
+  onStopEditing: noop,
+}
+const sharedDockComposerProps = {
+  layout: 'dock' as const,
+  inputValue: '',
+  inputRef: emptyRef,
+  mentionLabels: emptyArray,
+  showMentions: false,
+  mentionQuery: '',
+  clients: emptyArray,
+  projects: emptyArray,
+  teams: emptyArray,
+  users: emptyArray,
+  mentionsLoading: false,
+  pendingAttachments: emptyArray,
+  isDraggingFiles: false,
+  isExtractingAttachments: false,
+  disabled: false,
+  onInputChange: noop,
+  onKeyDown: noop,
+  onOpenFilePicker: noop,
+  onCloseMentions: noop,
+  onSelectMention: noop,
+  onVoiceTranscript: noop,
+  onVoiceInterim: noop,
+  onRemoveAttachment: noop,
+  onSubmit: noop,
+}
+const sharedEmptyComposerProps = {
+  ...sharedDockComposerProps,
+  layout: 'centered' as const,
+  quickSuggestions: ['Schedule a meeting'],
+  onSuggestionClick: noop,
+}
+
 import type { AgentConversationSummary, AgentMessage } from '@/shared/hooks/use-agent-mode'
 
 import {
@@ -49,9 +113,9 @@ describe('agent mode panel sections', () => {
           conversationId="chat-1"
           messagesCount={1}
           showHistory={true}
-          onClose={vi.fn()}
-          onStartNewChat={vi.fn()}
-          onToggleHistory={vi.fn()}
+          onClose={noop}
+          onStartNewChat={noop}
+          onToggleHistory={noop}
         />
         <AgentHistoryPanel
           showHistory={true}
@@ -63,21 +127,21 @@ describe('agent mode panel sections', () => {
           loadingConversationId={null}
           editingConversationId={null}
           editingTitle=""
-          setEditingTitle={vi.fn()}
-          onSelectConversation={vi.fn()}
-          onUpdateConversationTitle={vi.fn()}
-          onDeleteConversation={vi.fn()}
-          onStartNewChat={vi.fn()}
-          onClose={vi.fn()}
-          onStartEditing={vi.fn()}
-          onStopEditing={vi.fn()}
+          setEditingTitle={noop}
+          onSelectConversation={noop}
+          onUpdateConversationTitle={noop}
+          onDeleteConversation={noop}
+          onStartNewChat={noop}
+          onClose={noop}
+          onStartEditing={noop}
+          onStopEditing={noop}
         />
         <AgentMessagesSection
           isConversationLoading={false}
           isProcessing={true}
           mentionLabels={[]}
           messages={[{ id: 'm1', content: 'Hello', type: 'user', timestamp: new Date() } as AgentMessage]}
-          scrollAreaRef={{ current: null }}
+          scrollAreaRef={emptyRef}
         />
       </>,
     )
@@ -97,7 +161,7 @@ describe('agent mode panel sections', () => {
           <AgentComposerSection
             layout="centered"
             inputValue=""
-            inputRef={{ current: null }}
+            inputRef={emptyRef}
             mentionLabels={[]}
             showMentions={false}
             mentionQuery=""
@@ -110,21 +174,21 @@ describe('agent mode panel sections', () => {
             isDraggingFiles={true}
             isExtractingAttachments={false}
             disabled={false}
-            onInputChange={vi.fn()}
-            onKeyDown={vi.fn()}
-            onOpenFilePicker={vi.fn()}
-            onCloseMentions={vi.fn()}
-            onSelectMention={vi.fn()}
-            onVoiceTranscript={vi.fn()}
-            onVoiceInterim={vi.fn()}
-            onRemoveAttachment={vi.fn()}
-            onSubmit={vi.fn()}
+            onInputChange={noop}
+            onKeyDown={noop}
+            onOpenFilePicker={noop}
+            onCloseMentions={noop}
+            onSelectMention={noop}
+            onVoiceTranscript={noop}
+            onVoiceInterim={noop}
+            onRemoveAttachment={noop}
+            onSubmit={noop}
             quickSuggestions={['Schedule a meeting']}
-            onSuggestionClick={vi.fn()}
+            onSuggestionClick={noop}
           />
         </AgentEmptyState>
-        <RateLimitBanner countdown={12} onDismiss={vi.fn()} />
-        <FailedMessageBanner lastFailedMessage="Failed" onRetry={vi.fn()} />
+        <RateLimitBanner countdown={12} onDismiss={noop} />
+        <FailedMessageBanner lastFailedMessage="Failed" onRetry={noop} />
       </>,
     )
 
@@ -141,40 +205,14 @@ describe('agent mode panel sections', () => {
     const shellMarkup = renderToStaticMarkup(
       <AgentModePanelShell
         attachmentAccept=".pdf"
-        fileInputRef={{ current: null }}
-        headerProps={{
-          connectionStatus: 'connected',
-          conversationId: 'chat-1',
-          messagesCount: 1,
-          showHistory: false,
-          onClose: vi.fn(),
-          onStartNewChat: vi.fn(),
-          onToggleHistory: vi.fn(),
-        }}
-        historyPanelProps={{
-          showHistory: false,
-          history: [],
-          isHistoryLoading: false,
-          conversationId: 'chat-1',
-          messagesCount: 1,
-          isConversationLoading: false,
-          loadingConversationId: null,
-          editingConversationId: null,
-          editingTitle: '',
-          setEditingTitle: vi.fn(),
-          onSelectConversation: vi.fn(),
-          onUpdateConversationTitle: vi.fn(),
-          onDeleteConversation: vi.fn(),
-          onStartNewChat: vi.fn(),
-          onClose: vi.fn(),
-          onStartEditing: vi.fn(),
-          onStopEditing: vi.fn(),
-        }}
-        onClearError={vi.fn()}
-        onDragLeave={vi.fn()}
-        onDragOver={vi.fn()}
-        onDrop={vi.fn()}
-        onFileSelection={vi.fn()}
+          fileInputRef={emptyRef}
+          headerProps={sharedHeaderProps}
+          historyPanelProps={sharedHistoryPanelProps}
+        onClearError={noop}
+        onDragLeave={noop}
+        onDragOver={noop}
+        onDrop={noop}
+        onFileSelection={noop}
         rateLimitCountdown={9}
       >
         <div>Body Content</div>
@@ -183,67 +221,15 @@ describe('agent mode panel sections', () => {
 
     const contentMarkup = renderToStaticMarkup(
       <AgentModePanelContent
-        dockComposerProps={{
-          layout: 'dock',
-          inputValue: '',
-          inputRef: { current: null },
-          mentionLabels: [],
-          showMentions: false,
-          mentionQuery: '',
-          clients: [],
-          projects: [],
-          teams: [],
-          users: [],
-          mentionsLoading: false,
-          pendingAttachments: [],
-          isDraggingFiles: false,
-          isExtractingAttachments: false,
-          disabled: false,
-          onInputChange: vi.fn(),
-          onKeyDown: vi.fn(),
-          onOpenFilePicker: vi.fn(),
-          onCloseMentions: vi.fn(),
-          onSelectMention: vi.fn(),
-          onVoiceTranscript: vi.fn(),
-          onVoiceInterim: vi.fn(),
-          onRemoveAttachment: vi.fn(),
-          onSubmit: vi.fn(),
-        }}
-        emptyComposerProps={{
-          layout: 'centered',
-          inputValue: '',
-          inputRef: { current: null },
-          mentionLabels: [],
-          showMentions: false,
-          mentionQuery: '',
-          clients: [],
-          projects: [],
-          teams: [],
-          users: [],
-          mentionsLoading: false,
-          pendingAttachments: [],
-          isDraggingFiles: false,
-          isExtractingAttachments: false,
-          disabled: false,
-          onInputChange: vi.fn(),
-          onKeyDown: vi.fn(),
-          onOpenFilePicker: vi.fn(),
-          onCloseMentions: vi.fn(),
-          onSelectMention: vi.fn(),
-          onVoiceTranscript: vi.fn(),
-          onVoiceInterim: vi.fn(),
-          onRemoveAttachment: vi.fn(),
-          onSubmit: vi.fn(),
-          quickSuggestions: ['Schedule a meeting'],
-          onSuggestionClick: vi.fn(),
-        }}
+          dockComposerProps={sharedDockComposerProps}
+          emptyComposerProps={sharedEmptyComposerProps}
         isConversationLoading={false}
         isProcessing={false}
         lastFailedMessage="Failed again"
         mentionLabels={[]}
         messages={[{ id: 'm1', content: 'Hello again', type: 'user', timestamp: new Date() } as AgentMessage]}
-        onRetry={vi.fn()}
-        scrollAreaRef={{ current: null }}
+        onRetry={noop}
+        scrollAreaRef={emptyRef}
         showEmptyState={false}
       />,
     )

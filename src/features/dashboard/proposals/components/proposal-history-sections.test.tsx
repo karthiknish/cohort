@@ -25,6 +25,25 @@ const baseProposal = {
   presentationDeck: null,
 } as const
 
+const proposalHistoryRow: ProposalHistoryRowViewModel = {
+  deckRequestable: true,
+  displayName: 'Acme',
+  isActiveDraft: false,
+  isDeckPreparing: false,
+  presentationUrl: null,
+  proposal: baseProposal as never,
+  resumeDisabled: false,
+  resumeLabel: 'Resume editing',
+}
+
+const readyProposalHistoryRow: ProposalHistoryRowViewModel = {
+  ...proposalHistoryRow,
+  deckRequestable: false,
+  presentationUrl: 'https://cdn.example.com/deck.pptx',
+  proposal: { ...baseProposal, status: 'ready' } as never,
+  resumeLabel: 'View proposal',
+}
+
 describe('proposal history sections', () => {
   it('renders the header and empty state', () => {
     const markup = renderToStaticMarkup(
@@ -41,29 +60,10 @@ describe('proposal history sections', () => {
   })
 
   it('renders a history row with proposal actions', () => {
-    const row: ProposalHistoryRowViewModel = {
-      deckRequestable: true,
-      displayName: 'Acme',
-      isActiveDraft: false,
-      isDeckPreparing: false,
-      presentationUrl: null,
-      proposal: baseProposal as never,
-      resumeDisabled: false,
-      resumeLabel: 'Resume editing',
-    }
-
-    const readyRow: ProposalHistoryRowViewModel = {
-      ...row,
-      deckRequestable: false,
-      presentationUrl: 'https://cdn.example.com/deck.pptx',
-      proposal: { ...baseProposal, status: 'ready' } as never,
-      resumeLabel: 'View proposal',
-    }
-
     const markup = renderToStaticMarkup(
       <>
-        <ProposalHistoryRow deletingProposalId={null} onDownloadDeck={vi.fn()} onRequestDelete={vi.fn()} onResume={vi.fn()} row={row} />
-        <ProposalHistoryRow deletingProposalId={null} onDownloadDeck={vi.fn()} onRequestDelete={vi.fn()} onResume={vi.fn()} row={readyRow} />
+        <ProposalHistoryRow deletingProposalId={null} onDownloadDeck={vi.fn()} onRequestDelete={vi.fn()} onResume={vi.fn()} row={proposalHistoryRow} />
+        <ProposalHistoryRow deletingProposalId={null} onDownloadDeck={vi.fn()} onRequestDelete={vi.fn()} onResume={vi.fn()} row={readyProposalHistoryRow} />
       </>,
     )
 

@@ -1,3 +1,4 @@
+import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { describe, expect, it, vi } from 'vitest'
@@ -53,6 +54,8 @@ const baseForm = {
   value: { proposalSize: '', engagementType: '', presentationTheme: 'modern-professional' },
 } as const
 
+const proposalStepContent = createElement('div', null, 'Step content')
+
 describe('proposal page sections', () => {
   it('renders the start card affordance', () => {
     const markup = renderToStaticMarkup(
@@ -102,7 +105,7 @@ describe('proposal page sections', () => {
         currentStep={0}
         draftId={null}
         autosaveStatus="saved"
-        stepContent={<div>Step content</div>}
+        stepContent={proposalStepContent}
         onBack={vi.fn()}
         onNext={vi.fn()}
         isFirstStep={true}
@@ -131,7 +134,7 @@ describe('proposal page sections', () => {
         currentStep={0}
         draftId={null}
         autosaveStatus="saved"
-        stepContent={<div>Step content</div>}
+        stepContent={proposalStepContent}
         onBack={vi.fn()}
         onNext={vi.fn()}
         isFirstStep={true}

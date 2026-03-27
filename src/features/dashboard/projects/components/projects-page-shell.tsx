@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useMemo } from 'react'
 import { Briefcase, CircleX, FolderKanban, ListChecks, LoaderCircle, RefreshCw, TriangleAlert, Users } from 'lucide-react'
 import Link from 'next/link'
 
@@ -59,6 +60,9 @@ function ProjectsHeaderSection() {
     setViewMode,
     viewMode,
   } = useProjectsPageContext()
+  const handleRefreshProjectsClick = useCallback(() => {
+    void handleRefreshProjects()
+  }, [handleRefreshProjects])
 
   return (
     <div className={DASHBOARD_THEME.layout.header}>
@@ -81,7 +85,7 @@ function ProjectsHeaderSection() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => void handleRefreshProjects()}
+              onClick={handleRefreshProjectsClick}
               className={cn(getButtonClasses('outline'), 'inline-flex items-center gap-2')}
               disabled={loading}
               aria-label="Refresh projects"
@@ -151,6 +155,7 @@ function ProjectsDialogs() {
 
 function ProjectsSummarySection() {
   const { completionRate, openTaskTotal, projects, statusCounts, taskTotal } = useProjectsPageContext()
+  const completionStyle = useMemo(() => ({ width: `${completionRate}%` }), [completionRate])
 
   return (
     <div className={DASHBOARD_THEME.stats.container}>
@@ -182,7 +187,7 @@ function ProjectsSummarySection() {
             <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/60">
               <div
                 className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
-                style={{ width: `${completionRate}%` }}
+                style={completionStyle}
               />
             </div>
           </div>
@@ -227,6 +232,17 @@ function ProjectsBacklogSection() {
     toggleSortDirection,
     viewMode,
   } = useProjectsPageContext()
+  const handleMilestoneRefresh = useCallback(() => {
+    void loadMilestones(projects.map((project) => project.id))
+  }, [loadMilestones, projects])
+
+  const handleRefreshProjectsClick = useCallback(() => {
+    void handleRefreshProjects()
+  }, [handleRefreshProjects])
+
+  const handleSearchClear = useCallback(() => {
+    setSearchInput('')
+  }, [setSearchInput])
 
   return (
     <Card className="border-muted/60 bg-background">
@@ -289,7 +305,7 @@ function ProjectsBacklogSection() {
             milestones={milestonesByProject}
             loading={milestonesLoading}
             error={milestonesError}
-            onRefresh={() => void loadMilestones(projects.map((project) => project.id))}
+            onRefresh={handleMilestoneRefresh}
             onMilestoneCreated={handleMilestoneCreated}
           />
         ) : (
@@ -303,8 +319,8 @@ function ProjectsBacklogSection() {
             onCreateProject={handleProjectCreated}
             onDelete={openDeleteDialog}
             onEdit={openEditDialog}
-            onRefresh={() => void handleRefreshProjects()}
-            onSearchClear={() => setSearchInput('')}
+            onRefresh={handleRefreshProjectsClick}
+            onSearchClear={handleSearchClear}
             onUpdateStatus={handleUpdateStatus}
             pendingStatusUpdates={pendingStatusUpdates}
             projects={projects}

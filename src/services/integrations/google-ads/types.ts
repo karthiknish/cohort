@@ -2,7 +2,7 @@
 // GOOGLE ADS API TYPES
 // =============================================================================
 
-import { NormalizedMetric } from '@/types/integrations'
+import type { NormalizedMetric } from '@/types/integrations'
 
 export const GOOGLE_API_VERSION = 'v22'
 export const GOOGLE_API_BASE = `https://googleads.googleapis.com/${GOOGLE_API_VERSION}`

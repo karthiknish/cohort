@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState, ChangeEvent, DragEvent } from 'react'
+import { useCallback, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent } from 'react'
 import { ImagePlus, LoaderCircle, Trash2, Upload } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -110,6 +110,12 @@ export function ImageUploader({
     setIsDragging(false)
   }, [])
 
+  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter') {
+      handleClick()
+    }
+  }, [handleClick])
+
   const handleDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
       event.preventDefault()
@@ -188,7 +194,7 @@ export function ImageUploader({
           role="button"
           tabIndex={0}
           onClick={handleClick}
-          onKeyDown={(e) => e.key === 'Enter' && handleClick()}
+          onKeyDown={handleKeyDown}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}

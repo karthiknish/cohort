@@ -124,6 +124,35 @@ export function ProfileCard({
     [profileName, profilePhone, toast, updateMyProfile, user],
   )
 
+  const handleAvatarRemove = useCallback(async () => {
+    if (!user) {
+      setAvatarError('You must be signed in to update your avatar.')
+      return
+    }
+
+    setAvatarUploading(true)
+    setAvatarError(null)
+
+    if (tempAvatarUrlRef.current) {
+      URL.revokeObjectURL(tempAvatarUrlRef.current)
+      tempAvatarUrlRef.current = null
+    }
+
+    await updateMyProfile({ photoUrl: null })
+      .then(() => {
+        setAvatarPreviewOverride(null)
+        toast({ title: 'Profile photo removed', description: 'We removed your avatar.' })
+      })
+      .catch((removeError) => {
+        console.error('[settings/profile] avatar remove failed', removeError)
+        setAvatarError('Failed to remove profile photo. Try again.')
+        toast({ title: 'Remove failed', description: 'Unable to remove your photo right now.', variant: 'destructive' })
+      })
+      .finally(() => {
+        setAvatarUploading(false)
+      })
+  }, [toast, updateMyProfile, user])
+
   const handleAvatarButtonClick = useCallback(() => {
     setAvatarError(null)
     avatarInputRef.current?.click()
@@ -217,34 +246,28 @@ export function ProfileCard({
     [avatarPreview, toast, updateMyProfile, user, uploadAvatarImage],
   )
 
-  const handleAvatarRemove = useCallback(async () => {
-    if (!user) {
-      setAvatarError('You must be signed in to update your avatar.')
-      return
+  const handleProfileNameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setProfileNameDraft(event.target.value)
+    setProfileError(null)
+  }, [])
+
+  const handleProfilePhoneChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setProfilePhoneDraft(event.target.value)
+    setPhoneError(null)
+    setProfileError(null)
+  }, [])
+
+  const handleProfilePhoneBlur = useCallback(() => {
+    if (profilePhone.trim() && !isPhoneValid(profilePhone)) {
+      setPhoneError('Enter a valid phone number (e.g. +1 555 000 1234).')
+    } else {
+      setPhoneError(null)
     }
+  }, [profilePhone])
 
-    setAvatarUploading(true)
-    setAvatarError(null)
-
-    if (tempAvatarUrlRef.current) {
-      URL.revokeObjectURL(tempAvatarUrlRef.current)
-      tempAvatarUrlRef.current = null
-    }
-
-    await updateMyProfile({ photoUrl: null })
-      .then(() => {
-        setAvatarPreviewOverride(null)
-        toast({ title: 'Profile photo removed', description: 'We removed your avatar.' })
-      })
-      .catch((removeError) => {
-        console.error('[settings/profile] avatar remove failed', removeError)
-        setAvatarError('Failed to remove profile photo. Try again.')
-        toast({ title: 'Remove failed', description: 'Unable to remove your photo right now.', variant: 'destructive' })
-      })
-      .finally(() => {
-        setAvatarUploading(false)
-      })
-  }, [toast, updateMyProfile, user])
+  const handleAvatarRemoveClick = useCallback(() => {
+    void handleAvatarRemove()
+  }, [handleAvatarRemove])
 
   return (
     <Card>
@@ -259,9 +282,7 @@ export function ProfileCard({
             type="file"
             accept="image/png,image/jpeg,image/jpg,image/webp"
             className="hidden"
-            onChange={(event) => {
-              void handleAvatarFileChange(event)
-            }}
+            onChange={handleAvatarFileChange}
           />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <Avatar className="h-16 w-16">
@@ -290,9 +311,7 @@ export function ProfileCard({
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => {
-                      void handleAvatarRemove()
-                    }}
+                    onClick={handleAvatarRemoveClick}
                     disabled={avatarUploading}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -312,10 +331,7 @@ export function ProfileCard({
               <Input
                 id="profile-name"
                 value={profileName}
-                onChange={(event) => {
-                  setProfileNameDraft(event.target.value)
-                  setProfileError(null)
-                }}
+                onChange={handleProfileNameChange}
                 placeholder="e.g. Jordan Michaels"
                 autoComplete="name"
               />
@@ -325,18 +341,8 @@ export function ProfileCard({
               <Input
                 id="profile-phone"
                 value={profilePhone}
-                onChange={(event) => {
-                  setProfilePhoneDraft(event.target.value)
-                  setPhoneError(null)
-                  setProfileError(null)
-                }}
-                onBlur={() => {
-                  if (profilePhone.trim() && !isPhoneValid(profilePhone)) {
-                    setPhoneError('Enter a valid phone number (e.g. +1 555 000 1234).')
-                  } else {
-                    setPhoneError(null)
-                  }
-                }}
+                onChange={handleProfilePhoneChange}
+                onBlur={handleProfilePhoneBlur}
                 placeholder="+1 555 000 1234"
                 autoComplete="tel"
                 aria-describedby={phoneError ? 'phone-error' : 'phone-hint'}

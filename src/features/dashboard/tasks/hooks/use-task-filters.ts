@@ -1,8 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { TaskRecord, TaskStatus, TASK_STATUSES } from '@/types/tasks'
-import { SortField, SortDirection, PRIORITY_ORDER } from '../task-types'
+import { TASK_STATUSES } from '@/types/tasks'
+import type { TaskRecord, TaskStatus } from '@/types/tasks'
+import { PRIORITY_ORDER } from '../task-types'
+import type { SortField, SortDirection } from '../task-types'
 
 const TASK_VIEW_MODE_STORAGE_KEY = 'dashboard:tasks:view-mode'
 

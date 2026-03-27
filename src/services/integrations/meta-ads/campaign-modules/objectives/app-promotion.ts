@@ -2,7 +2,7 @@
 // APP PROMOTION OBJECTIVE - App install/engagement campaign configuration
 // =============================================================================
 
-import { CampaignObjectiveConfig } from '../types'
+import type { CampaignObjectiveConfig } from '../types'
 
 export const APP_PROMOTION_OBJECTIVE_CONFIG: CampaignObjectiveConfig = {
   objective: 'OUTCOME_APP_PROMOTION',

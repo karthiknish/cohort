@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useMemo, useState, type MouseEvent } from 'react'
 import { Edit2, Globe, MapPin, X } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
@@ -45,6 +45,43 @@ export function LocationTargetingSection({
 }: LocationTargetingSectionProps) {
   const [selectedLocation, setSelectedLocation] = useState<LocationMarker | null>(null)
 
+  const handleToggleEditing = useCallback(() => {
+    onToggleEditing('locations')
+  }, [onToggleEditing])
+
+  const handleLocationSelect = useCallback((loc: LocationMarker) => {
+    setSelectedLocation(loc)
+    toast({
+      title: 'Location selected',
+      description: `${loc.name} - Click on the map to add more locations`,
+    })
+  }, [])
+
+  const locationSelectHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        aggregatedData.locations.included.map((loc) => [loc.id, () => {
+          const marker = locationMarkers.find((item) => item.id === loc.id)
+          if (marker) setSelectedLocation(marker)
+        }]),
+      ) as Record<string, () => void>,
+    [aggregatedData.locations.included, locationMarkers]
+  )
+
+  const locationRemoveHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        aggregatedData.locations.included.map((loc) => [loc.id, (event: MouseEvent<HTMLButtonElement>) => {
+          event.stopPropagation()
+          toast({
+            title: 'Location would be removed',
+            description: `${loc.name} removal requires API integration`,
+          })
+        }]),
+      ) as Record<string, (event: MouseEvent<HTMLButtonElement>) => void>,
+    [aggregatedData.locations.included]
+  )
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -77,7 +114,7 @@ export function LocationTargetingSection({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onClick={() => onToggleEditing('locations')}
+                onClick={handleToggleEditing}
               >
                 <Edit2 className="h-3.5 w-3.5" />
               </Button>
@@ -92,13 +129,7 @@ export function LocationTargetingSection({
           height="280px"
           interactive={editingSection === 'locations'}
           showSearch={editingSection === 'locations'}
-          onLocationSelect={(loc) => {
-            setSelectedLocation(loc)
-            toast({
-              title: 'Location selected',
-              description: `${loc.name} - Click on the map to add more locations`,
-            })
-          }}
+          onLocationSelect={handleLocationSelect}
         />
       </div>
       {aggregatedData.locations.included.length > 0 ? (
@@ -111,22 +142,13 @@ export function LocationTargetingSection({
                 'text-xs cursor-pointer transition-colors',
                 selectedLocation?.id === loc.id && 'ring-2 ring-primary'
               )}
-              onClick={() => {
-                const marker = locationMarkers.find((item) => item.id === loc.id)
-                if (marker) setSelectedLocation(marker)
-              }}
+              onClick={locationSelectHandlers[loc.id]}
             >
               <MapPin className="h-3 w-3 mr-1" />
               {loc.name}
               {editingSection === 'locations' && (
                 <button
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    toast({
-                      title: 'Location would be removed',
-                      description: `${loc.name} removal requires API integration`,
-                    })
-                  }}
+                  onClick={locationRemoveHandlers[loc.id]}
                   className="ml-1 hover:text-destructive"
                 >
                   <X className="h-3 w-3" />

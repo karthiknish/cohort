@@ -118,6 +118,37 @@ export function AdvancedFilter({
     setOpen(false)
   }, [currentFilters, sortBy, sortOrder, onFilterChange, onSortChange])
 
+  const handleLoadSavedFilter = useCallback(
+    (config: FilterConfig) => {
+      setCurrentFilters(config.filters)
+      setSortBy(config.sortBy ?? '')
+      setSortOrder(config.sortOrder ?? 'desc')
+      onFilterChange(config.filters)
+
+      if (onSortChange && config.sortBy) {
+        onSortChange(config.sortBy, config.sortOrder ?? 'desc')
+      }
+
+      setOpen(false)
+    },
+    [onFilterChange, onSortChange]
+  )
+
+  const handleFilterNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFilterName(e.target.value)
+  }, [])
+
+  const handleSortOrderChange = useCallback((value: string) => {
+    setSortOrder(value as 'asc' | 'desc')
+  }, [])
+
+  const handleDeleteSavedFilter = useCallback(
+    (id: string) => {
+      onDeleteFilter?.(id)
+    },
+    [onDeleteFilter]
+  )
+
   const saveCurrentConfig = useCallback(() => {
     if (!filterName.trim()) {
       toast({
@@ -174,37 +205,23 @@ export function AdvancedFilter({
                 <Label>Saved Filters</Label>
                 <div className="flex flex-wrap gap-2">
                   {savedFilters.map((filter) => (
-                    <Button
+                    <SavedFilterButton
                       key={filter.id}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-6 rounded-full px-2 text-xs"
-                      onClick={() => {
-                        setCurrentFilters(filter.filters)
-                        if (filter.sortBy) {
-                          setSortBy(filter.sortBy)
-                          setSortOrder(filter.sortOrder ?? 'desc')
-                        }
-                        applyFilters()
-                      }}
+                      filter={filter}
+                      onApply={handleLoadSavedFilter}
                     >
                       {filter.name}
-                    </Button>
+                    </SavedFilterButton>
                   ))}
                 </div>
                 {onDeleteFilter && (
                   <div className="flex gap-2">
                     {savedFilters.map((filter) => (
-                      <Button
+                      <SavedFilterDeleteButton
                         key={filter.id}
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDeleteFilter(filter.id)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
+                        filterId={filter.id}
+                        onDelete={handleDeleteSavedFilter}
+                      />
                     ))}
                   </div>
                 )}
@@ -213,63 +230,12 @@ export function AdvancedFilter({
 
             {/* Filter fields */}
             {availableFilters.map((filter) => (
-              <div key={filter.key} className="space-y-2">
-                <Label>{filter.label}</Label>
-                {filter.type === 'text' && (
-                  <Input
-                    value={getStringFilterValue(currentFilters[filter.key])}
-                    onChange={(e) => applyFilter(filter.key, e.target.value)}
-                    placeholder={`Search ${filter.label.toLowerCase()}...`}
-                  />
-                )}
-
-                {filter.type === 'select' && (
-                  <Select
-                    value={getStringFilterValue(currentFilters[filter.key])}
-                    onValueChange={(value) => applyFilter(filter.key, value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={`Select ${filter.label.toLowerCase()}`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">All</SelectItem>
-                      {filter.options?.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-
-                {filter.type === 'multiselect' && (
-                  <div className="space-y-1">
-                    {filter.options?.map((option) => (
-                      <div key={option.value} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`${filter.key}-${option.value}`}
-                          checked={getStringArrayFilterValue(currentFilters[filter.key]).includes(option.value)}
-                          onCheckedChange={(checked) => {
-                            const current = getStringArrayFilterValue(currentFilters[filter.key])
-                            applyFilter(
-                              filter.key,
-                              checked
-                                ? [...current, option.value]
-                                : current.filter((v: string) => v !== option.value)
-                            )
-                          }}
-                        />
-                        <label
-                          htmlFor={`${filter.key}-${option.value}`}
-                          className="text-sm cursor-pointer"
-                        >
-                          {option.label}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <AdvancedFilterField
+                key={filter.key}
+                filter={filter}
+                value={currentFilters[filter.key]}
+                onChange={applyFilter}
+              />
             ))}
 
             {/* Sort options */}
@@ -288,7 +254,7 @@ export function AdvancedFilter({
                       <SelectItem value="priority">Priority</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as 'asc' | 'desc')}>
+                  <Select value={sortOrder} onValueChange={handleSortOrderChange}>
                     <SelectTrigger className="w-[120px]">
                       <SelectValue />
                     </SelectTrigger>
@@ -320,7 +286,7 @@ export function AdvancedFilter({
                   <Input
                     placeholder="Filter name…"
                     value={filterName}
-                    onChange={(e) => setFilterName(e.target.value)}
+                    onChange={handleFilterNameChange}
                     className="w-40"
                   />
                   <Button
@@ -368,17 +334,7 @@ export function ActiveFiltersBar({
     <div className={cn('flex items-center gap-2 flex-wrap', className)}>
       <span className="text-xs text-muted-foreground">Active filters:</span>
       {entries.map(([key, value]) => (
-        <Badge key={key} variant="secondary" className="gap-1 pr-1">
-          {key}: {Array.isArray(value) ? value.join(', ') : value}
-          <button
-            type="button"
-            onClick={() => onRemove(key)}
-            className="rounded p-0.5 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={`Remove ${key} filter`}
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        <ActiveFilterBadge key={key} filterKey={key} value={value} onRemove={onRemove} />
       ))}
       <Button
         type="button"
@@ -390,5 +346,180 @@ export function ActiveFiltersBar({
         Clear all
       </Button>
     </div>
+  )
+}
+
+interface SavedFilterButtonProps {
+  filter: FilterConfig
+  onApply: (config: FilterConfig) => void
+  children: string
+}
+
+function SavedFilterButton({ filter, onApply, children }: SavedFilterButtonProps) {
+  const handleClick = useCallback(() => {
+    onApply(filter)
+  }, [filter, onApply])
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="h-6 rounded-full px-2 text-xs"
+      onClick={handleClick}
+    >
+      {children}
+    </Button>
+  )
+}
+
+interface SavedFilterDeleteButtonProps {
+  filterId: string
+  onDelete: (id: string) => void
+}
+
+function SavedFilterDeleteButton({ filterId, onDelete }: SavedFilterDeleteButtonProps) {
+  const handleClick = useCallback(() => {
+    onDelete(filterId)
+  }, [filterId, onDelete])
+
+  return (
+    <Button type="button" variant="ghost" size="sm" onClick={handleClick}>
+      <X className="h-3 w-3" />
+    </Button>
+  )
+}
+
+interface AdvancedFilterFieldProps {
+  filter: {
+    key: string
+    label: string
+    type: 'text' | 'select' | 'multiselect' | 'date' | 'number'
+    options?: Array<{ value: string; label: string }>
+  }
+  value: FilterValue | undefined
+  onChange: (key: string, value: FilterValue) => void
+}
+
+function AdvancedFilterField({ filter, value, onChange }: AdvancedFilterFieldProps) {
+  const handleTextChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(filter.key, e.target.value)
+    },
+    [filter.key, onChange]
+  )
+
+  const handleSelectChange = useCallback(
+    (nextValue: string) => {
+      onChange(filter.key, nextValue)
+    },
+    [filter.key, onChange]
+  )
+
+  const handleMultiSelectChange = useCallback(
+    (optionValue: string, checked: boolean) => {
+      const currentValues = getStringArrayFilterValue(value)
+      onChange(
+        filter.key,
+        checked
+          ? [...currentValues, optionValue]
+          : currentValues.filter((currentValue) => currentValue !== optionValue)
+      )
+    },
+    [filter.key, onChange, value]
+  )
+
+  return (
+    <div className="space-y-2">
+      <Label>{filter.label}</Label>
+      {filter.type === 'text' && (
+        <Input
+          value={getStringFilterValue(value)}
+          onChange={handleTextChange}
+          placeholder={`Search ${filter.label.toLowerCase()}...`}
+        />
+      )}
+
+      {filter.type === 'select' && (
+        <Select value={getStringFilterValue(value)} onValueChange={handleSelectChange}>
+          <SelectTrigger>
+            <SelectValue placeholder={`Select ${filter.label.toLowerCase()}`} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All</SelectItem>
+            {filter.options?.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      {filter.type === 'multiselect' && (
+        <div className="space-y-1">
+          {filter.options?.map((option) => (
+            <FilterMultiSelectOption
+              key={option.value}
+              filterKey={filter.key}
+              option={option}
+              checked={getStringArrayFilterValue(value).includes(option.value)}
+              onChange={handleMultiSelectChange}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface FilterMultiSelectOptionProps {
+  filterKey: string
+  option: { value: string; label: string }
+  checked: boolean
+  onChange: (optionValue: string, checked: boolean) => void
+}
+
+function FilterMultiSelectOption({ filterKey, option, checked, onChange }: FilterMultiSelectOptionProps) {
+  const handleCheckedChange = useCallback(
+    (nextChecked: boolean | 'indeterminate') => {
+      onChange(option.value, nextChecked === true)
+    },
+    [onChange, option.value]
+  )
+
+  return (
+    <div className="flex items-center gap-2">
+      <Checkbox id={`${filterKey}-${option.value}`} checked={checked} onCheckedChange={handleCheckedChange} />
+      <label htmlFor={`${filterKey}-${option.value}`} className="text-sm cursor-pointer">
+        {option.label}
+      </label>
+    </div>
+  )
+}
+
+interface ActiveFilterBadgeProps {
+  filterKey: string
+  value: FilterValue
+  onRemove: (key: string) => void
+}
+
+function ActiveFilterBadge({ filterKey, value, onRemove }: ActiveFilterBadgeProps) {
+  const handleRemove = useCallback(() => {
+    onRemove(filterKey)
+  }, [filterKey, onRemove])
+
+  return (
+    <Badge variant="secondary" className="gap-1 pr-1">
+      {filterKey}: {Array.isArray(value) ? value.join(', ') : value}
+      <button
+        type="button"
+        onClick={handleRemove}
+        className="rounded p-0.5 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={`Remove ${filterKey} filter`}
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </Badge>
   )
 }

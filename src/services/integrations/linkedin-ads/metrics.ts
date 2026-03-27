@@ -10,7 +10,7 @@ import {
   DEFAULT_RETRY_CONFIG,
 } from './client'
 import { linkedinAdsClient } from '@/services/integrations/shared/base-client'
-import {
+import type {
   LinkedInAdsOptions,
   LinkedInAdAccount,
   LinkedInAnalyticsRow,

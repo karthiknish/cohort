@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import Link from 'next/link'
 
 import { AdConnectionsCard } from '@/features/dashboard/home/components/ad-connections-card'
@@ -45,6 +46,21 @@ export default function IntegrationsPage() {
     adPlatforms,
     triggerRefresh,
   } = useAdsConnections()
+
+  const handleInitializeMeta = useCallback(
+    () => void initializeMetaIntegration(undefined, selectedMetaAccountId || null),
+    [initializeMetaIntegration, selectedMetaAccountId]
+  )
+
+  const handleReloadMetaAccountOptions = useCallback(
+    () => void reloadMetaAccountOptions(),
+    [reloadMetaAccountOptions]
+  )
+
+  const handleInitializeTikTok = useCallback(
+    () => void initializeTikTokIntegration(),
+    [initializeTikTokIntegration]
+  )
 
   return (
     <div className={DASHBOARD_THEME.layout.container}>
@@ -92,16 +108,16 @@ export default function IntegrationsPage() {
               metaSetupMessage={metaSetupMessage}
               metaNeedsAccountSelection={metaNeedsAccountSelection}
               initializingMeta={initializingMeta}
-              onInitializeMeta={() => void initializeMetaIntegration(undefined, selectedMetaAccountId || null)}
+              onInitializeMeta={handleInitializeMeta}
               metaAccountOptions={metaAccountOptions}
               selectedMetaAccountId={selectedMetaAccountId}
               onMetaAccountSelectionChange={setSelectedMetaAccountId}
               loadingMetaAccountOptions={loadingMetaAccountOptions}
-              onReloadMetaAccountOptions={() => void reloadMetaAccountOptions()}
+              onReloadMetaAccountOptions={handleReloadMetaAccountOptions}
               tiktokSetupMessage={tiktokSetupMessage}
               tiktokNeedsAccountSelection={tiktokNeedsAccountSelection}
               initializingTikTok={initializingTikTok}
-              onInitializeTikTok={() => void initializeTikTokIntegration()}
+              onInitializeTikTok={handleInitializeTikTok}
             />
           </FadeIn>
 

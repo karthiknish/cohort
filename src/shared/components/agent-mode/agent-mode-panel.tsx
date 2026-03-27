@@ -124,13 +124,13 @@ export function AgentModePanel({
 
 
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     if (inputValue.trim() && !isProcessing && !isExtractingAttachments) {
       onSendMessage(inputValue.trim())
       setInputValue('')
       setShowMentions(false)
     }
-  }
+  }, [inputValue, isProcessing, isExtractingAttachments, onSendMessage])
 
   // Detect @ character and extract query
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,7 +182,7 @@ export function AgentModePanel({
     setShowMentions(false)
   }, [inputValue])
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
     // Don't handle Enter/Escape if mention dropdown is open (it handles them)
     if (showMentions && ['Enter', 'ArrowUp', 'ArrowDown', 'Tab', 'Escape'].includes(e.key)) {
       return
@@ -194,11 +194,15 @@ export function AgentModePanel({
     if (e.key === 'Escape') {
       onClose()
     }
-  }
+  }, [handleSubmit, onClose, showMentions])
 
-  const handleSuggestionClick = (suggestion: string) => {
+  const handleSuggestionClick = useCallback((suggestion: string) => {
     onSendMessage(suggestion)
-  }
+  }, [onSendMessage])
+
+  const handleCloseMentions = useCallback(() => {
+    setShowMentions(false)
+  }, [])
 
   const handleOpenFilePicker = useCallback(() => {
     fileInputRef.current?.click()
@@ -233,10 +237,10 @@ export function AgentModePanel({
     await onAddAttachments(event.dataTransfer.files)
   }, [onAddAttachments])
 
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     onClearError?.()
     onRetry?.()
-  }
+  }, [onClearError, onRetry])
 
   const handleStartNewChat = useCallback(() => {
     onClear()
@@ -259,51 +263,92 @@ export function AgentModePanel({
     })
   }, [onOpenHistory])
 
+  const handleCloseHistory = useCallback(() => {
+    setShowHistory(false)
+  }, [])
+
+  const handleStartEditingConversation = useCallback((conversationIdValue: string, title: string) => {
+    setEditingConversationId(conversationIdValue)
+    setEditingTitle(title)
+  }, [])
+
+  const handleStopEditingConversation = useCallback(() => {
+    setEditingConversationId(null)
+  }, [])
+
   const showEmptyState = messages.length === 0 && !isConversationLoading
 
   // Check if input is disabled (rate limited or processing)
   const isInputDisabled = isProcessing || isExtractingAttachments || (typeof rateLimitCountdown === 'number' && rateLimitCountdown > 0)
 
-  const sharedComposerProps: Omit<AgentComposerSectionProps, 'layout' | 'disabled' | 'quickSuggestions' | 'onSuggestionClick'> = {
-    inputValue,
-    inputRef,
-    mentionLabels,
-    showMentions,
-    mentionQuery,
-    clients,
-    projects,
-    teams,
-    users,
-    mentionsLoading,
-    pendingAttachments,
-    isDraggingFiles,
-    isExtractingAttachments,
-    onInputChange: handleInputChange,
-    onKeyDown: handleKeyDown,
-    onOpenFilePicker: handleOpenFilePicker,
-    onCloseMentions: () => setShowMentions(false),
-    onSelectMention: handleMentionSelect,
-    onVoiceTranscript: handleVoiceTranscript,
-    onVoiceInterim: handleVoiceInterim,
-    onRemoveAttachment,
-    onSubmit: handleSubmit,
-  }
+  const sharedComposerProps = useMemo<
+    Omit<AgentComposerSectionProps, 'layout' | 'disabled' | 'quickSuggestions' | 'onSuggestionClick'>
+  >(
+    () => ({
+      inputValue,
+      inputRef,
+      mentionLabels,
+      showMentions,
+      mentionQuery,
+      clients,
+      projects,
+      teams,
+      users,
+      mentionsLoading,
+      pendingAttachments,
+      isDraggingFiles,
+      isExtractingAttachments,
+      onInputChange: handleInputChange,
+      onKeyDown: handleKeyDown,
+      onOpenFilePicker: handleOpenFilePicker,
+      onCloseMentions: handleCloseMentions,
+      onSelectMention: handleMentionSelect,
+      onVoiceTranscript: handleVoiceTranscript,
+      onVoiceInterim: handleVoiceInterim,
+      onRemoveAttachment,
+      onSubmit: handleSubmit,
+    }),
+    [
+      clients,
+      handleCloseMentions,
+      handleInputChange,
+      handleKeyDown,
+      handleMentionSelect,
+      handleOpenFilePicker,
+      handleSubmit,
+      handleVoiceInterim,
+      handleVoiceTranscript,
+      inputRef,
+      inputValue,
+      isDraggingFiles,
+      isExtractingAttachments,
+      mentionLabels,
+      mentionQuery,
+      mentionsLoading,
+      onRemoveAttachment,
+      pendingAttachments,
+      projects,
+      showMentions,
+      teams,
+      users,
+    ]
+  )
 
-  const emptyComposerProps: AgentComposerSectionProps = {
+  const emptyComposerProps = useMemo<AgentComposerSectionProps>(() => ({
     ...sharedComposerProps,
     layout: 'centered',
     disabled: isInputDisabled,
     quickSuggestions: QUICK_SUGGESTIONS,
     onSuggestionClick: handleSuggestionClick,
-  }
+  }), [handleSuggestionClick, isInputDisabled, sharedComposerProps])
 
-  const dockComposerProps: AgentComposerSectionProps = {
+  const dockComposerProps = useMemo<AgentComposerSectionProps>(() => ({
     ...sharedComposerProps,
     layout: 'dock',
     disabled: isInputDisabled || isConversationLoading,
-  }
+  }), [isConversationLoading, isInputDisabled, sharedComposerProps])
 
-  const historyPanelProps = {
+  const historyPanelProps = useMemo(() => ({
     showHistory,
     history,
     isHistoryLoading,
@@ -318,13 +363,37 @@ export function AgentModePanel({
     onUpdateConversationTitle,
     onDeleteConversation,
     onStartNewChat: handleStartNewChat,
-    onClose: () => setShowHistory(false),
-    onStartEditing: (conversationIdValue: string, title: string) => {
-      setEditingConversationId(conversationIdValue)
-      setEditingTitle(title)
-    },
-    onStopEditing: () => setEditingConversationId(null),
-  }
+    onClose: handleCloseHistory,
+    onStartEditing: handleStartEditingConversation,
+    onStopEditing: handleStopEditingConversation,
+  }), [
+    conversationId,
+    editingConversationId,
+    editingTitle,
+    handleCloseHistory,
+    handleStartEditingConversation,
+    handleStartNewChat,
+    handleStopEditingConversation,
+    history,
+    isConversationLoading,
+    isHistoryLoading,
+    loadingConversationId,
+    messages.length,
+    onDeleteConversation,
+    onSelectConversation,
+    onUpdateConversationTitle,
+    showHistory,
+  ])
+
+  const headerProps = useMemo(() => ({
+    connectionStatus,
+    conversationId,
+    messagesCount: messages.length,
+    showHistory,
+    onClose,
+    onStartNewChat: handleStartNewChat,
+    onToggleHistory: handleToggleHistory,
+  }), [connectionStatus, conversationId, handleStartNewChat, handleToggleHistory, messages.length, onClose, showHistory])
 
   return (
     <LazyMotion features={domAnimation}>
@@ -333,15 +402,7 @@ export function AgentModePanel({
           <AgentModePanelShell
             attachmentAccept={AGENT_ATTACHMENT_ACCEPT}
             fileInputRef={fileInputRef}
-            headerProps={{
-              connectionStatus,
-              conversationId,
-              messagesCount: messages.length,
-              showHistory,
-              onClose,
-              onStartNewChat: handleStartNewChat,
-              onToggleHistory: handleToggleHistory,
-            }}
+            headerProps={headerProps}
             historyPanelProps={historyPanelProps}
             onClearError={onClearError}
             onDragLeave={handleDragLeave}

@@ -3,6 +3,35 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { CreativeEditorTabs } from './creative-editor-tabs'
 
+const creative = {
+  providerId: 'google',
+  creativeId: 'creative-1',
+  campaignId: 'campaign-1',
+  name: 'Creative 1',
+  type: 'IMAGE',
+  status: 'ACTIVE',
+  headlines: ['Headline'],
+  descriptions: ['Description'],
+}
+
+const performanceSummary = {
+  totalSpend: 1234,
+  totalRevenue: 2468,
+  totalImpressions: 10000,
+  totalClicks: 420,
+  totalConversions: 24,
+  averageRoaS: 2,
+  averageCpc: 3,
+  averageCtr: 4,
+  averageConvRate: 5,
+  providerId: 'facebook',
+  period: 'current',
+  dayCount: 7,
+  ctr: 4.2,
+  roas: 2,
+  cpc: 3,
+}
+
 vi.mock('@/shared/ui/tabs', () => ({
   Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -23,16 +52,7 @@ describe('CreativeEditorTabs', () => {
     const markup = renderToStaticMarkup(
       <CreativeEditorTabs
         providerId="google"
-        creative={{
-          providerId: 'google',
-          creativeId: 'creative-1',
-          campaignId: 'campaign-1',
-          name: 'Creative 1',
-          type: 'IMAGE',
-          status: 'ACTIVE',
-          headlines: ['Headline'],
-          descriptions: ['Description'],
-        }}
+        creative={creative}
         copiedField={null}
         onCopy={vi.fn()}
         isEditing={false}
@@ -53,23 +73,7 @@ describe('CreativeEditorTabs', () => {
         metricsLoading={false}
         metricsError={null}
         currency="GBP"
-        performanceSummary={{
-          totalSpend: 1234,
-          totalRevenue: 2468,
-          totalImpressions: 10000,
-          totalClicks: 420,
-          totalConversions: 24,
-          averageRoaS: 2,
-          averageCpc: 3,
-          averageCtr: 4,
-          averageConvRate: 5,
-          providerId: 'facebook',
-          period: 'current',
-          dayCount: 7,
-          ctr: 4.2,
-          roas: 2,
-          cpc: 3,
-        }}
+        performanceSummary={performanceSummary}
         efficiencyScore={82}
         onRefreshPerformance={vi.fn()}
         algorithmicInsights={[]}

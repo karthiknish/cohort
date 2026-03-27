@@ -1,6 +1,6 @@
 'use client'
 
-import type { RefObject } from 'react'
+import { useCallback, type RefObject } from 'react'
 import { Calendar as CalendarIcon, Paperclip } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 
@@ -69,6 +69,27 @@ export function TaskCreationModalFormFields({
   onRemoveAttachment,
   onCancel,
 }: TaskCreationModalFormFieldsProps) {
+  const handleTitleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onTitleChange(event.target.value)
+  }, [onTitleChange])
+
+  const handleDescriptionChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onDescriptionChange(event.target.value)
+  }, [onDescriptionChange])
+
+  const handlePriorityChange = useCallback((value: string) => {
+    onPriorityChange(value as TaskPriority)
+  }, [onPriorityChange])
+
+  const handleOpenFileDialog = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [fileInputRef])
+
+  const handleFilesChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onAddAttachments(event.target.files)
+    event.currentTarget.value = ''
+  }, [onAddAttachments])
+
   return (
     <>
       <div className="space-y-2">
@@ -77,7 +98,7 @@ export function TaskCreationModalFormFields({
           id="title"
           placeholder="Enter task title…"
           value={title}
-          onChange={(event) => onTitleChange(event.target.value)}
+          onChange={handleTitleChange}
           required
         />
       </div>
@@ -88,7 +109,7 @@ export function TaskCreationModalFormFields({
           id="description"
           placeholder="Enter task description…"
           value={description}
-          onChange={(event) => onDescriptionChange(event.target.value)}
+          onChange={handleDescriptionChange}
           rows={3}
         />
       </div>
@@ -96,7 +117,7 @@ export function TaskCreationModalFormFields({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="priority">Priority</Label>
-          <Select value={priority} onValueChange={(value) => onPriorityChange(value as TaskPriority)}>
+          <Select value={priority} onValueChange={handlePriorityChange}>
             <SelectTrigger id="priority">
               <SelectValue placeholder="Select priority" />
             </SelectTrigger>
@@ -161,7 +182,7 @@ export function TaskCreationModalFormFields({
             size="sm"
             className="gap-2"
             disabled={isLoading}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleOpenFileDialog}
           >
             <Paperclip className="h-4 w-4" />
             Attach files
@@ -173,10 +194,7 @@ export function TaskCreationModalFormFields({
           type="file"
           multiple
           className="hidden"
-          onChange={(event) => {
-            onAddAttachments(event.target.files)
-            event.currentTarget.value = ''
-          }}
+          onChange={handleFilesChange}
         />
 
         {pendingAttachments.length > 0 ? (

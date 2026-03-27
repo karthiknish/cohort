@@ -17,7 +17,7 @@ import { Badge } from '@/shared/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useToast } from '@/shared/ui/use-toast'
 import { cn } from '@/lib/utils'
-import { TaskRecord } from '@/types/tasks'
+import type { TaskRecord } from '@/types/tasks'
 
 type TaskShareDialogProps = {
   task: TaskRecord
@@ -88,6 +88,21 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
     window.open(`mailto:?subject=${subject}&body=${body}`, '_blank')
   }, [task.title, task.description, taskUrl])
 
+  const handleEmailInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setEmailInput(event.target.value)
+  }, [])
+
+  const handleEmailInputKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      handleAddEmail()
+    }
+  }, [handleAddEmail])
+
+  const handleDone = useCallback(() => {
+    setOpen(false)
+  }, [])
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -155,19 +170,7 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
                 <Label>Shared with</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {sharedWith.map((email) => (
-                    <Badge
-                      key={email}
-                      variant="secondary"
-                      className="gap-1.5 pr-1"
-                    >
-                      {email}
-                      <button
-                        onClick={() => handleRemoveEmail(email)}
-                        className="ml-1 rounded-full hover:bg-destructive/20 p-0.5"
-                      >
-                        ×
-                      </button>
-                    </Badge>
+                    <SharedEmailBadge key={email} email={email} onRemove={handleRemoveEmail} />
                   ))}
                 </div>
               </div>
@@ -182,13 +185,8 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
                   type="email"
                   placeholder="colleague@example.com"
                   value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      handleAddEmail()
-                    }
-                  }}
+                  onChange={handleEmailInputChange}
+                  onKeyDown={handleEmailInputKeyDown}
                 />
                 <Button
                   onClick={handleAddEmail}
@@ -219,7 +217,7 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
         </Tabs>
 
         <div className="flex justify-end pt-4 border-t">
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={handleDone}>
             Done
           </Button>
         </div>
@@ -232,5 +230,26 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
 export function QuickShareButton({ task, onShareUpdate }: { task: TaskRecord, onShareUpdate?: (sharedWith: string[]) => void }) {
   return (
     <TaskShareDialog task={task} onShareUpdate={onShareUpdate} />
+  )
+}
+
+function SharedEmailBadge({
+  email,
+  onRemove,
+}: {
+  email: string
+  onRemove: (email: string) => void
+}) {
+  const handleRemove = useCallback(() => {
+    onRemove(email)
+  }, [email, onRemove])
+
+  return (
+    <Badge variant="secondary" className="gap-1.5 pr-1">
+      {email}
+      <button type="button" onClick={handleRemove} className="ml-1 rounded-full hover:bg-destructive/20 p-0.5">
+        ×
+      </button>
+    </Badge>
   )
 }

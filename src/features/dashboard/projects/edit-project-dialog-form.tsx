@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import type { Dispatch, KeyboardEvent } from 'react'
 import { format } from 'date-fns'
 import { Calendar as CalendarIcon, Plus, Tag, X } from 'lucide-react'
@@ -26,6 +27,8 @@ import { cn } from '@/lib/utils'
 import { PROJECT_STATUSES, type ProjectStatus } from '@/types/projects'
 
 import type { EditProjectAction } from './edit-project-dialog'
+
+const MINIMUM_PROJECT_DATE = new Date('1900-01-01')
 
 type EditProjectFormFieldsProps = {
   loading: boolean
@@ -94,6 +97,34 @@ function ProjectDateField({
   )
 }
 
+function ProjectTagBadge({
+  loading,
+  onRemove,
+  tag,
+}: {
+  loading: boolean
+  onRemove: (tag: string) => void
+  tag: string
+}) {
+  const handleRemove = useCallback(() => onRemove(tag), [onRemove, tag])
+
+  return (
+    <Badge variant="secondary" className="gap-1 pr-1">
+      <Tag className="h-3 w-3" />
+      {tag}
+      <button
+        type="button"
+        onClick={handleRemove}
+        className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20"
+        disabled={loading}
+        aria-label={`Remove tag ${tag}`}
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </Badge>
+  )
+}
+
 export function EditProjectFormFields({
   loading,
   name,
@@ -112,6 +143,69 @@ export function EditProjectFormFields({
   onTagKeyDown,
   formatStatusLabel,
 }: EditProjectFormFieldsProps) {
+  const handleNameChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      onDispatch({ type: 'setName', value: event.target.value })
+    },
+    [onDispatch]
+  )
+
+  const handleDescriptionChange = useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      onDispatch({ type: 'setDescription', value: event.target.value })
+    },
+    [onDispatch]
+  )
+
+  const handleStatusChange = useCallback(
+    (value: ProjectStatus) => {
+      onDispatch({ type: 'setStatus', value })
+    },
+    [onDispatch]
+  )
+
+  const handleClientChange = useCallback(
+    (value: string) => {
+      onDispatch({ type: 'setClientId', value })
+    },
+    [onDispatch]
+  )
+
+  const handleStartDateSelect = useCallback(
+    (value: Date | undefined) => {
+      onDispatch({ type: 'setStartDate', value })
+    },
+    [onDispatch]
+  )
+
+  const handleEndDateSelect = useCallback(
+    (value: Date | undefined) => {
+      onDispatch({ type: 'setEndDate', value })
+    },
+    [onDispatch]
+  )
+
+  const handleTagInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      onDispatch({ type: 'setTagInput', value: event.target.value })
+    },
+    [onDispatch]
+  )
+
+  const handleAddTagClick = useCallback(() => {
+    onAddTag()
+  }, [onAddTag])
+
+  const handleStartDateDisabled = useCallback(
+    (date: Date) => date < MINIMUM_PROJECT_DATE,
+    []
+  )
+
+  const handleEndDateDisabled = useCallback(
+    (date: Date) => (startDate ? date < startDate : false) || date < MINIMUM_PROJECT_DATE,
+    [startDate]
+  )
+
   return (
     <div className="mt-6 space-y-4">
       <div className="space-y-2">
@@ -122,7 +216,7 @@ export function EditProjectFormFields({
           id="edit-project-name"
           placeholder="e.g., Q1 Marketing Campaign"
           value={name}
-          onChange={(event) => onDispatch({ type: 'setName', value: event.target.value })}
+          onChange={handleNameChange}
           disabled={loading}
           aria-invalid={!!validationErrors.name}
           aria-describedby={validationErrors.name ? 'name-error' : undefined}
@@ -141,7 +235,7 @@ export function EditProjectFormFields({
           id="edit-project-description"
           placeholder="Brief overview of the project goals and scope…"
           value={description}
-          onChange={(event) => onDispatch({ type: 'setDescription', value: event.target.value })}
+          onChange={handleDescriptionChange}
           disabled={loading}
           rows={3}
           aria-invalid={!!validationErrors.description}
@@ -156,7 +250,7 @@ export function EditProjectFormFields({
           <Label htmlFor="edit-project-status">Status</Label>
           <Select
             value={status}
-            onValueChange={(value: ProjectStatus) => onDispatch({ type: 'setStatus', value })}
+            onValueChange={handleStatusChange}
             disabled={loading}
           >
             <SelectTrigger id="edit-project-status">
@@ -176,7 +270,7 @@ export function EditProjectFormFields({
           <Label htmlFor="edit-project-client">Client / Workspace</Label>
           <Select
             value={clientId}
-            onValueChange={(value) => onDispatch({ type: 'setClientId', value })}
+            onValueChange={handleClientChange}
             disabled={loading}
           >
             <SelectTrigger id="edit-project-client">
@@ -198,20 +292,18 @@ export function EditProjectFormFields({
         <ProjectDateField
           disabled={loading}
           label="Start date"
-          onSelect={(value) => onDispatch({ type: 'setStartDate', value })}
+          onSelect={handleStartDateSelect}
           selected={startDate}
-          disabledDate={(date) => date < new Date('1900-01-01')}
+          disabledDate={handleStartDateDisabled}
         />
 
         <ProjectDateField
           disabled={loading}
           label="End date"
-          onSelect={(value) => onDispatch({ type: 'setEndDate', value })}
+          onSelect={handleEndDateSelect}
           selected={endDate}
           validationError={validationErrors.endDate}
-          disabledDate={(date) =>
-            (startDate ? date < startDate : false) || date < new Date('1900-01-01')
-          }
+          disabledDate={handleEndDateDisabled}
         />
       </div>
 
@@ -222,7 +314,7 @@ export function EditProjectFormFields({
             id="edit-project-tags"
             placeholder="Add a tag…"
             value={tagInput}
-            onChange={(event) => onDispatch({ type: 'setTagInput', value: event.target.value })}
+            onChange={handleTagInputChange}
             onKeyDown={onTagKeyDown}
             disabled={loading || tags.length >= 10}
           />
@@ -230,7 +322,7 @@ export function EditProjectFormFields({
             type="button"
             variant="outline"
             size="icon"
-            onClick={onAddTag}
+            onClick={handleAddTagClick}
             disabled={loading || !tagInput.trim() || tags.length >= 10}
             aria-label="Add tag"
           >
@@ -240,19 +332,7 @@ export function EditProjectFormFields({
         {tags.length > 0 ? (
           <div className="flex flex-wrap gap-1.5 pt-2">
             {tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="gap-1 pr-1">
-                <Tag className="h-3 w-3" />
-                {tag}
-                <button
-                  type="button"
-                  onClick={() => onRemoveTag(tag)}
-                  className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20"
-                  disabled={loading}
-                  aria-label={`Remove tag ${tag}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
+              <ProjectTagBadge key={tag} loading={loading} onRemove={onRemoveTag} tag={tag} />
             ))}
           </div>
         ) : null}

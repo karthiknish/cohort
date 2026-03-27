@@ -18,6 +18,26 @@ import { TaskCommentsPanel } from './task-comments'
 import { TaskSheetAttachmentsSection, TaskSheetFields } from './task-form-sheet-sections'
 import { teamMembersToMentionable, type TaskFormState, type TaskParticipant } from './task-types'
 
+const EDIT_TASK_FIELD_IDS = {
+  title: 'edit-task-title',
+  description: 'edit-task-description',
+  status: 'edit-task-status',
+  priority: 'edit-task-priority',
+  client: 'edit-task-client',
+  project: 'edit-task-project',
+  dueDate: 'edit-task-due-date',
+}
+
+const CREATE_TASK_FIELD_IDS = {
+  title: 'task-title',
+  description: 'task-description',
+  status: 'task-status',
+  priority: 'task-priority',
+  client: 'task-client',
+  project: 'task-project',
+  dueDate: 'task-due-date',
+}
+
 export type CreateTaskSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -59,15 +79,7 @@ export function CreateTaskSheet({
           </SheetHeader>
           <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
             <TaskSheetFields
-              ids={{
-                title: 'task-title',
-                description: 'task-description',
-                status: 'task-status',
-                priority: 'task-priority',
-                client: 'task-client',
-                project: 'task-project',
-                dueDate: 'task-due-date',
-              }}
+              ids={CREATE_TASK_FIELD_IDS}
               formState={formState}
               setFormState={setFormState}
               disabled={creating}
@@ -146,15 +158,7 @@ export function EditTaskSheet({
           </SheetHeader>
           <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
             <TaskSheetFields
-              ids={{
-                title: 'edit-task-title',
-                description: 'edit-task-description',
-                status: 'edit-task-status',
-                priority: 'edit-task-priority',
-                client: 'edit-task-client',
-                project: 'edit-task-project',
-                dueDate: 'edit-task-due-date',
-              }}
+              ids={EDIT_TASK_FIELD_IDS}
               formState={formState}
               setFormState={setFormState}
               disabled={updating}

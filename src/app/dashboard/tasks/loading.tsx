@@ -4,6 +4,8 @@ import { Skeleton } from '@/shared/ui/skeleton'
  * Tasks page loading skeleton for streaming SSR.
  */
 export default function TasksLoading() {
+  const taskCardSlots = ['task-1', 'task-2', 'task-3']
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -35,8 +37,8 @@ export default function TasksLoading() {
               <Skeleton className="h-5 w-6" />
             </div>
             <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="rounded-lg border bg-background p-3 space-y-2">
+              {taskCardSlots.map((slot) => (
+                <div key={slot} className="space-y-2 rounded-lg border bg-background p-3">
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-3 w-3/4" />
                   <div className="flex items-center justify-between pt-2">

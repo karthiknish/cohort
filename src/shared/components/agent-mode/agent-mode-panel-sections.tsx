@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  useCallback,
   useMemo,
   type ChangeEvent,
   type ComponentProps,
@@ -43,6 +44,20 @@ import { MentionDropdown, type MentionItem } from './mention-dropdown'
 import { splitAgentTextWithMentions } from './mention-highlights'
 
 type MentionDropdownProps = ComponentProps<typeof MentionDropdown>
+
+const MOTION_FADE_SLIDE_UP = { opacity: 0, y: -10 } as const
+const MOTION_VISIBLE = { opacity: 1, y: 0 } as const
+const MOTION_FADE_SLIDE_UP_EXIT = { opacity: 0, y: -10 } as const
+const MOTION_FADE_IN = { opacity: 0 } as const
+const MOTION_FADE_IN_VISIBLE = { opacity: 1 } as const
+const MOTION_FADE_STILL = { opacity: 0, y: 0 } as const
+const MOTION_FADE_STILL_VISIBLE = { opacity: 1, y: 0 } as const
+const MOTION_FADE_STILL_EXIT = { opacity: 0, y: 0 } as const
+const MOTION_PANEL_TRANSITION = { duration: motionDurationSeconds.fast, ease: motionEasing.out } as const
+
+function stopPropagation(event: { stopPropagation: () => void }) {
+  event.stopPropagation()
+}
 
 function HistorySkeleton() {
   return (
@@ -105,6 +120,54 @@ function AttachmentDropzone({
   )
 }
 
+function AttachmentItem({
+  attachment,
+  onRemoveAttachment,
+}: {
+  attachment: AgentAttachmentContext
+  onRemoveAttachment: (attachmentId: string) => void
+}) {
+  const handleRemove = useCallback(() => {
+    onRemoveAttachment(attachment.id)
+  }, [onRemoveAttachment, attachment.id])
+
+  return (
+    <div key={attachment.id} className="rounded-2xl border bg-card/70 px-3 py-3 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="rounded-xl bg-primary/10 p-2 text-primary">
+            <FileText className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="truncate text-sm font-medium">{attachment.name}</p>
+              <AttachmentStatusBadge attachment={attachment} />
+              <span className="text-xs text-muted-foreground">{attachment.sizeLabel}</span>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">{attachment.excerpt}</p>
+            {attachment.errorMessage ? (
+              <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-warning">
+                <AlertCircle className="h-3.5 w-3.5" />
+                <span>{attachment.errorMessage}</span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-full"
+          onClick={handleRemove}
+          aria-label={`Remove ${attachment.name}`}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 function AttachmentList({
   attachments,
   onRemoveAttachment,
@@ -117,39 +180,7 @@ function AttachmentList({
   return (
     <div className="mb-3 space-y-2">
       {attachments.map((attachment) => (
-        <div key={attachment.id} className="rounded-2xl border bg-card/70 px-3 py-3 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                <FileText className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate text-sm font-medium">{attachment.name}</p>
-                  <AttachmentStatusBadge attachment={attachment} />
-                  <span className="text-xs text-muted-foreground">{attachment.sizeLabel}</span>
-                </div>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">{attachment.excerpt}</p>
-                {attachment.errorMessage ? (
-                  <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-warning">
-                    <AlertCircle className="h-3.5 w-3.5" />
-                    <span>{attachment.errorMessage}</span>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full"
-              onClick={() => onRemoveAttachment(attachment.id)}
-              aria-label={`Remove ${attachment.name}`}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <AttachmentItem key={attachment.id} attachment={attachment} onRemoveAttachment={onRemoveAttachment} />
       ))}
     </div>
   )
@@ -160,9 +191,9 @@ function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
 
   return (
     <m.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
+      initial={MOTION_FADE_SLIDE_UP}
+      animate={MOTION_VISIBLE}
+      exit={MOTION_FADE_SLIDE_UP_EXIT}
       className={cn(
         'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium',
         status === 'retrying' && 'bg-warning/10 text-warning',
@@ -187,9 +218,9 @@ function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
 export function RateLimitBanner({ countdown, onDismiss }: { countdown: number; onDismiss?: () => void }) {
   return (
     <m.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
+      initial={MOTION_FADE_SLIDE_UP}
+      animate={MOTION_VISIBLE}
+      exit={MOTION_FADE_SLIDE_UP_EXIT}
     className="flex items-center justify-between gap-3 border border-warning/20 bg-warning/10 px-4 py-2.5 text-sm"
   >
       <div className="flex items-center gap-2 text-warning">
@@ -291,6 +322,31 @@ export type AgentComposerSectionProps = {
 
 const EMPTY_QUICK_SUGGESTIONS: string[] = []
 
+function SuggestionButton({
+  suggestion,
+  disabled,
+  onSuggestionClick,
+}: {
+  suggestion: string
+  disabled: boolean
+  onSuggestionClick: (suggestion: string) => void
+}) {
+  const handleClick = useCallback(() => {
+    onSuggestionClick(suggestion)
+  }, [onSuggestionClick, suggestion])
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={disabled}
+      className="rounded-full bg-muted/50 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50"
+    >
+      {suggestion}
+    </button>
+  )
+}
+
 export function AgentComposerSection({
   layout,
   inputValue,
@@ -387,15 +443,12 @@ export function AgentComposerSection({
       {isCentered && quickSuggestions.length > 0 && onSuggestionClick ? (
         <div className="mt-3 flex flex-wrap justify-center gap-2">
           {quickSuggestions.map((suggestion) => (
-            <button
-              type="button"
+            <SuggestionButton
               key={suggestion}
-              onClick={() => onSuggestionClick(suggestion)}
+              suggestion={suggestion}
               disabled={disabled}
-              className="rounded-full bg-muted/50 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50"
-            >
-              {suggestion}
-            </button>
+              onSuggestionClick={onSuggestionClick}
+            />
           ))}
         </div>
       ) : null}
@@ -451,6 +504,152 @@ export function AgentModeHeader({
         <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 rounded-full" aria-label="Close Agent Mode">
           <X className="h-4 w-4" />
         </Button>
+      </div>
+    </div>
+  )
+}
+
+function ConversationItem({
+  conversation,
+  conversationId,
+  isConversationLoading,
+  loadingConversationId,
+  editingConversationId,
+  editingTitle,
+  setEditingTitle,
+  onSelectConversation,
+  onUpdateConversationTitle,
+  onDeleteConversation,
+  onClose,
+  onStartEditing,
+  onStopEditing,
+}: {
+  conversation: AgentConversationSummary
+  conversationId: string | null
+  isConversationLoading: boolean
+  loadingConversationId: string | null
+  editingConversationId: string | null
+  editingTitle: string
+  setEditingTitle: (value: string) => void
+  onSelectConversation: (conversationId: string) => void
+  onUpdateConversationTitle: (conversationId: string, title: string) => void
+  onDeleteConversation: (conversationId: string) => void
+  onClose: () => void
+  onStartEditing: (conversationId: string, title: string) => void
+  onStopEditing: () => void
+}) {
+  const handleChangeTitle = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => setEditingTitle(event.target.value),
+    [setEditingTitle],
+  )
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        onUpdateConversationTitle(conversation.id, editingTitle)
+        onStopEditing()
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onStopEditing()
+      }
+    },
+    [conversation.id, editingTitle, onUpdateConversationTitle, onStopEditing],
+  )
+
+  const handleSelect = useCallback(() => {
+    if (isConversationLoading) return
+    onSelectConversation(conversation.id)
+    onClose()
+  }, [isConversationLoading, onSelectConversation, conversation.id, onClose])
+
+  const handleSaveTitle = useCallback(() => {
+    onUpdateConversationTitle(conversation.id, editingTitle)
+    onStopEditing()
+  }, [onUpdateConversationTitle, conversation.id, editingTitle, onStopEditing])
+
+  const handleStartEditing = useCallback(() => {
+    onStartEditing(conversation.id, conversation.title || '')
+  }, [onStartEditing, conversation.id, conversation.title])
+
+  const handleDelete = useCallback(() => {
+    onDeleteConversation(conversation.id)
+  }, [onDeleteConversation, conversation.id])
+
+  return (
+    <div
+      className={cn(
+        'w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted',
+        conversation.id === conversationId && 'bg-muted',
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          {editingConversationId === conversation.id ? (
+            <Input
+              value={editingTitle}
+              onChange={handleChangeTitle}
+              onKeyDown={handleKeyDown}
+              className="h-8"
+              placeholder="Chat title"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={handleSelect}
+              className="w-full min-w-0 text-left disabled:cursor-wait"
+              disabled={isConversationLoading}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate font-medium">{conversation.title || 'Chat'}</span>
+                {isConversationLoading && conversation.id === loadingConversationId ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                ) : conversation.lastMessageAt ? (
+                  <span className="shrink-0 text-xs text-muted-foreground">{new Date(conversation.lastMessageAt).toLocaleString()}</span>
+                ) : null}
+              </div>
+            </button>
+          )}
+
+          {typeof conversation.messageCount === 'number' ? (
+            <div className="mt-0.5 text-xs text-muted-foreground">{conversation.messageCount} messages</div>
+          ) : null}
+        </div>
+
+        <div className="flex items-center gap-1">
+          {editingConversationId === conversation.id ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleSaveTitle}
+              aria-label="Save title"
+            >
+              <Check className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleStartEditing}
+              aria-label="Edit title"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={handleDelete}
+            aria-label="Delete chat"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -517,98 +716,22 @@ export function AgentHistoryPanel({
         ) : (
           <div className="p-2">
             {history.map((conversation) => (
-              <div
+              <ConversationItem
                 key={conversation.id}
-                className={cn(
-                  'w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted',
-                  conversation.id === conversationId && 'bg-muted',
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    {editingConversationId === conversation.id ? (
-                      <Input
-                        value={editingTitle}
-                        onChange={(event) => setEditingTitle(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') {
-                            event.preventDefault()
-                            onUpdateConversationTitle(conversation.id, editingTitle)
-                            onStopEditing()
-                          }
-                          if (event.key === 'Escape') {
-                            event.preventDefault()
-                            onStopEditing()
-                          }
-                        }}
-                        className="h-8"
-                        placeholder="Chat title"
-                      />
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isConversationLoading) return
-                          onSelectConversation(conversation.id)
-                          onClose()
-                        }}
-                        className="w-full min-w-0 text-left disabled:cursor-wait"
-                        disabled={isConversationLoading}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="truncate font-medium">{conversation.title || 'Chat'}</span>
-                          {isConversationLoading && conversation.id === loadingConversationId ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                          ) : conversation.lastMessageAt ? (
-                            <span className="shrink-0 text-xs text-muted-foreground">{new Date(conversation.lastMessageAt).toLocaleString()}</span>
-                          ) : null}
-                        </div>
-                      </button>
-                    )}
-
-                    {typeof conversation.messageCount === 'number' ? (
-                      <div className="mt-0.5 text-xs text-muted-foreground">{conversation.messageCount} messages</div>
-                    ) : null}
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    {editingConversationId === conversation.id ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                          onUpdateConversationTitle(conversation.id, editingTitle)
-                          onStopEditing()
-                        }}
-                        aria-label="Save title"
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => onStartEditing(conversation.id, conversation.title || '')}
-                        aria-label="Edit title"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    )}
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => onDeleteConversation(conversation.id)}
-                      aria-label="Delete chat"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+                conversation={conversation}
+                conversationId={conversationId}
+                isConversationLoading={isConversationLoading}
+                loadingConversationId={loadingConversationId}
+                editingConversationId={editingConversationId}
+                editingTitle={editingTitle}
+                setEditingTitle={setEditingTitle}
+                onSelectConversation={onSelectConversation}
+                onUpdateConversationTitle={onUpdateConversationTitle}
+                onDeleteConversation={onDeleteConversation}
+                onClose={onClose}
+                onStartEditing={onStartEditing}
+                onStopEditing={onStopEditing}
+              />
             ))}
           </div>
         )}
@@ -651,7 +774,7 @@ export function AgentMessagesSection({
   scrollAreaRef: RefObject<HTMLDivElement | null>
 }) {
   return (
-    <div className="flex-1 overflow-y-auto p-4" ref={scrollAreaRef} onWheel={(event) => event.stopPropagation()}>
+    <div className="flex-1 overflow-y-auto p-4" ref={scrollAreaRef} onWheel={stopPropagation}>
       {isConversationLoading ? (
         <div className="flex h-full min-h-[240px] items-center justify-center">
           <div className="flex items-center gap-3 rounded-2xl border bg-background px-4 py-3 text-sm text-muted-foreground shadow-sm">
@@ -666,7 +789,7 @@ export function AgentMessagesSection({
           ))}
 
           {isProcessing ? (
-            <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
+            <m.div initial={MOTION_FADE_IN} animate={MOTION_FADE_IN_VISIBLE} className="flex justify-start">
               <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2.5 text-sm">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span className="text-foreground">Thinking...</span>
@@ -729,14 +852,14 @@ export function AgentModePanelShell({
 }) {
   return (
     <m.div
-      initial={{ opacity: 0, y: 0 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 0 }}
-      transition={{ duration: motionDurationSeconds.fast, ease: motionEasing.out }}
+      initial={MOTION_FADE_STILL}
+      animate={MOTION_FADE_STILL_VISIBLE}
+      exit={MOTION_FADE_STILL_EXIT}
+      transition={MOTION_PANEL_TRANSITION}
       className="fixed inset-0 z-[9999] flex h-screen flex-col bg-background"
-      onWheel={(event) => event.stopPropagation()}
-      onTouchMove={(event) => event.stopPropagation()}
-      onScroll={(event) => event.stopPropagation()}
+      onWheel={stopPropagation}
+      onTouchMove={stopPropagation}
+      onScroll={stopPropagation}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}

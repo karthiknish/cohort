@@ -16,7 +16,7 @@ import { Label } from '@/shared/ui/label'
 import { Textarea } from '@/shared/ui/textarea'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { cn } from '@/lib/utils'
-import { TimeEntry } from '@/types/tasks'
+import type { TimeEntry } from '@/types/tasks'
 
 type TaskTimeTrackingProps = {
   taskId: string
@@ -92,6 +92,25 @@ export function TaskTimeTracking({
     onStopTracking?.()
   }, [onStopTracking])
 
+  const handleAddTimeSubmit = useCallback(
+    (minutes: number, note: string) => {
+      onAddTime?.(minutes, note)
+      setOpen(false)
+    },
+    [onAddTime]
+  )
+
+  const handleAddTimeCancel = useCallback(() => {
+    setOpen(false)
+  }, [])
+
+  const handleDeleteEntry = useCallback(
+    (entryId: string) => {
+      onDeleteEntry?.(entryId)
+    },
+    [onDeleteEntry]
+  )
+
   return (
     <div className="space-y-3">
       {/* Summary */}
@@ -151,11 +170,8 @@ export function TaskTimeTracking({
               </DialogDescription>
             </DialogHeader>
             <ManualTimeEntry
-              onSubmit={(minutes, note) => {
-                onAddTime(minutes, note)
-                setOpen(false)
-              }}
-              onCancel={() => setOpen(false)}
+              onSubmit={handleAddTimeSubmit}
+              onCancel={handleAddTimeCancel}
             />
           </DialogContent>
         </Dialog>
@@ -198,14 +214,7 @@ export function TaskTimeTracking({
                     </span>
                   </div>
                   {!readonly && onDeleteEntry && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteEntry(entry.id)}
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                    >
-                      ×
-                    </Button>
+                    <TimeEntryDeleteButton entryId={entry.id} onDeleteEntry={handleDeleteEntry} />
                   )}
                 </div>
               ))}
@@ -214,6 +223,29 @@ export function TaskTimeTracking({
         </div>
       )}
     </div>
+  )
+}
+
+function TimeEntryDeleteButton({
+  entryId,
+  onDeleteEntry,
+}: {
+  entryId: string
+  onDeleteEntry: (entryId: string) => void
+}) {
+  const handleClick = useCallback(() => {
+    onDeleteEntry(entryId)
+  }, [entryId, onDeleteEntry])
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={handleClick}
+      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+    >
+      ×
+    </Button>
   )
 }
 
@@ -228,13 +260,25 @@ function ManualTimeEntry({
   const [minutes, setMinutes] = useState('0')
   const [note, setNote] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
     const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0)
     if (totalMinutes > 0) {
       onSubmit(totalMinutes, note)
     }
-  }
+  }, [hours, minutes, note, onSubmit])
+
+  const handleHoursChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setHours(event.target.value)
+  }, [])
+
+  const handleMinutesChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setMinutes(event.target.value)
+  }, [])
+
+  const handleNoteChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNote(event.target.value)
+  }, [])
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -246,7 +290,7 @@ function ManualTimeEntry({
             type="number"
             min="0"
             value={hours}
-            onChange={(e) => setHours(e.target.value)}
+            onChange={handleHoursChange}
             className="text-center"
           />
         </div>
@@ -258,7 +302,7 @@ function ManualTimeEntry({
             min="0"
             max="59"
             value={minutes}
-            onChange={(e) => setMinutes(e.target.value)}
+            onChange={handleMinutesChange}
             className="text-center"
           />
         </div>
@@ -269,7 +313,7 @@ function ManualTimeEntry({
           id="note"
           placeholder="What did you work on?"
           value={note}
-          onChange={(e) => setNote(e.target.value)}
+          onChange={handleNoteChange}
           rows={2}
         />
       </div>

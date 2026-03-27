@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 /**
  * Simple in-memory rate limiter using token bucket algorithm.

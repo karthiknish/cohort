@@ -70,6 +70,8 @@ const DeleteTaskDialog = dynamic(
   { ssr: false }
 )
 
+const TASKS_PAGE_FALLBACK = <TasksPageFallback />
+
 type TasksPageClientProps = {
   initialProjectId?: string | null
   initialProjectName?: string | null
@@ -88,7 +90,7 @@ export default function TasksPageClient({
   initialSearchParamsString = '',
 }: TasksPageClientProps) {
   return (
-    <Suspense fallback={<TasksPageFallback />}>
+    <Suspense fallback={TASKS_PAGE_FALLBACK}>
       <TasksPageContent
         initialAction={initialAction}
         initialClientId={initialClientId}
@@ -314,8 +316,12 @@ function TasksPageContent({
     exportToCsv(data, `tasks-export-${new Date().toISOString().split('T')[0]}.csv`)
   }, [filters.filteredTasks])
 
+  const handleNewTaskClick = useCallback(() => {
+    form.handleCreateOpenChange(true)
+  }, [form])
+
   // Delete confirmation handler
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = useCallback(async () => {
     if (!form.deletingTask) return
 
     form.setDeleting(true)
@@ -325,7 +331,19 @@ function TasksPageContent({
     if (success) {
       form.handleDeleteClose()
     }
-  }
+  }, [form, handleDeleteTask])
+
+  const handleEditDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      form.handleEditClose()
+    }
+  }, [form])
+
+  const handleDeleteDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      form.handleDeleteClose()
+    }
+  }, [form])
 
   const visibleTasks = filters.sortedTasks
 
@@ -454,7 +472,7 @@ function TasksPageContent({
           loading={loading}
           retryCount={retryCount}
           onRefresh={handleRefresh}
-          onNewTaskClick={() => form.handleCreateOpenChange(true)}
+          onNewTaskClick={handleNewTaskClick}
           scopeLabel={scopeLabel}
           scopeHelper={scopeHelper}
         />
@@ -638,7 +656,7 @@ function TasksPageContent({
         {/* Edit Task Sheet */}
         <EditTaskSheet
           open={form.isEditOpen}
-          onOpenChange={(open) => !open && form.handleEditClose()}
+          onOpenChange={handleEditDialogOpenChange}
           taskId={form.editingTask?.id ?? null}
           formState={form.editFormState}
           setFormState={form.setEditFormState}
@@ -655,7 +673,7 @@ function TasksPageContent({
         {/* Delete Confirmation Dialog */}
         <DeleteTaskDialog
           open={form.isDeleteDialogOpen}
-          onOpenChange={(open) => !open && form.handleDeleteClose()}
+          onOpenChange={handleDeleteDialogOpenChange}
           task={form.deletingTask}
           deleting={form.deleting}
           onConfirm={handleConfirmDelete}

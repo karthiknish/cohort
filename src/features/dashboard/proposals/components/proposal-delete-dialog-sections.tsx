@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { Button } from '@/shared/ui/button'
 import {
   DialogContent,
@@ -20,6 +21,10 @@ export function ProposalDeleteDialogContent({
   onOpenChange: (open: boolean) => void
   proposalName: string | null
 }) {
+  const handleCancel = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
+
   return (
     <DialogContent>
       <DialogHeader>
@@ -29,7 +34,7 @@ export function ProposalDeleteDialogContent({
         </DialogDescription>
       </DialogHeader>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isDeleting}>
+        <Button type="button" variant="outline" onClick={handleCancel} disabled={isDeleting}>
           Cancel
         </Button>
         <Button type="button" variant="destructive" onClick={onConfirm} disabled={isDeleting}>

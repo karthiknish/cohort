@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useReducer, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Lock, ArrowLeft, Shield, Check, X, LoaderCircle, CircleCheck } from 'lucide-react'
@@ -91,13 +91,61 @@ type ResetPasswordPageClientProps = {
   oobCode?: string | null
 }
 
+type VerificationStatus = 'loading' | 'ready' | 'success' | 'error'
+
+type VerificationState = {
+  status: VerificationStatus
+  email: string | null
+  verificationError: string | null
+}
+
+type VerificationAction =
+  | { type: 'missing-token' }
+  | { type: 'verified'; email: string }
+  | { type: 'failed'; error: string }
+  | { type: 'success' }
+
+const initialVerificationState: VerificationState = {
+  status: 'loading',
+  email: null,
+  verificationError: null,
+}
+
+function verificationReducer(state: VerificationState, action: VerificationAction): VerificationState {
+  switch (action.type) {
+    case 'missing-token':
+      return {
+        status: 'error',
+        email: null,
+        verificationError: 'Missing reset token. Please request a new password reset email.',
+      }
+    case 'verified':
+      return {
+        status: 'ready',
+        email: action.email,
+        verificationError: null,
+      }
+    case 'failed':
+      return {
+        status: 'error',
+        email: null,
+        verificationError: action.error,
+      }
+    case 'success':
+      return {
+        ...state,
+        status: 'success',
+      }
+    default:
+      return state
+  }
+}
+
 function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
   const router = useRouter()
   const { toast } = useToast()
   const { verifyPasswordResetCode, confirmPasswordReset } = useAuth()
-  const [status, setStatus] = useState<'loading' | 'ready' | 'success' | 'error'>('loading')
-  const [email, setEmail] = useState<string | null>(null)
-  const [verificationError, setVerificationError] = useState<string | null>(null)
+  const [verificationState, dispatchVerification] = useReducer(verificationReducer, initialVerificationState)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -106,35 +154,15 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
   const [submitting, setSubmitting] = useState(false)
 
   // Calculate password strength
-  const passwordStrength = useMemo(
-    () => calculatePasswordStrength(newPassword),
-    [newPassword]
-  )
+  const passwordStrength = calculatePasswordStrength(newPassword)
 
   // Check if passwords match
-  const passwordsMatch = useMemo(
-    () => newPassword === confirmPassword,
-    [newPassword, confirmPassword]
-  )
+  const passwordsMatch = newPassword === confirmPassword
 
   useEffect(() => {
-    const frames: number[] = []
-    const enqueue = (fn: () => void) => {
-      const frame = requestAnimationFrame(fn)
-      frames.push(frame)
-    }
-
     if (!oobCode) {
-      enqueue(() => {
-        setVerificationError('Missing reset token. Please request a new password reset email.')
-        setStatus('error')
-      })
-
-      return () => {
-        frames.forEach((frame) => {
-          cancelAnimationFrame(frame)
-        })
-      }
+      dispatchVerification({ type: 'missing-token' })
+      return
     }
 
     let active = true
@@ -142,67 +170,82 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
     verifyPasswordResetCode(oobCode)
       .then((verifiedEmail) => {
         if (!active) return
-        enqueue(() => {
-          setEmail(verifiedEmail)
-          setStatus('ready')
-        })
+        dispatchVerification({ type: 'verified', email: verifiedEmail })
       })
       .catch((error: unknown) => {
         if (!active) return
-        enqueue(() => {
-          setVerificationError(getFriendlyAuthErrorMessage(error))
-          setStatus('error')
+        dispatchVerification({
+          type: 'failed',
+          error: getFriendlyAuthErrorMessage(error),
         })
       })
 
     return () => {
       active = false
-      frames.forEach((frame) => {
-        cancelAnimationFrame(frame)
-      })
     }
   }, [oobCode, verifyPasswordResetCode])
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    if (!oobCode || submitting) {
-      return
-    }
-
-    // Validate password strength
-    if (passwordStrength.score < 2) {
-      setFormError('Please create a stronger password with at least 8 characters.')
-      return
-    }
-
-    if (newPassword !== confirmPassword) {
-      setFormError('Passwords do not match.')
-      return
-    }
-
-    setSubmitting(true)
-    setFormError(null)
-
-    void confirmPasswordReset(oobCode, newPassword)
-      .then(() => {
-        setStatus('success')
-        toast({
-          title: 'Password updated',
-          description: 'You can now sign in with your new password.',
-        })
-      })
-      .catch((error: unknown) => {
-        setFormError(getFriendlyAuthErrorMessage(error))
-      })
-      .finally(() => {
-        setSubmitting(false)
-      })
-  }
-
-  const handleReturnToSignIn = () => {
+  const handleReturnToSignIn = useCallback(() => {
     router.push('/')
-  }
+  }, [router])
+
+  const handleNewPasswordChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setNewPassword(event.target.value)
+  }, [])
+
+  const handleConfirmPasswordChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setConfirmPassword(event.target.value)
+  }, [])
+
+  const handleToggleShowPassword = useCallback(() => {
+    setShowPassword((prev) => !prev)
+  }, [])
+
+  const handleToggleShowConfirmPassword = useCallback(() => {
+    setShowConfirmPassword((prev) => !prev)
+  }, [])
+
+  const handleSubmit = useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+
+      if (!oobCode || submitting) {
+        return
+      }
+
+      // Validate password strength
+      if (passwordStrength.score < 2) {
+        setFormError('Please create a stronger password with at least 8 characters.')
+        return
+      }
+
+      if (newPassword !== confirmPassword) {
+        setFormError('Passwords do not match.')
+        return
+      }
+
+      setSubmitting(true)
+      setFormError(null)
+
+      void confirmPasswordReset(oobCode, newPassword)
+        .then(() => {
+          dispatchVerification({ type: 'success' })
+          toast({
+            title: 'Password updated',
+            description: 'You can now sign in with your new password.',
+          })
+        })
+        .catch((error: unknown) => {
+          setFormError(getFriendlyAuthErrorMessage(error))
+        })
+        .finally(() => {
+          setSubmitting(false)
+        })
+    },
+    [confirmPassword, confirmPasswordReset, newPassword, oobCode, passwordStrength.score, submitting, toast],
+  )
+
+  const { status, email, verificationError } = verificationState
 
   return (
     <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">
@@ -274,7 +317,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                   required
                   minLength={6}
                   value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
+                  onChange={handleNewPasswordChange}
                   placeholder="Enter a new password"
                   className="pl-9 pr-10"
                   disabled={submitting}
@@ -284,7 +327,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                   variant="ghost"
                   size="icon-sm"
                   className="absolute inset-y-0 right-1 h-full w-9 text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowPassword((prev) => !prev)}
+                  onClick={handleToggleShowPassword}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   disabled={submitting}
                 >
@@ -345,7 +388,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                   required
                   minLength={6}
                   value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  onChange={handleConfirmPasswordChange}
                   placeholder="Re-enter your new password"
                   className={cn(
                     "pl-9 pr-10",
@@ -359,7 +402,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                   variant="ghost"
                   size="icon-sm"
                   className="absolute inset-y-0 right-1 h-full w-9 text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  onClick={handleToggleShowConfirmPassword}
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                   disabled={submitting}
                 >

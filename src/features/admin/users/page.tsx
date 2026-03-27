@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import {
   CircleAlert,
@@ -43,7 +43,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
+import { DATE_FORMATS, formatDate as formatDateLib, formatRelativeTime } from '@/lib/dates'
 import { cn } from '@/lib/utils'
 import { ADMIN_USER_ROLES, ADMIN_USER_STATUSES, type AdminUserRecord, type AdminUserRole, type AdminUserStatus } from '@/types/admin'
 
@@ -83,6 +83,183 @@ function normalizeAdminStatus(value: string | null | undefined): AdminUserStatus
     return value as AdminUserStatus
   }
   return 'pending'
+}
+
+function UserRow({
+  record,
+  savingId,
+  onRoleChange,
+  onApprovalToggle,
+  onSelectUser,
+  onRevokeOpen,
+}: {
+  record: AdminUserRecord
+  savingId: string | null
+  onRoleChange: (record: AdminUserRecord, role: AdminUserRole) => void
+  onApprovalToggle: (record: AdminUserRecord, approved: boolean) => void
+  onSelectUser: (user: AdminUserRecord) => void
+  onRevokeOpen: () => void
+}) {
+  const handleRoleChange = useCallback(
+    (value: string) => onRoleChange(record, value as AdminUserRole),
+    [onRoleChange, record]
+  )
+
+  const handleApprovalToggle = useCallback(
+    (checked: boolean | 'indeterminate') => onApprovalToggle(record, checked === true),
+    [onApprovalToggle, record]
+  )
+
+  const handleViewDetails = useCallback(() => onSelectUser(record), [onSelectUser, record])
+
+  return (
+    <tr className="border-b border-muted/20">
+      <td className="py-3 pr-3">
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col">
+            <span className="font-medium">{record.name}</span>
+            <span className="text-xs text-muted-foreground">{record.email}</span>
+          </div>
+        </div>
+      </td>
+      <td className="py-3 pr-3">
+        <Select
+          value={record.role}
+          onValueChange={handleRoleChange}
+          disabled={savingId === record.id}
+        >
+          <SelectTrigger className="w-24">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ROLE_ASSIGNABLE.map((role) => (
+              <SelectItem key={role} value={role}>
+                {role.charAt(0).toUpperCase() + role.slice(1)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </td>
+      <td className="py-3 pr-3 text-center">
+        <Checkbox
+          checked={record.status === 'active'}
+          onCheckedChange={handleApprovalToggle}
+          disabled={savingId === record.id}
+        />
+      </td>
+      <td className="py-3 pr-3">
+        <Badge variant={record.status === 'active' ? 'default' : 'secondary'}>
+          {record.status}
+        </Badge>
+      </td>
+      <td className="py-3 pr-3 text-sm text-muted-foreground">
+        {record.lastLoginAt ? formatRelativeTime(record.lastLoginAt) : 'Never'}
+      </td>
+      <td className="py-3 text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleViewDetails}>
+              View details
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={onRevokeOpen}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Revoke access
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </td>
+    </tr>
+  )
+}
+
+function InvitationRow({
+  invitation,
+  invitationActionKey,
+  onResend,
+  onRevoke,
+}: {
+  invitation: AdminInvitationRecord
+  invitationActionKey: string | null
+  onResend: (invitation: AdminInvitationRecord) => void
+  onRevoke: (invitation: AdminInvitationRecord) => void
+}) {
+  const isLoading = invitationActionKey === invitation.id
+
+  const handleResend = useCallback(() => onResend(invitation), [invitation, onResend])
+
+  const handleRevoke = useCallback(() => onRevoke(invitation), [invitation, onRevoke])
+
+  return (
+    <tr className="border-b border-muted/20">
+      <td className="py-3 pr-3">
+        <div className="flex flex-col">
+          <span className="font-medium">{invitation.name || invitation.email}</span>
+          {invitation.name && <span className="text-xs text-muted-foreground">{invitation.email}</span>}
+        </div>
+      </td>
+      <td className="py-3 pr-3">
+        <Badge variant="outline">{invitation.role}</Badge>
+      </td>
+      <td className="py-3 pr-3">
+        <Badge
+          variant={
+            invitation.effectiveStatus === 'accepted'
+              ? 'default'
+              : invitation.effectiveStatus === 'expired'
+              ? 'destructive'
+              : invitation.effectiveStatus === 'revoked'
+              ? 'secondary'
+              : 'outline'
+          }
+        >
+          {invitation.effectiveStatus}
+        </Badge>
+      </td>
+      <td className="py-3 pr-3 text-sm text-muted-foreground">
+        {formatRelativeTime(invitation.createdAtMs)}
+      </td>
+      <td className="py-3 pr-3 text-sm text-muted-foreground">
+        {formatRelativeTime(invitation.expiresAtMs)}
+      </td>
+      <td className="py-3 pr-3 text-sm text-muted-foreground">
+        {invitation.invitedByName || invitation.invitedBy}
+      </td>
+      <td className="py-3 text-right">
+        <div className="flex justify-end gap-2">
+          {invitation.effectiveStatus === 'pending' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResend}
+              disabled={isLoading}
+            >
+              Resend
+            </Button>
+          )}
+          {(invitation.effectiveStatus === 'pending' || invitation.effectiveStatus === 'expired') && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRevoke}
+              disabled={isLoading}
+              className="text-destructive hover:text-destructive"
+            >
+              Revoke
+            </Button>
+          )}
+        </div>
+      </td>
+    </tr>
+  )
 }
 
 export default function AdminUsersPage() {
@@ -251,7 +428,7 @@ export default function AdminUsersPage() {
     })
   }, [invitations, invitationSearchTerm, invitationStatusFilter])
 
-  const handleRoleChange = (record: AdminUserRecord, nextRole: AdminUserRole) => {
+  const handleRoleChange = useCallback((record: AdminUserRecord, nextRole: AdminUserRole) => {
     if (record.role === nextRole) {
       return
     }
@@ -279,9 +456,9 @@ export default function AdminUsersPage() {
       .finally(() => {
         setSavingId(null)
       })
-  }
+  }, [toast, updateUserRoleStatus, users])
 
-  const handleApprovalToggle = (record: AdminUserRecord, approved: boolean) => {
+  const handleApprovalToggle = useCallback((record: AdminUserRecord, approved: boolean) => {
     if (record.role === 'admin' && !approved) {
       toast({ title: 'Cannot disable admin', description: 'Admin accounts must remain active.', variant: 'destructive' })
       return
@@ -311,9 +488,9 @@ export default function AdminUsersPage() {
       .finally(() => {
         setSavingId(null)
       })
-  }
+  }, [toast, updateUserRoleStatus, users])
 
-  const handleInviteUser = () => {
+  const handleInviteUser = useCallback(() => {
     if (!inviteEmail || !user?.id) return
     
     setInviteSending(true)
@@ -341,9 +518,9 @@ export default function AdminUsersPage() {
       .finally(() => {
         setInviteSending(false)
       })
-  }
+  }, [inviteEmail, inviteRole, user, createInvitation, toast])
 
-  const handleResendInvitation = (invitation: AdminInvitationRecord) => {
+  const handleResendInvitation = useCallback((invitation: AdminInvitationRecord) => {
     const actionKey = `resend:${invitation.id}`
     setInvitationActionKey(actionKey)
 
@@ -362,9 +539,9 @@ export default function AdminUsersPage() {
       .finally(() => {
         setInvitationActionKey((current) => (current === actionKey ? null : current))
       })
-  }
+  }, [resendInvitation, toast])
 
-  const handleRevokeInvitation = (invitation: AdminInvitationRecord) => {
+  const handleRevokeInvitation = useCallback((invitation: AdminInvitationRecord) => {
     const actionKey = `revoke:${invitation.id}`
     setInvitationActionKey(actionKey)
 
@@ -383,9 +560,9 @@ export default function AdminUsersPage() {
       .finally(() => {
         setInvitationActionKey((current) => (current === actionKey ? null : current))
       })
-  }
+  }, [revokeInvitation, toast])
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     if (loading) return
     setStatusFilter('all')
     setRoleFilter('all')
@@ -393,7 +570,66 @@ export default function AdminUsersPage() {
     setInvitationStatusFilter('pending')
     setInvitationSearchTerm('')
     setUsersOverride(null)
-  }
+  }, [loading])
+
+  const handleInviteEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setInviteEmail(e.target.value)
+  }, [])
+
+  const handleInviteRoleChange = useCallback((v: string) => {
+    setInviteRole(v as AdminUserRole)
+  }, [])
+
+  const handleInviteClose = useCallback(() => {
+    setInviteOpen(false)
+  }, [])
+
+  const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value)
+  }, [])
+
+  const handleStatusFilterChange = useCallback((value: string) => {
+    setStatusFilter(value as StatusFilter)
+  }, [])
+
+  const handleRoleFilterChange = useCallback((value: string) => {
+    setRoleFilter(value as RoleFilter)
+  }, [])
+
+  const handleInvitationSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setInvitationSearchTerm(event.target.value)
+  }, [])
+
+  const handleInvitationStatusFilterChange = useCallback((value: string) => {
+    setInvitationStatusFilter(value as InvitationLifecycleStatus)
+  }, [])
+
+  const handleRevokeClose = useCallback(() => {
+    setRevokeOpen(false)
+  }, [])
+
+  const handleRevokeConfirm = useCallback(() => {
+    if (selectedUser) {
+      handleApprovalToggle(selectedUser, false)
+    }
+  }, [selectedUser, handleApprovalToggle])
+
+  const handleLoadMore = useCallback(() => {
+    if (loadingMore) return
+    setLoadingMore(true)
+    void Promise.resolve()
+      .then(() => loadMore(50))
+      .catch((err: unknown) => {
+        logError(err, 'AdminUsers:loadMore')
+      })
+      .finally(() => {
+        setLoadingMore(false)
+      })
+  }, [loadingMore, loadMore])
+
+  const handleRevokeOpen = useCallback(() => {
+    setRevokeOpen(true)
+  }, [])
 
   if (!user) {
     return (
@@ -442,16 +678,16 @@ export default function AdminUsersPage() {
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email address</Label>
-                    <Input
+                     <Input
                       id="email"
                       placeholder="colleague@company.com"
                       value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
+                      onChange={handleInviteEmailChange}
                     />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="role">Role</Label>
-                    <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AdminUserRole)}>
+                    <Select value={inviteRole} onValueChange={handleInviteRoleChange}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -464,7 +700,7 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setInviteOpen(false)} disabled={inviteSending}>Cancel</Button>
+                  <Button variant="outline" onClick={handleInviteClose} disabled={inviteSending}>Cancel</Button>
                   <Button onClick={handleInviteUser} disabled={!inviteEmail || inviteSending}>
                     {inviteSending ? 'Sending…' : 'Send Invitation'}
                   </Button>
@@ -530,10 +766,10 @@ export default function AdminUsersPage() {
               <Input
                 placeholder="Search by name or email"
                 value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
+                onChange={handleSearchChange}
                 className="lg:w-64"
               />
-              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                 <SelectTrigger className="lg:w-40">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
@@ -545,7 +781,7 @@ export default function AdminUsersPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as RoleFilter)}>
+              <Select value={roleFilter} onValueChange={handleRoleFilterChange}>
                 <SelectTrigger className="lg:w-40">
                   <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
@@ -585,95 +821,17 @@ export default function AdminUsersPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredUsers.map((record) => {
-                      const approvalDisabled = savingId === record.id || record.role === 'admin'
-
-                      return (
-                        <tr key={record.id} className="border-b border-muted/30">
-                          <td className="py-3 pr-3 align-top">
-                            <div className="font-medium text-foreground">{record.name}</div>
-                            <div className="text-xs text-muted-foreground">{record.email || 'No email on file'}</div>
-                            {record.agencyId && (
-                              <div className="text-xs text-muted-foreground">Agency: {record.agencyId}</div>
-                            )}
-                          </td>
-                          <td className="py-3 pr-3 align-middle">
-                            <Select
-                              value={record.role}
-                              onValueChange={(value) => handleRoleChange(record, value as AdminUserRole)}
-                              disabled={savingId === record.id || record.role === 'admin'}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {ROLE_ASSIGNABLE.map((role) => (
-                                  <SelectItem key={role} value={role}>
-                                    {role.charAt(0).toUpperCase() + role.slice(1)}
-                                  </SelectItem>
-                                ))}
-                                {record.role === 'admin' && <SelectItem value="admin">Admin</SelectItem>}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                          <td className="py-3 pr-3 text-center align-middle">
-                            <Checkbox
-                              checked={record.status === 'active'}
-                              onChange={(e) => {
-                                const checked = e.target.checked
-                                if (checked === false) {
-                                  setSelectedUser(record)
-                                  setRevokeOpen(true)
-                                } else {
-                                  handleApprovalToggle(record, true)
-                                }
-                              }}
-                              disabled={approvalDisabled}
-                              aria-label={`Toggle approval for ${record.name}`}
-                            />
-                          </td>
-                          <td className="py-3 pr-3 align-middle">
-                            <Badge variant={statusToVariant(record.status)} className="capitalize">
-                              {statusLabel(record.status)}
-                            </Badge>
-                          </td>
-                          <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
-                            {formatDate(record.lastLoginAt)}
-                          </td>
-                          <td className="py-3 text-right align-middle">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Actions for ${record.name}`}>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => navigator.clipboard.writeText(record.email)}>
-                                  Copy email
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                {record.status !== 'active' ? (
-                                  <DropdownMenuItem onClick={() => handleApprovalToggle(record, true)}>
-                                    <UserCheck className="mr-2 h-4 w-4" /> Approve user
-                                  </DropdownMenuItem>
-                                ) : (
-                                  <DropdownMenuItem 
-                                    onClick={() => {
-                                      setSelectedUser(record)
-                                      setRevokeOpen(true)
-                                    }}
-                                    className="text-destructive focus:text-destructive"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" /> Revoke access
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
-                        </tr>
-                      )
-                    })
+                    filteredUsers.map((record) => (
+                      <UserRow
+                        key={record.id}
+                        record={record}
+                        savingId={savingId}
+                        onRoleChange={handleRoleChange}
+                        onApprovalToggle={handleApprovalToggle}
+                        onSelectUser={setSelectedUser}
+                        onRevokeOpen={handleRevokeOpen}
+                      />
+                    ))
                   )}
                 </tbody>
               </table>
@@ -684,19 +842,7 @@ export default function AdminUsersPage() {
                 <Button
                   type="button"
                   variant="outline"
-                   onClick={() => {
-                     if (loadingMore) return
-                     setLoadingMore(true)
-
-                      void Promise.resolve()
-                        .then(() => loadMore(50))
-                        .catch((err: unknown) => {
-                          logError(err, 'AdminUsers:loadMore')
-                        })
-                        .finally(() => {
-                          setLoadingMore(false)
-                        })
-                   }}
+                   onClick={handleLoadMore}
 
                   disabled={loadingMore}
                   className="inline-flex items-center gap-2"
@@ -719,7 +865,7 @@ export default function AdminUsersPage() {
             </div>
             <Input
               value={invitationSearchTerm}
-              onChange={(event) => setInvitationSearchTerm(event.target.value)}
+              onChange={handleInvitationSearchChange}
               placeholder="Search invitations by name or email"
               className="lg:w-72"
             />
@@ -727,7 +873,7 @@ export default function AdminUsersPage() {
           <CardContent className="space-y-4">
             <Tabs
               value={invitationStatusFilter}
-              onValueChange={(value) => setInvitationStatusFilter(value as InvitationLifecycleStatus)}
+              onValueChange={handleInvitationStatusFilterChange}
               className="space-y-4"
             >
               <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
@@ -762,71 +908,15 @@ export default function AdminUsersPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredInvitations.map((invitation) => {
-                      const resendKey = `resend:${invitation.id}`
-                      const revokeKey = `revoke:${invitation.id}`
-                      const isResending = invitationActionKey === resendKey
-                      const isRevoking = invitationActionKey === revokeKey
-                      const canRevoke = invitation.effectiveStatus === 'pending'
-                      const canResend = invitation.effectiveStatus === 'expired' || invitation.effectiveStatus === 'revoked'
-
-                      return (
-                        <tr key={invitation.id} className="border-b border-muted/30">
-                          <td className="py-3 pr-3 align-top">
-                            <div className="font-medium text-foreground">{invitation.name || invitation.email}</div>
-                            <div className="text-xs text-muted-foreground">{invitation.email}</div>
-                          </td>
-                          <td className="py-3 pr-3 align-middle">
-                            <Badge variant="outline" className="capitalize">
-                              {invitation.role}
-                            </Badge>
-                          </td>
-                          <td className="py-3 pr-3 align-middle">
-                            <Badge variant={invitationStatusToVariant(invitation.effectiveStatus)} className="capitalize">
-                              {invitationStatusLabel(invitation.effectiveStatus)}
-                            </Badge>
-                          </td>
-                          <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
-                            {formatDateMs(invitation.createdAtMs)}
-                          </td>
-                          <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
-                            {formatDateMs(invitation.expiresAtMs)}
-                          </td>
-                          <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">
-                            {invitation.invitedByName || invitation.invitedBy}
-                          </td>
-                          <td className="py-3 text-right align-middle">
-                            <div className="flex justify-end gap-2">
-                              {canResend ? (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleResendInvitation(invitation)}
-                                  disabled={isResending || isRevoking}
-                                >
-                                  {isResending ? 'Resending…' : 'Resend'}
-                                </Button>
-                              ) : null}
-                              {canRevoke ? (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => handleRevokeInvitation(invitation)}
-                                  disabled={isResending || isRevoking}
-                                >
-                                  {isRevoking ? 'Revoking…' : 'Revoke'}
-                                </Button>
-                              ) : null}
-                              {!canResend && !canRevoke ? (
-                                <span className="text-xs text-muted-foreground">No actions</span>
-                              ) : null}
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })
+                    filteredInvitations.map((invitation) => (
+                      <InvitationRow
+                        key={invitation.id}
+                        invitation={invitation}
+                        invitationActionKey={invitationActionKey}
+                        onResend={handleResendInvitation}
+                        onRevoke={handleRevokeInvitation}
+                      />
+                    ))
                   )}
                 </tbody>
               </table>
@@ -844,14 +934,10 @@ export default function AdminUsersPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRevokeOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={handleRevokeClose}>Cancel</Button>
             <Button 
               variant="destructive" 
-              onClick={() => {
-                if (selectedUser) {
-                  handleApprovalToggle(selectedUser, false)
-                }
-              }}
+              onClick={handleRevokeConfirm}
             >
               Revoke Access
             </Button>

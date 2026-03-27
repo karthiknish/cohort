@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Flag } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import {
@@ -35,6 +35,14 @@ const PRIORITY_CONFIGS: Record<MessagePriority, PriorityConfig> = {
   high: { value: 'high', label: 'High', color: 'bg-primary/10 text-primary border-primary/20', icon: '🟠' },
   urgent: { value: 'urgent', label: 'Urgent', color: 'bg-destructive/10 text-destructive border-destructive/20', icon: '🔴' },
 }
+
+const PRIORITY_OPTIONS = Object.values(PRIORITY_CONFIGS)
+const PRIORITY_FILTER_OPTIONS: Array<{ value: MessagePriority; label: string; color: string }> = [
+  { value: 'urgent', label: 'Urgent', color: 'bg-destructive' },
+  { value: 'high', label: 'High', color: 'bg-primary' },
+  { value: 'medium', label: 'Medium', color: 'bg-accent' },
+  { value: 'low', label: 'Low', color: 'bg-secondary' },
+]
 
 interface MessagePriorityBadgeProps {
   priority: MessagePriority
@@ -97,6 +105,14 @@ export function MessagePrioritySelector({
     md: 'h-8 w-8',
   }
 
+  const priorityButtonHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        PRIORITY_OPTIONS.map((p) => [p.value, () => handlePriorityChange(p.value)])
+      ) as Record<MessagePriority, () => void>,
+    [handlePriorityChange]
+  )
+
   if (variant === 'button') {
     return (
       <DropdownMenu>
@@ -122,10 +138,10 @@ export function MessagePrioritySelector({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-40">
-          {Object.values(PRIORITY_CONFIGS).map((p) => (
+          {PRIORITY_OPTIONS.map((p) => (
             <DropdownMenuItem
               key={p.value}
-              onClick={() => handlePriorityChange(p.value)}
+              onClick={priorityButtonHandlers[p.value]}
             >
               <span className="mr-2">{p.icon}</span>
               {p.label}
@@ -174,7 +190,7 @@ export function MessagePrioritySelector({
         {Object.values(PRIORITY_CONFIGS).map((p) => (
           <DropdownMenuItem
             key={p.value}
-            onClick={() => handlePriorityChange(p.value)}
+            onClick={priorityButtonHandlers[p.value]}
           >
             <span className="mr-2">{p.icon}</span>
             {p.label}
@@ -198,29 +214,30 @@ interface PriorityFilterProps {
  * Filter for showing messages by priority
  */
 export function PriorityFilter({ selected, onChange, className }: PriorityFilterProps) {
-  const options: Array<{ value: MessagePriority; label: string; color: string }> = [
-    { value: 'urgent', label: 'Urgent', color: 'bg-destructive' },
-    { value: 'high', label: 'High', color: 'bg-primary' },
-    { value: 'medium', label: 'Medium', color: 'bg-accent' },
-    { value: 'low', label: 'Low', color: 'bg-secondary' },
-  ]
-
-  const toggle = (value: MessagePriority) => {
+  const toggle = useCallback((value: MessagePriority) => {
     if (selected.includes(value)) {
       onChange(selected.filter((p) => p !== value))
     } else {
       onChange([...selected, value])
     }
-  }
+  }, [onChange, selected])
+
+  const optionClickHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        PRIORITY_FILTER_OPTIONS.map((option) => [option.value, () => toggle(option.value)])
+      ) as Record<MessagePriority, () => void>,
+    [toggle]
+  )
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <span className="text-xs text-muted-foreground">Priority:</span>
-      {options.map((option) => (
+      {PRIORITY_FILTER_OPTIONS.map((option) => (
         <button
           key={option.value}
           type="button"
-          onClick={() => toggle(option.value)}
+          onClick={optionClickHandlers[option.value]}
           className={cn(
             'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition-colors',
             selected.includes(option.value)

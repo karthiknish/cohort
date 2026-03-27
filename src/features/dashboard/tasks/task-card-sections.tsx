@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import {
@@ -53,6 +54,29 @@ import {
 
 type HighlightRenderer = (text: string, query: string) => ReactNode
 
+function TaskStatusMenuItem({
+  onQuickStatusChange,
+  status,
+  task,
+}: {
+  onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
+  status: TaskStatus
+  task: TaskRecord
+}) {
+  const NextStatusIcon = STATUS_ICONS[status]
+
+  const handleClick = useCallback(() => {
+    onQuickStatusChange(task, status)
+  }, [onQuickStatusChange, status, task])
+
+  return (
+    <DropdownMenuItem onClick={handleClick}>
+      <NextStatusIcon className="mr-2 h-4 w-4" />
+      Move to {formatStatusLabel(status)}
+    </DropdownMenuItem>
+  )
+}
+
 export function TaskCardHeaderSection({
   task,
   isPendingUpdate,
@@ -76,13 +100,17 @@ export function TaskCardHeaderSection({
   onClone?: (task: TaskRecord) => void
   onShare?: (task: TaskRecord) => void
 }) {
+  const handleOpenTask = useCallback(() => {
+    onOpen?.(task)
+  }, [onOpen, task])
+
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1 space-y-1">
         {onOpen ? (
           <button
             type="button"
-            onClick={() => onOpen(task)}
+            onClick={handleOpenTask}
             className="block min-w-0 rounded-md text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
             aria-label={`View task ${task.title}`}
           >
@@ -271,6 +299,22 @@ function TaskCardActionsMenu({
   onClone?: (task: TaskRecord) => void
   onShare?: (task: TaskRecord) => void
 }) {
+  const handleEditClick = useCallback(() => {
+    onEdit(task)
+  }, [onEdit, task])
+
+  const handleDeleteClick = useCallback(() => {
+    onDelete(task)
+  }, [onDelete, task])
+
+  const handleCloneClick = useCallback(() => {
+    onClone?.(task)
+  }, [onClone, task])
+
+  const handleShareClick = useCallback(() => {
+    onShare?.(task)
+  }, [onShare, task])
+
   return (
     <div className="shrink-0">
       <DropdownMenu>
@@ -286,34 +330,27 @@ function TaskCardActionsMenu({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {TASK_STATUSES.filter((status) => status !== task.status && status !== 'archived').map((status) => {
-            const NextStatusIcon = STATUS_ICONS[status]
-
-            return (
-              <DropdownMenuItem key={status} onClick={() => onQuickStatusChange(task, status)}>
-                <NextStatusIcon className="mr-2 h-4 w-4" />
-                Move to {formatStatusLabel(status)}
-              </DropdownMenuItem>
-            )
+            return <TaskStatusMenuItem key={status} onQuickStatusChange={onQuickStatusChange} status={status} task={task} />
           })}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => onEdit(task)}>
+          <DropdownMenuItem onClick={handleEditClick}>
             <Pencil className="mr-2 h-4 w-4" />
             Edit task
           </DropdownMenuItem>
           {onClone ? (
-            <DropdownMenuItem onClick={() => onClone(task)}>
+            <DropdownMenuItem onClick={handleCloneClick}>
               <Copy className="mr-2 h-4 w-4" />
               Duplicate task
             </DropdownMenuItem>
           ) : null}
           {onShare ? (
-            <DropdownMenuItem onClick={() => onShare(task)}>
+            <DropdownMenuItem onClick={handleShareClick}>
               <Link2 className="mr-2 h-4 w-4" />
               Share task
             </DropdownMenuItem>
           ) : null}
           {(onClone || onShare) ? <DropdownMenuSeparator /> : null}
-          <DropdownMenuItem onClick={() => onDelete(task)} className="text-destructive focus:text-destructive">
+          <DropdownMenuItem onClick={handleDeleteClick} className="text-destructive focus:text-destructive">
             <Trash2 className="mr-2 h-4 w-4" />
             Delete task
           </DropdownMenuItem>

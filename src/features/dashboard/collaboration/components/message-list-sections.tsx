@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useCallback, type MouseEvent, type ReactNode } from 'react'
 
 import { LoaderCircle, RefreshCw, Smile } from 'lucide-react'
 
@@ -39,12 +39,14 @@ function getInitials(name: string): string {
 }
 
 export function MessageListLoadingState({ loadingSkeleton }: { loadingSkeleton?: ReactNode }) {
+  const loadingRowSlots = ['loading-row-1', 'loading-row-2', 'loading-row-3'] as const
+
   return (
     <div className="flex-1 min-h-0 overflow-y-auto p-4">
       {loadingSkeleton || (
         <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className={cn('flex gap-2', i % 2 === 0 && 'justify-end')}>
+          {loadingRowSlots.map((slot, index) => (
+            <div key={slot} className={cn('flex gap-2', index % 2 === 1 && 'justify-end')}>
               <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-muted" />
               <div className="space-y-2">
                 <div className="h-4 w-32 animate-pulse rounded bg-muted" />
@@ -123,6 +125,17 @@ function MessageReactionRow({
   onReact: (messageId: string, emoji: string) => void
   reactionPendingByMessage: Record<string, string | null>
 }) {
+  const handleReactionClick = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      const messageId = event.currentTarget.dataset.messageId
+      const emoji = event.currentTarget.dataset.emoji
+
+      if (!messageId || !emoji) return
+      onReact(messageId, emoji)
+    },
+    [onReact]
+  )
+
   if (!message.reactions || message.reactions.length === 0) {
     return null
   }
@@ -137,7 +150,9 @@ function MessageReactionRow({
           <button
             key={reaction.emoji}
             type="button"
-            onClick={() => onReact(message.id, reaction.emoji)}
+            onClick={handleReactionClick}
+            data-message-id={message.id}
+            data-emoji={reaction.emoji}
             disabled={disabled}
             className={cn(
               'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
@@ -166,6 +181,13 @@ function MessageReactionPickerActions({
   message: UnifiedMessage
   onReact: (messageId: string, emoji: string) => void
 }) {
+  const handleEmojiClick = useCallback(
+    (emojiData: EmojiClickData) => {
+      onReact(message.id, emojiData.emoji)
+    },
+    [message.id, onReact]
+  )
+
   return (
     <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 shrink-0">
       <Popover>
@@ -175,14 +197,7 @@ function MessageReactionPickerActions({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align={align}>
-          <EmojiPicker
-            onEmojiClick={(emojiData: EmojiClickData) => {
-              onReact(message.id, emojiData.emoji)
-            }}
-            theme={Theme.LIGHT}
-            width={300}
-            height={350}
-          />
+          <EmojiPicker onEmojiClick={handleEmojiClick} theme={Theme.LIGHT} width={300} height={350} />
         </PopoverContent>
       </Popover>
 

@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { googleAdsSearch } from './client'
-import { GoogleAdMetric } from './types'
+import type { GoogleAdMetric } from './types'
 
 export async function fetchGoogleAdGroupMetrics(options: {
     accessToken: string

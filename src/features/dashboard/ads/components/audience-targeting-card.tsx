@@ -151,9 +151,19 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
       })
   }, [getTargeting, isConnected, providerId, selectedClientId, workspaceId])
 
-  const formatAgeRange = (range: string) => {
+  const handleOpenBuilder = useCallback(() => {
+    setBuilderOpen(true)
+  }, [])
+
+  const handleEdit = useCallback(() => {}, [])
+
+  const handleToggleExpanded = useCallback((entityId: string) => {
+    setExpandedId((current) => (current === entityId ? null : entityId))
+  }, [])
+
+  const formatAgeRange = useCallback((range: string) => {
     return range.replace(/_/g, '-').replace('AGE', '').replace('RANGE', '').trim()
-  }
+  }, [])
 
   if (!isConnected) {
     return <AudienceTargetingDisconnectedState providerName={providerName} />
@@ -161,8 +171,8 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
 
   return (
     <Card>
-      <AudienceTargetingHeader insights={insights} loading={loading} onLoadTargeting={fetchTargeting} onOpenBuilder={() => setBuilderOpen(true)} providerName={providerName} />
-      <AudienceTargetingContent expandedId={expandedId} formatAgeRange={formatAgeRange} insights={insights} onEdit={() => {}} onToggleExpanded={(entityId) => setExpandedId(expandedId === entityId ? null : entityId)} targeting={targeting} />
+      <AudienceTargetingHeader insights={insights} loading={loading} onLoadTargeting={fetchTargeting} onOpenBuilder={handleOpenBuilder} providerName={providerName} />
+      <AudienceTargetingContent expandedId={expandedId} formatAgeRange={formatAgeRange} insights={insights} onEdit={handleEdit} onToggleExpanded={handleToggleExpanded} targeting={targeting} />
       <AudienceBuilderDialog 
         isOpen={builderOpen} 
         onOpenChange={setBuilderOpen} 

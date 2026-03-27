@@ -1,7 +1,52 @@
 // professional GlobalError component
 'use client'
 
-import { useEffect } from 'react'
+import { type CSSProperties, useCallback, useEffect } from 'react'
+
+const BODY_STYLE: CSSProperties = {
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '100vh',
+  margin: 0,
+  backgroundColor: 'hsl(var(--background))',
+  color: 'hsl(var(--foreground))',
+}
+
+const CONTAINER_STYLE: CSSProperties = {
+  textAlign: 'center',
+  padding: '2rem',
+  maxWidth: '400px',
+}
+
+const TITLE_STYLE: CSSProperties = {
+  fontSize: '1.5rem',
+  fontWeight: 700,
+  marginBottom: '0.5rem',
+}
+
+const MESSAGE_STYLE: CSSProperties = {
+  color: 'hsl(var(--muted-foreground))',
+  marginBottom: '2rem',
+}
+
+const ACTION_BUTTON_STYLE: CSSProperties = {
+  backgroundColor: 'hsl(var(--foreground))',
+  color: 'hsl(var(--background))',
+  padding: '0.75rem 1.5rem',
+  borderRadius: '0.375rem',
+  border: 'none',
+  fontWeight: 500,
+  cursor: 'pointer',
+}
+
+const ERROR_ID_STYLE: CSSProperties = {
+  marginTop: '2rem',
+  fontSize: '0.75rem',
+  fontFamily: 'monospace',
+  color: 'hsl(var(--muted-foreground))',
+}
 
 export default function GlobalError({
   error,
@@ -10,6 +55,10 @@ export default function GlobalError({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const handleReset = useCallback(() => {
+    reset()
+  }, [reset])
+
   useEffect(() => {
     console.error('[GlobalError]', error)
   }, [error])
@@ -19,35 +68,15 @@ export default function GlobalError({
       <head>
         <title>Something went wrong</title>
       </head>
-      <body style={{
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        margin: 0,
-        backgroundColor: 'hsl(var(--background))',
-        color: 'hsl(var(--foreground))'
-      }}>
-        <div style={{ textAlign: 'center', padding: '2rem', maxWidth: '400px' }}>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>Something went wrong</h1>
-          <p style={{ color: 'hsl(var(--muted-foreground))', marginBottom: '2rem' }}>A critical error occurred. We have been notified and are looking into it.</p>
-          <button 
-            onClick={() => reset()}
-            style={{
-              backgroundColor: 'hsl(var(--foreground))',
-              color: 'hsl(var(--background))',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '0.375rem',
-              border: 'none',
-              fontWeight: 500,
-              cursor: 'pointer'
-            }}
-          >
+      <body style={BODY_STYLE}>
+        <div style={CONTAINER_STYLE}>
+          <h1 style={TITLE_STYLE}>Something went wrong</h1>
+          <p style={MESSAGE_STYLE}>A critical error occurred. We have been notified and are looking into it.</p>
+          <button type="button" onClick={handleReset} style={ACTION_BUTTON_STYLE}>
             Try again
           </button>
           {error.digest && (
-            <div style={{ marginTop: '2rem', fontSize: '0.75rem', fontFamily: 'monospace', color: 'hsl(var(--muted-foreground))' }}>
+            <div style={ERROR_ID_STYLE}>
               Error ID: {error.digest}
             </div>
           )}

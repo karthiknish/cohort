@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { format, isToday, isYesterday } from 'date-fns'
 import { Calendar, Search, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
@@ -167,10 +167,10 @@ export function ActivityList({
     return new Date(b).getTime() - new Date(a).getTime()
   })
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     // This would be handled by parent
     window.dispatchEvent(new CustomEvent('clear-activity-filters'))
-  }
+  }, [])
 
   return (
     <div className={cn('space-y-4', className)}>

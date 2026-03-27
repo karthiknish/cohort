@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, FolderKanban, Loader2, User, Users } from "lucide-react";
+import { Building2, FolderKanban, Loader2, User, Users, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motionDurationSeconds, motionEasing } from "@/lib/animation-system";
 import { cn } from "@/lib/utils";
@@ -46,6 +46,14 @@ const MENTION_CATEGORIES = [
 	{ type: "user" as MentionType, label: "Users", icon: User },
 ];
 
+const DROPDOWN_INITIAL = { opacity: 0, y: 8 } as const;
+const DROPDOWN_ANIMATE = { opacity: 1, y: 0 } as const;
+const DROPDOWN_EXIT = { opacity: 0, y: 8 } as const;
+const DROPDOWN_TRANSITION = {
+	duration: motionDurationSeconds.fast,
+	ease: motionEasing.out,
+} as const;
+
 function getTypeIcon(type: MentionType) {
 	switch (type) {
 		case "client":
@@ -70,6 +78,86 @@ function getTypeColor(type: MentionType): string {
 		case "user":
 			return "bg-primary/10 text-primary border-primary/20";
 	}
+}
+
+function MentionCategoryButton({
+	activeCategory,
+	type,
+	icon: Icon,
+	label,
+	onSelect,
+}: {
+	activeCategory: MentionType | null
+	type: MentionType
+	icon: LucideIcon
+	label: string
+	onSelect: (type: MentionType | null) => void
+}) {
+	const handleClick = useCallback(() => {
+		onSelect(type)
+	}, [onSelect, type])
+
+	return (
+		<button
+			type="button"
+			onClick={handleClick}
+			className={cn(
+				"flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+				activeCategory === type
+					? "bg-primary text-primary-foreground"
+					: "text-muted-foreground hover:bg-muted",
+			)}
+		>
+			<Icon className="h-3 w-3" />
+			{label}
+		</button>
+	)
+}
+
+function MentionResultButton({
+	clampedSelectedIndex,
+	index,
+	item,
+	onSelect,
+}: {
+	clampedSelectedIndex: number
+	index: number
+	item: MentionItem
+	onSelect: (item: MentionItem) => void
+}) {
+	const handleClick = useCallback(() => {
+		onSelect(item)
+	}, [item, onSelect])
+
+	return (
+		<button
+			type="button"
+			key={`${item.type}-${item.id}`}
+			onClick={handleClick}
+			className={cn(
+				"flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
+				index === clampedSelectedIndex ? "bg-primary/10" : "hover:bg-muted",
+			)}
+		>
+			<div
+				className={cn(
+					"flex h-7 w-7 items-center justify-center rounded-md border",
+					getTypeColor(item.type),
+				)}
+			>
+				{getTypeIcon(item.type)}
+			</div>
+			<div className="min-w-0 flex-1">
+				<p className="truncate text-sm font-medium">{item.name}</p>
+				{item.subtitle && (
+					<p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
+				)}
+			</div>
+			<span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+				{item.type}
+			</span>
+		</button>
+	)
 }
 
 export function MentionDropdown({
@@ -158,6 +246,9 @@ export function MentionDropdown({
 		selectedIndex,
 		Math.max(filteredItems.length - 1, 0),
 	);
+	const handleAllCategoryClick = useCallback(() => {
+		setActiveCategory(null);
+	}, []);
 
 	// Handle keyboard navigation
 	const handleKeyDown = useCallback(
@@ -244,20 +335,17 @@ export function MentionDropdown({
 			<AnimatePresence>
 				<m.div
 					ref={dropdownRef}
-					initial={{ opacity: 0, y: 8 }}
-					animate={{ opacity: 1, y: 0 }}
-					exit={{ opacity: 0, y: 8 }}
-					transition={{
-						duration: motionDurationSeconds.fast,
-						ease: motionEasing.out,
-					}}
+					initial={DROPDOWN_INITIAL}
+					animate={DROPDOWN_ANIMATE}
+					exit={DROPDOWN_EXIT}
+					transition={DROPDOWN_TRANSITION}
 					className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-xl border bg-background shadow-lg"
 				>
 					{/* Category tabs */}
 					<div className="flex items-center gap-1 border-b bg-muted/30 px-2 py-1.5">
 						<button
 							type="button"
-							onClick={() => setActiveCategory(null)}
+							onClick={handleAllCategoryClick}
 							className={cn(
 								"rounded-md px-2 py-1 text-xs font-medium transition-colors",
 								activeCategory === null
@@ -268,20 +356,14 @@ export function MentionDropdown({
 							All
 						</button>
 						{MENTION_CATEGORIES.map((cat) => (
-							<button
-								type="button"
+							<MentionCategoryButton
 								key={cat.type}
-								onClick={() => setActiveCategory(cat.type)}
-								className={cn(
-									"flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
-									activeCategory === cat.type
-										? "bg-primary text-primary-foreground"
-										: "text-muted-foreground hover:bg-muted",
-								)}
-							>
-								<cat.icon className="h-3 w-3" />
-								{cat.label}
-							</button>
+								activeCategory={activeCategory}
+								icon={cat.icon}
+								label={cat.label}
+								onSelect={setActiveCategory}
+								type={cat.type}
+							/>
 						))}
 					</div>
 
@@ -298,39 +380,13 @@ export function MentionDropdown({
 						) : (
 							<div className="p-1">
 								{filteredItems.map((item, index) => (
-									<button
-										type="button"
-										key={`${item.type}-${item.id}`}
-										onClick={() => onSelect(item)}
-										className={cn(
-											"flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
-											index === clampedSelectedIndex
-												? "bg-primary/10"
-												: "hover:bg-muted",
-										)}
-									>
-										<div
-											className={cn(
-												"flex h-7 w-7 items-center justify-center rounded-md border",
-												getTypeColor(item.type),
-											)}
-										>
-											{getTypeIcon(item.type)}
-										</div>
-										<div className="flex-1 min-w-0">
-											<p className="text-sm font-medium truncate">
-												{item.name}
-											</p>
-											{item.subtitle && (
-												<p className="text-xs text-muted-foreground truncate">
-													{item.subtitle}
-												</p>
-											)}
-										</div>
-										<span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-											{item.type}
-										</span>
-									</button>
+										<MentionResultButton
+											key={`${item.type}-${item.id}`}
+											clampedSelectedIndex={clampedSelectedIndex}
+											index={index}
+											item={item}
+											onSelect={onSelect}
+										/>
 								))}
 							</div>
 						)}

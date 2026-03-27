@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { ChevronDown, CircleAlert, Clock, Eye, History, LoaderCircle, RotateCcw, Save, User } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
@@ -92,18 +93,30 @@ function ProposalVersionHistoryRow({
   restoring: boolean
   version: ProposalVersion
 }) {
+  const handlePreview = useCallback(() => {
+    onPreview(version)
+  }, [onPreview, version])
+
+  const handleRestore = useCallback(() => {
+    onRestore(version)
+  }, [onRestore, version])
+
+  const handleSelect = useCallback((event: Event) => {
+    event.preventDefault()
+  }, [])
+
   return (
-    <DropdownMenuItem className="flex cursor-default flex-col items-start gap-1 px-2 py-2" onSelect={(event) => event.preventDefault()}>
+    <DropdownMenuItem className="flex cursor-default flex-col items-start gap-1 px-2 py-2" onSelect={handleSelect}>
       <div className="flex w-full items-center justify-between">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs">v{version.versionNumber}</Badge>
           <span className="text-xs text-muted-foreground">{formatRelativeTime(version.createdAt)}</span>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onPreview(version)} aria-label={`Preview version ${version.versionNumber}`}>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handlePreview} aria-label={`Preview version ${version.versionNumber}`}>
             <Eye className="h-3 w-3" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" disabled={restoring} onClick={() => onRestore(version)} aria-label={`Restore version ${version.versionNumber}`}>
+          <Button variant="ghost" size="icon" className="h-6 w-6" disabled={restoring} onClick={handleRestore} aria-label={`Restore version ${version.versionNumber}`}>
             <RotateCcw className="h-3 w-3" />
           </Button>
         </div>
@@ -193,6 +206,10 @@ export function ProposalVersionPreviewDialog({
   previewVersion: ProposalVersion | null
   setPreviewVersion: (version: ProposalVersion | null) => void
 }) {
+  const handleClose = useCallback(() => {
+    setPreviewVersion(null)
+  }, [setPreviewVersion])
+
   return (
     <DialogContent className="max-w-xl">
       <DialogHeader>
@@ -205,7 +222,7 @@ export function ProposalVersionPreviewDialog({
         <pre className="max-h-[50vh] overflow-auto text-xs">{JSON.stringify(previewVersion?.formData ?? currentFormData, null, 2)}</pre>
       </div>
       <DialogFooter>
-        <Button variant="outline" onClick={() => setPreviewVersion(null)}>Close</Button>
+        <Button variant="outline" onClick={handleClose}>Close</Button>
       </DialogFooter>
     </DialogContent>
   )
@@ -222,6 +239,10 @@ export function ProposalVersionRestoreDialog({
   restoring: boolean
   setRestoreConfirmVersion: (version: ProposalVersion | null) => void
 }) {
+  const handleCancel = useCallback(() => {
+    setRestoreConfirmVersion(null)
+  }, [setRestoreConfirmVersion])
+
   return (
     <DialogContent className="max-w-md">
       <DialogHeader>
@@ -233,7 +254,7 @@ export function ProposalVersionRestoreDialog({
         </DialogDescription>
       </DialogHeader>
       <DialogFooter>
-        <Button variant="outline" onClick={() => setRestoreConfirmVersion(null)} disabled={restoring}>Cancel</Button>
+        <Button variant="outline" onClick={handleCancel} disabled={restoring}>Cancel</Button>
         <Button onClick={handleRestoreVersion} disabled={restoring}>
           {restoring ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
           Restore

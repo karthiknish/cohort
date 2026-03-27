@@ -39,6 +39,9 @@ export function AnalyticsCreativesSection({
     initialMetricsLoading,
     onRefreshMetrics,
 }: AnalyticsCreativesSectionProps) {
+    const loadingCardSlots = ['loading-1', 'loading-2', 'loading-3', 'loading-4']
+    const metricSlots = ['metric-1', 'metric-2', 'metric-3', 'metric-4']
+
     return (
         <Card className="overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
             <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
@@ -65,12 +68,12 @@ export function AnalyticsCreativesSection({
                 {initialMetricsLoading || (isMetricsLoading && creativeBreakdown.length === 0) ? (
                     <div className="p-6">
                         <div className="space-y-4">
-                            {Array.from({ length: 4 }).map((_, idx) => (
-                                <div key={idx} className="rounded-xl border border-muted/20 bg-muted/5 p-4">
+                            {loadingCardSlots.map((slot) => (
+                                <div key={slot} className="rounded-xl border border-muted/20 bg-muted/5 p-4">
                                     <Skeleton className="h-4 w-1/3 rounded-full" />
                                     <div className="mt-4 grid grid-cols-4 gap-4">
-                                        {Array.from({ length: 4 }).map((__, metricIdx) => (
-                                            <Skeleton key={metricIdx} className="h-4 w-full rounded-md" />
+                                        {metricSlots.map((metricSlot) => (
+                                            <Skeleton key={metricSlot} className="h-4 w-full rounded-md" />
                                         ))}
                                     </div>
                                 </div>

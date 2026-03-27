@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { LayoutDashboard, LogOut } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -15,7 +15,7 @@ export function SiteHeader() {
   const [signingOut, setSigningOut] = useState(false)
   const showAccountActions = pathname === '/for-you'
 
-  const handleSignOut = () => {
+  const handleSignOut = useCallback(() => {
     setSigningOut(true)
 
     void signOut()
@@ -25,7 +25,7 @@ export function SiteHeader() {
       .finally(() => {
         setSigningOut(false)
       })
-  }
+  }, [signOut])
 
   return (
     <header className="sticky top-0 z-40 border-b border-muted/50 bg-background/90 backdrop-blur">

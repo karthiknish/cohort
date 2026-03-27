@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Video, RefreshCw, Copy } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -20,7 +20,7 @@ export default function MeetingsError({
 
   const isDev = process.env.NODE_ENV === 'development'
 
-  const copyErrorDetails = () => {
+  const copyErrorDetails = useCallback(() => {
     const details = [
       `Component: MeetingsError`,
       `Error: ${error.message}`,
@@ -28,7 +28,7 @@ export default function MeetingsError({
       error.stack ? `Stack:\n${error.stack}` : '',
     ].filter(Boolean).join('\n\n')
     void navigator.clipboard.writeText(details)
-  }
+  }, [error])
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-4">

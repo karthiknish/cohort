@@ -1,9 +1,9 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Printer } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { TaskRecord, TaskStatus } from '@/types/tasks'
+import type { TaskRecord, TaskStatus } from '@/types/tasks'
 import { formatStatusLabel, formatDate, formatPriorityLabel } from './task-types'
 import { cn } from '@/lib/utils'
 import './tasks-print.css'
@@ -46,9 +46,9 @@ export function TaskPrintView({ tasks, title = 'Tasks', summary, onClose }: Task
 
   const calculatedSummary = summary ?? derivedSummary
 
-  const handlePrint = () => {
+  const handlePrint = useCallback(() => {
     window.print()
-  }
+  }, [])
 
   return (
     <div className="tasks-print-container">
@@ -167,7 +167,7 @@ function PrintableTaskCard({ task }: { task: TaskRecord }) {
 
 // Standalone print button
 export function PrintTasksButton({ tasks, title }: { tasks: TaskRecord[], title?: string }) {
-  const handlePrint = () => {
+  const handlePrint = useCallback(() => {
     // Create a hidden print container
     const printContainer = document.createElement('div')
     printContainer.className = 'tasks-print-container'
@@ -208,7 +208,7 @@ export function PrintTasksButton({ tasks, title }: { tasks: TaskRecord[], title?
     setTimeout(() => {
       document.body.removeChild(printContainer)
     }, 1000)
-  }
+  }, [tasks, title])
 
   return (
     <Button

@@ -175,6 +175,37 @@ export function GlobalSearch({
     return Object.keys(groupedResults) as SearchResultType[]
   }, [groupedResults])
 
+  const handleQueryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value)
+  }, [])
+
+  const handleSearchInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      setOpen(false)
+    }
+  }, [])
+
+  const handleClearQuery = useCallback(() => {
+    setQuery('')
+  }, [])
+
+  const handleSelectAllTypes = useCallback(() => {
+    setSelectedType('all')
+  }, [])
+
+  const handleSelectType = useCallback((type?: SearchResultType) => {
+    setSelectedType(type ?? 'all')
+  }, [])
+
+  const handleResultClick = useCallback(
+    (result: SearchResult) => {
+      onResultClick?.(result)
+      setOpen(false)
+    },
+    [onResultClick]
+  )
+
   const defaultTrigger = (
     <DialogTrigger asChild>
       <Button variant="outline" size="sm" className="gap-2">
@@ -196,22 +227,17 @@ export function GlobalSearch({
           <Search className="h-5 w-5 text-muted-foreground" />
           <Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={handleQueryChange}
             placeholder="Search across all items…"
             className="flex-1"
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.preventDefault()
-                setOpen(false)
-              }
-            }}
+            onKeyDown={handleSearchInputKeyDown}
           />
           {query && (
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              onClick={() => setQuery('')}
+              onClick={handleClearQuery}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -221,32 +247,19 @@ export function GlobalSearch({
         {/* Type filters */}
         {resultTypes.length > 0 && (
           <div className="flex items-center gap-2 px-4 py-2 border-b">
-            <button
-              type="button"
-              onClick={() => setSelectedType('all')}
-              className={cn(
-                'px-2 py-1 rounded-md text-xs font-medium transition-colors',
-                selectedType === 'all'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-muted'
-              )}
-            >
-              All ({results.length})
-            </button>
+            <SearchTypeButton
+              label={`All (${results.length})`}
+              selected={selectedType === 'all'}
+              onSelect={handleSelectAllTypes}
+            />
             {resultTypes.map((type) => (
-              <button
+              <SearchTypeButton
                 key={type}
-                type="button"
-                onClick={() => setSelectedType(type)}
-                className={cn(
-                  'px-2 py-1 rounded-md text-xs font-medium transition-colors',
-                  selectedType === type
-                    ? 'bg-primary text-primary-foreground'
-                    : 'hover:bg-muted'
-                )}
-              >
-                {SEARCH_TYPE_LABELS[type]} ({groupedResults[type]?.length || 0})
-              </button>
+                label={`${SEARCH_TYPE_LABELS[type]} (${groupedResults[type]?.length || 0})`}
+                selected={selectedType === type}
+                onSelect={handleSelectType}
+                typeValue={type}
+              />
             ))}
           </div>
         )}
@@ -300,10 +313,7 @@ export function GlobalSearch({
                         <SearchResultItem
                           key={result.id}
                           result={result}
-                          onClick={() => {
-                            onResultClick?.(result)
-                            setOpen(false)
-                          }}
+                          onSelect={handleResultClick}
                         />
                       ))}
                     </div>
@@ -348,16 +358,45 @@ export function GlobalSearch({
 
 interface SearchResultItemProps {
   result: SearchResult
-  onClick: () => void
+  onSelect: (result: SearchResult) => void
 }
 
-function SearchResultItem({ result, onClick }: SearchResultItemProps) {
-  const IconComponent = SEARCH_TYPE_ICONS[result.type]
+interface SearchTypeButtonProps {
+  label: string
+  selected: boolean
+  onSelect: (type?: SearchResultType) => void
+  typeValue?: SearchResultType
+}
+
+function SearchTypeButton({ label, selected, onSelect, typeValue }: SearchTypeButtonProps) {
+  const handleClick = useCallback(() => {
+    onSelect(typeValue)
+  }, [onSelect, typeValue])
 
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={handleClick}
+      className={cn(
+        'px-2 py-1 rounded-md text-xs font-medium transition-colors',
+        selected ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+      )}
+    >
+      {label}
+    </button>
+  )
+}
+
+function SearchResultItem({ result, onSelect }: SearchResultItemProps) {
+  const IconComponent = SEARCH_TYPE_ICONS[result.type]
+  const handleClick = useCallback(() => {
+    onSelect(result)
+  }, [onSelect, result])
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
       className="w-full text-left p-3 rounded-lg hover:bg-muted transition-colors"
     >
       <div className="flex items-start gap-3">
@@ -415,6 +454,14 @@ export function QuickSearchInput({
 }) {
   const [value, setValue] = useState('')
 
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(e.target.value)
+  }, [])
+
+  const handleClear = useCallback(() => {
+    setValue('')
+  }, [])
+
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault()
@@ -431,13 +478,13 @@ export function QuickSearchInput({
       <Input
         placeholder={placeholder}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={handleChange}
         className="pl-9"
       />
       {value && (
         <button
           type="button"
-          onClick={() => setValue('')}
+          onClick={handleClear}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
         >
           <X className="h-4 w-4" />

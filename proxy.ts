@@ -1,14 +1,14 @@
+import { getToken } from '@convex-dev/better-auth/utils'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
+import { convexSiteUrl } from '@/lib/auth-server'
 import {
-  getClientIdentifier,
   buildRateLimitHeaders,
-  RATE_LIMITS,
   createRateLimitConfig,
+  getClientIdentifier,
+  RATE_LIMITS,
 } from '@/lib/rate-limiter'
 import { checkConvexRateLimit } from '@/lib/rate-limiter-convex'
-import { getToken } from '@convex-dev/better-auth/utils'
-import { convexSiteUrl } from '@/lib/auth-server'
 
 // User-agents to block (monitoring bots, crawlers that don't respect auth)
 const BLOCKED_USER_AGENTS = [
@@ -36,14 +36,22 @@ const BLOCKED_USER_AGENTS = [
   'postman',
 ]
 
-const API_RATE_LIMIT_MAX = parseInteger(process.env.API_RATE_LIMIT_MAX, RATE_LIMITS.standard.maxRequests)
-const API_RATE_LIMIT_WINDOW_MS = parseInteger(process.env.API_RATE_LIMIT_WINDOW_MS, RATE_LIMITS.standard.windowMs)
+const API_RATE_LIMIT_MAX = parseInteger(
+  process.env.API_RATE_LIMIT_MAX,
+  RATE_LIMITS.standard.maxRequests,
+)
+const API_RATE_LIMIT_WINDOW_MS = parseInteger(
+  process.env.API_RATE_LIMIT_WINDOW_MS,
+  RATE_LIMITS.standard.windowMs,
+)
 
 const PROTECTED_ROUTE_MATCHER = ['/dashboard', '/admin']
 const AUTH_ROUTE_PREFIX = '/auth'
 
 function isProtectedPath(pathname: string): boolean {
-  return PROTECTED_ROUTE_MATCHER.some((route) => pathname === route || pathname.startsWith(`${route}/`))
+  return PROTECTED_ROUTE_MATCHER.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  )
 }
 
 async function hasValidSession(request: NextRequest): Promise<boolean> {
@@ -62,14 +70,11 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith('/api/')) {
     // Block common monitoring/crawling user-agents from API routes
     const userAgent = request.headers.get('user-agent')?.toLowerCase() ?? ''
-    if (BLOCKED_USER_AGENTS.some(bot => userAgent.includes(bot))) {
+    if (BLOCKED_USER_AGENTS.some((bot) => userAgent.includes(bot))) {
       if (process.env.NODE_ENV !== 'production') {
         console.log(`[Proxy] Blocked ${userAgent} from ${pathname}`)
       }
-      return NextResponse.json(
-        { success: false, error: 'Not allowed' },
-        { status: 403 }
-      )
+      return NextResponse.json({ success: false, error: 'Not allowed' }, { status: 403 })
     }
     const identifier = getClientIdentifier(request)
     const rateLimit = await checkConvexRateLimit(
@@ -77,7 +82,9 @@ export async function proxy(request: NextRequest) {
       createRateLimitConfig(API_RATE_LIMIT_MAX, API_RATE_LIMIT_WINDOW_MS),
     )
 
-    console.log(`[Proxy] API Request: ${pathname} | ID: ${identifier} | Allowed: ${rateLimit.allowed}`)
+    console.log(
+      `[Proxy] API Request: ${pathname} | ID: ${identifier} | Allowed: ${rateLimit.allowed}`,
+    )
 
     if (!rateLimit.allowed) {
       console.warn(`[Proxy] Rate limit exceeded for ${identifier} on ${pathname}`)

@@ -46,15 +46,40 @@ import { getPreviewNotifications } from '@/lib/preview-data'
 import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
 
 const PAGE_SIZE = 25
+const NOTIFICATIONS_PAGE_FALLBACK = <NotificationsPageFallback />
 
 
 type AckAction = 'read' | 'dismiss'
 
 type FilterType = 'all' | 'unread' | 'mentions' | 'system'
 
+function getNotificationIcon(kind: WorkspaceNotification['kind']) {
+  switch (kind) {
+    case 'collaboration.mention':
+    case 'task.mention':
+      return <MessageSquare className="h-6 w-6" />
+    case 'task.comment':
+      return <MessageSquare className="h-6 w-6" />
+    case 'proposal.deck.ready':
+      return <BarChart className="h-6 w-6" />
+    case 'task.created':
+    case 'task.updated':
+      return <CircleCheck className="h-6 w-6" />
+    default:
+      return <Mail className="h-6 w-6" />
+  }
+}
+
+function getNotificationCategory(kind: WorkspaceNotification['kind']) {
+  if (kind === 'collaboration.mention' || kind === 'task.mention') return 'Mention'
+  if (kind === 'proposal.deck.ready') return 'System'
+  if (kind === 'task.created' || kind === 'task.updated' || kind === 'task.comment') return 'Task'
+  return 'General'
+}
+
 export default function NotificationsPage() {
   return (
-    <Suspense fallback={<NotificationsPageFallback />}>
+    <Suspense fallback={NOTIFICATIONS_PAGE_FALLBACK}>
       <NotificationsPageContent />
     </Suspense>
   )
@@ -287,6 +312,10 @@ function NotificationsPageContent() {
     void updateNotificationStatus(unreadIds, 'read')
   }, [notifications, updateNotificationStatus, toast])
 
+  const handleActiveFilterChange = useCallback((value: string) => {
+    setActiveFilter(value as FilterType)
+  }, [setActiveFilter])
+
   const handleClearAll = useCallback(() => {
     const allIds = notifications.map((item) => item.id)
     if (allIds.length === 0) {
@@ -298,7 +327,7 @@ function NotificationsPageContent() {
 
   const unreadCount = useMemo(() => notifications.filter((item) => !item.read).length, [notifications])
 
-  const renderTimestamp = (input: string | null) => {
+  const renderTimestamp = useCallback((input: string | null) => {
     if (!input) {
       return 'Just now'
     }
@@ -308,31 +337,7 @@ function NotificationsPageContent() {
       return 'Just now'
     }
     return formatDistanceToNow(date, { addSuffix: true })
-  }
-
-  const getNotificationIcon = (kind: WorkspaceNotification['kind']) => {
-    switch (kind) {
-      case 'collaboration.mention':
-      case 'task.mention':
-        return <MessageSquare className="h-6 w-6" />
-      case 'task.comment':
-        return <MessageSquare className="h-6 w-6" />
-      case 'proposal.deck.ready':
-        return <BarChart className="h-6 w-6" />
-      case 'task.created':
-      case 'task.updated':
-        return <CircleCheck className="h-6 w-6" />
-      default:
-        return <Mail className="h-6 w-6" />
-    }
-  }
-
-  const getNotificationCategory = (kind: WorkspaceNotification['kind']) => {
-    if (kind === 'collaboration.mention' || kind === 'task.mention') return 'Mention'
-    if (kind === 'proposal.deck.ready') return 'System'
-    if (kind === 'task.created' || kind === 'task.updated' || kind === 'task.comment') return 'Task'
-    return 'General'
-  }
+  }, [])
 
   return (
     <div className={DASHBOARD_THEME.layout.container}>
@@ -373,7 +378,7 @@ function NotificationsPageContent() {
         </Alert>
       )}
 
-      <Tabs value={activeFilter} onValueChange={(value) => setActiveFilter(value as FilterType)}>
+      <Tabs value={activeFilter} onValueChange={handleActiveFilterChange}>
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="all" className="relative">
             All
@@ -448,85 +453,17 @@ function NotificationsPageContent() {
                 <ScrollArea className="h-[calc(100vh-24rem)]">
                   <div className="space-y-2">
                     {notifications.map((notification) => (
-                      <div
+                      <NotificationRow
                         key={notification.id}
-                        className={cn(
-                          'group flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50',
-                          !notification.read && 'border-primary/30 bg-primary/5'
-                        )}
-                      >
-                        <div className="text-2xl">{getNotificationIcon(notification.kind)}</div>
-                        <div className="flex-1 space-y-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold text-foreground">{notification.title}</p>
-                                {!notification.read && (
-                                  <Badge variant="default" className="h-5 text-[10px]">
-                                    NEW
-                                  </Badge>
-                                )}
-                                <Badge variant="outline" className="h-5 text-[10px]">
-                                  {getNotificationCategory(notification.kind)}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">{notification.body}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{renderTimestamp(notification.createdAt)}</span>
-                            {notification.actor.name && (
-                              <>
-                                <span>•</span>
-                                <span>by {notification.actor.name}</span>
-                              </>
-                            )}
-                            {notification.recipients.clientId && (
-                              <>
-                                <span>•</span>
-                                <Badge variant="secondary" className="h-4 text-[10px]">
-                                  Client
-                                </Badge>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                          {notification.navigationUrl && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleOpenNotification(notification)}
-                              title="Open"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {!notification.read && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleMarkAsRead(notification.id)}
-                              disabled={ackInFlight}
-                              title="Mark as read"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleDismiss(notification.id)}
-                            disabled={ackInFlight}
-                            title="Dismiss"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+                        ackInFlight={ackInFlight}
+                        getNotificationCategory={getNotificationCategory}
+                        getNotificationIcon={getNotificationIcon}
+                        handleDismiss={handleDismiss}
+                        handleMarkAsRead={handleMarkAsRead}
+                        handleOpenNotification={handleOpenNotification}
+                        notification={notification}
+                        renderTimestamp={renderTimestamp}
+                      />
                     ))}
                   </div>
                 </ScrollArea>
@@ -554,6 +491,119 @@ function NotificationsPageContent() {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  )
+}
+
+function NotificationRow({
+  ackInFlight,
+  getNotificationCategory,
+  getNotificationIcon,
+  handleDismiss,
+  handleMarkAsRead,
+  handleOpenNotification,
+  notification,
+  renderTimestamp,
+}: {
+  ackInFlight: boolean
+  getNotificationCategory: (kind: WorkspaceNotification['kind']) => string
+  getNotificationIcon: (kind: WorkspaceNotification['kind']) => React.ReactNode
+  handleDismiss: (id: string) => void
+  handleMarkAsRead: (id: string) => void
+  handleOpenNotification: (notification: WorkspaceNotification) => void
+  notification: WorkspaceNotification
+  renderTimestamp: (input: string | null) => string
+}) {
+  const handleOpen = useCallback(() => {
+    handleOpenNotification(notification)
+  }, [handleOpenNotification, notification])
+
+  const handleRead = useCallback(() => {
+    handleMarkAsRead(notification.id)
+  }, [handleMarkAsRead, notification.id])
+
+  const handleRemove = useCallback(() => {
+    handleDismiss(notification.id)
+  }, [handleDismiss, notification.id])
+
+  return (
+    <div
+      className={cn(
+        'group flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50',
+        !notification.read && 'border-primary/30 bg-primary/5'
+      )}
+    >
+      <div className="text-2xl">{getNotificationIcon(notification.kind)}</div>
+      <div className="flex-1 space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-foreground">{notification.title}</p>
+              {!notification.read ? (
+                <Badge variant="default" className="h-5 text-[10px]">
+                  NEW
+                </Badge>
+              ) : null}
+              <Badge variant="outline" className="h-5 text-[10px]">
+                {getNotificationCategory(notification.kind)}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">{notification.body}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{renderTimestamp(notification.createdAt)}</span>
+          {notification.actor.name ? (
+            <>
+              <span>•</span>
+              <span>by {notification.actor.name}</span>
+            </>
+          ) : null}
+          {notification.recipients.clientId ? (
+            <>
+              <span>•</span>
+              <Badge variant="secondary" className="h-4 text-[10px]">
+                Client
+              </Badge>
+            </>
+          ) : null}
+        </div>
+      </div>
+      <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        {notification.navigationUrl ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={handleOpen}
+            title="Open"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+        ) : null}
+        {!notification.read ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={handleRead}
+            disabled={ackInFlight}
+            title="Mark as read"
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+        ) : null}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={handleRemove}
+          disabled={ackInFlight}
+          title="Dismiss"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   )
 }

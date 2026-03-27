@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoaderCircle, Trash2 } from 'lucide-react'
 
@@ -22,6 +22,10 @@ import {
 export function DeleteAccountCard() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
+  const handleOpenDeleteDialog = useCallback(() => {
+    setDeleteDialogOpen(true)
+  }, [])
+
   return (
     <>
       <Card className="border-destructive/40">
@@ -40,7 +44,7 @@ export function DeleteAccountCard() {
           </p>
         </CardContent>
         <CardFooter className="flex justify-end">
-          <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+          <Button variant="destructive" onClick={handleOpenDeleteDialog}>
             <Trash2 className="mr-2 h-4 w-4" />
             Delete account
           </Button>
@@ -121,6 +125,11 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       })
   }, [deleteAccount, deleteConfirm, onOpenChange, router, toast, user])
 
+  const handleDeleteConfirmChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setDeleteConfirm(event.target.value)
+    setDeleteAccountError(null)
+  }, [])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -134,10 +143,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
         <div className="space-y-3">
           <Input
             value={deleteConfirm}
-            onChange={(event) => {
-              setDeleteConfirm(event.target.value)
-              setDeleteAccountError(null)
-            }}
+            onChange={handleDeleteConfirmChange}
             placeholder="Type DELETE to confirm"
           />
           {deleteAccountError ? <p className="text-sm text-destructive">{deleteAccountError}</p> : null}
@@ -152,7 +158,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
           <Button
             type="button"
             variant="destructive"
-            onClick={() => void handleAccountDeletion()}
+            onClick={handleAccountDeletion}
             disabled={deleteConfirm.trim().toLowerCase() !== 'delete' || deleteAccountLoading}
           >
             {deleteAccountLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}

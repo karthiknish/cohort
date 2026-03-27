@@ -1,6 +1,7 @@
 'use client'
 
 import type { ChangeEvent, ClipboardEvent, DragEvent, ReactNode, RefObject } from 'react'
+import { useCallback } from 'react'
 import {
   Archive,
   ArchiveRestore,
@@ -113,6 +114,18 @@ export function UnifiedMessageActionBar({
 }: UnifiedMessageActionBarProps) {
   const canManageMessage = Boolean(currentUserId && message.senderId === currentUserId)
   const isBusy = activeDeletingMessageId === message.id || messageUpdatingId === message.id
+  const handleReplyClick = useCallback(() => {
+    onReply?.(message)
+  }, [message, onReply])
+  const handleEditClick = useCallback(() => {
+    onStartEdit?.(message)
+  }, [message, onStartEdit])
+  const handleDeleteClick = useCallback(() => {
+    onRequestDelete?.(message.id)
+  }, [message.id, onRequestDelete])
+  const handleShareEmailClick = useCallback(() => {
+    onShare?.(message, 'email')
+  }, [message, onShare])
 
   return (
     <div className="flex items-center gap-1">
@@ -125,7 +138,7 @@ export function UnifiedMessageActionBar({
                 size="icon"
                 className="h-6 w-6 transition-transform hover:scale-105"
                 disabled={isBusy}
-                onClick={() => onReply(message)}
+                onClick={handleReplyClick}
               >
                 <Reply className="h-3 w-3" />
                 <span className="sr-only">Reply in thread</span>
@@ -147,7 +160,7 @@ export function UnifiedMessageActionBar({
                 size="icon"
                 className="h-6 w-6 transition-transform hover:scale-105"
                 disabled={isBusy}
-                onClick={() => onStartEdit(message)}
+                onClick={handleEditClick}
               >
                 <Pencil className="h-3 w-3" />
                 <span className="sr-only">Edit message</span>
@@ -169,7 +182,7 @@ export function UnifiedMessageActionBar({
                 size="icon"
                 className="h-6 w-6 text-destructive transition-transform hover:scale-105 hover:text-destructive"
                 disabled={isBusy}
-                onClick={() => onRequestDelete(message.id)}
+                onClick={handleDeleteClick}
               >
                 <Trash2 className="h-3 w-3" />
                 <span className="sr-only">Delete message</span>
@@ -195,10 +208,7 @@ export function UnifiedMessageActionBar({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem
-              onClick={() => onShare(message, 'email')}
-              disabled={sharingTo === `${message.id}-email`}
-            >
+            <DropdownMenuItem onClick={handleShareEmailClick} disabled={sharingTo === `${message.id}-email`}>
               <Mail className="mr-2 h-4 w-4" />
               Share via Email
             </DropdownMenuItem>
@@ -251,6 +261,16 @@ export function UnifiedThreadReplyCard({
   const effectiveRenderMessageContent = renderMessageContent ?? renderContext?.renderMessageContent
   const effectiveRenderMessageAttachments = renderMessageAttachments ?? renderContext?.renderMessageAttachments
 
+  const handleToggleReaction = useCallback((emoji: string) => {
+    onToggleReaction(message.id, emoji)
+  }, [message.id, onToggleReaction])
+  const handleEditReply = useCallback(() => {
+    onStartEdit?.(message)
+  }, [message, onStartEdit])
+  const handleDeleteReply = useCallback(() => {
+    onRequestDelete?.(message.id)
+  }, [message.id, onRequestDelete])
+
   return (
     <div
       key={reply.id}
@@ -289,16 +309,16 @@ export function UnifiedThreadReplyCard({
           </>
         )}
 
-        {!isEditing && !message.deleted ? (
-          <MessageReactions
-            reactions={reply.reactions ?? []}
-            currentUserId={currentUserId}
-            pendingEmoji={reactionPendingEmoji}
-            disabled={isDeleting || isUpdating}
-            onToggle={(emoji) => onToggleReaction(message.id, emoji)}
-          />
-        ) : null}
-      </div>
+          {!isEditing && !message.deleted ? (
+            <MessageReactions
+              reactions={reply.reactions ?? []}
+              currentUserId={currentUserId}
+              pendingEmoji={reactionPendingEmoji}
+              disabled={isDeleting || isUpdating}
+              onToggle={handleToggleReaction}
+            />
+          ) : null}
+        </div>
 
       {!isEditing && !message.deleted && canManageMessage ? (
         <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity duration-[var(--motion-duration-fast)] group-hover:opacity-100 motion-reduce:transition-none">
@@ -311,9 +331,8 @@ export function UnifiedThreadReplyCard({
                     size="icon"
                     className="h-6 w-6 transition-transform hover:scale-105"
                     disabled={isDeleting || isUpdating}
-                    onClick={() => onStartEdit(message)}
+                    onClick={handleEditReply}
                   >
-                    <Pencil className="h-3 w-3" />
                     <span className="sr-only">Edit reply</span>
                   </Button>
                 </TooltipTrigger>
@@ -333,9 +352,8 @@ export function UnifiedThreadReplyCard({
                     size="icon"
                     className="h-6 w-6 text-destructive transition-transform hover:scale-105 hover:text-destructive"
                     disabled={isDeleting || isUpdating}
-                    onClick={() => onRequestDelete(message.id)}
+                    onClick={handleDeleteReply}
                   >
-                    <Trash2 className="h-3 w-3" />
                     <span className="sr-only">Delete reply</span>
                   </Button>
                 </TooltipTrigger>
@@ -354,6 +372,13 @@ export function UnifiedThreadReplyCard({
 }
 
 export function UnifiedConversationHeader({ header }: { header: MessagePaneHeaderInfo }) {
+  const handleArchiveToggle = useCallback(() => {
+    header.onArchive?.(!header.isArchived)
+  }, [header])
+  const handleMuteToggle = useCallback(() => {
+    header.onMute?.(!header.isMuted)
+  }, [header])
+
   return (
     <div className="shrink-0 border-b border-muted/40 p-4">
       <div className="flex items-center justify-between">
@@ -405,7 +430,7 @@ export function UnifiedConversationHeader({ header }: { header: MessagePaneHeade
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {header.onArchive ? (
-                  <DropdownMenuItem onClick={() => header.onArchive?.(!header.isArchived)}>
+                  <DropdownMenuItem onClick={handleArchiveToggle}>
                     {header.isArchived ? (
                       <>
                         <ArchiveRestore className="mr-2 h-4 w-4" />
@@ -420,7 +445,7 @@ export function UnifiedConversationHeader({ header }: { header: MessagePaneHeade
                   </DropdownMenuItem>
                 ) : null}
                 {header.onMute ? (
-                  <DropdownMenuItem onClick={() => header.onMute?.(!header.isMuted)}>
+                  <DropdownMenuItem onClick={handleMuteToggle}>
                     {header.isMuted ? (
                       <>
                         <Bell className="mr-2 h-4 w-4" />
@@ -494,13 +519,20 @@ export function UnifiedComposerSection({
   onAttachmentInputChange,
   typingIndicator,
 }: UnifiedComposerSectionProps) {
+  const handleRemoveAttachment = useCallback((attachmentId: string) => {
+    onRemoveAttachment?.(attachmentId)
+  }, [onRemoveAttachment])
+  const handleSend = useCallback(() => {
+    onSend()
+  }, [onSend])
+
   return (
     <div className="shrink-0 border-t border-muted/40 p-4">
       <PendingAttachmentsList
         attachments={pendingAttachments}
         uploading={uploadingAttachments}
         disabled={isSending}
-        onRemove={(attachmentId) => onRemoveAttachment?.(attachmentId)}
+        onRemove={handleRemoveAttachment}
       />
       <div
         className={cn(
@@ -537,7 +569,7 @@ export function UnifiedComposerSection({
         </span>
         <div className="flex-1" />
         <Button
-          onClick={onSend}
+          onClick={handleSend}
           disabled={(!messageInput.trim() && !hasPendingAttachments) || isSending || uploadingAttachments}
           size="sm"
           className="transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"

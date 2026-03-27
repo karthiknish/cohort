@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import Link from 'next/link'
 import { Search, UserPlus, Users as UsersIcon, X } from 'lucide-react'
 
@@ -96,6 +97,17 @@ export function TeamMembersCard({
   teamSearch,
   onTeamSearchChange,
 }: TeamMembersCardProps) {
+  const handleTeamSearchChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      onTeamSearchChange(event.target.value)
+    },
+    [onTeamSearchChange]
+  )
+
+  const handleClearTeamSearch = useCallback(() => {
+    onTeamSearchChange('')
+  }, [onTeamSearchChange])
+
   return (
     <Card className="overflow-hidden border-muted/40 bg-card shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
       <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
@@ -115,7 +127,7 @@ export function TeamMembersCard({
               <Input
                 placeholder="Search team…"
                 value={teamSearch}
-                onChange={(e) => onTeamSearchChange(e.target.value)}
+                onChange={handleTeamSearchChange}
                 className="h-9 w-full rounded-xl border-muted/30 bg-card pl-10 pr-8 text-[11px] font-medium shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:border-primary/40 focus:ring-4 focus:ring-primary/5 sm:w-48"
               />
               {teamSearch && (
@@ -123,7 +135,7 @@ export function TeamMembersCard({
                   variant="ghost"
                   size="sm"
                   className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 rounded-lg p-0 text-muted-foreground/70 hover:text-foreground"
-                  onClick={() => onTeamSearchChange('')}
+                  onClick={handleClearTeamSearch}
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -148,7 +160,7 @@ export function TeamMembersCard({
             <p className="mt-1 text-xs font-medium text-muted-foreground">
               Try refining your search criteria
             </p>
-            <Button variant="ghost" size="sm" className="mt-4 text-[10px] font-bold uppercase tracking-widest text-primary" onClick={() => onTeamSearchChange('')}>
+            <Button variant="ghost" size="sm" className="mt-4 text-[10px] font-bold uppercase tracking-widest text-primary" onClick={handleClearTeamSearch}>
               Clear search
             </Button>
           </div>

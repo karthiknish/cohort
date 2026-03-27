@@ -316,6 +316,10 @@ export function ClientAiSummaryCard({
     [summarySnapshot]
   )
 
+  const handleManualRefresh = useCallback(() => {
+    setManualRefreshToken((token) => token + 1)
+  }, [])
+
   return (
     <Card className="border-primary/15 bg-gradient-to-br from-background via-background to-primary/5 shadow-sm">
       <CardHeader className="flex flex-row items-start justify-between gap-3">
@@ -334,7 +338,7 @@ export function ClientAiSummaryCard({
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => setManualRefreshToken((token) => token + 1)}
+          onClick={handleManualRefresh}
           disabled={!summarySnapshot || waitingForData}
         >
           <RefreshCw className="mr-2 h-3.5 w-3.5" />

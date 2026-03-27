@@ -64,14 +64,14 @@ export function ConfirmDialog({
   const config = variantConfig[variant]
   const Icon = config.icon
 
-  const handleConfirm = async () => {
+  const handleConfirm = React.useCallback(async () => {
     await onConfirm()
-  }
+  }, [onConfirm])
 
-  const handleCancel = () => {
+  const handleCancel = React.useCallback(() => {
     onCancel?.()
     onOpenChange(false)
-  }
+  }, [onCancel, onOpenChange])
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

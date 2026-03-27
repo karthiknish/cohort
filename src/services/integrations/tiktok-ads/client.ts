@@ -2,7 +2,7 @@
 // TIKTOK ADS API CLIENT - Core request execution (delegates retry/error/logging to base client)
 // =============================================================================
 
-import { TikTokApiErrorResponse } from './types'
+import type { TikTokApiErrorResponse } from './types'
 
 import { tiktokAdsClient } from '../shared/base-client'
 import { executeIntegrationRequest } from '../shared/execute-integration-request'

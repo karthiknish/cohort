@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { ChartGantt, Columns3, LayoutGrid, List } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -13,6 +14,11 @@ interface ViewModeSelectorProps {
 }
 
 export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) {
+  const handleListView = useCallback(() => onChange('list'), [onChange])
+  const handleGridView = useCallback(() => onChange('grid'), [onChange])
+  const handleBoardView = useCallback(() => onChange('board'), [onChange])
+  const handleGanttView = useCallback(() => onChange('gantt'), [onChange])
+
   return (
     <div className="flex items-center rounded-md border bg-background p-1">
       <Tooltip>
@@ -21,7 +27,7 @@ export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) 
             variant={viewMode === 'list' ? 'secondary' : 'ghost'}
             size="icon"
             className="h-8 w-8"
-            onClick={() => onChange('list')}
+            onClick={handleListView}
             aria-label="List view"
           >
             <List className="h-4 w-4" />
@@ -35,7 +41,7 @@ export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) 
             variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
             size="icon"
             className="h-8 w-8"
-            onClick={() => onChange('grid')}
+            onClick={handleGridView}
             aria-label="Grid view"
           >
             <LayoutGrid className="h-4 w-4" />
@@ -49,7 +55,7 @@ export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) 
             variant={viewMode === 'board' ? 'secondary' : 'ghost'}
             size="icon"
             className="h-8 w-8"
-            onClick={() => onChange('board')}
+            onClick={handleBoardView}
             aria-label="Kanban view"
           >
             <Columns3 className="h-4 w-4" />
@@ -63,7 +69,7 @@ export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) 
             variant={viewMode === 'gantt' ? 'secondary' : 'ghost'}
             size="icon"
             className="h-8 w-8"
-            onClick={() => onChange('gantt')}
+            onClick={handleGanttView}
             aria-label="Gantt view"
           >
             <ChartGantt className="h-4 w-4" />

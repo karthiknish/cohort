@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, type ChangeEvent } from 'react'
 import { LoaderCircle } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -29,6 +30,22 @@ export function NotificationPreferencesCard({
   savingPreferences,
   onPreferenceToggle,
 }: NotificationPreferencesCardProps) {
+  const handleAdAlertsChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    onPreferenceToggle('emailAdAlerts', event.target.checked)
+  }, [onPreferenceToggle])
+
+  const handlePerformanceDigestChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    onPreferenceToggle('emailPerformanceDigest', event.target.checked)
+  }, [onPreferenceToggle])
+
+  const handleTaskActivityChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    onPreferenceToggle('emailTaskActivity', event.target.checked)
+  }, [onPreferenceToggle])
+
+  const handleCollaborationChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    onPreferenceToggle('emailCollaboration', event.target.checked)
+  }, [onPreferenceToggle])
+
   return (
     <Card>
       <CardHeader>
@@ -53,9 +70,7 @@ export function NotificationPreferencesCard({
                 </div>
                 <Checkbox
                   checked={emailAdAlertsEnabled}
-                  onChange={(e) => {
-                    onPreferenceToggle('emailAdAlerts', e.target.checked)
-                  }}
+                  onChange={handleAdAlertsChange}
                   disabled={notificationsLoading || savingPreferences}
                 />
               </div>
@@ -67,9 +82,7 @@ export function NotificationPreferencesCard({
                 </div>
                 <Checkbox
                   checked={emailPerformanceDigestEnabled}
-                  onChange={(e) => {
-                    onPreferenceToggle('emailPerformanceDigest', e.target.checked)
-                  }}
+                  onChange={handlePerformanceDigestChange}
                   disabled={notificationsLoading || savingPreferences}
                 />
               </div>
@@ -81,9 +94,7 @@ export function NotificationPreferencesCard({
                 </div>
                 <Checkbox
                   checked={emailTaskActivityEnabled}
-                  onChange={(e) => {
-                    onPreferenceToggle('emailTaskActivity', e.target.checked)
-                  }}
+                  onChange={handleTaskActivityChange}
                   disabled={notificationsLoading || savingPreferences}
                 />
               </div>
@@ -95,9 +106,7 @@ export function NotificationPreferencesCard({
                 </div>
                 <Checkbox
                   checked={emailCollaborationEnabled}
-                  onChange={(e) => {
-                    onPreferenceToggle('emailCollaboration', e.target.checked)
-                  }}
+                  onChange={handleCollaborationChange}
                   disabled={notificationsLoading || savingPreferences}
                 />
               </div>

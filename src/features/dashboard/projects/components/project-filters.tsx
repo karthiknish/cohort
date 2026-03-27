@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -31,9 +32,19 @@ export function ProjectFilters({
   onSortFieldChange,
   onToggleSortDirection,
 }: ProjectFiltersProps) {
+  const handleStatusChange = useCallback(
+    (value: string) => onStatusChange(value as StatusFilter),
+    [onStatusChange]
+  )
+
+  const handleSortFieldChange = useCallback(
+    (value: string) => onSortFieldChange(value as SortField),
+    [onSortFieldChange]
+  )
+
   return (
     <div className="flex items-center gap-1">
-      <Select value={statusFilter} onValueChange={(value: StatusFilter) => onStatusChange(value)}>
+      <Select value={statusFilter} onValueChange={handleStatusChange}>
         <SelectTrigger className="sm:w-40" aria-label="Filter by status">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
@@ -45,7 +56,7 @@ export function ProjectFilters({
           ))}
         </SelectContent>
       </Select>
-      <Select value={sortField} onValueChange={(value: SortField) => onSortFieldChange(value)}>
+      <Select value={sortField} onValueChange={handleSortFieldChange}>
         <SelectTrigger className="sm:w-36" aria-label="Sort by">
           <SelectValue placeholder="Sort by" />
         </SelectTrigger>

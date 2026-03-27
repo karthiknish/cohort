@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useMemo } from 'react'
 import { Search } from 'lucide-react'
 import type { ChangeEvent } from 'react'
 
@@ -31,9 +32,17 @@ export function CollaborationChannelList({
   onSearchQueryChange,
   channelSummaries,
 }: CollaborationChannelListProps) {
-  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     onSearchQueryChange(event.target.value)
-  }
+  }, [onSearchQueryChange])
+
+  const selectChannelHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        filteredChannels.map((channel) => [channel.id, () => onSelectChannel(channel.id)])
+      ) as Record<string, () => void>,
+    [filteredChannels, onSelectChannel]
+  )
 
   return (
     <div className="flex h-full w-full flex-col border-b border-muted/40 lg:h-[640px] lg:w-80 lg:border-b-0 lg:border-r">
@@ -58,7 +67,7 @@ export function CollaborationChannelList({
                 <button
                   key={channel.id}
                   type="button"
-                  onClick={() => onSelectChannel(channel.id)}
+                  onClick={selectChannelHandlers[channel.id]}
                   className={cn(
                     'flex w-full flex-col gap-1.5 rounded-lg border p-3 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] outline-none focus-visible:ring-2 focus-visible:ring-primary/20',
                     isSelected

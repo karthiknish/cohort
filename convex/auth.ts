@@ -15,7 +15,7 @@ export const getCurrentUser = query({
 
 // Type exports for better TypeScript integration
 // Use: import type { Session, User } from '@/convex/auth'
-import { createAuth as _createAuth } from "./betterAuth/auth";
+import type { createAuth as _createAuth } from "./betterAuth/auth";
 
 export type Auth = ReturnType<typeof _createAuth>;
 export type Session = Auth["$Infer"]["Session"];

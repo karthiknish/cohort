@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { format, subDays, startOfDay, endOfDay } from 'date-fns'
 import { CalendarIcon, ChevronDown } from 'lucide-react'
 
@@ -51,24 +51,45 @@ function formatDateRange(range: DateRange): string {
 export function DateRangePicker({ value, onChange, className }: DateRangePickerProps) {
   const [open, setOpen] = useState(false)
 
-  const dateRange: DayPickerRange = {
-    from: value.start,
-    to: value.end,
-  }
+  const dateRange = useMemo<DayPickerRange>(
+    () => ({
+      from: value.start,
+      to: value.end,
+    }),
+    [value.end, value.start]
+  )
 
-  const handleSelect = (range: Partial<DayPickerRange> | undefined) => {
-    if (range?.from && range?.to) {
-      onChange({
-        start: startOfDay(range.from),
-        end: endOfDay(range.to),
-      })
-    }
-  }
+  const handleSelect = useCallback(
+    (range: Partial<DayPickerRange> | undefined) => {
+      if (range?.from && range?.to) {
+        onChange({
+          start: startOfDay(range.from),
+          end: endOfDay(range.to),
+        })
+      }
+    },
+    [onChange]
+  )
 
-  const handlePresetSelect = (days: number) => {
-    onChange(getPresetRange(days))
-    setOpen(false)
-  }
+  const handlePresetSelect = useCallback(
+    (days: number) => {
+      onChange(getPresetRange(days))
+      setOpen(false)
+    },
+    [onChange]
+  )
+
+  const handleDisabledDate = useCallback((date: Date) => date > new Date(), [])
+
+  const presetHandlers = useMemo(
+    () => ({
+      7: () => handlePresetSelect(7),
+      14: () => handlePresetSelect(14),
+      30: () => handlePresetSelect(30),
+      90: () => handlePresetSelect(90),
+    }),
+    [handlePresetSelect]
+  )
 
   return (
     <div className={cn('grid gap-2', className)}>
@@ -99,7 +120,7 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
                   variant="ghost"
                   size="sm"
                   className="justify-start font-normal"
-                  onClick={() => handlePresetSelect(preset.days)}
+                  onClick={presetHandlers[preset.days]}
                 >
                   {preset.label}
                 </Button>
@@ -113,7 +134,7 @@ export function DateRangePicker({ value, onChange, className }: DateRangePickerP
                 selected={dateRange}
                 onSelect={handleSelect}
                 numberOfMonths={2}
-                disabled={(date: Date) => date > new Date()}
+                disabled={handleDisabledDate}
               />
             </div>
           </div>

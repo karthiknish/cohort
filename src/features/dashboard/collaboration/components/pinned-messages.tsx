@@ -264,7 +264,7 @@ export function PinMessageButton({
         type="button"
         variant={isPinned ? 'default' : 'outline'}
         size="sm"
-        onClick={(e) => handleTogglePin(e)}
+        onClick={handleTogglePin}
         disabled={isLoading}
         className={cn('gap-2', className)}
       >
@@ -289,7 +289,7 @@ export function PinMessageButton({
             variant="ghost"
             size="icon"
             className={cn('h-7 w-7', isPinned && 'text-primary', className)}
-            onClick={(e) => handleTogglePin(e)}
+            onClick={handleTogglePin}
             disabled={isLoading}
           >
             {isLoading ? (

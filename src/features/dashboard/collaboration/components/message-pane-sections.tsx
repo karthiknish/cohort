@@ -1,6 +1,7 @@
 'use client'
 
 import type { RefObject } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { LoaderCircle, RefreshCw } from 'lucide-react'
 
@@ -133,6 +134,73 @@ export function CollaborationMessageItem({
   const lastReplyIso =
     message.threadLastReplyAt ?? (threadReplies.length > 0 ? threadReplies[threadReplies.length - 1]?.createdAt ?? null : null)
 
+  const handleReaction = useCallback((emoji: string) => onToggleReaction(message.id, emoji), [onToggleReaction, message.id])
+  const handleReply = useCallback(() => onReply(message), [onReply, message])
+  const handleEdit = useCallback(() => onStartEdit(message), [onStartEdit, message])
+  const handleDelete = useCallback(() => onConfirmDelete(message.id), [onConfirmDelete, message.id])
+  const handleCreateTask = useCallback(() => onCreateTask(message), [onCreateTask, message])
+
+  const handleThreadToggle = useCallback(() => onThreadToggle(threadRootId), [onThreadToggle, threadRootId])
+  const handleRetryThreadLoad = useCallback(() => onRetryThreadLoad(threadRootId), [onRetryThreadLoad, threadRootId])
+  const handleLoadMoreThread = useCallback(() => onLoadMoreThread(threadRootId), [onLoadMoreThread, threadRootId])
+  const renderThreadReply = useCallback(
+    (reply: CollaborationMessage) => (
+      <CollaborationMessageReplyItem
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        editingMessageId={editingMessageId}
+        editingPreview={editingPreview}
+        editingValue={editingValue}
+        expandedThreadIds={expandedThreadIds}
+        message={reply}
+        messageDeletingId={messageDeletingId}
+        messageUpdatingId={messageUpdatingId}
+        onCancelEdit={onCancelEdit}
+        onConfirmDelete={onConfirmDelete}
+        onConfirmEdit={onConfirmEdit}
+        onCreateTask={onCreateTask}
+        onEditingValueChange={onEditingValueChange}
+        onLoadMoreThread={onLoadMoreThread}
+        onReply={onReply}
+        onRetryThreadLoad={onRetryThreadLoad}
+        onStartEdit={onStartEdit}
+        onThreadToggle={onThreadToggle}
+        onToggleReaction={onToggleReaction}
+        reactionPendingByMessage={reactionPendingByMessage}
+        threadErrorsByRootId={threadErrorsByRootId}
+        threadLoadingByRootId={threadLoadingByRootId}
+        threadMessagesByRootId={threadMessagesByRootId}
+        threadNextCursorByRootId={threadNextCursorByRootId}
+      />
+    ),
+    [
+      currentUserId,
+      currentUserRole,
+      editingMessageId,
+      editingPreview,
+      editingValue,
+      expandedThreadIds,
+      messageDeletingId,
+      messageUpdatingId,
+      onCancelEdit,
+      onConfirmDelete,
+      onConfirmEdit,
+      onCreateTask,
+      onEditingValueChange,
+      onLoadMoreThread,
+      onReply,
+      onRetryThreadLoad,
+      onStartEdit,
+      onThreadToggle,
+      onToggleReaction,
+      reactionPendingByMessage,
+      threadErrorsByRootId,
+      threadLoadingByRootId,
+      threadMessagesByRootId,
+      threadNextCursorByRootId,
+    ],
+  )
+
   const containerClass = cn(
     'relative group flex items-start gap-3 px-6 py-2.5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
     isSearchResult && 'bg-primary/5 ring-1 ring-primary/20',
@@ -175,11 +243,11 @@ export function CollaborationMessageItem({
             isUpdating={isUpdating}
             isDeleting={isDeleting}
             disableReactionActions={disableReactionActions}
-            onReaction={(emoji) => onToggleReaction(message.id, emoji)}
-            onReply={() => onReply(message)}
-            onEdit={() => onStartEdit(message)}
-            onDelete={() => onConfirmDelete(message.id)}
-            onCreateTask={() => onCreateTask(message)}
+            onReaction={handleReaction}
+            onReply={handleReply}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onCreateTask={handleCreateTask}
           />
         ) : (
           <ReplyActionsBar
@@ -187,8 +255,8 @@ export function CollaborationMessageItem({
             canManage={canManageMessage}
             isUpdating={isUpdating}
             isDeleting={isDeleting}
-            onEdit={() => onStartEdit(message)}
-            onDelete={() => onConfirmDelete(message.id)}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
           />
         )}
 
@@ -233,7 +301,7 @@ export function CollaborationMessageItem({
             currentUserId={currentUserId}
             pendingEmoji={reactionPendingEmoji}
             disabled={disableReactionActions}
-            onToggle={(emoji) => onToggleReaction(message.id, emoji)}
+            onToggle={handleReaction}
           />
         ) : null}
 
@@ -253,49 +321,524 @@ export function CollaborationMessageItem({
             error={threadError}
             hasNextCursor={!!threadNextCursor}
             replies={threadReplies}
-            onToggle={() => onThreadToggle(threadRootId)}
-            onRetry={() => onRetryThreadLoad(threadRootId)}
-            onLoadMore={() => onLoadMoreThread(threadRootId)}
-            onReply={() => onReply(message)}
-            renderReply={(reply) => (
-              <CollaborationMessageItem
-                currentUserId={currentUserId}
-                currentUserRole={currentUserRole}
-                editingMessageId={editingMessageId}
-                editingPreview={editingPreview}
-                editingValue={editingValue}
-                expandedThreadIds={expandedThreadIds}
-                isReply={true}
-                isSearchResult={isSearchResult}
-                message={reply}
-                messageDeletingId={messageDeletingId}
-                messageUpdatingId={messageUpdatingId}
-                onCancelEdit={onCancelEdit}
-                onConfirmDelete={onConfirmDelete}
-                onConfirmEdit={onConfirmEdit}
-                onCreateTask={onCreateTask}
-                onEditingValueChange={onEditingValueChange}
-                onLoadMoreThread={onLoadMoreThread}
-                onReply={onReply}
-                onRetryThreadLoad={onRetryThreadLoad}
-                onStartEdit={onStartEdit}
-                onThreadToggle={onThreadToggle}
-                onToggleReaction={onToggleReaction}
-                reactionPendingByMessage={reactionPendingByMessage}
-                showAvatar={true}
-                showHeader={true}
-                threadErrorsByRootId={threadErrorsByRootId}
-                threadLoadingByRootId={threadLoadingByRootId}
-                threadMessagesByRootId={threadMessagesByRootId}
-                threadNextCursorByRootId={threadNextCursorByRootId}
-              />
-            )}
+            onToggle={handleThreadToggle}
+            onRetry={handleRetryThreadLoad}
+            onLoadMore={handleLoadMoreThread}
+            onReply={handleReply}
+            renderReply={renderThreadReply}
           />
         ) : null}
       </div>
 
       {!message.isDeleted ? <DeletingOverlay isDeleting={isDeleting} /> : null}
     </div>
+  )
+}
+
+type CollaborationMessageReplyItemProps = {
+  currentUserId?: string | null
+  currentUserRole?: string | null
+  editingMessageId: string | null
+  editingPreview: string
+  editingValue: string
+  expandedThreadIds: Record<string, boolean>
+  message: CollaborationMessage
+  messageDeletingId: string | null
+  messageUpdatingId: string | null
+  onCancelEdit: () => void
+  onConfirmDelete: (messageId: string) => void
+  onConfirmEdit: () => void
+  onCreateTask: (message: CollaborationMessage) => void
+  onEditingValueChange: (value: string) => void
+  onLoadMoreThread: (threadRootId: string) => void
+  onReply: (message: CollaborationMessage) => void
+  onRetryThreadLoad: (threadRootId: string) => void
+  onStartEdit: (message: CollaborationMessage) => void
+  onThreadToggle: (threadRootId: string) => void
+  onToggleReaction: (messageId: string, emoji: string) => void
+  reactionPendingByMessage: Record<string, string | null>
+  threadErrorsByRootId: Record<string, string | null>
+  threadLoadingByRootId: Record<string, boolean>
+  threadMessagesByRootId: Record<string, CollaborationMessage[]>
+  threadNextCursorByRootId: Record<string, string | null>
+}
+
+function CollaborationMessageReplyItem({
+  currentUserId,
+  currentUserRole,
+  editingMessageId,
+  editingPreview,
+  editingValue,
+  expandedThreadIds,
+  message,
+  messageDeletingId,
+  messageUpdatingId,
+  onCancelEdit,
+  onConfirmDelete,
+  onConfirmEdit,
+  onCreateTask,
+  onEditingValueChange,
+  onLoadMoreThread,
+  onReply,
+  onRetryThreadLoad,
+  onStartEdit,
+  onThreadToggle,
+  onToggleReaction,
+  reactionPendingByMessage,
+  threadErrorsByRootId,
+  threadLoadingByRootId,
+  threadMessagesByRootId,
+  threadNextCursorByRootId,
+}: CollaborationMessageReplyItemProps) {
+  return (
+    <CollaborationMessageItem
+      currentUserId={currentUserId}
+      currentUserRole={currentUserRole}
+      editingMessageId={editingMessageId}
+      editingPreview={editingPreview}
+      editingValue={editingValue}
+      expandedThreadIds={expandedThreadIds}
+      message={message}
+      messageDeletingId={messageDeletingId}
+      messageUpdatingId={messageUpdatingId}
+      onCancelEdit={onCancelEdit}
+      onConfirmDelete={onConfirmDelete}
+      onConfirmEdit={onConfirmEdit}
+      onCreateTask={onCreateTask}
+      onEditingValueChange={onEditingValueChange}
+      onLoadMoreThread={onLoadMoreThread}
+      onReply={onReply}
+      onRetryThreadLoad={onRetryThreadLoad}
+      onStartEdit={onStartEdit}
+      onThreadToggle={onThreadToggle}
+      onToggleReaction={onToggleReaction}
+      reactionPendingByMessage={reactionPendingByMessage}
+      threadErrorsByRootId={threadErrorsByRootId}
+      threadLoadingByRootId={threadLoadingByRootId}
+      threadMessagesByRootId={threadMessagesByRootId}
+      threadNextCursorByRootId={threadNextCursorByRootId}
+    />
+  )
+}
+
+type SearchMessageActionsBarProps = {
+  currentUserId?: string | null
+  currentUserRole?: string | null
+  message: CollaborationMessage
+  messageDeletingId: string | null
+  messageUpdatingId: string | null
+  onConfirmDelete: (messageId: string) => void
+  onCreateTask: (message: CollaborationMessage) => void
+  onReply: (message: CollaborationMessage) => void
+  onStartEdit: (message: CollaborationMessage) => void
+  onToggleReaction: (messageId: string, emoji: string) => void
+}
+
+function SearchMessageActionsBar({
+  currentUserId,
+  currentUserRole,
+  message,
+  messageDeletingId,
+  messageUpdatingId,
+  onConfirmDelete,
+  onCreateTask,
+  onReply,
+  onStartEdit,
+  onToggleReaction,
+}: SearchMessageActionsBarProps) {
+  const canManageMessage =
+    !message.isDeleted &&
+    ((message.senderId && message.senderId === currentUserId) || currentUserRole === 'admin')
+
+  const handleReaction = useCallback((emoji: string) => onToggleReaction(message.id, emoji), [onToggleReaction, message.id])
+  const handleReply = useCallback(() => onReply(message), [onReply, message])
+  const handleEdit = useCallback(() => onStartEdit(message), [onStartEdit, message])
+  const handleDelete = useCallback(() => onConfirmDelete(message.id), [onConfirmDelete, message.id])
+  const handleCreateTask = useCallback(() => onCreateTask(message), [onCreateTask, message])
+
+  return (
+    <MessageActionsBar
+      message={message}
+      canReact={!message.isDeleted && !!currentUserId}
+      canManage={canManageMessage}
+      isUpdating={messageUpdatingId === message.id}
+      isDeleting={messageDeletingId === message.id}
+      disableReactionActions={message.isDeleted || !currentUserId}
+      onReaction={handleReaction}
+      onReply={handleReply}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+      onCreateTask={handleCreateTask}
+    />
+  )
+}
+
+type SearchThreadSectionProps = {
+  currentUserId?: string | null
+  currentUserRole?: string | null
+  editingMessageId: string | null
+  editingPreview: string
+  editingValue: string
+  expandedThreadIds: Record<string, boolean>
+  messageDeletingId: string | null
+  messageUpdatingId: string | null
+  onCancelEdit: () => void
+  onConfirmDelete: (messageId: string) => void
+  onConfirmEdit: () => void
+  onCreateTask: (message: CollaborationMessage) => void
+  onEditingValueChange: (value: string) => void
+  onLoadMoreThread: (threadRootId: string) => void
+  onReply: (message: CollaborationMessage) => void
+  onRetryThreadLoad: (threadRootId: string) => void
+  onStartEdit: (message: CollaborationMessage) => void
+  onThreadToggle: (threadRootId: string) => void
+  onToggleReaction: (messageId: string, emoji: string) => void
+  originalMessage: CollaborationMessage
+  reactionPendingByMessage: Record<string, string | null>
+  threadErrorsByRootId: Record<string, string | null>
+  threadLoadingByRootId: Record<string, boolean>
+  threadMessagesByRootId: Record<string, CollaborationMessage[]>
+  threadNextCursorByRootId: Record<string, string | null>
+}
+
+function SearchThreadSection({
+  currentUserId,
+  currentUserRole,
+  editingMessageId,
+  editingPreview,
+  editingValue,
+  expandedThreadIds,
+  messageDeletingId,
+  messageUpdatingId,
+  onCancelEdit,
+  onConfirmDelete,
+  onConfirmEdit,
+  onCreateTask,
+  onEditingValueChange,
+  onLoadMoreThread,
+  onReply,
+  onRetryThreadLoad,
+  onStartEdit,
+  onThreadToggle,
+  onToggleReaction,
+  originalMessage,
+  reactionPendingByMessage,
+  threadErrorsByRootId,
+  threadLoadingByRootId,
+  threadMessagesByRootId,
+  threadNextCursorByRootId,
+}: SearchThreadSectionProps) {
+  const threadRootId = getThreadRootId(originalMessage)
+  const threadReplies = threadMessagesByRootId[threadRootId] ?? []
+  const threadLoading = threadLoadingByRootId[threadRootId] ?? false
+  const threadError = threadErrorsByRootId[threadRootId] ?? null
+  const threadNextCursor = threadNextCursorByRootId[threadRootId] ?? null
+  const replyCount = Math.max(typeof originalMessage.threadReplyCount === 'number' ? originalMessage.threadReplyCount : 0, threadReplies.length)
+  const lastReplyIso =
+    originalMessage.threadLastReplyAt ?? (threadReplies.length > 0 ? threadReplies[threadReplies.length - 1]?.createdAt ?? null : null)
+
+  const handleToggle = useCallback(() => onThreadToggle(threadRootId), [onThreadToggle, threadRootId])
+  const handleRetry = useCallback(() => onRetryThreadLoad(threadRootId), [onRetryThreadLoad, threadRootId])
+  const handleLoadMore = useCallback(() => onLoadMoreThread(threadRootId), [onLoadMoreThread, threadRootId])
+  const handleReply = useCallback(() => onReply(originalMessage), [onReply, originalMessage])
+  const renderReply = useCallback(
+    (reply: CollaborationMessage) => (
+      <CollaborationMessageItem
+        currentUserId={currentUserId}
+        currentUserRole={currentUserRole}
+        editingMessageId={editingMessageId}
+        editingPreview={editingPreview}
+        editingValue={editingValue}
+        expandedThreadIds={expandedThreadIds}
+        message={reply}
+        messageDeletingId={messageDeletingId}
+        messageUpdatingId={messageUpdatingId}
+        onCancelEdit={onCancelEdit}
+        onConfirmDelete={onConfirmDelete}
+        onConfirmEdit={onConfirmEdit}
+        onCreateTask={onCreateTask}
+        onEditingValueChange={onEditingValueChange}
+        onLoadMoreThread={onLoadMoreThread}
+        onReply={onReply}
+        onRetryThreadLoad={onRetryThreadLoad}
+        onStartEdit={onStartEdit}
+        onThreadToggle={onThreadToggle}
+        onToggleReaction={onToggleReaction}
+        reactionPendingByMessage={reactionPendingByMessage}
+        threadErrorsByRootId={threadErrorsByRootId}
+        threadLoadingByRootId={threadLoadingByRootId}
+        threadMessagesByRootId={threadMessagesByRootId}
+        threadNextCursorByRootId={threadNextCursorByRootId}
+      />
+    ),
+    [
+      currentUserId,
+      currentUserRole,
+      editingMessageId,
+      editingPreview,
+      editingValue,
+      expandedThreadIds,
+      messageDeletingId,
+      messageUpdatingId,
+      onCancelEdit,
+      onConfirmDelete,
+      onConfirmEdit,
+      onCreateTask,
+      onEditingValueChange,
+      onLoadMoreThread,
+      onReply,
+      onRetryThreadLoad,
+      onStartEdit,
+      onThreadToggle,
+      onToggleReaction,
+      reactionPendingByMessage,
+      threadErrorsByRootId,
+      threadLoadingByRootId,
+      threadMessagesByRootId,
+      threadNextCursorByRootId,
+    ],
+  )
+
+  return (
+    <ThreadSection
+      threadRootId={threadRootId}
+      replyCount={replyCount}
+      lastReplyIso={lastReplyIso}
+      isOpen={Boolean(expandedThreadIds[threadRootId])}
+      isLoading={threadLoading}
+      error={threadError}
+      hasNextCursor={!!threadNextCursor}
+      replies={threadReplies}
+      onToggle={handleToggle}
+      onRetry={handleRetry}
+      onLoadMore={handleLoadMore}
+      onReply={handleReply}
+      renderReply={renderReply}
+    />
+  )
+}
+
+type CollaborationSearchMessageListProps = {
+  currentUserId?: string | null
+  currentUserRole?: string | null
+  editingMessageId: string | null
+  editingPreview: string
+  editingValue: string
+  expandedThreadIds: Record<string, boolean>
+  messageDeletingId: string | null
+  messageUpdatingId: string | null
+  onCancelEdit: () => void
+  onConfirmDelete: (messageId: string) => void
+  onConfirmEdit: () => void
+  onCreateTask: (message: CollaborationMessage) => void
+  onEditingValueChange: (value: string) => void
+  onLoadMoreThread: (threadRootId: string) => void
+  onReply: (message: CollaborationMessage) => void
+  onRetryThreadLoad: (threadRootId: string) => void
+  onStartEdit: (message: CollaborationMessage) => void
+  onThreadToggle: (threadRootId: string) => void
+  onToggleReaction: (messageId: string, emoji: string) => void
+  reactionPendingByMessage: Record<string, string | null>
+  threadErrorsByRootId: Record<string, string | null>
+  threadLoadingByRootId: Record<string, boolean>
+  threadMessagesByRootId: Record<string, CollaborationMessage[]>
+  threadNextCursorByRootId: Record<string, string | null>
+  visibleMessages: CollaborationMessage[]
+}
+
+function CollaborationSearchMessageList({
+  currentUserId,
+  currentUserRole,
+  editingMessageId,
+  editingPreview,
+  editingValue,
+  expandedThreadIds,
+  messageDeletingId,
+  messageUpdatingId,
+  onCancelEdit,
+  onConfirmDelete,
+  onConfirmEdit,
+  onCreateTask,
+  onEditingValueChange,
+  onLoadMoreThread,
+  onReply,
+  onRetryThreadLoad,
+  onStartEdit,
+  onThreadToggle,
+  onToggleReaction,
+  reactionPendingByMessage,
+  threadErrorsByRootId,
+  threadLoadingByRootId,
+  threadMessagesByRootId,
+  threadNextCursorByRootId,
+  visibleMessages,
+}: CollaborationSearchMessageListProps) {
+  const handleToggleReaction = useCallback(async (messageId: string, emoji: string) => {
+    await onToggleReaction(messageId, emoji)
+  }, [onToggleReaction])
+  const emptyState = useMemo(() => <NoSearchResultsState />, [])
+  const handleNoopLoadMore = useCallback(() => {}, [])
+
+  const renderMessageContent = useCallback(
+    (message: { id: string }) => {
+      const originalMsg = visibleMessages.find((candidate) => candidate.id === message.id)
+      return originalMsg ? <MessageContent content={originalMsg.content ?? ''} mentions={originalMsg.mentions} /> : null
+    },
+    [visibleMessages],
+  )
+
+  const renderMessageAttachments = useCallback(
+    (message: { id: string }) => {
+      const originalMsg = visibleMessages.find((candidate) => candidate.id === message.id)
+      return originalMsg?.attachments && originalMsg.attachments.length > 0 ? <MessageAttachments attachments={originalMsg.attachments} /> : null
+    },
+    [visibleMessages],
+  )
+
+  const renderMessageExtras = useCallback(
+    (message: { id: string }) => {
+      const originalMsg = visibleMessages.find((candidate) => candidate.id === message.id)
+      return originalMsg?.sharedTo && originalMsg.sharedTo.length > 0 ? <SharedPlatformIcons sharedTo={originalMsg.sharedTo} /> : null
+    },
+    [visibleMessages],
+  )
+
+  const renderThreadSection = useCallback(
+    (message: { id: string; deleted?: boolean }) => {
+      const originalMsg = visibleMessages.find((candidate) => candidate.id === message.id)
+      if (!originalMsg || message.deleted) return null
+
+      return (
+        <SearchThreadSection
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          editingMessageId={editingMessageId}
+          editingPreview={editingPreview}
+          editingValue={editingValue}
+          expandedThreadIds={expandedThreadIds}
+          messageDeletingId={messageDeletingId}
+          messageUpdatingId={messageUpdatingId}
+          onCancelEdit={onCancelEdit}
+          onConfirmDelete={onConfirmDelete}
+          onConfirmEdit={onConfirmEdit}
+          onCreateTask={onCreateTask}
+          onEditingValueChange={onEditingValueChange}
+          onLoadMoreThread={onLoadMoreThread}
+          onReply={onReply}
+          onRetryThreadLoad={onRetryThreadLoad}
+          onStartEdit={onStartEdit}
+          onThreadToggle={onThreadToggle}
+          onToggleReaction={onToggleReaction}
+          originalMessage={originalMsg}
+          reactionPendingByMessage={reactionPendingByMessage}
+          threadErrorsByRootId={threadErrorsByRootId}
+          threadLoadingByRootId={threadLoadingByRootId}
+          threadMessagesByRootId={threadMessagesByRootId}
+          threadNextCursorByRootId={threadNextCursorByRootId}
+        />
+      )
+    },
+    [
+      currentUserId,
+      currentUserRole,
+      editingMessageId,
+      editingPreview,
+      editingValue,
+      expandedThreadIds,
+      messageDeletingId,
+      messageUpdatingId,
+      onCancelEdit,
+      onConfirmDelete,
+      onConfirmEdit,
+      onCreateTask,
+      onEditingValueChange,
+      onLoadMoreThread,
+      onReply,
+      onRetryThreadLoad,
+      onStartEdit,
+      onThreadToggle,
+      onToggleReaction,
+      reactionPendingByMessage,
+      threadErrorsByRootId,
+      threadLoadingByRootId,
+      threadMessagesByRootId,
+      threadNextCursorByRootId,
+      visibleMessages,
+    ],
+  )
+
+  const renderMessageActions = useCallback(
+    (message: { id: string }) => {
+      const originalMsg = visibleMessages.find((candidate) => candidate.id === message.id)
+      if (!originalMsg) return null
+
+      return (
+        <SearchMessageActionsBar
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
+          message={originalMsg}
+          messageDeletingId={messageDeletingId}
+          messageUpdatingId={messageUpdatingId}
+          onConfirmDelete={onConfirmDelete}
+          onCreateTask={onCreateTask}
+          onReply={onReply}
+          onStartEdit={onStartEdit}
+          onToggleReaction={onToggleReaction}
+        />
+      )
+    },
+    [currentUserId, currentUserRole, messageDeletingId, messageUpdatingId, onConfirmDelete, onCreateTask, onReply, onStartEdit, onToggleReaction, visibleMessages],
+  )
+
+  const renderEditForm = useCallback(
+    (message: { id: string }) => {
+      if (editingMessageId !== message.id) return null
+      return (
+        <MessageEditForm
+          value={editingValue}
+          onChange={onEditingValueChange}
+          onConfirm={onConfirmEdit}
+          onCancel={onCancelEdit}
+          isUpdating={messageUpdatingId === message.id}
+          editingPreview={editingPreview}
+        />
+      )
+    },
+    [editingMessageId, editingPreview, editingValue, messageUpdatingId, onCancelEdit, onConfirmEdit, onEditingValueChange],
+  )
+
+  const renderDeletedInfo = useCallback(
+    (message: { id: string }) => {
+      const originalMsg = visibleMessages.find((candidate) => candidate.id === message.id)
+      return originalMsg ? <DeletedMessageInfo deletedBy={originalMsg.deletedBy} deletedAt={originalMsg.deletedAt} /> : null
+    },
+    [visibleMessages],
+  )
+
+  return (
+    <MessageList
+      messages={visibleMessages.map(collaborationToUnifiedMessage)}
+      currentUserId={currentUserId ?? null}
+      currentUserRole={currentUserRole}
+      isLoading={false}
+      hasMore={false}
+      onLoadMore={handleNoopLoadMore}
+      onToggleReaction={handleToggleReaction}
+      reactionPendingByMessage={reactionPendingByMessage}
+      variant="channel"
+      showAvatars={true}
+      renderMessageContent={renderMessageContent}
+      renderMessageAttachments={renderMessageAttachments}
+      renderMessageExtras={renderMessageExtras}
+      renderThreadSection={renderThreadSection}
+      renderMessageActions={renderMessageActions}
+      renderEditForm={renderEditForm}
+      renderDeletedInfo={renderDeletedInfo}
+      editingMessageId={editingMessageId}
+      deletingMessageId={messageDeletingId}
+      updatingMessageId={messageUpdatingId}
+      emptyState={emptyState}
+    />
   )
 }
 
@@ -441,135 +984,32 @@ export function CollaborationMessageViewport({
             })}
           </div>
         ) : (
-          <MessageList
-            messages={visibleMessages.map(collaborationToUnifiedMessage)}
-            currentUserId={currentUserId ?? null}
+          <CollaborationSearchMessageList
+            currentUserId={currentUserId}
             currentUserRole={currentUserRole}
-            isLoading={false}
-            hasMore={false}
-            onLoadMore={() => {}}
-            onToggleReaction={async (messageId, emoji) => onToggleReaction(messageId, emoji)}
-            reactionPendingByMessage={reactionPendingByMessage}
-            variant="channel"
-            showAvatars={true}
-            renderMessageContent={(message) => {
-              const originalMsg = visibleMessages.find((candidate) => candidate.id === message.id)
-              return originalMsg ? <MessageContent content={originalMsg.content ?? ''} mentions={originalMsg.mentions} /> : null
-            }}
-            renderMessageAttachments={(message) => {
-              const originalMsg = visibleMessages.find((candidate) => candidate.id === message.id)
-              return originalMsg?.attachments && originalMsg.attachments.length > 0 ? <MessageAttachments attachments={originalMsg.attachments} /> : null
-            }}
-            renderMessageExtras={(message) => {
-              const originalMsg = visibleMessages.find((candidate) => candidate.id === message.id)
-              return originalMsg?.sharedTo && originalMsg.sharedTo.length > 0 ? <SharedPlatformIcons sharedTo={originalMsg.sharedTo} /> : null
-            }}
-            renderThreadSection={(message) => {
-              const originalMsg = visibleMessages.find((candidate) => candidate.id === message.id)
-              if (!originalMsg || message.deleted) return null
-
-              const threadRootId = getThreadRootId(originalMsg)
-              const threadReplies = threadMessagesByRootId[threadRootId] ?? []
-              const threadLoading = threadLoadingByRootId[threadRootId] ?? false
-              const threadError = threadErrorsByRootId[threadRootId] ?? null
-              const threadNextCursor = threadNextCursorByRootId[threadRootId] ?? null
-              const replyCount = Math.max(typeof originalMsg.threadReplyCount === 'number' ? originalMsg.threadReplyCount : 0, threadReplies.length)
-              const lastReplyIso =
-                originalMsg.threadLastReplyAt ?? (threadReplies.length > 0 ? threadReplies[threadReplies.length - 1]?.createdAt ?? null : null)
-
-              return (
-                <ThreadSection
-                  threadRootId={threadRootId}
-                  replyCount={replyCount}
-                  lastReplyIso={lastReplyIso}
-                  isOpen={Boolean(expandedThreadIds[threadRootId])}
-                  isLoading={threadLoading}
-                  error={threadError}
-                  hasNextCursor={!!threadNextCursor}
-                  replies={threadReplies}
-                  onToggle={() => onThreadToggle(threadRootId)}
-                  onRetry={() => onRetryThreadLoad(threadRootId)}
-                  onLoadMore={() => onLoadMoreThread(threadRootId)}
-                  onReply={() => onReply(originalMsg)}
-                  renderReply={(reply) => (
-                    <CollaborationMessageItem
-                      currentUserId={currentUserId}
-                      currentUserRole={currentUserRole}
-                      editingMessageId={editingMessageId}
-                      editingPreview={editingPreview}
-                      editingValue={editingValue}
-                      expandedThreadIds={expandedThreadIds}
-                      isReply={true}
-                      isSearchResult={true}
-                      message={reply}
-                      messageDeletingId={messageDeletingId}
-                      messageUpdatingId={messageUpdatingId}
-                      onCancelEdit={onCancelEdit}
-                      onConfirmDelete={onConfirmDelete}
-                      onConfirmEdit={onConfirmEdit}
-                      onCreateTask={onCreateTask}
-                      onEditingValueChange={onEditingValueChange}
-                      onLoadMoreThread={onLoadMoreThread}
-                      onReply={onReply}
-                      onRetryThreadLoad={onRetryThreadLoad}
-                      onStartEdit={onStartEdit}
-                      onThreadToggle={onThreadToggle}
-                      onToggleReaction={onToggleReaction}
-                      reactionPendingByMessage={reactionPendingByMessage}
-                      threadErrorsByRootId={threadErrorsByRootId}
-                      threadLoadingByRootId={threadLoadingByRootId}
-                      threadMessagesByRootId={threadMessagesByRootId}
-                      threadNextCursorByRootId={threadNextCursorByRootId}
-                    />
-                  )}
-                />
-              )
-            }}
-            renderMessageActions={(message) => {
-              const originalMsg = visibleMessages.find((candidate) => candidate.id === message.id)
-              if (!originalMsg) return null
-
-              const canManageMessage =
-                !originalMsg.isDeleted &&
-                ((originalMsg.senderId && originalMsg.senderId === currentUserId) || currentUserRole === 'admin')
-
-              return (
-                <MessageActionsBar
-                  message={originalMsg}
-                  canReact={!originalMsg.isDeleted && !!currentUserId}
-                  canManage={canManageMessage}
-                  isUpdating={messageUpdatingId === originalMsg.id}
-                  isDeleting={messageDeletingId === originalMsg.id}
-                  disableReactionActions={originalMsg.isDeleted || !currentUserId}
-                  onReaction={(emoji) => onToggleReaction(originalMsg.id, emoji)}
-                  onReply={() => onReply(originalMsg)}
-                  onEdit={() => onStartEdit(originalMsg)}
-                  onDelete={() => onConfirmDelete(originalMsg.id)}
-                  onCreateTask={() => onCreateTask(originalMsg)}
-                />
-              )
-            }}
-            renderEditForm={(message) => {
-              if (editingMessageId !== message.id) return null
-              return (
-                <MessageEditForm
-                  value={editingValue}
-                  onChange={onEditingValueChange}
-                  onConfirm={onConfirmEdit}
-                  onCancel={onCancelEdit}
-                  isUpdating={messageUpdatingId === message.id}
-                  editingPreview={editingPreview}
-                />
-              )
-            }}
-            renderDeletedInfo={(message) => {
-              const originalMsg = visibleMessages.find((candidate) => candidate.id === message.id)
-              return originalMsg ? <DeletedMessageInfo deletedBy={originalMsg.deletedBy} deletedAt={originalMsg.deletedAt} /> : null
-            }}
             editingMessageId={editingMessageId}
-            deletingMessageId={messageDeletingId}
-            updatingMessageId={messageUpdatingId}
-            emptyState={<NoSearchResultsState />}
+            editingPreview={editingPreview}
+            editingValue={editingValue}
+            expandedThreadIds={expandedThreadIds}
+            messageDeletingId={messageDeletingId}
+            messageUpdatingId={messageUpdatingId}
+            onCancelEdit={onCancelEdit}
+            onConfirmDelete={onConfirmDelete}
+            onConfirmEdit={onConfirmEdit}
+            onCreateTask={onCreateTask}
+            onEditingValueChange={onEditingValueChange}
+            onLoadMoreThread={onLoadMoreThread}
+            onReply={onReply}
+            onRetryThreadLoad={onRetryThreadLoad}
+            onStartEdit={onStartEdit}
+            onThreadToggle={onThreadToggle}
+            onToggleReaction={onToggleReaction}
+            reactionPendingByMessage={reactionPendingByMessage}
+            threadErrorsByRootId={threadErrorsByRootId}
+            threadLoadingByRootId={threadLoadingByRootId}
+            threadMessagesByRootId={threadMessagesByRootId}
+            threadNextCursorByRootId={threadNextCursorByRootId}
+            visibleMessages={visibleMessages}
           />
         )}
 

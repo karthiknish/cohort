@@ -1,5 +1,7 @@
 'use client'
 
+import { useMemo } from 'react'
+
 import {
   Briefcase,
   ChevronDown,
@@ -36,12 +38,23 @@ export function AudienceDisplaySection({
   toggleSection,
   interestSection,
 }: AudienceDisplaySectionProps) {
+  const sectionToggleHandlers = useMemo(
+    () => ({
+      audiences: () => toggleSection('audiences'),
+      keywords: () => toggleSection('keywords'),
+      devices: () => toggleSection('devices'),
+      placements: () => toggleSection('placements'),
+      professional: () => toggleSection('professional'),
+    }),
+    [toggleSection]
+  )
+
   return (
     <>
       {aggregatedData.audiences.included.length > 0 && (
         <Collapsible
           open={expandedSections.has('audiences')}
-          onOpenChange={() => toggleSection('audiences')}
+          onOpenChange={sectionToggleHandlers.audiences}
         >
           <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
             <div className="flex items-center gap-2">
@@ -75,7 +88,7 @@ export function AudienceDisplaySection({
       {aggregatedData.keywords.length > 0 && (
         <Collapsible
           open={expandedSections.has('keywords')}
-          onOpenChange={() => toggleSection('keywords')}
+          onOpenChange={sectionToggleHandlers.keywords}
         >
           <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
             <div className="flex items-center gap-2">
@@ -110,7 +123,7 @@ export function AudienceDisplaySection({
       {aggregatedData.devices.length > 0 && (
         <Collapsible
           open={expandedSections.has('devices')}
-          onOpenChange={() => toggleSection('devices')}
+          onOpenChange={sectionToggleHandlers.devices}
         >
           <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
             <div className="flex items-center gap-2">
@@ -142,7 +155,7 @@ export function AudienceDisplaySection({
       {aggregatedData.placements.length > 0 && (
         <Collapsible
           open={expandedSections.has('placements')}
-          onOpenChange={() => toggleSection('placements')}
+          onOpenChange={sectionToggleHandlers.placements}
         >
           <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
             <div className="flex items-center gap-2">
@@ -277,7 +290,7 @@ export function AudienceDisplaySection({
         aggregatedData.professional.jobTitles.length > 0) && (
         <Collapsible
           open={expandedSections.has('professional')}
-          onOpenChange={() => toggleSection('professional')}
+          onOpenChange={sectionToggleHandlers.professional}
         >
           <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
             <div className="flex items-center gap-2">

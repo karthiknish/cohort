@@ -9,6 +9,8 @@ type ProposalDeckViewerPageProps = {
   searchParams?: RouteSearchParams | Promise<RouteSearchParams>
 }
 
+const PROPOSAL_DECK_VIEWER_FALLBACK = <ProposalDeckViewerFallback />
+
 function getFirstSearchParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) {
     return value[0] ?? null
@@ -21,7 +23,7 @@ export default async function ProposalDeckViewerPage({ searchParams }: ProposalD
   const resolvedSearchParams = await searchParams
 
   return (
-    <Suspense fallback={<ProposalDeckViewerFallback />}>
+    <Suspense fallback={PROPOSAL_DECK_VIEWER_FALLBACK}>
       <ProposalDeckViewerPageClient src={getFirstSearchParam(resolvedSearchParams?.src)} />
     </Suspense>
   )

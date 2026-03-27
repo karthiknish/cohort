@@ -454,6 +454,24 @@ export function RichComposer({
     onDrop?.(event)
   }, [onDrop])
 
+  const handleInsertMention = useCallback(() => {
+    applyTextUpdate((current, selectionStart, selectionEnd) => {
+      const insertionPoint = selectionStart === selectionEnd ? selectionStart : selectionEnd
+      const nextValue = `${current.slice(0, insertionPoint)}@${current.slice(insertionPoint)}`
+      const nextCaret = insertionPoint + 1
+      return {
+        nextValue,
+        nextSelectionStart: nextCaret,
+        nextSelectionEnd: nextCaret,
+      }
+    })
+  }, [applyTextUpdate])
+
+  const handleVoiceTranscript = useCallback(
+    (transcript: string) => onChange(value + (value && !value.endsWith(' ') ? ' ' : '') + transcript),
+    [onChange, value],
+  )
+
   return (
     <div className="relative flex flex-col">
       <RichComposerToolbar
@@ -463,24 +481,9 @@ export function RichComposer({
         onAction={handleFormattingAction}
         onAttachClick={onAttachClick}
         onEmojiClick={handleEmojiClick}
-        onInsertMention={() => {
-          const textarea = textareaRef.current
-          if (!textarea) {
-            return
-          }
-          applyTextUpdate((current, selectionStart, selectionEnd) => {
-            const insertionPoint = selectionStart === selectionEnd ? selectionStart : selectionEnd
-            const nextValue = `${current.slice(0, insertionPoint)}@${current.slice(insertionPoint)}`
-            const nextCaret = insertionPoint + 1
-            return {
-              nextValue,
-              nextSelectionStart: nextCaret,
-              nextSelectionEnd: nextCaret,
-            }
-          })
-        }}
+        onInsertMention={handleInsertMention}
         onOpenEmojiChange={setEmojiPickerOpen}
-        onVoiceTranscript={(transcript) => onChange(value + (value && !value.endsWith(' ') ? ' ' : '') + transcript)}
+        onVoiceTranscript={handleVoiceTranscript}
       />
       <RichComposerTextareaShell
         disabled={disabled}

@@ -11,6 +11,12 @@ vi.mock('@/shared/ui/select', () => ({
   SelectValue: ({ placeholder }: { placeholder?: string }) => <div>{placeholder}</div>,
 }))
 
+const benchmarkChart = <div>Benchmark chart</div>
+const comparisonChart = <div>Comparison chart</div>
+const efficiencyChart = <div>Efficiency chart</div>
+const funnelChart = <div>Funnel chart</div>
+const trendsChart = <div>Trends chart</div>
+
 import {
   InsightsChartsEmptyState,
   InsightsChartsHeader,
@@ -40,11 +46,11 @@ describe('insights charts card sections', () => {
 
     const tabsMarkup = renderToStaticMarkup(
       <InsightsChartsTabs
-        benchmarkChart={<div>Benchmark chart</div>}
-        comparisonChart={<div>Comparison chart</div>}
-        efficiencyChart={<div>Efficiency chart</div>}
-        funnelChart={<div>Funnel chart</div>}
-        trendsChart={<div>Trends chart</div>}
+        benchmarkChart={benchmarkChart}
+        comparisonChart={comparisonChart}
+        efficiencyChart={efficiencyChart}
+        funnelChart={funnelChart}
+        trendsChart={trendsChart}
       />,
     )
 

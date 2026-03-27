@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Card } from '@/shared/ui/card'
 import { formatCurrency } from '@/lib/utils'
 import { normalizeAdsProviderId } from '@/domain/ads/provider'
@@ -171,13 +171,13 @@ export function CrossChannelOverviewCard({
     ]
   }, [currency, filteredMetrics.length, filteredTotals])
 
-  const toggleProvider = (providerId: string) => {
+  const toggleProvider = useCallback((providerId: string) => {
     setSelectedProviders((prev) =>
       prev.includes(providerId)
         ? prev.filter((p) => p !== providerId)
         : [...prev, providerId]
     )
-  }
+  }, [])
 
   const hasProviderFilter = selectedProviders.length > 0
 

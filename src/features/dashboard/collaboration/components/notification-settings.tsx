@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   Bell,
   BellOff,
@@ -138,7 +138,77 @@ export function NotificationSettings({
     }))
   }, [])
 
+  const handleMuteFor15 = useCallback(() => handleMuteFor(15), [handleMuteFor])
+  const handleMuteFor60 = useCallback(() => handleMuteFor(60), [handleMuteFor])
+  const handleMuteFor480 = useCallback(() => handleMuteFor(480), [handleMuteFor])
+  const handleMuteFor1440 = useCallback(() => handleMuteFor(1440), [handleMuteFor])
+
+  const handleAllMessagesChange = useCallback((checked: boolean) => {
+    setPreferences((prev) => ({ ...prev, allMessages: checked }))
+  }, [])
+
+  const handleMentionsChange = useCallback((checked: boolean) => {
+    setPreferences((prev) => ({ ...prev, mentions: checked }))
+  }, [])
+
+  const handleKeywordInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setKeywordInput(e.target.value)
+  }, [])
+
+  const handleKeywordKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        handleAddKeyword()
+      }
+    },
+    [handleAddKeyword]
+  )
+
+  const handleSoundChange = useCallback((checked: boolean) => {
+    setPreferences((prev) => ({ ...prev, sound: checked }))
+  }, [])
+
+  const handleDesktopChange = useCallback((checked: boolean) => {
+    setPreferences((prev) => ({ ...prev, desktop: checked }))
+  }, [])
+
+  const handleEmailChange = useCallback((checked: boolean) => {
+    setPreferences((prev) => ({ ...prev, email: checked }))
+  }, [])
+
+  const handleQuietHoursEnabledChange = useCallback((checked: boolean) => {
+    setPreferences((prev) => ({
+      ...prev,
+      quietHours: { ...prev.quietHours, enabled: checked },
+    }))
+  }, [])
+
+  const handleQuietHoursStartChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPreferences((prev) => ({
+      ...prev,
+      quietHours: { ...prev.quietHours, start: e.target.value },
+    }))
+  }, [])
+
+  const handleQuietHoursEndChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPreferences((prev) => ({
+      ...prev,
+      quietHours: { ...prev.quietHours, end: e.target.value },
+    }))
+  }, [])
+
+  const handleCancel = useCallback(() => setOpen(false), [])
+
   const isMuted = preferences.muteUntil ? new Date() < preferences.muteUntil : false
+
+  const keywordItems = useMemo(
+    () =>
+      preferences.keywords.map((keyword) => (
+        <KeywordTag key={keyword} keyword={keyword} onRemove={handleRemoveKeyword} />
+      )),
+    [preferences.keywords, handleRemoveKeyword]
+  )
 
   const defaultTrigger = (
     <DialogTrigger asChild>
@@ -192,7 +262,7 @@ export function NotificationSettings({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleMuteFor(15)}
+                  onClick={handleMuteFor15}
                 >
                   15 min
                 </Button>
@@ -200,7 +270,7 @@ export function NotificationSettings({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleMuteFor(60)}
+                  onClick={handleMuteFor60}
                 >
                   1 hour
                 </Button>
@@ -208,7 +278,7 @@ export function NotificationSettings({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleMuteFor(480)}
+                  onClick={handleMuteFor480}
                 >
                   8 hours
                 </Button>
@@ -216,7 +286,7 @@ export function NotificationSettings({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handleMuteFor(1440)}
+                  onClick={handleMuteFor1440}
                 >
                   24 hours
                 </Button>
@@ -242,9 +312,7 @@ export function NotificationSettings({
               <Switch
                 id="all-messages"
                 checked={preferences.allMessages}
-                onCheckedChange={(checked) =>
-                  setPreferences((prev) => ({ ...prev, allMessages: checked }))
-                }
+                onCheckedChange={handleAllMessagesChange}
               />
             </div>
 
@@ -262,9 +330,7 @@ export function NotificationSettings({
               <Switch
                 id="mentions"
                 checked={preferences.mentions}
-                onCheckedChange={(checked) =>
-                  setPreferences((prev) => ({ ...prev, mentions: checked }))
-                }
+                onCheckedChange={handleMentionsChange}
               />
             </div>
 
@@ -276,8 +342,8 @@ export function NotificationSettings({
                   type="text"
                   placeholder="Add keyword…"
                   value={keywordInput}
-                  onChange={(e) => setKeywordInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddKeyword())}
+                  onChange={handleKeywordInputChange}
+                  onKeyDown={handleKeywordKeyDown}
                   className="flex-1 px-3 py-2 text-sm rounded-md border bg-background"
                 />
                 <Button type="button" size="sm" onClick={handleAddKeyword}>
@@ -286,21 +352,7 @@ export function NotificationSettings({
               </div>
               {preferences.keywords.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {preferences.keywords.map((keyword) => (
-                    <span
-                      key={keyword}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs"
-                    >
-                      {keyword}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveKeyword(keyword)}
-                        className="hover:text-destructive"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
+                  {keywordItems}
                 </div>
               )}
             </div>
@@ -323,9 +375,7 @@ export function NotificationSettings({
               <Switch
                 id="sound"
                 checked={preferences.sound}
-                onCheckedChange={(checked) =>
-                  setPreferences((prev) => ({ ...prev, sound: checked }))
-                }
+                onCheckedChange={handleSoundChange}
               />
             </div>
 
@@ -338,9 +388,7 @@ export function NotificationSettings({
               <Switch
                 id="desktop"
                 checked={preferences.desktop}
-                onCheckedChange={(checked) =>
-                  setPreferences((prev) => ({ ...prev, desktop: checked }))
-                }
+                onCheckedChange={handleDesktopChange}
               />
             </div>
 
@@ -353,9 +401,7 @@ export function NotificationSettings({
               <Switch
                 id="email"
                 checked={preferences.email}
-                onCheckedChange={(checked) =>
-                  setPreferences((prev) => ({ ...prev, email: checked }))
-                }
+                onCheckedChange={handleEmailChange}
               />
             </div>
           </div>
@@ -366,12 +412,7 @@ export function NotificationSettings({
               <Label>Quiet hours</Label>
               <Switch
                 checked={preferences.quietHours.enabled}
-                onCheckedChange={(checked) =>
-                  setPreferences((prev) => ({
-                    ...prev,
-                    quietHours: { ...prev.quietHours, enabled: checked },
-                  }))
-                }
+                onCheckedChange={handleQuietHoursEnabledChange}
               />
             </div>
             {preferences.quietHours.enabled && (
@@ -379,24 +420,14 @@ export function NotificationSettings({
                 <input
                   type="time"
                   value={preferences.quietHours.start}
-                  onChange={(e) =>
-                    setPreferences((prev) => ({
-                      ...prev,
-                      quietHours: { ...prev.quietHours, start: e.target.value },
-                    }))
-                  }
+                  onChange={handleQuietHoursStartChange}
                   className="px-3 py-2 text-sm rounded-md border bg-background"
                 />
                 <span className="text-muted-foreground">to</span>
                 <input
                   type="time"
                   value={preferences.quietHours.end}
-                  onChange={(e) =>
-                    setPreferences((prev) => ({
-                      ...prev,
-                      quietHours: { ...prev.quietHours, end: e.target.value },
-                    }))
-                  }
+                  onChange={handleQuietHoursEndChange}
                   className="px-3 py-2 text-sm rounded-md border bg-background"
                 />
               </div>
@@ -408,7 +439,7 @@ export function NotificationSettings({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setOpen(false)}
+            onClick={handleCancel}
             disabled={isSaving}
           >
             Cancel
@@ -429,5 +460,29 @@ export function NotificationSettings({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+interface KeywordTagProps {
+  keyword: string
+  onRemove: (keyword: string) => void
+}
+
+function KeywordTag({ keyword, onRemove }: KeywordTagProps) {
+  const handleClick = useCallback(() => {
+    onRemove(keyword)
+  }, [keyword, onRemove])
+
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs">
+      {keyword}
+      <button
+        type="button"
+        onClick={handleClick}
+        className="hover:text-destructive"
+      >
+        ×
+      </button>
+    </span>
   )
 }

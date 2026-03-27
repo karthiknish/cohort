@@ -169,9 +169,21 @@ export function ActivityWidget() {
     router.push(newUrl)
   }, [pathname, router])
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     retry()
-  }
+  }, [retry])
+
+  const handleActivityTypeChange = useCallback((value: string) => {
+    updateFilters(value, dateRange)
+  }, [dateRange, updateFilters])
+
+  const handleDateRangeChange = useCallback((value: string) => {
+    updateFilters(activityType, value)
+  }, [activityType, updateFilters])
+
+  const handleClearFilters = useCallback(() => {
+    updateFilters('all', '7d')
+  }, [updateFilters])
 
   if (!selectedClient?.id) {
     return (
@@ -208,7 +220,7 @@ export function ActivityWidget() {
         
         {/* Filter Controls */}
         <div className="flex items-center gap-1">
-          <Select value={activityType} onValueChange={(value) => updateFilters(value, dateRange)}>
+          <Select value={activityType} onValueChange={handleActivityTypeChange}>
             <SelectTrigger className="h-7 w-[28px] px-0 border-0 hover:bg-muted focus:ring-0 data-[state=open]:bg-muted">
               <Filter className="h-4 w-4 text-muted-foreground mx-auto" />
               <span className="sr-only">Filter type</span>
@@ -221,7 +233,7 @@ export function ActivityWidget() {
             </SelectContent>
           </Select>
           
-          <Select value={dateRange} onValueChange={(value) => updateFilters(activityType, value)}>
+          <Select value={dateRange} onValueChange={handleDateRangeChange}>
             <SelectTrigger className="h-7 text-xs border-0 hover:bg-muted focus:ring-0 data-[state=open]:bg-muted gap-1 px-2">
               <span className="text-muted-foreground">
                 {dateRange === '1d' ? '24h' : dateRange === '7d' ? '7d' : dateRange === '30d' ? '30d' : '90d'}
@@ -239,8 +251,8 @@ export function ActivityWidget() {
       <CardContent className="flex-1">
         {loading ? (
           <div className="space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex gap-3 p-2">
+            {Array.from({ length: 5 }, (_, index) => `activity-${index + 1}`).map((slot) => (
+              <div key={slot} className="flex gap-3 p-2">
                 <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-full" />
@@ -269,7 +281,7 @@ export function ActivityWidget() {
               }
             </p>
             {(activityType !== 'all' || dateRange !== '7d') && (
-              <Button variant="ghost" size="sm" className="mt-2 h-8 text-xs" onClick={() => updateFilters('all', '7d')}>
+              <Button variant="ghost" size="sm" className="mt-2 h-8 text-xs" onClick={handleClearFilters}>
                 Clear filters
               </Button>
             )}

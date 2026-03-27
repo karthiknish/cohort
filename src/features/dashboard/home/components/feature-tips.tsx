@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
 import { X, Lightbulb, ChevronRight, ChevronLeft } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -45,30 +45,31 @@ export function FeatureTips({ tips, storageKey, className }: FeatureTipsProps) {
     }
   }, [isHydrated, storageKey])
 
+  const isFirst = currentIndex === 0
+  const isLast = currentIndex === tips.length - 1
+
+  const handleDismiss = useCallback(() => {
+    localStorage.setItem(`tips_dismissed_${storageKey}`, 'true')
+    setDismissed(true)
+  }, [storageKey])
+
+  const handleNext = useCallback(() => {
+    if (!isLast) {
+      setCurrentIndex((prev) => prev + 1)
+    }
+  }, [isLast])
+
+  const handlePrev = useCallback(() => {
+    if (!isFirst) {
+      setCurrentIndex((prev) => prev - 1)
+    }
+  }, [isFirst])
+
   if (!isHydrated || dismissed || isStoredDismissed || tips.length === 0) {
     return null
   }
 
   const currentTip = tips[currentIndex]!
-  const isFirst = currentIndex === 0
-  const isLast = currentIndex === tips.length - 1
-
-  const handleDismiss = () => {
-    localStorage.setItem(`tips_dismissed_${storageKey}`, 'true')
-    setDismissed(true)
-  }
-
-  const handleNext = () => {
-    if (!isLast) {
-      setCurrentIndex((prev) => prev + 1)
-    }
-  }
-
-  const handlePrev = () => {
-    if (!isFirst) {
-      setCurrentIndex((prev) => prev - 1)
-    }
-  }
 
   return (
     <Card className={cn('border-primary/20 bg-primary/5', className)}>

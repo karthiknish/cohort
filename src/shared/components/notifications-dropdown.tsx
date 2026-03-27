@@ -30,6 +30,70 @@ import { useToast } from '@/shared/ui/use-toast'
 
 const PAGE_SIZE = 20
 
+function NotificationMenuItem({
+  ackInFlight,
+  notification,
+  onDismiss,
+  onOpen,
+  renderTimestamp,
+}: {
+  ackInFlight: boolean
+  notification: WorkspaceNotification
+  onDismiss: (id: string) => void
+  onOpen: (notification: WorkspaceNotification) => void
+  renderTimestamp: (input: string | null) => string
+}) {
+  const handleSelect = useCallback((event: Event) => {
+    event.preventDefault()
+  }, [])
+
+  const handleOpen = useCallback(() => {
+    onOpen(notification)
+  }, [notification, onOpen])
+
+  const handleDismiss = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation()
+      onDismiss(notification.id)
+    },
+    [notification.id, onDismiss]
+  )
+
+  return (
+    <DropdownMenuItem
+      className={cn(
+        'flex items-start gap-3 px-4 py-3 focus:bg-muted/60',
+        !notification.read && 'bg-muted/40'
+      )}
+      onSelect={handleSelect}
+      onClick={handleOpen}
+    >
+      <div className="flex-1 space-y-1">
+        <p className="text-sm font-medium text-foreground">{notification.title}</p>
+        <p className="text-xs text-muted-foreground">{notification.body}</p>
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <span>{renderTimestamp(notification.createdAt)}</span>
+          {notification.recipients.clientId && (
+            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground/80">
+              Client
+            </span>
+          )}
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+        onClick={handleDismiss}
+        disabled={ackInFlight}
+      >
+        <Trash2 className="h-4 w-4" />
+        <span className="sr-only">Dismiss notification</span>
+      </Button>
+    </DropdownMenuItem>
+  )
+}
+
 type NotificationsCursor = {
   createdAtMs: number
   legacyId: string
@@ -203,7 +267,7 @@ export function NotificationsDropdown() {
 
   const isLoadingInitial = notificationsInfiniteQuery.isLoading && notifications.length === 0
 
-  const renderTimestamp = (input: string | null) => {
+  const renderTimestamp = useCallback((input: string | null) => {
     if (!input) {
       return 'Just now'
     }
@@ -213,7 +277,7 @@ export function NotificationsDropdown() {
       return 'Just now'
     }
     return formatDistanceToNow(date, { addSuffix: true })
-  }
+  }, [])
 
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange}>
@@ -222,7 +286,7 @@ export function NotificationsDropdown() {
           <Bell className="h-5 w-5" />
           <span className="sr-only">View notifications</span>
           {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground" aria-label={`${unreadCount} unread notifications`}>
+            <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
@@ -255,41 +319,14 @@ export function NotificationsDropdown() {
           ) : (
             <div className="flex flex-col">
               {notifications.map((notification) => (
-                <DropdownMenuItem
+                <NotificationMenuItem
                   key={notification.id}
-                  className={cn(
-                    'flex items-start gap-3 px-4 py-3 focus:bg-muted/60',
-                    !notification.read && 'bg-muted/40'
-                  )}
-                  onSelect={(event) => event.preventDefault()}
-                  onClick={() => handleOpenNotification(notification)}
-                >
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-foreground">{notification.title}</p>
-                    <p className="text-xs text-muted-foreground">{notification.body}</p>
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <span>{renderTimestamp(notification.createdAt)}</span>
-                      {notification.recipients.clientId && (
-                        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground/80">
-                          Client
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      handleDismiss(notification.id)
-                    }}
-                    disabled={ackInFlight}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Dismiss notification</span>
-                  </Button>
-                </DropdownMenuItem>
+                  ackInFlight={ackInFlight}
+                  notification={notification}
+                  onDismiss={handleDismiss}
+                  onOpen={handleOpenNotification}
+                  renderTimestamp={renderTimestamp}
+                />
               ))}
             </div>
           )}

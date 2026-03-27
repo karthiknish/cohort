@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ShieldAlert, RefreshCw, Home, Copy, Code2 } from 'lucide-react'
 
@@ -23,7 +23,7 @@ export default function AdminError({
   const errorDigest = error.digest
   const componentName = 'AdminError'
 
-  const copyErrorDetails = () => {
+  const copyErrorDetails = useCallback(() => {
     const details = [
       `Component: ${componentName}`,
       `Error: ${error.message}`,
@@ -31,7 +31,7 @@ export default function AdminError({
       error.stack ? `Stack:\n${error.stack}` : '',
     ].filter(Boolean).join('\n\n')
     navigator.clipboard.writeText(details)
-  }
+  }, [componentName, error.message, errorDigest, error.stack])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">

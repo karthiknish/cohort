@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Filter, ListFilter } from 'lucide-react'
 
 import type { ClientRecord } from '@/types/clients'
@@ -37,23 +37,32 @@ export function DashboardFilterBar({
 
   const availableClients = useMemo(() => clients, [clients])
 
-  const toggleClient = (clientId: string) => {
+  const handleClientChange = useCallback((clientId: string) => {
     if (!canCompare) return
+
     const exists = selectedClientIds.includes(clientId)
     if (exists) {
       onClientChange(selectedClientIds.filter((id) => id !== clientId))
       return
     }
-    if (selectedClientIds.length >= MAX_CLIENT_COMPARISONS) {
-      return
-    }
-    onClientChange([...selectedClientIds, clientId])
-  }
 
-  const clearSelection = () => {
+    if (selectedClientIds.length >= MAX_CLIENT_COMPARISONS) return
+
+    onClientChange([...selectedClientIds, clientId])
+  }, [canCompare, onClientChange, selectedClientIds])
+
+  const handleClearSelection = useCallback(() => {
     if (!canCompare) return
     onClientChange([])
-  }
+  }, [canCompare, onClientChange])
+
+  const handleCloseMenu = useCallback(() => {
+    setIsMenuOpen(false)
+  }, [])
+
+  const handlePeriodChange = useCallback((value: string) => {
+    onPeriodChange(Number(value))
+  }, [onPeriodChange])
 
   const selectedLabel = selectedClientIds.length === 0
     ? 'Select workspaces'
@@ -89,15 +98,13 @@ export function DashboardFilterBar({
           {availableClients.map((client) => {
             const checked = selectedClientIds.includes(client.id)
             return (
-              <DropdownMenuItem
+              <DashboardFilterClientItem
                 key={client.id}
-                className={cn('gap-2', !canCompare && 'pointer-events-none opacity-60')}
-                onSelect={(event) => event.preventDefault()}
-                onClick={() => toggleClient(client.id)}
-              >
-                <Checkbox checked={checked} aria-label={`Toggle ${client.name}`} className="h-4 w-4" />
-                <span className="text-sm">{client.name}</span>
-              </DropdownMenuItem>
+                client={client}
+                checked={checked}
+                canCompare={canCompare}
+                onToggle={handleClientChange}
+              />
             )
           })}
           <DropdownMenuSeparator />
@@ -107,11 +114,11 @@ export function DashboardFilterBar({
               variant="ghost"
               size="sm"
               disabled={!canCompare || selectedClientIds.length === 0}
-              onClick={clearSelection}
+              onClick={handleClearSelection}
             >
               Clear
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => setIsMenuOpen(false)}>
+            <Button type="button" variant="outline" size="sm" onClick={handleCloseMenu}>
               Done
             </Button>
           </div>
@@ -120,7 +127,7 @@ export function DashboardFilterBar({
 
       <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
         <span>Period</span>
-        <Select value={String(periodDays)} onValueChange={(value) => onPeriodChange(Number(value))}>
+        <Select value={String(periodDays)} onValueChange={handlePeriodChange}>
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="Period" />
           </SelectTrigger>
@@ -140,5 +147,36 @@ export function DashboardFilterBar({
         </p>
       )}
     </div>
+  )
+}
+
+function DashboardFilterClientItem({
+  client,
+  checked,
+  canCompare,
+  onToggle,
+}: {
+  client: ClientRecord
+  checked: boolean
+  canCompare: boolean
+  onToggle: (clientId: string) => void
+}) {
+  const handleSelect = useCallback((event: Event) => {
+    event.preventDefault()
+  }, [])
+
+  const handleClick = useCallback(() => {
+    onToggle(client.id)
+  }, [client.id, onToggle])
+
+  return (
+    <DropdownMenuItem
+      className={cn('gap-2', !canCompare && 'pointer-events-none opacity-60')}
+      onSelect={handleSelect}
+      onClick={handleClick}
+    >
+      <Checkbox checked={checked} aria-label={`Toggle ${client.name}`} className="h-4 w-4" />
+      <span className="text-sm">{client.name}</span>
+    </DropdownMenuItem>
   )
 }

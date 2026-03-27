@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Label } from '@/shared/ui/label'
 import { Switch } from '@/shared/ui/switch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -12,7 +12,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
 import { Users, Plus, FileText, CheckCircle } from 'lucide-react'
-import { ObjectiveComponentProps } from './types'
+import type { ObjectiveComponentProps } from './types'
 
 // Mock lead forms - in real implementation, these would be fetched from the API
 const MOCK_LEAD_FORMS = [
@@ -26,13 +26,39 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
   const [newFormName, setNewFormName] = useState('')
   const [newFormFields, setNewFormFields] = useState('')
 
-  const handleCreateForm = () => {
+  const handleInstantFormToggle = useCallback(
+    (checked: boolean | 'indeterminate' | undefined) => onChange({ instantFormEnabled: checked === true }),
+    [onChange]
+  )
+
+  const handleLeadFormSelect = useCallback(
+    (leadFormId: string) => onChange({ leadFormId }),
+    [onChange]
+  )
+
+  const handleOpenCreateForm = useCallback(() => {
+    setShowCreateForm(true)
+  }, [])
+
+  const handleCloseCreateForm = useCallback(() => {
+    setShowCreateForm(false)
+  }, [])
+
+  const handleCreateFormNameChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setNewFormName(event.target.value)
+  }, [])
+
+  const handleCreateFormFieldsChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewFormFields(event.target.value)
+  }, [])
+
+  const handleCreateForm = useCallback(() => {
     // In real implementation, this would create a lead form via API
     console.log('Creating lead form:', { name: newFormName, fields: newFormFields })
     setShowCreateForm(false)
     setNewFormName('')
     setNewFormFields('')
-  }
+  }, [newFormFields, newFormName])
 
   return (
     <div className="space-y-6">
@@ -58,8 +84,8 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
             </div>
             <Switch
               id="instant-form"
-              checked={formData.instantFormEnabled}
-              onCheckedChange={(checked) => onChange({ instantFormEnabled: checked })}
+              checked={Boolean(formData.instantFormEnabled)}
+              onCheckedChange={handleInstantFormToggle}
               disabled={disabled}
             />
           </div>
@@ -70,30 +96,13 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
                 <Label>Select Form</Label>
                 <div className="grid gap-2">
                   {MOCK_LEAD_FORMS.map((form) => (
-                    <button
+                    <LeadFormOptionButton
                       key={form.id}
-                      type="button"
-                      onClick={() => onChange({ leadFormId: form.id })}
-                      disabled={disabled}
-                  className={`flex items-center justify-between p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
-                        formData.leadFormId === form.id
-                          ? 'border-info/20 bg-info/10'
-                          : 'border-border hover:border-info/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium text-sm">{form.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {form.fields} fields • {form.leads} leads collected
-                          </p>
-                        </div>
-                      </div>
-                      {formData.leadFormId === form.id && (
-                        <CheckCircle className="w-5 h-5 text-info" />
-                      )}
-                    </button>
+                      disabled={Boolean(disabled)}
+                      form={form}
+                      isSelected={formData.leadFormId === form.id}
+                      onSelect={handleLeadFormSelect}
+                    />
                   ))}
                 </div>
 
@@ -101,7 +110,7 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
                   type="button"
                   variant="outline"
                   className="w-full"
-                  onClick={() => setShowCreateForm(true)}
+                    onClick={handleOpenCreateForm}
                   disabled={disabled}
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -119,7 +128,7 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
                       id="form-name"
                       placeholder="e.g., Free Consultation Request"
                       value={newFormName}
-                      onChange={(e) => setNewFormName(e.target.value)}
+                      onChange={handleCreateFormNameChange}
                     />
                   </div>
                   <div className="space-y-2">
@@ -128,7 +137,7 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
                       id="form-fields"
                       placeholder="Full Name&#10;Email&#10;Phone Number&#10;Company"
                       value={newFormFields}
-                      onChange={(e) => setNewFormFields(e.target.value)}
+                      onChange={handleCreateFormFieldsChange}
                       rows={4}
                     />
                   </div>
@@ -145,7 +154,7 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
                       type="button"
                       size="sm"
                       variant="ghost"
-                      onClick={() => setShowCreateForm(false)}
+                      onClick={handleCloseCreateForm}
                     >
                       Cancel
                     </Button>
@@ -201,5 +210,43 @@ export function LeadsObjectiveSection({ formData, onChange, disabled }: Objectiv
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function LeadFormOptionButton({
+  form,
+  disabled,
+  isSelected,
+  onSelect,
+}: {
+  form: (typeof MOCK_LEAD_FORMS)[number]
+  disabled: boolean
+  isSelected: boolean
+  onSelect: (leadFormId: string) => void
+}) {
+  const handleClick = useCallback(() => {
+    onSelect(form.id)
+  }, [form.id, onSelect])
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={disabled}
+      className={`flex items-center justify-between rounded-lg border p-3 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
+        isSelected ? 'border-info/20 bg-info/10' : 'border-border hover:border-info/50'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <FileText className="h-5 w-5 text-muted-foreground" />
+        <div>
+          <p className="text-sm font-medium">{form.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {form.fields} fields • {form.leads} leads collected
+          </p>
+        </div>
+      </div>
+      {isSelected && <CheckCircle className="h-5 w-5 text-info" />}
+    </button>
   )
 }

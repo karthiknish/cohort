@@ -1,7 +1,7 @@
 'use client'
 
 import { ArrowRight, CircleCheck, Info, Lightbulb, RefreshCw, TrendingUp, TriangleAlert } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { NoInsightsData, NoIntegrationConnected } from '@/shared/ui/analytics-empty-state'
@@ -27,6 +27,18 @@ function formatInsightProviderLabel(providerId: string) {
     return PROVIDER_LABELS[providerId] ?? providerId
 }
 
+const INSIGHT_MARKDOWN_COMPONENTS: Components = {
+    p: ({ children }) => <p className="leading-relaxed">{children}</p>,
+    ul: ({ children }) => <ul className="ml-5 list-disc space-y-1.5">{children}</ul>,
+    ol: ({ children }) => <ol className="ml-5 list-decimal space-y-1.5">{children}</ol>,
+    li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+    strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
+    h1: ({ children }) => <h4 className="text-sm font-semibold text-foreground">{children}</h4>,
+    h2: ({ children }) => <h4 className="text-sm font-semibold text-foreground">{children}</h4>,
+    h3: ({ children }) => <h5 className="text-sm font-semibold text-foreground">{children}</h5>,
+    code: ({ children }) => <code className="rounded bg-muted px-1 py-0.5 text-[0.9em] text-foreground">{children}</code>,
+}
+
 function InsightMarkdown({ content }: { content: string }) {
     const normalized = normalizeInsightMarkdown(content)
 
@@ -34,17 +46,7 @@ function InsightMarkdown({ content }: { content: string }) {
         <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             className="space-y-3 text-sm text-muted-foreground/90"
-            components={{
-                p: ({ children }) => <p className="leading-relaxed">{children}</p>,
-                ul: ({ children }) => <ul className="ml-5 list-disc space-y-1.5">{children}</ul>,
-                ol: ({ children }) => <ol className="ml-5 list-decimal space-y-1.5">{children}</ol>,
-                li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-                strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
-                h1: ({ children }) => <h4 className="text-sm font-semibold text-foreground">{children}</h4>,
-                h2: ({ children }) => <h4 className="text-sm font-semibold text-foreground">{children}</h4>,
-                h3: ({ children }) => <h5 className="text-sm font-semibold text-foreground">{children}</h5>,
-                code: ({ children }) => <code className="rounded bg-muted px-1 py-0.5 text-[0.9em] text-foreground">{children}</code>,
-            }}
+            components={INSIGHT_MARKDOWN_COMPONENTS}
             skipHtml
         >
             {normalized}

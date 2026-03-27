@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import type { ChangeEvent } from 'react'
 import { LoaderCircle, Plus, Trash, Building2, Users } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -59,6 +60,39 @@ function parseTeamMembers(input: string): ClientTeamMember[] {
     .filter((member) => member.name.length > 0)
 }
 
+function WorkspaceRow({
+  client,
+  disabled,
+  onRemove,
+}: {
+  client: { id: string; name: string }
+  disabled: boolean
+  onRemove: (clientId: string) => void
+}) {
+  const handleRemove = useCallback(() => onRemove(client.id), [client.id, onRemove])
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-muted/60 bg-muted/30 px-4 py-3 text-sm transition-colors hover:bg-muted/50">
+      <div className="flex items-center gap-3">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <Building2 className="h-3.5 w-3.5" />
+        </div>
+        <span className="font-medium">{client.name}</span>
+      </div>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8 rounded-full text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
+        onClick={handleRemove}
+        disabled={disabled}
+      >
+        <Trash className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
 export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorProps) {
   const { user } = useAuth()
   const { clients, selectedClientId, selectClient, createClient, removeClient } = useClientContext()
@@ -91,7 +125,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
     }))
   }, [allUsers])
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setNewClientName('')
     setAccountManagerInput('')
     setAccountManagerMentions([])
@@ -100,16 +134,16 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
     setSaving(false)
     setRemovingId(null)
     setErrorMessage(null)
-  }
+  }, [])
 
-  const handleSheetChange = (open: boolean) => {
+  const handleSheetChange = useCallback((open: boolean) => {
     setIsSheetOpen(open)
     if (!open) {
       resetForm()
     }
-  }
+  }, [resetForm])
 
-  const handleCreateClient = async () => {
+  const handleCreateClient = useCallback(async () => {
     const name = newClientName.trim()
     const accountManager = accountManagerMentions[0]?.name ?? parseSinglePerson(accountManagerInput)
 
@@ -156,9 +190,9 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
       .finally(() => {
         setSaving(false)
       })
-  }
+  }, [accountManagerInput, accountManagerMentions, createClient, handleSheetChange, newClientName, teamInput, teamMentions])
 
-  const handleRemoveClient = async (clientId: string) => {
+  const handleRemoveClient = useCallback(async (clientId: string) => {
     setRemovingId(clientId)
     setErrorMessage(null)
 
@@ -173,7 +207,36 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
       .finally(() => {
         setRemovingId(null)
       })
-  }
+  }, [removeClient])
+
+  const handleClientNameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setNewClientName(event.target.value)
+  }, [])
+
+  const handleAccountManagerChange = useCallback(
+    (value: string, mentions: MentionableUser[]) => {
+      setAccountManagerInput(value)
+      setAccountManagerMentions(mentions.slice(0, 1))
+    },
+    []
+  )
+
+  const handleTeamChange = useCallback((value: string, mentions: MentionableUser[]) => {
+    setTeamInput(value)
+    setTeamMentions(mentions)
+  }, [])
+
+  const handleOpenSheet = useCallback(() => {
+    handleSheetChange(true)
+  }, [handleSheetChange])
+
+  const handleCloseSheet = useCallback(() => {
+    handleSheetChange(false)
+  }, [handleSheetChange])
+
+  const handleSaveClientClick = useCallback(() => {
+    void handleCreateClient()
+  }, [handleCreateClient])
 
   const handleValueChange = useCallback((value: string) => {
     selectClient(value)
@@ -248,7 +311,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
           <Button
             size="icon"
             variant="outline"
-            onClick={() => handleSheetChange(true)}
+            onClick={handleOpenSheet}
             className="h-11 w-11 rounded-xl border-input bg-background/50 backdrop-blur-sm hover:bg-background hover:border-primary/30 hover:shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none shrink-0"
           >
             <Plus className="h-4 w-4" />
@@ -270,7 +333,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                   <Input
                     id="client-name"
                     value={newClientName}
-                    onChange={(event) => setNewClientName(event.target.value)}
+                    onChange={handleClientNameChange}
                     placeholder="e.g. Horizon Ventures"
                     required
                     className="h-11 rounded-lg"
@@ -279,10 +342,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                 <MentionInput
                   label="Account manager"
                   value={accountManagerInput}
-                  onChange={(value, mentions) => {
-                    setAccountManagerInput(value)
-                    setAccountManagerMentions(mentions.slice(0, 1))
-                  }}
+                  onChange={handleAccountManagerChange}
                   users={mentionableUsers}
                   placeholder="Type a name or use @ to pick a user…"
                   disabled={saving}
@@ -291,10 +351,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                 <MentionInput
                   label="Team members"
                   value={teamInput}
-                  onChange={(value, mentions) => {
-                    setTeamInput(value)
-                    setTeamMentions(mentions)
-                  }}
+                  onChange={handleTeamChange}
                   users={mentionableUsers}
                   placeholder="Type names separated by commas, or use @ to add users…"
                   disabled={saving}
@@ -306,31 +363,12 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                     <p className="text-sm font-semibold text-muted-foreground">Existing workspaces</p>
                     <div className="space-y-2">
                       {clients.map((client) => (
-                        <div
+                        <WorkspaceRow
                           key={client.id}
-                          className="flex items-center justify-between rounded-lg border border-muted/60 bg-muted/30 px-4 py-3 text-sm transition-colors hover:bg-muted/50"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                              <Building2 className="h-3.5 w-3.5" />
-                            </div>
-                            <span className="font-medium">{client.name}</span>
-                          </div>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10 rounded-full"
-                            onClick={() => void handleRemoveClient(client.id)}
-                            disabled={clients.length === 1 || removingId === client.id || saving}
-                          >
-                            {removingId === client.id ? (
-                              <LoaderCircle className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
+                          client={client}
+                          disabled={clients.length === 1 || removingId === client.id || saving}
+                          onRemove={handleRemoveClient}
+                        />
                       ))}
                     </div>
                   </div>
@@ -344,7 +382,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleSheetChange(false)}
+                    onClick={handleCloseSheet}
                     disabled={saving}
                     className="rounded-lg"
                   >
@@ -354,7 +392,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                     type="button"
                     disabled={saving}
                     className="rounded-lg"
-                    onClick={() => void handleCreateClient()}
+                    onClick={handleSaveClientClick}
                   >
                     {saving && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
                     Save client

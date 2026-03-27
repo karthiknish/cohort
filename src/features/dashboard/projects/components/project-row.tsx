@@ -1,6 +1,6 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import {
   Calendar,
@@ -55,6 +55,27 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
   const collaborationHref = `/dashboard/collaboration?${new URLSearchParams({ projectId: project.id }).toString()}`
   const StatusIcon = STATUS_ICONS[project.status]
 
+  const handleEdit = useCallback(() => onEdit(project), [onEdit, project])
+  const handleDelete = useCallback(() => onDelete(project), [onDelete, project])
+  const statusAccentStyles = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(STATUS_ACCENT_COLORS).map(([status, backgroundColor]) => [status, { backgroundColor }]),
+      ) as Record<ProjectStatus, { backgroundColor: string }>,
+    [],
+  )
+
+  const statusUpdateHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        PROJECT_STATUSES.filter((status) => status !== project.status).map((status) => [
+          status,
+          () => onUpdateStatus(project, status),
+        ]),
+      ) as Partial<Record<ProjectStatus, () => void>>,
+    [onUpdateStatus, project],
+  )
+
   return (
     <div className={cn(
       "group relative rounded-xl border border-muted/30 bg-background p-5 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/30 sm:p-6",
@@ -103,8 +124,8 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
                     </span>
                   </div>
                   {PROJECT_STATUSES.filter((s) => s !== project.status).map((status) => (
-                    <DropdownMenuItem key={status} onClick={() => onUpdateStatus(project, status)} className="gap-2">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: STATUS_ACCENT_COLORS[status] }} />
+                    <DropdownMenuItem key={status} onClick={statusUpdateHandlers[status]} className="gap-2">
+                      <div className="h-2 w-2 rounded-full" style={statusAccentStyles[status]} />
                       <span>{formatStatusLabel(status)}</span>
                     </DropdownMenuItem>
                   ))}
@@ -178,7 +199,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
               size="sm"
               variant="outline"
               className="h-8 px-3 text-xs font-semibold gap-2 border-muted hover:bg-muted/50 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
-              onClick={() => onEdit(project)}
+              onClick={handleEdit}
             >
               <Pencil className="h-3.5 w-3.5" />
               Edit
@@ -212,7 +233,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive gap-2 cursor-pointer"
-                  onClick={() => onDelete(project)}
+                  onClick={handleDelete}
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Delete Project</span>

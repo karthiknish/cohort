@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useMemo } from 'react'
 import type { ReactNode } from 'react'
 
 import { AlertCircle, Hash, Inbox, MessageCircle, Plus, Search } from 'lucide-react'
@@ -85,6 +86,21 @@ export function ConversationListPane({
   sourceFilter,
   totalUnread,
 }: ConversationListPaneProps) {
+  const handleSearchChange = useCallback((event: { target: { value: string } }) => {
+    onSearchQueryChange(event.target.value)
+  }, [onSearchQueryChange])
+
+  const handleSourceFilterChange = useCallback((value: string) => {
+    onSourceFilterChange(value as SourceFilter)
+  }, [onSourceFilterChange])
+
+  const createSelectItemHandler = useCallback(
+    (item: UnifiedItem) => () => {
+      onSelectItem(item)
+    },
+    [onSelectItem]
+  )
+
   return (
     <div className="flex h-full w-full flex-col border-b border-muted/40 lg:w-80 lg:border-b-0 lg:border-r">
       <div className="space-y-3 p-4">
@@ -101,10 +117,10 @@ export function ConversationListPane({
 
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(event) => onSearchQueryChange(event.target.value)} placeholder="Search conversations…" className="pl-9" />
+          <Input value={searchQuery} onChange={handleSearchChange} placeholder="Search conversations…" className="pl-9" />
         </div>
 
-        <Tabs value={sourceFilter} onValueChange={(value) => onSourceFilterChange(value as SourceFilter)}>
+        <Tabs value={sourceFilter} onValueChange={handleSourceFilterChange}>
           <TabsList className="flex h-auto w-full flex-wrap bg-muted/50">
             <TabsTrigger value="all" className="flex-1 text-xs">
               All <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{channelCount + dmCount}</Badge>
@@ -155,7 +171,7 @@ export function ConversationListPane({
                 <button
                   key={`${item.type}-${item.legacyId}`}
                   type="button"
-                  onClick={() => onSelectItem(item)}
+                  onClick={createSelectItemHandler(item)}
                   className={cn(
                     'flex w-full items-center gap-3 rounded-lg p-3 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
                     'hover:bg-muted/50',
@@ -338,29 +354,68 @@ export function ChannelConversationPane({
     !searchingMessages &&
     !hasRequestedDeepLinkTarget(channelMessages, threadMessagesByRootId, deepLinkMessageId, deepLinkThreadId)
 
+  const channelHeader = useMemo(() => ({
+    name: selectedChannel.name,
+    type: 'channel' as const,
+    participantCount: channelParticipants.length,
+    messageCount: channelMessages.length,
+  }), [channelParticipants.length, channelMessages.length, selectedChannel.name])
+
+  const missingDeepLinkBanner = useMemo(() => {
+    if (!showMissingDeepLinkNotice) return null
+
+    return (
+      <Alert className="mx-4 mt-4 border-warning/20 bg-warning/10 text-warning-foreground dark:border-warning/30 dark:bg-warning/10 dark:text-warning-foreground">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Linked message unavailable</AlertTitle>
+        <AlertDescription className="space-y-2">
+          <p>We couldn&apos;t open the requested message in #{selectedChannel.name}. It may no longer be available in this channel.</p>
+          {onClearDeepLink ? (
+            <Button type="button" variant="outline" size="sm" onClick={onClearDeepLink}>
+              Clear link
+            </Button>
+          ) : null}
+        </AlertDescription>
+      </Alert>
+    )
+  }, [onClearDeepLink, selectedChannel.name, showMissingDeepLinkNotice])
+
+  const handleLoadMore = useCallback(() => {
+    onLoadMore(selectedChannel.id)
+  }, [onLoadMore, selectedChannel.id])
+
+  const handleSendMessage = useCallback(async () => {
+    await onSendMessage()
+  }, [onSendMessage])
+
+  const handleToggleReaction = useCallback(async (messageId: string, emoji: string) => {
+    onToggleReaction(selectedChannel.id, messageId, emoji)
+  }, [onToggleReaction, selectedChannel.id])
+
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
+    onDeleteMessage(selectedChannel.id, messageId)
+  }, [onDeleteMessage, selectedChannel.id])
+
+  const handleEditMessage = useCallback(async (messageId: string, newContent: string) => {
+    onEditMessage(selectedChannel.id, messageId, newContent)
+  }, [onEditMessage, selectedChannel.id])
+
   return (
     <UnifiedMessagePane
-      header={{
-        name: selectedChannel.name,
-        type: 'channel',
-        participantCount: channelParticipants.length,
-        messageCount: channelMessages.length,
-      }}
+      header={channelHeader}
       messages={channelMessagesForPane.map(collaborationToUnifiedMessage)}
       currentUserId={currentUserId}
       currentUserRole={currentUserRole}
       isLoading={isCurrentChannelLoading || (isChannelSearchActive && searchingMessages)}
       isLoadingMore={!isChannelSearchActive && loadingMore}
       hasMore={!isChannelSearchActive && canLoadMore}
-      onLoadMore={() => onLoadMore(selectedChannel.id)}
+      onLoadMore={handleLoadMore}
       messageSearchQuery={messageSearchQuery}
       onMessageSearchChange={onMessageSearchChange}
       messageSearchHighlights={searchHighlights}
       messageInput={messageInput}
       onMessageInputChange={onMessageInputChange}
-      onSendMessage={async () => {
-        await onSendMessage()
-      }}
+      onSendMessage={handleSendMessage}
       isSending={sending || uploading}
       pendingAttachments={pendingAttachments}
       uploadingAttachments={uploading}
@@ -369,25 +424,12 @@ export function ChannelConversationPane({
       typingIndicator={typingIndicatorText}
       onComposerFocus={onComposerFocus}
       onComposerBlur={onComposerBlur}
-      onToggleReaction={async (messageId: string, emoji: string) => onToggleReaction(selectedChannel.id, messageId, emoji)}
+      onToggleReaction={handleToggleReaction}
       reactionPendingByMessage={reactionPendingByMessage}
-      onDeleteMessage={async (messageId: string) => onDeleteMessage(selectedChannel.id, messageId)}
-      onEditMessage={async (messageId: string, newContent: string) => onEditMessage(selectedChannel.id, messageId, newContent)}
+      onDeleteMessage={handleDeleteMessage}
+      onEditMessage={handleEditMessage}
       participants={mentionParticipants}
-      statusBanner={showMissingDeepLinkNotice ? (
-        <Alert className="mx-4 mt-4 border-warning/20 bg-warning/10 text-warning-foreground dark:border-warning/30 dark:bg-warning/10 dark:text-warning-foreground">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Linked message unavailable</AlertTitle>
-          <AlertDescription className="space-y-2">
-            <p>We couldn&apos;t open the requested message in #{selectedChannel.name}. It may no longer be available in this channel.</p>
-            {onClearDeepLink ? (
-              <Button type="button" variant="outline" size="sm" onClick={onClearDeepLink}>
-                Clear link
-              </Button>
-            ) : null}
-          </AlertDescription>
-        </Alert>
-      ) : null}
+      statusBanner={missingDeepLinkBanner}
       channelMessages={channelMessages}
       threadMessagesByRootId={threadMessagesByRootId}
       threadNextCursorByRootId={threadNextCursorByRootId}
@@ -462,19 +504,21 @@ export function DirectMessageConversationPane({
   uploading,
   onStartNewDM,
 }: DirectMessageConversationPaneProps) {
+  const dmHeader = useMemo(() => ({
+    name: selectedDM.otherParticipantName,
+    type: 'dm' as const,
+    role: selectedDM.otherParticipantRole,
+    isArchived: selectedDM.isArchived,
+    isMuted: selectedDM.isMuted,
+    onArchive: onArchiveConversation,
+    onMute: dmMuteConversation,
+    primaryActionLabel: 'New chat',
+    onPrimaryAction: onStartNewDM,
+  }), [dmMuteConversation, onArchiveConversation, onStartNewDM, selectedDM])
+
   return (
     <UnifiedMessagePane
-      header={{
-        name: selectedDM.otherParticipantName,
-        type: 'dm',
-        role: selectedDM.otherParticipantRole,
-        isArchived: selectedDM.isArchived,
-        isMuted: selectedDM.isMuted,
-        onArchive: onArchiveConversation,
-        onMute: dmMuteConversation,
-        primaryActionLabel: 'New chat',
-        onPrimaryAction: onStartNewDM,
-      }}
+      header={dmHeader}
       messages={dmMessagesForPane.map(directMessageToUnifiedMessage)}
       currentUserId={currentUserId}
       isLoading={dmIsLoadingMessages || (isDmSearchActive && dmSearchingMessages)}

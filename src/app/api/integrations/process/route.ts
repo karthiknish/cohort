@@ -17,7 +17,7 @@ import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
 import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
 import { syncGoogleAnalyticsMetrics } from '@/services/integrations/google-analytics/sync'
-import { NormalizedMetric, SyncJob } from '@/types/integrations'
+import type { NormalizedMetric, SyncJob } from '@/types/integrations'
 import {
   IntegrationTokenError,
   isTokenExpiringSoon,

@@ -1,6 +1,6 @@
 'use client'
 
-import type { KeyboardEvent } from 'react'
+import { useCallback, type ChangeEvent, type KeyboardEvent } from 'react'
 import { format } from 'date-fns'
 import { Calendar as CalendarIcon, Plus, Tag, X } from 'lucide-react'
 
@@ -42,6 +42,38 @@ type CreateProjectFormFieldsProps = {
   onAddTag: () => void
   onRemoveTag: (tag: string) => void
   formatStatusLabel: (value: ProjectStatus) => string
+}
+
+const MIN_PROJECT_DATE = new Date('1900-01-01')
+
+function ProjectTagChip({
+  disabled,
+  onRemove,
+  tag,
+}: {
+  disabled: boolean
+  onRemove: (tag: string) => void
+  tag: string
+}) {
+  const handleRemoveClick = useCallback(() => {
+    onRemove(tag)
+  }, [onRemove, tag])
+
+  return (
+    <Badge key={tag} variant="secondary" className="gap-1 pr-1">
+      <Tag className="h-3 w-3" />
+      {tag}
+      <button
+        type="button"
+        onClick={handleRemoveClick}
+        className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20"
+        disabled={disabled}
+        aria-label={`Remove tag ${tag}`}
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </Badge>
+  )
 }
 
 function ProjectDateField({
@@ -101,6 +133,33 @@ export function CreateProjectFormFields({
   onRemoveTag,
   formatStatusLabel,
 }: CreateProjectFormFieldsProps) {
+  const handleNameChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => onNameChange(event.target.value),
+    [onNameChange]
+  )
+
+  const handleDescriptionChange = useCallback(
+    (event: ChangeEvent<HTMLTextAreaElement>) => onDescriptionChange(event.target.value),
+    [onDescriptionChange]
+  )
+
+  const handleStatusChange = useCallback(
+    (value: ProjectStatus) => onStatusChange(value),
+    [onStatusChange]
+  )
+
+  const handleTagInputChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => onTagInputChange(event.target.value),
+    [onTagInputChange]
+  )
+
+  const handleStartDateDisabled = useCallback((date: Date) => date < MIN_PROJECT_DATE, [])
+
+  const handleEndDateDisabled = useCallback(
+    (date: Date) => (state.startDate ? date < state.startDate : false) || date < MIN_PROJECT_DATE,
+    [state.startDate]
+  )
+
   return (
     <div className="mt-6 space-y-4">
       <div className="space-y-2">
@@ -111,7 +170,7 @@ export function CreateProjectFormFields({
           id="project-name"
           placeholder="e.g., Q1 Marketing Campaign"
           value={state.name}
-          onChange={(event) => onNameChange(event.target.value)}
+          onChange={handleNameChange}
           disabled={loading}
         />
       </div>
@@ -122,7 +181,7 @@ export function CreateProjectFormFields({
           id="project-description"
           placeholder="Brief overview of the project goals and scope…"
           value={state.description}
-          onChange={(event) => onDescriptionChange(event.target.value)}
+          onChange={handleDescriptionChange}
           disabled={loading}
           rows={3}
         />
@@ -131,7 +190,7 @@ export function CreateProjectFormFields({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="project-status">Status</Label>
-          <Select value={state.status} onValueChange={(value: ProjectStatus) => onStatusChange(value)} disabled={loading}>
+          <Select value={state.status} onValueChange={handleStatusChange} disabled={loading}>
             <SelectTrigger id="project-status">
               <SelectValue placeholder="Select status" />
             </SelectTrigger>
@@ -169,7 +228,7 @@ export function CreateProjectFormFields({
           label="Start date"
           onSelect={onStartDateChange}
           selected={state.startDate}
-          disabledDate={(date) => date < new Date('1900-01-01')}
+          disabledDate={handleStartDateDisabled}
         />
 
         <ProjectDateField
@@ -177,7 +236,7 @@ export function CreateProjectFormFields({
           label="End date"
           onSelect={onEndDateChange}
           selected={state.endDate}
-          disabledDate={(date) => (state.startDate ? date < state.startDate : false) || date < new Date('1900-01-01')}
+          disabledDate={handleEndDateDisabled}
         />
       </div>
 
@@ -188,7 +247,7 @@ export function CreateProjectFormFields({
             id="project-tags"
             placeholder="Add a tag…"
             value={state.tagInput}
-            onChange={(event) => onTagInputChange(event.target.value)}
+            onChange={handleTagInputChange}
             onKeyDown={onTagKeyDown}
             disabled={loading || state.tags.length >= 10}
           />
@@ -206,19 +265,7 @@ export function CreateProjectFormFields({
         {state.tags.length > 0 ? (
           <div className="flex flex-wrap gap-1.5 pt-2">
             {state.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="gap-1 pr-1">
-                <Tag className="h-3 w-3" />
-                {tag}
-                <button
-                  type="button"
-                  onClick={() => onRemoveTag(tag)}
-                  className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20"
-                  disabled={loading}
-                  aria-label={`Remove tag ${tag}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
+              <ProjectTagChip key={tag} disabled={loading} onRemove={onRemoveTag} tag={tag} />
             ))}
           </div>
         ) : null}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useCallback } from 'react'
 
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { FadeIn } from '@/shared/ui/animate-in'
@@ -25,6 +26,14 @@ export default function SocialsPage() {
 
   const connected = connections.status?.connected ?? false
 
+  const handleRequestSync = useCallback(() => {
+    void connections.handleRequestSync()
+  }, [connections])
+
+  const handleSurfaceChange = useCallback((value: string) => {
+    setActiveSurface(value as 'facebook' | 'instagram')
+  }, [])
+
   return (
     <div className={DASHBOARD_THEME.layout.container}>
       <SocialsHeader
@@ -46,7 +55,7 @@ export default function SocialsPage() {
             onConnectFacebook={connections.handleConnectFacebook}
             onConnectInstagram={connections.handleConnectInstagram}
             onDisconnect={connections.handleDisconnect}
-            onRequestSync={() => void connections.handleRequestSync()}
+            onRequestSync={handleRequestSync}
           />
         </div>
       </FadeIn>
@@ -54,7 +63,7 @@ export default function SocialsPage() {
       <FadeIn>
         <Tabs
           value={activeSurface}
-          onValueChange={(value) => setActiveSurface(value as 'facebook' | 'instagram')}
+          onValueChange={handleSurfaceChange}
           className="space-y-6"
         >
           <TabsList className={DASHBOARD_THEME.tabs.list}>

@@ -75,6 +75,33 @@ const allNavigation: NavItem[] = [
   { name: 'Manage Clients', href: '/admin/clients', icon: Shield, description: 'Admin client portal', roles: ['admin'] },
 ]
 
+function NavItemLink({
+  item,
+  linkClasses,
+  onNavigate,
+  prefetchRoute,
+  collapsed,
+}: {
+  item: NavItem
+  linkClasses: string
+  onNavigate?: () => void
+  prefetchRoute: (href: string) => void
+  collapsed: boolean
+}) {
+  const handleMouseEnter = useCallback(() => prefetchRoute(item.href), [prefetchRoute, item.href])
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      onMouseEnter={handleMouseEnter}
+      className={linkClasses}
+    >
+      <item.icon className="h-4 w-4 shrink-0" />
+      {!collapsed && <span className="truncate">{item.name}</span>}
+    </Link>
+  )
+}
+
 function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -93,6 +120,9 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
       }
     }
   }, [pathname, router])
+
+  const prefetchAdmin = useCallback(() => prefetchRoute('/admin'), [prefetchRoute])
+  const prefetchSettings = useCallback(() => prefetchRoute('/settings'), [prefetchRoute])
 
   // Persist last visited dashboard tab
   useEffect(() => {
@@ -130,16 +160,14 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
               )
 
               const navLink = (
-                <Link
+                <NavItemLink
                   key={item.name}
-                  href={item.href}
-                  onClick={onNavigate}
-                  onMouseEnter={() => prefetchRoute(item.href)}
-                  className={linkClasses}
-                >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  {!collapsed && <span className="truncate">{item.name}</span>}
-                </Link>
+                  item={item}
+                  linkClasses={linkClasses}
+                  onNavigate={onNavigate}
+                  prefetchRoute={prefetchRoute}
+                  collapsed={collapsed}
+                />
               )
 
               if (collapsed) {
@@ -170,7 +198,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                   <Link
                     href="/admin"
                     onClick={onNavigate}
-                    onMouseEnter={() => prefetchRoute('/admin')}
+                    onMouseEnter={prefetchAdmin}
                     className="flex h-9 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80"
                   >
                     <Shield className="h-4 w-4" />
@@ -184,7 +212,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
               <Link
                 href="/admin"
                 onClick={onNavigate}
-                onMouseEnter={() => prefetchRoute('/admin')}
+                onMouseEnter={prefetchAdmin}
                 className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80"
               >
                 <Shield className="h-4 w-4" />
@@ -199,7 +227,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                 <Link
                   href="/settings"
                   onClick={onNavigate}
-                  onMouseEnter={() => prefetchRoute('/settings')}
+                  onMouseEnter={prefetchSettings}
                   className="flex h-9 w-full items-center justify-center gap-2 rounded-md text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80"
                 >
                   <Settings className="h-4 w-4" />
@@ -213,7 +241,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
             <Link
               href="/settings"
               onClick={onNavigate}
-              onMouseEnter={() => prefetchRoute('/settings')}
+              onMouseEnter={prefetchSettings}
               className="flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/80"
             >
               <Settings className="h-4 w-4" />
@@ -301,6 +329,21 @@ export function Header() {
       .toUpperCase()
     : 'US'
 
+  const handleNavigate = useCallback(() => setOpen(false), [])
+  const handleSignOut = useCallback(() => {
+    setOpen(false)
+    signOut()
+  }, [signOut])
+  const handleShowOnboarding = useCallback(() => {
+    setShowWelcome(true)
+    void onHelpOpenChange(true)
+  }, [setShowWelcome, onHelpOpenChange])
+  const handleOpenHelp = useCallback(() => {
+    setShowWelcome(false)
+    void onHelpOpenChange(true)
+  }, [setShowWelcome, onHelpOpenChange])
+  const handleOpenProblemReport = useCallback(() => setProblemReportOpen(true), [])
+
   const roleLabel = useMemo(() => {
     switch (user?.role) {
       case 'admin': return 'Admin'
@@ -337,14 +380,11 @@ export function Header() {
                   <SheetTitle className="text-base font-semibold">Workspace</SheetTitle>
                 </SheetHeader>
                 <div className="p-4">
-                  <NavigationList onNavigate={() => setOpen(false)} />
+                  <NavigationList onNavigate={handleNavigate} />
                   <Button
                     variant="ghost"
                     className="mt-6 w-full justify-start gap-2 text-sm font-medium"
-                    onClick={() => {
-                      setOpen(false)
-                      signOut()
-                    }}
+                    onClick={handleSignOut}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign Out
@@ -361,20 +401,14 @@ export function Header() {
 
           {/* Search / Command menu (takes remaining space on desktop) */}
           <div className="hidden sm:flex flex-1 sm:max-w-md">
-            <CommandMenu onOpenHelp={() => {
-              setShowWelcome(false)
-              void onHelpOpenChange(true)
-            }} />
+            <CommandMenu onOpenHelp={handleOpenHelp} />
           </div>
 
           {/* Right side actions (pinned to the right) */}
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             {/* Mobile search button - only visible on small screens */}
             <div className="sm:hidden">
-              <CommandMenu onOpenHelp={() => {
-                setShowWelcome(false)
-                void onHelpOpenChange(true)
-              }} />
+              <CommandMenu onOpenHelp={handleOpenHelp} />
             </div>
 
             <TooltipProvider>
@@ -383,7 +417,7 @@ export function Header() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setProblemReportOpen(true)}
+                    onClick={handleOpenProblemReport}
                     className="hidden sm:inline-flex"
                     aria-label="Report a problem"
                   >
@@ -403,10 +437,7 @@ export function Header() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => {
-                      setShowWelcome(true)
-                      void onHelpOpenChange(true)
-                    }}
+                    onClick={handleShowOnboarding}
                     className="hidden sm:inline-flex"
                     aria-label="Show onboarding"
                   >
@@ -471,10 +502,7 @@ export function Header() {
                 <DropdownMenuItem asChild>
                   <Link href="/settings">Settings</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => {
-                  setShowWelcome(false)
-                  void onHelpOpenChange(true)
-                }}>
+                <DropdownMenuItem onSelect={handleOpenHelp}>
                   Help & Navigation
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -487,7 +515,7 @@ export function Header() {
         </div>
       </header>
 
-      <HelpModal open={helpOpen} onOpenChange={(nextOpen) => void onHelpOpenChange(nextOpen)} showWelcome={showWelcome} />
+  <HelpModal open={helpOpen} onOpenChange={onHelpOpenChange} showWelcome={showWelcome} />
       <ProblemReportModal open={problemReportOpen} onOpenChange={setProblemReportOpen} />
     </>
   )

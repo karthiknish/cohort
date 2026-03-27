@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { usePaginatedQuery, useQuery } from 'convex/react'
 import { LoaderCircle, Plus, Trash2, Users as UsersIcon, X } from 'lucide-react'
 import Link from 'next/link'
@@ -32,6 +32,248 @@ type AdminUserRow = {
   email?: string | null
   role?: string | null
   status?: string | null
+}
+
+type AssignableUser = {
+  id: string
+  name: string
+  email: string | null
+  role: string
+  status: string
+}
+
+type TeamMemberField = {
+  key: string
+  name: string
+  role: string
+}
+
+type ClientRecord = {
+  id: string
+  name: string
+  accountManager: string
+  teamMembers: { name: string; role: string }[]
+}
+
+type TeamMemberFieldRowProps = {
+  member: TeamMemberField
+  index: number
+  assignableUsers: AssignableUser[]
+  clientSaving: boolean
+  teamMembersLength: number
+  onUpdateName: (key: string, value: string) => void
+  onUpdateRole: (key: string, value: string) => void
+  onRemove: (key: string) => void
+  excludeNames: string[]
+}
+
+function TeamMemberFieldRow({
+  member,
+  index,
+  assignableUsers,
+  clientSaving,
+  teamMembersLength,
+  onUpdateName,
+  onUpdateRole,
+  onRemove,
+  excludeNames,
+}: TeamMemberFieldRowProps) {
+  const handleNameChange = useCallback(
+    (value: string) => onUpdateName(member.key, value),
+    [member.key, onUpdateName]
+  )
+  const handleNameInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onUpdateName(member.key, event.target.value),
+    [member.key, onUpdateName]
+  )
+  const handleRoleChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onUpdateRole(member.key, event.target.value),
+    [member.key, onUpdateRole]
+  )
+  const handleRemove = useCallback(() => onRemove(member.key), [member.key, onRemove])
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border p-4 sm:flex-row sm:items-center">
+      <div className="flex-1 space-y-2">
+        <Label htmlFor={`team-member-name-${member.key}`} className="text-xs uppercase tracking-wide text-muted-foreground">
+          Name
+        </Label>
+        {assignableUsers.length > 0 ? (
+          <UserSearchPicker
+            id={`team-member-name-${member.key}`}
+            value={member.name}
+            onChange={handleNameChange}
+            options={assignableUsers}
+            placeholder={index === 0 ? 'Select teammate' : 'Choose teammate'}
+            searchPlaceholder="Search teammates"
+            emptyText="No matching teammate found."
+            disabled={clientSaving}
+            excludeNames={excludeNames}
+          />
+        ) : (
+          <Input
+            id={`team-member-name-${member.key}`}
+            placeholder={index === 0 ? 'Alex Chen' : 'Teammate name'}
+            value={member.name}
+            onChange={handleNameInputChange}
+            disabled={clientSaving}
+          />
+        )}
+      </div>
+      <div className="flex-1 space-y-2">
+        <Label htmlFor={`team-member-role-${member.key}`} className="text-xs uppercase tracking-wide text-muted-foreground">
+          Role
+        </Label>
+        <Input
+          id={`team-member-role-${member.key}`}
+          placeholder={index === 0 ? 'Paid Media Lead' : 'Role (optional)'}
+          value={member.role}
+          onChange={handleRoleChange}
+          disabled={clientSaving}
+        />
+      </div>
+      <div className="flex items-center justify-end pt-2 sm:pt-6">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="text-destructive hover:text-destructive"
+          onClick={handleRemove}
+          disabled={teamMembersLength <= 1 || clientSaving}
+        >
+          <Trash2 className="h-4 w-4" />
+          <span className="sr-only">Remove team member</span>
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+type ClientRowProps = {
+  client: ClientRecord
+  unmatchedCount: number
+  addingMember: boolean
+  clientPendingMembersId: string | undefined
+  deletingClientId: string | null | undefined
+  removingTeamMemberKey: string | null | undefined
+  onAddTeamMember: (client: ClientRecord) => void
+  onDeleteClient: (client: ClientRecord) => void
+  onRemoveTeamMember: (client: ClientRecord, memberName: string) => void
+}
+
+function ClientRow({
+  client,
+  unmatchedCount,
+  addingMember,
+  clientPendingMembersId,
+  deletingClientId,
+  removingTeamMemberKey,
+  onAddTeamMember,
+  onDeleteClient,
+  onRemoveTeamMember,
+}: ClientRowProps) {
+  const handleAddTeamMember = useCallback(() => onAddTeamMember(client), [client, onAddTeamMember])
+  const handleDeleteClient = useCallback(() => onDeleteClient(client), [client, onDeleteClient])
+
+  return (
+    <div key={client.id} className="rounded-md border p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-bold text-foreground">{client.name}</p>
+          <p className="text-xs text-muted-foreground">Managed by {client.accountManager}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline">Team {client.teamMembers.length}</Badge>
+          <Badge variant={unmatchedCount ? 'secondary' : 'outline'}>
+            {unmatchedCount ? `${unmatchedCount} unmatched` : 'Mapped'}
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAddTeamMember}
+            disabled={addingMember && clientPendingMembersId === client.id}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add teammate
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDeleteClient}
+            disabled={Boolean(deletingClientId) && deletingClientId !== client.id}
+          >
+            {deletingClientId === client.id ? (
+              <>
+                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Deleting…
+              </>
+            ) : (
+              <>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+      {unmatchedCount ? (
+        <p className="mt-3 text-xs text-warning">
+          This client still has legacy allocation names that do not match current workspace users.
+        </p>
+      ) : null}
+      {client.teamMembers.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {client.teamMembers.map((member) => (
+            <ClientTeamMemberBadge
+              key={`${client.id}-${member.name}-${member.role}`}
+              client={client}
+              member={member}
+              removingTeamMemberKey={removingTeamMemberKey}
+              onRemove={onRemoveTeamMember}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+type ClientTeamMemberBadgeProps = {
+  client: ClientRecord
+  member: { name: string; role: string }
+  removingTeamMemberKey: string | null | undefined
+  onRemove: (client: ClientRecord, memberName: string) => void
+}
+
+function ClientTeamMemberBadge({ client, member, removingTeamMemberKey, onRemove }: ClientTeamMemberBadgeProps) {
+  const handleRemove = useCallback(
+    () => onRemove(client, member.name),
+    [client, member.name, onRemove]
+  )
+  const isRemoving = removingTeamMemberKey === `${client.id}:${member.name.toLowerCase()}`
+  const isAccountManager = member.name.toLowerCase() === client.accountManager.toLowerCase()
+
+  return (
+    <div className="inline-flex items-center rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground">
+      <span className="font-medium text-foreground">{member.name}</span>
+      {member.role && <span className="ml-2 text-muted-foreground">{member.role}</span>}
+      <button
+        type="button"
+        className="ml-2 rounded-full p-0.5 text-muted-foreground transition-colors hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={handleRemove}
+        disabled={isRemoving || isAccountManager}
+        aria-label={`Remove ${member.name} from ${client.name}`}
+        title={
+          isAccountManager
+            ? 'Account manager cannot be removed from the team'
+            : `Remove ${member.name}`
+        }
+      >
+        {isRemoving ? (
+          <LoaderCircle className="h-3 w-3 animate-spin" />
+        ) : (
+          <X className="h-3 w-3" />
+        )}
+      </button>
+    </div>
+  )
 }
 
 export default function AdminClientsPage() {
@@ -135,6 +377,51 @@ export default function AdminClientsPage() {
     }, {})
   }, [allocationSummary.unmatched])
 
+  const handleRefresh = useCallback(() => void loadClients(), [loadClients])
+  const handleFormSubmit = useCallback(
+    (event: React.FormEvent) => {
+      event.preventDefault()
+      void handleCreateClient()
+    },
+    [handleCreateClient]
+  )
+  const handleClientNameChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => setClientName(event.target.value),
+    [setClientName]
+  )
+  const handleAccountManagerChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => setClientAccountManager(event.target.value),
+    [setClientAccountManager]
+  )
+  const handleClientSearchChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => setClientSearch(event.target.value),
+    []
+  )
+  const handleUpdateTeamMemberName = useCallback(
+    (key: string, value: string) => updateTeamMemberField(key, 'name', value),
+    [updateTeamMemberField]
+  )
+  const handleUpdateTeamMemberRole = useCallback(
+    (key: string, value: string) => updateTeamMemberField(key, 'role', value),
+    [updateTeamMemberField]
+  )
+  const handleCancelDelete = useCallback(() => handleDeleteDialogChange(false), [handleDeleteDialogChange])
+  const handleConfirmDelete = useCallback(() => void handleDeleteClient(), [handleDeleteClient])
+  const handleMemberNameChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => setMemberName(event.target.value),
+    [setMemberName]
+  )
+  const handleMemberRoleChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => setMemberRole(event.target.value),
+    [setMemberRole]
+  )
+  const handleCancelTeamDialog = useCallback(() => handleTeamDialogChange(false), [handleTeamDialogChange])
+  const handleConfirmAddTeamMember = useCallback(() => void handleAddTeamMember(), [handleAddTeamMember])
+  const handleRemoveTeamMemberStable = useCallback(
+    (client: ClientRecord, memberName: string) => void handleRemoveTeamMember(client, memberName),
+    [handleRemoveTeamMember]
+  )
+
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
@@ -164,7 +451,7 @@ export default function AdminClientsPage() {
             <Button asChild variant="outline">
               <Link href="/admin">Admin home</Link>
             </Button>
-            <Button variant="outline" size="sm" onClick={() => void loadClients()} disabled={clientsLoading} className="inline-flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={clientsLoading} className="inline-flex items-center gap-2">
               <LoaderCircle className={`h-4 w-4 ${clientsLoading ? 'animate-spin' : ''}`} /> Refresh
             </Button>
           </div>
@@ -224,10 +511,7 @@ export default function AdminClientsPage() {
           <CardContent className="space-y-6">
             <form
               className="space-y-4"
-              onSubmit={(event) => {
-                event.preventDefault()
-                void handleCreateClient()
-              }}
+              onSubmit={handleFormSubmit}
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
@@ -236,7 +520,7 @@ export default function AdminClientsPage() {
                     id="admin-client-name"
                     placeholder="e.g. Horizon Ventures"
                     value={clientName}
-                    onChange={(event) => setClientName(event.target.value)}
+                    onChange={handleClientNameChange}
                     required
                     disabled={clientSaving}
                   />
@@ -259,7 +543,7 @@ export default function AdminClientsPage() {
                       id="admin-client-owner"
                       placeholder="Primary owner"
                       value={clientAccountManager}
-                      onChange={(event) => setClientAccountManager(event.target.value)}
+                      onChange={handleAccountManagerChange}
                       required
                       disabled={clientSaving}
                     />
@@ -276,64 +560,20 @@ export default function AdminClientsPage() {
                 </div>
                 <div className="space-y-2">
                   {teamMemberFields.map((member, index) => (
-                    <div
+                    <TeamMemberFieldRow
                       key={member.key}
-                      className="flex flex-col gap-2 rounded-md border p-4 sm:flex-row sm:items-center"
-                    >
-                      <div className="flex-1 space-y-2">
-                        <Label htmlFor={`team-member-name-${member.key}`} className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Name
-                        </Label>
-                        {assignableUsers.length > 0 ? (
-                          <UserSearchPicker
-                            id={`team-member-name-${member.key}`}
-                            value={member.name}
-                            onChange={(value) => updateTeamMemberField(member.key, 'name', value)}
-                            options={assignableUsers}
-                            placeholder={index === 0 ? 'Select teammate' : 'Choose teammate'}
-                            searchPlaceholder="Search teammates"
-                            emptyText="No matching teammate found."
-                            disabled={clientSaving}
-                            excludeNames={teamMemberFields
-                              .filter((candidate) => candidate.key !== member.key)
-                              .map((candidate) => candidate.name)}
-                          />
-                        ) : (
-                          <Input
-                            id={`team-member-name-${member.key}`}
-                            placeholder={index === 0 ? 'Alex Chen' : 'Teammate name'}
-                            value={member.name}
-                            onChange={(event) => updateTeamMemberField(member.key, 'name', event.target.value)}
-                            disabled={clientSaving}
-                          />
-                        )}
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <Label htmlFor={`team-member-role-${member.key}`} className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Role
-                        </Label>
-                        <Input
-                          id={`team-member-role-${member.key}`}
-                          placeholder={index === 0 ? 'Paid Media Lead' : 'Role (optional)'}
-                          value={member.role}
-                          onChange={(event) => updateTeamMemberField(member.key, 'role', event.target.value)}
-                          disabled={clientSaving}
-                        />
-                      </div>
-                      <div className="flex items-center justify-end pt-2 sm:pt-6">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => removeTeamMemberField(member.key)}
-                          disabled={teamMemberFields.length <= 1 || clientSaving}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Remove team member</span>
-                        </Button>
-                      </div>
-                    </div>
+                      member={member}
+                      index={index}
+                      assignableUsers={assignableUsers}
+                      clientSaving={clientSaving}
+                      teamMembersLength={teamMemberFields.length}
+                      onUpdateName={handleUpdateTeamMemberName}
+                      onUpdateRole={handleUpdateTeamMemberRole}
+                      onRemove={removeTeamMemberField}
+                      excludeNames={teamMemberFields
+                        .filter((candidate) => candidate.key !== member.key)
+                        .map((candidate) => candidate.name)}
+                    />
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -364,7 +604,7 @@ export default function AdminClientsPage() {
                 </div>
                 <Input
                   value={clientSearch}
-                  onChange={(event) => setClientSearch(event.target.value)}
+                  onChange={handleClientSearchChange}
                   placeholder="Search clients or teammates"
                   className="w-full sm:w-72"
                 />
@@ -382,83 +622,18 @@ export default function AdminClientsPage() {
               ) : (
                 <div className="space-y-3">
                   {filteredClients.map((client) => (
-                    <div key={client.id} className="rounded-md border p-4">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="text-sm font-bold text-foreground">{client.name}</p>
-                          <p className="text-xs text-muted-foreground">Managed by {client.accountManager}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">Team {client.teamMembers.length}</Badge>
-                          <Badge variant={unmatchedByClientId[client.id] ? 'secondary' : 'outline'}>
-                            {unmatchedByClientId[client.id] ? `${unmatchedByClientId[client.id]} unmatched` : 'Mapped'}
-                          </Badge>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => requestAddTeamMember(client)}
-                            disabled={addingMember && clientPendingMembers?.id === client.id}
-                          >
-                            <Plus className="mr-2 h-4 w-4" /> Add teammate
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => requestDeleteClient(client)}
-                            disabled={Boolean(deletingClientId) && deletingClientId !== client.id}
-                          >
-                            {deletingClientId === client.id ? (
-                              <>
-                                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> Deleting…
-                              </>
-                            ) : (
-                              <>
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      {unmatchedByClientId[client.id] ? (
-                        <p className="mt-3 text-xs text-warning">
-                          This client still has legacy allocation names that do not match current workspace users.
-                        </p>
-                      ) : null}
-                      {client.teamMembers.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {client.teamMembers.map((member) => (
-                            <div
-                              key={`${client.id}-${member.name}-${member.role}`}
-                              className="inline-flex items-center rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground"
-                            >
-                              <span className="font-medium text-foreground">{member.name}</span>
-                              {member.role && <span className="ml-2 text-muted-foreground">{member.role}</span>}
-                              <button
-                                type="button"
-                                className="ml-2 rounded-full p-0.5 text-muted-foreground transition-colors hover:text-destructive disabled:cursor-not-allowed disabled:opacity-50"
-                                onClick={() => void handleRemoveTeamMember(client, member.name)}
-                                disabled={
-                                  removingTeamMemberKey === `${client.id}:${member.name.toLowerCase()}` ||
-                                  member.name.toLowerCase() === client.accountManager.toLowerCase()
-                                }
-                                aria-label={`Remove ${member.name} from ${client.name}`}
-                                title={
-                                  member.name.toLowerCase() === client.accountManager.toLowerCase()
-                                    ? 'Account manager cannot be removed from the team'
-                                    : `Remove ${member.name}`
-                                }
-                              >
-                                {removingTeamMemberKey === `${client.id}:${member.name.toLowerCase()}` ? (
-                                  <LoaderCircle className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  <X className="h-3 w-3" />
-                                )}
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <ClientRow
+                      key={client.id}
+                      client={client}
+                      unmatchedCount={unmatchedByClientId[client.id] ?? 0}
+                      addingMember={addingMember}
+                      clientPendingMembersId={clientPendingMembers?.id}
+                      deletingClientId={deletingClientId}
+                      removingTeamMemberKey={removingTeamMemberKey}
+                      onAddTeamMember={requestAddTeamMember}
+                      onDeleteClient={requestDeleteClient}
+                      onRemoveTeamMember={handleRemoveTeamMemberStable}
+                    />
                   ))}
 
                   {nextCursor && (
@@ -499,7 +674,7 @@ export default function AdminClientsPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => handleDeleteDialogChange(false)}
+              onClick={handleCancelDelete}
               disabled={Boolean(deletingClientId)}
             >
               Cancel
@@ -507,7 +682,7 @@ export default function AdminClientsPage() {
             <Button
               type="button"
               variant="destructive"
-              onClick={() => void handleDeleteClient()}
+              onClick={handleConfirmDelete}
               disabled={Boolean(deletingClientId)}
             >
               {deletingClientId ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
@@ -546,7 +721,7 @@ export default function AdminClientsPage() {
                   id="team-member-name-input"
                   placeholder="e.g. Priya Patel"
                   value={memberName}
-                  onChange={(event) => setMemberName(event.target.value)}
+                  onChange={handleMemberNameChange}
                   disabled={addingMember}
                 />
               )}
@@ -557,16 +732,16 @@ export default function AdminClientsPage() {
                 id="team-member-role-input"
                 placeholder="e.g. Paid Media Lead"
                 value={memberRole}
-                onChange={(event) => setMemberRole(event.target.value)}
+                onChange={handleMemberRoleChange}
                 disabled={addingMember}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => handleTeamDialogChange(false)} disabled={addingMember}>
+            <Button type="button" variant="outline" onClick={handleCancelTeamDialog} disabled={addingMember}>
               Cancel
             </Button>
-            <Button type="button" onClick={() => void handleAddTeamMember()} disabled={addingMember}>
+            <Button type="button" onClick={handleConfirmAddTeamMember} disabled={addingMember}>
               {addingMember && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
               Add teammate
             </Button>

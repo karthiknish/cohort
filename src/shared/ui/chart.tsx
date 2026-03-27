@@ -24,6 +24,23 @@ type ChartContextProps = {
 
 const ChartContext = React.createContext<ChartContextProps | null>(null)
 
+function createChartContextValue(config: ChartConfig): ChartContextProps {
+  return { config }
+}
+
+function getChartTooltipIndicatorStyle(indicatorColor: string): React.CSSProperties {
+  return {
+    "--color-bg": indicatorColor,
+    "--color-border": indicatorColor,
+  } as React.CSSProperties
+}
+
+function getChartLegendMarkerStyle(color: string | undefined): React.CSSProperties {
+  return {
+    backgroundColor: color,
+  }
+}
+
 function useChart() {
   const context = React.useContext(ChartContext)
 
@@ -48,9 +65,10 @@ function ChartContainer({
 }) {
   const uniqueId = React.useId()
   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
+  const contextValue = React.useMemo(() => createChartContextValue(config), [config])
 
   return (
-    <ChartContext.Provider value={{ config }}>
+    <ChartContext.Provider value={contextValue}>
       <div
         data-slot="chart"
         data-chart={chartId}
@@ -212,10 +230,7 @@ function ChartTooltipContent({
                             }
                           )}
                           style={
-                            {
-                              "--color-bg": indicatorColor,
-                              "--color-border": indicatorColor,
-                            } as React.CSSProperties
+                            getChartTooltipIndicatorStyle(indicatorColor)
                           }
                         />
                       )
@@ -295,9 +310,7 @@ function ChartLegendContent({
               ) : (
                 <div
                   className="h-2 w-2 shrink-0 rounded-[2px]"
-                  style={{
-                    backgroundColor: item.color,
-                  }}
+                  style={getChartLegendMarkerStyle(item.color)}
                 />
               )}
               {itemConfig?.label}

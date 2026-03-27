@@ -4,6 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Skeleton } from '@/shared/ui/skeleton'
 
 export function AdsSkeleton() {
+  const insightSlots = ['insight-1', 'insight-2', 'insight-3']
+  const statSlots = ['stat-1', 'stat-2', 'stat-3', 'stat-4']
+  const metricSlots = ['metric-1', 'metric-2', 'metric-3']
+  const rowSlots = ['row-1', 'row-2', 'row-3', 'row-4', 'row-5', 'row-6']
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -21,8 +26,8 @@ export function AdsSkeleton() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, idx) => (
-              <Card key={idx} className="border-muted/60 bg-muted/10">
+            {insightSlots.map((slot) => (
+              <Card key={slot} className="border-muted/60 bg-muted/10">
                 <CardContent className="space-y-3 p-4">
                   <Skeleton className="h-5 w-32" />
                   <Skeleton className="h-4 w-40" />
@@ -35,8 +40,8 @@ export function AdsSkeleton() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, idx) => (
-          <Card key={idx} className="border-muted/60 bg-background">
+        {statSlots.map((slot) => (
+          <Card key={slot} className="border-muted/60 bg-background">
             <CardContent className="space-y-3 p-5">
               <Skeleton className="h-3 w-20" />
               <Skeleton className="h-8 w-28" />
@@ -52,13 +57,13 @@ export function AdsSkeleton() {
           <Skeleton className="mt-2 h-4 w-64" />
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, idx) => (
-            <div key={idx} className="rounded-lg border border-muted/60 bg-muted/10 p-4">
+          {metricSlots.map((slot) => (
+            <div key={slot} className="rounded-lg border border-muted/60 bg-muted/10 p-4">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="mt-2 h-3 w-40" />
               <div className="mt-3 grid grid-cols-3 gap-2">
-                {Array.from({ length: 3 }).map((__, metricIdx) => (
-                  <Skeleton key={metricIdx} className="h-3 w-full" />
+                {metricSlots.map((metricSlot) => (
+                  <Skeleton key={metricSlot} className="h-3 w-full" />
                 ))}
               </div>
             </div>
@@ -75,8 +80,8 @@ export function AdsSkeleton() {
           <Skeleton className="h-9 w-36" />
         </CardHeader>
         <CardContent className="space-y-2">
-          {Array.from({ length: 6 }).map((_, idx) => (
-            <Skeleton key={idx} className="h-10 w-full rounded" />
+          {rowSlots.map((slot) => (
+            <Skeleton key={slot} className="h-10 w-full rounded" />
           ))}
         </CardContent>
       </Card>

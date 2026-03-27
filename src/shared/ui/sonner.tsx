@@ -1,5 +1,6 @@
 "use client"
 
+import { type CSSProperties } from 'react'
 import {
   CircleCheckIcon,
   InfoIcon,
@@ -10,6 +11,18 @@ import {
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
+const TOASTER_ICONS = {
+  success: <CircleCheckIcon className="size-4" />,
+  info: <InfoIcon className="size-4" />,
+  warning: <TriangleAlertIcon className="size-4" />,
+  error: <OctagonXIcon className="size-4" />,
+  loading: <Loader2Icon className="size-4 animate-spin" />,
+} as const
+
+const TOASTER_STYLE = {
+  '--border-radius': 'var(--radius)',
+} as CSSProperties & { '--border-radius': string }
+
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
 
@@ -17,18 +30,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
-      icons={{
-        success: <CircleCheckIcon className="size-4" />,
-        info: <InfoIcon className="size-4" />,
-        warning: <TriangleAlertIcon className="size-4" />,
-        error: <OctagonXIcon className="size-4" />,
-        loading: <Loader2Icon className="size-4 animate-spin" />,
-      }}
-      style={
-        {
-          "--border-radius": "var(--radius)",
-        } as React.CSSProperties
-      }
+      icons={TOASTER_ICONS}
+      style={TOASTER_STYLE}
       {...props}
     />
   )

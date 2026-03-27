@@ -6,6 +6,9 @@ import { googleAdsSearch } from './client'
 import { GoogleAdsApiError } from './errors'
 import {
     GOOGLE_API_BASE,
+    
+} from './types'
+import type {
     GoogleAudienceTargeting,
     GoogleAdsApiErrorResponse,
 } from './types'

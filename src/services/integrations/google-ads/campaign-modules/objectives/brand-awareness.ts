@@ -2,7 +2,7 @@
 // BRAND AWARENESS OBJECTIVE - Build brand recognition
 // =============================================================================
 
-import { GoogleCampaignObjectiveConfig } from '../types'
+import type { GoogleCampaignObjectiveConfig } from '../types'
 
 export const GOOGLE_BRAND_AWARENESS_OBJECTIVE_CONFIG: GoogleCampaignObjectiveConfig = {
   objective: 'BRAND_AWARENESS_AND_REACH',

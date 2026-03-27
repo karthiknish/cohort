@@ -18,6 +18,124 @@ import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
 import { CreateChannelDialog } from './create-channel-dialog'
 import { ChannelMembersDialog } from './channel-members-dialog'
 
+type CollaborationDashboardContext = ReturnType<typeof useCollaborationDashboardContext>
+
+function createUnifiedInboxSidebarProps(context: CollaborationDashboardContext) {
+  const { collab, dm, handleSelectChannel, handleSelectDM, openNewDMDialog } = context
+
+  return {
+    channels: collab.channels,
+    channelSummaries: collab.channelSummaries,
+    channelUnreadCounts: collab.channelUnreadCounts,
+    dmConversations: dm.conversations,
+    selectedChannel: collab.selectedChannel,
+    selectedDM: dm.selectedConversation,
+    onSelectChannel: handleSelectChannel,
+    onSelectDM: handleSelectDM,
+    onNewDM: openNewDMDialog,
+    isLoadingChannels: collab.isBootstrapping,
+    isLoadingDMs: dm.isLoadingConversations,
+  }
+}
+
+function createUnifiedInboxChannelPaneProps(
+  context: CollaborationDashboardContext,
+  mentionParticipants: ClientTeamMember[],
+) {
+  const { collab, clearMessageFocus, requestedMessageId, requestedThreadId } = context
+
+  return {
+    selectedChannel: collab.selectedChannel,
+    channelMessages: collab.channelMessages,
+    visibleMessages: collab.visibleMessages,
+    channelParticipants: collab.channelParticipants,
+    mentionParticipants,
+    messageSearchQuery: collab.messageSearchQuery,
+    onMessageSearchChange: collab.setMessageSearchQuery,
+    searchHighlights: collab.searchHighlights,
+    searchingMessages: collab.searchingMessages,
+    isCurrentChannelLoading: collab.isCurrentChannelLoading,
+    onLoadMore: collab.handleLoadMore,
+    canLoadMore: collab.canLoadMore,
+    loadingMore: collab.loadingMore,
+    messageInput: collab.messageInput,
+    onMessageInputChange: collab.setMessageInput,
+    onSendMessage: collab.handleSendMessage,
+    sending: collab.sending,
+    pendingAttachments: collab.pendingAttachments,
+    onAddAttachments: collab.handleAddAttachments,
+    onRemoveAttachment: collab.handleRemoveAttachment,
+    uploading: collab.uploading,
+    typingParticipants: collab.typingParticipants,
+    onComposerFocus: collab.handleComposerFocus,
+    onComposerBlur: collab.handleComposerBlur,
+    onEditMessage: collab.handleEditMessage,
+    onDeleteMessage: collab.handleDeleteMessage,
+    onToggleReaction: collab.handleToggleReaction,
+    messageUpdatingId: collab.messageUpdatingId,
+    messageDeletingId: collab.messageDeletingId,
+    currentUserRole: collab.currentUserRole,
+    threadMessagesByRootId: collab.threadMessagesByRootId,
+    threadNextCursorByRootId: collab.threadNextCursorByRootId,
+    threadLoadingByRootId: collab.threadLoadingByRootId,
+    threadErrorsByRootId: collab.threadErrorsByRootId,
+    threadUnreadCountsByRootId: collab.threadUnreadCountsByRootId,
+    onLoadThreadReplies: collab.loadThreadReplies,
+    onLoadMoreThreadReplies: collab.loadMoreThreadReplies,
+    onMarkThreadAsRead: collab.markThreadAsRead,
+    reactionPendingByMessage: collab.reactionPendingByMessage,
+    sharedFiles: collab.sharedFiles,
+    onClearDeepLink: clearMessageFocus,
+    deepLinkMessageId: requestedMessageId,
+    deepLinkThreadId: requestedThreadId,
+  }
+}
+
+function createUnifiedInboxDirectMessagePaneProps(context: CollaborationDashboardContext) {
+  const { collab, dm, openNewDMDialog } = context
+
+  return {
+    selectedDM: dm.selectedConversation,
+    messages: dm.messages,
+    visibleMessages: dm.visibleMessages,
+    isLoadingMessages: dm.isLoadingMessages,
+    isLoadingMore: dm.isLoadingMore,
+    hasMoreMessages: dm.hasMoreMessages,
+    loadMoreMessages: dm.loadMoreMessages,
+    messageSearchQuery: dm.messageSearchQuery,
+    onMessageSearchChange: dm.setMessageSearchQuery,
+    searchHighlights: dm.searchHighlights,
+    searchingMessages: dm.searchingMessages,
+    sendMessage: dm.sendMessage,
+    isSending: dm.isSending,
+    toggleReaction: dm.toggleReaction,
+    deleteMessage: dm.deleteMessage,
+    editMessage: dm.editMessage,
+    archiveConversation: dm.archiveConversation,
+    muteConversation: dm.muteConversation,
+    pendingAttachments: collab.pendingAttachments,
+    clearPendingAttachments: collab.clearPendingAttachments,
+    uploadPendingAttachments: collab.uploadPendingAttachments,
+    uploading: collab.uploading,
+    onAddAttachments: collab.handleAddAttachments,
+    onRemoveAttachment: collab.handleRemoveAttachment,
+    onStartNewDM: openNewDMDialog,
+  }
+}
+
+function createUnifiedInboxManageChannelProps(context: CollaborationDashboardContext) {
+  const { isAdmin, selectedCustomChannel, openManageMembersDialog } = context
+
+  if (!isAdmin || !selectedCustomChannel) {
+    return undefined
+  }
+
+  return {
+    canManageSelectedChannel: true,
+    onManageSelectedChannel: openManageMembersDialog,
+  }
+}
+
 export function CollaborationDashboard() {
   return (
     <CollaborationDashboardProvider>
@@ -102,26 +220,17 @@ function CollaborationProjectBanner() {
 }
 
 function CollaborationInboxSection() {
+  const context = useCollaborationDashboardContext()
   const {
-    clearMessageFocus,
     collab,
     currentUserId,
-    dm,
-    handleSelectChannel,
-    handleSelectDM,
-    isAdmin,
-    openManageMembersDialog,
-    openNewDMDialog,
-    requestedMessageId,
-    requestedThreadId,
-    selectedCustomChannel,
-    workspaceId,
     currentUserRole,
-    workspaceMembers,
+    handleStartNewDM,
     isNewDMDialogOpen,
     setIsNewDMDialogOpen,
-    handleStartNewDM,
-  } = useCollaborationDashboardContext()
+    workspaceId,
+    workspaceMembers,
+  } = context
 
   const mentionParticipants = useMemo<ClientTeamMember[]>(() => {
     const members = new Map<string, ClientTeamMember>()
@@ -147,100 +256,20 @@ function CollaborationInboxSection() {
     return Array.from(members.values()).sort((left, right) => left.name.localeCompare(right.name))
   }, [collab.channelParticipants, workspaceMembers])
 
+  const sidebar = useMemo(() => createUnifiedInboxSidebarProps(context), [context])
+  const channelPane = useMemo(() => createUnifiedInboxChannelPaneProps(context, mentionParticipants), [context, mentionParticipants])
+  const directMessagePane = useMemo(() => createUnifiedInboxDirectMessagePaneProps(context), [context])
+  const manageChannel = useMemo(() => createUnifiedInboxManageChannelProps(context), [context])
+
   return (
     <Card className={DASHBOARD_THEME.cards.base}>
       <CardContent className="flex flex-col p-0 lg:flex-row">
         <UnifiedInbox
           currentUserId={currentUserId}
-          sidebar={{
-            channels: collab.channels,
-            channelSummaries: collab.channelSummaries,
-            channelUnreadCounts: collab.channelUnreadCounts,
-            dmConversations: dm.conversations,
-            selectedChannel: collab.selectedChannel,
-            selectedDM: dm.selectedConversation,
-            onSelectChannel: handleSelectChannel,
-            onSelectDM: handleSelectDM,
-            onNewDM: openNewDMDialog,
-            isLoadingChannels: collab.isBootstrapping,
-            isLoadingDMs: dm.isLoadingConversations,
-          }}
-          channelPane={{
-            selectedChannel: collab.selectedChannel,
-            channelMessages: collab.channelMessages,
-            visibleMessages: collab.visibleMessages,
-            channelParticipants: collab.channelParticipants,
-            mentionParticipants,
-            messageSearchQuery: collab.messageSearchQuery,
-            onMessageSearchChange: collab.setMessageSearchQuery,
-            searchHighlights: collab.searchHighlights,
-            searchingMessages: collab.searchingMessages,
-            isCurrentChannelLoading: collab.isCurrentChannelLoading,
-            onLoadMore: collab.handleLoadMore,
-            canLoadMore: collab.canLoadMore,
-            loadingMore: collab.loadingMore,
-            messageInput: collab.messageInput,
-            onMessageInputChange: collab.setMessageInput,
-            onSendMessage: collab.handleSendMessage,
-            sending: collab.sending,
-            pendingAttachments: collab.pendingAttachments,
-            onAddAttachments: collab.handleAddAttachments,
-            onRemoveAttachment: collab.handleRemoveAttachment,
-            uploading: collab.uploading,
-            typingParticipants: collab.typingParticipants,
-            onComposerFocus: collab.handleComposerFocus,
-            onComposerBlur: collab.handleComposerBlur,
-            onEditMessage: collab.handleEditMessage,
-            onDeleteMessage: collab.handleDeleteMessage,
-            onToggleReaction: collab.handleToggleReaction,
-            messageUpdatingId: collab.messageUpdatingId,
-            messageDeletingId: collab.messageDeletingId,
-            currentUserRole: collab.currentUserRole,
-            threadMessagesByRootId: collab.threadMessagesByRootId,
-            threadNextCursorByRootId: collab.threadNextCursorByRootId,
-            threadLoadingByRootId: collab.threadLoadingByRootId,
-            threadErrorsByRootId: collab.threadErrorsByRootId,
-            threadUnreadCountsByRootId: collab.threadUnreadCountsByRootId,
-            onLoadThreadReplies: collab.loadThreadReplies,
-            onLoadMoreThreadReplies: collab.loadMoreThreadReplies,
-            onMarkThreadAsRead: collab.markThreadAsRead,
-            reactionPendingByMessage: collab.reactionPendingByMessage,
-            sharedFiles: collab.sharedFiles,
-            onClearDeepLink: clearMessageFocus,
-            deepLinkMessageId: requestedMessageId,
-            deepLinkThreadId: requestedThreadId,
-          }}
-          directMessagePane={{
-            selectedDM: dm.selectedConversation,
-            messages: dm.messages,
-            visibleMessages: dm.visibleMessages,
-            isLoadingMessages: dm.isLoadingMessages,
-            isLoadingMore: dm.isLoadingMore,
-            hasMoreMessages: dm.hasMoreMessages,
-            loadMoreMessages: dm.loadMoreMessages,
-            messageSearchQuery: dm.messageSearchQuery,
-            onMessageSearchChange: dm.setMessageSearchQuery,
-            searchHighlights: dm.searchHighlights,
-            searchingMessages: dm.searchingMessages,
-            sendMessage: dm.sendMessage,
-            isSending: dm.isSending,
-            toggleReaction: dm.toggleReaction,
-            deleteMessage: dm.deleteMessage,
-            editMessage: dm.editMessage,
-            archiveConversation: dm.archiveConversation,
-            muteConversation: dm.muteConversation,
-            pendingAttachments: collab.pendingAttachments,
-            clearPendingAttachments: collab.clearPendingAttachments,
-            uploadPendingAttachments: collab.uploadPendingAttachments,
-            uploading: collab.uploading,
-            onAddAttachments: collab.handleAddAttachments,
-            onRemoveAttachment: collab.handleRemoveAttachment,
-            onStartNewDM: openNewDMDialog,
-          }}
-          manageChannel={{
-            canManageSelectedChannel: Boolean(isAdmin && selectedCustomChannel),
-            onManageSelectedChannel: isAdmin && selectedCustomChannel ? openManageMembersDialog : undefined,
-          }}
+          sidebar={sidebar}
+          channelPane={channelPane}
+          directMessagePane={directMessagePane}
+          manageChannel={manageChannel}
         />
 
         <NewDMDialog

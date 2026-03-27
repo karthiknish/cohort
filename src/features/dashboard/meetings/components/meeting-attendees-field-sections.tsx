@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, type ChangeEvent, type KeyboardEvent } from 'react'
 import { X } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
@@ -19,6 +20,11 @@ export function MeetingAttendeesSelectedList({
   onRemoveEmail: (email: string) => void
   selectedEmails: string[]
 }) {
+  const handleRemoveEmail = useCallback(
+    (email: string) => () => onRemoveEmail(email),
+    [onRemoveEmail]
+  )
+
   if (selectedEmails.length === 0) {
     return <p className="mb-2 px-1 text-xs text-muted-foreground">{emptyStateText}</p>
   }
@@ -26,18 +32,7 @@ export function MeetingAttendeesSelectedList({
   return (
     <div className="mb-2 flex flex-wrap gap-2">
       {selectedEmails.map((email) => (
-        <Badge key={email} variant="secondary" className="gap-1 pr-1">
-          {email}
-          <button
-            type="button"
-            onClick={() => onRemoveEmail(email)}
-            disabled={disabled}
-            className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
-            aria-label={`Remove ${email}`}
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </Badge>
+        <SelectedEmailBadge key={email} disabled={disabled} email={email} onRemoveEmail={onRemoveEmail} />
       ))}
     </div>
   )
@@ -56,14 +51,19 @@ export function MeetingAttendeesInputRow({
   inputValue: string
   onCommitInput: () => void
   onInputChange: (value: string) => void
-  onInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void
+  onInputKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void
 }) {
+  const handleInputChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => onInputChange(event.target.value),
+    [onInputChange]
+  )
+
   return (
     <div className="flex gap-2">
       <Input
         id={inputId}
         value={inputValue}
-        onChange={(event) => onInputChange(event.target.value)}
+        onChange={handleInputChange}
         onKeyDown={onInputKeyDown}
         placeholder="Type name or email and press Enter"
         disabled={disabled}
@@ -89,6 +89,11 @@ export function MeetingAttendeesSuggestions({
   onAddSuggestedEmail: (email: string) => void
   suggestions: MeetingAttendeeSuggestion[]
 }) {
+  const handleAddSuggestedEmail = useCallback(
+    (email: string) => () => onAddSuggestedEmail(email),
+    [onAddSuggestedEmail]
+  )
+
   if (suggestions.length === 0) {
     return null
   }
@@ -100,22 +105,73 @@ export function MeetingAttendeesSuggestions({
       </p>
       <div className="flex flex-wrap gap-2">
         {suggestions.map((member) => (
-          <Button
+          <SuggestedEmailButton
             key={member.id}
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onAddSuggestedEmail(member.email)}
             disabled={disabled}
-            className="h-auto py-1.5 text-left"
-          >
-            <span className="flex flex-col items-start leading-tight">
-              <span className="text-xs font-medium">{member.name}</span>
-              <span className="text-[11px] text-muted-foreground">{member.email}</span>
-            </span>
-          </Button>
+            member={member}
+            onAddSuggestedEmail={onAddSuggestedEmail}
+          />
         ))}
       </div>
     </div>
+  )
+}
+
+function SelectedEmailBadge({
+  disabled,
+  email,
+  onRemoveEmail,
+}: {
+  disabled: boolean
+  email: string
+  onRemoveEmail: (email: string) => void
+}) {
+  const handleRemove = useCallback(() => {
+    onRemoveEmail(email)
+  }, [email, onRemoveEmail])
+
+  return (
+    <Badge variant="secondary" className="gap-1 pr-1">
+      {email}
+      <button
+        type="button"
+        onClick={handleRemove}
+        disabled={disabled}
+        className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground"
+        aria-label={`Remove ${email}`}
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </Badge>
+  )
+}
+
+function SuggestedEmailButton({
+  disabled,
+  member,
+  onAddSuggestedEmail,
+}: {
+  disabled: boolean
+  member: MeetingAttendeeSuggestion
+  onAddSuggestedEmail: (email: string) => void
+}) {
+  const handleAdd = useCallback(() => {
+    onAddSuggestedEmail(member.email)
+  }, [member.email, onAddSuggestedEmail])
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={handleAdd}
+      disabled={disabled}
+      className="h-auto py-1.5 text-left"
+    >
+      <span className="flex flex-col items-start leading-tight">
+        <span className="text-xs font-medium">{member.name}</span>
+        <span className="text-[11px] text-muted-foreground">{member.email}</span>
+      </span>
+    </Button>
   )
 }

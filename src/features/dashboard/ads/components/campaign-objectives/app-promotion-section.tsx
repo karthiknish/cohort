@@ -4,14 +4,36 @@
 
 'use client'
 
+import { useCallback } from 'react'
 import { Label } from '@/shared/ui/label'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Smartphone, Store, AppWindow, Play } from 'lucide-react'
-import { APP_EVENT_TYPES, ObjectiveComponentProps } from './types'
+import type { ObjectiveComponentProps } from './types'
+import { APP_EVENT_TYPES } from './types'
 
 export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveComponentProps) {
+  const handleDestinationTypeChange = useCallback((value: string) => {
+    onChange({ destinationType: value as 'WEBSITE' | 'APP' | 'MESSENGER' })
+  }, [onChange])
+
+  const handleAppIdChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onChange({ appId: event.target.value })
+  }, [onChange])
+
+  const handleAppStoreUrlChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onChange({ appStoreUrl: event.target.value })
+  }, [onChange])
+
+  const handleDestinationUrlChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onChange({ destinationUrl: event.target.value })
+  }, [onChange])
+
+  const handleAppEventTypeChange = useCallback((value: string) => {
+    onChange({ appEventType: value })
+  }, [onChange])
+
   return (
     <div className="space-y-6">
       {/* App Configuration */}
@@ -31,9 +53,7 @@ export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveC
             <Label htmlFor="app-store">App Store</Label>
             <Select
               value={formData.destinationType}
-              onValueChange={(value) =>
-                onChange({ destinationType: value as 'WEBSITE' | 'APP' | 'MESSENGER' })
-              }
+              onValueChange={handleDestinationTypeChange}
               disabled={disabled}
             >
               <SelectTrigger id="app-store">
@@ -63,7 +83,7 @@ export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveC
               id="app-id"
               placeholder="e.g., 1234567890"
               value={formData.appId || ''}
-              onChange={(e) => onChange({ appId: e.target.value })}
+              onChange={handleAppIdChange}
               disabled={disabled}
             />
             <p className="text-xs text-muted-foreground">
@@ -79,7 +99,7 @@ export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveC
               type="url"
               placeholder="https://apps.apple.com/app/your-app"
               value={formData.appStoreUrl || ''}
-              onChange={(e) => onChange({ appStoreUrl: e.target.value })}
+              onChange={handleAppStoreUrlChange}
               disabled={disabled}
             />
           </div>
@@ -99,7 +119,7 @@ export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveC
             <Label htmlFor="app-event">App Event</Label>
             <Select
               value={formData.appEventType}
-              onValueChange={(value) => onChange({ appEventType: value })}
+              onValueChange={handleAppEventTypeChange}
               disabled={disabled}
             >
               <SelectTrigger id="app-event">
@@ -135,7 +155,7 @@ export function AppPromotionSection({ formData, onChange, disabled }: ObjectiveC
               id="deep-link"
               placeholder="e.g., myapp://product/123"
               value={formData.destinationUrl || ''}
-              onChange={(e) => onChange({ destinationUrl: e.target.value })}
+              onChange={handleDestinationUrlChange}
               disabled={disabled}
             />
             <p className="text-xs text-muted-foreground">

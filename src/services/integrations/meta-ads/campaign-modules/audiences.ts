@@ -7,7 +7,7 @@ import {
   META_API_BASE,
 } from '../client'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
-import { CreateAudienceOptions } from './types'
+import type { CreateAudienceOptions } from './types'
 
 // =============================================================================
 // CREATE CUSTOM AUDIENCE

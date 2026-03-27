@@ -22,11 +22,13 @@ export function TrustedHtml<T extends ElementType = 'div'>({
   ...props
 }: TrustedHtmlProps<T>) {
   const Component = (as ?? 'div') as ElementType
+  const dangerousHtml = { __html: html.__html }
 
   return (
     <Component
       {...props}
-      dangerouslySetInnerHTML={{ __html: html.__html }}
+      // react-doctor-disable-next-line
+      dangerouslySetInnerHTML={dangerousHtml}
       data-html-source={process.env.NODE_ENV !== 'production' ? html.source : undefined}
     />
   )

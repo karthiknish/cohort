@@ -165,6 +165,10 @@ export const DisconnectDialog = memo(function DisconnectDialog({
     onOpenChange(false)
   }, [clearHistoricalData, onConfirm, onOpenChange])
 
+  const handleClearHistoricalDataChange = useCallback((checked: boolean | 'indeterminate') => {
+    setClearHistoricalData(Boolean(checked))
+  }, [])
+
   const checkboxId = `${providerName.replace(/\s+/g, '-').toLowerCase()}-clear-historical-data`
 
   return (
@@ -186,7 +190,7 @@ export const DisconnectDialog = memo(function DisconnectDialog({
               <Checkbox
                 id={checkboxId}
                 checked={clearHistoricalData}
-                onCheckedChange={(checked) => setClearHistoricalData(Boolean(checked))}
+                onCheckedChange={handleClearHistoricalDataChange}
                 disabled={isDisconnecting}
                 aria-label="Clear historical data"
               />

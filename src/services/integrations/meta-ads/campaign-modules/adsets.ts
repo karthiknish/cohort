@@ -7,8 +7,8 @@ import {
   META_API_BASE,
 } from '../client'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
-import { MetaAdSet } from '../types'
-import {
+import type { MetaAdSet } from '../types'
+import type {
   CreateAdSetOptions,
   UpdateAdSetOptions,
 } from './types'

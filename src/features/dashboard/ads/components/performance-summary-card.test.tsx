@@ -5,6 +5,12 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { PerformanceSummaryCard } from './performance-summary-card'
 
+const emptyProviderSummaries = {}
+
+const metaAdsProviderSummary = {
+  meta_ads: { spend: 1234, impressions: 12000, clicks: 345, conversions: 12 },
+}
+
 vi.mock('next/link', () => ({
   default: ({ children, href }: { children: ReactNode; href: string }) => <a href={href}>{children}</a>,
 }))
@@ -13,7 +19,7 @@ describe('performance summary card', () => {
   it('renders the empty state copy', () => {
     const markup = renderToStaticMarkup(
       <PerformanceSummaryCard
-        providerSummaries={{}}
+        providerSummaries={emptyProviderSummaries}
         hasMetrics={false}
         initialMetricsLoading={false}
         metricsLoading={false}
@@ -31,9 +37,7 @@ describe('performance summary card', () => {
   it('renders provider summary metrics', () => {
     const markup = renderToStaticMarkup(
       <PerformanceSummaryCard
-        providerSummaries={{
-          meta_ads: { spend: 1234, impressions: 12000, clicks: 345, conversions: 12 },
-        }}
+        providerSummaries={metaAdsProviderSummary}
         currency="GBP"
         hasMetrics={true}
         initialMetricsLoading={false}

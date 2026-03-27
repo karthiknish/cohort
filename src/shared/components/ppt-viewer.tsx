@@ -228,6 +228,18 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
 
   const currentSlideData = slides[currentSlide]!
 
+  const handlePreviousSlide = useCallback(() => {
+    goToSlide(currentSlide - 1)
+  }, [currentSlide, goToSlide])
+
+  const handleNextSlide = useCallback(() => {
+    goToSlide(currentSlide + 1)
+  }, [currentSlide, goToSlide])
+
+  const handleToggleFullscreen = useCallback(() => {
+    setIsFullscreen((previous) => !previous)
+  }, [])
+
   if (isLoading) {
     return (
       <div className={cn('flex items-center justify-center rounded-lg border bg-muted p-12', className)}>
@@ -290,7 +302,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
               variant="ghost"
               size="icon"
               className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 disabled:opacity-30"
-              onClick={() => goToSlide(currentSlide - 1)}
+              onClick={handlePreviousSlide}
               disabled={currentSlide === 0}
             >
               <ChevronLeft className="h-6 w-6" />
@@ -299,7 +311,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
               variant="ghost"
               size="icon"
               className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 disabled:opacity-30"
-              onClick={() => goToSlide(currentSlide + 1)}
+              onClick={handleNextSlide}
               disabled={currentSlide === slides.length - 1}
             >
               <ChevronRight className="h-6 w-6" />
@@ -312,7 +324,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
           variant="ghost"
           size="icon"
           className="absolute right-2 top-2 bg-black/50 text-white hover:bg-black/70"
-          onClick={() => setIsFullscreen(!isFullscreen)}
+          onClick={handleToggleFullscreen}
         >
           {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </Button>
@@ -327,17 +339,14 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
       {slides.length > 1 && (
         <div className="flex gap-2 overflow-x-auto py-2">
           {slides.map((slide, index) => (
-            <button
+            <PptViewerThumbnailButton
               key={slide.index}
-              onClick={() => goToSlide(index)}
+              index={index}
+              currentSlide={currentSlide}
+              onGoToSlide={goToSlide}
+              title={title}
               aria-label={index === currentSlide ? `Currently viewing slide ${index + 1}` : `Go to slide ${index + 1}`}
-              aria-current={index === currentSlide ? 'true' : undefined}
-              className={cn(
-                'flex-shrink-0 rounded border-2 overflow-hidden transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
-                index === currentSlide
-                  ? 'border-primary ring-2 ring-primary/20'
-                  : 'border-transparent hover:border-muted-foreground/30'
-              )}
+              slide={slide}
             >
               <div className="w-20 h-12 bg-muted flex items-center justify-center text-xs text-muted-foreground">
                 {slide.imageUrl ? (
@@ -355,7 +364,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
                   <span>{index + 1}</span>
                 )}
               </div>
-            </button>
+            </PptViewerThumbnailButton>
           ))}
         </div>
       )}
@@ -371,4 +380,43 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
   }
 
   return <div className={cn('flex flex-col gap-3', className)}>{viewerContent}</div>
+}
+
+function PptViewerThumbnailButton({
+  slide,
+  index,
+  currentSlide,
+  title,
+  onGoToSlide,
+  children,
+  ...buttonProps
+}: {
+  slide: Slide
+  index: number
+  currentSlide: number
+  title: string
+  onGoToSlide: (index: number) => void
+  children: React.ReactNode
+  'aria-label': string
+}) {
+  const handleClick = useCallback(() => {
+    onGoToSlide(index)
+  }, [index, onGoToSlide])
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-label={buttonProps['aria-label']}
+      aria-current={index === currentSlide ? 'true' : undefined}
+      className={cn(
+        'flex-shrink-0 rounded border-2 overflow-hidden transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+        index === currentSlide
+          ? 'border-primary ring-2 ring-primary/20'
+          : 'border-transparent hover:border-muted-foreground/30'
+      )}
+    >
+      {children}
+    </button>
+  )
 }

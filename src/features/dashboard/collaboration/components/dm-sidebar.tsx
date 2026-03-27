@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { Search, Plus, MessageCircle, Archive, BellOff } from 'lucide-react'
 import { useState, useMemo, type ChangeEvent } from 'react'
 
@@ -64,9 +65,17 @@ export function DMSidebar({
     )
   }, [conversations, searchQuery])
 
-  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value)
-  }
+  }, [])
+
+  const selectConversationHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        filteredConversations.map((conversation) => [conversation.legacyId, () => onSelectConversation(conversation)])
+      ) as Record<string, () => void>,
+    [filteredConversations, onSelectConversation]
+  )
 
   return (
     <div className="flex h-full w-full flex-col border-b border-muted/40 lg:h-[640px] lg:w-80 lg:border-b-0 lg:border-r">
@@ -136,7 +145,7 @@ export function DMSidebar({
                 <button
                   key={conversation.legacyId}
                   type="button"
-                  onClick={() => onSelectConversation(conversation)}
+                  onClick={selectConversationHandlers[conversation.legacyId]}
                   className={cn(
                     'w-full flex items-center gap-3 p-3 rounded-lg text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
                     'hover:bg-muted/50',

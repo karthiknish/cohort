@@ -7,7 +7,7 @@ import {
   META_API_BASE,
 } from '../client'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
-import { MetaAudienceTargeting } from '../types'
+import type { MetaAudienceTargeting } from '../types'
 
 // =============================================================================
 // FETCH AUDIENCE TARGETING

@@ -11,7 +11,7 @@ export function Skeleton({ className, variant = 'shimmer', ...props }: SkeletonP
     <div
       className={cn(
         'relative overflow-hidden rounded-md bg-muted',
-        variant === 'shimmer' && 'before:absolute before:inset-0 before:-translate-x-full before:animate-[skeleton-shimmer_var(--motion-duration-shimmer)_var(--motion-ease-in-out)_infinite] before:bg-gradient-to-r before:from-transparent before:via-muted-foreground/20 before:to-transparent before:content-[""] motion-reduce:before:animate-none',
+        variant === 'shimmer' && 'before:absolute before:inset-0 before:-translate-x-full before:animate-[skeleton-shimmer_var(--motion-duration-shimmer)_var(--motion-ease-in-out)_infinite] before:bg-gradient-to-r before:from-transparent before:via-muted-foreground/20 before:to-transparent before:content-["\"] motion-reduce:before:animate-none',
         variant === 'pulse' && 'animate-pulse',
         className
       )}
@@ -26,10 +26,7 @@ export function SkeletonText({ className, lines = 3, ...props }: SkeletonProps &
       {Array.from({ length: lines }, (_, line) => `text-line-${line + 1}`).map((lineKey, lineIndex) => (
         <Skeleton
           key={lineKey}
-          className={cn(
-            'h-4',
-            lineIndex === lines - 1 ? 'w-3/4' : 'w-full'
-          )}
+          className={cn('h-4', lineIndex === lines - 1 ? 'w-3/4' : 'w-full')}
         />
       ))}
     </div>
@@ -59,6 +56,21 @@ export interface SkeletonTableProps extends React.HTMLAttributes<HTMLDivElement>
   showHeader?: boolean
 }
 
+const SKELETON_SLOT_KEYS = [
+  'slot-a',
+  'slot-b',
+  'slot-c',
+  'slot-d',
+  'slot-e',
+  'slot-f',
+  'slot-g',
+  'slot-h',
+  'slot-i',
+  'slot-j',
+  'slot-k',
+  'slot-l',
+] as const
+
 export function SkeletonTable({
   rows = 5,
   columns = 4,
@@ -66,19 +78,22 @@ export function SkeletonTable({
   className,
   ...props
 }: SkeletonTableProps) {
+  const headerKeys = SKELETON_SLOT_KEYS.slice(0, columns)
+  const rowKeys = SKELETON_SLOT_KEYS.slice(0, rows)
+
   return (
     <div className={cn('space-y-3', className)} {...props}>
       {showHeader && (
-        <div className="flex gap-4 pb-2 border-b">
-          {Array.from({ length: columns }).map((_, i) => (
-            <Skeleton key={`header-${i}`} className="h-4 flex-1" />
+        <div className="flex gap-4 border-b pb-2">
+          {headerKeys.map((headerKey) => (
+            <Skeleton key={headerKey} className="h-4 flex-1" />
           ))}
         </div>
       )}
-      {Array.from({ length: rows }).map((_, rowIndex) => (
-        <div key={`row-${rowIndex}`} className="flex gap-4 py-2">
-          {Array.from({ length: columns }).map((_, colIndex) => (
-            <Skeleton key={`cell-${rowIndex}-${colIndex}`} className="h-4 flex-1" />
+      {rowKeys.map((rowKey) => (
+        <div key={rowKey} className="flex gap-4 py-2">
+          {headerKeys.map((columnKey) => (
+            <Skeleton key={`${rowKey}-${columnKey}`} className="h-4 flex-1" />
           ))}
         </div>
       ))}
@@ -122,7 +137,7 @@ export function SkeletonList({
 
 export function SkeletonDashboardCard({ className, ...props }: SkeletonProps) {
   return (
-    <div className={cn('rounded-lg border bg-card p-6 space-y-4', className)} {...props}>
+    <div className={cn('space-y-4 rounded-lg border bg-card p-6', className)} {...props}>
       <div className="flex items-center justify-between">
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-8 w-8 rounded-full" />
@@ -145,11 +160,7 @@ export interface SkeletonStatsProps extends React.HTMLAttributes<HTMLDivElement>
   cards?: number
 }
 
-export function SkeletonStats({
-  cards = 4,
-  className,
-  ...props
-}: SkeletonStatsProps) {
+export function SkeletonStats({ cards = 4, className, ...props }: SkeletonStatsProps) {
   const cardSlots = Array.from({ length: cards }, (_, slot) => `stats-card-${slot + 1}`)
 
   return (
@@ -172,20 +183,22 @@ const SKELETON_CHART_BARS = SKELETON_CHART_HEIGHTS.map((height, slot) => ({
   height,
 }))
 
+function SkeletonChartBar({ height }: { height: number }) {
+  const style = React.useMemo(() => ({ height: `${height}%` }), [height])
+
+  return <Skeleton className="flex-1" style={style} />
+}
+
 export function SkeletonChart({ className, ...props }: SkeletonProps) {
   return (
-    <div className={cn('rounded-lg border bg-card p-6 space-y-4', className)} {...props}>
+    <div className={cn('space-y-4 rounded-lg border bg-card p-6', className)} {...props}>
       <div className="flex items-center justify-between">
         <Skeleton className="h-5 w-40" />
         <Skeleton className="h-8 w-24" />
       </div>
       <div className="h-64 flex items-end justify-between gap-2">
         {SKELETON_CHART_BARS.map((bar) => (
-          <Skeleton
-            key={bar.id}
-            className="flex-1"
-            style={{ height: `${bar.height}%` }}
-          />
+          <SkeletonChartBar key={bar.id} height={bar.height} />
         ))}
       </div>
     </div>

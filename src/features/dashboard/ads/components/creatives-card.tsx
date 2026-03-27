@@ -42,6 +42,17 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [compareOpen, setCompareOpen] = useState(false)
 
+  const handleOpenCompare = useCallback(() => {
+    setCompareOpen(true)
+  }, [])
+
+  const handlePromoteCreative = useCallback(() => {
+    toast({
+      title: 'A/B Test Action',
+      description: 'Creative promoted to primary. Syncing with platform...',
+    })
+  }, [])
+
   const fetchCreatives = useCallback(async () => {
     if (!isConnected) return
 
@@ -74,15 +85,17 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
       })
   }, [isConnected, listCreatives, providerId, workspaceId])
 
-  const handleToggleSelected = (creativeId: string) => {
-    const next = new Set(selectedIds)
-    if (next.has(creativeId)) {
-      next.delete(creativeId)
-    } else {
-      next.add(creativeId)
-    }
-    setSelectedIds(next)
-  }
+  const handleToggleSelected = useCallback((creativeId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(creativeId)) {
+        next.delete(creativeId)
+      } else {
+        next.add(creativeId)
+      }
+      return next
+    })
+  }, [])
 
   if (!isConnected) {
     return <CreativesDisconnectedState providerName={providerName} />
@@ -90,14 +103,9 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
 
   return (
     <Card>
-      <CreativesCardHeader loading={loading} onCompare={() => setCompareOpen(true)} onLoad={fetchCreatives} providerName={providerName} selectedCount={selectedIds.size} summary={summary} />
+      <CreativesCardHeader loading={loading} onCompare={handleOpenCompare} onLoad={fetchCreatives} providerName={providerName} selectedCount={selectedIds.size} summary={summary} />
       <CreativesCardContent creatives={creatives} onToggleSelected={handleToggleSelected} selectedIds={selectedIds} summary={summary} />
-      <CreativeComparisonDialog creatives={creatives} onOpenChange={setCompareOpen} onPromote={() => {
-        toast({
-          title: 'A/B Test Action',
-          description: 'Creative promoted to primary. Syncing with platform...',
-        })
-      }} open={compareOpen} providerName={providerName} selectedIds={selectedIds} />
+      <CreativeComparisonDialog creatives={creatives} onOpenChange={setCompareOpen} onPromote={handlePromoteCreative} open={compareOpen} providerName={providerName} selectedIds={selectedIds} />
     </Card>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useCallback } from 'react'
 import { Calendar, Clock4, User } from 'lucide-react'
 
 import type { TaskRecord } from '@/types/tasks'
@@ -54,19 +55,32 @@ export function TaskViewDialog({
     sourceCount: number
     count: number
   } | null>(null)
-  if (!task) return null
-
-  const sourceCommentCount = task.commentCount ?? 0
-  const liveCommentCount = commentCountState?.taskId === task.id && commentCountState.sourceCount === sourceCommentCount
+  const taskId = task?.id ?? ''
+  const sourceCommentCount = task?.commentCount ?? 0
+  const liveCommentCount = commentCountState?.taskId === taskId && commentCountState.sourceCount === sourceCommentCount
     ? commentCountState.count
     : sourceCommentCount
 
-  const handleDialogOpenChange = (nextOpen: boolean) => {
+  const handleDialogOpenChange = useCallback((nextOpen: boolean) => {
     if (!nextOpen) {
       setCommentCountState(null)
     }
     onOpenChange(nextOpen)
-  }
+  }, [onOpenChange])
+
+  const handleCommentCountChange = useCallback((count: number) => {
+    setCommentCountState({
+      taskId,
+      sourceCount: sourceCommentCount,
+      count,
+    })
+  }, [sourceCommentCount, taskId])
+
+  const handleFooterClose = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
+
+  if (!task) return null
 
   const summaryParts = [
     formatStatusLabel(task.status),
@@ -96,11 +110,7 @@ export function TaskViewDialog({
               <TaskViewDetailsTab detailItems={detailItems} task={task} />
               <TaskViewCommentsTab
                 commentCount={liveCommentCount}
-                onCommentCountChange={(count) => setCommentCountState({
-                  taskId: task.id,
-                  sourceCount: sourceCommentCount,
-                  count,
-                })}
+                onCommentCountChange={handleCommentCountChange}
                 participants={participants}
                 taskId={task.id}
                 userId={userId}
@@ -112,7 +122,7 @@ export function TaskViewDialog({
           </div>
         </ScrollArea>
 
-        <TaskViewDialogFooter onClose={() => onOpenChange(false)} />
+        <TaskViewDialogFooter onClose={handleFooterClose} />
       </DialogContent>
     </Dialog>
   )

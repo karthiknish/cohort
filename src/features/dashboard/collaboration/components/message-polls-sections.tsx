@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { BarChart3, Check, Plus, Trash2 } from 'lucide-react'
 
@@ -79,6 +80,17 @@ export function PollOptionRow({
   voteCount: number
 }) {
   const interactive = !showOptionResults && canVote
+  const barStyle = useMemo(() => ({ width: `${percentage}%` }), [percentage])
+
+  const handleRowClick = useCallback(() => {
+    if (interactive) {
+      handleToggleOption(option.id)
+    }
+  }, [handleToggleOption, interactive, option.id])
+
+  const handleCheckboxChange = useCallback(() => {
+    handleToggleOption(option.id)
+  }, [handleToggleOption, option.id])
 
   return (
     <button
@@ -89,21 +101,17 @@ export function PollOptionRow({
         isSelected && 'border-primary bg-primary/5',
         showOptionResults && hasLeadingWinner && percentage > 0 && 'border-primary/50',
       )}
-      onClick={() => {
-        if (interactive) {
-          handleToggleOption(option.id)
-        }
-      }}
+      onClick={handleRowClick}
       disabled={!interactive}
     >
       {showOptionResults && percentage > 0 ? (
-        <div className="absolute inset-0 -z-10 rounded-lg bg-primary/5" style={{ width: `${percentage}%` }} />
+        <div className="absolute inset-0 -z-10 rounded-lg bg-primary/5" style={barStyle} />
       ) : null}
 
       <div className="flex items-start gap-3">
         {!showOptionResults ? (
           <div className="pt-0.5">
-            <Checkbox checked={isSelected} onChange={() => handleToggleOption(option.id)} />
+            <Checkbox checked={isSelected} onChange={handleCheckboxChange} />
           </div>
         ) : null}
 
@@ -219,27 +227,32 @@ export function CreatePollFormFields({
   options: Array<{ id: string; text: string }>
   question: string
 }) {
+  const handleQuestionChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      onQuestionChange(event.target.value)
+    },
+    [onQuestionChange]
+  )
+
   return (
     <div className="space-y-4 py-4">
       <div className="space-y-2">
         <Label htmlFor="question">Question *</Label>
-        <Input id="question" placeholder="What do you want to ask?" value={question} onChange={(event) => onQuestionChange(event.target.value)} maxLength={200} />
+        <Input id="question" placeholder="What do you want to ask?" value={question} onChange={handleQuestionChange} maxLength={200} />
       </div>
 
       <div className="space-y-2">
         <Label>Options *</Label>
         <div className="space-y-2">
           {options.map((option, index) => (
-            <div key={option.id} className="flex items-center gap-2">
-              <span className="w-6 text-sm text-muted-foreground">{index + 1}.</span>
-              <Input placeholder={`Option ${index + 1}`} value={option.text} onChange={(event) => onOptionChange(option.id, event.target.value)} className="flex-1" />
-              {options.length > 2 ? (
-                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => onRemoveOption(option.id)} aria-label={`Remove option ${index + 1}`}>
-                  <Trash2 className="h-4 w-4" />
-                  <span className="sr-only">Remove option {index + 1}</span>
-                </Button>
-              ) : null}
-            </div>
+            <CreatePollOptionRow
+              key={option.id}
+              index={index}
+              option={option}
+              optionsLength={options.length}
+              onOptionChange={onOptionChange}
+              onRemoveOption={onRemoveOption}
+            />
           ))}
         </div>
         <Button type="button" variant="outline" size="sm" onClick={onAddOption} className="w-full">
@@ -262,6 +275,20 @@ export function CreatePollSettings({
   onAnonymousChange: (value: boolean) => void
   onMultipleChoiceChange: (value: boolean) => void
 }) {
+  const handleAnonymousChange = useCallback(
+    (checked: boolean | 'indeterminate') => {
+      onAnonymousChange(checked === true)
+    },
+    [onAnonymousChange]
+  )
+
+  const handleMultipleChoiceChange = useCallback(
+    (checked: boolean | 'indeterminate') => {
+      onMultipleChoiceChange(checked === true)
+    },
+    [onMultipleChoiceChange]
+  )
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -269,7 +296,7 @@ export function CreatePollSettings({
           <Label>Allow multiple selections</Label>
           <p className="text-xs text-muted-foreground">Users can select more than one option</p>
         </div>
-        <Checkbox checked={multipleChoice} onCheckedChange={(checked) => onMultipleChoiceChange(checked as boolean)} />
+        <Checkbox checked={multipleChoice} onCheckedChange={handleMultipleChoiceChange} />
       </div>
 
       <div className="flex items-center justify-between">
@@ -277,8 +304,48 @@ export function CreatePollSettings({
           <Label>Anonymous votes</Label>
           <p className="text-xs text-muted-foreground">Hide who voted for each option</p>
         </div>
-        <Checkbox checked={anonymous} onCheckedChange={(checked) => onAnonymousChange(checked as boolean)} />
+        <Checkbox checked={anonymous} onCheckedChange={handleAnonymousChange} />
       </div>
+    </div>
+  )
+}
+
+interface CreatePollOptionRowProps {
+  index: number
+  option: { id: string; text: string }
+  optionsLength: number
+  onOptionChange: (id: string, text: string) => void
+  onRemoveOption: (id: string) => void
+}
+
+function CreatePollOptionRow({
+  index,
+  option,
+  optionsLength,
+  onOptionChange,
+  onRemoveOption,
+}: CreatePollOptionRowProps) {
+  const handleOptionChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      onOptionChange(option.id, event.target.value)
+    },
+    [onOptionChange, option.id]
+  )
+
+  const handleRemoveOption = useCallback(() => {
+    onRemoveOption(option.id)
+  }, [onRemoveOption, option.id])
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-6 text-sm text-muted-foreground">{index + 1}.</span>
+      <Input placeholder={`Option ${index + 1}`} value={option.text} onChange={handleOptionChange} className="flex-1" />
+      {optionsLength > 2 ? (
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={handleRemoveOption} aria-label={`Remove option ${index + 1}`}>
+          <Trash2 className="h-4 w-4" />
+          <span className="sr-only">Remove option {index + 1}</span>
+        </Button>
+      ) : null}
     </div>
   )
 }

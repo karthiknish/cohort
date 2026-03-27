@@ -57,6 +57,16 @@ import {
   CampaignRowActions,
 } from './campaign-management-card-sections'
 
+const tableGroups = [{ id: 'g1', name: 'Group 1', status: 'enabled', totalBudget: 100, currency: 'USD' }]
+
+const campaignRow = { id: 'c1', name: 'Campaign 1', providerId: 'google', status: 'enabled' }
+
+const campaignGroupRow = { id: 'g1', name: 'Group 1', status: 'paused' }
+
+const biddingDialogValue = { type: 'TARGET_CPA', value: '50' }
+
+const connectedViewNewBidding = { type: 'TARGET_CPA', value: '50' }
+
 describe('campaign management card sections', () => {
   it('renders the header, tables, and row actions', () => {
     const markup = renderToStaticMarkup(
@@ -73,7 +83,7 @@ describe('campaign management card sections', () => {
           campaignColumns={[]}
           campaigns={[]}
           groupColumns={[]}
-          groups={[{ id: 'g1', name: 'Group 1', status: 'enabled', totalBudget: 100, currency: 'USD' }]}
+          groups={tableGroups}
           groupsLoading={false}
           loading={false}
           onRowClick={vi.fn()}
@@ -82,14 +92,14 @@ describe('campaign management card sections', () => {
         />
         <CampaignRowActions
           actionLoading={null}
-          campaign={{ id: 'c1', name: 'Campaign 1', providerId: 'google', status: 'enabled' }}
+          campaign={campaignRow}
           onAction={vi.fn(async () => {})}
           onOpenBiddingDialog={vi.fn()}
           onOpenBudgetDialog={vi.fn()}
         />
         <CampaignGroupRowActions
           actionLoading={null}
-          group={{ id: 'g1', name: 'Group 1', status: 'paused' }}
+          group={campaignGroupRow}
           onAction={vi.fn(async () => {})}
           onOpenBudgetDialog={vi.fn()}
         />
@@ -125,7 +135,7 @@ describe('campaign management card sections', () => {
           onSubmit={vi.fn()}
           open={true}
           selectedCampaignName="Campaign 1"
-          value={{ type: 'TARGET_CPA', value: '50' }}
+          value={biddingDialogValue}
         />
       </>,
     )
@@ -158,7 +168,7 @@ describe('campaign management card sections', () => {
           groups={[]}
           groupsLoading={false}
           loading={false}
-          newBidding={{ type: 'TARGET_CPA', value: '50' }}
+          newBidding={connectedViewNewBidding}
           newBudget="100"
           onBiddingChange={vi.fn()}
           onBiddingOpenChange={vi.fn()}

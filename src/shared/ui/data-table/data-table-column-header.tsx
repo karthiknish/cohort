@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { ArrowDown, ArrowUp, ChevronsUpDown, EyeOff } from 'lucide-react'
 import type { Column } from '@tanstack/react-table'
 
@@ -24,6 +25,18 @@ export function DataTableColumnHeader<TData, TValue>({
   title,
   className,
 }: DataTableColumnHeaderProps<TData, TValue>) {
+  const handleSortAscending = useCallback(() => {
+    column.toggleSorting(false)
+  }, [column])
+
+  const handleSortDescending = useCallback(() => {
+    column.toggleSorting(true)
+  }, [column])
+
+  const handleHideColumn = useCallback(() => {
+    column.toggleVisibility(false)
+  }, [column])
+
   if (!column.getCanSort()) {
     return <div className={cn(className)}>{title}</div>
   }
@@ -48,18 +61,18 @@ export function DataTableColumnHeader<TData, TValue>({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          <DropdownMenuItem onClick={() => column.toggleSorting(false)}>
+          <DropdownMenuItem onClick={handleSortAscending}>
             <ArrowUp className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             Asc
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => column.toggleSorting(true)}>
+          <DropdownMenuItem onClick={handleSortDescending}>
             <ArrowDown className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
             Desc
           </DropdownMenuItem>
           {column.getCanHide() && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => column.toggleVisibility(false)}>
+              <DropdownMenuItem onClick={handleHideColumn}>
                 <EyeOff className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
                 Hide
               </DropdownMenuItem>

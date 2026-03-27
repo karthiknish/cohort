@@ -56,6 +56,182 @@ type UseUnifiedMessagePaneRenderersArgs = {
   handleThreadToggle: (threadRootId: string, beforeMs?: number) => void
 }
 
+function UnifiedThreadSectionRenderer({
+  activeDeletingMessageId,
+  expanded,
+  handleLoadMoreThread,
+  handleReaction,
+  handleReply,
+  handleRequestDelete,
+  handleRetryThreadLoad,
+  handleThreadToggle,
+  handleStartEdit,
+  headerType,
+  message,
+  onReply,
+  resolveThreadRootId,
+  threadErrorsByRootId,
+  threadLoadingByRootId,
+  threadMessagesByRootId,
+  threadNextCursorByRootId,
+  threadUnreadCountsByRootId,
+  currentUserId,
+  editingMessageId,
+  messageUpdatingId,
+  onDeleteMessage,
+  onEditMessage,
+  reactionPendingByMessage,
+}: {
+  activeDeletingMessageId: string | null
+  expanded: Record<string, boolean>
+  handleLoadMoreThread: (threadRootId: string) => void
+  handleReaction: (messageId: string, emoji: string) => Promise<void>
+  handleReply: (message: UnifiedMessage) => void
+  handleRequestDelete: (messageId: string) => void
+  handleRetryThreadLoad: (threadRootId: string) => void
+  handleThreadToggle: (threadRootId: string, beforeMs?: number) => void
+  handleStartEdit: (message: UnifiedMessage) => void
+  headerType?: 'channel' | 'dm'
+  message: UnifiedMessage
+  onReply?: (message: UnifiedMessage) => void
+  resolveThreadRootId: (message: UnifiedMessage) => string
+  threadErrorsByRootId: Record<string, string | null>
+  threadLoadingByRootId: Record<string, boolean>
+  threadMessagesByRootId: Record<string, CollaborationMessage[]>
+  threadNextCursorByRootId: Record<string, string | null>
+  threadUnreadCountsByRootId: Record<string, number>
+  currentUserId: string | null
+  editingMessageId: string | null
+  messageUpdatingId: string | null
+  onDeleteMessage?: (messageId: string) => Promise<void>
+  onEditMessage?: (messageId: string, newContent: string) => Promise<void>
+  reactionPendingByMessage: Record<string, string | null>
+}) {
+  const threadRootId = resolveThreadRootId(message)
+  const threadReplies = threadMessagesByRootId[threadRootId] ?? []
+  const threadLoading = threadLoadingByRootId[threadRootId] ?? false
+  const threadError = threadErrorsByRootId[threadRootId] ?? null
+  const threadNextCursor = threadNextCursorByRootId[threadRootId] ?? null
+  const threadReplyCount = (message as UnifiedMessage & { threadReplyCount?: number }).threadReplyCount
+  const replyCount = Math.max(
+    typeof threadReplyCount === 'number' ? threadReplyCount : 0,
+    threadReplies.length,
+  )
+  const lastReplyIso =
+    message.threadLastReplyAt ??
+    (threadReplies.length > 0 ? threadReplies[threadReplies.length - 1]?.createdAt ?? null : null)
+  const unreadCount = Math.max(0, threadUnreadCountsByRootId[threadRootId] ?? 0)
+  const beforeMs = lastReplyIso ? Date.parse(lastReplyIso) : NaN
+
+  const handleToggle = useCallback(() => {
+    const resolvedBeforeMs = Number.isFinite(beforeMs) ? beforeMs : Date.now()
+    handleThreadToggle(threadRootId, resolvedBeforeMs)
+  }, [beforeMs, handleThreadToggle, threadRootId])
+
+  const handleRetry = useCallback(() => {
+    handleRetryThreadLoad(threadRootId)
+  }, [handleRetryThreadLoad, threadRootId])
+
+  const handleLoadMore = useCallback(() => {
+    handleLoadMoreThread(threadRootId)
+  }, [handleLoadMoreThread, threadRootId])
+
+  const handleReplyClick = useCallback(() => {
+    handleReply(message)
+  }, [handleReply, message])
+
+  const renderReply = useCallback(
+    (reply: CollaborationMessage) => (
+      <UnifiedThreadReplyCard
+        reply={reply}
+        currentUserId={currentUserId}
+        editingMessageId={editingMessageId}
+        activeDeletingMessageId={activeDeletingMessageId}
+        messageUpdatingId={messageUpdatingId}
+        reactionPendingEmoji={reactionPendingByMessage[reply.id] ?? null}
+        onToggleReaction={handleReaction}
+        onStartEdit={onEditMessage ? handleStartEdit : undefined}
+        onRequestDelete={onDeleteMessage ? handleRequestDelete : undefined}
+      />
+    ),
+    [
+      activeDeletingMessageId,
+      currentUserId,
+      editingMessageId,
+      handleReaction,
+      handleRequestDelete,
+      handleStartEdit,
+      messageUpdatingId,
+      onDeleteMessage,
+      onEditMessage,
+      reactionPendingByMessage,
+    ],
+  )
+
+  if (headerType !== 'channel' || message.deleted) {
+    return null
+  }
+
+  return (
+    <ThreadSection
+      threadRootId={threadRootId}
+      replyCount={replyCount}
+      unreadCount={unreadCount}
+      lastReplyIso={lastReplyIso}
+      isOpen={Boolean(expanded[threadRootId])}
+      isLoading={threadLoading}
+      error={threadError}
+      hasNextCursor={Boolean(threadNextCursor)}
+      replies={threadReplies}
+      onToggle={handleToggle}
+      onRetry={handleRetry}
+      onLoadMore={handleLoadMore}
+      onReply={handleReplyClick}
+      canReply={Boolean(onReply)}
+      renderReply={renderReply}
+    />
+  )
+}
+
+function SwipeableMessageRenderer({
+  children,
+  currentUserId,
+  handleReply,
+  handleRequestDelete,
+  message,
+  onDeleteMessage,
+  onReply,
+}: {
+  children: ReactNode
+  currentUserId: string | null
+  handleReply: (message: UnifiedMessage) => void
+  handleRequestDelete: (messageId: string) => void
+  message: UnifiedMessage
+  onDeleteMessage?: (messageId: string) => Promise<void>
+  onReply?: (message: UnifiedMessage) => void
+}) {
+  const handleMessageReply = useCallback(() => {
+    handleReply(message)
+  }, [handleReply, message])
+
+  const handleMessageDelete = useCallback(() => {
+    handleRequestDelete(message.id)
+  }, [handleRequestDelete, message.id])
+
+  return (
+    <SwipeableMessage
+      key={message.id}
+      message={message}
+      currentUserId={currentUserId}
+      canDelete={!message.deleted && message.senderId === currentUserId && !!onDeleteMessage}
+      onReply={!message.deleted && onReply ? handleMessageReply : undefined}
+      onDelete={!message.deleted && onDeleteMessage ? handleMessageDelete : undefined}
+    >
+      {children}
+    </SwipeableMessage>
+  )
+}
+
 export function useUnifiedMessagePaneRenderers({
   activeDeletingMessageId,
   channelMessagesById,
@@ -172,9 +348,7 @@ export function useUnifiedMessagePaneRenderers({
         activeDeletingMessageId={activeDeletingMessageId}
         messageUpdatingId={messageUpdatingId}
         reactionPendingEmoji={reactionPendingByMessage[reply.id] ?? null}
-        onToggleReaction={(messageId, emoji) => {
-          void handleReaction(messageId, emoji)
-        }}
+        onToggleReaction={handleReaction}
         onStartEdit={onEditMessage ? handleStartEdit : undefined}
         onRequestDelete={onDeleteMessage ? handleRequestDelete : undefined}
       />
@@ -195,60 +369,54 @@ export function useUnifiedMessagePaneRenderers({
 
   const renderThreadSection = useCallback(
     (message: UnifiedMessage) => {
-      if (headerType !== 'channel' || message.deleted) {
-        return null
-      }
-
-      const original = channelMessagesById.get(message.id)
-      const threadRootId = resolveThreadRootId(message)
-      const threadReplies = threadMessagesByRootId[threadRootId] ?? []
-      const threadLoading = threadLoadingByRootId[threadRootId] ?? false
-      const threadError = threadErrorsByRootId[threadRootId] ?? null
-      const threadNextCursor = threadNextCursorByRootId[threadRootId] ?? null
-      const replyCount = Math.max(
-        typeof original?.threadReplyCount === 'number'
-          ? original.threadReplyCount
-          : (typeof message.threadReplyCount === 'number' ? message.threadReplyCount : 0),
-        threadReplies.length,
-      )
-      const lastReplyIso =
-        original?.threadLastReplyAt ??
-        message.threadLastReplyAt ??
-        (threadReplies.length > 0 ? threadReplies[threadReplies.length - 1]?.createdAt ?? null : null)
-      const unreadCount = Math.max(0, threadUnreadCountsByRootId[threadRootId] ?? 0)
-      const beforeMs = lastReplyIso ? Date.parse(lastReplyIso) : NaN
-
       return (
-        <ThreadSection
-          threadRootId={threadRootId}
-          replyCount={replyCount}
-          unreadCount={unreadCount}
-          lastReplyIso={lastReplyIso}
-          isOpen={Boolean(expandedThreadIds[threadRootId])}
-          isLoading={threadLoading}
-          error={threadError}
-          hasNextCursor={Boolean(threadNextCursor)}
-          replies={threadReplies}
-          onToggle={() => handleThreadToggle(threadRootId, Number.isFinite(beforeMs) ? beforeMs : undefined)}
-          onRetry={() => handleRetryThreadLoad(threadRootId)}
-          onLoadMore={() => handleLoadMoreThread(threadRootId)}
-          onReply={() => handleReply(message)}
-          canReply={Boolean(onReply)}
-          renderReply={renderThreadReply}
+        <UnifiedThreadSectionRenderer
+          activeDeletingMessageId={activeDeletingMessageId}
+          currentUserId={currentUserId}
+          editingMessageId={editingMessageId}
+          expanded={expandedThreadIds}
+          handleLoadMoreThread={handleLoadMoreThread}
+          handleReaction={handleReaction}
+          handleReply={handleReply}
+          handleRequestDelete={handleRequestDelete}
+          handleRetryThreadLoad={handleRetryThreadLoad}
+          handleStartEdit={handleStartEdit}
+          handleThreadToggle={handleThreadToggle}
+          headerType={headerType}
+          message={message}
+          onReply={onReply}
+          onDeleteMessage={onDeleteMessage}
+          onEditMessage={onEditMessage}
+          reactionPendingByMessage={reactionPendingByMessage}
+          resolveThreadRootId={resolveThreadRootId}
+          threadErrorsByRootId={threadErrorsByRootId}
+          threadLoadingByRootId={threadLoadingByRootId}
+          threadMessagesByRootId={threadMessagesByRootId}
+          threadNextCursorByRootId={threadNextCursorByRootId}
+          threadUnreadCountsByRootId={threadUnreadCountsByRootId}
+          messageUpdatingId={messageUpdatingId}
         />
       )
     },
     [
-      channelMessagesById,
+      activeDeletingMessageId,
+      currentUserId,
+      editingMessageId,
       expandedThreadIds,
       handleLoadMoreThread,
+      handleReaction,
       handleReply,
+      handleRequestDelete,
       handleRetryThreadLoad,
       handleThreadToggle,
+      handleStartEdit,
       headerType,
+      messageUpdatingId,
       onReply,
+      onDeleteMessage,
+      onEditMessage,
+      reactionPendingByMessage,
       resolveThreadRootId,
-      renderThreadReply,
       threadErrorsByRootId,
       threadLoadingByRootId,
       threadMessagesByRootId,
@@ -259,16 +427,16 @@ export function useUnifiedMessagePaneRenderers({
 
   const renderMessageWrapper = useCallback(
     (message: UnifiedMessage, children: ReactNode) => (
-      <SwipeableMessage
-        key={message.id}
-        message={message}
+      <SwipeableMessageRenderer
         currentUserId={currentUserId}
-        canDelete={!message.deleted && message.senderId === currentUserId && !!onDeleteMessage}
-        onReply={!message.deleted && onReply ? () => handleReply(message) : undefined}
-        onDelete={!message.deleted && onDeleteMessage ? () => handleRequestDelete(message.id) : undefined}
+        handleReply={handleReply}
+        handleRequestDelete={handleRequestDelete}
+        message={message}
+        onDeleteMessage={onDeleteMessage}
+        onReply={onReply}
       >
         {children}
-      </SwipeableMessage>
+      </SwipeableMessageRenderer>
     ),
     [currentUserId, handleReply, handleRequestDelete, onDeleteMessage, onReply],
   )

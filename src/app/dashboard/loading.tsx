@@ -5,6 +5,14 @@ import { Skeleton } from '@/shared/ui/skeleton'
  * Shows immediately while the page content is loading.
  */
 export default function DashboardLoading() {
+  const statCardSlots = ['stat-1', 'stat-2', 'stat-3', 'stat-4']
+  const attentionSlots = ['attention-1', 'attention-2', 'attention-3', 'attention-4']
+  const comparisonSlots = ['comparison-1', 'comparison-2', 'comparison-3', 'comparison-4']
+  const platformSlots = ['platform-1', 'platform-2', 'platform-3']
+  const actionSlots = ['action-1', 'action-2', 'action-3', 'action-4']
+  const taskSlots = ['task-1', 'task-2', 'task-3']
+  const activitySlots = ['activity-1', 'activity-2', 'activity-3', 'activity-4']
+
   return (
     <div className="space-y-6">
       {/* Header skeleton */}
@@ -18,8 +26,8 @@ export default function DashboardLoading() {
 
       {/* Stats cards skeleton */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-lg border p-4 space-y-3">
+        {statCardSlots.map((slot) => (
+          <div key={slot} className="space-y-3 rounded-lg border p-4">
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-8 w-24" />
             <Skeleton className="h-3 w-16" />
@@ -31,8 +39,8 @@ export default function DashboardLoading() {
       <div className="rounded-lg border p-4 space-y-3">
         <Skeleton className="h-5 w-40" />
         <div className="flex gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-24" />
+          {attentionSlots.map((slot) => (
+            <Skeleton key={slot} className="h-10 w-24" />
           ))}
         </div>
       </div>
@@ -54,8 +62,8 @@ export default function DashboardLoading() {
               <Skeleton className="h-9 w-32" />
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-24 w-full" />
+              {comparisonSlots.map((slot) => (
+                <Skeleton key={slot} className="h-24 w-full" />
               ))}
             </div>
             <div className="rounded-lg border p-4">
@@ -71,8 +79,8 @@ export default function DashboardLoading() {
           <div className="rounded-lg border p-4 space-y-3">
             <Skeleton className="h-5 w-36" />
             <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+              {platformSlots.map((slot) => (
+                <Skeleton key={slot} className="h-12 w-full" />
               ))}
             </div>
           </div>
@@ -81,8 +89,8 @@ export default function DashboardLoading() {
           <div className="rounded-lg border p-4 space-y-3">
             <Skeleton className="h-5 w-28" />
             <div className="grid grid-cols-2 gap-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
+              {actionSlots.map((slot) => (
+                <Skeleton key={slot} className="h-10 w-full" />
               ))}
             </div>
           </div>
@@ -91,8 +99,8 @@ export default function DashboardLoading() {
           <div className="rounded-lg border p-4 space-y-3">
             <Skeleton className="h-5 w-24" />
             <div className="space-y-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
+              {taskSlots.map((slot) => (
+                <Skeleton key={slot} className="h-16 w-full" />
               ))}
             </div>
           </div>
@@ -101,8 +109,8 @@ export default function DashboardLoading() {
           <div className="rounded-lg border p-4 space-y-3">
             <Skeleton className="h-5 w-32" />
             <div className="space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+              {activitySlots.map((slot) => (
+                <Skeleton key={slot} className="h-12 w-full" />
               ))}
             </div>
           </div>

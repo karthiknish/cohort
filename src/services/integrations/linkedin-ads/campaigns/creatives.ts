@@ -9,7 +9,7 @@ import {
   coerceNumber,
 } from '../client'
 import { linkedinAdsClient } from '@/services/integrations/shared/base-client'
-import {
+import type {
   LinkedInCreative,
   LinkedInCreativeMetric,
 } from '../types'

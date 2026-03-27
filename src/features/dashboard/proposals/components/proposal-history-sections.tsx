@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { Clock, Download, ExternalLink, FileText, Layout, LoaderCircle, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -89,6 +90,22 @@ export function ProposalHistoryRow({
 }) {
   const { deckRequestable, displayName, isActiveDraft, isDeckPreparing, presentationUrl, proposal, resumeDisabled, resumeLabel } = row
 
+  const handleResumeAsEdit = useCallback(() => {
+    onResume(proposal, true)
+  }, [onResume, proposal])
+
+  const handleResume = useCallback(() => {
+    onResume(proposal, false)
+  }, [onResume, proposal])
+
+  const handleDownloadDeck = useCallback(() => {
+    onDownloadDeck(proposal)
+  }, [onDownloadDeck, proposal])
+
+  const handleRequestDelete = useCallback(() => {
+    onRequestDelete(proposal)
+  }, [onRequestDelete, proposal])
+
   return (
     <div
       className={cn(
@@ -129,13 +146,13 @@ export function ProposalHistoryRow({
 
         <div className="flex flex-wrap items-center gap-2">
           {proposal.status === 'draft' && !isActiveDraft ? (
-            <Button size="sm" variant="secondary" onClick={() => onResume(proposal, true)} className="h-9 px-4 font-medium">
+            <Button size="sm" variant="secondary" onClick={handleResumeAsEdit} className="h-9 px-4 font-medium">
               <Pencil className="mr-2 h-3.5 w-3.5" />
               Edit
             </Button>
           ) : null}
 
-          <Button size="sm" variant={isActiveDraft ? 'default' : 'outline'} onClick={() => onResume(proposal, false)} disabled={resumeDisabled} className="h-9 px-4 font-medium">
+          <Button size="sm" variant={isActiveDraft ? 'default' : 'outline'} onClick={handleResume} disabled={resumeDisabled} className="h-9 px-4 font-medium">
             {resumeDisabled ? <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Layout className="mr-2 h-3.5 w-3.5" />}
             {resumeLabel}
           </Button>
@@ -156,7 +173,7 @@ export function ProposalHistoryRow({
               </Button>
             </div>
           ) : deckRequestable ? (
-            <Button size="sm" variant="outline" onClick={() => onDownloadDeck(proposal)} disabled={isDeckPreparing} className="h-9 border-dashed px-4">
+            <Button size="sm" variant="outline" onClick={handleDownloadDeck} disabled={isDeckPreparing} className="h-9 border-dashed px-4">
               {isDeckPreparing ? <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" /> : <FileText className="mr-2 h-3.5 w-3.5 text-info" />}
               {isDeckPreparing ? 'Preparing…' : 'Generate Deck'}
             </Button>
@@ -165,7 +182,7 @@ export function ProposalHistoryRow({
           <Button
             size="icon"
             variant="ghost"
-            onClick={() => onRequestDelete(proposal)}
+            onClick={handleRequestDelete}
             disabled={Boolean(deletingProposalId)}
             className="h-9 w-9 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
             aria-label={`Delete ${displayName}`}

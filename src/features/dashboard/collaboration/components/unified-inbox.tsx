@@ -205,7 +205,8 @@ export function UnifiedInbox({
     uploadPendingAttachments,
     onStartNewDM,
   } = directMessagePane
-  const { canManageSelectedChannel = false, onManageSelectedChannel } = manageChannel ?? {}
+  const canManageSelectedChannel = manageChannel?.canManageSelectedChannel ?? false
+  const onManageSelectedChannel = manageChannel?.onManageSelectedChannel
   const [searchQuery, setSearchQuery] = useState('')
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
   const [dmMessageInputByConversation, setDmMessageInputByConversation] = useState<Record<string, string>>({})
@@ -355,10 +356,13 @@ export function UnifiedInbox({
     }
   }, [onSelectChannel, onSelectDM])
 
-  const isSelected = (item: UnifiedItem): boolean => {
-    if (item.type === 'channel') return selectedChannel?.id === item.id
-    return selectedDM?.legacyId === item.legacyId
-  }
+  const isSelected = useCallback(
+    (item: UnifiedItem): boolean => {
+      if (item.type === 'channel') return selectedChannel?.id === item.id
+      return selectedDM?.legacyId === item.legacyId
+    },
+    [selectedChannel?.id, selectedDM?.legacyId]
+  )
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row min-h-[500px] lg:h-[640px]">

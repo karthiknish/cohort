@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo, useCallback } from 'react'
 import { Info } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -77,6 +78,12 @@ const reachChartConfig = {
   },
 } satisfies ChartConfig
 
+const CHART_MARGIN = { left: 12, right: 12, top: 8, bottom: 8 }
+const TICK_STYLE = { fontSize: 12 }
+const AREA_CURSOR = { strokeDasharray: '3 3' }
+const AREA_ACTIVE_DOT = { r: 5, strokeWidth: 0 }
+const BAR_REACH_CURSOR = { fill: 'var(--color-reach)', opacity: 0.1 }
+
 type PerformanceMetricPoint = {
   date: string
   spend: number
@@ -126,6 +133,79 @@ export function InsightsChartsSection({
 }: InsightsChartsSectionProps) {
   const displayCurrency = normalizeCurrencyCode(currency)
 
+  const engagementFormatter = useCallback((value: unknown, name: unknown) => (
+    <div className="flex items-center justify-between gap-8">
+      <span className="text-muted-foreground">
+        {engagementChartConfig[name as keyof typeof engagementChartConfig]?.label ?? name as string}
+      </span>
+      <span className="font-mono font-medium">
+        {name === 'ctr' ? `${Number(value).toFixed(2)}%` : Number(value).toLocaleString('en-US')}
+      </span>
+    </div>
+  ), [])
+
+  const engagementTooltipContent = useMemo(() => (
+    <ChartTooltipContent formatter={engagementFormatter} />
+  ), [engagementFormatter])
+
+  const chartLegendContent = useMemo(() => <ChartLegendContent />, [])
+
+  const conversionsTickFormatter = useCallback((value: unknown) =>
+    `${Number(value).toLocaleString('en-US')}`, [])
+
+  const conversionsFormatter = useCallback((value: unknown, name: unknown) => (
+    <div className="flex items-center justify-between gap-8">
+      <span className="text-muted-foreground">
+        {conversionsChartConfig[name as keyof typeof conversionsChartConfig]?.label ?? name as string}
+      </span>
+      <span className="font-mono font-medium">
+        {name === 'revenue'
+          ? formatMoney(Number(value), displayCurrency)
+          : Number(value).toLocaleString('en-US')}
+      </span>
+    </div>
+  ), [displayCurrency])
+
+  const conversionsTooltipContent = useMemo(() => (
+    <ChartTooltipContent formatter={conversionsFormatter} />
+  ), [conversionsFormatter])
+
+  const costTickFormatter = useCallback((value: unknown) =>
+    formatMoney(Number(value), displayCurrency), [displayCurrency])
+
+  const costFormatter = useCallback((value: unknown, name: unknown) => (
+    <div className="flex items-center justify-between gap-8">
+      <span className="text-muted-foreground">
+        {costChartConfig[name as keyof typeof costChartConfig]?.label ?? name as string}
+      </span>
+      <span className="font-mono font-medium">
+        {formatMoney(Number(value), displayCurrency)}
+      </span>
+    </div>
+  ), [displayCurrency])
+
+  const costTooltipContent = useMemo(() => (
+    <ChartTooltipContent formatter={costFormatter} />
+  ), [costFormatter])
+
+  const reachTickFormatter = useCallback((value: unknown) =>
+    Number(value) >= 1000 ? `${(Number(value) / 1000).toFixed(1)}k` : String(value), [])
+
+  const reachFormatter = useCallback((value: unknown, name: unknown) => (
+    <div className="flex items-center justify-between gap-8">
+      <span className="text-muted-foreground">
+        {reachChartConfig[name as keyof typeof reachChartConfig]?.label ?? name as string}
+      </span>
+      <span className="font-mono font-medium">
+        {Number(value).toLocaleString('en-US')}
+      </span>
+    </div>
+  ), [])
+
+  const reachTooltipContent = useMemo(() => (
+    <ChartTooltipContent formatter={reachFormatter} />
+  ), [reachFormatter])
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* 1. Performance Overview */}
@@ -159,7 +239,7 @@ export function InsightsChartsSection({
             </div>
           ) : (
             <ChartContainer config={engagementChartConfig} className="h-full w-full">
-              <AreaChart data={engagementChartData} margin={{ left: 12, right: 12, top: 8, bottom: 8 }}>
+              <AreaChart data={engagementChartData} margin={CHART_MARGIN}>
                 <defs>
                   <linearGradient id="fillClicks" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--color-clicks)" stopOpacity={0.3} />
@@ -172,32 +252,19 @@ export function InsightsChartsSection({
                   axisLine={false}
                   tickLine={false}
                   tickMargin={10}
-                  tick={{ fontSize: 12 }}
+                  tick={TICK_STYLE}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   tickMargin={8}
-                  tick={{ fontSize: 12 }}
+                  tick={TICK_STYLE}
                 />
                 <RechartsTooltip
-                  cursor={{ strokeDasharray: '3 3' }}
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, name) => (
-                        <div className="flex items-center justify-between gap-8">
-                          <span className="text-muted-foreground">
-                            {engagementChartConfig[name as keyof typeof engagementChartConfig]?.label ?? name}
-                          </span>
-                          <span className="font-mono font-medium">
-                            {name === 'ctr' ? `${Number(value).toFixed(2)}%` : Number(value).toLocaleString('en-US')}
-                          </span>
-                        </div>
-                      )}
-                    />
-                  }
+                  cursor={AREA_CURSOR}
+                  content={engagementTooltipContent}
                 />
-                <ChartLegend content={<ChartLegendContent />} />
+                <ChartLegend content={chartLegendContent} />
                 <Area
                   type="monotone"
                   dataKey="clicks"
@@ -205,7 +272,7 @@ export function InsightsChartsSection({
                   strokeWidth={2}
                   fill="url(#fillClicks)"
                   dot={false}
-                  activeDot={{ r: 5, strokeWidth: 0 }}
+                  activeDot={AREA_ACTIVE_DOT}
                 />
               </AreaChart>
             </ChartContainer>
@@ -241,7 +308,7 @@ export function InsightsChartsSection({
             </div>
           ) : (
             <ChartContainer config={conversionsChartConfig} className="h-full w-full">
-              <AreaChart data={conversionsChartData} margin={{ left: 12, right: 12, top: 8, bottom: 8 }}>
+              <AreaChart data={conversionsChartData} margin={CHART_MARGIN}>
                 <defs>
                   <linearGradient id="fillConversions" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--color-conversions)" stopOpacity={0.3} />
@@ -254,35 +321,20 @@ export function InsightsChartsSection({
                   axisLine={false}
                   tickLine={false}
                   tickMargin={10}
-                  tick={{ fontSize: 12 }}
+                  tick={TICK_STYLE}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   tickMargin={8}
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => `${Number(value).toLocaleString('en-US')}`}
+                  tick={TICK_STYLE}
+                  tickFormatter={conversionsTickFormatter}
                 />
                 <RechartsTooltip
-                  cursor={{ strokeDasharray: '3 3' }}
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, name) => (
-                        <div className="flex items-center justify-between gap-8">
-                          <span className="text-muted-foreground">
-                            {conversionsChartConfig[name as keyof typeof conversionsChartConfig]?.label ?? name}
-                          </span>
-                          <span className="font-mono font-medium">
-                            {name === 'revenue'
-                              ? formatMoney(Number(value), displayCurrency)
-                              : Number(value).toLocaleString('en-US')}
-                          </span>
-                        </div>
-                      )}
-                    />
-                  }
+                  cursor={AREA_CURSOR}
+                  content={conversionsTooltipContent}
                 />
-                <ChartLegend content={<ChartLegendContent />} />
+                <ChartLegend content={chartLegendContent} />
                 <Area
                   type="monotone"
                   dataKey="conversions"
@@ -290,7 +342,7 @@ export function InsightsChartsSection({
                   strokeWidth={2}
                   fill="url(#fillConversions)"
                   dot={false}
-                  activeDot={{ r: 5, strokeWidth: 0 }}
+                  activeDot={AREA_ACTIVE_DOT}
                 />
               </AreaChart>
             </ChartContainer>
@@ -326,40 +378,27 @@ export function InsightsChartsSection({
             </div>
           ) : (
             <ChartContainer config={costChartConfig} className="h-full w-full">
-              <BarChart data={conversionsChartData} margin={{ left: 12, right: 12, top: 8, bottom: 8 }}>
+              <BarChart data={conversionsChartData} margin={CHART_MARGIN}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="dateFormatted"
                   axisLine={false}
                   tickLine={false}
                   tickMargin={10}
-                  tick={{ fontSize: 12 }}
+                  tick={TICK_STYLE}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   tickMargin={8}
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => formatMoney(Number(value), displayCurrency)}
+                  tick={TICK_STYLE}
+                  tickFormatter={costTickFormatter}
                 />
                 <RechartsTooltip
                   cursor={false}
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, name) => (
-                        <div className="flex items-center justify-between gap-8">
-                          <span className="text-muted-foreground">
-                            {costChartConfig[name as keyof typeof costChartConfig]?.label ?? name}
-                          </span>
-                          <span className="font-mono font-medium">
-                            {formatMoney(Number(value), displayCurrency)}
-                          </span>
-                        </div>
-                      )}
-                    />
-                  }
+                  content={costTooltipContent}
                 />
-                <ChartLegend content={<ChartLegendContent />} />
+                <ChartLegend content={chartLegendContent} />
                 <Bar
                   dataKey="cpc"
                   fill="var(--color-cpc)"
@@ -399,40 +438,27 @@ export function InsightsChartsSection({
           </CardHeader>
           <CardContent className="h-[350px]">
             <ChartContainer config={reachChartConfig} className="h-full w-full">
-              <BarChart data={reachChartData} margin={{ left: 12, right: 12, top: 8, bottom: 8 }}>
+              <BarChart data={reachChartData} margin={CHART_MARGIN}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="dateFormatted"
                   axisLine={false}
                   tickLine={false}
                   tickMargin={10}
-                  tick={{ fontSize: 12 }}
+                  tick={TICK_STYLE}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
                   tickMargin={8}
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => Number(value) >= 1000 ? `${(Number(value) / 1000).toFixed(1)}k` : value}
+                  tick={TICK_STYLE}
+                  tickFormatter={reachTickFormatter}
                 />
                 <RechartsTooltip
-                  cursor={{ fill: 'var(--color-reach)', opacity: 0.1 }}
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, name) => (
-                        <div className="flex items-center justify-between gap-8">
-                          <span className="text-muted-foreground">
-                            {reachChartConfig[name as keyof typeof reachChartConfig]?.label ?? name}
-                          </span>
-                          <span className="font-mono font-medium">
-                            {Number(value).toLocaleString('en-US')}
-                          </span>
-                        </div>
-                      )}
-                    />
-                  }
+                  cursor={BAR_REACH_CURSOR}
+                  content={reachTooltipContent}
                 />
-                <ChartLegend content={<ChartLegendContent />} />
+                <ChartLegend content={chartLegendContent} />
                 <Bar
                   dataKey="impressions"
                   fill="var(--color-impressions)"

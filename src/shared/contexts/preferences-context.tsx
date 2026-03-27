@@ -130,17 +130,20 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
     await fetchPreferences()
   }, [fetchPreferences])
 
+  const contextValue = useMemo(
+    () => ({
+      preferences,
+      loading,
+      error,
+      updateCurrency,
+      updatePreferences,
+      refreshPreferences,
+    }),
+    [error, loading, preferences, refreshPreferences, updateCurrency, updatePreferences],
+  )
+
   return (
-    <PreferencesContext.Provider
-      value={{
-        preferences,
-        loading,
-        error,
-        updateCurrency,
-        updatePreferences,
-        refreshPreferences,
-      }}
-    >
+    <PreferencesContext.Provider value={contextValue}>
       {children}
     </PreferencesContext.Provider>
   )

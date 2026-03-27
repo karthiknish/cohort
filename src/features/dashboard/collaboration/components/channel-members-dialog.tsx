@@ -70,6 +70,18 @@ function ChannelMembersDialogForm({
     [teamMembers],
   )
 
+  const handleVisibilityChange = useCallback((value: string) => {
+    setVisibility(value as 'public' | 'private')
+  }, [])
+
+  const handleOpenDeleteConfirm = useCallback(() => {
+    setConfirmDeleteOpen(true)
+  }, [])
+
+  const handleCloseDialog = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
+
   const handleMemberToggle = useCallback((memberId: string) => {
     setSelectedMemberIds((prev) =>
       prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId],
@@ -94,6 +106,14 @@ function ChannelMembersDialogForm({
         setSaving(false)
       })
   }, [onOpenChange, onSave, selectedMemberIds, visibility])
+
+  const memberToggleHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        sortedMembers.map((member) => [member.id, () => handleMemberToggle(member.id)]),
+      ) as Record<string, () => void>,
+    [handleMemberToggle, sortedMembers],
+  )
 
   const handleDelete = useCallback(() => {
     if (!channel.isCustom || !onDelete) {
@@ -147,7 +167,7 @@ function ChannelMembersDialogForm({
 
           <div className="space-y-2">
             <Label>Access</Label>
-            <Select value={visibility} onValueChange={(value) => setVisibility(value as 'public' | 'private')}>
+            <Select value={visibility} onValueChange={handleVisibilityChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -173,7 +193,7 @@ function ChannelMembersDialogForm({
                   <button
                     key={member.id}
                     type="button"
-                    onClick={() => handleMemberToggle(member.id)}
+                    onClick={memberToggleHandlers[member.id]}
                     className="flex w-full cursor-pointer items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-muted/40"
                   >
                     <Checkbox
@@ -198,7 +218,7 @@ function ChannelMembersDialogForm({
           {channel.isCustom && onDelete ? (
             <Button
               variant="destructive"
-              onClick={() => setConfirmDeleteOpen(true)}
+              onClick={handleOpenDeleteConfirm}
               disabled={saving || deleting}
               className="mr-auto"
             >
@@ -206,10 +226,10 @@ function ChannelMembersDialogForm({
               Delete channel
             </Button>
           ) : null}
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || deleting}>
+          <Button variant="outline" onClick={handleCloseDialog} disabled={saving || deleting}>
             Cancel
           </Button>
-          <Button onClick={() => void handleSave()} disabled={saving || deleting}>
+          <Button onClick={handleSave} disabled={saving || deleting}>
             {saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
             Save access
           </Button>

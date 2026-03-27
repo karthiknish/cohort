@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useState, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarClock, CheckSquare, Filter, Trash2, Calendar as CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -24,7 +24,8 @@ import { Calendar } from '@/shared/ui/calendar'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { isTaskDueDateDisabled } from './task-types'
-import { TaskStatus, TASK_STATUSES } from '@/types/tasks'
+import { TASK_STATUSES } from '@/types/tasks'
+import type { TaskStatus } from '@/types/tasks'
 
 export type TaskBulkToolbarProps = {
   selectedCount: number
@@ -78,6 +79,35 @@ export function TaskBulkToolbar({
   const masterChecked = hasSelection && selectedCount === totalVisible
   const masterIndeterminate = hasSelection && selectedCount > 0 && selectedCount < totalVisible
 
+  const handleMasterChange = useCallback(() => {
+    if (hasSelection && selectedCount === totalVisible) {
+      onClearSelection()
+    } else {
+      onSelectAll()
+    }
+  }, [hasSelection, onClearSelection, onSelectAll, selectedCount, totalVisible])
+
+  const handleStatusChange = useCallback((value: string) => {
+    onBulkStatusChange(value as TaskStatus)
+  }, [onBulkStatusChange])
+
+  const handleAssignInputChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setAssignInput(event.target.value)
+  }, [])
+
+  const handleAssignClick = useCallback(() => {
+    onBulkAssign(parseAssignees(assignInput))
+  }, [assignInput, onBulkAssign])
+
+  const handleUpdateDueDate = useCallback(() => {
+    onBulkDueDate(dueDate ? format(dueDate, 'yyyy-MM-dd') : null)
+  }, [dueDate, onBulkDueDate])
+
+  const handleClearDate = useCallback(() => {
+    setDueDate(undefined)
+    onBulkDueDate(null)
+  }, [onBulkDueDate])
+
   useEffect(() => {
     if (masterRef.current) {
       masterRef.current.indeterminate = masterIndeterminate
@@ -91,7 +121,7 @@ export function TaskBulkToolbar({
           <Checkbox
             ref={masterRef}
             checked={masterChecked}
-            onChange={() => (hasSelection && selectedCount === totalVisible ? onClearSelection() : onSelectAll())}
+            onChange={handleMasterChange}
             aria-label={selectAllLabel}
           />
           <span className="font-medium text-foreground">{selectedCount} selected</span>
@@ -117,7 +147,7 @@ export function TaskBulkToolbar({
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
           <Label className="text-xs text-muted-foreground">Status</Label>
-          <Select onValueChange={(value) => onBulkStatusChange(value as TaskStatus)} disabled={!hasSelection || bulkActive}>
+          <Select onValueChange={handleStatusChange} disabled={!hasSelection || bulkActive}>
             <SelectTrigger className="w-[150px] h-9">
               <SelectValue placeholder="Change status" />
             </SelectTrigger>
@@ -141,7 +171,7 @@ export function TaskBulkToolbar({
           <Input
             id="bulk-assign"
             value={assignInput}
-            onChange={(event) => setAssignInput(event.target.value)}
+            onChange={handleAssignInputChange}
             placeholder="Comma-separated names"
             className="h-9 w-[220px]"
             disabled={!hasSelection || bulkActive}
@@ -149,7 +179,7 @@ export function TaskBulkToolbar({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => onBulkAssign(parseAssignees(assignInput))}
+            onClick={handleAssignClick}
             disabled={!hasSelection || bulkActive}
           >
             Apply
@@ -188,7 +218,7 @@ export function TaskBulkToolbar({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => onBulkDueDate(dueDate ? format(dueDate, 'yyyy-MM-dd') : null)}
+            onClick={handleUpdateDueDate}
             disabled={!hasSelection || bulkActive || !dueDate}
           >
             Update
@@ -196,7 +226,7 @@ export function TaskBulkToolbar({
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => { setDueDate(undefined); onBulkDueDate(null) }}
+            onClick={handleClearDate}
             disabled={!hasSelection || bulkActive}
           >
             Clear date

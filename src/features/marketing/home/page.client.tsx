@@ -3,6 +3,7 @@
 import { LoaderCircle } from "lucide-react"
 import { useRouter, redirect } from "next/navigation"
 import { Suspense, useCallback, useMemo, useState } from "react"
+import type { ChangeEvent, FormEvent } from "react"
 
 import { AuthCard } from "@/features/marketing/home/components/auth-card"
 import { bootstrapAndSyncSession, calculatePasswordStrength } from "@/features/marketing/home/components/auth-utils"
@@ -12,9 +13,15 @@ import { useToast } from "@/shared/ui/use-toast"
 import { authClient } from "@/lib/auth-client"
 import { getFriendlyAuthErrorMessage } from "@/services/auth/error-utils"
 
+const TAB_STORAGE_KEY = "cohorts.auth.activeTab"
+const REMEMBER_ME_KEY = "cohorts.auth.rememberMe"
+const HOME_PAGE_FALLBACK = (
+  <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
+    <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
+  </div>
+)
+
 function HomePageContent() {
-  const TAB_STORAGE_KEY = "cohorts.auth.activeTab"
-  const REMEMBER_ME_KEY = "cohorts.auth.rememberMe"
   const [activeTab, setActiveTab] = useState<"signin" | "signup">(() => {
     if (typeof window === 'undefined') {
       return "signin"
@@ -91,7 +98,7 @@ function HomePageContent() {
     return emailRegex.test(email)
   }
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = useCallback((value: string) => {
     const nextTab = value === "signup" ? "signup" : "signin"
     setActiveTab(nextTab)
 
@@ -104,107 +111,118 @@ function HomePageContent() {
     } catch (error) {
       console.warn("[HomePage] failed to persist tab selection", error)
     }
-  }
+  }, [])
 
   if (!loading && user) {
     redirect(resolvePostAuthDestination())
   }
 
-  const handleSubmit = (mode: "signin" | "signup") => async (event: React.FormEvent) => {
-    event.preventDefault()
-    setIsSubmitting(true)
-    setEmailError(null)
+  const handleSubmit = useCallback(
+    (mode: "signin" | "signup") => async (event: FormEvent) => {
+      event.preventDefault()
+      setIsSubmitting(true)
+      setEmailError(null)
 
-    await Promise.resolve()
-      .then(async () => {
-        if (mode === "signup") {
-          // Validate email
-          if (!validateEmail(signUpData.email)) {
-            setEmailError("Please enter a valid email address")
-            return
-          }
+      await Promise.resolve()
+        .then(async () => {
+          if (mode === "signup") {
+            // Validate email
+            if (!validateEmail(signUpData.email)) {
+              setEmailError("Please enter a valid email address")
+              return
+            }
 
-          // Validate password strength
-          if (passwordStrength.score < 2) {
-            toast({
-              title: "Password needs work",
-              description: "Create a stronger password with at least 8 characters, including letters and numbers.",
-              variant: "destructive",
+            // Validate password strength
+            if (passwordStrength.score < 2) {
+              toast({
+                title: "Password needs work",
+                description: "Create a stronger password with at least 8 characters, including letters and numbers.",
+                variant: "destructive",
+              })
+              return
+            }
+
+            if (signUpData.password !== signUpData.confirmPassword) {
+              toast({
+                title: "Passwords don't match",
+                description: "Please make sure both passwords are identical.",
+                variant: "destructive",
+              })
+              return
+            }
+
+            await authClient.signUp.email({
+              email: signUpData.email,
+              password: signUpData.password,
+              name: signUpData.displayName.trim() || signUpData.email,
             })
-            return
-          }
 
-          if (signUpData.password !== signUpData.confirmPassword) {
+            await Promise.all([
+              authClient.getSession().catch(() => null),
+              bootstrapAndSyncSession(),
+            ])
+
             toast({
-              title: "Passwords don't match",
-              description: "Please make sure both passwords are identical.",
-              variant: "destructive",
+              title: "Welcome to Cohorts!",
+              description: "Your account has been created. Taking you to your dashboard...",
             })
-            return
+          } else {
+            // Validate email
+            if (!validateEmail(signInData.email)) {
+              setEmailError("Please enter a valid email address")
+              return
+            }
+
+            await authClient.signIn.email({
+              email: signInData.email,
+              password: signInData.password,
+            })
+
+            await Promise.all([
+              authClient.getSession().catch(() => null),
+              bootstrapAndSyncSession(),
+            ])
+
+            // Handle remember me
+            if (rememberMe && typeof window !== "undefined") {
+              window.localStorage.setItem(REMEMBER_ME_KEY, signInData.email)
+            } else if (typeof window !== "undefined") {
+              window.localStorage.removeItem(REMEMBER_ME_KEY)
+            }
+
+            toast({
+              title: "Welcome back!",
+              description: "Signed in successfully. Loading your workspace...",
+            })
           }
 
-          await authClient.signUp.email({
-            email: signUpData.email,
-            password: signUpData.password,
-            name: signUpData.displayName.trim() || signUpData.email,
-          })
-
-          await Promise.all([
-            authClient.getSession().catch(() => null),
-            bootstrapAndSyncSession(),
-          ])
-
-          toast({
-            title: "Welcome to Cohorts!",
-            description: "Your account has been created. Taking you to your dashboard...",
-          })
-        } else {
-          // Validate email
-          if (!validateEmail(signInData.email)) {
-            setEmailError("Please enter a valid email address")
-            return
-          }
-
-          await authClient.signIn.email({
-            email: signInData.email,
-            password: signInData.password,
-          })
-
-          await Promise.all([
-            authClient.getSession().catch(() => null),
-            bootstrapAndSyncSession(),
-          ])
-
-          // Handle remember me
-          if (rememberMe && typeof window !== "undefined") {
-            window.localStorage.setItem(REMEMBER_ME_KEY, signInData.email)
-          } else if (typeof window !== "undefined") {
-            window.localStorage.removeItem(REMEMBER_ME_KEY)
-          }
-
-          toast({
-            title: "Welcome back!",
-            description: "Signed in successfully. Loading your workspace...",
-          })
-        }
-
-        const destination = resolvePostAuthDestination()
-        router.push(destination)
-      })
-      .catch((error) => {
-        const errorMessage = getFriendlyAuthErrorMessage(error)
-        toast({
-          title: mode === "signin" ? "Sign in failed" : "Sign up failed",
-          description: errorMessage,
-          variant: "destructive",
+          const destination = resolvePostAuthDestination()
+          router.push(destination)
         })
-      })
-      .finally(() => {
-        setIsSubmitting(false)
-      })
-  }
+        .catch((error) => {
+          const errorMessage = getFriendlyAuthErrorMessage(error)
+          toast({
+            title: mode === "signin" ? "Sign in failed" : "Sign up failed",
+            description: errorMessage,
+            variant: "destructive",
+          })
+        })
+        .finally(() => {
+          setIsSubmitting(false)
+        })
+    },
+    [
+      passwordStrength.score,
+      rememberMe,
+      resolvePostAuthDestination,
+      router,
+      signInData,
+      signUpData,
+      toast,
+    ]
+  )
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = useCallback(async () => {
     setIsSubmitting(true)
 
     await authClient.signIn.social({
@@ -231,9 +249,9 @@ function HomePageContent() {
       .finally(() => {
         setIsSubmitting(false)
       })
-  }
+  }, [toast])
 
-  const handleSignInChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSignInChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target
     setSignInData((previous) => ({
       ...previous,
@@ -243,9 +261,9 @@ function HomePageContent() {
     if (name === "email" && emailError) {
       setEmailError(null)
     }
-  }
+  }, [emailError])
 
-  const handleSignUpChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSignUpChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target
     setSignUpData((previous) => ({
       ...previous,
@@ -255,7 +273,33 @@ function HomePageContent() {
     if (name === "email" && emailError) {
       setEmailError(null)
     }
-  }
+  }, [emailError])
+
+  const handleRememberMeChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setRememberMe(event.target.checked)
+  }, [])
+
+  const handleToggleShowPassword = useCallback(() => {
+    setShowPassword((previous) => !previous)
+  }, [])
+
+  const handleToggleShowConfirmPassword = useCallback(() => {
+    setShowConfirmPassword((previous) => !previous)
+  }, [])
+
+  const handleSubmitSignIn = useCallback(
+    (event: FormEvent) => {
+      void handleSubmit("signin")(event)
+    },
+    [handleSubmit]
+  )
+
+  const handleSubmitSignUp = useCallback(
+    (event: FormEvent) => {
+      void handleSubmit("signup")(event)
+    },
+    [handleSubmit]
+  )
 
   return (
     <div className="flex min-h-screen w-full bg-muted/30">
@@ -274,13 +318,13 @@ function HomePageContent() {
           signUpData={signUpData}
           passwordStrength={passwordStrength}
           onTabChange={handleTabChange}
-          onRememberMeChange={(event) => setRememberMe(event.target.checked)}
-          onToggleShowPassword={() => setShowPassword((previous) => !previous)}
-          onToggleShowConfirmPassword={() => setShowConfirmPassword((previous) => !previous)}
+          onRememberMeChange={handleRememberMeChange}
+          onToggleShowPassword={handleToggleShowPassword}
+          onToggleShowConfirmPassword={handleToggleShowConfirmPassword}
           onSignInChange={handleSignInChange}
           onSignUpChange={handleSignUpChange}
-          onSubmitSignIn={handleSubmit("signin")}
-          onSubmitSignUp={handleSubmit("signup")}
+          onSubmitSignIn={handleSubmitSignIn}
+          onSubmitSignUp={handleSubmitSignUp}
           onGoogleSignIn={handleGoogleSignIn}
         />
       </div>
@@ -289,15 +333,5 @@ function HomePageContent() {
 }
 
 export default function HomePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
-          <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
-        </div>
-      }
-    >
-      <HomePageContent />
-    </Suspense>
-  )
+  return <Suspense fallback={HOME_PAGE_FALLBACK}><HomePageContent /></Suspense>
 }

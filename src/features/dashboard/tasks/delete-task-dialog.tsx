@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog'
-import { TaskRecord } from '@/types/tasks'
+import type { TaskRecord } from '@/types/tasks'
 
 export type DeleteTaskDialogProps = {
   open: boolean

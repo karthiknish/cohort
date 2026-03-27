@@ -4,13 +4,15 @@
 
 import { googleAdsSearch, normalizeCost, DEFAULT_RETRY_CONFIG } from './client'
 import {
+  GOOGLE_API_BASE,
+} from './types'
+import type {
   GoogleAdsOptions,
   GoogleAdsResult,
   NormalizedMetric,
   CustomerSummary,
   GoogleAdAccount,
   GoogleAccessibleCustomersResponse,
-  GOOGLE_API_BASE,
 } from './types'
 
 // =============================================================================

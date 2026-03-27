@@ -5,7 +5,7 @@ import { Skeleton } from '@/shared/ui/skeleton'
 import { Badge } from '@/shared/ui/badge'
 import { cn, formatRelativeTime } from '@/lib/utils'
 import { Clock, Edit, Trash2, UserPlus, CheckCircle, MessageCircle, Timer } from 'lucide-react'
-import { TaskActivity } from '@/types/tasks'
+import type { TaskActivity } from '@/types/tasks'
 
 type TaskActivityLogProps = {
   activities: TaskActivity[]
@@ -70,10 +70,12 @@ export function TaskActivityLog({ activities, loading, className, maxItems = 20 
   const displayedActivities = activities.slice(0, maxItems)
 
   if (loading) {
+    const loadingSlots = ['loading-1', 'loading-2', 'loading-3']
+
     return (
       <div className={cn('space-y-4', className)}>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex gap-3">
+        {loadingSlots.map((slot) => (
+          <div key={slot} className="flex gap-3">
             <Skeleton className="h-8 w-8 rounded-full shrink-0" />
             <div className="flex-1 space-y-1">
               <Skeleton className="h-4 w-48" />

@@ -15,6 +15,19 @@ export interface PullToRefreshState {
 
 const DEFAULT_THRESHOLD = 80
 
+function getPullToRefreshContainerStyle(pullDistance: number, threshold: number, progress: number) {
+  return {
+    height: Math.min(pullDistance, threshold),
+    opacity: Math.min(progress * 2, 1),
+  }
+}
+
+function getPullToRefreshSpinnerStyle(progress: number) {
+  return {
+    transform: `rotate(${progress * 360}deg)`,
+  }
+}
+
 export function usePullToRefresh(
   ref: React.RefObject<HTMLElement | null>,
   options: PullToRefreshOptions
@@ -117,16 +130,11 @@ export function PullToRefreshIndicator({ state, threshold = DEFAULT_THRESHOLD }:
   return (
     <div
       className="absolute top-0 left-0 right-0 flex justify-center items-center overflow-hidden pointer-events-none z-10"
-      style={{
-        height: Math.min(pullDistance, threshold),
-        opacity: Math.min(progress * 2, 1),
-      }}
+      style={getPullToRefreshContainerStyle(pullDistance, threshold, progress)}
     >
       <div
         className={`transition-transform duration-200 ${isRefreshing ? 'animate-spin' : ''}`}
-        style={{
-          transform: `rotate(${progress * 360}deg)`,
-        }}
+        style={getPullToRefreshSpinnerStyle(progress)}
       >
         <svg
           className="w-6 h-6 text-primary"

@@ -4,6 +4,7 @@
 
 'use client'
 
+import { useCallback } from 'react'
 import { Label } from '@/shared/ui/label'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -12,6 +13,21 @@ import { ExternalLink, Globe, MessageCircle } from 'lucide-react'
 import { DESTINATION_TYPES, ObjectiveComponentProps } from './types'
 
 export function TrafficObjectiveSection({ formData, onChange, disabled }: ObjectiveComponentProps) {
+  const handleDestinationTypeChange = useCallback(
+    (value: string) => onChange({ destinationType: value as 'WEBSITE' | 'APP' | 'MESSENGER' }),
+    [onChange]
+  )
+
+  const handleDestinationUrlChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onChange({ destinationUrl: event.target.value }),
+    [onChange]
+  )
+
+  const handleOptimizationGoalChange = useCallback(
+    (value: string) => onChange({ optimizationGoal: value }),
+    [onChange]
+  )
+
   return (
     <div className="space-y-6">
       {/* Destination Configuration */}
@@ -31,9 +47,7 @@ export function TrafficObjectiveSection({ formData, onChange, disabled }: Object
             <Label htmlFor="destination-type">Destination Type</Label>
             <Select
               value={formData.destinationType}
-              onValueChange={(value) =>
-                onChange({ destinationType: value as 'WEBSITE' | 'APP' | 'MESSENGER' })
-              }
+              onValueChange={handleDestinationTypeChange}
               disabled={disabled}
             >
               <SelectTrigger id="destination-type">
@@ -71,7 +85,7 @@ export function TrafficObjectiveSection({ formData, onChange, disabled }: Object
                     : 'https://example.com/landing-page'
                 }
                 value={formData.destinationUrl || ''}
-                onChange={(e) => onChange({ destinationUrl: e.target.value })}
+                onChange={handleDestinationUrlChange}
                 disabled={disabled}
               />
               <p className="text-xs text-muted-foreground">
@@ -97,7 +111,7 @@ export function TrafficObjectiveSection({ formData, onChange, disabled }: Object
             <Label htmlFor="optimization-goal">Optimization Goal</Label>
             <Select
               value={formData.optimizationGoal}
-              onValueChange={(value) => onChange({ optimizationGoal: value })}
+              onValueChange={handleOptimizationGoalChange}
               disabled={disabled}
             >
               <SelectTrigger id="optimization-goal">

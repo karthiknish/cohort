@@ -44,6 +44,10 @@ import {
   useAlgorithmicInsights,
 } from './hooks'
 
+const ADS_SKELETON_200 = <Skeleton className="h-[200px] w-full" />
+const ADS_SKELETON_250 = <Skeleton className="h-[250px] w-full" />
+const ADS_SKELETON_300 = <Skeleton className="h-[300px] w-full" />
+
 /**
  * Ads Hub Page
  * 
@@ -175,6 +179,30 @@ export default function AdsPage() {
     document.getElementById('ads-setup-alerts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
 
+  const handleInitializeMeta = useCallback(() => {
+    void initializeMetaIntegration(undefined, selectedMetaAccountId || null)
+  }, [initializeMetaIntegration, selectedMetaAccountId])
+
+  const handleReloadMetaAccountOptions = useCallback(() => {
+    void reloadMetaAccountOptions()
+  }, [reloadMetaAccountOptions])
+
+  const handleInitializeTikTok = useCallback(() => {
+    void initializeTikTokIntegration()
+  }, [initializeTikTokIntegration])
+
+  const handleReloadGoogleAccountOptions = useCallback(() => {
+    void reloadGoogleAccountOptions()
+  }, [reloadGoogleAccountOptions])
+
+  const handleInitializeGoogle = useCallback(() => {
+    void initializeGoogleIntegration(undefined, selectedGoogleAccountId || null)
+  }, [initializeGoogleIntegration, selectedGoogleAccountId])
+
+  const handleLoadMoreMetrics = useCallback(() => {
+    void handleLoadMore()
+  }, [handleLoadMore])
+
   const openGoogleCampaignSetup = useCallback(() => {
     setGoogleSetupDialogOpen(true)
 
@@ -243,16 +271,16 @@ export default function AdsPage() {
                 metaSetupMessage={metaSetupMessage}
                 metaNeedsAccountSelection={metaNeedsAccountSelection}
                 initializingMeta={initializingMeta}
-                onInitializeMeta={() => void initializeMetaIntegration(undefined, selectedMetaAccountId || null)}
+                onInitializeMeta={handleInitializeMeta}
                 metaAccountOptions={metaAccountOptions}
                 selectedMetaAccountId={selectedMetaAccountId}
                 onMetaAccountSelectionChange={setSelectedMetaAccountId}
                 loadingMetaAccountOptions={loadingMetaAccountOptions}
-                onReloadMetaAccountOptions={() => void reloadMetaAccountOptions()}
+                onReloadMetaAccountOptions={handleReloadMetaAccountOptions}
                 tiktokSetupMessage={tiktokSetupMessage}
                 tiktokNeedsAccountSelection={tiktokNeedsAccountSelection}
                 initializingTikTok={initializingTikTok}
-                onInitializeTikTok={() => void initializeTikTokIntegration()}
+                onInitializeTikTok={handleInitializeTikTok}
               />
             </div>
           </FadeIn>
@@ -285,8 +313,8 @@ export default function AdsPage() {
             onAccountSelectionChange={setSelectedGoogleAccountId}
             loadingAccounts={loadingGoogleAccountOptions}
             initializing={initializingGoogle}
-            onReloadAccounts={() => void reloadGoogleAccountOptions()}
-            onInitialize={() => void initializeGoogleIntegration(undefined, selectedGoogleAccountId || null)}
+            onReloadAccounts={handleReloadGoogleAccountOptions}
+            onInitialize={handleInitializeGoogle}
           />
 
           {/* Campaign Management Cards for each connected provider */}
@@ -296,7 +324,7 @@ export default function AdsPage() {
                 <h2 className="text-lg font-semibold">Campaign Management</h2>
                 <DateRangePicker value={dateRange} onChange={setDateRange} />
               </div>
-              <Suspense fallback={<Skeleton className="h-[200px] w-full" />}>
+              <Suspense fallback={ADS_SKELETON_200}>
                 <div className="mt-4 grid gap-4">
                   {adPlatforms
                     .filter((p) => connectedProviders[p.id])
@@ -377,7 +405,7 @@ export default function AdsPage() {
       </FadeIn>
 
       <FadeIn>
-        <Suspense fallback={<Skeleton className="h-[200px] w-full" />}>
+        <Suspense fallback={ADS_SKELETON_200}>
           <AlgorithmicInsightsCard
             insights={algorithmicInsights.insights}
             globalEfficiencyScore={algorithmicInsights.globalEfficiencyScore}
@@ -388,7 +416,7 @@ export default function AdsPage() {
       </FadeIn>
 
       <FadeIn>
-        <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+        <Suspense fallback={ADS_SKELETON_300}>
           <InsightsChartsCard
             analysis={algorithmicInsights.analysis}
             currency={activeCurrency}
@@ -398,7 +426,7 @@ export default function AdsPage() {
       </FadeIn>
 
       <FadeIn>
-        <Suspense fallback={<Skeleton className="h-[250px] w-full" />}>
+        <Suspense fallback={ADS_SKELETON_250}>
           <ComparisonViewCard
             periodComparison={periodComparison}
             providerComparison={providerComparison}
@@ -409,7 +437,7 @@ export default function AdsPage() {
       </FadeIn>
 
       <FadeIn>
-        <Suspense fallback={<Skeleton className="h-[200px] w-full" />}>
+        <Suspense fallback={ADS_SKELETON_200}>
           <CustomInsightsCard
             derivedMetrics={hasMetricData ? derivedMetrics : null}
             processedMetrics={processedMetrics}
@@ -420,7 +448,7 @@ export default function AdsPage() {
       </FadeIn>
 
       <FadeIn>
-        <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+        <Suspense fallback={ADS_SKELETON_300}>
           <FormulaBuilderCard
             formulaEditor={formulaEditor}
             metricTotals={hasMetricData ? derivedMetrics.totals : undefined}
@@ -441,7 +469,7 @@ export default function AdsPage() {
           loadingMore={loadingMore}
           loadMoreError={suppressMetricsErrors ? null : loadMoreError}
           onRefresh={handleManualRefresh}
-          onLoadMore={() => void handleLoadMore()}
+          onLoadMore={handleLoadMoreMetrics}
         />
       </FadeIn>
     </div>

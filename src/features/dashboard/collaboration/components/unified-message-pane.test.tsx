@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest'
 
 import { UnifiedMessagePane } from './unified-message-pane'
 
+const handleLoadMore = () => {}
+const handleMessageInputChange = () => {}
+const handleSendMessage = async () => {}
+const handleToggleReaction = async () => {}
+
 describe('UnifiedMessagePane', () => {
   it('renders the select-conversation empty state without a header', () => {
     const markup = renderToStaticMarkup(
@@ -13,12 +18,12 @@ describe('UnifiedMessagePane', () => {
         isLoading={false}
         isLoadingMore={false}
         hasMore={false}
-        onLoadMore={() => {}}
+        onLoadMore={handleLoadMore}
         messageInput=""
-        onMessageInputChange={() => {}}
-        onSendMessage={async () => {}}
+        onMessageInputChange={handleMessageInputChange}
+        onSendMessage={handleSendMessage}
         isSending={false}
-        onToggleReaction={async () => {}}
+        onToggleReaction={handleToggleReaction}
       />,
     )
 

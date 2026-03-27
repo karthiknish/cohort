@@ -119,6 +119,14 @@ function useCrossChannelSearchController({
     clearFilters()
   }, [clearFilters])
 
+  const handleToggleAttachment = useCallback(() => {
+    setHasAttachment((current) => !current)
+  }, [])
+
+  const handleToggleLink = useCallback(() => {
+    setHasLink((current) => !current)
+  }, [])
+
   const handleResultClick = useCallback(
     (result: SearchResult) => {
       onResultClick?.(result.message.id, result.channel.id)
@@ -146,6 +154,8 @@ function useCrossChannelSearchController({
     setSelectedChannelType,
     setHasAttachment,
     setHasLink,
+    handleToggleAttachment,
+    handleToggleLink,
   }
 }
 
@@ -167,9 +177,9 @@ function CrossChannelSearchBar({
 }: {
   query: string
   isSearching: boolean
-  onQueryChange: (value: string) => void
+  onQueryChange: React.ChangeEventHandler<HTMLInputElement>
   onKeyDown: (event: React.KeyboardEvent) => void
-  onSearch: () => void
+  onSearch: () => void | Promise<void>
 }) {
   return (
     <div className="flex gap-2">
@@ -178,7 +188,7 @@ function CrossChannelSearchBar({
         <Input
           placeholder="Search messages…"
           value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
+          onChange={onQueryChange}
           onKeyDown={onKeyDown}
           className="pl-9"
         />
@@ -209,16 +219,16 @@ function CrossChannelSearchFilters({
     <div className="flex flex-wrap gap-2">
       <div className="flex gap-1">
         {(['all', 'team', 'client', 'project'] as const).map((type) => (
-          <Button
+          <CrossChannelSearchFilterButton
             key={type}
-            type="button"
             variant={filterState.selectedChannelType === type ? 'default' : 'outline'}
             size="sm"
-            onClick={() => onChannelTypeChange(type)}
+            onSelect={onChannelTypeChange}
+            value={type}
             className="capitalize"
           >
             {type}
-          </Button>
+          </CrossChannelSearchFilterButton>
         ))}
       </div>
 
@@ -256,6 +266,34 @@ function CrossChannelSearchFilters({
         </Button>
       ) : null}
     </div>
+  )
+}
+
+interface CrossChannelSearchFilterButtonProps {
+  variant: 'default' | 'outline'
+  size: 'sm'
+  onSelect: (value: CollaborationChannelType | 'all') => void
+  value: CollaborationChannelType | 'all'
+  className?: string
+  children: string
+}
+
+function CrossChannelSearchFilterButton({
+  variant,
+  size,
+  onSelect,
+  value,
+  className,
+  children,
+}: CrossChannelSearchFilterButtonProps) {
+  const handleClick = useCallback(() => {
+    onSelect(value)
+  }, [onSelect, value])
+
+  return (
+    <Button type="button" variant={variant} size={size} onClick={handleClick} className={className}>
+      {children}
+    </Button>
   )
 }
 
@@ -297,7 +335,7 @@ function CrossChannelSearchResults({
           <SearchResultItem
             key={`${result.channel.id}-${result.message.id}`}
             result={result}
-            onClick={() => onResultClick(result)}
+            onSelect={onResultClick}
           />
         ))}
       </div>
@@ -337,9 +375,17 @@ export function CrossChannelSearch({
     handleResultClick,
     clearSearch,
     setSelectedChannelType,
-    setHasAttachment,
-    setHasLink,
+    handleToggleAttachment,
+    handleToggleLink,
   } = useCrossChannelSearchController({ onSearch, onResultClick })
+
+  const handleQueryChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(event.target.value)
+  }, [setQuery])
+
+  const handleSearchClick = useCallback(() => {
+    void handleSearch()
+  }, [handleSearch])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -357,19 +403,17 @@ export function CrossChannelSearch({
         <CrossChannelSearchBar
           query={query}
           isSearching={isSearching}
-          onQueryChange={setQuery}
+          onQueryChange={handleQueryChange}
           onKeyDown={handleKeyDown}
-          onSearch={() => {
-            void handleSearch()
-          }}
+          onSearch={handleSearchClick}
         />
 
         <CrossChannelSearchFilters
           filterState={filterState}
           hasActiveFilters={hasActiveFilters}
           onChannelTypeChange={setSelectedChannelType}
-          onToggleAttachment={() => setHasAttachment((current) => !current)}
-          onToggleLink={() => setHasLink((current) => !current)}
+          onToggleAttachment={handleToggleAttachment}
+          onToggleLink={handleToggleLink}
           onClear={clearSearch}
         />
 
@@ -388,16 +432,19 @@ export function CrossChannelSearch({
 
 interface SearchResultItemProps {
   result: SearchResult
-  onClick: () => void
+  onSelect: (result: SearchResult) => void
 }
 
-function SearchResultItem({ result, onClick }: SearchResultItemProps) {
+function SearchResultItem({ result, onSelect }: SearchResultItemProps) {
   const { message, channel, highlights } = result
+  const handleClick = useCallback(() => {
+    onSelect(result)
+  }, [onSelect, result])
 
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={handleClick}
       className="w-full text-left p-3 hover:bg-muted/50 rounded-lg transition-colors group"
     >
       <div className="flex items-start gap-3">
@@ -480,6 +527,14 @@ export function QuickSearchInput({
 }) {
   const [value, setValue] = useState('')
 
+  const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(event.target.value)
+  }, [])
+
+  const handleClear = useCallback(() => {
+    setValue('')
+  }, [])
+
   const handleSubmit = useCallback(
     (e: { preventDefault: () => void }) => {
       e.preventDefault()
@@ -496,13 +551,13 @@ export function QuickSearchInput({
       <Input
         placeholder={placeholder}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={handleChange}
         className="pl-9"
       />
       {value && (
         <button
           type="button"
-          onClick={() => setValue('')}
+          onClick={handleClear}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
         >
           <X className="h-4 w-4" />

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
 import { useAction, useConvex, useMutation } from 'convex/react'
 import { api } from '/_generated/api'
 import { LoaderCircle, Plus, Sparkles, X } from 'lucide-react'
@@ -42,6 +43,43 @@ import {
   FEATURE_PRIORITIES,
   FEATURE_PRIORITY_LABELS,
 } from '@/types/features'
+
+function FeatureReferenceRow({
+  loading,
+  onRemove,
+  reference,
+  index,
+}: {
+  loading: boolean
+  onRemove: (index: number) => void
+  reference: FeatureReference
+  index: number
+}) {
+  const handleRemove = useCallback(() => onRemove(index), [onRemove, index])
+
+  return (
+    <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
+      <a
+        href={reference.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex-1 truncate text-sm text-primary hover:underline"
+      >
+        {reference.label}
+      </a>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0"
+        onClick={handleRemove}
+        disabled={loading}
+      >
+        <X className="h-3 w-3" />
+      </Button>
+    </div>
+  )
+}
 
 interface FeatureFormDialogProps {
   open: boolean
@@ -227,8 +265,44 @@ export function FeatureFormDialog({
     setReferences((prev) => prev.filter((_, i) => i !== index))
   }, [])
 
+  const handleTitleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setTitle(event.target.value)
+  }, [])
+
+  const handleDescriptionChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
+    setDescription(event.target.value)
+  }, [])
+
+  const handleStatusChange = useCallback((value: string) => {
+    setStatus(value as FeatureStatus)
+  }, [])
+
+  const handlePriorityChange = useCallback((value: string) => {
+    setPriority(value as FeaturePriority)
+  }, [])
+
+  const handleNewRefUrlChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setNewRefUrl(event.target.value)
+  }, [])
+
+  const handleNewRefLabelChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setNewRefLabel(event.target.value)
+  }, [])
+
+  const handleGenerateTitleClick = useCallback(() => {
+    handleGenerateAI('title')
+  }, [handleGenerateAI])
+
+  const handleGenerateDescriptionClick = useCallback(() => {
+    handleGenerateAI('description')
+  }, [handleGenerateAI])
+
+  const handleClose = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
+
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    (e: FormEvent) => {
       e.preventDefault()
 
       if (!title.trim()) {
@@ -268,7 +342,6 @@ export function FeatureFormDialog({
     },
     [title, description, status, priority, imageUrl, references, onSubmit, onOpenChange, toast]
   )
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -291,7 +364,7 @@ export function FeatureFormDialog({
                 variant="ghost"
                 size="sm"
                 className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary"
-                onClick={() => handleGenerateAI('title')}
+                onClick={handleGenerateTitleClick}
                 disabled={isSubmitting || isGeneratingTitle}
               >
                 {isGeneratingTitle ? (
@@ -305,7 +378,7 @@ export function FeatureFormDialog({
             <Input
               id="feature-title"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={handleTitleChange}
               placeholder="e.g., User Authentication System"
               disabled={isSubmitting || isGeneratingTitle}
             />
@@ -320,7 +393,7 @@ export function FeatureFormDialog({
                 variant="ghost"
                 size="sm"
                 className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-primary"
-                onClick={() => handleGenerateAI('description')}
+                onClick={handleGenerateDescriptionClick}
                 disabled={isSubmitting || isGeneratingDescription}
               >
                 {isGeneratingDescription ? (
@@ -334,7 +407,7 @@ export function FeatureFormDialog({
             <Textarea
               id="feature-description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={handleDescriptionChange}
               placeholder="Describe what this feature should accomplish…"
               rows={3}
               disabled={isSubmitting || isGeneratingDescription}
@@ -345,7 +418,7 @@ export function FeatureFormDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="feature-status">Status</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as FeatureStatus)} disabled={isSubmitting}>
+              <Select value={status} onValueChange={handleStatusChange} disabled={isSubmitting}>
                 <SelectTrigger id="feature-status">
                   <SelectValue />
                 </SelectTrigger>
@@ -361,7 +434,7 @@ export function FeatureFormDialog({
 
             <div className="space-y-2">
               <Label htmlFor="feature-priority">Priority</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as FeaturePriority)} disabled={isSubmitting}>
+              <Select value={priority} onValueChange={handlePriorityChange} disabled={isSubmitting}>
                 <SelectTrigger id="feature-priority">
                   <SelectValue />
                 </SelectTrigger>
@@ -398,30 +471,14 @@ export function FeatureFormDialog({
             {/* Existing References */}
             {references.length > 0 && (
               <div className="space-y-2">
-                  {references.map((ref, index) => (
-                  <div
-                      key={`${ref.url}-${ref.label}`}
-                    className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2"
-                  >
-                    <a
-                      href={ref.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 truncate text-sm text-primary hover:underline"
-                    >
-                      {ref.label}
-                    </a>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 shrink-0"
-                      onClick={() => handleRemoveReference(index)}
-                      disabled={isSubmitting}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
+                {references.map((reference, index) => (
+                  <FeatureReferenceRow
+                    key={`${reference.url}-${reference.label}`}
+                    loading={isSubmitting}
+                    onRemove={handleRemoveReference}
+                    reference={reference}
+                    index={index}
+                  />
                 ))}
               </div>
             )}
@@ -431,14 +488,14 @@ export function FeatureFormDialog({
               <Input
                 placeholder="https://example.com"
                 value={newRefUrl}
-                onChange={(e) => setNewRefUrl(e.target.value)}
+                onChange={handleNewRefUrlChange}
                 disabled={isSubmitting}
                 className="flex-1"
               />
               <Input
                 placeholder="Label (optional)"
                 value={newRefLabel}
-                onChange={(e) => setNewRefLabel(e.target.value)}
+                onChange={handleNewRefLabelChange}
                 disabled={isSubmitting}
                 className="w-32"
               />
@@ -458,7 +515,7 @@ export function FeatureFormDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
               disabled={isSubmitting}
             >
               Cancel

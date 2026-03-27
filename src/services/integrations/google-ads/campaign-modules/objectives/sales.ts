@@ -2,7 +2,7 @@
 // SALES OBJECTIVE - Drive online sales
 // =============================================================================
 
-import { GoogleCampaignObjectiveConfig } from '../types'
+import type { GoogleCampaignObjectiveConfig } from '../types'
 
 export const GOOGLE_SALES_OBJECTIVE_CONFIG: GoogleCampaignObjectiveConfig = {
   objective: 'SALES',

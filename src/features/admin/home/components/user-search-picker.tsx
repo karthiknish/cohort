@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState, useCallback } from 'react'
 import { Check, ChevronsUpDown } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -42,6 +42,16 @@ export function UserSearchPicker({ id, value, onChange, options, placeholder, se
   )
   const selectedLabel = availableOptions.find((option) => normalizeName(option.name) === selectedValue)?.name ?? value
 
+  const handleSelectOption = useCallback((optionName: string) => {
+    onChange(optionName)
+    setOpen(false)
+  }, [onChange])
+
+  const selectHandlers = useMemo(
+    () => Object.fromEntries(availableOptions.map((option) => [option.id, () => handleSelectOption(option.name)])) as Record<string, () => void>,
+    [availableOptions, handleSelectOption]
+  )
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -73,10 +83,7 @@ export function UserSearchPicker({ id, value, onChange, options, placeholder, se
                   <CommandItem
                     key={option.id}
                     value={`${option.name} ${option.email ?? ''}`}
-                    onSelect={() => {
-                      onChange(option.name)
-                      setOpen(false)
-                    }}
+                    onSelect={selectHandlers[option.id]}
                   >
                     <Check className={cn('mr-2 h-4 w-4', isSelected ? 'opacity-100' : 'opacity-0')} />
                     <div className="flex min-w-0 flex-col">

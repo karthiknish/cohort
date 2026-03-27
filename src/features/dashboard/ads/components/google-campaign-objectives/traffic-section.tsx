@@ -4,15 +4,29 @@
 
 'use client'
 
+import { useCallback, type ChangeEvent } from 'react'
 import { Label } from '@/shared/ui/label'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { ExternalLink, Link2 } from 'lucide-react'
-import { GoogleObjectiveComponentProps, GOOGLE_BIDDING_STRATEGIES } from './types'
+import type { GoogleObjectiveComponentProps } from './types'
+import { GOOGLE_BIDDING_STRATEGIES } from './types'
 
 export function GoogleTrafficSection({ formData, onChange, disabled }: GoogleObjectiveComponentProps) {
   const biddingStrategies = GOOGLE_BIDDING_STRATEGIES['WEBSITE_TRAFFIC'] || []
+
+  const handleBiddingStrategyChange = useCallback((value: string) => {
+    onChange({ biddingStrategyType: value })
+  }, [onChange])
+
+  const handleLandingPageChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    onChange({ landingPageUrl: event.target.value })
+  }, [onChange])
+
+  const handleTrackingTemplateChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    onChange({ trackingTemplate: event.target.value })
+  }, [onChange])
 
   return (
     <div className="space-y-6">
@@ -32,7 +46,7 @@ export function GoogleTrafficSection({ formData, onChange, disabled }: GoogleObj
             <Label htmlFor="bidding-strategy">Bidding Strategy</Label>
             <Select
               value={formData.biddingStrategyType}
-              onValueChange={(value) => onChange({ biddingStrategyType: value })}
+              onValueChange={handleBiddingStrategyChange}
               disabled={disabled}
             >
               <SelectTrigger id="bidding-strategy">
@@ -72,7 +86,7 @@ export function GoogleTrafficSection({ formData, onChange, disabled }: GoogleObj
               type="url"
               placeholder="https://example.com/landing-page"
               value={formData.landingPageUrl || ''}
-              onChange={(e) => onChange({ landingPageUrl: e.target.value })}
+              onChange={handleLandingPageChange}
               disabled={disabled}
             />
             <p className="text-xs text-muted-foreground">
@@ -86,7 +100,7 @@ export function GoogleTrafficSection({ formData, onChange, disabled }: GoogleObj
               id="tracking-template"
               placeholder="{lpurl}?utm_source=google&utm_campaign={campaignid}"
               value={formData.trackingTemplate || ''}
-              onChange={(e) => onChange({ trackingTemplate: e.target.value })}
+              onChange={handleTrackingTemplateChange}
               disabled={disabled}
             />
             <p className="text-xs text-muted-foreground">

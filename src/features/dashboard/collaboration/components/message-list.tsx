@@ -190,16 +190,28 @@ export function MessageList({
   const effectiveRenderEditForm = renderEditForm ?? renderContext?.renderEditForm
   const effectiveRenderDeletedInfo = renderDeletedInfo ?? renderContext?.renderDeletedInfo
   const effectiveRenderMessageWrapper = renderMessageWrapper ?? renderContext?.renderMessageWrapper
-  const renderers: MessageListRenderers = {
-    renderMessageActions: effectiveRenderMessageActions,
-    renderMessageAttachments: effectiveRenderMessageAttachments,
-    renderMessageContent: effectiveRenderMessageContent,
-    renderMessageExtras: effectiveRenderMessageExtras,
-    renderMessageFooter: effectiveRenderMessageFooter,
-    renderThreadSection: effectiveRenderThreadSection,
-    renderEditForm: effectiveRenderEditForm,
-    renderDeletedInfo: effectiveRenderDeletedInfo,
-  }
+  const renderers = useMemo<MessageListRenderers>(
+    () => ({
+      renderMessageActions: effectiveRenderMessageActions,
+      renderMessageAttachments: effectiveRenderMessageAttachments,
+      renderMessageContent: effectiveRenderMessageContent,
+      renderMessageExtras: effectiveRenderMessageExtras,
+      renderMessageFooter: effectiveRenderMessageFooter,
+      renderThreadSection: effectiveRenderThreadSection,
+      renderEditForm: effectiveRenderEditForm,
+      renderDeletedInfo: effectiveRenderDeletedInfo,
+    }),
+    [
+      effectiveRenderDeletedInfo,
+      effectiveRenderEditForm,
+      effectiveRenderMessageActions,
+      effectiveRenderMessageAttachments,
+      effectiveRenderMessageContent,
+      effectiveRenderMessageExtras,
+      effectiveRenderMessageFooter,
+      effectiveRenderThreadSection,
+    ]
+  )
 
   const requestLoadOlder = useCallback(() => {
     const container = scrollRef.current

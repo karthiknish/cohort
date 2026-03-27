@@ -46,6 +46,9 @@ const baseFormState = {
   },
 } as const
 
+const companyValidationErrors = { 'company.name': 'Company name is required.' }
+const emptyValidationErrors = {}
+
 describe('ProposalStepContent', () => {
   it('renders the company step through the thin dispatcher', () => {
     const markup = renderToStaticMarkup(
@@ -53,7 +56,7 @@ describe('ProposalStepContent', () => {
         stepId="company"
         formState={baseFormState as never}
         summary={baseFormState as never}
-        validationErrors={{ 'company.name': 'Company name is required.' }}
+        validationErrors={companyValidationErrors}
         onUpdateField={vi.fn()}
         onToggleArrayValue={vi.fn()}
         onChangeSocialHandle={vi.fn()}
@@ -71,7 +74,7 @@ describe('ProposalStepContent', () => {
         stepId="value"
         formState={baseFormState as never}
         summary={baseFormState as never}
-        validationErrors={{}}
+        validationErrors={emptyValidationErrors}
         onUpdateField={vi.fn()}
         onToggleArrayValue={vi.fn()}
         onChangeSocialHandle={vi.fn()}

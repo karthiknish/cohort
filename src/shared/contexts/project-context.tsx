@@ -81,13 +81,16 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     router.push(`${pathname}?${newParams.toString()}`)
   }, [searchParams, router, pathname])
 
-  const value: ProjectContextValue = {
-    selectedProjectId,
-    selectedProject,
-    selectProject,
-    clearProject,
-    isFromUrl,
-  }
+  const value = useMemo<ProjectContextValue>(
+    () => ({
+      selectedProjectId,
+      selectedProject,
+      selectProject,
+      clearProject,
+      isFromUrl,
+    }),
+    [clearProject, isFromUrl, selectProject, selectedProject, selectedProjectId],
+  )
 
   return (
     <ProjectContext.Provider value={value}>

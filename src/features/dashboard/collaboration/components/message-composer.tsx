@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import type { ChangeEvent, RefObject, ClipboardEvent } from 'react'
 import { FileText, Image as ImageIcon, LoaderCircle, Reply, Send, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
@@ -8,6 +9,52 @@ import type { CollaborationMessage } from '@/types/collaboration'
 import type { Channel } from '../types'
 import type { PendingAttachment } from '../hooks/types'
 import { RichComposer } from './rich-composer'
+
+function PendingAttachmentRow({
+  attachment,
+  disabled,
+  onRemove,
+}: {
+  attachment: PendingAttachment
+  disabled: boolean
+  onRemove: (attachmentId: string) => void
+}) {
+  const isImageType = attachment.mimeType.startsWith('image/')
+
+  const handleRemove = useCallback(() => {
+    onRemove(attachment.id)
+  }, [attachment.id, onRemove])
+
+  return (
+    <div
+      className="flex items-center justify-between gap-3 rounded-md border border-muted/50 bg-background p-2 text-sm animate-in fade-in-50 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
+      key={attachment.id}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        {isImageType ? (
+          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <FileText className="h-4 w-4 text-muted-foreground" />
+        )}
+        <span className="truncate" title={attachment.name}>
+          {attachment.name}
+        </span>
+        <span className="text-xs text-muted-foreground">{attachment.sizeLabel}</span>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={handleRemove}
+        disabled={disabled}
+        className="h-7 w-7"
+      >
+        <X className="h-4 w-4" />
+        <span className="sr-only">Remove {attachment.name}</span>
+      </Button>
+    </div>
+  )
+}
 
 export interface PendingAttachmentsListProps {
   attachments: PendingAttachment[]
@@ -35,38 +82,14 @@ export function PendingAttachmentsList({
         )}
       </div>
       <div className="space-y-2">
-        {attachments.map((attachment) => {
-          const isImageType = attachment.mimeType.startsWith('image/')
-          return (
-            <div
-              key={attachment.id}
-              className="flex items-center justify-between gap-3 rounded-md border border-muted/50 bg-background p-2 text-sm animate-in fade-in-50 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                {isImageType ? (
-                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                )}
-                <span className="truncate" title={attachment.name}>
-                  {attachment.name}
-                </span>
-                <span className="text-xs text-muted-foreground">{attachment.sizeLabel}</span>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => onRemove(attachment.id)}
-                disabled={disabled}
-                className="h-7 w-7"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Remove {attachment.name}</span>
-              </Button>
-            </div>
-          )
-        })}
+        {attachments.map((attachment) => (
+          <PendingAttachmentRow
+            key={attachment.id}
+            attachment={attachment}
+            disabled={disabled}
+            onRemove={onRemove}
+          />
+        ))}
       </div>
     </div>
   )
@@ -153,6 +176,10 @@ export function MessageComposer({
   onComposerDragOver,
   onComposerPaste,
 }: MessageComposerProps) {
+  const handleAttachClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [fileInputRef])
+
   return (
     <div className="border-t border-muted/40 bg-background p-4">
       <div className="space-y-3">
@@ -179,7 +206,7 @@ export function MessageComposer({
               onDragOver={onComposerDragOver}
               onPaste={onComposerPaste}
               participants={channelParticipants}
-              onAttachClick={() => fileInputRef.current?.click()}
+              onAttachClick={handleAttachClick}
               hasAttachments={pendingAttachments.length > 0}
             />
           </div>

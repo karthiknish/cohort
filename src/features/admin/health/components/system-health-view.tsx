@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
     Activity,
     AlertCircle,
@@ -75,6 +75,164 @@ async function fetchHealthData(): Promise<HealthData> {
     throw new Error('Invalid health response format')
 }
 
+function formatUptime(seconds: number) {
+    const days = Math.floor(seconds / 86400)
+    const hours = Math.floor((seconds % 86400) / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+
+    if (days > 0) {
+        return `${days}d ${hours}h ${minutes}m`
+    }
+    if (hours > 0) {
+        return `${hours}h ${minutes}m`
+    }
+    return `${minutes}m`
+}
+
+function getStatusIcon(status: string) {
+    switch (status) {
+        case 'ok':
+        case 'healthy':
+            return <CheckCircle2 className="h-5 w-5 text-success" />
+        case 'warning':
+        case 'degraded':
+            return <AlertCircle className="h-5 w-5 text-warning" />
+        default:
+            return <XCircle className="h-5 w-5 text-destructive" />
+    }
+}
+
+function getStatusBadgeColor(status: string) {
+    switch (status) {
+        case 'ok':
+        case 'healthy':
+            return 'bg-success/10 text-success'
+        case 'warning':
+        case 'degraded':
+            return 'bg-warning/10 text-warning'
+        default:
+            return 'bg-destructive/10 text-destructive'
+    }
+}
+
+function getServiceIcon(name: string) {
+    const key = name.toLowerCase()
+    switch (key) {
+        case 'convex':
+            return <Database className="h-4 w-4" />
+        case 'betterauth':
+            return <Server className="h-4 w-4" />
+        case 'gemini':
+            return <Zap className="h-4 w-4" />
+        case 'brevo':
+            return <Mail className="h-4 w-4" />
+        case 'posthog':
+            return <PieChart className="h-4 w-4" />
+        case 'googleworkspace':
+            return <Activity className="h-4 w-4" />
+        case 'livekit':
+            return <Server className="h-4 w-4" />
+        case 'environment':
+            return <Settings className="h-4 w-4" />
+        default:
+            return <Globe className="h-4 w-4" />
+    }
+}
+
+function getServiceDescription(name: string, check: HealthCheck) {
+    const key = name.toLowerCase()
+    if (check.status === 'warning' && check.message) return check.message
+    return SERVICE_META[key]?.description ?? (check.status === 'ok' ? 'Connected' : 'Service issue')
+}
+
+interface ServiceHealthCardProps {
+    name: string
+    check: HealthCheck
+    isExpanded: boolean
+    onToggleExpand: (service: string) => void
+}
+
+function ServiceHealthCard({ name, check, isExpanded, onToggleExpand }: ServiceHealthCardProps) {
+    const serviceMeta = SERVICE_META[name.toLowerCase()]
+
+    const handleToggleExpand = useCallback(() => {
+        onToggleExpand(name)
+    }, [name, onToggleExpand])
+
+    const isWarning = check.status === 'warning'
+
+    return (
+        <Card className={cn(
+            'overflow-hidden transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] border-muted/60',
+            check.status === 'error' && 'border-destructive/30 bg-destructive/5',
+            isWarning && 'border-warning/20 bg-warning/10'
+        )}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <div className="flex items-center gap-3">
+                    <div className={cn(
+                        'rounded-lg p-2',
+                        check.status === 'ok'
+                            ? 'bg-success/10 text-success'
+                            : isWarning
+                                ? 'bg-warning/10 text-warning'
+                                : 'bg-destructive/10 text-destructive'
+                    )}>
+                        {getServiceIcon(name)}
+                    </div>
+                    <div>
+                        <CardTitle className="text-base">{serviceMeta?.label ?? name}</CardTitle>
+                        <CardDescription className="text-xs">
+                            {getServiceDescription(name, check)}
+                        </CardDescription>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    {check.responseTime !== undefined && (
+                        <Badge variant="outline" className="text-[10px] font-mono">
+                            {check.responseTime}ms
+                        </Badge>
+                    )}
+                    {getStatusIcon(check.status)}
+                </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+                {check.message && (
+                    <p className={cn(
+                        'mb-2 text-xs font-medium',
+                        check.status === 'error'
+                            ? 'text-destructive'
+                            : check.status === 'warning'
+                                ? 'text-warning'
+                                : 'text-muted-foreground'
+                    )}>
+                        {check.message}
+                    </p>
+                )}
+
+                {check.metadata && Object.keys(check.metadata).length > 0 && (
+                    <div className="mt-2 space-y-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-full justify-between px-2 text-[11px] hover:bg-muted"
+                            onClick={handleToggleExpand}
+                        >
+                            {isExpanded ? 'Hide Details' : 'Show Details'}
+                            {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        </Button>
+
+                        {isExpanded && (
+                            <div className="max-h-40 overflow-auto rounded-md bg-muted/40 p-2 text-[10px] font-mono">
+                                <pre>{JSON.stringify(check.metadata, null, 2)}</pre>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    )
+}
+
 export function SystemHealthView() {
     const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set())
 
@@ -85,84 +243,18 @@ export function SystemHealthView() {
         staleTime: 10000,
     })
 
-    const toggleExpand = (service: string) => {
+    const toggleExpand = useCallback((service: string) => {
         setExpandedServices(prev => {
             const next = new Set(prev)
             if (next.has(service)) next.delete(service)
             else next.add(service)
             return next
         })
-    }
+    }, [])
 
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'ok':
-            case 'healthy':
-                return <CheckCircle2 className="h-5 w-5 text-success" />
-            case 'warning':
-            case 'degraded':
-                return <AlertCircle className="h-5 w-5 text-warning" />
-            default:
-                return <XCircle className="h-5 w-5 text-destructive" />
-        }
-    }
-
-    const getStatusBadgeColor = (status: string) => {
-        switch (status) {
-            case 'ok':
-            case 'healthy':
-                return 'bg-success/10 text-success'
-            case 'warning':
-            case 'degraded':
-                return 'bg-warning/10 text-warning'
-            default:
-                return 'bg-destructive/10 text-destructive'
-        }
-    }
-
-    const getServiceIcon = (name: string) => {
-        const key = name.toLowerCase()
-        switch (key) {
-            case 'convex':
-                return <Database className="h-4 w-4" />
-            case 'betterauth':
-                return <Server className="h-4 w-4" />
-            case 'gemini':
-                return <Zap className="h-4 w-4" />
-            case 'brevo':
-                return <Mail className="h-4 w-4" />
-            case 'posthog':
-                return <PieChart className="h-4 w-4" />
-            case 'googleworkspace':
-                return <Activity className="h-4 w-4" />
-            case 'livekit':
-                return <Server className="h-4 w-4" />
-            case 'environment':
-                return <Settings className="h-4 w-4" />
-            default:
-                return <Globe className="h-4 w-4" />
-        }
-    }
-
-    const getServiceDescription = (name: string, check: HealthCheck) => {
-        const key = name.toLowerCase()
-        if (check.status === 'warning' && check.message) return check.message
-        return SERVICE_META[key]?.description ?? (check.status === 'ok' ? 'Connected' : 'Service issue')
-    }
-
-    const formatUptime = (seconds: number) => {
-        const days = Math.floor(seconds / 86400)
-        const hours = Math.floor((seconds % 86400) / 3600)
-        const minutes = Math.floor((seconds % 3600) / 60)
-
-        if (days > 0) {
-            return `${days}d ${hours}h ${minutes}m`
-        }
-        if (hours > 0) {
-            return `${hours}h ${minutes}m`
-        }
-        return `${minutes}m`
-    }
+    const handleRefetch = useCallback(() => {
+        void refetch()
+    }, [refetch])
 
     if (loading && !data) {
         return (
@@ -192,7 +284,7 @@ export function SystemHealthView() {
                     <AlertCircle className="mb-4 h-10 w-10 text-destructive" />
                     <h3 className="text-lg font-semibold text-destructive">Monitoring Offline</h3>
                     <p className="max-w-xs text-sm text-muted-foreground">{error instanceof Error ? error.message : 'Failed to fetch health status'}</p>
-                    <Button variant="outline" className="mt-4" onClick={() => void refetch()}>
+                    <Button variant="outline" className="mt-4" onClick={handleRefetch}>
                         Try Again
                     </Button>
                 </CardContent>
@@ -233,7 +325,7 @@ export function SystemHealthView() {
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => void refetch()}
+                    onClick={handleRefetch}
                     disabled={refreshing}
                 >
                     <RefreshCw className={cn("mr-2 h-4 w-4", refreshing && "animate-spin")} />
@@ -278,82 +370,15 @@ export function SystemHealthView() {
             <div>
                 <h3 className="mb-4 text-lg font-semibold">Service Health</h3>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {data && Object.entries(data.checks).map(([name, check]) => {
-                        const isExpanded = expandedServices.has(name)
-                        const isWarning = check.status === 'warning'
-                        const serviceMeta = SERVICE_META[name.toLowerCase()]
-
-                        return (
-                            <Card key={name} className={cn(
-                                "overflow-hidden transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] border-muted/60",
-                                check.status === 'error' && "border-destructive/30 bg-destructive/5",
-                                isWarning && "border-warning/20 bg-warning/10"
-                            )}>
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn(
-                                            "rounded-lg p-2",
-                                            check.status === 'ok'
-                                                ? "bg-success/10 text-success"
-                                                : isWarning
-                                                    ? "bg-warning/10 text-warning"
-                                                    : "bg-destructive/10 text-destructive"
-                                        )}>
-                                            {getServiceIcon(name)}
-                                        </div>
-                                        <div>
-                                            <CardTitle className="text-base">{serviceMeta?.label ?? name}</CardTitle>
-                                            <CardDescription className="text-xs">
-                                                {getServiceDescription(name, check)}
-                                            </CardDescription>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {check.responseTime !== undefined && (
-                                            <Badge variant="outline" className="text-[10px] font-mono">
-                                                {check.responseTime}ms
-                                            </Badge>
-                                        )}
-                                        {getStatusIcon(check.status)}
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="pt-0">
-                                    {check.message && (
-                                        <p className={cn(
-                                            "mb-2 text-xs font-medium",
-                                            check.status === 'error'
-                                                ? "text-destructive"
-                                                : check.status === 'warning'
-                                                    ? "text-warning"
-                                                    : "text-muted-foreground"
-                                        )}>
-                                            {check.message}
-                                        </p>
-                                    )}
-
-                                    {check.metadata && Object.keys(check.metadata).length > 0 && (
-                                        <div className="mt-2 space-y-2">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="w-full justify-between h-7 px-2 text-[11px] hover:bg-muted"
-                                                onClick={() => toggleExpand(name)}
-                                            >
-                                                {isExpanded ? 'Hide Details' : 'Show Details'}
-                                                {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                                            </Button>
-
-                                            {isExpanded && (
-                                                <div className="rounded-md bg-muted/40 p-2 text-[10px] font-mono overflow-auto max-h-40">
-                                                    <pre>{JSON.stringify(check.metadata, null, 2)}</pre>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )
-                    })}
+                    {data && Object.entries(data.checks).map(([name, check]) => (
+                        <ServiceHealthCard
+                            key={name}
+                            name={name}
+                            check={check}
+                            isExpanded={expandedServices.has(name)}
+                            onToggleExpand={toggleExpand}
+                        />
+                    ))}
                 </div>
             </div>
 

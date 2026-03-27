@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useCallback, useMemo, useState, type ChangeEvent } from 'react'
 import dynamic from 'next/dynamic'
 import { MapPin, X, Search, Loader2 } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
@@ -59,6 +59,11 @@ export function LocationMap({
   showSelectedList = false,
 }: LocationMapProps) {
   const [searchQuery, setSearchQuery] = useState('')
+  const mapContainerStyle = useMemo(() => ({ height }), [height])
+
+  const handleSearchQueryChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value)
+  }, [])
 
   // Use TanStack Query for geocoding search with built-in debouncing
   const { data: searchResults = EMPTY_GEOCODE_RESULTS, isFetching: searching } = useGeocodeSearch(searchQuery, {
@@ -69,7 +74,7 @@ export function LocationMap({
     return [...locations, ...selectedLocations]
   }, [locations, selectedLocations])
 
-  const handleResultSelect = (result: GeocodeSearchResult) => {
+  const handleResultSelect = useCallback((result: GeocodeSearchResult) => {
     const location: LocationMarker = {
       id: `loc-${result.place_id}`,
       name: result.display_name.split(',')[0] || result.display_name,
@@ -83,7 +88,20 @@ export function LocationMap({
     if (onLocationSelect) {
       onLocationSelect(location)
     }
-  }
+  }, [onLocationSelect])
+
+  const searchResultHandlers = useMemo(
+    () => Object.fromEntries(searchResults.map((result) => [result.place_id, () => handleResultSelect(result)])) as Record<string, () => void>,
+    [handleResultSelect, searchResults]
+  )
+
+  const removeHandlers = useMemo(
+    () =>
+      onLocationRemove
+        ? Object.fromEntries(selectedLocations.map((location) => [location.id, () => onLocationRemove(location.id)])) as Record<string, () => void>
+        : {},
+    [onLocationRemove, selectedLocations]
+  )
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -94,7 +112,7 @@ export function LocationMap({
             <Input
               placeholder="Search for a city, country, or region…"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchQueryChange}
               className="pl-9 pr-9"
             />
             {searching && (
@@ -109,7 +127,7 @@ export function LocationMap({
                   key={result.place_id}
                   type="button"
                   className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
-                  onClick={() => handleResultSelect(result)}
+                  onClick={searchResultHandlers[result.place_id]}
                 >
                   <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span className="truncate">{result.display_name}</span>
@@ -120,7 +138,7 @@ export function LocationMap({
         </div>
       )}
 
-      <div className="relative rounded-lg overflow-hidden border" style={{ height }}>
+      <div className="relative rounded-lg overflow-hidden border" style={mapContainerStyle}>
         <LeafletMap
           locations={allLocations}
           interactive={interactive}
@@ -139,7 +157,7 @@ export function LocationMap({
                 {onLocationRemove && (
                   <button
                     type="button"
-                    onClick={() => onLocationRemove(loc.id)}
+                    onClick={removeHandlers[loc.id]}
                     className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20"
                   >
                     <X className="h-3 w-3" />

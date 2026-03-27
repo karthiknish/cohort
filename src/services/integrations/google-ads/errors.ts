@@ -2,7 +2,8 @@
 // GOOGLE ADS API ERROR CLASS
 // =============================================================================
 
-import { GOOGLE_ADS_ERROR_CODES, GoogleAdsErrorDetail } from './types'
+import { GOOGLE_ADS_ERROR_CODES } from './types'
+import type { GoogleAdsErrorDetail } from './types'
 
 import { IntegrationApiErrorBase } from '../shared/api-error-base'
 

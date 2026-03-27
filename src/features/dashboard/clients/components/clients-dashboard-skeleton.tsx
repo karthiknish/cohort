@@ -4,6 +4,10 @@ import { Card, CardContent, CardHeader } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
 
 export function ClientsDashboardSkeleton() {
+  const statSlots = ['stat-1', 'stat-2', 'stat-3', 'stat-4']
+  const quickActionSlots = ['quick-1', 'quick-2', 'quick-3']
+  const memberSlots = ['member-1', 'member-2', 'member-3', 'member-4']
+
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-500">
       {/* Header skeleton */}
@@ -21,8 +25,8 @@ export function ClientsDashboardSkeleton() {
 
       {/* Stats cards skeleton */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} className="border-muted/60">
+        {statSlots.map((slot) => (
+          <Card key={slot} className="border-muted/60">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-4 w-4 rounded" />
@@ -37,8 +41,8 @@ export function ClientsDashboardSkeleton() {
 
       {/* Quick actions skeleton */}
       <div className="grid gap-4 sm:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="border-muted/60">
+        {quickActionSlots.map((slot) => (
+          <Card key={slot} className="border-muted/60">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-4 w-4 rounded" />
@@ -59,8 +63,8 @@ export function ClientsDashboardSkeleton() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 rounded-lg border border-muted/40 p-3">
+              {memberSlots.map((slot) => (
+                <div key={slot} className="flex items-center gap-3 rounded-lg border border-muted/40 p-3">
                   <Skeleton className="h-10 w-10 rounded-full" />
                   <div className="flex-1">
                     <Skeleton className="h-4 w-24 mb-1" />

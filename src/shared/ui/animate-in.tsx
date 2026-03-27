@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { useMemo } from 'react'
 import { LazyMotion, domAnimation, m, type HTMLMotionProps, useReducedMotion } from '@/shared/ui/motion'
 
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
@@ -22,6 +23,10 @@ const defaultStaggerInterval = motionDurationSeconds.fast * 0.5
 
 type BaseMotionProps = HTMLMotionProps<'div'>
 
+const WHILE_IN_VIEW_FADE = { opacity: 1 }
+const VIEWPORT_DEFAULT = { once: true, amount: 0.2 }
+const HIDDEN_VARIANTS_STAGGER = {}
+
 type FadeInProps = Omit<BaseMotionProps, 'initial' | 'animate' | 'variants' | 'whileInView' | 'viewport' | 'transition'> & {
   as?: MotionElement
   delay?: number
@@ -42,10 +47,17 @@ export function FadeIn({
   const prefersReducedMotion = useReducedMotion()
   const Tag = (as ? tagMap[as] : m.div) as typeof m.div
 
+  const initial = useMemo(() => ({ opacity: 0, y }), [y])
+  const whileInViewFull = useMemo(() => ({ opacity: 1, y: 0 }), [])
+  const transition = useMemo(
+    () => ({ delay, duration, ease: motionEasing.out }),
+    [delay, duration],
+  )
+
   if (prefersReducedMotion) {
     return (
       <LazyMotion features={domAnimation}>
-        <Tag initial={false} whileInView={{ opacity: 1 }} viewport={{ once: true, amount: 0.2 }} {...props}>
+        <Tag initial={false} whileInView={WHILE_IN_VIEW_FADE} viewport={VIEWPORT_DEFAULT} {...props}>
           {children}
         </Tag>
       </LazyMotion>
@@ -55,10 +67,10 @@ export function FadeIn({
   return (
     <LazyMotion features={domAnimation}>
       <Tag
-        initial={{ opacity: 0, y }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ delay, duration, ease: motionEasing.out }}
+        initial={initial}
+        whileInView={whileInViewFull}
+        viewport={VIEWPORT_DEFAULT}
+        transition={transition}
         {...props}
       >
         {children}
@@ -87,13 +99,21 @@ export function FadeInStagger({
   const prefersReducedMotion = useReducedMotion()
   const Tag = (as ? tagMap[as] : m.div) as typeof m.div
 
+  const variants = useMemo(
+    () => ({
+      hidden: HIDDEN_VARIANTS_STAGGER,
+      visible: { transition: { staggerChildren: stagger, delayChildren: delay, duration } },
+    }),
+    [stagger, delay, duration],
+  )
+
   if (prefersReducedMotion) {
     return (
       <LazyMotion features={domAnimation}>
         <Tag
           initial={false}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true, amount: 0.2 }}
+          whileInView={WHILE_IN_VIEW_FADE}
+          viewport={VIEWPORT_DEFAULT}
           {...props}
         >
           {children}
@@ -107,11 +127,8 @@ export function FadeInStagger({
       <Tag
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
-        variants={{
-          hidden: {},
-          visible: { transition: { staggerChildren: stagger, delayChildren: delay, duration } },
-        }}
+        viewport={VIEWPORT_DEFAULT}
+        variants={variants}
         {...props}
       >
         {children}
@@ -144,13 +161,26 @@ export function FadeInItem({
   const prefersReducedMotion = useReducedMotion()
   const Tag = (as ? tagMap[as] : m.div) as typeof m.div
 
+  const resolvedViewport = useMemo(
+    () => viewport ?? VIEWPORT_DEFAULT,
+    [viewport],
+  )
+
+  const variants = useMemo(
+    () => ({
+      hidden: { opacity: 0, y },
+      visible: { opacity: 1, y: 0, transition: { duration, ease: motionEasing.out } },
+    }),
+    [y, duration],
+  )
+
   if (prefersReducedMotion) {
     return (
       <LazyMotion features={domAnimation}>
         <Tag
           initial={false}
-          whileInView={{ opacity: 1 }}
-          viewport={viewport ?? { once: true, amount: 0.2 }}
+          whileInView={WHILE_IN_VIEW_FADE}
+          viewport={resolvedViewport}
           {...props}
         >
           {children}
@@ -164,11 +194,8 @@ export function FadeInItem({
       <Tag
         initial={initial ?? 'hidden'}
         whileInView={whileInView ?? 'visible'}
-        viewport={viewport ?? { once: true, amount: 0.2 }}
-        variants={{
-          hidden: { opacity: 0, y },
-          visible: { opacity: 1, y: 0, transition: { duration, ease: motionEasing.out } },
-        }}
+        viewport={resolvedViewport}
+        variants={variants}
         {...props}
       >
         {children}

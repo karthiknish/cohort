@@ -32,6 +32,18 @@ export function ActivityComments({
   const [isOpen, setIsOpen] = useState(false)
   const [newComment, setNewComment] = useState('')
 
+  const handleToggleOpen = useCallback(() => {
+    setIsOpen((prev) => !prev)
+  }, [])
+
+  const handleCommentChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewComment(event.target.value)
+  }, [])
+
+  const handleClearComment = useCallback(() => {
+    setNewComment('')
+  }, [])
+
   const handleSubmit = useCallback(() => {
     if (newComment.trim()) {
       onAddComment(activity.id, newComment.trim())
@@ -53,7 +65,7 @@ export function ActivityComments({
     <div className="mt-2">
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggleOpen}
         className={cn(
           'flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors',
           isOpen && 'text-foreground'
@@ -101,7 +113,7 @@ export function ActivityComments({
             <Textarea
               placeholder="Add a comment… (⌘+Enter to send)"
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
+              onChange={handleCommentChange}
               onKeyDown={handleKeyDown}
               className="min-h-[60px] max-h-[120px] text-sm resize-none"
               rows={2}
@@ -122,7 +134,7 @@ export function ActivityComments({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 shrink-0"
-                  onClick={() => setNewComment('')}
+                  onClick={handleClearComment}
                 >
                   <X className="h-4 w-4" />
                 </Button>

@@ -18,6 +18,16 @@ vi.mock('emoji-picker-react', () => ({
   Theme: { LIGHT: 'light' },
 }))
 
+const renderers = {
+  renderMessageActions: () => <span>Quick actions</span>,
+  renderMessageContent: (msg: UnifiedMessage) => <span>{msg.content}</span>,
+  renderMessageFooter: () => <span>Footer</span>,
+  renderThreadSection: () => <span>Thread section</span>,
+}
+
+const emptyReactionPendingByMessage = {} as Record<string, unknown>
+const onReact = vi.fn()
+
 const message: UnifiedMessage = {
   id: 'message-1',
   senderId: 'user-1',
@@ -46,13 +56,6 @@ describe('message list sections', () => {
   })
 
   it('renders channel and dm message cards', () => {
-    const renderers = {
-      renderMessageActions: () => <span>Quick actions</span>,
-      renderMessageContent: (msg: UnifiedMessage) => <span>{msg.content}</span>,
-      renderMessageFooter: () => <span>Footer</span>,
-      renderThreadSection: () => <span>Thread section</span>,
-    }
-
     const markup = renderToStaticMarkup(
       <>
         <ChannelMessageCard
@@ -63,8 +66,8 @@ describe('message list sections', () => {
           isUpdating={false}
           localReactionPending={null}
           message={message}
-          onReact={vi.fn()}
-          reactionPendingByMessage={{}}
+          onReact={onReact}
+          reactionPendingByMessage={emptyReactionPendingByMessage}
           renderers={renderers}
           showAvatars={true}
         />
@@ -74,8 +77,8 @@ describe('message list sections', () => {
           isEditing={false}
           localReactionPending={null}
           message={message}
-          onReact={vi.fn()}
-          reactionPendingByMessage={{}}
+          onReact={onReact}
+          reactionPendingByMessage={emptyReactionPendingByMessage}
           renderers={renderers}
           showAvatars={true}
         />

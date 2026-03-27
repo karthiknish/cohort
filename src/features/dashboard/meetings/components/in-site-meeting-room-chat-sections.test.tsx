@@ -50,20 +50,28 @@ describe('meeting room chat sections', () => {
   })
 
   it('renders the open panel states', () => {
+    const fileInputRef = { current: null }
+    const messageEndRef = { current: null }
+    const textareaRef = { current: null }
+    const mentionResults = [{ avatarUrl: null, id: 'user-1', identity: 'alex', isLocal: false, label: 'Alex Kim' }]
+    const pendingAttachments = [
+      { file: new File(['notes'], 'notes.txt', { type: 'text/plain' }), id: 'att-1', mimeType: 'text/plain', name: 'notes.txt', sizeLabel: '1 KB' },
+    ]
+
     const markup = renderToStaticMarkup(
       <MeetingChatPanel
         attachmentAccept=".png,.pdf"
         canSend={true}
         chatMessages={[]}
         draft="@a"
-        fileInputRef={{ current: null }}
+        fileInputRef={fileInputRef}
         highlightedMentionIndex={0}
         isSending={false}
         localAvatarUrl={null}
         maxAttachments={10}
         mentionLabels={[]}
-        mentionResults={[{ avatarUrl: null, id: 'user-1', identity: 'alex', isLocal: false, label: 'Alex Kim' }]}
-        messageEndRef={{ current: null }}
+        mentionResults={mentionResults}
+        messageEndRef={messageEndRef}
         onAttachmentSelection={vi.fn()}
         onClose={vi.fn()}
         onComposerBlur={vi.fn()}
@@ -73,11 +81,9 @@ describe('meeting room chat sections', () => {
         onRemoveAttachment={vi.fn()}
         onSelectMention={vi.fn()}
         onSend={vi.fn()}
-        pendingAttachments={[
-          { file: new File(['notes'], 'notes.txt', { type: 'text/plain' }), id: 'att-1', mimeType: 'text/plain', name: 'notes.txt', sizeLabel: '1 KB' },
-        ]}
+        pendingAttachments={pendingAttachments}
         showMentionResults={true}
-        textareaRef={{ current: null }}
+        textareaRef={textareaRef}
         uploadingFiles={false}
       />,
     )
@@ -91,39 +97,44 @@ describe('meeting room chat sections', () => {
   })
 
   it('renders the floating dock launcher and panel branches', () => {
+    const fileInputRef = { current: null }
+    const messageEndRef = { current: null }
+    const textareaRef = { current: null }
+    const panelProps = {
+      attachmentAccept: '.png,.pdf',
+      canSend: false,
+      chatMessages: [],
+      draft: '',
+      fileInputRef,
+      highlightedMentionIndex: 0,
+      isSending: false,
+      localAvatarUrl: null,
+      maxAttachments: 10,
+      mentionLabels: [],
+      mentionResults: [],
+      messageEndRef,
+      onAttachmentSelection: vi.fn(),
+      onClose: vi.fn(),
+      onComposerBlur: vi.fn(),
+      onDraftChange: vi.fn(),
+      onKeyDown: vi.fn(),
+      onMentionMouseDown: vi.fn(),
+      onRemoveAttachment: vi.fn(),
+      onSelectMention: vi.fn(),
+      onSend: vi.fn(),
+      pendingAttachments: [],
+      showMentionResults: false,
+      textareaRef,
+      uploadingFiles: false,
+    }
+
     const closedMarkup = renderToStaticMarkup(
       <MeetingChatFloatingDock
         compact={false}
         isOpen={false}
         onOpen={vi.fn()}
         unreadCount={2}
-        panelProps={{
-          attachmentAccept: '.png,.pdf',
-          canSend: false,
-          chatMessages: [],
-          draft: '',
-          fileInputRef: { current: null },
-          highlightedMentionIndex: 0,
-          isSending: false,
-          localAvatarUrl: null,
-          maxAttachments: 10,
-          mentionLabels: [],
-          mentionResults: [],
-          messageEndRef: { current: null },
-          onAttachmentSelection: vi.fn(),
-          onClose: vi.fn(),
-          onComposerBlur: vi.fn(),
-          onDraftChange: vi.fn(),
-          onKeyDown: vi.fn(),
-          onMentionMouseDown: vi.fn(),
-          onRemoveAttachment: vi.fn(),
-          onSelectMention: vi.fn(),
-          onSend: vi.fn(),
-          pendingAttachments: [],
-          showMentionResults: false,
-          textareaRef: { current: null },
-          uploadingFiles: false,
-        }}
+        panelProps={panelProps}
       />,
     )
 
@@ -133,33 +144,7 @@ describe('meeting room chat sections', () => {
         isOpen={true}
         onOpen={vi.fn()}
         unreadCount={0}
-        panelProps={{
-          attachmentAccept: '.png,.pdf',
-          canSend: false,
-          chatMessages: [],
-          draft: '',
-          fileInputRef: { current: null },
-          highlightedMentionIndex: 0,
-          isSending: false,
-          localAvatarUrl: null,
-          maxAttachments: 10,
-          mentionLabels: [],
-          mentionResults: [],
-          messageEndRef: { current: null },
-          onAttachmentSelection: vi.fn(),
-          onClose: vi.fn(),
-          onComposerBlur: vi.fn(),
-          onDraftChange: vi.fn(),
-          onKeyDown: vi.fn(),
-          onMentionMouseDown: vi.fn(),
-          onRemoveAttachment: vi.fn(),
-          onSelectMention: vi.fn(),
-          onSend: vi.fn(),
-          pendingAttachments: [],
-          showMentionResults: false,
-          textareaRef: { current: null },
-          uploadingFiles: false,
-        }}
+        panelProps={panelProps}
       />,
     )
 

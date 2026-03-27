@@ -24,6 +24,90 @@ import {
     revenueChartConfig,
     usersSessionsChartConfig,
 } from './chart-configs'
+import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
+
+const AXIS_TICK_STYLE = {
+    fontSize: '10px',
+    fontWeight: '600',
+    fill: 'var(--muted-foreground)',
+    opacity: 0.8,
+} as const
+
+const CHART_TOOLTIP_CLASS_NAME = 'rounded-xl border-muted/40 shadow-lg backdrop-blur-md'
+const CHART_TOOLTIP_CURSOR = { stroke: 'rgba(var(--primary), 0.2)', strokeWidth: 1 } as const
+const CHART_ACTIVE_DOT = { r: 6, strokeWidth: 0 } as const
+const CHART_LEGEND_CONTENT = <ChartLegendContent className="pt-4 text-[10px] font-bold uppercase tracking-widest opacity-80" />
+
+function formatDateTick(value: string) {
+    const date = new Date(value)
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function formatNumberTick(value: number | string) {
+    return Number(value).toLocaleString()
+}
+
+function formatCurrencyTick(value: number | string) {
+    return formatCurrency(Number(value))
+}
+
+function formatPercentTick(value: number | string) {
+    return `${Number(value).toFixed(1)}%`
+}
+
+function renderUsersSessionsTooltip(value: ValueType, name: NameType) {
+    const displayValue = Array.isArray(value) ? value[0] ?? 0 : value
+
+    return (
+        <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">{String(name)}:</span>
+            <span className="text-sm font-bold text-foreground">{Number(displayValue).toLocaleString()}</span>
+        </div>
+    )
+}
+
+function renderRevenueTooltip(value: unknown) {
+    return (
+        <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Revenue:</span>
+            <span className="text-sm font-bold text-foreground">{formatCurrency(value as number)}</span>
+        </div>
+    )
+}
+
+function renderConversionsTooltip(value: unknown) {
+    return (
+        <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Conversions:</span>
+            <span className="text-sm font-bold text-foreground">{Number(value).toLocaleString()}</span>
+        </div>
+    )
+}
+
+function renderConversionRateTooltip(value: unknown) {
+    return (
+        <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Conv rate:</span>
+            <span className="text-sm font-bold text-foreground">{(value as number).toFixed(2)}%</span>
+        </div>
+    )
+}
+
+const USERS_SESSIONS_TOOLTIP_CONTENT = (
+    <ChartTooltipContent className={CHART_TOOLTIP_CLASS_NAME} formatter={renderUsersSessionsTooltip} />
+)
+
+const REVENUE_TOOLTIP_CONTENT = (
+    <ChartTooltipContent className={CHART_TOOLTIP_CLASS_NAME} formatter={renderRevenueTooltip} />
+)
+
+const CONVERSIONS_TOOLTIP_CONTENT = (
+    <ChartTooltipContent className={CHART_TOOLTIP_CLASS_NAME} formatter={renderConversionsTooltip} />
+)
+
+const CONVERSION_RATE_TOOLTIP_CONTENT = (
+    <ChartTooltipContent className={CHART_TOOLTIP_CLASS_NAME} formatter={renderConversionRateTooltip} />
+)
 
 interface ChartDataPoint {
     date: string
@@ -75,41 +159,28 @@ export function AnalyticsCharts({
                                     tickLine={false}
                                     axisLine={false}
                                     tickMargin={12}
-                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
-                                    tickFormatter={(value) => {
-                                        const date = new Date(value)
-                                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                                    }}
+                                    style={AXIS_TICK_STYLE}
+                                    tickFormatter={formatDateTick}
                                 />
                                 <YAxis
                                     tickLine={false}
                                     axisLine={false}
                                     tickMargin={12}
-                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
-                                    tickFormatter={(value) => Number(value).toLocaleString()}
+                                    style={AXIS_TICK_STYLE}
+                                    tickFormatter={formatNumberTick}
                                 />
                                 <ChartTooltip
-                                    cursor={{ stroke: 'rgba(var(--primary), 0.2)', strokeWidth: 1 }}
-                                    content={
-                                        <ChartTooltipContent
-                                            className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md"
-                                            formatter={(value, name) => (
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">{name}:</span>
-                                                    <span className="text-sm font-bold text-foreground">{Number(value).toLocaleString()}</span>
-                                                </div>
-                                            )}
-                                        />
-                                    }
+                                    cursor={CHART_TOOLTIP_CURSOR}
+                                    content={USERS_SESSIONS_TOOLTIP_CONTENT}
                                 />
-                                <ChartLegend content={<ChartLegendContent className="pt-4 text-[10px] font-bold uppercase tracking-widest opacity-80" />} />
+                                <ChartLegend content={CHART_LEGEND_CONTENT} />
                                 <Line
                                     type="monotone"
                                     dataKey="users"
                                     stroke="var(--color-users)"
                                     strokeWidth={3}
                                     dot={false}
-                                    activeDot={{ r: 6, strokeWidth: 0 }}
+                                    activeDot={CHART_ACTIVE_DOT}
                                 />
                                 <Line
                                     type="monotone"
@@ -117,7 +188,7 @@ export function AnalyticsCharts({
                                     stroke="var(--color-sessions)"
                                     strokeWidth={3}
                                     dot={false}
-                                    activeDot={{ r: 6, strokeWidth: 0 }}
+                                    activeDot={CHART_ACTIVE_DOT}
                                 />
                             </LineChart>
                         </ChartContainer>
@@ -153,41 +224,28 @@ export function AnalyticsCharts({
                                     tickLine={false}
                                     axisLine={false}
                                     tickMargin={12}
-                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
-                                    tickFormatter={(value) => {
-                                        const date = new Date(value)
-                                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                                    }}
+                                    style={AXIS_TICK_STYLE}
+                                    tickFormatter={formatDateTick}
                                 />
                                 <YAxis
                                     tickLine={false}
                                     axisLine={false}
                                     tickMargin={12}
-                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
-                                    tickFormatter={(value) => formatCurrency(Number(value))}
+                                    style={AXIS_TICK_STYLE}
+                                    tickFormatter={formatCurrencyTick}
                                 />
                                 <ChartTooltip
-                                    cursor={{ stroke: 'rgba(var(--primary), 0.2)', strokeWidth: 1 }}
-                                    content={
-                                        <ChartTooltipContent
-                                            className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md"
-                                            formatter={(value) => (
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Revenue:</span>
-                                                    <span className="text-sm font-bold text-foreground">{formatCurrency(value as number)}</span>
-                                                </div>
-                                            )}
-                                        />
-                                    }
+                                    cursor={CHART_TOOLTIP_CURSOR}
+                                    content={REVENUE_TOOLTIP_CONTENT}
                                 />
-                                <ChartLegend content={<ChartLegendContent className="pt-4 text-[10px] font-bold uppercase tracking-widest opacity-80" />} />
+                                <ChartLegend content={CHART_LEGEND_CONTENT} />
                                 <Line
                                     type="monotone"
                                     dataKey="revenue"
                                     stroke="var(--color-revenue)"
                                     strokeWidth={3}
                                     dot={false}
-                                    activeDot={{ r: 6, strokeWidth: 0 }}
+                                    activeDot={CHART_ACTIVE_DOT}
                                 />
                             </LineChart>
                         </ChartContainer>
@@ -223,33 +281,20 @@ export function AnalyticsCharts({
                                     tickLine={false}
                                     axisLine={false}
                                     tickMargin={12}
-                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
-                                    tickFormatter={(value) => {
-                                        const date = new Date(value)
-                                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                                    }}
+                                    style={AXIS_TICK_STYLE}
+                                    tickFormatter={formatDateTick}
                                 />
                                 <YAxis
                                     tickLine={false}
                                     axisLine={false}
                                     tickMargin={12}
-                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
-                                    tickFormatter={(value) => Number(value).toLocaleString()}
+                                    style={AXIS_TICK_STYLE}
+                                    tickFormatter={formatNumberTick}
                                 />
                                 <ChartTooltip
-                                    content={
-                                        <ChartTooltipContent
-                                            className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md"
-                                            formatter={(value) => (
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Conversions:</span>
-                                                    <span className="text-sm font-bold text-foreground">{Number(value).toLocaleString()}</span>
-                                                </div>
-                                            )}
-                                        />
-                                    }
+                                    content={CONVERSIONS_TOOLTIP_CONTENT}
                                 />
-                                <ChartLegend content={<ChartLegendContent className="pt-4 text-[10px] font-bold uppercase tracking-widest opacity-80" />} />
+                                <ChartLegend content={CHART_LEGEND_CONTENT} />
                                 <Bar dataKey="conversions" fill="var(--color-conversions)" radius={[6, 6, 0, 0]} barSize={24} />
                             </BarChart>
                         </ChartContainer>
@@ -285,41 +330,28 @@ export function AnalyticsCharts({
                                     tickLine={false}
                                     axisLine={false}
                                     tickMargin={12}
-                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
-                                    tickFormatter={(value) => {
-                                        const date = new Date(value)
-                                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                                    }}
+                                    style={AXIS_TICK_STYLE}
+                                    tickFormatter={formatDateTick}
                                 />
                                 <YAxis
                                     tickLine={false}
                                     axisLine={false}
                                     tickMargin={12}
-                                    style={{ fontSize: '10px', fontWeight: '600', fill: 'var(--muted-foreground)', opacity: 0.8 }}
-                                    tickFormatter={(value) => `${Number(value).toFixed(1)}%`}
+                                    style={AXIS_TICK_STYLE}
+                                    tickFormatter={formatPercentTick}
                                 />
                                 <ChartTooltip
-                                    cursor={{ stroke: 'rgba(var(--primary), 0.2)', strokeWidth: 1 }}
-                                    content={
-                                        <ChartTooltipContent
-                                            className="rounded-xl border-muted/40 shadow-lg backdrop-blur-md"
-                                            formatter={(value) => (
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Conv rate:</span>
-                                                    <span className="text-sm font-bold text-foreground">{(value as number).toFixed(2)}%</span>
-                                                </div>
-                                            )}
-                                        />
-                                    }
+                                    cursor={CHART_TOOLTIP_CURSOR}
+                                    content={CONVERSION_RATE_TOOLTIP_CONTENT}
                                 />
-                                <ChartLegend content={<ChartLegendContent className="pt-4 text-[10px] font-bold uppercase tracking-widest opacity-80" />} />
+                                <ChartLegend content={CHART_LEGEND_CONTENT} />
                                 <Line
                                     type="monotone"
                                     dataKey="conversionRate"
                                     stroke="var(--color-conversionRate)"
                                     strokeWidth={3}
                                     dot={false}
-                                    activeDot={{ r: 6, strokeWidth: 0 }}
+                                    activeDot={CHART_ACTIVE_DOT}
                                 />
                             </LineChart>
                         </ChartContainer>

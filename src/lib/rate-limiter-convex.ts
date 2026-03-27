@@ -1,4 +1,5 @@
-import { checkRateLimit, RateLimitConfig, RateLimitResult, RateLimitPreset, RATE_LIMITS } from './rate-limiter'
+import { checkRateLimit, RATE_LIMITS } from './rate-limiter'
+import type { RateLimitConfig, RateLimitResult, RateLimitPreset } from './rate-limiter'
 import { ConvexHttpClient } from 'convex/browser'
 import { api } from '/_generated/api'
 

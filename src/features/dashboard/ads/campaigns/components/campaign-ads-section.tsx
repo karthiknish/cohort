@@ -168,13 +168,15 @@ function CreativeStatusToggle({
   showLabel?: boolean
   className?: string
 }) {
+  const handleCheckedChange = useCallback((checked: boolean) => {
+    onChange(getNextAdStatus(providerId, checked))
+  }, [onChange, providerId])
+
   return (
     <div className={className}>
       <Switch
         checked={isAdEnabled(status)}
-        onCheckedChange={(checked) => {
-          onChange(getNextAdStatus(providerId, checked))
-        }}
+        onCheckedChange={handleCheckedChange}
         className={showLabel ? undefined : 'h-3.5 w-7'}
       />
       {showLabel ? (
@@ -215,6 +217,10 @@ function CampaignAdsHeader({
   viewMode: ViewMode
   workspaceId: string | null
 }) {
+  const handleSetGridView = useCallback(() => setViewMode('grid'), [setViewMode])
+  const handleSetListView = useCallback(() => setViewMode('list'), [setViewMode])
+  const handleRefresh = useCallback(() => { void fetchAds() }, [fetchAds])
+
   return (
     <CardHeader className="pb-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -251,7 +257,7 @@ function CampaignAdsHeader({
               variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
               size="icon"
               className="h-7 w-7"
-              onClick={() => setViewMode('grid')}
+              onClick={handleSetGridView}
               aria-label="Grid view"
             >
               <Grid3X3 className="h-4 w-4" />
@@ -260,7 +266,7 @@ function CampaignAdsHeader({
               variant={viewMode === 'list' ? 'secondary' : 'ghost'}
               size="icon"
               className="h-7 w-7"
-              onClick={() => setViewMode('list')}
+              onClick={handleSetListView}
               aria-label="List view"
             >
               <List className="h-4 w-4" />
@@ -269,9 +275,7 @@ function CampaignAdsHeader({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => {
-              void fetchAds()
-            }}
+            onClick={handleRefresh}
             disabled={!canLoad || loading}
             aria-label="Refresh creatives"
           >
@@ -302,6 +306,10 @@ function CampaignAdsFilters({
   uniqueStatuses: string[]
   uniqueTypes: string[]
 }) {
+  const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value)
+  }, [setSearchQuery])
+
   return (
     <div className="flex flex-col gap-2 sm:flex-row">
       <div className="relative flex-1">
@@ -309,7 +317,7 @@ function CampaignAdsFilters({
         <Input
           placeholder="Search creatives…"
           value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
+          onChange={handleSearchChange}
           className="pl-9"
         />
       </div>
@@ -344,6 +352,117 @@ function CampaignAdsFilters({
   )
 }
 
+function AdGridItem({
+  ad,
+  adMetrics,
+  currency,
+  onCreativeClick,
+  onToggleStatus,
+  providerId,
+}: {
+  ad: CampaignAd
+  adMetrics: Record<string, AggregatedMetric>
+  currency: string
+  onCreativeClick: (creative: CampaignAd) => void
+  onToggleStatus: (ad: CampaignAd, nextStatus: string) => void
+  providerId: string
+}) {
+  const handleClick = useCallback(() => onCreativeClick(ad), [onCreativeClick, ad])
+  const handleToggleStatus = useCallback((nextStatus: string) => onToggleStatus(ad, nextStatus), [onToggleStatus, ad])
+  const handleImageError = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = event.target as HTMLImageElement
+    target.style.display = 'none'
+    const parent = target.parentElement
+    if (parent && !parent.querySelector('.fallback-icon')) {
+      const fallback = document.createElement('div')
+      fallback.className = 'fallback-icon flex h-full items-center justify-center'
+      fallback.innerHTML = '<svg class="h-10 w-10 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>'
+      parent.appendChild(fallback)
+    }
+  }, [])
+
+  return (
+    <div
+      className="group relative overflow-hidden rounded-lg border bg-card text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/50 hover:shadow-md"
+    >
+      <button
+        type="button"
+        onClick={handleClick}
+        className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+      >
+        <div className="relative aspect-square overflow-hidden bg-muted">
+          {ad.imageUrl ? (
+            <NextImage
+              src={ad.imageUrl}
+              alt={ad.name || 'Creative preview'}
+              fill
+              unoptimized
+              sizes="(max-width: 1024px) 50vw, 240px"
+              className="object-cover transition-transform group-hover:scale-105"
+              onError={handleImageError}
+            />
+          ) : ad.videoUrl ? (
+            <div className="flex h-full items-center justify-center bg-muted">
+              <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                <Play className="h-10 w-10" />
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <Layers className="h-10 w-10 text-muted-foreground/30" />
+            </div>
+          )}
+
+          {ad.videoUrl && ad.imageUrl ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90">
+                <Play className="ml-0.5 h-6 w-6 text-black" />
+              </div>
+            </div>
+          ) : null}
+
+          <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-colors group-hover:bg-black/10 group-hover:opacity-100">
+            <span className="rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">View Details</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5 border-t bg-card p-3">
+          <div className="flex items-center justify-between">
+            <span className="max-w-[60%] truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{ad.type}</span>
+            <Badge variant={getStatusVariant(ad.status)} className="h-4 px-1 text-[8px] font-bold">
+              {ad.status}
+            </Badge>
+          </div>
+          <h4 className="line-clamp-1 text-xs font-semibold">{ad.name || ad.headlines?.[0] || 'Ad'}</h4>
+
+          {adMetrics[ad.creativeId] ? (
+            <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-muted pt-1.5">
+              <div className="flex flex-col">
+                <span className="mb-0.5 text-[9px] uppercase leading-none text-muted-foreground">Spend</span>
+                <span className="text-[11px] font-bold leading-none">{formatCurrency(adMetrics[ad.creativeId]?.spend ?? 0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="mb-0.5 text-[9px] uppercase leading-none text-muted-foreground">Conv.</span>
+                <span className="text-[11px] font-bold leading-none">{adMetrics[ad.creativeId]?.conversions ?? 0}</span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </button>
+
+      <div className="absolute right-2 top-2">
+        <div className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-2 py-1 backdrop-blur-sm">
+          <CreativeStatusToggle
+            providerId={providerId}
+            status={ad.status}
+            onChange={handleToggleStatus}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function CampaignAdsGrid({
   adMetrics,
   ads,
@@ -362,99 +481,108 @@ function CampaignAdsGrid({
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {ads.map((ad) => (
-        <div
+        <AdGridItem
           key={ad.creativeId}
-          className="group relative overflow-hidden rounded-lg border bg-card text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/50 hover:shadow-md"
-        >
-          <button
-            type="button"
-            onClick={() => onCreativeClick(ad)}
-            className="w-full text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-          >
-            <div className="relative aspect-square overflow-hidden bg-muted">
-              {ad.imageUrl ? (
-                <NextImage
-                  src={ad.imageUrl}
-                  alt={ad.name || 'Creative preview'}
-                  fill
-                  unoptimized
-                  sizes="(max-width: 1024px) 50vw, 240px"
-                  className="object-cover transition-transform group-hover:scale-105"
-                  onError={(event) => {
-                    const target = event.target as HTMLImageElement
-                    target.style.display = 'none'
-                    const parent = target.parentElement
-                    if (parent && !parent.querySelector('.fallback-icon')) {
-                      const fallback = document.createElement('div')
-                      fallback.className = 'fallback-icon flex h-full items-center justify-center'
-                      fallback.innerHTML = '<svg class="h-10 w-10 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>'
-                      parent.appendChild(fallback)
-                    }
-                  }}
-                />
-              ) : ad.videoUrl ? (
-                <div className="flex h-full items-center justify-center bg-muted">
-                  <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                    <Play className="h-10 w-10" />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex h-full items-center justify-center">
-                  <Layers className="h-10 w-10 text-muted-foreground/30" />
-                </div>
-              )}
-
-              {ad.videoUrl && ad.imageUrl ? (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90">
-                    <Play className="ml-0.5 h-6 w-6 text-black" />
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-colors group-hover:bg-black/10 group-hover:opacity-100">
-                <span className="rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">View Details</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1.5 border-t bg-card p-3">
-              <div className="flex items-center justify-between">
-                <span className="max-w-[60%] truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{ad.type}</span>
-                <Badge variant={getStatusVariant(ad.status)} className="h-4 px-1 text-[8px] font-bold">
-                  {ad.status}
-                </Badge>
-              </div>
-              <h4 className="line-clamp-1 text-xs font-semibold">{ad.name || ad.headlines?.[0] || 'Ad'}</h4>
-
-              {adMetrics[ad.creativeId] ? (
-                <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-muted pt-1.5">
-                  <div className="flex flex-col">
-                    <span className="mb-0.5 text-[9px] uppercase leading-none text-muted-foreground">Spend</span>
-                    <span className="text-[11px] font-bold leading-none">{formatCurrency(adMetrics[ad.creativeId]?.spend ?? 0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="mb-0.5 text-[9px] uppercase leading-none text-muted-foreground">Conv.</span>
-                    <span className="text-[11px] font-bold leading-none">{adMetrics[ad.creativeId]?.conversions ?? 0}</span>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </button>
-
-          <div className="absolute right-2 top-2">
-            <div className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-2 py-1 backdrop-blur-sm">
-              <CreativeStatusToggle
-                providerId={providerId}
-                status={ad.status}
-                onChange={(nextStatus) => {
-                  onToggleStatus(ad, nextStatus)
-                }}
-              />
-            </div>
-          </div>
-        </div>
+          ad={ad}
+          adMetrics={adMetrics}
+          currency={currency}
+          onCreativeClick={onCreativeClick}
+          onToggleStatus={onToggleStatus}
+          providerId={providerId}
+        />
       ))}
     </div>
+  )
+}
+
+function AdListRow({
+  ad,
+  adMetrics,
+  currency,
+  onCreativeClick,
+  onToggleStatus,
+  providerId,
+}: {
+  ad: CampaignAd
+  adMetrics: Record<string, AggregatedMetric>
+  currency: string
+  onCreativeClick: (creative: CampaignAd) => void
+  onToggleStatus: (ad: CampaignAd, nextStatus: string) => void
+  providerId: string
+}) {
+  const handleClick = useCallback(() => onCreativeClick(ad), [onCreativeClick, ad])
+  const handleStopPropagation = useCallback((event: React.MouseEvent) => event.stopPropagation(), [])
+  const handleToggleStatus = useCallback((nextStatus: string) => onToggleStatus(ad, nextStatus), [onToggleStatus, ad])
+
+  return (
+    <TableRow
+      className="cursor-pointer hover:bg-muted/50"
+      onClick={handleClick}
+    >
+      <TableCell>
+        <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border bg-muted">
+          {ad.imageUrl ? (
+            <NextImage
+              src={ad.imageUrl}
+              alt=""
+              fill
+              unoptimized
+              sizes="56px"
+              className="object-cover"
+            />
+          ) : ad.videoUrl ? (
+            <Play className="h-5 w-5 text-muted-foreground" />
+          ) : (
+            getCreativeTypeIcon(ad.type, 'h-5 w-5 text-muted-foreground')
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-col gap-0.5">
+          <p className="max-w-[240px] truncate font-medium">
+            {ad.name || ad.headlines?.[0] || ad.descriptions?.[0] || ad.creativeId}
+          </p>
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] font-bold uppercase text-muted-foreground">{ad.type}</span>
+            {ad.pageName ? (
+              <>
+                <span className="text-[9px] text-muted-foreground">•</span>
+                <span className="text-[9px] font-medium text-muted-foreground">{ad.pageName}</span>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </TableCell>
+      <TableCell onClick={handleStopPropagation}>
+        <div className="flex items-center gap-2">
+          <CreativeStatusToggle
+            providerId={providerId}
+            status={ad.status}
+            showLabel
+            onChange={handleToggleStatus}
+          />
+        </div>
+      </TableCell>
+      <TableCell className="text-right font-mono text-xs">
+        {adMetrics[ad.creativeId]?.spend !== undefined
+          ? formatCurrency(adMetrics[ad.creativeId]?.spend ?? 0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          : '—'}
+      </TableCell>
+      <TableCell className="text-right font-mono text-xs">
+        {adMetrics[ad.creativeId]?.clicks !== undefined ? adMetrics[ad.creativeId]?.clicks.toLocaleString() : '—'}
+      </TableCell>
+      <TableCell className="text-right font-mono text-xs">
+        {adMetrics[ad.creativeId]?.conversions !== undefined ? adMetrics[ad.creativeId]?.conversions.toLocaleString() : '—'}
+      </TableCell>
+      <TableCell className="hidden lg:table-cell">
+        <p className="max-w-[200px] truncate text-sm text-muted-foreground">
+          {ad.headlines?.[0] || ad.descriptions?.[0] || '-'}
+        </p>
+      </TableCell>
+      <TableCell>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -490,77 +618,15 @@ function CampaignAdsList({
         </TableHeader>
         <TableBody>
           {ads.map((ad) => (
-            <TableRow
+            <AdListRow
               key={ad.creativeId}
-              className="cursor-pointer hover:bg-muted/50"
-              onClick={() => onCreativeClick(ad)}
-            >
-              <TableCell>
-                <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border bg-muted">
-                  {ad.imageUrl ? (
-                    <NextImage
-                      src={ad.imageUrl}
-                      alt=""
-                      fill
-                      unoptimized
-                      sizes="56px"
-                      className="object-cover"
-                    />
-                  ) : ad.videoUrl ? (
-                    <Play className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    getCreativeTypeIcon(ad.type, 'h-5 w-5 text-muted-foreground')
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-0.5">
-                  <p className="max-w-[240px] truncate font-medium">
-                    {ad.name || ad.headlines?.[0] || ad.descriptions?.[0] || ad.creativeId}
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[9px] font-bold uppercase text-muted-foreground">{ad.type}</span>
-                    {ad.pageName ? (
-                      <>
-                        <span className="text-[9px] text-muted-foreground">•</span>
-                        <span className="text-[9px] font-medium text-muted-foreground">{ad.pageName}</span>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell onClick={(event) => event.stopPropagation()}>
-                <div className="flex items-center gap-2">
-                  <CreativeStatusToggle
-                    providerId={providerId}
-                    status={ad.status}
-                    showLabel
-                    onChange={(nextStatus) => {
-                      onToggleStatus(ad, nextStatus)
-                    }}
-                  />
-                </div>
-              </TableCell>
-              <TableCell className="text-right font-mono text-xs">
-                {adMetrics[ad.creativeId]?.spend !== undefined
-                  ? formatCurrency(adMetrics[ad.creativeId]?.spend ?? 0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                  : '—'}
-              </TableCell>
-              <TableCell className="text-right font-mono text-xs">
-                {adMetrics[ad.creativeId]?.clicks !== undefined ? adMetrics[ad.creativeId]?.clicks.toLocaleString() : '—'}
-              </TableCell>
-              <TableCell className="text-right font-mono text-xs">
-                {adMetrics[ad.creativeId]?.conversions !== undefined ? adMetrics[ad.creativeId]?.conversions.toLocaleString() : '—'}
-              </TableCell>
-              <TableCell className="hidden lg:table-cell">
-                <p className="max-w-[200px] truncate text-sm text-muted-foreground">
-                  {ad.headlines?.[0] || ad.descriptions?.[0] || '-'}
-                </p>
-              </TableCell>
-              <TableCell>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </TableCell>
-            </TableRow>
+              ad={ad}
+              adMetrics={adMetrics}
+              currency={currency}
+              onCreativeClick={onCreativeClick}
+              onToggleStatus={onToggleStatus}
+              providerId={providerId}
+            />
           ))}
         </TableBody>
       </Table>
@@ -721,15 +787,15 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     })
   }, [ads, searchQuery, typeFilter, statusFilter])
 
-  const handleCreativeClick = (creative: CampaignAd) => {
+  const handleCreativeClick = useCallback((creative: CampaignAd) => {
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
     const cName = creative.name || creative.headlines?.[0] || creative.creativeId
     params.set('creativeName', cName)
     params.set('currency', displayCurrency)
     router.push(`/dashboard/ads/campaigns/${providerId}/${campaignId}/creative/${creative.creativeId}?${params.toString()}`)
-  }
+  }, [campaignId, displayCurrency, providerId, router])
 
-  const toggleAdStatus = (ad: CampaignAd, newStatus: string) => {
+  const toggleAdStatus = useCallback((ad: CampaignAd, newStatus: string) => {
     // Optimistic update
     const previousAds = [...ads]
     setAds(currentAds =>
@@ -771,7 +837,11 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
           variant: 'destructive',
         })
       })
-  }
+  }, [ads, clientId, providerId, updateCreativeStatus, workspaceId])
+
+  const handleToggleAdStatus = useCallback((ad: CampaignAd, nextStatus: string) => {
+    void toggleAdStatus(ad, nextStatus)
+  }, [toggleAdStatus])
 
   const summaryStats = useMemo(() => {
     if (!summary) return null
@@ -779,6 +849,12 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     const activeCount = summary.byStatus?.ACTIVE ?? summary.byStatus?.ENABLED ?? 0
     return { total: summary.total, totalTypes, activeCount }
   }, [summary])
+
+  const handleClearFilters = useCallback(() => {
+    setSearchQuery('')
+    setTypeFilter('all')
+    setStatusFilter('all')
+  }, [])
 
   return (
     <Card>
@@ -850,11 +926,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                 <Button
                   variant="link"
                   size="sm"
-                  onClick={() => {
-                    setSearchQuery('')
-                    setTypeFilter('all')
-                    setStatusFilter('all')
-                  }}
+                  onClick={handleClearFilters}
                 >
                   Clear filters
                 </Button>
@@ -865,9 +937,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                 ads={filteredAds}
                 currency={displayCurrency}
                 onCreativeClick={handleCreativeClick}
-                onToggleStatus={(ad, nextStatus) => {
-                  void toggleAdStatus(ad, nextStatus)
-                }}
+                onToggleStatus={handleToggleAdStatus}
                 providerId={providerId}
               />
             ) : (
@@ -876,9 +946,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
                 ads={filteredAds}
                 currency={displayCurrency}
                 onCreativeClick={handleCreativeClick}
-                onToggleStatus={(ad, nextStatus) => {
-                  void toggleAdStatus(ad, nextStatus)
-                }}
+                onToggleStatus={handleToggleAdStatus}
                 providerId={providerId}
               />
             )}

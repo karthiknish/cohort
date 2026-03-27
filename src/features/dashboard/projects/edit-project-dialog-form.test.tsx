@@ -3,6 +3,11 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { EditProjectFormFields } from './edit-project-dialog-form'
 
+const clients = [{ id: 'client-1', name: 'Acme Corp' }]
+const validationErrors = {}
+
+const formatStatusLabel = (value: string) => value
+
 describe('EditProjectFormFields', () => {
   it('renders the main fields and tag summary', () => {
     const markup = renderToStaticMarkup(
@@ -16,13 +21,13 @@ describe('EditProjectFormFields', () => {
         endDate={new Date('2026-03-31T00:00:00.000Z')}
         tags={['design', 'marketing']}
         tagInput="seo"
-        validationErrors={{}}
-        clients={[{ id: 'client-1', name: 'Acme Corp' }]}
+        validationErrors={validationErrors}
+        clients={clients}
         onDispatch={vi.fn()}
         onAddTag={vi.fn()}
         onRemoveTag={vi.fn()}
         onTagKeyDown={vi.fn()}
-        formatStatusLabel={(value) => value}
+        formatStatusLabel={formatStatusLabel}
       />,
     )
 

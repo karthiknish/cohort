@@ -5,6 +5,9 @@ import type { AgentConversationSummary, AgentMessage } from '@/shared/hooks/use-
 
 import { AgentModePanel } from './agent-mode-panel'
 
+const noop = () => {}
+const noopAsync = async () => {}
+
 vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
   LazyMotion: ({ children }: { children: React.ReactNode }) => children,
@@ -42,22 +45,22 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof AgentModePan
   return renderToStaticMarkup(
     <AgentModePanel
       isOpen
-      onClose={() => {}}
+      onClose={noop}
       messages={[]}
       isProcessing={false}
-      onSendMessage={() => {}}
+      onSendMessage={noop}
       pendingAttachments={[]}
-      onAddAttachments={async () => {}}
-      onRemoveAttachment={() => {}}
+      onAddAttachments={noopAsync}
+      onRemoveAttachment={noop}
       isExtractingAttachments={false}
-      onClear={() => {}}
+      onClear={noop}
       conversationId={null}
       history={[] satisfies AgentConversationSummary[]}
       isHistoryLoading={false}
-      onOpenHistory={() => {}}
-      onSelectConversation={() => {}}
-      onUpdateConversationTitle={() => {}}
-      onDeleteConversation={() => {}}
+      onOpenHistory={noop}
+      onSelectConversation={noop}
+      onUpdateConversationTitle={noop}
+      onDeleteConversation={noop}
       {...overrides}
     />,
   )

@@ -28,20 +28,23 @@ function ToggleGroup({
   VariantProps<typeof toggleVariants> & {
     spacing?: number
   }) {
+  const style = React.useMemo(() => ({ "--gap": spacing } as React.CSSProperties), [spacing])
+  const contextValue = React.useMemo(() => ({ variant, size, spacing }), [variant, size, spacing])
+
   return (
     <ToggleGroupPrimitive.Root
       data-slot="toggle-group"
       data-variant={variant}
       data-size={size}
       data-spacing={spacing}
-      style={{ "--gap": spacing } as React.CSSProperties}
+      style={style}
       className={cn(
         "group/toggle-group flex w-fit items-center gap-[--spacing(var(--gap))] rounded-md data-[spacing=default]:data-[variant=outline]:shadow-xs",
         className
       )}
       {...props}
     >
-      <ToggleGroupContext.Provider value={{ variant, size, spacing }}>
+      <ToggleGroupContext.Provider value={contextValue}>
         {children}
       </ToggleGroupContext.Provider>
     </ToggleGroupPrimitive.Root>

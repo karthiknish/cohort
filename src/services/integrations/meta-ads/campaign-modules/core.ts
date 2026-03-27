@@ -7,8 +7,8 @@ import {
   META_API_BASE,
 } from '../client'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
-import { MetaCampaign } from '../types'
-import {
+import type { MetaCampaign } from '../types'
+import type {
   CreateCampaignOptions,
   UpdateCampaignOptions,
   UpdateCampaignBiddingOptions,

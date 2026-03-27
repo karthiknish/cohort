@@ -1,9 +1,10 @@
 'use client'
 
 import type { ColumnDef } from '@tanstack/react-table'
+import type { CellContext, HeaderContext } from '@tanstack/react-table'
 import { useAction } from 'convex/react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 import { Badge } from '@/shared/ui/badge'
 import { DataTableColumnHeader } from '@/shared/ui/data-table'
@@ -112,6 +113,127 @@ function getStatusBadge(status: string) {
     return <Badge variant="destructive">Removed</Badge>
   }
   return <Badge variant="outline">{status}</Badge>
+}
+
+type CampaignManagementActionContextValue = {
+  actionLoading: string | null
+  handleAction: (campaignId: string, action: 'enable' | 'pause' | 'remove') => Promise<void>
+  openCampaignBiddingDialog: (campaign: Campaign) => void
+  openCampaignBudgetDialog: (campaign: Campaign) => void
+  handleGroupAction: (groupId: string, action: 'enable' | 'pause') => Promise<void>
+  openGroupBudgetDialog: (group: CampaignGroup) => void
+}
+
+const CampaignManagementActionContext = createContext<CampaignManagementActionContextValue | null>(null)
+
+function useCampaignManagementActions() {
+  const context = useContext(CampaignManagementActionContext)
+  if (!context) {
+    throw new Error('CampaignManagementActionContext is missing')
+  }
+  return context
+}
+
+function CampaignNameHeader({ column }: HeaderContext<Campaign, unknown>) {
+  return <DataTableColumnHeader column={column} title="Name" />
+}
+
+function CampaignNameCell({ row }: CellContext<Campaign, unknown>) {
+  return <span className="font-medium hover:underline">{row.getValue('name')}</span>
+}
+
+function CampaignStatusHeader({ column }: HeaderContext<Campaign, unknown>) {
+  return <DataTableColumnHeader column={column} title="Status" />
+}
+
+function CampaignStatusCell({ row }: CellContext<Campaign, unknown>) {
+  return getStatusBadge(row.getValue('status'))
+}
+
+function CampaignRunsCell({ row }: CellContext<Campaign, unknown>) {
+  return <span className="text-sm text-muted-foreground">{formatCampaignDateRange(row.original.startTime, row.original.stopTime)}</span>
+}
+
+function CampaignBudgetHeader({ column }: HeaderContext<Campaign, unknown>) {
+  return <DataTableColumnHeader column={column} title="Budget" />
+}
+
+function CampaignBudgetCell({ row }: CellContext<Campaign, unknown>) {
+  const budget = row.getValue('budget') as number | undefined
+  if (budget === undefined) {
+    return <span className="text-muted-foreground">-</span>
+  }
+  return <span>{formatMoney(budget, row.original.currency)}/{row.original.budgetType || 'day'}</span>
+}
+
+function CampaignObjectiveHeader({ column }: HeaderContext<Campaign, unknown>) {
+  return <DataTableColumnHeader column={column} title="Objective" />
+}
+
+function CampaignObjectiveCell({ row }: CellContext<Campaign, unknown>) {
+  const objective = row.getValue('objective') as string | undefined
+  return <span className="capitalize text-sm text-muted-foreground">{objective?.toLowerCase().replace(/_/g, ' ') || '-'}</span>
+}
+
+function CampaignActionsHeader() {
+  return <div className="text-right">Actions</div>
+}
+
+function CampaignActionsCell({ row }: CellContext<Campaign, unknown>) {
+  const { actionLoading, handleAction, openCampaignBiddingDialog, openCampaignBudgetDialog } = useCampaignManagementActions()
+  return (
+    <CampaignRowActions
+      actionLoading={actionLoading}
+      campaign={row.original}
+      onAction={handleAction}
+      onOpenBiddingDialog={openCampaignBiddingDialog}
+      onOpenBudgetDialog={openCampaignBudgetDialog}
+    />
+  )
+}
+
+function GroupNameHeader({ column }: HeaderContext<CampaignGroup, unknown>) {
+  return <DataTableColumnHeader column={column} title="Name" />
+}
+
+function GroupNameCell({ row }: CellContext<CampaignGroup, unknown>) {
+  return <span className="font-medium hover:underline">{row.getValue('name')}</span>
+}
+
+function GroupStatusHeader({ column }: HeaderContext<CampaignGroup, unknown>) {
+  return <DataTableColumnHeader column={column} title="Status" />
+}
+
+function GroupStatusCell({ row }: CellContext<CampaignGroup, unknown>) {
+  return getStatusBadge(row.getValue('status'))
+}
+
+function GroupBudgetHeader({ column }: HeaderContext<CampaignGroup, unknown>) {
+  return <DataTableColumnHeader column={column} title="Budget" />
+}
+
+function GroupBudgetCell({ row }: CellContext<CampaignGroup, unknown>) {
+  const budget = row.getValue('totalBudget') as number | undefined
+  if (budget === undefined) {
+    return <span className="text-muted-foreground">-</span>
+  }
+  return <span>{formatMoney(budget, row.original.currency)} total</span>
+}
+
+function GroupActionsHeader() {
+  return <div className="text-right">Actions</div>
+}
+
+function GroupActionsCell({ row }: CellContext<CampaignGroup, unknown>) {
+  const { actionLoading, handleGroupAction, openGroupBudgetDialog } = useCampaignManagementActions()
+  return (
+    <CampaignGroupRowActions
+      actionLoading={actionLoading}
+      group={row.original}
+      onAction={handleGroupAction}
+      onOpenBudgetDialog={openGroupBudgetDialog}
+    />
+  )
 }
 
 // =============================================================================
@@ -487,84 +609,60 @@ export function CampaignManagementCard({
       })
   }, [selectedCampaign, newBidding, providerId, fetchCampaigns, onRefresh, selectedClientId, workspaceId, updateCampaign])
 
+    const actionContextValue = useMemo(
+      () => ({
+        actionLoading,
+        handleAction,
+        openCampaignBiddingDialog,
+        openCampaignBudgetDialog,
+        handleGroupAction,
+        openGroupBudgetDialog,
+      }),
+      [
+        actionLoading,
+        handleAction,
+        openCampaignBiddingDialog,
+        openCampaignBudgetDialog,
+        handleGroupAction,
+        openGroupBudgetDialog,
+      ]
+    )
+
   // Campaign columns
   const campaignColumns: ColumnDef<Campaign>[] = useMemo(
     () => [
       {
         accessorKey: 'name',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Name" />
-        ),
-        cell: ({ row }) => (
-          <span className="font-medium hover:underline">{row.getValue('name')}</span>
-        ),
+          header: CampaignNameHeader,
+          cell: CampaignNameCell,
       },
       {
         accessorKey: 'status',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Status" />
-        ),
-        cell: ({ row }) => getStatusBadge(row.getValue('status')),
+          header: CampaignStatusHeader,
+          cell: CampaignStatusCell,
       },
       {
         id: 'runs',
         header: 'Runs',
-        cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">
-            {formatCampaignDateRange(row.original.startTime, row.original.stopTime)}
-          </span>
-        ),
+          cell: CampaignRunsCell,
       },
       {
         accessorKey: 'budget',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Budget" />
-        ),
-        cell: ({ row }) => {
-          const budget = row.getValue('budget') as number | undefined
-          if (budget === undefined) {
-            return <span className="text-muted-foreground">-</span>
-          }
-          return (
-            <span>
-              {formatMoney(budget, row.original.currency)}
-              /{row.original.budgetType || 'day'}
-            </span>
-          )
-        },
+          header: CampaignBudgetHeader,
+          cell: CampaignBudgetCell,
       },
       {
         accessorKey: 'objective',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Objective" />
-        ),
-        cell: ({ row }) => {
-          const objective = row.getValue('objective') as string | undefined
-          return (
-            <span className="capitalize text-sm text-muted-foreground">
-              {objective?.toLowerCase().replace(/_/g, ' ') || '-'}
-            </span>
-          )
-        },
+          header: CampaignObjectiveHeader,
+          cell: CampaignObjectiveCell,
       },
       {
         id: 'actions',
-        header: () => <div className="text-right">Actions</div>,
-        cell: ({ row }) => {
-          const campaign = row.original
-          return (
-            <CampaignRowActions
-              actionLoading={actionLoading}
-              campaign={campaign}
-              onAction={handleAction}
-              onOpenBiddingDialog={openCampaignBiddingDialog}
-              onOpenBudgetDialog={openCampaignBudgetDialog}
-            />
-          )
-        },
+          header: CampaignActionsHeader,
+          cell: CampaignActionsCell,
       },
     ],
-    [actionLoading, handleAction, openCampaignBiddingDialog, openCampaignBudgetDialog]
+      []
   )
 
   // Group columns
@@ -572,50 +670,26 @@ export function CampaignManagementCard({
     () => [
       {
         accessorKey: 'name',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Name" />
-        ),
-        cell: ({ row }) => (
-          <span className="font-medium hover:underline">{row.getValue('name')}</span>
-        ),
+        header: GroupNameHeader,
+        cell: GroupNameCell,
       },
       {
         accessorKey: 'status',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Status" />
-        ),
-        cell: ({ row }) => getStatusBadge(row.getValue('status')),
+        header: GroupStatusHeader,
+        cell: GroupStatusCell,
       },
       {
         accessorKey: 'totalBudget',
-        header: ({ column }) => (
-          <DataTableColumnHeader column={column} title="Budget" />
-        ),
-        cell: ({ row }) => {
-          const budget = row.getValue('totalBudget') as number | undefined
-          if (budget === undefined) {
-            return <span className="text-muted-foreground">-</span>
-          }
-          return <span>{formatMoney(budget, row.original.currency)} total</span>
-        },
+        header: GroupBudgetHeader,
+        cell: GroupBudgetCell,
       },
       {
         id: 'actions',
-        header: () => <div className="text-right">Actions</div>,
-        cell: ({ row }) => {
-          const group = row.original
-          return (
-            <CampaignGroupRowActions
-              actionLoading={actionLoading}
-              group={group}
-              onAction={handleGroupAction}
-              onOpenBudgetDialog={openGroupBudgetDialog}
-            />
-          )
-        },
+        header: GroupActionsHeader,
+        cell: GroupActionsCell,
       },
     ],
-    [actionLoading, handleGroupAction, openGroupBudgetDialog]
+    []
   )
 
   if (!isConnected) {
@@ -635,38 +709,36 @@ export function CampaignManagementCard({
   }
 
   return (
-    <CampaignManagementConnectedView
-      actionLoading={actionLoading}
-      biddingDialogOpen={biddingDialogOpen}
-      budgetDialogOpen={budgetDialogOpen}
-      campaignColumns={campaignColumns}
-      campaigns={campaigns}
-      groupColumns={groupColumns}
-      groups={groups}
-      groupsLoading={groupsLoading}
-      loading={loading}
-      newBidding={newBidding}
-      newBudget={newBudget}
-      onBiddingChange={setNewBidding}
-      onBiddingOpenChange={setBiddingDialogOpen}
-      onBudgetChange={setNewBudget}
-      onBudgetOpenChange={setBudgetDialogOpen}
-      onRefresh={handleRefresh}
-      onRowClick={openInsightsPage}
-      onSubmitBidding={() => {
-        void handleBiddingUpdate()
-      }}
-      onSubmitBudget={() => {
-        void handleBudgetUpdate()
-      }}
-      onViewChange={setView}
-      providerId={providerId}
-      providerName={providerName}
-      selectedCampaignName={selectedCampaign?.name}
-      selectedCurrencyCode={selectedCurrencyCode}
-      selectedCurrencyLabel={selectedCurrencyLabel}
-      selectedTargetName={selectedBudgetTarget?.name}
-      view={view}
-    />
+    <CampaignManagementActionContext.Provider value={actionContextValue}>
+      <CampaignManagementConnectedView
+        actionLoading={actionLoading}
+        biddingDialogOpen={biddingDialogOpen}
+        budgetDialogOpen={budgetDialogOpen}
+        campaignColumns={campaignColumns}
+        campaigns={campaigns}
+        groupColumns={groupColumns}
+        groups={groups}
+        groupsLoading={groupsLoading}
+        loading={loading}
+        newBidding={newBidding}
+        newBudget={newBudget}
+        onBiddingChange={setNewBidding}
+        onBiddingOpenChange={setBiddingDialogOpen}
+        onBudgetChange={setNewBudget}
+        onBudgetOpenChange={setBudgetDialogOpen}
+        onRefresh={handleRefresh}
+        onRowClick={openInsightsPage}
+        onSubmitBidding={handleBiddingUpdate}
+        onSubmitBudget={handleBudgetUpdate}
+        onViewChange={setView}
+        providerId={providerId}
+        providerName={providerName}
+        selectedCampaignName={selectedCampaign?.name}
+        selectedCurrencyCode={selectedCurrencyCode}
+        selectedCurrencyLabel={selectedCurrencyLabel}
+        selectedTargetName={selectedBudgetTarget?.name}
+        view={view}
+      />
+    </CampaignManagementActionContext.Provider>
   )
 }

@@ -1,10 +1,14 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "import", "typescript", "react", "nextjs"],
+  "plugins": ["eslint", "import", "typescript", "react", "react-perf", "nextjs"],
   "jsPlugins": [
     {
       "name": "convex",
       "specifier": "@convex-dev/eslint-plugin"
+    },
+    {
+      "name": "react-js",
+      "specifier": "eslint-plugin-react"
     },
     "./oxlint/convex.cjs",
     "./oxlint/cohort.cjs"
@@ -42,12 +46,26 @@
     "eslint/no-unused-vars": "off",
     "eslint/no-useless-escape": "off",
     "typescript/no-explicit-any": "error",
+    "typescript/no-misused-promises": "warn",
+    "typescript/no-unnecessary-condition": "warn",
+    "typescript/consistent-type-imports": "warn",
     "typescript/no-require-imports": "warn",
     "react/exhaustive-deps": "warn",
+    "react/rules-of-hooks": "error",
+    "react/no-array-index-key": "warn",
+    "react-js/no-unstable-nested-components": "warn",
+    "react-perf/jsx-no-new-function-as-prop": "warn",
+    "react-perf/jsx-no-new-object-as-prop": "warn",
+    "react-perf/jsx-no-jsx-as-prop": "warn",
     "cohort/no-direct-colors": "warn",
     "cohort/only-shadcn-components": "warn",
     "cohort/no-ad-hoc-rate-limits": "warn",
     "convex-unused/no-unused-functions": "warn"
+  },
+  "settings": {
+    "react": {
+      "version": "18.2.0"
+    }
   },
   "overrides": [
     {

@@ -144,6 +144,16 @@ export function TaskKanban({
     setDragOverStatus(null)
   }, [])
 
+  const handleViewTask = useCallback((task: TaskRecord) => {
+    setViewingTask(task)
+  }, [])
+
+  const handleViewingTaskDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setViewingTask(null)
+    }
+  }, [])
+
   if (initialLoading) {
     const columnSkeletonKeys = ['todo', 'in-progress', 'review', 'completed'] as const
 
@@ -214,138 +224,30 @@ export function TaskKanban({
 
       <ScrollArea className="w-full">
         <div className="flex w-full gap-5 pb-6 pr-4 min-h-[600px]">
-          {columns.map((column) => {
-            const isDragTarget = dragOverStatus === column.status
-            const isDraggingFrom = draggedTask?.sourceStatus === column.status
-
-            return (
-              <div
-                key={column.status}
-                role="listbox"
-                tabIndex={bulkActive ? -1 : 0}
-                aria-label={`${column.label} task lane`}
-                className={cn(
-                  'group flex min-w-[292px] max-w-[360px] flex-1 flex-col overflow-hidden rounded-[1.5rem] border border-border/60 bg-gradient-to-b from-background to-muted/20 shadow-sm transition-colors',
-                  !bulkActive && 'hover:border-border hover:bg-muted/25',
-                  isDragTarget && 'border-primary/30 bg-primary/10',
-                  isDraggingFrom && "opacity-50"
-                )}
-                onDragOver={(e) => handleDragOver(e, column.status)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, column.status)}
-              >
-                <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-background/80 px-4 py-4.5 backdrop-blur-sm">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`h-2.5 w-2.5 rounded-full shadow-sm ${statusLaneColors[column.status]}`}
-                    />
-                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                      {column.label}
-                    </span>
-                  </div>
-                  <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.count)}>
-                    {column.items.length}
-                  </Badge>
-                </div>
-                <div className="flex-1 space-y-4 p-4">
-                  {column.items.length === 0 ? (
-                    <div className={cn(
-                      'flex h-32 flex-col items-center justify-center rounded-[1.15rem] border border-dashed border-border/60 bg-background/70 p-4 text-center transition-colors',
-                      isDragTarget && "border-primary/40 bg-primary/5"
-                    )}>
-                      {draggedTask ? (
-                        <>
-                          <GripVertical className="mb-1 h-5 w-5 text-muted-foreground" />
-                          <p className="text-xs font-medium text-muted-foreground">Drop to move</p>
-                        </>
-                      ) : (
-                        <p className="text-xs font-medium italic text-muted-foreground">Drop tasks here</p>
-                      )}
-                    </div>
-                  ) : (
-                    column.items.map((task) => {
-                      const isCollapsed = collapsedTaskIds.has(task.id)
-
-                      return (
-                      <div
-                        key={task.id}
-                        role="option"
-                        tabIndex={bulkActive || pendingStatusUpdates.has(task.id) ? -1 : 0}
-                        aria-selected={selectedTaskIds.has(task.id)}
-                        aria-label={task.title}
-                        draggable={!bulkActive && !pendingStatusUpdates.has(task.id)}
-                        onDragStart={(e) => handleDragStart(e, task)}
-                        onDragEnd={handleDragEnd}
-                        className={cn(
-                          "transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none active:scale-[0.98]",
-                          !bulkActive && !pendingStatusUpdates.has(task.id) && "cursor-grab active:cursor-grabbing",
-                          (bulkActive || pendingStatusUpdates.has(task.id)) && "cursor-default"
-                        )}
-                      >
-                        {isCollapsed ? (
-                          <button
-                            type="button"
-                            onClick={() => toggleCollapsed(task.id)}
-                            className={cn(
-                              'flex w-full flex-col gap-3 rounded-[1.35rem] border border-border/60 bg-gradient-to-b from-background via-background to-muted/20 p-4 text-left shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
-                              pendingStatusUpdates.has(task.id) && 'pointer-events-none opacity-75'
-                            )}
-                            aria-label={`Expand task ${task.title}`}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <h3 className="line-clamp-2 text-base font-bold leading-tight text-foreground">{task.title}</h3>
-                              <ChevronsUpDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                            </div>
-                            <div className={cn('inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold', taskPillColors.neutral)}>
-                              <Calendar className="h-3.5 w-3.5" />
-                              <span>{formatDate(task.dueDate)}</span>
-                            </div>
-                          </button>
-                        ) : (
-                          <div className="space-y-2">
-                            <TaskCard
-                              task={task}
-                              isPendingUpdate={pendingStatusUpdates.has(task.id)}
-                              onEdit={onEdit}
-                              onDelete={onDelete}
-                              onQuickStatusChange={onQuickStatusChange}
-                              onClone={onClone}
-                              onShare={onShare}
-                              selected={selectedTaskIds.has(task.id)}
-                              onSelectToggle={onToggleTaskSelection}
-                              searchQuery={searchQuery}
-                            />
-                            <div className="flex items-center justify-between gap-2 px-1">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-9 rounded-xl"
-                                onClick={() => setViewingTask(task)}
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                View task
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-9 rounded-xl text-muted-foreground hover:text-foreground"
-                                onClick={() => toggleCollapsed(task.id)}
-                              >
-                                <ChevronsDownUp className="mr-2 h-4 w-4" />
-                                Collapse
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )})
-                  )}
-                </div>
-              </div>
-            )
-          })}
+          {columns.map((column) => (
+            <KanbanColumn
+              key={column.status}
+              bulkActive={bulkActive}
+              column={column}
+              dragOverStatus={dragOverStatus}
+              draggedTask={draggedTask}
+              handleDragEnd={handleDragEnd}
+              handleDragLeave={handleDragLeave}
+              handleDragOver={handleDragOver}
+              handleDrop={handleDrop}
+              handleViewTask={handleViewTask}
+              onClone={onClone}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onQuickStatusChange={onQuickStatusChange}
+              onShare={onShare}
+              onToggleCollapsed={toggleCollapsed}
+              onToggleTaskSelection={onToggleTaskSelection}
+              pendingStatusUpdates={pendingStatusUpdates}
+              searchQuery={searchQuery}
+              selectedTaskIds={selectedTaskIds}
+            />
+          ))}
         </div>
       </ScrollArea>
 
@@ -368,10 +270,261 @@ export function TaskKanban({
         userName={userName}
         userRole={userRole}
         participants={participants}
-        onOpenChange={(open) => {
-          if (!open) setViewingTask(null)
-        }}
+        onOpenChange={handleViewingTaskDialogOpenChange}
       />
+    </div>
+  )
+}
+
+function KanbanColumn({
+  bulkActive,
+  column,
+  dragOverStatus,
+  draggedTask,
+  handleDragEnd,
+  handleDragLeave,
+  handleDragOver,
+  handleDrop,
+  handleViewTask,
+  onClone,
+  onDelete,
+  onEdit,
+  onQuickStatusChange,
+  onShare,
+  onToggleCollapsed,
+  onToggleTaskSelection,
+  pendingStatusUpdates,
+  searchQuery,
+  selectedTaskIds,
+}: {
+  bulkActive: boolean
+  column: { status: TaskStatus; label: string; items: TaskRecord[] }
+  dragOverStatus: TaskStatus | null
+  draggedTask: DraggedTask | null
+  handleDragEnd: () => void
+  handleDragLeave: () => void
+  handleDragOver: (e: React.DragEvent, status: TaskStatus) => void
+  handleDrop: (e: React.DragEvent, targetStatus: TaskStatus) => void
+  handleViewTask: (task: TaskRecord) => void
+  onClone?: (task: TaskRecord) => void
+  onDelete: (task: TaskRecord) => void
+  onEdit: (task: TaskRecord) => void
+  onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
+  onShare?: (task: TaskRecord) => void
+  onToggleCollapsed: (taskId: string) => void
+  onToggleTaskSelection?: (taskId: string, checked: boolean) => void
+  pendingStatusUpdates: Set<string>
+  searchQuery: string
+  selectedTaskIds: Set<string>
+}) {
+  const isDragTarget = dragOverStatus === column.status
+  const isDraggingFrom = draggedTask?.sourceStatus === column.status
+
+  const handleColumnDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => handleDragOver(event, column.status),
+    [column.status, handleDragOver]
+  )
+
+  const handleColumnDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => handleDrop(event, column.status),
+    [column.status, handleDrop]
+  )
+
+  return (
+    <div
+      role="listbox"
+      tabIndex={bulkActive ? -1 : 0}
+      aria-label={`${column.label} task lane`}
+      className={cn(
+        'group flex min-w-[292px] max-w-[360px] flex-1 flex-col overflow-hidden rounded-[1.5rem] border border-border/60 bg-gradient-to-b from-background to-muted/20 shadow-sm transition-colors',
+        !bulkActive && 'hover:border-border hover:bg-muted/25',
+        isDragTarget && 'border-primary/30 bg-primary/10',
+        isDraggingFrom && 'opacity-50'
+      )}
+      onDragOver={handleColumnDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleColumnDrop}
+    >
+      <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-background/80 px-4 py-4.5 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <div className={`h-2.5 w-2.5 rounded-full shadow-sm ${statusLaneColors[column.status]}`} />
+          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            {column.label}
+          </span>
+        </div>
+        <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.count)}>
+          {column.items.length}
+        </Badge>
+      </div>
+      <div className="flex-1 space-y-4 p-4">
+        {column.items.length === 0 ? (
+          <div className={cn(
+            'flex h-32 flex-col items-center justify-center rounded-[1.15rem] border border-dashed border-border/60 bg-background/70 p-4 text-center transition-colors',
+            isDragTarget && 'border-primary/40 bg-primary/5'
+          )}>
+            {draggedTask ? (
+              <>
+                <GripVertical className="mb-1 h-5 w-5 text-muted-foreground" />
+                <p className="text-xs font-medium text-muted-foreground">Drop to move</p>
+              </>
+            ) : (
+              <p className="text-xs font-medium italic text-muted-foreground">Drop tasks here</p>
+            )}
+          </div>
+        ) : (
+          column.items.map((task) => (
+            <KanbanTaskItem
+              key={task.id}
+              bulkActive={bulkActive}
+              handleDragEnd={handleDragEnd}
+              handleViewTask={handleViewTask}
+              isCollapsed={false}
+              onClone={onClone}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onQuickStatusChange={onQuickStatusChange}
+              onShare={onShare}
+              onToggleCollapsed={onToggleCollapsed}
+              onToggleTaskSelection={onToggleTaskSelection}
+              pending={pendingStatusUpdates.has(task.id)}
+              searchQuery={searchQuery}
+              selected={selectedTaskIds.has(task.id)}
+              task={task}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+function KanbanTaskItem({
+  bulkActive,
+  handleDragEnd,
+  handleViewTask,
+  isCollapsed,
+  onClone,
+  onDelete,
+  onEdit,
+  onQuickStatusChange,
+  onShare,
+  onToggleCollapsed,
+  onToggleTaskSelection,
+  pending,
+  searchQuery,
+  selected,
+  task,
+}: {
+  bulkActive: boolean
+  handleDragEnd: () => void
+  handleViewTask: (task: TaskRecord) => void
+  isCollapsed: boolean
+  onClone?: (task: TaskRecord) => void
+  onDelete: (task: TaskRecord) => void
+  onEdit: (task: TaskRecord) => void
+  onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
+  onShare?: (task: TaskRecord) => void
+  onToggleCollapsed: (taskId: string) => void
+  onToggleTaskSelection?: (taskId: string, checked: boolean) => void
+  pending: boolean
+  searchQuery: string
+  selected: boolean
+  task: TaskRecord
+}) {
+  const handleDragStart = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (bulkActive) return
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/plain', task.id)
+    },
+    [bulkActive, task.id]
+  )
+
+  const handleExpand = useCallback(() => {
+    onToggleCollapsed(task.id)
+  }, [onToggleCollapsed, task.id])
+
+  const handleCollapse = useCallback(() => {
+    onToggleCollapsed(task.id)
+  }, [onToggleCollapsed, task.id])
+
+  const handleOpenTask = useCallback(() => {
+    handleViewTask(task)
+  }, [handleViewTask, task])
+
+  return (
+    <div
+      key={task.id}
+      role="option"
+      tabIndex={bulkActive || pending ? -1 : 0}
+      aria-selected={selected}
+      aria-label={task.title}
+      draggable={!bulkActive && !pending}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      className={cn(
+        'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none active:scale-[0.98]',
+        !bulkActive && !pending && 'cursor-grab active:cursor-grabbing',
+        (bulkActive || pending) && 'cursor-default'
+      )}
+    >
+      {isCollapsed ? (
+        <button
+          type="button"
+          onClick={handleExpand}
+          className={cn(
+            'flex w-full flex-col gap-3 rounded-[1.35rem] border border-border/60 bg-gradient-to-b from-background via-background to-muted/20 p-4 text-left shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
+            pending && 'pointer-events-none opacity-75'
+          )}
+          aria-label={`Expand task ${task.title}`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="line-clamp-2 text-base font-bold leading-tight text-foreground">{task.title}</h3>
+            <ChevronsUpDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          </div>
+          <div className={cn('inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold', taskPillColors.neutral)}>
+            <Calendar className="h-3.5 w-3.5" />
+            <span>{formatDate(task.dueDate)}</span>
+          </div>
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <TaskCard
+            task={task}
+            isPendingUpdate={pending}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onQuickStatusChange={onQuickStatusChange}
+            onClone={onClone}
+            onShare={onShare}
+            selected={selected}
+            onSelectToggle={onToggleTaskSelection}
+            searchQuery={searchQuery}
+          />
+          <div className="flex items-center justify-between gap-2 px-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-xl"
+              onClick={handleOpenTask}
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              View task
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-9 rounded-xl text-muted-foreground hover:text-foreground"
+              onClick={handleCollapse}
+            >
+              <ChevronsDownUp className="mr-2 h-4 w-4" />
+              Collapse
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

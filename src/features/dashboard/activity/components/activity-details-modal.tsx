@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import {
@@ -38,6 +39,16 @@ export function ActivityDetailsModal({
   onMarkAsRead,
   onTogglePin,
 }: ActivityDetailsModalProps) {
+  const handleTogglePinClick = useCallback(() => {
+    if (!activity) return
+    onTogglePin(activity.id)
+  }, [activity, onTogglePin])
+
+  const handleMarkAsReadClick = useCallback(() => {
+    if (!activity) return
+    onMarkAsRead(activity.id)
+  }, [activity, onMarkAsRead])
+
   if (!activity) return null
 
   const Icon = ACTIVITY_ICONS[activity.type]
@@ -128,7 +139,7 @@ export function ActivityDetailsModal({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onTogglePin(activity.id)}
+            onClick={handleTogglePinClick}
           >
             {activity.isPinned ? (
               <>
@@ -146,7 +157,7 @@ export function ActivityDetailsModal({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onMarkAsRead(activity.id)}
+              onClick={handleMarkAsReadClick}
             >
               <Check className="h-4 w-4 mr-1" />
               Mark as Read

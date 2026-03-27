@@ -4,6 +4,8 @@
 
 'use client'
 
+import { useCallback, type ChangeEvent } from 'react'
+
 import { Label } from '@/shared/ui/label'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -13,6 +15,34 @@ import { GoogleObjectiveComponentProps, GOOGLE_BIDDING_STRATEGIES, APP_CAMPAIGN_
 
 export function GoogleAppPromotionSection({ formData, onChange, disabled }: GoogleObjectiveComponentProps) {
   const biddingStrategies = GOOGLE_BIDDING_STRATEGIES['APP_PROMOTION'] || []
+
+  const handleAppStoreChange = useCallback(
+    (value: string) => {
+      onChange({ appStore: value as 'GOOGLE_PLAY' | 'APPLE_APP_STORE' })
+    },
+    [onChange]
+  )
+
+  const handleAppIdChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onChange({ appId: event.target.value })
+    },
+    [onChange]
+  )
+
+  const handleCampaignSubtypeChange = useCallback(
+    (value: string) => {
+      onChange({ appCampaignSubtype: value })
+    },
+    [onChange]
+  )
+
+  const handleBiddingStrategyChange = useCallback(
+    (value: string) => {
+      onChange({ biddingStrategyType: value })
+    },
+    [onChange]
+  )
 
   return (
     <div className="space-y-6">
@@ -33,7 +63,7 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
             <Label htmlFor="app-store">App Store</Label>
             <Select
               value={formData.appStore}
-              onValueChange={(value) => onChange({ appStore: value as 'GOOGLE_PLAY' | 'APPLE_APP_STORE' })}
+              onValueChange={handleAppStoreChange}
               disabled={disabled}
             >
               <SelectTrigger id="app-store">
@@ -66,7 +96,7 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
               id="app-id"
               placeholder={formData.appStore === 'APPLE_APP_STORE' ? '1234567890' : 'com.example.app'}
               value={formData.appId || ''}
-              onChange={(e) => onChange({ appId: e.target.value })}
+              onChange={handleAppIdChange}
               disabled={disabled}
             />
             <p className="text-xs text-muted-foreground">
@@ -91,7 +121,7 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
             <Label htmlFor="campaign-subtype">Campaign Type</Label>
             <Select
               value={formData.appCampaignSubtype}
-              onValueChange={(value) => onChange({ appCampaignSubtype: value })}
+              onValueChange={handleCampaignSubtypeChange}
               disabled={disabled}
             >
               <SelectTrigger id="campaign-subtype">
@@ -125,7 +155,7 @@ export function GoogleAppPromotionSection({ formData, onChange, disabled }: Goog
             <Label htmlFor="bidding-strategy">Bidding Strategy</Label>
             <Select
               value={formData.biddingStrategyType}
-              onValueChange={(value) => onChange({ biddingStrategyType: value })}
+              onValueChange={handleBiddingStrategyChange}
               disabled={disabled}
             >
               <SelectTrigger id="bidding-strategy">

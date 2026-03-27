@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import {
   Building2,
   CircleAlert,
@@ -76,15 +77,46 @@ function SelectionIndicator({ selected }: { selected: boolean }) {
 }
 
 function socialHandleIcon(handle: (typeof socialHandles)[number]) {
-  if (handle === 'Facebook') return Facebook
-  if (handle === 'Instagram') return Instagram
-  if (handle === 'LinkedIn') return Linkedin
-  if (handle === 'X / Twitter') return Twitter
-  if (handle === 'YouTube') return Youtube
-  return Globe
+  if (handle === 'Facebook') {
+    return <Facebook className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+  }
+  if (handle === 'Instagram') {
+    return <Instagram className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+  }
+  if (handle === 'LinkedIn') {
+    return <Linkedin className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+  }
+  if (handle === 'X / Twitter') {
+    return <Twitter className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+  }
+  if (handle === 'YouTube') {
+    return <Youtube className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+  }
+  return <Globe className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
 }
 
 export function ProposalCompanyStepSection({ formState, validationErrors, onUpdateField }: ProposalStepSectionProps) {
+  const onChangeCompanyName = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onUpdateField(['company', 'name'], event.target.value),
+    [onUpdateField],
+  )
+  const onChangeCompanyWebsite = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onUpdateField(['company', 'website'], event.target.value),
+    [onUpdateField],
+  )
+  const onChangeCompanyIndustry = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onUpdateField(['company', 'industry'], event.target.value),
+    [onUpdateField],
+  )
+  const onChangeCompanySize = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onUpdateField(['company', 'size'], event.target.value),
+    [onUpdateField],
+  )
+  const onChangeCompanyLocations = useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => onUpdateField(['company', 'locations'], event.target.value),
+    [onUpdateField],
+  )
+
   return (
     <div className={animatedStepClassName}>
       <div className="grid gap-6 md:grid-cols-2">
@@ -98,7 +130,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
             name="companyName"
             placeholder="Acme Corporation"
             value={formState.company.name}
-            onChange={(event) => onUpdateField(['company', 'name'], event.target.value)}
+            onChange={onChangeCompanyName}
             className={cn(
               'h-10 border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
               validationErrors['company.name'] && 'border-destructive/50 ring-destructive/20',
@@ -117,7 +149,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
             type="url"
             placeholder="https://acme.com"
             value={formState.company.website}
-            onChange={(event) => onUpdateField(['company', 'website'], event.target.value)}
+            onChange={onChangeCompanyWebsite}
             className="h-10 border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
           />
         </div>
@@ -134,7 +166,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
             name="industry"
             placeholder="e.g. SaaS, Retail, Healthcare"
             value={formState.company.industry}
-            onChange={(event) => onUpdateField(['company', 'industry'], event.target.value)}
+            onChange={onChangeCompanyIndustry}
             className={cn(
               'h-10 border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
               validationErrors['company.industry'] && 'border-destructive/50 ring-destructive/20',
@@ -152,7 +184,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
             name="companySize"
             placeholder="e.g. 25 employees"
             value={formState.company.size}
-            onChange={(event) => onUpdateField(['company', 'size'], event.target.value)}
+            onChange={onChangeCompanySize}
             className="h-10 border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
           />
         </div>
@@ -168,7 +200,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
           name="locations"
           placeholder="List primary offices or regions served"
           value={formState.company.locations}
-          onChange={(event) => onUpdateField(['company', 'locations'], event.target.value)}
+          onChange={onChangeCompanyLocations}
           className="min-h-[100px] resize-none border-muted/60 bg-background/50 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
         />
       </div>
@@ -176,7 +208,77 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
   )
 }
 
+function MarketingPlatformButton({
+  platform,
+  isSelected,
+  onToggleArrayValue,
+}: {
+  platform: string
+  isSelected: boolean
+  onToggleArrayValue: ProposalStepSectionProps['onToggleArrayValue']
+}) {
+  const handleClick = useCallback(
+    () => onToggleArrayValue?.(['marketing', 'platforms'], platform),
+    [onToggleArrayValue, platform],
+  )
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-pressed={isSelected}
+      className={cn(
+        `flex cursor-pointer items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
+        isSelected
+          ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
+          : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/10',
+      )}
+    >
+      <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{platform}</span>
+      <SelectionIndicator selected={isSelected} />
+    </button>
+  )
+}
+
+function SocialHandleInput({
+  handle,
+  value,
+  onChangeSocialHandle,
+}: {
+  handle: (typeof socialHandles)[number]
+  value: string
+  onChangeSocialHandle: ProposalStepSectionProps['onChangeSocialHandle']
+}) {
+  const handleChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onChangeSocialHandle?.(handle, event.target.value),
+    [onChangeSocialHandle, handle],
+  )
+  return (
+    <div className="group space-y-2 rounded-xl border border-muted/50 bg-background/40 p-3 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-background/80">
+      <div className="mb-1 flex items-center gap-2">
+        {socialHandleIcon(handle)}
+        <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">{handle}</Label>
+      </div>
+      <Input
+        name={`social-${handle}`}
+        placeholder="@company"
+        value={value}
+        onChange={handleChange}
+        className="h-8 border-muted/40 bg-transparent text-xs transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
+      />
+    </div>
+  )
+}
+
 export function ProposalMarketingStepSection({ formState, validationErrors, onUpdateField, onToggleArrayValue, onChangeSocialHandle }: ProposalStepSectionProps) {
+  const onChangeBudget = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onUpdateField(['marketing', 'budget'], event.target.value),
+    [onUpdateField],
+  )
+  const onChangeAdAccounts = useCallback(
+    (value: string) => onUpdateField(['marketing', 'adAccounts'], value),
+    [onUpdateField],
+  )
+
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
@@ -187,13 +289,13 @@ export function ProposalMarketingStepSection({ formState, validationErrors, onUp
             name="budget"
             placeholder="e.g. £7,500"
             value={formState.marketing.budget}
-            onChange={(event) => onUpdateField(['marketing', 'budget'], event.target.value)}
+            onChange={onChangeBudget}
           />
           {validationErrors['marketing.budget'] ? <p className="mt-1 text-xs text-destructive">{validationErrors['marketing.budget']}</p> : null}
         </div>
         <div className="space-y-2">
           <Label htmlFor="adAccounts">Existing ad accounts?</Label>
-          <Select value={formState.marketing.adAccounts} onValueChange={(value) => onUpdateField(['marketing', 'adAccounts'], value)}>
+          <Select value={formState.marketing.adAccounts} onValueChange={onChangeAdAccounts}>
             <SelectTrigger id="adAccounts">
               <SelectValue placeholder="Select an option" />
             </SelectTrigger>
@@ -211,58 +313,104 @@ export function ProposalMarketingStepSection({ formState, validationErrors, onUp
           <p className="text-xs text-muted-foreground">Which platforms are you already using for ads?</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {marketingPlatforms.map((platform) => {
-            const isSelected = formState.marketing.platforms.includes(platform)
-            return (
-              <button
-                key={platform}
-                type="button"
-                onClick={() => onToggleArrayValue(['marketing', 'platforms'], platform)}
-                aria-pressed={isSelected}
-                className={cn(
-                  `flex cursor-pointer items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
-                  isSelected
-                    ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
-                    : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/10',
-                )}
-              >
-                <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{platform}</span>
-                <SelectionIndicator selected={isSelected} />
-              </button>
-            )
-          })}
+          {marketingPlatforms.map((platform) => (
+            <MarketingPlatformButton
+              key={platform}
+              platform={platform}
+              isSelected={formState.marketing.platforms.includes(platform)}
+              onToggleArrayValue={onToggleArrayValue}
+            />
+          ))}
         </div>
       </div>
 
       <div className="space-y-4">
         <Label className="text-base font-semibold">Social handles</Label>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {socialHandles.map((handle) => {
-            const Icon = socialHandleIcon(handle)
-
-            return (
-              <div key={handle} className="group space-y-2 rounded-xl border border-muted/50 bg-background/40 p-3 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-background/80">
-                <div className="mb-1 flex items-center gap-2">
-                  <Icon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
-                  <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">{handle}</Label>
-                </div>
-                <Input
-                  name={`social-${handle}`}
-                  placeholder="@company"
-                  value={formState.marketing.socialHandles[handle] ?? ''}
-                  onChange={(event) => onChangeSocialHandle(handle, event.target.value)}
-                  className="h-8 border-muted/40 bg-transparent text-xs transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
-                />
-              </div>
-            )
-          })}
+          {socialHandles.map((handle) => (
+            <SocialHandleInput
+              key={handle}
+              handle={handle}
+              value={formState.marketing.socialHandles[handle] ?? ''}
+              onChangeSocialHandle={onChangeSocialHandle}
+            />
+          ))}
         </div>
       </div>
     </div>
   )
 }
 
+function GoalOptionButton({
+  goal,
+  isSelected,
+  onToggleArrayValue,
+}: {
+  goal: string
+  isSelected: boolean
+  onToggleArrayValue: ProposalStepSectionProps['onToggleArrayValue']
+}) {
+  const handleClick = useCallback(
+    () => onToggleArrayValue?.(['goals', 'objectives'], goal),
+    [onToggleArrayValue, goal],
+  )
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-pressed={isSelected}
+      className={cn(
+        `flex cursor-pointer items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
+        isSelected
+          ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
+          : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/10',
+      )}
+    >
+      <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{goal}</span>
+      <SelectionIndicator selected={isSelected} />
+    </button>
+  )
+}
+
+function ChallengeButton({
+  challenge,
+  isSelected,
+  onToggleArrayValue,
+}: {
+  challenge: string
+  isSelected: boolean
+  onToggleArrayValue: ProposalStepSectionProps['onToggleArrayValue']
+}) {
+  const handleClick = useCallback(
+    () => onToggleArrayValue?.(['goals', 'challenges'], challenge),
+    [onToggleArrayValue, challenge],
+  )
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn(
+        'rounded-full border px-4 py-2 text-xs font-semibold transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+        isSelected
+          ? 'scale-[1.02] border-primary bg-primary text-primary-foreground shadow-md'
+          : 'border-muted bg-background text-muted-foreground hover:border-muted-foreground/30 hover:bg-muted/5',
+      )}
+    >
+      {challenge}
+    </button>
+  )
+}
+
 export function ProposalGoalsStepSection({ formState, validationErrors, onUpdateField, onToggleArrayValue }: ProposalStepSectionProps) {
+  const onChangeAudience = useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => onUpdateField(['goals', 'audience'], event.target.value),
+    [onUpdateField],
+  )
+  const onChangeCustomChallenge = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => onUpdateField(['goals', 'customChallenge'], event.target.value),
+    [onUpdateField],
+  )
+
   return (
     <div className={animatedStepClassName}>
       <div className="space-y-4">
@@ -271,26 +419,14 @@ export function ProposalGoalsStepSection({ formState, validationErrors, onUpdate
           <p className="text-xs text-muted-foreground">What are you hoping to achieve in the next 6-12 months?</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          {goalOptions.map((goal) => {
-            const isSelected = formState.goals.objectives.includes(goal)
-            return (
-              <button
-                key={goal}
-                type="button"
-                onClick={() => onToggleArrayValue(['goals', 'objectives'], goal)}
-                aria-pressed={isSelected}
-                className={cn(
-                  `flex cursor-pointer items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
-                  isSelected
-                    ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
-                    : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/10',
-                )}
-              >
-                <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{goal}</span>
-                <SelectionIndicator selected={isSelected} />
-              </button>
-            )
-          })}
+          {goalOptions.map((goal) => (
+            <GoalOptionButton
+              key={goal}
+              goal={goal}
+              isSelected={formState.goals.objectives.includes(goal)}
+              onToggleArrayValue={onToggleArrayValue}
+            />
+          ))}
           {validationErrors['goals.objectives'] ? (
             <p className="col-span-full mt-1 flex items-center gap-1.5 px-1 text-[11px] font-medium text-destructive">
               <CircleAlert className="h-3 w-3" />
@@ -308,7 +444,7 @@ export function ProposalGoalsStepSection({ formState, validationErrors, onUpdate
           name="audience"
           placeholder="e.g. Marketing Managers at B2B SaaS companies with 50-200 employees"
           value={formState.goals.audience}
-          onChange={(event) => onUpdateField(['goals', 'audience'], event.target.value)}
+          onChange={onChangeAudience}
           className="min-h-[100px] resize-none border-muted/60 bg-background/50 shadow-inner transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
         />
       </div>
@@ -319,31 +455,21 @@ export function ProposalGoalsStepSection({ formState, validationErrors, onUpdate
           <p className="text-xs text-muted-foreground">What&apos;s currently standing in your way?</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {challenges.map((challenge) => {
-            const isSelected = formState.goals.challenges.includes(challenge)
-            return (
-              <button
-                key={challenge}
-                type="button"
-                onClick={() => onToggleArrayValue(['goals', 'challenges'], challenge)}
-                className={cn(
-                  'rounded-full border px-4 py-2 text-xs font-semibold transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
-                  isSelected
-                    ? 'scale-[1.02] border-primary bg-primary text-primary-foreground shadow-md'
-                    : 'border-muted bg-background text-muted-foreground hover:border-muted-foreground/30 hover:bg-muted/5',
-                )}
-              >
-                {challenge}
-              </button>
-            )
-          })}
+          {challenges.map((challenge) => (
+            <ChallengeButton
+              key={challenge}
+              challenge={challenge}
+              isSelected={formState.goals.challenges.includes(challenge)}
+              onToggleArrayValue={onToggleArrayValue}
+            />
+          ))}
         </div>
         <div className="pt-2">
           <Input
             name="customChallenge"
             placeholder="Other specific challenge…"
             value={formState.goals.customChallenge}
-            onChange={(event) => onUpdateField(['goals', 'customChallenge'], event.target.value)}
+            onChange={onChangeCustomChallenge}
             className="h-10 border-muted/60 bg-background/50 text-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
           />
         </div>
@@ -352,7 +478,45 @@ export function ProposalGoalsStepSection({ formState, validationErrors, onUpdate
   )
 }
 
+function ScopeServiceButton({
+  service,
+  isSelected,
+  onToggleArrayValue,
+}: {
+  service: string
+  isSelected: boolean
+  onToggleArrayValue: ProposalStepSectionProps['onToggleArrayValue']
+}) {
+  const handleClick = useCallback(
+    () => onToggleArrayValue?.(['scope', 'services'], service),
+    [onToggleArrayValue, service],
+  )
+  return (
+    <button
+      type="button"
+      className={cn(
+        `flex cursor-pointer items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
+        isSelected
+          ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
+          : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/10',
+      )}
+      onClick={handleClick}
+      aria-pressed={isSelected}
+    >
+      <div className="space-y-0.5">
+        <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{service}</span>
+      </div>
+      <SelectionIndicator selected={isSelected} />
+    </button>
+  )
+}
+
 export function ProposalScopeStepSection({ formState, validationErrors, onUpdateField, onToggleArrayValue }: ProposalStepSectionProps) {
+  const onChangeOtherService = useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => onUpdateField(['scope', 'otherService'], event.target.value),
+    [onUpdateField],
+  )
+
   return (
     <div className={animatedStepClassName}>
       <div className="space-y-4">
@@ -361,28 +525,14 @@ export function ProposalScopeStepSection({ formState, validationErrors, onUpdate
           <p className="text-xs text-muted-foreground">Select the services where you need our expertise.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {scopeOptions.map((service) => {
-            const isSelected = formState.scope.services.includes(service)
-            return (
-              <button
-                key={service}
-                type="button"
-                className={cn(
-                  `flex cursor-pointer items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
-                  isSelected
-                    ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
-                    : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/10',
-                )}
-                onClick={() => onToggleArrayValue(['scope', 'services'], service)}
-                aria-pressed={isSelected}
-              >
-                <div className="space-y-0.5">
-                  <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{service}</span>
-                </div>
-                <SelectionIndicator selected={isSelected} />
-              </button>
-            )
-          })}
+          {scopeOptions.map((service) => (
+            <ScopeServiceButton
+              key={service}
+              service={service}
+              isSelected={formState.scope.services.includes(service)}
+              onToggleArrayValue={onToggleArrayValue}
+            />
+          ))}
         </div>
         {validationErrors['scope.services'] ? <InlineValidationMessage message={validationErrors['scope.services']} /> : null}
       </div>
@@ -395,7 +545,7 @@ export function ProposalScopeStepSection({ formState, validationErrors, onUpdate
           name="otherService"
           placeholder="e.g. CRO Audit, Landing Page Design, etc."
           value={formState.scope.otherService}
-          onChange={(event) => onUpdateField(['scope', 'otherService'], event.target.value)}
+          onChange={onChangeOtherService}
           className="min-h-[100px] resize-none border-muted/60 bg-background/50 shadow-inner transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
         />
       </div>
@@ -403,31 +553,55 @@ export function ProposalScopeStepSection({ formState, validationErrors, onUpdate
   )
 }
 
+function TimelineOptionButton({
+  option,
+  isSelected,
+  onUpdateField,
+}: {
+  option: string
+  isSelected: boolean
+  onUpdateField: ProposalStepSectionProps['onUpdateField']
+}) {
+  const handleClick = useCallback(
+    () => onUpdateField(['timelines', 'startTime'], option),
+    [onUpdateField, option],
+  )
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn(
+        `flex items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
+        isSelected
+          ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
+          : 'border-muted/60 bg-background/50 hover:bg-muted/10',
+      )}
+    >
+      <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{option}</span>
+      {isSelected ? <CircleCheck className="h-5 w-5 text-primary" /> : null}
+    </button>
+  )
+}
+
 export function ProposalTimelinesStepSection({ formState, onUpdateField }: ProposalStepSectionProps) {
+  const onChangeUpcomingEvents = useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => onUpdateField(['timelines', 'upcomingEvents'], event.target.value),
+    [onUpdateField],
+  )
+
   return (
     <div className={animatedStepClassName}>
       <div className="space-y-4">
         <Label className="text-base font-semibold">Project Timeline</Label>
         <div className="grid gap-3 sm:grid-cols-2">
-          {startTimelineOptions.map((option) => {
-            const isSelected = formState.timelines.startTime === option
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => onUpdateField(['timelines', 'startTime'], option)}
-                className={cn(
-                  `flex items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
-                  isSelected
-                    ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
-                    : 'border-muted/60 bg-background/50 hover:bg-muted/10',
-                )}
-              >
-                <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{option}</span>
-                {isSelected ? <CircleCheck className="h-5 w-5 text-primary" /> : null}
-              </button>
-            )
-          })}
+          {startTimelineOptions.map((option) => (
+            <TimelineOptionButton
+              key={option}
+              option={option}
+              isSelected={formState.timelines.startTime === option}
+              onUpdateField={onUpdateField}
+            />
+          ))}
         </div>
       </div>
 
@@ -439,11 +613,104 @@ export function ProposalTimelinesStepSection({ formState, onUpdateField }: Propo
           name="upcomingEvents"
           placeholder="e.g. Q1 Product Launch, Black Friday Sales, etc."
           value={formState.timelines.upcomingEvents}
-          onChange={(event) => onUpdateField(['timelines', 'upcomingEvents'], event.target.value)}
+          onChange={onChangeUpcomingEvents}
           className="min-h-[100px] resize-none border-muted/60 bg-background/50 shadow-inner transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
         />
       </div>
     </div>
+  )
+}
+
+function ProposalValueButton({
+  option,
+  isSelected,
+  onUpdateField,
+}: {
+  option: string
+  isSelected: boolean
+  onUpdateField: ProposalStepSectionProps['onUpdateField']
+}) {
+  const handleClick = useCallback(
+    () => onUpdateField(['value', 'proposalSize'], option),
+    [onUpdateField, option],
+  )
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn(
+        'flex flex-col items-center justify-center gap-2 rounded-2xl border p-6 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+        isSelected
+          ? 'scale-[1.05] border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-lg'
+          : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/5',
+      )}
+    >
+      <span className={cn('text-lg font-bold', isSelected ? 'text-primary' : 'text-foreground')}>{option}</span>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Per Month</span>
+    </button>
+  )
+}
+
+function EngagementTypeButton({
+  option,
+  isSelected,
+  onUpdateField,
+}: {
+  option: string
+  isSelected: boolean
+  onUpdateField: ProposalStepSectionProps['onUpdateField']
+}) {
+  const handleClick = useCallback(
+    () => onUpdateField(['value', 'engagementType'], option),
+    [onUpdateField, option],
+  )
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn(
+        `flex items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
+        isSelected
+          ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
+          : 'border-muted/60 bg-background/50 hover:bg-muted/10',
+      )}
+    >
+      <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{option}</span>
+      {isSelected ? <CircleCheck className="h-5 w-5 text-primary" /> : null}
+    </button>
+  )
+}
+
+function PresentationThemeButton({
+  theme,
+  isSelected,
+  onUpdateField,
+}: {
+  theme: { id: string; name: string; description: string }
+  isSelected: boolean
+  onUpdateField: ProposalStepSectionProps['onUpdateField']
+}) {
+  const handleClick = useCallback(
+    () => onUpdateField(['value', 'presentationTheme'], theme.id),
+    [onUpdateField, theme.id],
+  )
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn(
+        'group relative flex flex-col gap-2 rounded-xl border p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+        isSelected
+          ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-md'
+          : 'border-muted/60 bg-background hover:border-muted-foreground/30 hover:shadow-sm',
+      )}
+    >
+      <div className="flex w-full items-center justify-between">
+        <span className={cn('text-sm font-bold', isSelected ? 'text-primary' : 'text-foreground')}>{theme.name}</span>
+        {isSelected ? <CircleCheck className="h-4 w-4 text-primary" /> : null}
+      </div>
+      <p className="text-left text-[10px] text-muted-foreground">{theme.description}</p>
+    </button>
   )
 }
 
@@ -454,25 +721,14 @@ export function ProposalValueStepSection({ formState, summary, validationErrors,
         <Label className="text-base font-semibold">Estimated Project Value</Label>
         <p className="mb-4 text-xs text-muted-foreground">Choose the budget range that best fits the project.</p>
         <div className="grid gap-4 md:grid-cols-3">
-          {proposalValueOptions.map((option) => {
-            const isSelected = formState.value.proposalSize === option
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => onUpdateField(['value', 'proposalSize'], option)}
-                className={cn(
-                  'flex flex-col items-center justify-center gap-2 rounded-2xl border p-6 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
-                  isSelected
-                    ? 'scale-[1.05] border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-lg'
-                    : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/5',
-                )}
-              >
-                <span className={cn('text-lg font-bold', isSelected ? 'text-primary' : 'text-foreground')}>{option}</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Per Month</span>
-              </button>
-            )
-          })}
+          {proposalValueOptions.map((option) => (
+            <ProposalValueButton
+              key={option}
+              option={option}
+              isSelected={formState.value.proposalSize === option}
+              onUpdateField={onUpdateField}
+            />
+          ))}
         </div>
         {validationErrors['value.proposalSize'] ? <InlineValidationMessage message={validationErrors['value.proposalSize']} /> : null}
       </div>
@@ -480,25 +736,14 @@ export function ProposalValueStepSection({ formState, summary, validationErrors,
       <div className="space-y-4">
         <Label className="text-base font-semibold">Engagement Type</Label>
         <div className="grid gap-3 sm:grid-cols-2">
-          {engagementOptions.map((option) => {
-            const isSelected = formState.value.engagementType === option
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => onUpdateField(['value', 'engagementType'], option)}
-                className={cn(
-                  `flex items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
-                  isSelected
-                    ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
-                    : 'border-muted/60 bg-background/50 hover:bg-muted/10',
-                )}
-              >
-                <span className={cn('text-sm font-semibold', isSelected ? 'text-primary' : 'text-muted-foreground')}>{option}</span>
-                {isSelected ? <CircleCheck className="h-5 w-5 text-primary" /> : null}
-              </button>
-            )
-          })}
+          {engagementOptions.map((option) => (
+            <EngagementTypeButton
+              key={option}
+              option={option}
+              isSelected={formState.value.engagementType === option}
+              onUpdateField={onUpdateField}
+            />
+          ))}
         </div>
       </div>
 
@@ -508,28 +753,14 @@ export function ProposalValueStepSection({ formState, summary, validationErrors,
           <p className="text-xs text-muted-foreground">Select a visual style for your generated proposal deck.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {GAMMA_PRESENTATION_THEMES.map((theme) => {
-            const isSelected = formState.value.presentationTheme === theme.id
-            return (
-              <button
-                key={theme.id}
-                type="button"
-                onClick={() => onUpdateField(['value', 'presentationTheme'], theme.id)}
-                className={cn(
-                  'group relative flex flex-col gap-2 rounded-xl border p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
-                  isSelected
-                    ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-md'
-                    : 'border-muted/60 bg-background hover:border-muted-foreground/30 hover:shadow-sm',
-                )}
-              >
-                <div className="flex w-full items-center justify-between">
-                  <span className={cn('text-sm font-bold', isSelected ? 'text-primary' : 'text-foreground')}>{theme.name}</span>
-                  {isSelected ? <CircleCheck className="h-4 w-4 text-primary" /> : null}
-                </div>
-                <p className="text-left text-[10px] text-muted-foreground">{theme.description}</p>
-              </button>
-            )
-          })}
+          {GAMMA_PRESENTATION_THEMES.map((theme) => (
+            <PresentationThemeButton
+              key={theme.id}
+              theme={theme}
+              isSelected={formState.value.presentationTheme === theme.id}
+              onUpdateField={onUpdateField}
+            />
+          ))}
         </div>
       </div>
 

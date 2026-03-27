@@ -2,6 +2,10 @@ import { action } from './_generated/server'
 import { internal } from '/_generated/api'
 import { v } from 'convex/values'
 import { ErrorCode, Errors, isAppError, withErrorHandling } from './errors'
+import type { GoogleAudienceTargeting } from '@/services/integrations/google-ads/types'
+import type { TikTokAudienceTargeting } from '@/services/integrations/tiktok-ads/types'
+import type { LinkedInAudienceTargeting } from '@/services/integrations/linkedin-ads/types'
+import type { MetaAudienceTargeting } from '@/services/integrations/meta-ads/types'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -85,7 +89,7 @@ function buildInsights(targeting: NormalizedTargeting[]) {
   }
 }
 
-function normalizeGoogleTargeting(items: import('@/services/integrations/google-ads').GoogleAudienceTargeting[]): NormalizedTargeting[] {
+function normalizeGoogleTargeting(items: GoogleAudienceTargeting[]): NormalizedTargeting[] {
   return items.map((t) => ({
     providerId: 'google',
     entityId: t.entityId,
@@ -116,7 +120,7 @@ function normalizeGoogleTargeting(items: import('@/services/integrations/google-
   }))
 }
 
-function normalizeTikTokTargeting(items: import('@/services/integrations/tiktok-ads').TikTokAudienceTargeting[]): NormalizedTargeting[] {
+function normalizeTikTokTargeting(items: TikTokAudienceTargeting[]): NormalizedTargeting[] {
   return items.map((t) => ({
     providerId: 'tiktok',
     entityId: t.adGroupId,
@@ -148,7 +152,7 @@ function normalizeTikTokTargeting(items: import('@/services/integrations/tiktok-
   }))
 }
 
-function normalizeLinkedInTargeting(items: import('@/services/integrations/linkedin-ads').LinkedInAudienceTargeting[]): NormalizedTargeting[] {
+function normalizeLinkedInTargeting(items: LinkedInAudienceTargeting[]): NormalizedTargeting[] {
   return items.map((t) => ({
     providerId: 'linkedin',
     entityId: t.campaignId,
@@ -180,7 +184,7 @@ function normalizeLinkedInTargeting(items: import('@/services/integrations/linke
   }))
 }
 
-function normalizeMetaTargeting(items: import('@/services/integrations/meta-ads').MetaAudienceTargeting[]): NormalizedTargeting[] {
+function normalizeMetaTargeting(items: MetaAudienceTargeting[]): NormalizedTargeting[] {
   return items.map((t) => ({
     providerId: 'facebook',
     entityId: t.adSetId,

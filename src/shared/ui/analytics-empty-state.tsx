@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { FileX, BarChart3, TrendingUp, AlertCircle } from 'lucide-react'
 import { Button } from './button'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,8 @@ type Props = {
   }
   className?: string
 }
+
+type AnalyticsAction = NonNullable<Props['action']>
 
 const variantConfig = {
   'no-data': {
@@ -43,6 +45,28 @@ const variantConfig = {
     defaultTitle: 'Unable to Load Data',
     defaultDescription: 'There was a problem loading the analytics data.',
   },
+}
+
+function createConnectAction(onConnect?: () => void, platform?: string): AnalyticsAction | undefined {
+  if (!onConnect) {
+    return undefined
+  }
+
+  return {
+    label: `Connect ${platform || 'Account'}`,
+    onClick: onConnect,
+  }
+}
+
+function createRetryAction(onRetry?: () => void): AnalyticsAction | undefined {
+  if (!onRetry) {
+    return undefined
+  }
+
+  return {
+    label: 'Retry',
+    onClick: onRetry,
+  }
 }
 
 export function AnalyticsEmptyState({
@@ -126,11 +150,7 @@ export function NoIntegrationConnected({
       variant="no-integration"
       title={`Connect Your ${platform || 'Ad'} Account`}
       description={`Connect your ${platform || 'ad platform'} account to start seeing performance data and insights.`}
-      action={
-        onConnect
-          ? { label: `Connect ${platform || 'Account'}`, onClick: onConnect }
-          : undefined
-      }
+      action={createConnectAction(onConnect, platform)}
       className={className}
     />
   )
@@ -148,7 +168,7 @@ export function AnalyticsError({
       variant="error"
       title="Unable to Load Analytics"
       description={message || 'There was a problem loading the analytics data. Please try again.'}
-      action={onRetry ? { label: 'Retry', onClick: onRetry } : undefined}
+      action={createRetryAction(onRetry)}
     />
   )
 }

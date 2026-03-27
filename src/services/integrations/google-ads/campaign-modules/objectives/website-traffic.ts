@@ -2,7 +2,7 @@
 // WEBSITE TRAFFIC OBJECTIVE - Drive website visits
 // =============================================================================
 
-import { GoogleCampaignObjectiveConfig } from '../types'
+import type { GoogleCampaignObjectiveConfig } from '../types'
 
 export const GOOGLE_WEBSITE_TRAFFIC_OBJECTIVE_CONFIG: GoogleCampaignObjectiveConfig = {
   objective: 'WEBSITE_TRAFFIC',

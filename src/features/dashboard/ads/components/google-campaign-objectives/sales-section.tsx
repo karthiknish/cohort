@@ -4,14 +4,31 @@
 
 'use client'
 
+import { useCallback } from 'react'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { TrendingUp, DollarSign } from 'lucide-react'
-import { GoogleObjectiveComponentProps, GOOGLE_BIDDING_STRATEGIES, CONVERSION_GOALS } from './types'
+import type { GoogleObjectiveComponentProps } from './types'
+import { GOOGLE_BIDDING_STRATEGIES, CONVERSION_GOALS } from './types'
 
 export function GoogleSalesSection({ formData, onChange, disabled }: GoogleObjectiveComponentProps) {
   const biddingStrategies = GOOGLE_BIDDING_STRATEGIES['SALES'] || []
+  const handleBiddingStrategyChange = useCallback((value: string) => {
+    onChange({ biddingStrategyType: value })
+  }, [onChange])
+
+  const handleTargetRoasChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onChange({ targetRoas: parseFloat(event.target.value) })
+  }, [onChange])
+
+  const handleTargetCpaChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onChange({ targetCpa: parseFloat(event.target.value) })
+  }, [onChange])
+
+  const handleConversionGoalChange = useCallback((value: string) => {
+    onChange({ conversionGoal: value })
+  }, [onChange])
 
   return (
     <div className="space-y-6">
@@ -31,7 +48,7 @@ export function GoogleSalesSection({ formData, onChange, disabled }: GoogleObjec
             <Label htmlFor="bidding-strategy">Bidding Strategy</Label>
             <Select
               value={formData.biddingStrategyType}
-              onValueChange={(value) => onChange({ biddingStrategyType: value })}
+              onValueChange={handleBiddingStrategyChange}
               disabled={disabled}
             >
               <SelectTrigger id="bidding-strategy">
@@ -61,7 +78,7 @@ export function GoogleSalesSection({ formData, onChange, disabled }: GoogleObjec
                 max="1000"
                 placeholder="400"
                 value={formData.targetRoas || ''}
-                onChange={(e) => onChange({ targetRoas: parseFloat(e.target.value) })}
+                onChange={handleTargetRoasChange}
                 disabled={disabled}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               />
@@ -81,7 +98,7 @@ export function GoogleSalesSection({ formData, onChange, disabled }: GoogleObjec
                 step="0.01"
                 placeholder="25.00"
                 value={formData.targetCpa || ''}
-                onChange={(e) => onChange({ targetCpa: parseFloat(e.target.value) })}
+                onChange={handleTargetCpaChange}
                 disabled={disabled}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               />
@@ -109,7 +126,7 @@ export function GoogleSalesSection({ formData, onChange, disabled }: GoogleObjec
             <Label htmlFor="conversion-goal">Primary Conversion Goal</Label>
             <Select
               value={formData.conversionGoal}
-              onValueChange={(value) => onChange({ conversionGoal: value })}
+              onValueChange={handleConversionGoalChange}
               disabled={disabled}
             >
               <SelectTrigger id="conversion-goal">

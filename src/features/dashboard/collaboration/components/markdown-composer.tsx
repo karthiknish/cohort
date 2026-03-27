@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { type AnchorHTMLAttributes, type ChangeEvent, type ComponentPropsWithoutRef, useCallback, useState } from 'react'
 import { Eye, EyeOff, Type } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -8,6 +8,71 @@ import { Button } from '@/shared/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { Textarea } from '@/shared/ui/textarea'
 import { cn } from '@/lib/utils'
+
+function MarkdownPreviewLink(props: AnchorHTMLAttributes<HTMLAnchorElement>) {
+  return (
+    <a
+      {...props}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary underline underline-offset-2 hover:no-underline"
+    />
+  )
+}
+
+function MarkdownPreviewCode({
+  className,
+  children,
+  ...props
+}: ComponentPropsWithoutRef<'code'>) {
+  if (!className) {
+    return (
+      <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono" {...props}>
+        {children}
+      </code>
+    )
+  }
+
+  return (
+    <code className={className} {...props}>
+      {children}
+    </code>
+  )
+}
+
+const MARKDOWN_PREVIEW_COMPONENTS = {
+  a: MarkdownPreviewLink,
+  code: MarkdownPreviewCode,
+}
+
+function MarkdownToolbarActionButton({
+  insert,
+  title,
+  icon,
+  onInsert,
+}: {
+  insert: string
+  title: string
+  icon: string
+  onInsert: (markdown: string) => void
+}) {
+  const handleClick = useCallback(() => {
+    onInsert(insert)
+  }, [insert, onInsert])
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="h-7 px-2"
+      onClick={handleClick}
+      title={title}
+    >
+      {icon}
+    </Button>
+  )
+}
 interface MarkdownPreviewProps {
   value: string
   onChange: (value: string) => void
@@ -31,6 +96,13 @@ export function MarkdownPreview({
 }: MarkdownPreviewProps) {
   const [showPreview, setShowPreview] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const handleTogglePreview = useCallback(() => {
+    setShowPreview((current) => !current)
+  }, [])
+  const handleToggleFullscreen = useCallback(() => {
+    setIsFullscreen((current) => !current)
+  }, [])
+  const handleChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value), [onChange])
 
   const charCount = value.length
   const remaining = maxLength - charCount
@@ -58,7 +130,7 @@ export function MarkdownPreview({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => setShowPreview(!showPreview)}
+            onClick={handleTogglePreview}
             className="h-7 px-2"
           >
             {showPreview ? (
@@ -80,7 +152,7 @@ export function MarkdownPreview({
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={() => setIsFullscreen(!isFullscreen)}
+            onClick={handleToggleFullscreen}
           >
             <span className="sr-only">Toggle fullscreen</span>
             {isFullscreen ? '↙' : '↗'}
@@ -117,7 +189,7 @@ export function MarkdownPreview({
           <TabsContent value="write" className="mt-0">
             <Textarea
               value={value}
-              onChange={(e) => onChange(e.target.value)}
+              onChange={handleChange}
               placeholder={placeholder}
               maxLength={maxLength}
               rows={minRows}
@@ -166,33 +238,7 @@ function MarkdownPreviewContent({ value }: { value: string }) {
     <div className="prose prose-sm dark:prose-invert max-w-none break-words">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        components={{
-          a: (props) => (
-            <a
-              {...props}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline underline-offset-2 hover:no-underline"
-            />
-          ),
-          code: ({ className, children, ...props }) => {
-            if (!className) {
-              return (
-                <code
-                  className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono"
-                  {...props}
-                >
-                  {children}
-                </code>
-              )
-            }
-            return (
-              <code className={className} {...props}>
-                {children}
-              </code>
-            )
-          },
-        }}
+        components={MARKDOWN_PREVIEW_COMPONENTS}
       >
         {value}
       </ReactMarkdown>
@@ -222,17 +268,13 @@ export function MarkdownToolbar({
   return (
     <div className={cn('flex items-center gap-1 p-1 border-b bg-muted/50', className)}>
       {buttons.map((btn) => (
-        <Button
+        <MarkdownToolbarActionButton
           key={btn.label}
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2"
-          onClick={() => onInsert(btn.insert)}
+          insert={btn.insert}
           title={btn.title}
-        >
-          {btn.icon}
-        </Button>
+          icon={btn.icon}
+          onInsert={onInsert}
+        />
       ))}
     </div>
   )

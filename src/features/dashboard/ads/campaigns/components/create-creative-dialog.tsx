@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAction } from 'convex/react'
 import { Plus } from 'lucide-react'
 
@@ -77,7 +77,7 @@ export function CreateCreativeDialog({
   const [status, setStatus] = useState<CreativeStatus>('PAUSED')
   const submissionRef = useRef<{ fingerprint: string; key: string } | null>(null)
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setName('')
     setObjectType('IMAGE')
     setTitle('')
@@ -93,7 +93,7 @@ export function CreateCreativeDialog({
     setStatus('PAUSED')
     setSelectedAdSetId(propAdSetId)
     submissionRef.current = null
-  }
+  }, [propAdSetId])
 
   const formFingerprint = useMemo(
     () => JSON.stringify({
@@ -153,11 +153,14 @@ export function CreateCreativeDialog({
     return options
   }, [metaPageActors])
 
-  const handleSelectPage = (nextPageId: string) => {
-    setPageId(nextPageId)
-    const actor = metaPageActors.find((row) => row.id === nextPageId)
-    setInstagramActorId(actor?.instagramBusinessAccountId ?? '')
-  }
+  const handleSelectPage = useCallback(
+    (nextPageId: string) => {
+      setPageId(nextPageId)
+      const actor = metaPageActors.find((row) => row.id === nextPageId)
+      setInstagramActorId(actor?.instagramBusinessAccountId ?? '')
+    },
+    [metaPageActors]
+  )
 
   useEffect(() => {
     if (!open || !isMeta || !workspaceId) return
@@ -222,184 +225,218 @@ export function CreateCreativeDialog({
     }
   }, [open, isMeta, workspaceId, clientId, listMetaPageActors])
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleImageUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
 
-    if (providerId !== 'facebook') {
-      toast({
-        title: 'Platform not supported',
-        description: 'Image upload is currently only supported for Meta (Facebook/Instagram) ads.',
-        variant: 'destructive',
-      })
-      return
-    }
+      if (providerId !== 'facebook') {
+        toast({
+          title: 'Platform not supported',
+          description: 'Image upload is currently only supported for Meta (Facebook/Instagram) ads.',
+          variant: 'destructive',
+        })
+        return
+      }
 
-    setUploadingImage(true)
+      setUploadingImage(true)
 
-    if (!workspaceId) {
-      toast({
-        title: 'Upload failed',
-        description: 'Sign in required',
-        variant: 'destructive',
-      })
-      setUploadingImage(false)
-      return
-    }
-
-    // Convert file to bytes
-    const arrayBuffer = await file.arrayBuffer()
-    const fileData = new Uint8Array(arrayBuffer)
-
-    await uploadMedia({
-      workspaceId,
-      providerId: 'facebook',
-      clientId: clientId ?? null,
-      fileName: file.name,
-      fileData: Array.from(fileData),
-    })
-      .then((result) => {
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to upload media')
-        }
-
-        // Extract creative spec which contains the image_hash
-        if (result.creativeSpec) {
-          const spec = JSON.parse(result.creativeSpec as string) as { image_hash?: string; video_id?: string }
-          if (spec.image_hash) {
-            setImageHash(spec.image_hash)
-            toast({
-              title: 'Image uploaded',
-              description: 'Your image has been uploaded successfully.',
-            })
-          }
-        }
-      })
-      .catch((error) => {
-        logError(error, 'CreateCreativeDialog:handleImageUpload')
+      if (!workspaceId) {
         toast({
           title: 'Upload failed',
-          description: asErrorMessage(error),
+          description: 'Sign in required',
           variant: 'destructive',
         })
-      })
-      .finally(() => {
         setUploadingImage(false)
+        return
+      }
+
+      // Convert file to bytes
+      const arrayBuffer = await file.arrayBuffer()
+      const fileData = new Uint8Array(arrayBuffer)
+
+      await uploadMedia({
+        workspaceId,
+        providerId: 'facebook',
+        clientId: clientId ?? null,
+        fileName: file.name,
+        fileData: Array.from(fileData),
       })
-  }
+        .then((result) => {
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to upload media')
+          }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!workspaceId) {
-      toast({
-        title: 'Error',
-        description: 'Sign in required',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (!name.trim()) {
-      toast({
-        title: 'Validation error',
-        description: 'Creative name is required',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (providerId !== 'facebook') {
-      toast({
-        title: 'Platform not supported',
-        description: 'Creating creatives is currently only supported for Meta (Facebook/Instagram) ads.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (!selectedAdSetId) {
-      toast({
-        title: 'Ad Set required',
-        description: 'Please select an ad set to create the ad.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (!pageId) {
-      toast({
-        title: 'Facebook Page required',
-        description: 'Select a Facebook Page before creating a Meta creative.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    if (!metaPageActors.some((actor) => actor.id === pageId)) {
-      toast({
-        title: 'Invalid Facebook Page',
-        description: 'The selected page is no longer available. Reload the page list and try again.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    const currentSubmission = submissionRef.current
-    const effectiveIdempotencyKey =
-      currentSubmission && currentSubmission.fingerprint === formFingerprint
-        ? currentSubmission.key
-        : generateCreativeIdempotencyKey()
-    submissionRef.current = {
-      fingerprint: formFingerprint,
-      key: effectiveIdempotencyKey,
-    }
-
-    setLoading(true)
-
-    await createCreative({
-      workspaceId,
-      providerId: 'facebook',
-      clientId: clientId ?? null,
-      idempotencyKey: effectiveIdempotencyKey,
-      campaignId,
-      adSetId: selectedAdSetId,
-      name: name.trim(),
-      objectType,
-      title: title.trim() || undefined,
-      body: body.trim() || undefined,
-      description: description.trim() || undefined,
-      callToActionType: callToActionType || undefined,
-      linkUrl: linkUrl.trim() || undefined,
-      imageUrl: imageUrl.trim() || undefined,
-      imageHash: imageHash || undefined,
-      videoId: videoId || undefined,
-      pageId,
-      instagramActorId: instagramActorId || undefined,
-      status,
-    })
-      .then(() => {
-        toast({
-          title: 'Creative created',
-          description: `Your ad creative "${name}" has been created successfully.`,
+          // Extract creative spec which contains the image_hash
+          if (result.creativeSpec) {
+            const spec = JSON.parse(result.creativeSpec as string) as { image_hash?: string; video_id?: string }
+            if (spec.image_hash) {
+              setImageHash(spec.image_hash)
+              toast({
+                title: 'Image uploaded',
+                description: 'Your image has been uploaded successfully.',
+              })
+            }
+          }
         })
+        .catch((error) => {
+          logError(error, 'CreateCreativeDialog:handleImageUpload')
+          toast({
+            title: 'Upload failed',
+            description: asErrorMessage(error),
+            variant: 'destructive',
+          })
+        })
+        .finally(() => {
+          setUploadingImage(false)
+        })
+    },
+    [clientId, providerId, uploadMedia, workspaceId]
+  )
 
-        setOpen(false)
-        resetForm()
-        onSuccess?.()
-      })
-      .catch((error) => {
-        logError(error, 'CreateCreativeDialog:handleSubmit')
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+
+      if (!workspaceId) {
         toast({
-          title: 'Creation failed',
-          description: asErrorMessage(error),
+          title: 'Error',
+          description: 'Sign in required',
           variant: 'destructive',
         })
+        return
+      }
+
+      if (!name.trim()) {
+        toast({
+          title: 'Validation error',
+          description: 'Creative name is required',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (providerId !== 'facebook') {
+        toast({
+          title: 'Platform not supported',
+          description: 'Creating creatives is currently only supported for Meta (Facebook/Instagram) ads.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (!selectedAdSetId) {
+        toast({
+          title: 'Ad Set required',
+          description: 'Please select an ad set to create the ad.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (!pageId) {
+        toast({
+          title: 'Facebook Page required',
+          description: 'Select a Facebook Page before creating a Meta creative.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      if (!metaPageActors.some((actor) => actor.id === pageId)) {
+        toast({
+          title: 'Invalid Facebook Page',
+          description: 'The selected page is no longer available. Reload the page list and try again.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      const currentSubmission = submissionRef.current
+      const effectiveIdempotencyKey =
+        currentSubmission && currentSubmission.fingerprint === formFingerprint
+          ? currentSubmission.key
+          : generateCreativeIdempotencyKey()
+      submissionRef.current = {
+        fingerprint: formFingerprint,
+        key: effectiveIdempotencyKey,
+      }
+
+      setLoading(true)
+
+      await createCreative({
+        workspaceId,
+        providerId: 'facebook',
+        clientId: clientId ?? null,
+        idempotencyKey: effectiveIdempotencyKey,
+        campaignId,
+        adSetId: selectedAdSetId,
+        name: name.trim(),
+        objectType,
+        title: title.trim() || undefined,
+        body: body.trim() || undefined,
+        description: description.trim() || undefined,
+        callToActionType: callToActionType || undefined,
+        linkUrl: linkUrl.trim() || undefined,
+        imageUrl: imageUrl.trim() || undefined,
+        imageHash: imageHash || undefined,
+        videoId: videoId || undefined,
+        pageId,
+        instagramActorId: instagramActorId || undefined,
+        status,
       })
-      .finally(() => {
-        setLoading(false)
-      })
-  }
+        .then(() => {
+          toast({
+            title: 'Creative created',
+            description: `Your ad creative "${name}" has been created successfully.`,
+          })
+
+          setOpen(false)
+          resetForm()
+          onSuccess?.()
+        })
+        .catch((error) => {
+          logError(error, 'CreateCreativeDialog:handleSubmit')
+          toast({
+            title: 'Creation failed',
+            description: asErrorMessage(error),
+            variant: 'destructive',
+          })
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    },
+    [
+      clientId,
+      createCreative,
+      formFingerprint,
+      imageHash,
+      instagramActorId,
+      metaPageActors,
+      name,
+      objectType,
+      pageId,
+      providerId,
+      resetForm,
+      selectedAdSetId,
+      status,
+      title,
+      body,
+      description,
+      callToActionType,
+      linkUrl,
+      imageUrl,
+      videoId,
+      campaignId,
+      workspaceId,
+      onSuccess,
+    ]
+  )
+
+  const handleClose = useCallback(() => {
+    setOpen(false)
+  }, [])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -429,7 +466,7 @@ export function CreateCreativeDialog({
           objectType={objectType}
           onBodyChange={setBody}
           onCallToActionTypeChange={setCallToActionType}
-          onClose={() => setOpen(false)}
+          onClose={handleClose}
           onDescriptionChange={setDescription}
           onImageUpload={handleImageUpload}
           onImageUrlChange={setImageUrl}

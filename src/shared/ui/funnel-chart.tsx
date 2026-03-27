@@ -31,6 +31,8 @@ export function FunnelChart({
   className,
   showPercentages = true,
 }: FunnelChartProps) {
+  const loadingSlots = ['loading-1', 'loading-2', 'loading-3', 'loading-4']
+
   // Calculate totals and percentages
   const funnelData = useMemo(() => {
     const total = steps[0]?.count || 1
@@ -53,6 +55,7 @@ export function FunnelChart({
   }, [steps])
 
   const defaultColor = 'hsl(var(--primary))'
+  const legendDotStyle = useMemo(() => ({ backgroundColor: defaultColor }), [defaultColor])
 
   if (isLoading) {
     return (
@@ -63,8 +66,8 @@ export function FunnelChart({
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, idx) => (
-              <Skeleton key={idx} className="h-12 w-full" />
+            {loadingSlots.map((slot) => (
+              <Skeleton key={slot} className="h-12 w-full" />
             ))}
           </div>
         </CardContent>
@@ -96,65 +99,23 @@ export function FunnelChart({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {funnelData.map((step, index) => {
-            const stepColor = step.color || defaultColor
-
-            return (
-              <div key={step.id} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-foreground">{step.name}</span>
-                  <div className="flex items-center gap-3">
-                    {showPercentages && (
-                      <span className="text-muted-foreground">
-                        {step.percentage.toFixed(1)}%
-                      </span>
-                    )}
-                    <span className="font-mono font-bold text-foreground">{step.count.toLocaleString()}</span>
-                  </div>
-                </div>
-                <div className="relative h-8 w-full overflow-hidden rounded-lg bg-muted/30">
-                  {/* Background track */}
-                  <div className="absolute inset-y-0 left-0 w-full bg-muted/20" />
-
-                  {/* Filled bar */}
-                  <div
-                    className="absolute inset-y-0 left-0 h-full rounded-lg transition-[width] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
-                    style={{
-                      width: `${step.width}%`,
-                      backgroundColor: stepColor,
-                    }}
-                  />
-
-                  {/* Labels inside bar */}
-                  <div
-                    className="absolute inset-0 flex items-center px-3 text-[10px] font-medium text-white mix-blend-plus-lighter"
-                    style={{
-                      justifyContent: step.width < 15 ? 'flex-start' : step.width < 30 ? 'center' : 'flex-end',
-                    }}
-                  >
-                    {step.label || step.name}
-                  </div>
-                </div>
-
-                {/* Drop-off indicator */}
-                {index < steps.length - 1 && (
-                  <div className="flex items-center justify-end text-[10px] text-muted-foreground">
-                    <span className="mr-1">Drop-off:</span>
-                    <span className="font-mono font-medium">
-                      {step.dropOff.toLocaleString()} ({step.dropOffPercent.toFixed(1)}%)
-                    </span>
-                  </div>
-                )}
-              </div>
-            )
-          })}
+          {funnelData.map((step, index) => (
+            <FunnelStepRow
+              key={step.id}
+              defaultColor={defaultColor}
+              index={index}
+              showPercentages={showPercentages}
+              step={step}
+              totalSteps={steps.length}
+            />
+          ))}
         </div>
 
         {/* Legend */}
         <div className="mt-4 pt-4 border-t border-muted/20">
           <div className="flex flex-wrap gap-4 text-[10px] text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: defaultColor }} />
+              <div className="h-2 w-2 rounded-full" style={legendDotStyle} />
               <span>Conversion Stage</span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -192,4 +153,81 @@ export function createEcommerceFunnel(
     { id: 'checkout', name: 'Checkout', count: checkout || 0, color: CHART_COLORS.funnel.checkout },
     { id: 'purchase', name: 'Purchase', count: purchase || 0, color: CHART_COLORS.funnel.purchase },
   ]
+}
+
+function FunnelStepRow({
+  defaultColor,
+  index,
+  showPercentages,
+  step,
+  totalSteps,
+}: {
+  defaultColor: string
+  index: number
+  showPercentages: boolean
+  step: FunnelDataStep
+  totalSteps: number
+}) {
+  const stepColor = step.color || defaultColor
+  const barStyle = useMemo(
+    () => ({
+      width: `${step.width}%`,
+      backgroundColor: stepColor,
+    }),
+    [step.width, stepColor]
+  )
+  const labelStyle = useMemo(
+    () => ({
+      justifyContent: step.width < 15 ? 'flex-start' : step.width < 30 ? 'center' : 'flex-end',
+    }),
+    [step.width]
+  )
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-semibold text-foreground">{step.name}</span>
+        <div className="flex items-center gap-3">
+          {showPercentages && <span className="text-muted-foreground">{step.percentage.toFixed(1)}%</span>}
+          <span className="font-mono font-bold text-foreground">{step.count.toLocaleString()}</span>
+        </div>
+      </div>
+      <div className="relative h-8 w-full overflow-hidden rounded-lg bg-muted/30">
+        {/* Background track */}
+        <div className="absolute inset-y-0 left-0 w-full bg-muted/20" />
+
+        {/* Filled bar */}
+        <div
+          className="absolute inset-y-0 left-0 h-full rounded-lg transition-[width] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
+          style={barStyle}
+        />
+
+        {/* Labels inside bar */}
+        <div
+          className="absolute inset-0 flex items-center px-3 text-[10px] font-medium text-white mix-blend-plus-lighter"
+          style={labelStyle}
+        >
+          {step.label || step.name}
+        </div>
+      </div>
+
+      {/* Drop-off indicator */}
+      {index < totalSteps - 1 && (
+        <div className="flex items-center justify-end text-[10px] text-muted-foreground">
+          <span className="mr-1">Drop-off:</span>
+          <span className="font-mono font-medium">
+            {step.dropOff.toLocaleString()} ({step.dropOffPercent.toFixed(1)}%)
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+type FunnelDataStep = FunnelStep & {
+  percentage: number
+  dropOff: number
+  dropOffPercent: number
+  width: number
+  previousCount: number
 }

@@ -8,6 +8,14 @@ interface DashboardSkeletonProps {
 }
 
 export function DashboardSkeleton({ showStepIndicator = false }: DashboardSkeletonProps) {
+  const stepCardSlots = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5', 'step-6']
+  const statSlots = ['stat-1', 'stat-2', 'stat-3', 'stat-4']
+  const sectionSlots = ['section-1', 'section-2', 'section-3']
+  const comparisonSlots = ['comparison-1', 'comparison-2', 'comparison-3', 'comparison-4']
+  const summarySlots = ['summary-1', 'summary-2', 'summary-3']
+  const actionSlots = ['action-1', 'action-2']
+  const activitySlots = ['activity-1', 'activity-2', 'activity-3', 'activity-4', 'activity-5']
+
   return (
     <div className="space-y-6">
       <div>
@@ -26,8 +34,8 @@ export function DashboardSkeleton({ showStepIndicator = false }: DashboardSkelet
               <Skeleton className="h-4 w-64" />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {Array.from({ length: 6 }).map((_, idx) => (
-                <Card key={idx} className="border-muted/60 bg-muted/10">
+              {stepCardSlots.map((slot) => (
+                <Card key={slot} className="border-muted/60 bg-muted/10">
                   <CardContent className="space-y-3 p-4">
                     <Skeleton className="h-4 w-36" />
                     <Skeleton className="h-3 w-48" />
@@ -41,8 +49,8 @@ export function DashboardSkeleton({ showStepIndicator = false }: DashboardSkelet
       )}
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, idx) => (
-          <Card key={idx} className="border-muted/60 bg-background shadow-sm">
+        {statSlots.map((slot) => (
+          <Card key={slot} className="border-muted/60 bg-background shadow-sm">
             <CardContent className="space-y-3 p-5">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="h-8 w-32" />
@@ -58,8 +66,8 @@ export function DashboardSkeleton({ showStepIndicator = false }: DashboardSkelet
           <Skeleton className="mt-2 h-4 w-64" />
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, idx) => (
-            <div key={idx} className="flex h-full flex-col justify-between rounded-lg border border-muted/60 bg-muted/10 p-4">
+          {sectionSlots.map((slot) => (
+            <div key={slot} className="flex h-full flex-col justify-between rounded-lg border border-muted/60 bg-muted/10 p-4">
               <div className="space-y-3">
                 <Skeleton className="h-9 w-9 rounded-full" />
                 <Skeleton className="h-4 w-40" />
@@ -82,13 +90,13 @@ export function DashboardSkeleton({ showStepIndicator = false }: DashboardSkelet
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
-              {Array.from({ length: 4 }).map((_, idx) => (
-                <div key={idx} className="rounded-lg border border-muted/60 bg-muted/10 p-4">
+              {comparisonSlots.map((slot) => (
+                <div key={slot} className="rounded-lg border border-muted/60 bg-muted/10 p-4">
                   <Skeleton className="h-4 w-36" />
                   <Skeleton className="mt-2 h-3 w-48" />
                   <div className="mt-4 grid grid-cols-3 gap-2">
-                    {Array.from({ length: 3 }).map((__, metricIdx) => (
-                      <Skeleton key={metricIdx} className="h-3 w-full" />
+                    {summarySlots.map((summarySlot) => (
+                      <Skeleton key={summarySlot} className="h-3 w-full" />
                     ))}
                   </div>
                 </div>
@@ -102,8 +110,8 @@ export function DashboardSkeleton({ showStepIndicator = false }: DashboardSkelet
             <Skeleton className="mt-2 h-4 w-56" />
           </CardHeader>
           <CardContent className="space-y-3">
-            {Array.from({ length: 4 }).map((_, idx) => (
-              <div key={idx} className="flex items-center gap-3 rounded-md border border-muted/60 bg-muted/10 p-3">
+            {activitySlots.map((slot) => (
+              <div key={slot} className="flex items-center gap-3 rounded-md border border-muted/60 bg-muted/10 p-3">
                 <Skeleton className="h-10 w-10 rounded-full" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-40" />
@@ -124,19 +132,19 @@ export function DashboardSkeleton({ showStepIndicator = false }: DashboardSkelet
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Skeleton className="h-10 w-full sm:w-64" />
             <div className="flex flex-wrap items-center gap-2">
-              {Array.from({ length: 2 }).map((_, idx) => (
-                <Skeleton key={idx} className="h-10 w-32" />
+              {actionSlots.map((slot) => (
+                <Skeleton key={slot} className="h-10 w-32" />
               ))}
             </div>
           </div>
           <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, idx) => (
-              <div key={idx} className="rounded-md border border-muted/60 bg-muted/10 p-4">
+            {activitySlots.map((slot) => (
+              <div key={slot} className="rounded-md border border-muted/60 bg-muted/10 p-4">
                 <Skeleton className="h-4 w-60" />
                 <Skeleton className="mt-2 h-3 w-32" />
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {Array.from({ length: 3 }).map((__, tagIdx) => (
-                    <Skeleton key={tagIdx} className="h-4 w-20" />
+                  {summarySlots.map((tagSlot) => (
+                    <Skeleton key={tagSlot} className="h-4 w-20" />
                   ))}
                 </div>
               </div>

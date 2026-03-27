@@ -26,10 +26,17 @@ const providerInfo = {
   loginMethod: 'redirect' as const,
 }
 
+const MetaIcon = ({ className }: { className?: string }) => <span className={className}>icon</span>
+
+const popupBlockedGuidance = {
+  title: 'Popup blocked',
+  action: 'Allow popups and try again.',
+}
+
 describe('connection dialog sections', () => {
   it('renders the dialog header and progress', () => {
     const headerMarkup = renderToStaticMarkup(
-      <ConnectionDialogHeader providerInfo={providerInfo} Icon={({ className }) => <span className={className}>icon</span>} />,
+      <ConnectionDialogHeader providerInfo={providerInfo} Icon={MetaIcon} />,
     )
     const progressMarkup = renderToStaticMarkup(<ConnectionProgress step="fetching" providerName="Meta Ads" />)
 
@@ -54,7 +61,7 @@ describe('connection dialog sections', () => {
       <ConnectionDialogBody
         connectionStep="error"
         error="Popup was blocked"
-        errorGuidance={{ title: 'Popup blocked', action: 'Allow popups and try again.' }}
+        errorGuidance={popupBlockedGuidance}
         isInProgress={false}
         providerInfo={providerInfo}
         showPreConnect={false}

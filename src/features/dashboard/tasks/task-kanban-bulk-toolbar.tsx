@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { CheckSquare, X, Trash2, User, Calendar, LoaderCircle } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
@@ -9,7 +9,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/shared/ui/popover'
-import { TaskStatus, TASK_STATUSES } from '@/types/tasks'
+import { TASK_STATUSES } from '@/types/tasks'
+import type { TaskStatus } from '@/types/tasks'
 import { formatStatusLabel } from './task-types'
 
 type TaskKanbanBulkToolbarProps = {
@@ -40,6 +41,43 @@ export function TaskKanbanBulkToolbar({
   onBulkDelete,
 }: TaskKanbanBulkToolbarProps) {
   const [assigneeInput, setAssigneeInput] = useState('')
+
+  const handleAssigneeInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setAssigneeInput(e.target.value)
+  }, [])
+
+  const handleBulkAssign = useCallback(() => {
+    if (!onBulkAssign || !assigneeInput.trim()) return
+
+    onBulkAssign(assigneeInput.split(',').map((name) => name.trim()))
+    setAssigneeInput('')
+  }, [assigneeInput, onBulkAssign])
+
+  const handleAssigneeKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key !== 'Enter') return
+
+      e.preventDefault()
+      handleBulkAssign()
+    },
+    [handleBulkAssign]
+  )
+
+  const handleClearDueDate = useCallback(() => {
+    onBulkDueDate?.(null)
+  }, [onBulkDueDate])
+
+  const handleSetToday = useCallback(() => {
+    onBulkDueDate?.(new Date().toISOString().split('T')[0]!)
+  }, [onBulkDueDate])
+
+  const handleSetTomorrow = useCallback(() => {
+    onBulkDueDate?.(new Date(Date.now() + 86400000).toISOString().split('T')[0]!)
+  }, [onBulkDueDate])
+
+  const handleSetNextWeek = useCallback(() => {
+    onBulkDueDate?.(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]!)
+  }, [onBulkDueDate])
 
   if (selectedCount === 0 && !bulkActive) {
     return (
@@ -111,13 +149,11 @@ export function TaskKanbanBulkToolbar({
               </PopoverTrigger>
               <PopoverContent className="w-40 p-1" align="end">
                 {TASK_STATUSES.filter(s => s !== 'archived').map((status) => (
-                  <button
+                  <BulkStatusOption
                     key={status}
-                    onClick={() => onBulkStatusChange(status)}
-                    className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
-                  >
-                    {formatStatusLabel(status)}
-                  </button>
+                    status={status}
+                    onSelect={onBulkStatusChange}
+                  />
                 ))}
               </PopoverContent>
             </Popover>
@@ -139,26 +175,13 @@ export function TaskKanbanBulkToolbar({
                     type="text"
                     placeholder="Alice, Bob, …"
                     value={assigneeInput}
-                    onChange={(e) => setAssigneeInput(e.target.value)}
+                    onChange={handleAssigneeInputChange}
                     className="w-full h-8 px-2 rounded-md border border-input bg-background text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        if (assigneeInput.trim()) {
-                          onBulkAssign(assigneeInput.split(',').map(s => s.trim()))
-                          setAssigneeInput('')
-                        }
-                      }
-                    }}
+                    onKeyDown={handleAssigneeKeyDown}
                   />
                   <Button
                     size="sm"
-                    onClick={() => {
-                      if (assigneeInput.trim()) {
-                        onBulkAssign(assigneeInput.split(',').map(s => s.trim()))
-                        setAssigneeInput('')
-                      }
-                    }}
+                    onClick={handleBulkAssign}
                     className="w-full h-7"
                   >
                     Assign
@@ -179,34 +202,25 @@ export function TaskKanbanBulkToolbar({
               </PopoverTrigger>
               <PopoverContent className="w-48 p-1" align="end">
                 <button
-                  onClick={() => onBulkDueDate(null)}
+                  onClick={handleClearDueDate}
                   className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
                 >
                   Clear due date
                 </button>
                 <button
-                  onClick={() => {
-                    const today = new Date().toISOString().split('T')[0]!
-                    onBulkDueDate(today)
-                  }}
+                  onClick={handleSetToday}
                   className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
                 >
                   Today
                 </button>
                 <button
-                  onClick={() => {
-                    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]!
-                    onBulkDueDate(tomorrow)
-                  }}
+                  onClick={handleSetTomorrow}
                   className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
                 >
                   Tomorrow
                 </button>
                 <button
-                  onClick={() => {
-                    const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]!
-                    onBulkDueDate(nextWeek)
-                  }}
+                  onClick={handleSetNextWeek}
                   className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
                 >
                   Next week
@@ -230,5 +244,26 @@ export function TaskKanbanBulkToolbar({
         </div>
       )}
     </div>
+  )
+}
+
+interface BulkStatusOptionProps {
+  status: TaskStatus
+  onSelect?: (status: TaskStatus) => void
+}
+
+function BulkStatusOption({ status, onSelect }: BulkStatusOptionProps) {
+  const handleClick = useCallback(() => {
+    onSelect?.(status)
+  }, [onSelect, status])
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className="w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-muted transition-colors"
+    >
+      {formatStatusLabel(status)}
+    </button>
   )
 }

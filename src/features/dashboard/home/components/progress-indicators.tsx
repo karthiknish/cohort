@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { X, Minimize2, Maximize2, Pause, Play, RotateCcw } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Progress } from '@/shared/ui/progress'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Badge } from '@/shared/ui/badge'
 import { cn } from '@/lib/utils'
+
+const noop = () => {}
 
 export type OperationStatus = 'pending' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled'
 
@@ -75,6 +77,26 @@ export function ProgressIndicators({
     })
   }, [])
 
+  const handleToggleExpanded = useCallback(() => {
+    setIsExpanded((prev) => !prev)
+  }, [])
+
+  const collapseHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        operations.map((op) => [op.id, () => toggleCollapsed(op.id)])
+      ) as Record<string, () => void>,
+    [operations, toggleCollapsed]
+  )
+
+  const dismissHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        operations.map((op) => [op.id, () => onDismiss?.(op.id)])
+      ) as Record<string, () => void>,
+    [operations, onDismiss]
+  )
+
   if (variant === 'minimal') {
     return (
       <div className={cn('fixed top-4 right-4 z-50 flex flex-col gap-2', className)}>
@@ -112,7 +134,7 @@ export function ProgressIndicators({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={handleToggleExpanded}
               >
                 {isExpanded ? (
                   <Minimize2 className="h-4 w-4" />
@@ -140,7 +162,7 @@ export function ProgressIndicators({
                   key={op.id}
                   operation={op}
                   isCollapsed={collapsedOps.has(op.id)}
-                  onToggleCollapse={() => toggleCollapsed(op.id)}
+                  onToggleCollapse={collapseHandlers[op.id] ?? noop}
                 />
               ))}
             </CardContent>
@@ -155,7 +177,7 @@ export function ProgressIndicators({
             <CompletedOperationItem
               key={op.id}
               operation={op}
-              onDismiss={() => onDismiss?.(op.id)}
+              onDismiss={dismissHandlers[op.id] ?? noop}
             />
           ))}
         </div>

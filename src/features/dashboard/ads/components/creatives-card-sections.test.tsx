@@ -37,11 +37,14 @@ const creative = {
   pageName: 'Brand Page',
 }
 
+const headerSummary = { total: 5, byType: { IMAGE: 3 } }
+const contentSummary = { total: 1, byType: { IMAGE: 1 } }
+
 describe('creatives card sections', () => {
   it('renders the disconnected state and card header', () => {
     const disconnectedMarkup = renderToStaticMarkup(<CreativesDisconnectedState providerName="Meta Ads" />)
     const headerMarkup = renderToStaticMarkup(
-      <CreativesCardHeader loading={false} onCompare={vi.fn()} onLoad={vi.fn()} providerName="Meta Ads" selectedCount={2} summary={{ total: 5, byType: { IMAGE: 3 } }} />,
+      <CreativesCardHeader loading={false} onCompare={vi.fn()} onLoad={vi.fn()} providerName="Meta Ads" selectedCount={2} summary={headerSummary} />,
     )
 
     expect(disconnectedMarkup).toContain('Connect Meta Ads to view creatives')
@@ -52,7 +55,7 @@ describe('creatives card sections', () => {
 
   it('renders the creatives content table', () => {
     const markup = renderToStaticMarkup(
-      <CreativesCardContent creatives={[creative]} onToggleSelected={vi.fn()} selectedIds={new Set(['creative-1'])} summary={{ total: 1, byType: { IMAGE: 1 } }} />,
+      <CreativesCardContent creatives={[creative]} onToggleSelected={vi.fn()} selectedIds={new Set(['creative-1'])} summary={contentSummary} />,
     )
 
     expect(markup).toContain('IMAGE: 1')

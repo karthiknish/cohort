@@ -70,11 +70,22 @@ function getStatusCopy(status: string): { title: string; message: string } {
 interface AccessOverlayProps {
   title: string
   message: string
-  action?: React.ReactNode
+  actionLabel?: string
+  actionHref?: string
+  actionOnClick?: () => void
+  actionVariant?: 'default' | 'outline'
   showSpinner?: boolean
 }
 
-function AccessOverlay({ title, message, action, showSpinner }: AccessOverlayProps) {
+function AccessOverlay({
+  title,
+  message,
+  actionHref,
+  actionLabel,
+  actionOnClick,
+  actionVariant = 'default',
+  showSpinner,
+}: AccessOverlayProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
       <div className="w-full max-w-md rounded-lg border border-border bg-background p-8 text-center shadow-sm">
@@ -85,7 +96,19 @@ function AccessOverlay({ title, message, action, showSpinner }: AccessOverlayPro
         )}
         <h2 className="text-lg font-semibold text-foreground mb-2">{title}</h2>
         <p className="text-sm text-muted-foreground">{message}</p>
-        {action && <div className="mt-4">{action}</div>}
+        {actionLabel ? (
+          <div className="mt-4">
+            {actionHref ? (
+              <Button asChild variant={actionVariant}>
+                <Link href={actionHref}>{actionLabel}</Link>
+              </Button>
+            ) : (
+              <Button variant={actionVariant} onClick={actionOnClick}>
+                {actionLabel}
+              </Button>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   )
@@ -137,11 +160,8 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
       <AccessOverlay
         title="Sign in required"
         message="You need to sign in to access this area of the application."
-        action={
-          <Button asChild>
-            <Link href="/">Go to sign in</Link>
-          </Button>
-        }
+        actionLabel="Go to sign in"
+        actionHref="/"
       />
     )
   }
@@ -153,11 +173,9 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
       <AccessOverlay
         title={title}
         message={message}
-        action={
-          <Button variant="outline" onClick={handleBlockedSignOut}>
-            Sign out and try again
-          </Button>
-        }
+        actionLabel="Sign out and try again"
+        actionVariant="outline"
+        actionOnClick={handleBlockedSignOut}
       />
     )
   }
@@ -168,11 +186,8 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
       <AccessOverlay
         title="Insufficient permissions"
         message="You do not have the required role to access this area."
-        action={
-          <Button asChild>
-            <Link href="/dashboard">Back to dashboard</Link>
-          </Button>
-        }
+        actionLabel="Back to dashboard"
+        actionHref="/dashboard"
       />
     )
   }

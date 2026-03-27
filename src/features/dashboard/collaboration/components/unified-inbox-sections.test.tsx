@@ -113,6 +113,13 @@ const directMessage: DirectMessage = {
   updatedAtMs: Date.now(),
 }
 
+const EMPTY_BOOLEAN_MAP = {} as Record<string, boolean>
+const EMPTY_STRING_MAP = {} as Record<string, string | null>
+const EMPTY_NUMBER_MAP = {} as Record<string, number>
+const EMPTY_MESSAGE_MAP = {} as Record<string, CollaborationMessage[]>
+
+const makeIsSelected = (selectedId: string) => (item: UnifiedItem) => item.id === selectedId
+
 describe('unified inbox sections', () => {
   it('renders the list pane and empty selection state', () => {
     const items: UnifiedItem[] = [
@@ -141,6 +148,7 @@ describe('unified inbox sections', () => {
         originalData: directConversation,
       },
     ]
+    const isSelected = makeIsSelected(channel.id)
 
     const markup = renderToStaticMarkup(
       <>
@@ -149,7 +157,7 @@ describe('unified inbox sections', () => {
           dmCount={1}
           filteredItems={items}
           isLoading={false}
-          isSelected={(item) => item.id === channel.id}
+          isSelected={isSelected}
           onNewDM={vi.fn()}
           onSearchQueryChange={vi.fn()}
           onSelectItem={vi.fn()}
@@ -169,14 +177,20 @@ describe('unified inbox sections', () => {
   })
 
   it('renders channel and direct message panes through the shared message pane', () => {
+    const channelParticipants = [{ name: 'Taylor', role: 'manager' }]
+    const mentionParticipants = [
+      { id: 'user-1', name: 'Taylor', role: 'manager' },
+      { id: 'user-2', name: 'Jordan', role: 'designer' },
+    ]
+
     const markup = renderToStaticMarkup(
       <>
         <ChannelConversationPane
           canLoadMore={false}
           channelMessages={[channelMessage]}
           channelMessagesForPane={[channelMessage]}
-          channelParticipants={[{ name: 'Taylor', role: 'manager' }]}
-          mentionParticipants={[{ id: 'user-1', name: 'Taylor', role: 'manager' }, { id: 'user-2', name: 'Jordan', role: 'designer' }]}
+          channelParticipants={channelParticipants}
+          mentionParticipants={mentionParticipants}
           currentUserId="user-1"
           currentUserRole="admin"
           deepLinkMessageId={null}
@@ -204,16 +218,16 @@ describe('unified inbox sections', () => {
           onSendMessage={vi.fn()}
           onToggleReaction={vi.fn()}
           pendingAttachments={[]}
-          reactionPendingByMessage={{}}
+          reactionPendingByMessage={EMPTY_STRING_MAP}
           searchHighlights={[]}
           searchingMessages={false}
           selectedChannel={channel}
           sending={false}
-          threadErrorsByRootId={{}}
-          threadLoadingByRootId={{}}
-          threadMessagesByRootId={{}}
-          threadNextCursorByRootId={{}}
-          threadUnreadCountsByRootId={{}}
+          threadErrorsByRootId={EMPTY_STRING_MAP}
+          threadLoadingByRootId={EMPTY_BOOLEAN_MAP}
+          threadMessagesByRootId={EMPTY_MESSAGE_MAP}
+          threadNextCursorByRootId={EMPTY_STRING_MAP}
+          threadUnreadCountsByRootId={EMPTY_NUMBER_MAP}
           uploading={false}
         />
         <DirectMessageConversationPane
@@ -290,16 +304,16 @@ describe('unified inbox sections', () => {
         onSendMessage={vi.fn()}
         onToggleReaction={vi.fn()}
         pendingAttachments={[]}
-        reactionPendingByMessage={{}}
+        reactionPendingByMessage={EMPTY_STRING_MAP}
         searchHighlights={[]}
         searchingMessages={false}
         selectedChannel={channel}
         sending={false}
-        threadErrorsByRootId={{}}
-        threadLoadingByRootId={{}}
-        threadMessagesByRootId={{}}
-        threadNextCursorByRootId={{}}
-        threadUnreadCountsByRootId={{}}
+        threadErrorsByRootId={EMPTY_STRING_MAP}
+        threadLoadingByRootId={EMPTY_BOOLEAN_MAP}
+        threadMessagesByRootId={EMPTY_MESSAGE_MAP}
+        threadNextCursorByRootId={EMPTY_STRING_MAP}
+        threadUnreadCountsByRootId={EMPTY_NUMBER_MAP}
         uploading={false}
       />,
     )

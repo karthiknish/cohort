@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { ExternalLink, GripVertical, ImageIcon, Link2, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
@@ -32,6 +33,18 @@ export function FeatureCard({
   onDelete,
   isDragging = false,
 }: FeatureCardProps) {
+  const handleEditClick = useCallback(() => {
+    onEdit(feature)
+  }, [feature, onEdit])
+
+  const handleDeleteClick = useCallback(() => {
+    onDelete(feature)
+  }, [feature, onDelete])
+
+  const handleReferenceClick = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.stopPropagation()
+  }, [])
+
   return (
     <div
       className={cn(
@@ -61,13 +74,13 @@ export function FeatureCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(feature)}>
+            <DropdownMenuItem onClick={handleEditClick}>
               <Pencil className="mr-2 h-4 w-4" />
               Edit
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => onDelete(feature)}
+              onClick={handleDeleteClick}
               className="text-destructive focus:text-destructive"
             >
               <Trash2 className="mr-2 h-4 w-4" />
@@ -131,7 +144,7 @@ export function FeatureCard({
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline max-w-[120px] truncate"
-              onClick={(e) => e.stopPropagation()}
+              onClick={handleReferenceClick}
             >
               <ExternalLink className="h-2.5 w-2.5 shrink-0" />
               {ref.label}

@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils'
 
 import { InSiteMeetingRoomChat } from './in-site-meeting-room-chat'
 
+const MEETING_CONTROL_BAR_CONTROLS = { chat: false, settings: true }
+
 type LayoutContextValue = ComponentProps<typeof LayoutContextProvider>['value']
 type GridTracks = ComponentProps<typeof GridLayout>['tracks']
 
@@ -283,7 +285,7 @@ export function LiveRoomCanvasShell({
         {children}
 
         <div className={cn('border-t border-border bg-card/95 backdrop-blur', compact ? 'px-2.5 py-2.5' : 'px-3 py-3')}>
-          <ControlBar controls={{ chat: false, settings: true }} />
+          <ControlBar controls={MEETING_CONTROL_BAR_CONTROLS} />
         </div>
 
         <RoomAudioRenderer />

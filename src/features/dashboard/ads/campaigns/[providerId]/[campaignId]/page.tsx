@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, createElement, useCallback, useEffect, useMemo, useState } from 'react'
 import { useAction } from 'convex/react'
 import { useParams } from 'next/navigation'
 
@@ -81,6 +81,11 @@ type CampaignInsightsResponse = {
   }
   currency?: string
 }
+
+const campaignInsightsSuspenseFallback = createElement('div', {
+  className: 'min-h-[320px] rounded-xl border border-muted/50 bg-muted/20',
+  'aria-busy': 'true',
+})
 
 function toIsoDateOnly(date: Date): string {
   return date.toISOString().split('T')[0]!
@@ -478,6 +483,10 @@ function CampaignInsightsPageContent() {
     [campaign?.currency, insights?.currency],
   )
 
+  const handleRetryCampaign = useCallback(() => {
+    void loadCampaign()
+  }, [loadCampaign])
+
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-10 p-6 pb-20">
       {/* 1. Header & Controls */}
@@ -494,7 +503,9 @@ function CampaignInsightsPageContent() {
         <Card className="border-destructive/20 bg-destructive/5">
           <CardContent className="flex items-center gap-3 p-4 text-sm font-bold text-destructive">
             <span>{campaignError}</span>
-            <button type="button" onClick={() => void loadCampaign()} className="underline">Retry</button>
+            <button type="button" onClick={handleRetryCampaign} className="underline">
+              Retry
+            </button>
           </CardContent>
         </Card>
       )}
@@ -576,7 +587,7 @@ function CampaignInsightsPageContent() {
 
 export default function CampaignInsightsPage() {
   return (
-    <Suspense fallback={<div className="min-h-[320px] rounded-xl border border-muted/50 bg-muted/20" aria-busy="true" />}>
+    <Suspense fallback={campaignInsightsSuspenseFallback}>
       <CampaignInsightsPageContent />
     </Suspense>
   )

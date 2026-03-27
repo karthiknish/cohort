@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   // reactCompiler: true, // Temporarily disabled - causes build issues with _global-error
@@ -29,18 +29,18 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-tabs',
       '@radix-ui/react-toast',
       '@radix-ui/react-tooltip',
-      'recharts'
+      'recharts',
     ],
   },
   cleanDistDir: true,
   async rewrites() {
     return [
       {
-        source: "/ingest/:path*",
-        destination: "https://us.i.posthog.com/:path*",
+        source: '/ingest/:path*',
+        destination: 'https://us.i.posthog.com/:path*',
       },
-    ];
+    ]
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig

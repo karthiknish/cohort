@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { linkedinAdsClient } from '@/services/integrations/shared/base-client'
-import {
+import type {
   LinkedInCampaign,
   LinkedInCampaignGroup,
   LinkedInAd,

@@ -74,6 +74,12 @@ export function TaskList({
     setViewingTask(task)
   }, [])
 
+  const handleTaskViewDialogOpenChange = useCallback((nextOpen: boolean) => {
+    if (!nextOpen) {
+      setViewingTask(null)
+    }
+  }, [])
+
   return (
     <ScrollArea className="max-h-[520px]">
       <div
@@ -121,9 +127,7 @@ export function TaskList({
         userName={userName}
         userRole={userRole}
         participants={participants}
-        onOpenChange={(open) => {
-          if (!open) setViewingTask(null)
-        }}
+        onOpenChange={handleTaskViewDialogOpenChange}
       />
     </ScrollArea>
   )

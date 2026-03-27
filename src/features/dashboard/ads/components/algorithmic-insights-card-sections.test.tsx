@@ -30,6 +30,7 @@ describe('algorithmic insights card sections', () => {
   })
 
   it('renders the compact variant', () => {
+    const onViewAll = vi.fn()
     const markup = renderToStaticMarkup(
       <AlgorithmicInsightsCompactCard
         criticalCount={0}
@@ -37,7 +38,7 @@ describe('algorithmic insights card sections', () => {
         globalEfficiencyScore={74}
         hasMoreInsights={true}
         insightsCount={3}
-        onViewAll={vi.fn()}
+        onViewAll={onViewAll}
         title="AI-Powered Insights"
         warningCount={1}
       />,
@@ -50,6 +51,8 @@ describe('algorithmic insights card sections', () => {
   })
 
   it('renders the full variant', () => {
+    const onViewAll = vi.fn()
+    const providerEfficiencyScores = { meta_ads: 31, google_ads: 44 }
     const markup = renderToStaticMarkup(
       <AlgorithmicInsightsFullCard
         criticalCount={1}
@@ -57,8 +60,8 @@ describe('algorithmic insights card sections', () => {
         displayedInsights={[]}
         globalEfficiencyScore={38}
         hasMoreInsights={true}
-        onViewAll={vi.fn()}
-        providerEfficiencyScores={{ meta_ads: 31, google_ads: 44 }}
+        onViewAll={onViewAll}
+        providerEfficiencyScores={providerEfficiencyScores}
         title="AI-Powered Insights"
       />,
     )

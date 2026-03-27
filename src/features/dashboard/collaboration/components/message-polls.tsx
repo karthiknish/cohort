@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { createElement, useState, useCallback, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -109,6 +109,10 @@ export function PollCard({
       })
   }, [onVote, poll.id, selectedOptions, userId, toast])
 
+  const handleShowResults = useCallback(() => {
+    setShowResults(true)
+  }, [])
+
   const handleToggleOption = useCallback((optionId: string) => {
     if (poll.multipleChoice) {
       setSelectedOptions((prev) =>
@@ -175,7 +179,7 @@ export function PollCard({
         isExpired={isExpired}
         isVoting={isVoting}
         onEndPoll={handleEndPoll}
-        onShowResults={() => setShowResults(true)}
+        onShowResults={handleShowResults}
         onVote={handleVote}
         selectedOptionsCount={selectedOptions.length}
         showResults={showResults}
@@ -301,6 +305,10 @@ export function CreatePollDialog({
       })
   }, [question, options, multipleChoice, anonymous, workspaceId, userId, onCreate, toast])
 
+  const handleCancelCreate = useCallback(() => {
+    setOpen(false)
+  }, [])
+
   const defaultTrigger = (
     <CreatePollDialogTrigger />
   )
@@ -324,7 +332,7 @@ export function CreatePollDialog({
           onAnonymousChange={setAnonymous}
           onMultipleChoiceChange={setMultipleChoice}
         />
-        <CreatePollDialogFooter isCreating={isCreating} onCancel={() => setOpen(false)} onCreate={handleCreate} question={question} />
+        <CreatePollDialogFooter isCreating={isCreating} onCancel={handleCancelCreate} onCreate={handleCreate} question={question} />
       </DialogContent>
     </Dialog>
   )
@@ -337,7 +345,7 @@ export function QuickPollButton(props: CreatePollDialogProps) {
   return (
     <CreatePollDialog
       {...props}
-      trigger={<QuickPollTrigger />}
+      trigger={createElement(QuickPollTrigger)}
     />
   )
 }

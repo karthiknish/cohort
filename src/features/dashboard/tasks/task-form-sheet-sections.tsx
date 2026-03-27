@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { Calendar as CalendarIcon, Paperclip } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -66,6 +67,16 @@ export function TaskSheetFields({
   projectHelpText,
   dueDateLayout = 'full',
 }: TaskSheetFieldsProps) {
+  const handleDueDateSelect = useCallback(
+    (date: Date | undefined) => {
+      setFormState((prev) => ({
+        ...prev,
+        dueDate: date ? format(date, 'yyyy-MM-dd') : '',
+      }))
+    },
+    [setFormState]
+  )
+
   const dueDateField = (
     <div className="space-y-2">
       <Label htmlFor={ids.dueDate}>Due date</Label>
@@ -89,17 +100,47 @@ export function TaskSheetFields({
             mode="single"
             selected={formState.dueDate ? parseISO(formState.dueDate) : undefined}
             disabled={isTaskDueDateDisabled}
-            onSelect={(date: Date | undefined) => {
-              setFormState((prev) => ({
-                ...prev,
-                dueDate: date ? format(date, 'yyyy-MM-dd') : '',
-              }))
-            }}
+            onSelect={handleDueDateSelect}
             initialFocus
           />
         </PopoverContent>
       </Popover>
     </div>
+  )
+
+  const handleTitleChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setFormState((prev) => ({ ...prev, title: event.target.value }))
+    },
+    [setFormState]
+  )
+
+  const handleDescriptionChange = useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setFormState((prev) => ({ ...prev, description: event.target.value }))
+    },
+    [setFormState]
+  )
+
+  const handleStatusChange = useCallback(
+    (value: string) => {
+      setFormState((prev) => ({ ...prev, status: value as TaskStatus }))
+    },
+    [setFormState]
+  )
+
+  const handlePriorityChange = useCallback(
+    (value: string) => {
+      setFormState((prev) => ({ ...prev, priority: value as TaskPriority }))
+    },
+    [setFormState]
+  )
+
+  const handleAssignedToChange = useCallback(
+    (value: string) => {
+      setFormState((prev) => ({ ...prev, assignedTo: value }))
+    },
+    [setFormState]
   )
 
   return (
@@ -109,9 +150,7 @@ export function TaskSheetFields({
         <Input
           id={ids.title}
           value={formState.title}
-          onChange={(event) => {
-            setFormState((prev) => ({ ...prev, title: event.target.value }))
-          }}
+          onChange={handleTitleChange}
           placeholder={titlePlaceholder}
           required
           disabled={disabled}
@@ -123,9 +162,7 @@ export function TaskSheetFields({
         <Textarea
           id={ids.description}
           value={formState.description}
-          onChange={(event) => {
-            setFormState((prev) => ({ ...prev, description: event.target.value }))
-          }}
+          onChange={handleDescriptionChange}
           placeholder="Add context, goals, or next steps"
           rows={4}
           disabled={disabled}
@@ -137,9 +174,7 @@ export function TaskSheetFields({
           <Label htmlFor={ids.status}>Status</Label>
           <Select
             value={formState.status}
-            onValueChange={(value) => {
-              setFormState((prev) => ({ ...prev, status: value as TaskStatus }))
-            }}
+            onValueChange={handleStatusChange}
             disabled={disabled}
           >
             <SelectTrigger id={ids.status}>
@@ -158,9 +193,7 @@ export function TaskSheetFields({
           <Label htmlFor={ids.priority}>Priority</Label>
           <Select
             value={formState.priority}
-            onValueChange={(value) => {
-              setFormState((prev) => ({ ...prev, priority: value as TaskPriority }))
-            }}
+            onValueChange={handlePriorityChange}
             disabled={disabled}
           >
             <SelectTrigger id={ids.priority}>
@@ -180,9 +213,7 @@ export function TaskSheetFields({
         <Label>Assigned to</Label>
         <MentionInput
           value={formState.assignedTo}
-          onChange={(value) => {
-            setFormState((prev) => ({ ...prev, assignedTo: value }))
-          }}
+          onChange={handleAssignedToChange}
           users={mentionableUsers}
           placeholder="Type @ to assign teammates or admins"
           disabled={disabled}
@@ -236,6 +267,18 @@ export function TaskSheetAttachmentsSection({
   onRemoveAttachment,
   fileInputRef,
 }: TaskSheetAttachmentsSectionProps) {
+  const handleAttachFilesClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [fileInputRef])
+
+  const handleFileInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      onAddAttachments(event.target.files)
+      event.currentTarget.value = ''
+    },
+    [onAddAttachments]
+  )
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
@@ -245,7 +288,7 @@ export function TaskSheetAttachmentsSection({
           variant="outline"
           size="sm"
           className="gap-2"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={handleAttachFilesClick}
           disabled={disabled}
         >
           <Paperclip className="h-4 w-4" />
@@ -258,10 +301,7 @@ export function TaskSheetAttachmentsSection({
         type="file"
         multiple
         className="hidden"
-        onChange={(event) => {
-          onAddAttachments(event.target.files)
-          event.currentTarget.value = ''
-        }}
+        onChange={handleFileInputChange}
       />
 
       {pendingAttachments.length > 0 ? (

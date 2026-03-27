@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server'
+import type { RefObject } from 'react'
 
 import { describe, expect, it, vi } from 'vitest'
 
@@ -48,6 +49,11 @@ const baseMessage: CollaborationMessage = {
   sharedTo: ['email'],
 }
 
+const EMPTY_BOOLEAN_MAP = {} as Record<string, boolean>
+const EMPTY_STRING_MAP = {} as Record<string, string | null>
+const EMPTY_MESSAGE_MAP = {} as Record<string, CollaborationMessage[]>
+const EMPTY_MESSAGES_END_REF = { current: null } as RefObject<HTMLDivElement | null>
+
 describe('message pane sections', () => {
   it('renders a collaboration message item shell', () => {
     const markup = renderToStaticMarkup(
@@ -57,7 +63,7 @@ describe('message pane sections', () => {
         editingMessageId={null}
         editingPreview=""
         editingValue=""
-        expandedThreadIds={{}}
+        expandedThreadIds={EMPTY_BOOLEAN_MAP}
         message={baseMessage}
         messageDeletingId={null}
         messageUpdatingId={null}
@@ -72,11 +78,11 @@ describe('message pane sections', () => {
         onStartEdit={vi.fn()}
         onThreadToggle={vi.fn()}
         onToggleReaction={vi.fn()}
-        reactionPendingByMessage={{}}
-        threadErrorsByRootId={{}}
-        threadLoadingByRootId={{}}
-        threadMessagesByRootId={{}}
-        threadNextCursorByRootId={{}}
+        reactionPendingByMessage={EMPTY_STRING_MAP}
+        threadErrorsByRootId={EMPTY_STRING_MAP}
+        threadLoadingByRootId={EMPTY_BOOLEAN_MAP}
+        threadMessagesByRootId={EMPTY_MESSAGE_MAP}
+        threadNextCursorByRootId={EMPTY_STRING_MAP}
       />,
     )
 
@@ -100,14 +106,14 @@ describe('message pane sections', () => {
         editingMessageId={null}
         editingPreview=""
         editingValue=""
-        expandedThreadIds={{}}
+        expandedThreadIds={EMPTY_BOOLEAN_MAP}
         flattenedMessages={flattenedMessages}
         isLoading={false}
         isSearchActive={false}
         loadingMore={false}
         messageDeletingId={null}
         messageUpdatingId={null}
-        messagesEndRef={{ current: null }}
+        messagesEndRef={EMPTY_MESSAGES_END_REF}
         messagesError={null}
         onCancelEdit={vi.fn()}
         onConfirmDelete={vi.fn()}
@@ -121,11 +127,11 @@ describe('message pane sections', () => {
         onStartEdit={vi.fn()}
         onThreadToggle={vi.fn()}
         onToggleReaction={vi.fn()}
-        reactionPendingByMessage={{}}
-        threadErrorsByRootId={{}}
-        threadLoadingByRootId={{}}
-        threadMessagesByRootId={{}}
-        threadNextCursorByRootId={{}}
+        reactionPendingByMessage={EMPTY_STRING_MAP}
+        threadErrorsByRootId={EMPTY_STRING_MAP}
+        threadLoadingByRootId={EMPTY_BOOLEAN_MAP}
+        threadMessagesByRootId={EMPTY_MESSAGE_MAP}
+        threadNextCursorByRootId={EMPTY_STRING_MAP}
         visibleMessages={[baseMessage]}
       />,
     )
@@ -139,14 +145,14 @@ describe('message pane sections', () => {
         editingMessageId={null}
         editingPreview=""
         editingValue=""
-        expandedThreadIds={{}}
+        expandedThreadIds={EMPTY_BOOLEAN_MAP}
         flattenedMessages={[]}
         isLoading={false}
         isSearchActive={false}
         loadingMore={false}
         messageDeletingId={null}
         messageUpdatingId={null}
-        messagesEndRef={{ current: null }}
+        messagesEndRef={EMPTY_MESSAGES_END_REF}
         messagesError={null}
         onCancelEdit={vi.fn()}
         onConfirmDelete={vi.fn()}
@@ -160,11 +166,11 @@ describe('message pane sections', () => {
         onStartEdit={vi.fn()}
         onThreadToggle={vi.fn()}
         onToggleReaction={vi.fn()}
-        reactionPendingByMessage={{}}
-        threadErrorsByRootId={{}}
-        threadLoadingByRootId={{}}
-        threadMessagesByRootId={{}}
-        threadNextCursorByRootId={{}}
+        reactionPendingByMessage={EMPTY_STRING_MAP}
+        threadErrorsByRootId={EMPTY_STRING_MAP}
+        threadLoadingByRootId={EMPTY_BOOLEAN_MAP}
+        threadMessagesByRootId={EMPTY_MESSAGE_MAP}
+        threadNextCursorByRootId={EMPTY_STRING_MAP}
         visibleMessages={[]}
       />,
     )

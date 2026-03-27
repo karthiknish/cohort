@@ -1,6 +1,6 @@
 'use client'
 
-import type { KeyboardEvent } from 'react'
+import { useCallback, type KeyboardEvent } from 'react'
 
 import { format } from 'date-fns'
 import { CalendarDays } from 'lucide-react'
@@ -76,6 +76,14 @@ export function MeetingDetailsSection({
   onDescriptionChange,
   onTitleChange,
 }: MeetingDetailsSectionProps) {
+  const handleTitleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onTitleChange(event.target.value)
+  }, [onTitleChange])
+
+  const handleDescriptionChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onDescriptionChange(event.target.value)
+  }, [onDescriptionChange])
+
   return (
     <>
       <div className="space-y-2 md:col-span-2">
@@ -85,7 +93,7 @@ export function MeetingDetailsSection({
           required
           disabled={disabled}
           value={title}
-          onChange={(event) => onTitleChange(event.target.value)}
+          onChange={handleTitleChange}
           placeholder={titlePlaceholder}
         />
       </div>
@@ -97,7 +105,7 @@ export function MeetingDetailsSection({
           rows={3}
           disabled={disabled}
           value={description}
-          onChange={(event) => onDescriptionChange(event.target.value)}
+          onChange={handleDescriptionChange}
           placeholder={descriptionPlaceholder}
         />
       </div>
@@ -111,6 +119,8 @@ export function MeetingScheduleDateSection({
   meetingDate,
   onMeetingDateChange,
 }: MeetingScheduleDateSectionProps) {
+  const handleDisabledDate = useCallback((date: Date) => date < new Date(new Date().setHours(0, 0, 0, 0)), [])
+
   return (
     <div className="space-y-2">
       <label htmlFor={dateId} className="text-sm font-medium">Date</label>
@@ -135,7 +145,7 @@ export function MeetingScheduleDateSection({
             mode="single"
             selected={meetingDate}
             onSelect={onMeetingDateChange}
-            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+            disabled={handleDisabledDate}
             initialFocus
           />
         </PopoverContent>
@@ -158,6 +168,14 @@ export function MeetingTimingSection({
   onMeetingTimeChange,
   onTimezoneChange,
 }: MeetingTimingSectionProps) {
+  const handleDurationChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onDurationMinutesChange(event.target.value)
+  }, [onDurationMinutesChange])
+
+  const handleTimezoneChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onTimezoneChange(event.target.value)
+  }, [onTimezoneChange])
+
   return (
     <>
       {showStartTime && timeId && onMeetingTimeChange ? (
@@ -183,7 +201,7 @@ export function MeetingTimingSection({
           required
           disabled={disabled}
           value={durationMinutes}
-          onChange={(event) => onDurationMinutesChange(event.target.value)}
+          onChange={handleDurationChange}
         />
       </div>
 
@@ -194,7 +212,7 @@ export function MeetingTimingSection({
           required
           disabled={disabled}
           value={timezone}
-          onChange={(event) => onTimezoneChange(event.target.value)}
+          onChange={handleTimezoneChange}
           placeholder="America/New_York"
         />
       </div>

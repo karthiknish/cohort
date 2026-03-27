@@ -48,6 +48,46 @@ interface InteractiveChartProps {
 }
 
 const DEFAULT_VALUE_FORMATTER = (value: number) => value.toString()
+const AXIS_TICK_STYLE = { fontSize: 11 } as const
+const ACTIVE_DOT_STYLE = { r: 5 } as const
+
+function TooltipMetricLine({
+  metric,
+  value,
+}: {
+  metric?: { color: string; label: string }
+  value?: number | string
+}) {
+  const labelStyle = useMemo(() => ({ color: metric?.color }), [metric?.color])
+
+  return (
+    <p style={labelStyle}>
+      {metric?.label}: {value}
+    </p>
+  )
+}
+
+function MetricTooltipContent({
+  active,
+  payload,
+  metrics,
+}: {
+  active?: boolean
+  payload?: Array<{ name?: string; value?: number | string }>
+  metrics: Array<{ key: string; label: string; color: string }>
+}) {
+    if (!active || !payload?.length) return null
+
+  return (
+    <div className="bg-background border rounded-lg px-2 py-1 shadow-sm">
+      {payload.map((entry, index: number) => {
+        const typedEntry = entry as { name?: string; value?: number | string }
+
+        return <TooltipMetricLine key={typedEntry.name} metric={metrics[index]} value={typedEntry.value} />
+      })}
+    </div>
+  )
+}
 
 /**
  * Interactive chart component with multiple chart types and export
@@ -249,39 +289,30 @@ export function MultiMetricChart({
   height?: number
   className?: string
 }) {
+  const renderTooltipContent = useCallback(
+    (props: { active?: boolean; payload?: Array<{ name?: string; value?: number | string }> }) => (
+      <MetricTooltipContent {...props} metrics={metrics} />
+    ),
+    [metrics],
+  )
+    const activeDot = useMemo(() => ({ r: 5 }), [])
+
   return (
     <ResponsiveContainer width="100%" height={height} className={className}>
       <LineChart data={data}>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.2} />
         <XAxis
           dataKey={xAxisKey}
-          tick={{ fontSize: 11 }}
+          tick={AXIS_TICK_STYLE}
           stroke="hsl(var(--muted-foreground))"
           strokeOpacity={0.5}
         />
         <YAxis
-          tick={{ fontSize: 11 }}
+          tick={AXIS_TICK_STYLE}
           stroke="hsl(var(--muted-foreground))"
           strokeOpacity={0.5}
         />
-        <Tooltip
-          content={({ active, payload }) => {
-            if (!active || !payload?.length) return null
-            return (
-              <div className="bg-background border rounded-lg px-2 py-1 shadow-sm">
-                {payload.map((entry, index: number) => {
-                  const typedEntry = entry as { name?: string; value?: number | string }
-                  const metric = metrics[index]
-                  return (
-                    <p key={typedEntry.name} style={{ color: metric?.color }}>
-                      {metric?.label}: {typedEntry.value}
-                    </p>
-                  )
-                })}
-              </div>
-            )
-          }}
-        />
+        <Tooltip content={renderTooltipContent} />
         <Legend />
         {metrics.map((metric) => (
           <Line
@@ -290,8 +321,8 @@ export function MultiMetricChart({
             dataKey={metric.key}
             stroke={metric.color}
             strokeWidth={2}
-            dot={{ fill: metric.color, r: 3 }}
-            activeDot={{ r: 5 }}
+            dot={false}
+            activeDot={ACTIVE_DOT_STYLE}
           />
         ))}
       </LineChart>

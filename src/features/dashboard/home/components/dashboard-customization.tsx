@@ -252,86 +252,16 @@ export function DashboardCustomization({
               Active Widgets ({visibleWidgets.length})
             </h3>
             {visibleWidgets.map((widget, index) => (
-              <div
+              <DashboardWidgetRow
                 key={widget.id}
-                className="flex items-center gap-2 p-2 rounded-lg border bg-muted/30 group"
-              >
-                <div className="flex flex-col gap-0.5">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5 p-0"
-                    onClick={() => handleMoveUp(index)}
-                    disabled={index === 0}
-                  >
-                    <ChevronUp className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5 p-0"
-                    onClick={() => handleMoveDown(index)}
-                    disabled={index === visibleWidgets.length - 1}
-                  >
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{widget.title}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {widget.description || widget.category}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  {widget.collapsible && (
-                    <TooltipProvider delayDuration={200}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() =>
-                              handleCollapse(widget.id, widget.collapsed ?? false)
-                            }
-                          >
-                            {widget.collapsed ? (
-                              <Eye className="h-3.5 w-3.5" />
-                            ) : (
-                              <EyeOff className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {widget.collapsed ? 'Expand widget' : 'Collapse widget'}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-
-                  <TooltipProvider delayDuration={200}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => handleToggleVisibility(widget.id, true)}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Hide widget</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
+                widget={widget}
+                index={index}
+                total={visibleWidgets.length}
+                onMoveUp={handleMoveUp}
+                onMoveDown={handleMoveDown}
+                onCollapse={handleCollapse}
+                onToggleVisibility={handleToggleVisibility}
+              />
             ))}
           </div>
 
@@ -342,31 +272,11 @@ export function DashboardCustomization({
                 Hidden Widgets ({hiddenWidgets.length})
               </h3>
               {hiddenWidgets.map((widget) => (
-                <div
+                <HiddenDashboardWidgetRow
                   key={widget.id}
-                  className="flex items-center justify-between p-2 rounded-lg border bg-muted/30"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{widget.title}</p>
-                    <p className="text-xs text-muted-foreground">{widget.category}</p>
-                  </div>
-                  <TooltipProvider delayDuration={200}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => handleToggleVisibility(widget.id, false)}
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Show widget</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
+                  widget={widget}
+                  onToggleVisibility={handleToggleVisibility}
+                />
               ))}
             </div>
           )}
@@ -432,24 +342,158 @@ export function WidgetSizeSelector({
   return (
     <div className="flex items-center gap-1">
       {sizes.map((size) => (
-        <button
+        <WidgetSizeButton
           key={size.value}
-          type="button"
-          onClick={() => onSizeChange(size.value)}
+          size={size}
+          currentSize={currentSize}
           disabled={disabled}
-          className={cn(
-            'h-6 w-6 rounded flex items-center justify-center text-xs font-medium transition-colors',
-            currentSize === size.value
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-muted-foreground hover:bg-muted/70',
-            disabled && 'opacity-50 cursor-not-allowed'
-          )}
-          title={`${size.label}: ${size.width}`}
-        >
-          {size.label}
-        </button>
+          onSizeChange={onSizeChange}
+        />
       ))}
     </div>
+  )
+}
+
+function DashboardWidgetRow({
+  widget,
+  index,
+  total,
+  onMoveUp,
+  onMoveDown,
+  onCollapse,
+  onToggleVisibility,
+}: {
+  widget: DashboardWidget
+  index: number
+  total: number
+  onMoveUp: (index: number) => void
+  onMoveDown: (index: number) => void
+  onCollapse: (widgetId: string, collapsed: boolean) => void
+  onToggleVisibility: (widgetId: string, currentlyVisible: boolean) => void
+}) {
+  const handleMoveUp = useCallback(() => {
+    onMoveUp(index)
+  }, [index, onMoveUp])
+
+  const handleMoveDown = useCallback(() => {
+    onMoveDown(index)
+  }, [index, onMoveDown])
+
+  const handleCollapse = useCallback(() => {
+    onCollapse(widget.id, widget.collapsed ?? false)
+  }, [onCollapse, widget.collapsed, widget.id])
+
+  const handleHide = useCallback(() => {
+    onToggleVisibility(widget.id, true)
+  }, [onToggleVisibility, widget.id])
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-2 group">
+      <div className="flex flex-col gap-0.5">
+        <Button type="button" variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={handleMoveUp} disabled={index === 0}>
+          <ChevronUp className="h-3 w-3" />
+        </Button>
+        <Button type="button" variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={handleMoveDown} disabled={index === total - 1}>
+          <ChevronDown className="h-3 w-3" />
+        </Button>
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{widget.title}</p>
+        <p className="truncate text-xs text-muted-foreground">{widget.description || widget.category}</p>
+      </div>
+
+      <div className="flex items-center gap-1">
+        {widget.collapsible && (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={handleCollapse}>
+                  {widget.collapsed ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{widget.collapsed ? 'Expand widget' : 'Collapse widget'}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={handleHide}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Hide widget</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    </div>
+  )
+}
+
+function HiddenDashboardWidgetRow({
+  widget,
+  onToggleVisibility,
+}: {
+  widget: DashboardWidget
+  onToggleVisibility: (widgetId: string, currentlyVisible: boolean) => void
+}) {
+  const handleShow = useCallback(() => {
+    onToggleVisibility(widget.id, false)
+  }, [onToggleVisibility, widget.id])
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-2">
+      <div>
+        <p className="text-sm font-medium">{widget.title}</p>
+        <p className="text-xs text-muted-foreground">{widget.category}</p>
+      </div>
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={handleShow}>
+              <Eye className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Show widget</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
+  )
+}
+
+function WidgetSizeButton({
+  size,
+  currentSize,
+  disabled,
+  onSizeChange,
+}: {
+  size: { value: 'small' | 'medium' | 'large'; label: string; width: string }
+  currentSize: 'small' | 'medium' | 'large'
+  disabled?: boolean
+  onSizeChange: (size: 'small' | 'medium' | 'large') => void
+}) {
+  const handleClick = useCallback(() => {
+    onSizeChange(size.value)
+  }, [onSizeChange, size.value])
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={disabled}
+      className={cn(
+        'flex h-6 w-6 items-center justify-center rounded text-xs font-medium transition-colors',
+        currentSize === size.value
+          ? 'bg-primary text-primary-foreground'
+          : 'bg-muted text-muted-foreground hover:bg-muted/70',
+        disabled && 'cursor-not-allowed opacity-50'
+      )}
+      title={`${size.label}: ${size.width}`}
+    >
+      {size.label}
+    </button>
   )
 }
 

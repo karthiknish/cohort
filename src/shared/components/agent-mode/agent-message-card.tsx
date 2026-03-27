@@ -19,6 +19,15 @@ import { cn } from '@/lib/utils'
 import { buildAgentDataSections } from './agent-message-data'
 import { AgentMentionText } from './mention-highlights'
 
+const AGENT_MESSAGE_INITIAL = { opacity: 0, y: 10 } as const
+const AGENT_MESSAGE_ANIMATE = { opacity: 1, y: 0 } as const
+const AGENT_MESSAGE_ENHANCED_INITIAL = { opacity: 0, y: 10, scale: 0.98 } as const
+const AGENT_MESSAGE_ENHANCED_ANIMATE = { opacity: 1, y: 0, scale: 1 } as const
+const AGENT_MESSAGE_TRANSITION = {
+    duration: motionDurationSeconds.normal,
+    ease: motionEasing.out,
+} as const
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -104,8 +113,8 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
         return (
             <LazyMotion features={domAnimation}>
                 <m.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={AGENT_MESSAGE_INITIAL}
+                    animate={AGENT_MESSAGE_ANIMATE}
                     className="flex justify-end"
                 >
                     <div className="max-w-[85%] rounded-2xl bg-primary px-4 py-2.5 text-sm text-primary-foreground">
@@ -133,9 +142,9 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
         return (
       <LazyMotion features={domAnimation}>
         <m.div
-          initial={{ opacity: 0, y: 10, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: motionDurationSeconds.normal, ease: motionEasing.out }}
+                    initial={AGENT_MESSAGE_ENHANCED_INITIAL}
+                    animate={AGENT_MESSAGE_ENHANCED_ANIMATE}
+                                        transition={AGENT_MESSAGE_TRANSITION}
           className="flex justify-start"
         >
                 <div
@@ -323,8 +332,8 @@ export function AgentMessageCard({ message, mentionLabels = EMPTY_MENTION_LABELS
     return (
             <LazyMotion features={domAnimation}>
                 <m.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={AGENT_MESSAGE_INITIAL}
+                    animate={AGENT_MESSAGE_ANIMATE}
                     className="flex justify-start"
                 >
                     <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-secondary px-4 py-2.5 text-sm text-secondary-foreground">

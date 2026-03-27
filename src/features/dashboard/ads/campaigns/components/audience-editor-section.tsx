@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { ChevronDown, Edit2, Heart, Plus, X } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
@@ -38,11 +38,40 @@ export function AudienceEditorSection({
   onToggleEditing,
 }: AudienceEditorSectionProps) {
   const [newInterest, setNewInterest] = useState('')
+  const handleToggleInterests = useCallback(() => {
+    toggleSection('interests')
+  }, [toggleSection])
+
+  const handleEditInterests = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    onToggleEditing('interests')
+  }, [onToggleEditing])
+
+  const handleNewInterestChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setNewInterest(event.target.value)
+  }, [])
+
+  const handleAddInterest = useCallback(() => {
+    if (!newInterest.trim()) return
+
+    toast({
+      title: 'Interest would be added',
+      description: `"${newInterest}" - Requires API integration`,
+    })
+    setNewInterest('')
+  }, [newInterest])
+
+  const handleRemoveInterest = useCallback((interestName: string) => {
+    toast({
+      title: 'Interest would be removed',
+      description: `"${interestName}" removal requires API integration`,
+    })
+  }, [])
 
   return (
     <Collapsible
       open={expandedSections.has('interests')}
-      onOpenChange={() => toggleSection('interests')}
+      onOpenChange={handleToggleInterests}
     >
       <div className="flex w-full items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
         <CollapsibleTrigger asChild>
@@ -62,10 +91,7 @@ export function AudienceEditorSection({
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onToggleEditing('interests')
-                  }}
+                  onClick={handleEditInterests}
                 >
                   <Edit2 className="h-3.5 w-3.5" />
                 </Button>
@@ -92,21 +118,13 @@ export function AudienceEditorSection({
               <Input
                 placeholder="Add new interest…"
                 value={newInterest}
-                onChange={(event) => setNewInterest(event.target.value)}
+                onChange={handleNewInterestChange}
                 className="flex-1 h-8 text-sm"
               />
               <Button
                 size="sm"
                 className="h-8"
-                onClick={() => {
-                  if (newInterest.trim()) {
-                    toast({
-                      title: 'Interest would be added',
-                      description: `"${newInterest}" - Requires API integration`,
-                    })
-                    setNewInterest('')
-                  }
-                }}
+                onClick={handleAddInterest}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -140,23 +158,12 @@ export function AudienceEditorSection({
                   return (
                     <div className="flex flex-wrap gap-1.5">
                       {aggregatedData.interests.map((interest) => (
-                        <Badge key={interest.id} variant="outline" className="text-xs group">
-                          <Heart className="h-3 w-3 mr-1 text-accent" />
-                          {interest.name}
-                          {editingSection === 'interests' && (
-                            <button
-                              onClick={() => {
-                                toast({
-                                  title: 'Interest would be removed',
-                                  description: `"${interest.name}" removal requires API integration`,
-                                })
-                              }}
-                              className="ml-1 opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          )}
-                        </Badge>
+                        <AudienceInterestBadge
+                          key={interest.id}
+                          name={interest.name}
+                          removable={editingSection === 'interests'}
+                          onRemove={handleRemoveInterest}
+                        />
                       ))}
                     </div>
                   )
@@ -169,23 +176,12 @@ export function AudienceEditorSection({
                         <p className="text-xs font-medium text-muted-foreground mb-1.5">{category}</p>
                         <div className="flex flex-wrap gap-1.5">
                           {categorized[category]!.map((interest) => (
-                            <Badge key={interest.id} variant="outline" className="text-xs group">
-                              <Heart className="h-3 w-3 mr-1 text-accent" />
-                              {interest.name}
-                              {editingSection === 'interests' && (
-                                <button
-                                  onClick={() => {
-                                    toast({
-                                      title: 'Interest would be removed',
-                                      description: `"${interest.name}" removal requires API integration`,
-                                    })
-                                  }}
-                                  className="ml-1 opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              )}
-                            </Badge>
+                            <AudienceInterestBadge
+                              key={interest.id}
+                              name={interest.name}
+                              removable={editingSection === 'interests'}
+                              onRemove={handleRemoveInterest}
+                            />
                           ))}
                         </div>
                       </div>
@@ -202,5 +198,35 @@ export function AudienceEditorSection({
         </div>
       </CollapsibleContent>
     </Collapsible>
+  )
+}
+
+function AudienceInterestBadge({
+  name,
+  removable,
+  onRemove,
+}: {
+  name: string
+  removable: boolean
+  onRemove: (interestName: string) => void
+}) {
+  const handleRemove = useCallback(() => {
+    onRemove(name)
+  }, [name, onRemove])
+
+  return (
+    <Badge variant="outline" className="group text-xs">
+      <Heart className="mr-1 h-3 w-3 text-accent" />
+      {name}
+      {removable && (
+        <button
+          type="button"
+          onClick={handleRemove}
+          className="ml-1 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+    </Badge>
   )
 }

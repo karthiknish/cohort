@@ -325,35 +325,65 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
     }
   }, [handleSend, highlightedMentionIndex, insertSelectedMention, mentionResults, mentionState.active, resetMentionState])
 
-  const panelProps = {
-    attachmentAccept,
-    canSend,
-    chatMessages,
-    draft,
-    fileInputRef,
-    highlightedMentionIndex,
-    isSending,
-    localAvatarUrl: user?.photoURL ?? null,
-    maxAttachments: MAX_ATTACHMENTS,
-    mentionLabels,
-    mentionResults,
-    messageEndRef,
-    onAttachmentSelection: handleAttachmentSelection,
-    onClose: handleClose,
-    onComposerBlur: handleComposerBlur,
-    onDraftChange: handleDraftChange,
-    onKeyDown: handleComposerKeyDown,
-    onMentionMouseDown: handleMentionMouseDown,
-    onRemoveAttachment: handleRemoveAttachment,
-    onSelectMention: insertSelectedMention,
-    onSend: () => {
-      void handleSend()
-    },
-    pendingAttachments,
-    showMentionResults: mentionState.active,
-    textareaRef,
-    uploadingFiles,
-  }
+  const handleSendMessage = useCallback(() => {
+    void handleSend()
+  }, [handleSend])
+
+  const panelProps = useMemo(
+    () => ({
+      attachmentAccept,
+      canSend,
+      chatMessages,
+      draft,
+      fileInputRef,
+      highlightedMentionIndex,
+      isSending,
+      localAvatarUrl: user?.photoURL ?? null,
+      maxAttachments: MAX_ATTACHMENTS,
+      mentionLabels,
+      mentionResults,
+      messageEndRef,
+      onAttachmentSelection: handleAttachmentSelection,
+      onClose: handleClose,
+      onComposerBlur: handleComposerBlur,
+      onDraftChange: handleDraftChange,
+      onKeyDown: handleComposerKeyDown,
+      onMentionMouseDown: handleMentionMouseDown,
+      onRemoveAttachment: handleRemoveAttachment,
+      onSelectMention: insertSelectedMention,
+      onSend: handleSendMessage,
+      pendingAttachments,
+      showMentionResults: mentionState.active,
+      textareaRef,
+      uploadingFiles,
+    }),
+    [
+      attachmentAccept,
+      canSend,
+      chatMessages,
+      draft,
+      fileInputRef,
+      highlightedMentionIndex,
+      handleAttachmentSelection,
+      handleClose,
+      handleComposerBlur,
+      handleComposerKeyDown,
+      handleDraftChange,
+      handleMentionMouseDown,
+      handleRemoveAttachment,
+      handleSendMessage,
+      insertSelectedMention,
+      isSending,
+      mentionLabels,
+      mentionResults,
+      messageEndRef,
+      mentionState.active,
+      pendingAttachments,
+      textareaRef,
+      uploadingFiles,
+      user?.photoURL,
+    ],
+  )
 
   return (
     <MeetingChatFloatingDock

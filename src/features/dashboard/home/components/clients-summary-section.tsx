@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useQuery } from 'convex/react'
 import { useConvexAuth } from 'convex/react'
 import {
@@ -81,9 +81,9 @@ function avatarColor(name: string): string {
 function ClientSummaryCard({ client }: { client: ClientSummary }) {
   const { selectClient } = useClientContext()
 
-  const handleNavigate = () => {
+  const handleNavigate = useCallback(() => {
     selectClient(client.legacyId)
-  }
+  }, [client.legacyId, selectClient])
 
   const hasMeeting = client.nextMeetingMs !== null
   const meetingLabel = formatNextMeeting(client.nextMeetingMs)

@@ -9,7 +9,7 @@ import {
 } from '../client'
 import { optimizeMetaImageUrl, isSignedMetaThumbnail } from '../utils'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
-import { MetaCreative, MetaAdsListResponse, MetaAdData, MetaAdCreative } from '../types'
+import type { MetaCreative, MetaAdsListResponse, MetaAdData, MetaAdCreative } from '../types'
 
 function collectUniqueStrings(values: Array<string | null | undefined>): string[] {
   const seen = new Set<string>()

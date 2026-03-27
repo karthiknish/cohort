@@ -148,6 +148,18 @@ export function ProposalVersionHistory({
       })
   }, [createSnapshot, proposalId, toast, user?.email, user?.id, workspaceId])
 
+  const handlePreviewOpenChange = useCallback((isOpen: boolean) => {
+    if (!isOpen) {
+      setPreviewVersion(null)
+    }
+  }, [])
+
+  const handleRestoreOpenChange = useCallback((isOpen: boolean) => {
+    if (!isOpen) {
+      setRestoreConfirmVersion(null)
+    }
+  }, [])
+
   const handleRestoreVersion = useCallback(async () => {
     if (!proposalId || !restoreConfirmVersion) return
 
@@ -220,7 +232,7 @@ export function ProposalVersionHistory({
           versionSummary={versionSummary}
         />
         <ProposalVersionHistoryMenuContent
-          handleSaveVersion={() => void handleSaveVersion()}
+          handleSaveVersion={handleSaveVersion}
           latestVersion={latestVersion}
           loading={loading}
           proposalId={proposalId}
@@ -232,13 +244,13 @@ export function ProposalVersionHistory({
         />
       </DropdownMenu>
 
-      <Dialog open={Boolean(previewVersion)} onOpenChange={(v) => !v && setPreviewVersion(null)}>
+      <Dialog open={Boolean(previewVersion)} onOpenChange={handlePreviewOpenChange}>
         <ProposalVersionPreviewDialog currentFormData={currentFormData} previewVersion={previewVersion} setPreviewVersion={setPreviewVersion} />
       </Dialog>
 
-      <Dialog open={Boolean(restoreConfirmVersion)} onOpenChange={(v) => !v && setRestoreConfirmVersion(null)}>
+      <Dialog open={Boolean(restoreConfirmVersion)} onOpenChange={handleRestoreOpenChange}>
         <ProposalVersionRestoreDialog
-          handleRestoreVersion={() => void handleRestoreVersion()}
+          handleRestoreVersion={handleRestoreVersion}
           restoreConfirmVersion={restoreConfirmVersion}
           restoring={restoring}
           setRestoreConfirmVersion={setRestoreConfirmVersion}

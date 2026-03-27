@@ -1,11 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "ignoreDeprecations": "5.0",
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -28,24 +25,12 @@
       }
     ],
     "paths": {
-      "@/app/*": [
-        "./src/app/*"
-      ],
-      "@/features/*": [
-        "./src/features/*"
-      ],
-      "@/shared/*": [
-        "./src/shared/*"
-      ],
-      "@convex/*": [
-        "./convex/*"
-      ],
-      "/_generated/*": [
-        "./convex/_generated/*"
-      ],
-      "@/*": [
-        "./src/*"
-      ]
+      "@/app/*": ["./src/app/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@convex/*": ["./convex/*"],
+      "/_generated/*": ["./convex/_generated/*"],
+      "@/*": ["./src/*"]
     }
   },
   "include": [
@@ -56,11 +41,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    ".next",
-    "convex",
-    "**/*.test.ts",
-    "**/*.test.tsx"
-  ]
+  "exclude": ["node_modules", ".next", "convex", "**/*.test.ts", "**/*.test.tsx"]
 }

@@ -311,6 +311,44 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
       [insertMention]
     )
 
+    const handleInputRef = useCallback(
+      (node: HTMLInputElement | null) => {
+        inputRef.current = node
+
+        if (typeof ref === 'function') {
+          ref(node)
+        } else if (ref) {
+          ref.current = node
+        }
+      },
+      [ref]
+    )
+
+    const removeMentionHandlers = useMemo(
+      () =>
+        Object.fromEntries(
+          selectedMentions.map((mention) => [mention.id, () => removeMention(mention)])
+        ) as Record<string, () => void>,
+      [removeMention, selectedMentions]
+    )
+
+    const mentionOptionHandlers = useMemo(
+      () =>
+        Object.fromEntries(
+          mentionResults.map((user, index) => [user.id, {
+            onClick: () => handleUserSelect(user),
+            onMouseEnter: () => setHighlightedIndex(index),
+          }])
+        ) as Record<
+          string,
+          {
+            onClick: () => void
+            onMouseEnter: () => void
+          }
+        >,
+      [handleUserSelect, mentionResults]
+    )
+
     const handleKeyDown = useCallback(
       (event: KeyboardEvent<HTMLInputElement>) => {
         if (!mentionState.active) {
@@ -368,7 +406,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
                 <span>{mention.name}</span>
                 <button
                   type="button"
-                  onClick={() => removeMention(mention)}
+                  onClick={removeMentionHandlers[mention.id]}
                   className="rounded-full p-0.5 text-primary/80 transition-colors hover:text-destructive"
                   disabled={disabled}
                   aria-label={`Remove ${mention.name}`}
@@ -382,14 +420,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
 
         <div ref={containerRef} className="relative">
           <Input
-            ref={(node) => {
-              inputRef.current = node
-              if (typeof ref === 'function') {
-                ref(node)
-              } else if (ref) {
-                ref.current = node
-              }
-            }}
+            ref={handleInputRef}
             id={inputId}
             type="text"
             value={value}
@@ -431,8 +462,8 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
                         type="button"
                         role="option"
                         aria-selected={index === effectiveHighlightedIndex}
-                        onMouseEnter={() => setHighlightedIndex(index)}
-                        onClick={() => handleUserSelect(user)}
+                        onMouseEnter={mentionOptionHandlers[user.id]?.onMouseEnter}
+                        onClick={mentionOptionHandlers[user.id]?.onClick}
                         className={cn(
                           'flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors',
                           index === effectiveHighlightedIndex

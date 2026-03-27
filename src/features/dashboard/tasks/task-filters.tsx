@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { Search, ArrowUp, ArrowDown } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -12,7 +13,8 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
-import { SortField, SortDirection, SORT_OPTIONS } from './task-types'
+import { SORT_OPTIONS } from './task-types'
+import type { SortField, SortDirection } from './task-types'
 
 export type TaskFiltersProps = {
   searchQuery: string
@@ -43,6 +45,14 @@ export function TaskFilters({
   sortDirection,
   onSortDirectionToggle,
 }: TaskFiltersProps) {
+  const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onSearchChange(event.target.value)
+  }, [onSearchChange])
+
+  const handleSortFieldChange = useCallback((value: string) => {
+    onSortFieldChange(value as SortField)
+  }, [onSortFieldChange])
+
   return (
     <div className="flex flex-col gap-3 border-b border-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="w-full sm:max-w-sm">
@@ -51,7 +61,7 @@ export function TaskFilters({
           <Input
             id="task-search"
             value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={handleSearchChange}
             placeholder="Search tasks…"
             className="pl-9"
             aria-label="Search tasks"
@@ -87,7 +97,7 @@ export function TaskFilters({
           </Select>
         )}
         <div className="flex items-center gap-1">
-          <Select value={sortField} onValueChange={(value: SortField) => onSortFieldChange(value)}>
+          <Select value={sortField} onValueChange={handleSortFieldChange}>
             <SelectTrigger className="w-[130px]" aria-label="Sort by">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Card, CardContent } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
@@ -75,12 +75,10 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
     }
   }, [attachments])
 
-  if (!attachments || attachments.length === 0) return null
-
   const downloadableAttachments = attachments.filter((attachment) => hasUsableAttachmentUrl(attachment.url))
   const canDownloadAny = downloadableAttachments.length > 0
 
-  const handleDownloadAll = () => {
+  const handleDownloadAll = useCallback(() => {
     downloadableAttachments.forEach((attachment, index) => {
       const anchor = document.createElement('a')
       anchor.href = attachment.url
@@ -90,7 +88,13 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
       anchor.click()
       document.body.removeChild(anchor)
     })
-  }
+  }, [downloadableAttachments])
+
+  const handleClosePdf = useCallback(() => {
+    setActivePdf(null)
+  }, [])
+
+  if (!attachments || attachments.length === 0) return null
 
   return (
     <div className="space-y-3">
@@ -160,10 +164,7 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
                   {attachment.size && <Badge variant="secondary" className="text-[11px]">{attachment.size}</Badge>}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" className="h-8 gap-1" onClick={() => setActivePdf(attachment)}>
-                    <MonitorPlay className="h-4 w-4" />
-                    Preview
-                  </Button>
+                  <PdfPreviewButton attachment={attachment} onOpenPdf={setActivePdf} />
                   <Button asChild variant="ghost" size="icon" className="h-8 w-8">
                     <a href={attachment.url} target="_blank" rel="noopener noreferrer" aria-label={`Download ${attachment.name}`}>
                       <Download className="h-4 w-4" />
@@ -227,7 +228,7 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
         )
       })}
 
-      <Dialog open={Boolean(activePdf)} onOpenChange={() => setActivePdf(null)}>
+      <Dialog open={Boolean(activePdf)} onOpenChange={handleClosePdf}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>{activePdf?.name || 'PDF preview'}</DialogTitle>
@@ -243,5 +244,24 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+function PdfPreviewButton({
+  attachment,
+  onOpenPdf,
+}: {
+  attachment: CollaborationAttachment
+  onOpenPdf: React.Dispatch<React.SetStateAction<CollaborationAttachment | null>>
+}) {
+  const handleOpenPdf = useCallback(() => {
+    onOpenPdf(attachment)
+  }, [attachment, onOpenPdf])
+
+  return (
+    <Button variant="ghost" size="sm" className="h-8 gap-1" onClick={handleOpenPdf}>
+      <MonitorPlay className="h-4 w-4" />
+      Preview
+    </Button>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import type { ProposalDraft } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/shared/ui/use-toast'
@@ -178,13 +178,13 @@ function ProposalsPageContent() {
   }, [hasSelectedClient, isBootstrapping, refreshProposals])
 
   // Handle next button with submit
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (isLastStep) {
       void submitProposal()
     } else {
       wizard.handleNext()
     }
-  }
+  }, [isLastStep, submitProposal, wizard])
 
   // Summary for display
   const summary = useMemo(() => {
@@ -218,6 +218,20 @@ function ProposalsPageContent() {
     handleResumeProposal,
     handleContinueEditingFromSnapshot,
   })
+
+  const handleRefreshProposals = useCallback(() => {
+    void refreshProposals().then(setProposals)
+  }, [refreshProposals])
+
+  const handleConfirmDeleteProposal = useCallback(() => {
+    if (proposalPendingDelete) {
+      void handleDeleteProposal(proposalPendingDelete)
+    }
+  }, [handleDeleteProposal, proposalPendingDelete])
+
+  const handleCloseWizard = useCallback(() => {
+    setIsWizardOpen(false)
+  }, [])
 
   const stepContent = useMemo(
     () => (
@@ -283,8 +297,8 @@ function ProposalsPageContent() {
         draftId={draftId}
         isLoading={isLoadingProposals}
         deletingProposalId={deletingProposalId}
-        onRefresh={() => void refreshProposals().then(setProposals)}
-        onResume={(proposal: ProposalDraft, forceEdit?: boolean) => handleResumeProposalInModal(proposal, forceEdit)}
+        onRefresh={handleRefreshProposals}
+        onResume={handleResumeProposalInModal}
         onRequestDelete={requestDeleteProposal}
         isGenerating={isSubmitting}
         downloadingDeckId={downloadingDeckId}
@@ -298,18 +312,14 @@ function ProposalsPageContent() {
         isDeleting={Boolean(deletingProposalId)}
         proposalName={proposalPendingDelete?.clientName ?? proposalPendingDelete?.id ?? null}
         onOpenChange={handleDeleteDialogChange}
-        onConfirm={() => {
-          if (proposalPendingDelete) {
-            void handleDeleteProposal(proposalPendingDelete)
-          }
-        }}
+        onConfirm={handleConfirmDeleteProposal}
       />
       <ProposalGenerationOverlay isSubmitting={isSubmitting} isPresentationReady={isPresentationReady} />
       <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)} />
 
       <ProposalBuilderOverlay
         open={isWizardOpen}
-        onClose={() => setIsWizardOpen(false)}
+        onClose={handleCloseWizard}
         isBootstrapping={isBootstrapping}
         submitted={submitted}
         summary={summary}
@@ -338,8 +348,10 @@ function ProposalsPageContent() {
 }
 
 export default function ProposalsPage() {
+  const dashboardSkeleton = useMemo(() => <DashboardSkeleton />, [])
+
   return (
-    <Suspense fallback={<DashboardSkeleton />}>
+    <Suspense fallback={dashboardSkeleton}>
       <ProposalsPageContent />
     </Suspense>
   )

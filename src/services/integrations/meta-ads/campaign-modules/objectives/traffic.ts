@@ -2,7 +2,7 @@
 // TRAFFIC OBJECTIVE - Traffic campaign configuration
 // =============================================================================
 
-import { CampaignObjectiveConfig } from '../types'
+import type { CampaignObjectiveConfig } from '../types'
 
 export const TRAFFIC_OBJECTIVE_CONFIG: CampaignObjectiveConfig = {
   objective: 'OUTCOME_TRAFFIC',

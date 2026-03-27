@@ -161,6 +161,14 @@ export function BudgetControlSection({
     })
   }, [onReloadCampaign])
 
+  const handleModeChange = useCallback((value: string) => {
+    setMode(value as BudgetUiMode)
+  }, [])
+
+  const handleAmountChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setAmount(event.target.value)
+  }, [])
+
   return (
     <Card>
       <CardHeader className="pb-4">
@@ -187,7 +195,7 @@ export function BudgetControlSection({
             >
               <RefreshCw className={cn('h-4 w-4', saving && 'animate-spin')} />
             </Button>
-            <Button onClick={() => void handleSave()} disabled={!canEdit || saving}>
+            <Button onClick={handleSave} disabled={!canEdit || saving}>
               <Save className="h-4 w-4 mr-2" />
               Save
             </Button>
@@ -206,7 +214,7 @@ export function BudgetControlSection({
           {modeOptions.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="budget-type">Budget type</Label>
-              <Select value={mode ?? undefined} onValueChange={(v) => setMode(v as BudgetUiMode)} disabled={!canEdit || saving}>
+              <Select value={mode ?? undefined} onValueChange={handleModeChange} disabled={!canEdit || saving}>
                 <SelectTrigger id="budget-type">
                   <SelectValue placeholder="Select budget type" />
                 </SelectTrigger>
@@ -228,7 +236,7 @@ export function BudgetControlSection({
               inputMode="decimal"
               placeholder="e.g. 50"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={handleAmountChange}
               disabled={!canEdit || saving}
             />
             <p className="text-xs text-muted-foreground">

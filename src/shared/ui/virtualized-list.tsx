@@ -1,7 +1,7 @@
 'use client'
 'use no memo'
 
-import { useRef, useCallback, type ReactNode } from 'react'
+import { useCallback, useMemo, useRef, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface VirtualizedListProps<T> {
@@ -50,6 +50,17 @@ export function VirtualizedList<T>({
     const hasCalledEndReached = useRef(false)
 
     const totalMinHeight = Math.max(items.length * estimateSize + Math.max(items.length - 1, 0) * gap, 0)
+    const containerStyle = useMemo(
+        () => ({ height: typeof height === 'number' ? `${height}px` : height }),
+        [height]
+    )
+    const contentStyle = useMemo(
+        () => ({
+            minHeight: `${totalMinHeight}px`,
+            width: '100%',
+        }),
+        [totalMinHeight]
+    )
 
     // Handle scroll for infinite loading
     const handleScroll = useCallback(() => {
@@ -75,27 +86,22 @@ export function VirtualizedList<T>({
         <div
             ref={parentRef}
             className={cn('overflow-auto', className)}
-            style={{ height: typeof height === 'number' ? `${height}px` : height }}
+            style={containerStyle}
             onScroll={handleScroll}
         >
-            <div
-                style={{
-                    minHeight: `${totalMinHeight}px`,
-                    width: '100%',
-                }}
-            >
+            <div style={contentStyle}>
                 {items.map((item, index) => {
                     const key = getItemKey ? getItemKey(item, index) : index
                     return (
-                        <div
+                        <VirtualizedListRow
                             key={key}
-                            data-index={index}
-                            style={{
-                                marginBottom: index === items.length - 1 ? 0 : gap,
-                            }}
+                            gap={gap}
+                            index={index}
+                            itemsLength={items.length}
+                            renderItem={renderItem}
+                            value={item}
                         >
-                            {renderItem(item, index)}
-                        </div>
+                        </VirtualizedListRow>
                     )
                 })}
             </div>
@@ -118,11 +124,40 @@ export function VirtualizedListWithHeader<T>({
     footer,
     ...props
 }: VirtualizedListWithHeaderProps<T>) {
+    const headerContainerStyle = useMemo(() => ({ height: props.height }), [props.height])
+
     return (
-        <div className="flex flex-col" style={{ height: props.height }}>
+        <div className="flex flex-col" style={headerContainerStyle}>
             {header}
             <VirtualizedList {...props} height="100%" className={cn('flex-1', props.className)} />
             {footer}
+        </div>
+    )
+}
+
+function VirtualizedListRow<T>({
+    gap,
+    index,
+    itemsLength,
+    renderItem,
+    value,
+}: {
+    gap: number
+    index: number
+    itemsLength: number
+    renderItem: (item: T, index: number) => ReactNode
+    value: T
+}) {
+    const rowStyle = useMemo(
+        () => ({
+            marginBottom: index === itemsLength - 1 ? 0 : gap,
+        }),
+        [gap, index, itemsLength]
+    )
+
+    return (
+        <div data-index={index} style={rowStyle}>
+            {renderItem(value, index)}
         </div>
     )
 }

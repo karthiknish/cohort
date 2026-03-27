@@ -8,22 +8,26 @@ type CodeSyntaxHighlighterProps = {
   code: string
 }
 
+const codeStyle = {
+  margin: 0,
+  padding: '1rem',
+  background: 'transparent',
+  fontSize: '13px',
+  lineHeight: '1.5',
+}
+
+const codeTagProps = {
+  className: 'font-mono',
+}
+
 export function CodeSyntaxHighlighter({ language, code }: CodeSyntaxHighlighterProps) {
   return (
     <SyntaxHighlighter
       style={oneLight}
       language={language}
       PreTag="div"
-      customStyle={{
-        margin: 0,
-        padding: '1rem',
-        background: 'transparent',
-        fontSize: '13px',
-        lineHeight: '1.5',
-      }}
-      codeTagProps={{
-        className: 'font-mono',
-      }}
+      customStyle={codeStyle}
+      codeTagProps={codeTagProps}
     >
       {code}
     </SyntaxHighlighter>

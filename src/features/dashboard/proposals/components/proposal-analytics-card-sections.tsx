@@ -12,7 +12,7 @@ import {
   TrendingUp,
   TriangleAlert,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -34,7 +34,15 @@ type ChartData = {
   points: ProposalAnalyticsTimeSeriesPoint[]
 }
 
-function SummaryStatCard({ icon, label, toneClassName, value }: { icon: ReactNode; label: string; toneClassName: string; value: string | number }) {
+type SummaryStatIconKey = 'drafts' | 'submitted' | 'sent' | 'average'
+
+function SummaryStatCard({ iconKey, label, toneClassName, value }: { iconKey: SummaryStatIconKey; label: string; toneClassName: string; value: string | number }) {
+  const icon =
+    iconKey === 'drafts' ? <FileText className="h-5 w-5 text-primary" /> :
+    iconKey === 'submitted' ? <CircleCheck className="h-5 w-5 text-success" /> :
+    iconKey === 'sent' ? <Send className="h-5 w-5 text-info" /> :
+    <Clock className="h-5 w-5 text-warning" />
+
   return (
     <Card>
       <CardContent className="pt-6">
@@ -49,6 +57,30 @@ function SummaryStatCard({ icon, label, toneClassName, value }: { icon: ReactNod
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+function ProposalAnalyticsChartBar({
+  point,
+  maxGenerations,
+}: {
+  point: ProposalAnalyticsTimeSeriesPoint
+  maxGenerations: number
+}) {
+  const totalGenerations = point.aiGenerations + point.deckGenerations
+  const totalFailures = point.aiFailures + point.deckFailures
+  const height = (totalGenerations / maxGenerations) * 100
+  const failureHeight = totalFailures > 0 && totalGenerations > 0 ? Math.min((totalFailures / totalGenerations) * height, height) : 0
+
+  const barStyle = useMemo(() => ({ height: `${Math.max(height, 4)}%` }), [height])
+  const failureStyle = useMemo(() => ({ height: `${failureHeight}%` }), [failureHeight])
+
+  return (
+    <div className="flex flex-1 flex-col justify-end" title={`${point.date}: ${totalGenerations} generations, ${totalFailures} failures`}>
+      <div className="relative w-full rounded-t bg-primary/20 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-primary/30" style={barStyle}>
+        {failureHeight > 0 ? <div className="absolute inset-x-0 bottom-0 rounded-t bg-destructive/50" style={failureStyle} /> : null}
+      </div>
+    </div>
   )
 }
 
@@ -120,6 +152,10 @@ export function ProposalAnalyticsHeader({
   onTimeRangeChange: (value: TimeRange) => void
   timeRange: TimeRange
 }) {
+  const handleTimeRangeChange = useCallback((value: string) => {
+    onTimeRangeChange(value as TimeRange)
+  }, [onTimeRangeChange])
+
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -127,7 +163,7 @@ export function ProposalAnalyticsHeader({
         <p className="text-sm text-muted-foreground">Track proposal generation success rates and performance</p>
       </div>
       <div className="flex items-center gap-2">
-        <Select value={timeRange} onValueChange={(value) => onTimeRangeChange(value as TimeRange)}>
+        <Select value={timeRange} onValueChange={handleTimeRangeChange}>
           <SelectTrigger className="w-36">
             <SelectValue />
           </SelectTrigger>
@@ -150,10 +186,10 @@ export function ProposalAnalyticsHeader({
 export function ProposalAnalyticsSummaryGrid({ summary, formatDuration }: { summary: ProposalAnalyticsSummary; formatDuration: (ms: number | null) => string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <SummaryStatCard icon={<FileText className="h-5 w-5 text-primary" />} label="Drafts Created" toneClassName="bg-primary/10" value={summary.totalDrafts} />
-      <SummaryStatCard icon={<CircleCheck className="h-5 w-5 text-success" />} label="Proposals Submitted" toneClassName="bg-success/10" value={summary.totalSubmitted} />
-      <SummaryStatCard icon={<Send className="h-5 w-5 text-info" />} label="Proposals Sent" toneClassName="bg-info/10" value={summary.totalSent} />
-      <SummaryStatCard icon={<Clock className="h-5 w-5 text-warning" />} label="Avg. AI Generation" toneClassName="bg-warning/10" value={formatDuration(summary.averageAiGenerationTime)} />
+      <SummaryStatCard iconKey="drafts" label="Drafts Created" toneClassName="bg-primary/10" value={summary.totalDrafts} />
+      <SummaryStatCard iconKey="submitted" label="Proposals Submitted" toneClassName="bg-success/10" value={summary.totalSubmitted} />
+      <SummaryStatCard iconKey="sent" label="Proposals Sent" toneClassName="bg-info/10" value={summary.totalSent} />
+      <SummaryStatCard iconKey="average" label="Avg. AI Generation" toneClassName="bg-warning/10" value={formatDuration(summary.averageAiGenerationTime)} />
     </div>
   )
 }
@@ -201,20 +237,9 @@ export function ProposalAnalyticsActivityChart({ chartData }: { chartData: Chart
       </CardHeader>
       <CardContent>
         <div className="flex h-32 items-end gap-1">
-          {chartData.points.map((point) => {
-            const totalGenerations = point.aiGenerations + point.deckGenerations
-            const totalFailures = point.aiFailures + point.deckFailures
-            const height = (totalGenerations / chartData.maxGenerations) * 100
-            const failureHeight = totalFailures > 0 && totalGenerations > 0 ? Math.min((totalFailures / totalGenerations) * height, height) : 0
-
-            return (
-              <div key={point.date} className="flex flex-1 flex-col justify-end" title={`${point.date}: ${totalGenerations} generations, ${totalFailures} failures`}>
-                <div className="relative w-full rounded-t bg-primary/20 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-primary/30" style={{ height: `${Math.max(height, 4)}%` }}>
-                  {failureHeight > 0 ? <div className="absolute inset-x-0 bottom-0 rounded-t bg-destructive/50" style={{ height: `${failureHeight}%` }} /> : null}
-                </div>
-              </div>
-            )
-          })}
+          {chartData.points.map((point) => (
+            <ProposalAnalyticsChartBar key={point.date} point={point} maxGenerations={chartData.maxGenerations} />
+          ))}
         </div>
         <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
           <span>{chartData.points[0]?.date}</span>

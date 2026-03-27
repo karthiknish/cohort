@@ -41,6 +41,8 @@ import type { MilestoneRecord, MilestoneStatus } from '@/types/milestones'
 import type { ProjectRecord } from '@/types/projects'
 import { MILESTONE_STATUSES } from '@/types/milestones'
 
+const MIN_CALENDAR_DATE = new Date('1900-01-01')
+
 const STATUS_LABELS: Record<MilestoneStatus, string> = {
   planned: 'Planned',
   in_progress: 'In progress',
@@ -69,6 +71,29 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   const [description, setDescription] = useState('')
+
+  const handleTitleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(event.target.value)
+  }, [])
+
+  const handleDescriptionChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setDescription(event.target.value)
+  }, [])
+
+  const handleStatusChange = useCallback((value: MilestoneStatus) => {
+    setStatus(value)
+  }, [])
+
+  const handleStartDateDisabled = useCallback((date: Date) => date < MIN_CALENDAR_DATE, [])
+
+  const handleEndDateDisabled = useCallback(
+    (date: Date) => (startDate ? date < startDate : false) || date < MIN_CALENDAR_DATE,
+    [startDate]
+  )
+
+  const handleCancel = useCallback(() => {
+    setOpen(false)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -194,7 +219,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
                 id="milestone-title"
                 placeholder="e.g., Launch beta cohort"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={handleTitleChange}
                 disabled={loading}
                 required
               />
@@ -223,7 +248,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
                       selected={startDate}
                       onSelect={setStartDate}
                       initialFocus
-                      disabled={(date: Date) => date < new Date('1900-01-01')}
+                      disabled={handleStartDateDisabled}
                     />
                   </PopoverContent>
                 </Popover>
@@ -250,9 +275,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
                       selected={endDate}
                       onSelect={setEndDate}
                       initialFocus
-                      disabled={(date: Date) =>
-                        (startDate ? date < startDate : false) || date < new Date('1900-01-01')
-                      }
+                      disabled={handleEndDateDisabled}
                     />
                   </PopoverContent>
                 </Popover>
@@ -261,7 +284,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
 
             <div className="space-y-2">
               <Label htmlFor="milestone-status">Status</Label>
-              <Select value={status} onValueChange={(value: MilestoneStatus) => setStatus(value)} disabled={loading}>
+              <Select value={status} onValueChange={handleStatusChange} disabled={loading}>
                 <SelectTrigger id="milestone-status">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
@@ -281,7 +304,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
                 id="milestone-description"
                 placeholder="Optional context or acceptance criteria…"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={handleDescriptionChange}
                 rows={3}
                 disabled={loading}
               />
@@ -289,7 +312,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
           </div>
 
           <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+            <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !projectId || !title.trim()}>

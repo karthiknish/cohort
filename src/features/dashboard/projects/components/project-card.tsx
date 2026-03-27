@@ -1,6 +1,6 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import {
   ListChecks,
@@ -58,6 +58,27 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
   })
   const collaborationHref = `/dashboard/collaboration?${new URLSearchParams({ projectId: project.id }).toString()}`
   const StatusIcon = STATUS_ICONS[project.status]
+
+  const handleEdit = useCallback(() => onEdit(project), [onEdit, project])
+  const handleDelete = useCallback(() => onDelete(project), [onDelete, project])
+  const statusAccentStyles = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(STATUS_ACCENT_COLORS).map(([status, backgroundColor]) => [status, { backgroundColor }]),
+      ) as Record<ProjectStatus, { backgroundColor: string }>,
+    [],
+  )
+
+  const statusUpdateHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        PROJECT_STATUSES.filter((status) => status !== project.status).map((status) => [
+          status,
+          () => onUpdateStatus(project, status),
+        ]),
+      ) as Partial<Record<ProjectStatus, () => void>>,
+    [onUpdateStatus, project],
+  )
 
   return (
     <div className={cn(
@@ -127,7 +148,7 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => onEdit(project)} className="gap-2">
+                <DropdownMenuItem onClick={handleEdit} className="gap-2">
                   <Pencil className="h-4 w-4" />
                   <span>Edit Details</span>
                 </DropdownMenuItem>
@@ -144,15 +165,15 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
                   </span>
                 </div>
                 {PROJECT_STATUSES.filter((s) => s !== project.status).map((status) => (
-                  <DropdownMenuItem key={status} onClick={() => onUpdateStatus(project, status)} className="gap-2">
-                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: STATUS_ACCENT_COLORS[status] }} />
+                  <DropdownMenuItem key={status} onClick={statusUpdateHandlers[status]} className="gap-2">
+                    <div className="h-2 w-2 rounded-full" style={statusAccentStyles[status]} />
                     <span>{formatStatusLabel(status)}</span>
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive gap-2"
-                  onClick={() => onDelete(project)}
+                  onClick={handleDelete}
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Delete Project</span>

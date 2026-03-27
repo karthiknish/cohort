@@ -406,6 +406,10 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
     [userName, userRole]
   )
 
+  const handleCloseDeleteDialog = useCallback(() => {
+    setDeleteTarget(null)
+  }, [])
+
   return (
     <>
       <Card className="overflow-hidden border-border/60 bg-background/95 shadow-sm">
@@ -457,7 +461,7 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
       <TaskCommentsDeleteDialog
         deleteTarget={deleteTarget}
         deletingCommentId={deletingCommentId}
-        onClose={() => setDeleteTarget(null)}
+        onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
       />
     </>

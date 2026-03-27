@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, RefreshCw, Home, Copy, Code2, FileJson } from 'lucide-react'
 
@@ -68,7 +68,7 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
     return null
   }, [error.stack])
 
-  const copyErrorDetails = () => {
+  const copyErrorDetails = useCallback(() => {
     const details = [
       `=== ERROR DETAILS ===`,
       `Component: ${componentName}`,
@@ -87,7 +87,7 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
       componentStack || 'No component stack available',
     ].filter(Boolean).join('\n')
     navigator.clipboard.writeText(details)
-  }
+  }, [componentName, componentStack, error.message, error.stack, errorDigest, reactErrorInfo])
 
   // Render specific UI for account setup error
   if (isUserNotFoundError) {
@@ -253,9 +253,9 @@ export default function DashboardError({ error, reset }: DashboardErrorProps) {
                     View Render History (Last {renderLogs.length} renders)
                   </summary>
                   <div className="max-h-64 overflow-auto space-y-2 mt-2">
-                    {renderLogs.slice(-20).reverse().map((log, i) => (
+                    {renderLogs.slice(-20).reverse().map((log) => (
                       <div
-                        key={`${log.name ?? 'unknown'}-${log.timestamp ?? 'no-time'}-${log.renderCount ?? i}`}
+                        key={`${log.name ?? 'unknown'}-${log.timestamp ?? 'no-time'}-${log.renderCount ?? 'no-count'}-${JSON.stringify(log.changedProps ?? {})}`}
                         className="text-[10px] font-mono border-b border-info/20 pb-1 last:border-0"
                       >
                         <div className="flex justify-between text-info">

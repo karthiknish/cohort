@@ -13,8 +13,16 @@ import {
 } from '@/shared/ui/dialog'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Badge } from '@/shared/ui/badge'
-import { TaskTemplate, TaskStatus, TaskPriority } from '@/types/tasks'
+import type { TaskTemplate, TaskStatus, TaskPriority } from '@/types/tasks'
 import { DEFAULT_TASK_TEMPLATES } from './task-types'
+
+const TEMPLATE_CATEGORIES = [
+  { id: 'all', label: 'All Templates' },
+  { id: 'development', label: 'Development' },
+  { id: 'design', label: 'Design' },
+  { id: 'marketing', label: 'Marketing' },
+  { id: 'management', label: 'Management' },
+]
 
 type TaskTemplateProps = {
   onSelectTemplate: (template: TaskTemplate) => void
@@ -23,14 +31,6 @@ type TaskTemplateProps = {
 export function TaskTemplatesDialog({ onSelectTemplate }: TaskTemplateProps) {
   const [open, setOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
-
-  const categories = [
-    { id: 'all', label: 'All Templates' },
-    { id: 'development', label: 'Development' },
-    { id: 'design', label: 'Design' },
-    { id: 'marketing', label: 'Marketing' },
-    { id: 'management', label: 'Management' },
-  ]
 
   const filteredTemplates = DEFAULT_TASK_TEMPLATES.filter(t =>
     selectedCategory === 'all' || t.tags.some(tag => tag.toLowerCase().includes(selectedCategory))
@@ -62,63 +62,92 @@ export function TaskTemplatesDialog({ onSelectTemplate }: TaskTemplateProps) {
 
         {/* Category filter */}
         <div className="flex flex-wrap gap-2 pb-2">
-          {categories.map((cat) => (
-            <Button
+          {TEMPLATE_CATEGORIES.map((cat) => (
+            <TaskTemplateCategoryButton
               key={cat.id}
-              variant={selectedCategory === cat.id ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedCategory(cat.id)}
-              className="text-xs"
-            >
-              {cat.label}
-            </Button>
+              category={cat}
+              selected={selectedCategory === cat.id}
+              onSelect={setSelectedCategory}
+            />
           ))}
         </div>
 
         <ScrollArea className="h-[400px] pr-4">
           <div className="grid gap-3">
             {filteredTemplates.map((template) => (
-              <button
-                key={template.id}
-                onClick={() => handleSelectTemplate(template)}
-                className="text-left group"
-              >
-                <div className="rounded-lg border border-muted/40 bg-background p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/40 hover:shadow-md">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                          {template.name}
-                        </h4>
-                        <Badge variant="outline" className="text-[10px] px-1.5 h-4">
-                          {template.estimatedHours}h
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground/80">
-                        {template.description}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {template.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-muted/40">
-                            #{tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>Priority: <span className="font-medium capitalize">{template.priority}</span></span>
-                        <span>•</span>
-                        <span>Status: <span className="font-medium">{template.status === 'todo' ? 'To Do' : template.status}</span></span>
-                      </div>
-                    </div>
-                    <Plus className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-                  </div>
-                </div>
-              </button>
+              <TaskTemplateCard key={template.id} template={template} onSelect={handleSelectTemplate} />
             ))}
           </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function TaskTemplateCategoryButton({
+  category,
+  selected,
+  onSelect,
+}: {
+  category: { id: string; label: string }
+  selected: boolean
+  onSelect: (categoryId: string) => void
+}) {
+  const handleClick = useCallback(() => {
+    onSelect(category.id)
+  }, [category.id, onSelect])
+
+  return (
+    <Button variant={selected ? 'default' : 'outline'} size="sm" onClick={handleClick} className="text-xs">
+      {category.label}
+    </Button>
+  )
+}
+
+function TaskTemplateCard({
+  template,
+  onSelect,
+}: {
+  template: TaskTemplate
+  onSelect: (template: TaskTemplate) => void
+}) {
+  const handleClick = useCallback(() => {
+    onSelect(template)
+  }, [onSelect, template])
+
+  return (
+    <button type="button" onClick={handleClick} className="text-left group">
+      <div className="rounded-lg border border-muted/40 bg-background p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/40 hover:shadow-md">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-2">
+              <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                {template.name}
+              </h4>
+              <Badge variant="outline" className="text-[10px] px-1.5 h-4">
+                {template.estimatedHours}h
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground/80">
+              {template.description}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {template.tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-muted/40">
+                  #{tag}
+                </Badge>
+              ))}
+            </div>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span>Priority: <span className="font-medium capitalize">{template.priority}</span></span>
+              <span>•</span>
+              <span>Status: <span className="font-medium">{template.status === 'todo' ? 'To Do' : template.status}</span></span>
+            </div>
+          </div>
+          <Plus className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+        </div>
+      </div>
+    </button>
   )
 }
 

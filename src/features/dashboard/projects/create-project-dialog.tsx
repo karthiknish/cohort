@@ -243,6 +243,59 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
       })
   }, [user?.id, workspaceId, clients, formState, toast, onProjectCreated, resetForm, createProject])
 
+  const handleNameChange = useCallback(
+    (value: string) => {
+      dispatch({ type: 'setName', value })
+    },
+    [dispatch]
+  )
+
+  const handleDescriptionChange = useCallback(
+    (value: string) => {
+      dispatch({ type: 'setDescription', value })
+    },
+    [dispatch]
+  )
+
+  const handleStatusChange = useCallback(
+    (value: ProjectStatus) => {
+      dispatch({ type: 'setStatus', value })
+    },
+    [dispatch]
+  )
+
+  const handleClientChange = useCallback(
+    (value: string) => {
+      dispatch({ type: 'setClientId', value })
+    },
+    [dispatch]
+  )
+
+  const handleStartDateChange = useCallback(
+    (value: Date | undefined) => {
+      dispatch({ type: 'setStartDate', value })
+    },
+    [dispatch]
+  )
+
+  const handleEndDateChange = useCallback(
+    (value: Date | undefined) => {
+      dispatch({ type: 'setEndDate', value })
+    },
+    [dispatch]
+  )
+
+  const handleTagInputChange = useCallback(
+    (value: string) => {
+      dispatch({ type: 'setTagInput', value })
+    },
+    [dispatch]
+  )
+
+  const handleCancel = useCallback(() => {
+    setOpen(false)
+  }, [])
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -266,13 +319,13 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
             loading={loading}
             clients={clients}
             state={formState}
-            onNameChange={(value) => dispatch({ type: 'setName', value })}
-            onDescriptionChange={(value) => dispatch({ type: 'setDescription', value })}
-            onStatusChange={(value) => dispatch({ type: 'setStatus', value })}
-            onClientChange={(value) => dispatch({ type: 'setClientId', value })}
-            onStartDateChange={(value) => dispatch({ type: 'setStartDate', value })}
-            onEndDateChange={(value) => dispatch({ type: 'setEndDate', value })}
-            onTagInputChange={(value) => dispatch({ type: 'setTagInput', value })}
+            onNameChange={handleNameChange}
+            onDescriptionChange={handleDescriptionChange}
+            onStatusChange={handleStatusChange}
+            onClientChange={handleClientChange}
+            onStartDateChange={handleStartDateChange}
+            onEndDateChange={handleEndDateChange}
+            onTagInputChange={handleTagInputChange}
             onTagKeyDown={handleTagKeyDown}
             onAddTag={handleAddTag}
             onRemoveTag={handleRemoveTag}
@@ -280,7 +333,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
           />
 
           <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+            <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !formState.name.trim()}>

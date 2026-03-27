@@ -2,7 +2,7 @@
 // APP PROMOTION OBJECTIVE - Promote app installs and engagement
 // =============================================================================
 
-import { GoogleCampaignObjectiveConfig } from '../types'
+import type { GoogleCampaignObjectiveConfig } from '../types'
 
 export const GOOGLE_APP_PROMOTION_OBJECTIVE_CONFIG: GoogleCampaignObjectiveConfig = {
   objective: 'APP_PROMOTION',

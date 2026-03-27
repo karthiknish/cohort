@@ -33,6 +33,56 @@ import {
 } from '@/shared/ui/command'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
 
+function CommandMenuRouteItem({
+  description,
+  href,
+  icon: Icon,
+  label,
+  onNavigate,
+}: {
+  description: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  onNavigate: (href: string) => void
+}) {
+  const handleSelect = useCallback(() => {
+    onNavigate(href)
+  }, [href, onNavigate])
+
+  return (
+    <CommandItem onSelect={handleSelect}>
+      <Icon className="mr-2 h-4 w-4" />
+      <span>{label}</span>
+      <span className="ml-2 text-xs text-muted-foreground">{description}</span>
+    </CommandItem>
+  )
+}
+
+function CommandMenuActionItem({
+  children,
+  icon: Icon,
+  label,
+  onSelect,
+}: {
+  children?: React.ReactNode
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  onSelect: () => void
+}) {
+  const handleSelect = useCallback(() => {
+    onSelect()
+  }, [onSelect])
+
+  return (
+    <CommandItem onSelect={handleSelect}>
+      <Icon className="mr-2 h-4 w-4" />
+      <span>{label}</span>
+      {children}
+    </CommandItem>
+  )
+}
+
 interface CommandMenuProps {
   onOpenHelp?: () => void
 }
@@ -66,16 +116,36 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
     callback: () => setOpen((prev) => !prev),
   })
 
-  const runCommand = useCallback((command: () => void) => {
+  const handleOpen = useCallback(() => {
+    setOpen(true)
+  }, [])
+
+  const handleNavigate = useCallback(
+    (href: string) => {
+      setOpen(false)
+      router.push(href)
+    },
+    [router]
+  )
+
+  const handleSettingsSelect = useCallback(() => {
+    handleNavigate('/settings')
+  }, [handleNavigate])
+
+  const handleHelpSelect = useCallback(() => {
     setOpen(false)
-    command()
+    onOpenHelp?.()
+  }, [onOpenHelp])
+
+  const handleKeyboardShortcutsSelect = useCallback(() => {
+    setOpen(false)
   }, [])
 
   return (
     <>
       {/* Mobile: compact icon button */}
       <button
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         className="inline-flex sm:hidden items-center justify-center rounded-md border border-input bg-background p-2 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
         aria-label="Open quick navigation"
         type="button"
@@ -86,7 +156,7 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
       {/* Desktop: full button with text */}
       <button
         id="tour-command-menu"
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
         type="button"
         className="hidden sm:inline-flex w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
       >
@@ -104,14 +174,14 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
             {quickActions.map((item) => {
               const Icon = item.icon
               return (
-                <CommandItem
+                <CommandMenuRouteItem
                   key={item.name}
-                  onSelect={() => runCommand(() => router.push(item.action))}
-                >
-                  <Icon className="mr-2 h-4 w-4" />
-                  <span>{item.name}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{item.description}</span>
-                </CommandItem>
+                  description={item.description}
+                  href={item.action}
+                  icon={Icon}
+                  label={item.name}
+                  onNavigate={handleNavigate}
+                />
               )
             })}
           </CommandGroup>
@@ -122,14 +192,14 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
             {navigationItems.map((item) => {
               const Icon = item.icon
               return (
-                <CommandItem
+                <CommandMenuRouteItem
                   key={item.name}
-                  onSelect={() => runCommand(() => router.push(item.href))}
-                >
-                  <Icon className="mr-2 h-4 w-4" />
-                  <span>{item.name}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{item.description}</span>
-                </CommandItem>
+                  description={item.description}
+                  href={item.href}
+                  icon={Icon}
+                  label={item.name}
+                  onNavigate={handleNavigate}
+                />
               )
             })}
           </CommandGroup>
@@ -137,21 +207,17 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
           <CommandSeparator />
 
           <CommandGroup heading="Help">
-            <CommandItem onSelect={() => runCommand(() => router.push('/settings'))}>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
-            </CommandItem>
+            <CommandMenuActionItem icon={Settings} label="Settings" onSelect={handleSettingsSelect} />
             {onOpenHelp && (
-              <CommandItem onSelect={() => runCommand(onOpenHelp)}>
-                <CircleHelp className="mr-2 h-4 w-4" />
-                <span>Help & Shortcuts</span>
+              <CommandMenuActionItem icon={CircleHelp} label="Help & Shortcuts" onSelect={handleHelpSelect}>
                 <CommandShortcut>?</CommandShortcut>
-              </CommandItem>
+              </CommandMenuActionItem>
             )}
-            <CommandItem onSelect={() => runCommand(() => { })}>
-              <Keyboard className="mr-2 h-4 w-4" />
-              <span>Keyboard shortcuts</span>
-            </CommandItem>
+            <CommandMenuActionItem
+              icon={Keyboard}
+              label="Keyboard shortcuts"
+              onSelect={handleKeyboardShortcutsSelect}
+            />
           </CommandGroup>
         </CommandList>
       </CommandDialog>

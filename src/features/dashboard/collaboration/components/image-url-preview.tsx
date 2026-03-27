@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { CircleAlert, LoaderCircle, ZoomIn } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -17,6 +17,29 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
+  const handleOpenPreview = useCallback(() => {
+    setPreviewOpen(true)
+  }, [])
+
+  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      setPreviewOpen(true)
+    }
+  }, [])
+
+  const handleImageLoad = useCallback(() => {
+    setIsLoading(false)
+  }, [])
+
+  const handleImageError = useCallback(() => {
+    setIsLoading(false)
+    setHasError(true)
+  }, [])
+
+  const handleClosePreview = useCallback(() => {
+    setPreviewOpen(false)
+  }, [])
 
   const fileName = useMemo(() => {
     const pathWithMaybeHash = url.split("?")[0] ?? ""
@@ -52,13 +75,8 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
           "group relative block max-w-md overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted my-2",
           className
         )}
-        onClick={() => setPreviewOpen(true)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault()
-            setPreviewOpen(true)
-          }
-        }}
+        onClick={handleOpenPreview}
+        onKeyDown={handleKeyDown}
         role="button"
         tabIndex={0}
         aria-label={`Preview image ${fileName}`}
@@ -77,11 +95,8 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
               isLoading && "opacity-0",
               "group-hover:scale-105"
             )}
-            onLoad={() => setIsLoading(false)}
-            onError={() => {
-              setIsLoading(false)
-              setHasError(true)
-            }}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
             <div className="flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -95,7 +110,7 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
       <ImagePreviewModal
         images={[{ url, name: fileName }]}
         isOpen={previewOpen}
-        onClose={() => setPreviewOpen(false)}
+        onClose={handleClosePreview}
       />
     </>
   )

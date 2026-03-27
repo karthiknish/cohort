@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { ChevronUp, ChevronDown, X, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/shared/ui/sheet'
@@ -68,6 +68,9 @@ export function MobileCollapsible({
 }: MobileCollapsibleProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen)
   const [isMobile, setIsMobile] = useState(false)
+  const handleToggle = useCallback(() => {
+    setIsOpen((current) => !current)
+  }, [])
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -83,7 +86,7 @@ export function MobileCollapsible({
     <div className={cn('space-y-2', className)}>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className={cn(
           'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-muted md:bg-background md:hover:bg-muted/50',
           triggerClassName
@@ -127,6 +130,10 @@ export function MobileFilterSheet({
   onOpenChange,
   filterCount,
 }: MobileFilterSheetProps) {
+  const handleClose = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       {trigger && (
@@ -154,7 +161,7 @@ export function MobileFilterSheet({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onOpenChange(false)}
+            onClick={handleClose}
           >
             <X className="h-5 w-5" />
           </Button>
@@ -229,6 +236,9 @@ interface MobileActionSheetProps {
 
 function MobileActionSheet({ actions }: MobileActionSheetProps) {
   const [open, setOpen] = useState(false)
+  const handleClose = useCallback(() => {
+    setOpen(false)
+  }, [])
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -248,23 +258,36 @@ function MobileActionSheet({ actions }: MobileActionSheetProps) {
           <SheetTitle>More Actions</SheetTitle>
         </SheetHeader>
         <div className="space-y-1">
-            {actions.map((action) => (
-            <button
-                key={action.label}
-              type="button"
-              onClick={() => {
-                action.onClick()
-                setOpen(false)
-              }}
-              className="flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-muted"
-            >
-              <action.icon className="h-5 w-5 text-muted-foreground" />
-              <span className="text-sm font-medium">{action.label}</span>
-            </button>
+          {actions.map((action) => (
+            <MobileActionSheetItem key={action.label} action={action} onClose={handleClose} />
           ))}
         </div>
       </SheetContent>
     </Sheet>
+  )
+}
+
+function MobileActionSheetItem({
+  action,
+  onClose,
+}: {
+  action: MobileActionSheetProps['actions'][number]
+  onClose: () => void
+}) {
+  const handleClick = useCallback(() => {
+    action.onClick()
+    onClose()
+  }, [action, onClose])
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className="flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors hover:bg-muted"
+    >
+      <action.icon className="h-5 w-5 text-muted-foreground" />
+      <span className="text-sm font-medium">{action.label}</span>
+    </button>
   )
 }
 
@@ -294,6 +317,7 @@ export function ResponsiveGrid({
     3: 'grid-cols-3',
     4: 'grid-cols-4',
   }
+  const gridStyle = useMemo(() => ({ gap: `${gap * 0.25}rem` }), [gap])
 
   return (
     <div
@@ -303,7 +327,7 @@ export function ResponsiveGrid({
         `sm:${gridClasses[tabletCols]} lg:${gridClasses[desktopCols]}`,
         className
       )}
-      style={{ gap: `${gap * 0.25}rem` }}
+      style={gridStyle}
     >
       {children}
     </div>
@@ -407,6 +431,14 @@ export function PullToRefresh({
 
   const pullDistance = Math.min(touchCurrent - touchStart, threshold * 1.5)
   const rotation = (pullDistance / threshold) * 360
+  const indicatorStyle = useMemo(
+    () => ({
+      transform: `translateY(${Math.max(0, pullDistance - threshold)}px)`,
+      opacity: isPulling ? pullDistance / threshold : 0,
+    }),
+    [isPulling, pullDistance, threshold]
+  )
+  const rotationStyle = useMemo(() => ({ transform: `rotate(${rotation}deg)` }), [rotation])
 
   return (
     <div
@@ -418,14 +450,11 @@ export function PullToRefresh({
       {/* Pull indicator */}
       <div
         className="fixed left-0 right-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur transition-transform duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] motion-reduce:transition-none md:hidden"
-        style={{
-          transform: `translateY(${Math.max(0, pullDistance - threshold)}px)`,
-          opacity: isPulling ? pullDistance / threshold : 0,
-        }}
+        style={indicatorStyle}
       >
         <div
           className="text-muted-foreground transition-transform"
-          style={{ transform: `rotate(${rotation}deg)` }}
+          style={rotationStyle}
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { Link2, LoaderCircle, Video } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
@@ -37,6 +38,11 @@ export function UpcomingMeetingItemCard({
   const notesProcessingState = normalizeMeetingProcessingState(meeting.notesProcessingState)
   const postCallProcessing = transcriptProcessingState === 'processing' || notesProcessingState === 'processing'
 
+  const handleOpenInSiteMeeting = useCallback(() => onOpenInSiteMeeting(meeting), [meeting, onOpenInSiteMeeting])
+  const handleRescheduleMeeting = useCallback(() => onRescheduleMeeting(meeting), [meeting, onRescheduleMeeting])
+  const handleCancelMeeting = useCallback(() => onCancelMeeting(meeting), [meeting, onCancelMeeting])
+  const handleMarkCompleted = useCallback(() => onMarkCompleted(meeting.legacyId), [meeting.legacyId, onMarkCompleted])
+
   return (
     <div className="rounded-lg border border-muted/60 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -60,7 +66,7 @@ export function UpcomingMeetingItemCard({
 
       <div className="mt-3 flex flex-wrap gap-2">
         {meeting.status !== 'cancelled' ? (
-          <Button size="sm" className={getButtonClasses('primary')} onClick={() => onOpenInSiteMeeting(meeting)}>
+          <Button size="sm" className={getButtonClasses('primary')} onClick={handleOpenInSiteMeeting}>
             <Video className="mr-1 h-3.5 w-3.5" />
             Join Room
           </Button>
@@ -77,18 +83,18 @@ export function UpcomingMeetingItemCard({
 
         {canSchedule && meeting.status !== 'completed' && meeting.status !== 'cancelled' ? (
           <>
-            <Button size="sm" variant="outline" onClick={() => onRescheduleMeeting(meeting)}>
+            <Button size="sm" variant="outline" onClick={handleRescheduleMeeting}>
               Reschedule
             </Button>
             <Button
               size="sm"
               variant="outline"
-              onClick={() => onCancelMeeting(meeting)}
+              onClick={handleCancelMeeting}
               disabled={cancellingMeetingId === meeting.legacyId}
             >
               {cancellingMeetingId === meeting.legacyId ? 'Cancelling…' : 'Cancel'}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onMarkCompleted(meeting.legacyId)}>
+            <Button size="sm" variant="outline" onClick={handleMarkCompleted}>
               Mark Completed
             </Button>
           </>

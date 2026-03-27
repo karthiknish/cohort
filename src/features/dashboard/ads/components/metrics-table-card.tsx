@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState, type ChangeEvent } from 'react'
 import { Card, CardContent } from '@/shared/ui/card'
 
 import {
@@ -70,18 +70,22 @@ function MetricsTableCardComponent({
     })
   }, [processedMetrics, searchQuery, selectedProviders])
 
-  const toggleProvider = (providerId: string) => {
+  const toggleProvider = useCallback((providerId: string) => {
     setSelectedProviders((prev) =>
       prev.includes(providerId)
         ? prev.filter((p) => p !== providerId)
         : [...prev, providerId]
     )
-  }
+  }, [])
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setSearchQuery('')
     setSelectedProviders([])
-  }
+  }, [])
+
+  const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value)
+  }, [])
 
   const hasActiveFilters = searchQuery.length > 0 || selectedProviders.length > 0
 
@@ -91,7 +95,7 @@ function MetricsTableCardComponent({
     <Card className="shadow-sm">
       <MetricsTableHeader description={description} metricsLoading={metricsLoading} onRefresh={onRefresh} title={title} />
       <CardContent>
-        {hasMetrics && !initialMetricsLoading ? <MetricsTableFilters availableProviders={availableProviders} hasActiveFilters={hasActiveFilters} onClearFilters={clearFilters} onSearchChange={(event) => setSearchQuery(event.target.value)} searchQuery={searchQuery} selectedProviders={selectedProviders} toggleProvider={toggleProvider} /> : null}
+        {hasMetrics && !initialMetricsLoading ? <MetricsTableFilters availableProviders={availableProviders} hasActiveFilters={hasActiveFilters} onClearFilters={clearFilters} onSearchChange={handleSearchChange} searchQuery={searchQuery} selectedProviders={selectedProviders} toggleProvider={toggleProvider} /> : null}
         <MetricsTableBody columns={columns} emptyCtaHref={emptyCtaHref} emptyCtaLabel={emptyCtaLabel} emptyMessage={emptyMessage} filteredMetrics={filteredMetrics} hasMetrics={hasMetrics} hasActiveFilters={hasActiveFilters} initialMetricsLoading={initialMetricsLoading} metricError={metricError} onClearFilters={clearFilters} processedMetrics={processedMetrics} />
         <MetricsTableLoadMore hasMetrics={hasMetrics} loadMoreError={loadMoreError} loadingMore={loadingMore} nextCursor={nextCursor} onLoadMore={onLoadMore} />
       </CardContent>

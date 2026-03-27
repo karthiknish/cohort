@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
     Card,
@@ -99,7 +99,7 @@ export function FormulaBuilderCard({
         return executeFormula(formulaExpression, inputs)
     }, [validation, metricTotals, executeFormula, formulaExpression])
 
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
         if (!validation?.valid || !formulaName.trim() || !outputMetric.trim()) return
 
         await createFormula({
@@ -114,17 +114,39 @@ export function FormulaBuilderCard({
         setFormulaExpression('')
         setOutputMetric('')
         setDialogOpen(false)
-    }
+    }, [createFormula, formulaExpression, formulaName, outputMetric, validation])
 
-    const handleInsertMetric = (metricName: string) => {
+    const handleInsertMetric = useCallback((metricName: string) => {
         setFormulaExpression((prev) => (prev ? `${prev} ${metricName}` : metricName))
-    }
+    }, [])
 
-    const handleUseExample = (example: typeof EXAMPLE_FORMULAS[0]) => {
+    const handleUseExample = useCallback((example: typeof EXAMPLE_FORMULAS[0]) => {
         setFormulaName(example.name)
         setFormulaExpression(example.formula)
         setOutputMetric(example.output)
-    }
+    }, [])
+
+    const handleExpressionChange = useCallback(
+        (event: React.ChangeEvent<HTMLInputElement>) => setFormulaExpression(event.target.value),
+        []
+    )
+
+    const handleFormulaNameChange = useCallback(
+        (event: React.ChangeEvent<HTMLInputElement>) => setFormulaName(event.target.value),
+        []
+    )
+
+    const handleOutputMetricChange = useCallback(
+        (event: React.ChangeEvent<HTMLInputElement>) => setOutputMetric(event.target.value),
+        []
+    )
+
+    const handleDeleteFormula = useCallback(
+        (formulaId: string) => {
+            void deleteFormula(formulaId)
+        },
+        [deleteFormula]
+    )
 
     const formulaItems = useMemo<Array<{ formula: CustomFormula; result: number | null }>>(() => {
         return formulas.map((formula) => {
@@ -153,18 +175,18 @@ export function FormulaBuilderCard({
                     formulaExpression={formulaExpression}
                     formulaName={formulaName}
                     onDialogOpenChange={setDialogOpen}
-                    onExpressionChange={(event) => setFormulaExpression(event.target.value)}
-                    onFormulaNameChange={(event) => setFormulaName(event.target.value)}
+                    onExpressionChange={handleExpressionChange}
                     onInsertMetric={handleInsertMetric}
-                    onOutputMetricChange={(event) => setOutputMetric(event.target.value)}
-                    onSave={() => { void handleSave() }}
+                    onFormulaNameChange={handleFormulaNameChange}
+                    onOutputMetricChange={handleOutputMetricChange}
+                    onSave={handleSave}
                     onUseExample={handleUseExample}
                     outputMetric={outputMetric}
                     previewResult={previewResult}
                     validation={validation}
                 />
             </FormulaBuilderHeader>
-            {loading || formulasLoading ? <FormulaBuilderLoadingState /> : formulas.length === 0 ? <FormulaBuilderEmptyState /> : <FormulaBuilderList items={formulaItems} onDelete={(formulaId) => { void deleteFormula(formulaId) }} />}
+            {loading || formulasLoading ? <FormulaBuilderLoadingState /> : formulas.length === 0 ? <FormulaBuilderEmptyState /> : <FormulaBuilderList items={formulaItems} onDelete={handleDeleteFormula} />}
         </Card>
     )
 }

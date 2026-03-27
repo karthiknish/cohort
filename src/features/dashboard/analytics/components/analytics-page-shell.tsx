@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { CheckCircle2, Link2, LoaderCircle, RotateCw, TrendingUp, Unlink } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
@@ -79,6 +80,18 @@ function GoogleAnalyticsConnectionSection() {
     setGaDisconnectDialogOpen,
   } = useAnalyticsPageContext()
 
+  const handleConnectClick = useCallback(() => {
+    void handleConnectGoogleAnalytics()
+  }, [handleConnectGoogleAnalytics])
+
+  const handleDisconnectClick = useCallback(() => {
+    setGaDisconnectDialogOpen(true)
+  }, [setGaDisconnectDialogOpen])
+
+  const handleSyncClick = useCallback(() => {
+    void handleSyncGoogleAnalytics()
+  }, [handleSyncGoogleAnalytics])
+
   return (
     <Card className="overflow-hidden border border-border/60 bg-card shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
       <CardHeader className="flex flex-col gap-4 border-b border-border/60 bg-card py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -119,7 +132,7 @@ function GoogleAnalyticsConnectionSection() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => void handleConnectGoogleAnalytics()}
+              onClick={handleConnectClick}
               disabled={gaLoading}
               className="h-9 rounded-md border-border/60 bg-background text-primary text-sm font-medium transition-colors hover:bg-muted/40"
             >
@@ -143,7 +156,7 @@ function GoogleAnalyticsConnectionSection() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setGaDisconnectDialogOpen(true)}
+                onClick={handleDisconnectClick}
                 className="h-9 rounded-md border-border/60 bg-background text-destructive text-sm font-medium transition-colors hover:bg-destructive/10"
               >
                 <Unlink className="mr-2 h-4 w-4" />
@@ -153,7 +166,7 @@ function GoogleAnalyticsConnectionSection() {
             <Button
               type="button"
               size="sm"
-              onClick={() => void handleSyncGoogleAnalytics()}
+              onClick={handleSyncClick}
               disabled={isSyncPending || gaLoading || !gaConnected || gaNeedsPropertySelection}
               className="h-9 rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-none transition-colors hover:bg-primary/90"
             >
@@ -206,6 +219,14 @@ function AnalyticsDialogs() {
     setGaSetupDialogOpen,
   } = useAnalyticsPageContext()
 
+  const handleReloadProperties = useCallback(() => {
+    void loadGoogleAnalyticsPropertyOptions()
+  }, [loadGoogleAnalyticsPropertyOptions])
+
+  const handleInitialize = useCallback(() => {
+    void handleFinalizeGoogleAnalyticsSetup()
+  }, [handleFinalizeGoogleAnalyticsSetup])
+
   return (
     <>
       <GoogleAnalyticsSetupDialog
@@ -217,8 +238,8 @@ function AnalyticsDialogs() {
         onPropertySelectionChange={setGaSelectedPropertyId}
         loadingProperties={gaLoadingProperties}
         initializing={gaInitializingProperty}
-        onReloadProperties={() => void loadGoogleAnalyticsPropertyOptions()}
-        onInitialize={() => void handleFinalizeGoogleAnalyticsSetup()}
+        onReloadProperties={handleReloadProperties}
+        onInitialize={handleInitialize}
       />
 
       <DisconnectDialog
@@ -276,6 +297,14 @@ function AnalyticsEmptyState() {
     isSyncPending,
   } = useAnalyticsPageContext()
 
+  const handleConnectClick = useCallback(() => {
+    void handleConnectGoogleAnalytics()
+  }, [handleConnectGoogleAnalytics])
+
+  const handleSyncClick = useCallback(() => {
+    void handleSyncGoogleAnalytics()
+  }, [handleSyncGoogleAnalytics])
+
   return (
     <Card className="overflow-hidden border border-border/60 bg-card shadow-sm">
       <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
@@ -292,7 +321,7 @@ function AnalyticsEmptyState() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => void handleConnectGoogleAnalytics()}
+              onClick={handleConnectClick}
               disabled={gaLoading}
               className="rounded-md border-border/60 bg-background text-primary hover:bg-muted/40"
             >
@@ -307,7 +336,7 @@ function AnalyticsEmptyState() {
             <Button
               type="button"
               size="sm"
-              onClick={() => void handleSyncGoogleAnalytics()}
+              onClick={handleSyncClick}
               disabled={isSyncPending || gaLoading || !gaConnected}
               className="rounded-md bg-primary text-primary-foreground shadow-none hover:bg-primary/90"
             >

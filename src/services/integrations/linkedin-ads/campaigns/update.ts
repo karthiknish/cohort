@@ -4,7 +4,7 @@
 
 import { linkedinAdsClient } from '@/services/integrations/shared/base-client'
 import { LinkedInApiError } from '../errors'
-import { LinkedInApiErrorResponse } from '../types'
+import type { LinkedInApiErrorResponse } from '../types'
 
 // =============================================================================
 // UPDATE CAMPAIGN STATUS

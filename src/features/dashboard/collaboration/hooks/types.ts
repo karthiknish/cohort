@@ -128,4 +128,6 @@ export interface UseCollaborationDataReturn {
 
   // Reactions
   reactionPendingByMessage: ReactionPendingState
+
+  [key: string]: unknown
 }

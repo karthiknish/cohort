@@ -1,6 +1,7 @@
 import { decrypt, encrypt, generateCodeVerifier } from '@/lib/crypto'
 import { enqueueSyncJob, persistIntegrationTokens } from '@/lib/ads-admin'
-import { fetchTikTokAdAccounts, TikTokAdAccount } from '@/services/integrations/tiktok-ads'
+import { fetchTikTokAdAccounts } from '@/services/integrations/tiktok-ads'
+import type { TikTokAdAccount } from '@/services/integrations/tiktok-ads'
 
 const STATE_TTL_MS = 5 * 60 * 1000
 

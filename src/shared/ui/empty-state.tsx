@@ -3,7 +3,8 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from './button'
-import { LucideIcon, Inbox, FileSearch, Users, FolderOpen, CircleAlert, Plus, Calendar, MessageSquare, BarChart3, RefreshCw, WifiOff } from 'lucide-react'
+import { Inbox, FileSearch, Users, FolderOpen, CircleAlert, Plus, Calendar, MessageSquare, BarChart3, RefreshCw, WifiOff } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: LucideIcon
@@ -27,6 +28,16 @@ const iconMap: Record<string, LucideIcon> = {
   users: Users,
   folder: FolderOpen,
   alert: CircleAlert,
+}
+
+function createNetworkErrorAction(action: EmptyStateProps['action']) {
+  return (
+    action || {
+      label: 'Retry',
+      onClick: () => window.location.reload(),
+      icon: RefreshCw,
+    }
+  )
 }
 
 export function EmptyState({
@@ -211,11 +222,7 @@ export function NetworkErrorEmptyState(props: Partial<EmptyStateProps>) {
       icon={WifiOff}
       title="Connection error"
       description="Unable to load data. Please check your connection and try again."
-      action={props.action || {
-        label: 'Retry',
-        onClick: () => window.location.reload(),
-        icon: RefreshCw,
-      }}
+      action={createNetworkErrorAction(props.action)}
       {...props}
     />
   )

@@ -1,7 +1,7 @@
 'use client'
 'use no memo'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, RefObject } from 'react'
 
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
@@ -222,97 +222,100 @@ export function CollaborationMessagePane({
   }, [channel?.id, isLoading, isSearchActive, latestVisibleMessageId, messagesEndRef])
 
   // Handlers
-  const handleStartEdit = (message: CollaborationMessage) => {
+  const handleStartEdit = useCallback((message: CollaborationMessage) => {
     if (message.isDeleted || messageUpdatingId === message.id || messageDeletingId === message.id) return
     setEditingMessageId(message.id)
     setEditingValue(message.content ?? '')
-  }
+  }, [messageUpdatingId, messageDeletingId])
 
-  const handleReply = (message: CollaborationMessage) => {
+  const handleReply = useCallback((message: CollaborationMessage) => {
     setReplyingToMessage(message)
-  }
+  }, [])
 
-  const handleCancelReply = () => {
+  const handleCancelReply = useCallback(() => {
     setReplyingToMessage(null)
-  }
+  }, [])
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingMessageId(null)
     setEditingValue('')
-  }
+  }, [])
 
-  const handleConfirmEdit = () => {
+  const handleConfirmEdit = useCallback(() => {
     if (!editingMessageId || messageUpdatingId === editingMessageId) return
     const trimmed = editingValue.trim()
     if (!trimmed) return
     onEditMessage(editingMessageId, trimmed)
     setEditingMessageId(null)
     setEditingValue('')
-  }
+  }, [editingMessageId, messageUpdatingId, editingValue, onEditMessage])
 
-  const handleConfirmDelete = (messageId: string) => {
+  const handleConfirmDelete = useCallback((messageId: string) => {
     if (messageDeletingId === messageId) return
-    if (editingMessageId === messageId) handleCancelEdit()
+    if (editingMessageId === messageId) {
+      setEditingMessageId(null)
+      setEditingValue('')
+    }
     setConfirmingDeleteMessageId(messageId)
-  }
+  }, [messageDeletingId, editingMessageId])
 
-  const handleExecuteDelete = () => {
+  const handleExecuteDelete = useCallback(() => {
     if (!confirmingDeleteMessageId || messageDeletingId === confirmingDeleteMessageId) return
     onDeleteMessage(confirmingDeleteMessageId)
     setConfirmingDeleteMessageId(null)
-  }
+  }, [confirmingDeleteMessageId, messageDeletingId, onDeleteMessage])
 
-  const handleCancelDelete = () => {
+  const handleCancelDelete = useCallback(() => {
     setConfirmingDeleteMessageId(null)
-  }
+  }, [])
 
-  const handleCreateTaskFromMessage = (message: CollaborationMessage) => {
+  const handleCreateTaskFromMessage = useCallback((message: CollaborationMessage) => {
     setSelectedMessageForTask(message)
     setTaskCreationModalOpen(true)
-  }
+  }, [])
 
-  const handleTaskCreated = (task: TaskRecord) => {
+  const handleTaskCreated = useCallback((task: TaskRecord) => {
     console.log('Task created from message:', task)
-  }
+  }, [])
 
-  const handleSearchChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     onMessageSearchChange(event.target.value)
-  }
+  }, [onMessageSearchChange])
 
-  const handleAttachmentInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleAttachmentInputChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files || files.length === 0) return
     onAddAttachments(files)
     event.target.value = ''
-  }
+  }, [onAddAttachments])
 
-  const handleComposerDrop = (event: DragEvent<HTMLTextAreaElement>) => {
+  const handleComposerDrop = useCallback((event: DragEvent<HTMLTextAreaElement>) => {
     event.preventDefault()
     if (!channel || sending) return
     if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
       onAddAttachments(event.dataTransfer.files)
       event.dataTransfer.clearData()
     }
-  }
+  }, [channel, sending, onAddAttachments])
 
-  const handleComposerDragOver = (event: DragEvent<HTMLTextAreaElement>) => {
+  const handleComposerDragOver = useCallback((event: DragEvent<HTMLTextAreaElement>) => {
     event.preventDefault()
     if (!channel || sending) {
       event.dataTransfer.dropEffect = 'none'
       return
     }
     event.dataTransfer.dropEffect = 'copy'
-  }
+  }, [channel, sending])
 
-  const handleComposerPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+  const handleComposerPaste = useCallback((event: ClipboardEvent<HTMLTextAreaElement>) => {
     if (!channel || sending) return
     const files = Array.from(event.clipboardData?.files ?? []).filter((file) => file.type.startsWith('image/'))
     if (files.length === 0) return
     event.preventDefault()
     onAddAttachments(files)
-  }
+  }, [channel, sending, onAddAttachments])
 
-  const handleThreadToggle = (threadRootId: string) => {
+  const handleThreadToggle = useCallback((threadRootId: string) => {
     const normalizedId = threadRootId.trim()
     if (!normalizedId) return
 
@@ -340,21 +343,21 @@ export function CollaborationMessagePane({
         void onLoadThreadReplies(normalizedId)
       }
     }
-  }
+  }, [expandedThreadIds, threadMessagesByRootId, threadErrorsByRootId, threadLoadingByRootId, onLoadThreadReplies])
 
-  const handleRetryThreadLoad = (threadRootId: string) => {
+  const handleRetryThreadLoad = useCallback((threadRootId: string) => {
     const normalizedId = threadRootId.trim()
     if (!normalizedId) return
     void onLoadThreadReplies(normalizedId)
-  }
+  }, [onLoadThreadReplies])
 
-  const handleLoadMoreThread = (threadRootId: string) => {
+  const handleLoadMoreThread = useCallback((threadRootId: string) => {
     const normalizedId = threadRootId.trim()
     if (!normalizedId) return
     void onLoadMoreThreadReplies(normalizedId)
-  }
+  }, [onLoadMoreThreadReplies])
 
-  const handleExportChannel = () => {
+  const handleExportChannel = useCallback(() => {
     if (!channel || channelMessages.length === 0) return
 
     const headers = ['Date', 'Sender', 'Role', 'Content', 'Attachments', 'Reactions', 'Thread Replies']
@@ -387,12 +390,27 @@ export function CollaborationMessagePane({
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-  }
+  }, [channel, channelMessages])
 
-  const handleSendWithReply = () => {
+  const handleSendWithReply = useCallback(() => {
     onSendMessage({ parentMessageId: replyingToMessage?.id })
     setReplyingToMessage(null)
-  }
+  }, [onSendMessage, replyingToMessage?.id])
+
+  const handleCloseTaskModal = useCallback(() => {
+    setTaskCreationModalOpen(false)
+  }, [])
+
+  const taskCreationInitialData = useMemo(() => ({
+    title: selectedMessageForTask ? `Task from: ${selectedMessageForTask.content?.slice(0, 50)}...` : '',
+    description: selectedMessageForTask?.content || '',
+    projectId: channel?.id || '',
+    projectName: channel?.name || '',
+  }), [selectedMessageForTask, channel?.id, channel?.name])
+
+  const handleConfirmDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) handleCancelDelete()
+  }, [handleCancelDelete])
 
   // Early return for no channel
   if (!channel) {
@@ -483,20 +501,15 @@ export function CollaborationMessagePane({
       {/* Task Creation Modal */}
       <TaskCreationModal
         isOpen={taskCreationModalOpen}
-        onClose={() => setTaskCreationModalOpen(false)}
-        initialData={{
-          title: selectedMessageForTask ? `Task from: ${selectedMessageForTask.content?.slice(0, 50)}...` : '',
-          description: selectedMessageForTask?.content || '',
-          projectId: channel?.id || '',
-          projectName: channel?.name || '',
-        }}
+        onClose={handleCloseTaskModal}
+        initialData={taskCreationInitialData}
         onTaskCreated={handleTaskCreated}
       />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         open={Boolean(confirmingDeleteMessageId)}
-        onOpenChange={(open) => !open && handleCancelDelete()}
+        onOpenChange={handleConfirmDialogOpenChange}
         title="Delete message"
         description="Are you sure you want to delete this message? This action cannot be undone. The message will be marked as deleted and hidden from all participants."
         confirmLabel="Delete"

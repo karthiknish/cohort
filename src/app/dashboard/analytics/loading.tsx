@@ -4,6 +4,8 @@ import { Skeleton } from '@/shared/ui/skeleton'
  * Analytics page loading skeleton for streaming SSR.
  */
 export default function AnalyticsLoading() {
+  const statSlots = ['stat-1', 'stat-2', 'stat-3', 'stat-4', 'stat-5', 'stat-6']
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -20,8 +22,8 @@ export default function AnalyticsLoading() {
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="rounded-lg border p-4 space-y-3">
+        {statSlots.map((slot) => (
+          <div key={slot} className="space-y-3 rounded-lg border p-4">
             <Skeleton className="h-4 w-16" />
             <Skeleton className="h-7 w-20" />
             <Skeleton className="h-3 w-12" />

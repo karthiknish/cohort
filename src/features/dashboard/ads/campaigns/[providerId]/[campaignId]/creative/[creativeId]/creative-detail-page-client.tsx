@@ -378,7 +378,7 @@ export default function CreativeDetailPageClient({
     }
   }, [creative, fetchMetrics])
 
-  const handleCopy = (text: string, field: string) => {
+  const handleCopy = useCallback((text: string, field: string) => {
     const canUseClipboardApi =
       typeof window !== 'undefined' &&
       typeof navigator !== 'undefined' &&
@@ -422,24 +422,24 @@ export default function CreativeDetailPageClient({
           variant: "destructive",
         })
       })
-  }
+  }, [])
 
-  const startEditing = () => {
+  const startEditing = useCallback(() => {
     if (!creative) return
     setEditedHeadlines(creative.headlines || [])
     setEditedDescriptions(creative.descriptions || [])
     setEditedCta(creative.callToAction || '')
     setEditedLandingPage(creative.landingPageUrl || '')
     setIsEditing(true)
-  }
+  }, [creative])
 
-  const cancelEditing = () => {
+  const cancelEditing = useCallback(() => {
     setIsEditing(false)
     setEditedHeadlines([])
     setEditedDescriptions([])
     setEditedCta('')
     setEditedLandingPage('')
-  }
+  }, [])
 
   const generateCopy = useCallback(async (kind: 'headlines' | 'captions') => {
     if (!creative) return
@@ -571,7 +571,7 @@ export default function CreativeDetailPageClient({
       })
   }, [campaignName, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isEditing, isPreviewMode, params.campaignId, params.creativeId, params.providerId, selectedClientId, generateCopyAction])
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (isPreviewMode) {
       if (!creative) {
         return
@@ -682,35 +682,47 @@ export default function CreativeDetailPageClient({
       .finally(() => {
         setIsSaving(false)
       })
-  }
+  }, [creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, fetchCreative, isPreviewMode, params.providerId, selectedClientId, updateCreative, workspaceId])
 
-  const addHeadline = () => {
-    setEditedHeadlines([...editedHeadlines, ''])
-  }
+  const addHeadline = useCallback(() => {
+    setEditedHeadlines((current) => [...current, ''])
+  }, [])
 
-  const removeHeadline = (index: number) => {
-    setEditedHeadlines(editedHeadlines.filter((_, i) => i !== index))
-  }
+  const removeHeadline = useCallback((index: number) => {
+    setEditedHeadlines((current) => current.filter((_, currentIndex) => currentIndex !== index))
+  }, [])
 
-  const updateHeadline = (index: number, value: string) => {
-    const updated = [...editedHeadlines]
-    updated[index] = value
-    setEditedHeadlines(updated)
-  }
+  const updateHeadline = useCallback((index: number, value: string) => {
+    setEditedHeadlines((current) => {
+      const updated = [...current]
+      updated[index] = value
+      return updated
+    })
+  }, [])
 
-  const addDescription = () => {
-    setEditedDescriptions([...editedDescriptions, ''])
-  }
+  const addDescription = useCallback(() => {
+    setEditedDescriptions((current) => [...current, ''])
+  }, [])
 
-  const removeDescription = (index: number) => {
-    setEditedDescriptions(editedDescriptions.filter((_, i) => i !== index))
-  }
+  const removeDescription = useCallback((index: number) => {
+    setEditedDescriptions((current) => current.filter((_, currentIndex) => currentIndex !== index))
+  }, [])
 
-  const updateDescription = (index: number, value: string) => {
-    const updated = [...editedDescriptions]
-    updated[index] = value
-    setEditedDescriptions(updated)
-  }
+  const updateDescription = useCallback((index: number, value: string) => {
+    setEditedDescriptions((current) => {
+      const updated = [...current]
+      updated[index] = value
+      return updated
+    })
+  }, [])
+
+  const handleGenerateHeadlines = useCallback(() => {
+    void generateCopy('headlines')
+  }, [generateCopy])
+
+  const handleGenerateDescriptions = useCallback(() => {
+    void generateCopy('captions')
+  }, [generateCopy])
 
   const backUrl = `/dashboard/ads/campaigns/${params.providerId}/${params.campaignId}${searchParamsString ? `?${searchParamsString}` : ''}`
 
@@ -843,8 +855,8 @@ export default function CreativeDetailPageClient({
 
           generatingHeadlines={generatingHeadlines}
           generatingDescriptions={generatingDescriptions}
-          onGenerateHeadlines={() => void generateCopy('headlines')}
-          onGenerateDescriptions={() => void generateCopy('captions')}
+          onGenerateHeadlines={handleGenerateHeadlines}
+          onGenerateDescriptions={handleGenerateDescriptions}
           days={days}
           onChangeDays={setDays}
           metricsLoading={metricsLoading}

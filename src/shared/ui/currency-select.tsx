@@ -40,10 +40,17 @@ export function CurrencySelect({
   const currencyInfo = SUPPORTED_CURRENCIES[normalizedValue] ?? SUPPORTED_CURRENCIES.USD
   const allOptions = getCurrencyOptions()
 
+  const handleValueChange = React.useCallback(
+    (nextValue: string) => {
+      onValueChange(nextValue as CurrencyCode)
+    },
+    [onValueChange]
+  )
+
   return (
     <Select
       value={normalizedValue}
-      onValueChange={(v) => onValueChange(v as CurrencyCode)}
+      onValueChange={handleValueChange}
       disabled={disabled}
     >
       <SelectTrigger className={cn(compact ? 'w-[100px]' : 'w-[140px]', className)}>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { Lock, RefreshCw, Copy, Code2 } from 'lucide-react'
 
@@ -22,7 +22,7 @@ export default function AuthError({
   const errorDigest = error.digest
   const componentName = 'AuthError'
 
-  const copyErrorDetails = () => {
+  const copyErrorDetails = useCallback(() => {
     const details = [
       `Component: ${componentName}`,
       `Error: ${error.message}`,
@@ -30,7 +30,7 @@ export default function AuthError({
       error.stack ? `Stack:\n${error.stack}` : '',
     ].filter(Boolean).join('\n\n')
     navigator.clipboard.writeText(details)
-  }
+  }, [componentName, error.message, error.stack, errorDigest])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">

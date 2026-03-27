@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { linkedinAdsClient } from '@/services/integrations/shared/base-client'
-import { LinkedInAudienceTargeting } from '../types'
+import type { LinkedInAudienceTargeting } from '../types'
 
 type TargetingFacet = {
   type?: string

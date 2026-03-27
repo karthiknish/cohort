@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { useMutation, useQuery, useConvexAuth } from 'convex/react'
 import Link from 'next/link'
 import {
@@ -34,6 +34,64 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { KeyboardShortcutBadge, useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
 import { onboardingApi } from '@/lib/convex-api'
 import { useOnboardingTour } from '@/shared/hooks/use-onboarding-tour'
+
+function HelpStepActionLink({
+  href,
+  label,
+  onClose,
+}: {
+  href: string
+  label: string
+  onClose: () => void
+}) {
+  const handleClick = useCallback(() => {
+    onClose()
+  }, [onClose])
+
+  return (
+    <Button asChild size="sm" variant="ghost" className="shrink-0">
+      <Link href={href} onClick={handleClick}>
+        {label}
+        <ArrowRight className="ml-1 h-3 w-3" />
+      </Link>
+    </Button>
+  )
+}
+
+function HelpNavigationLink({
+  href,
+  icon: Icon,
+  item,
+  onClose,
+}: {
+  href: string
+  icon: React.ComponentType<{ className?: string }>
+  item: { name: string; description: string }
+  onClose: () => void
+}) {
+  const handleClick = useCallback(() => {
+    onClose()
+  }, [onClose])
+
+  return (
+    <Link
+      href={href}
+      onClick={handleClick}
+      className="group flex items-start gap-3 rounded-lg border border-muted/60 p-3 transition hover:border-primary/40 hover:bg-muted/30"
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="flex-1 space-y-1">
+        <div className="flex items-center gap-2">
+          <h4 className="font-medium text-foreground group-hover:text-primary">{item.name}</h4>
+          <ArrowRight className="h-3 w-3 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
+        </div>
+        <p className="text-sm text-muted-foreground">{item.description}</p>
+      </div>
+    </Link>
+  )
+}
 
 interface HelpModalProps {
   open: boolean
@@ -142,6 +200,19 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
   const { startTour } = useOnboardingTour()
 
   const keyboardShortcuts = getKeyboardShortcuts()
+  const handleLaunchTour = useCallback(() => {
+    onOpenChange(false)
+    startTour()
+  }, [onOpenChange, startTour])
+
+  const handleSkipWelcome = useCallback(() => {
+    localStorage.setItem('cohorts_welcome_seen', 'true')
+    onOpenChange(false)
+  }, [onOpenChange])
+
+  const handleClose = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -173,10 +244,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
               <TabsContent value="welcome" className="mt-4 space-y-4">
                 <div className="pt-2 flex flex-col gap-2">
                   <Button
-                    onClick={() => {
-                      onOpenChange(false)
-                      startTour()
-                    }}
+                    onClick={handleLaunchTour}
                     className="w-full bg-gradient-to-r from-primary to-primary/80"
                   >
                     <Sparkles className="mr-2 h-4 w-4" />
@@ -184,10 +252,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                   </Button>
                   <Button
                     variant="ghost"
-                    onClick={() => {
-                      localStorage.setItem('cohorts_welcome_seen', 'true')
-                      onOpenChange(false)
-                    }}
+                    onClick={handleSkipWelcome}
                     className="w-full text-muted-foreground"
                   >
                     Skip to dashboard
@@ -221,12 +286,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                         <h4 className="font-medium text-foreground">{step.title}</h4>
                         <p className="text-sm text-muted-foreground">{step.description}</p>
                       </div>
-                      <Button asChild size="sm" variant="ghost" className="shrink-0">
-                        <Link href={step.action.href} onClick={() => onOpenChange(false)}>
-                          {step.action.label}
-                          <ArrowRight className="ml-1 h-3 w-3" />
-                        </Link>
-                      </Button>
+                      <HelpStepActionLink href={step.action.href} label={step.action.label} onClose={handleClose} />
                     </div>
                   ))}
                 </div>
@@ -237,25 +297,13 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
               {navigationGuide.map((item) => {
                 const Icon = item.icon
                 return (
-                  <Link
+                  <HelpNavigationLink
                     key={item.name}
                     href={item.href}
-                    onClick={() => onOpenChange(false)}
-                    className="group flex items-start gap-3 rounded-lg border border-muted/60 p-3 transition hover:border-primary/40 hover:bg-muted/30"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-foreground group-hover:text-primary">
-                          {item.name}
-                        </h4>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
-                      </div>
-                      <p className="text-sm text-muted-foreground">{item.description}</p>
-                    </div>
-                  </Link>
+                    icon={Icon}
+                    item={item}
+                    onClose={handleClose}
+                  />
                 )
               })}
             </TabsContent>

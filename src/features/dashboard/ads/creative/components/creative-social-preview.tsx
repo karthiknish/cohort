@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import NextImage from 'next/image'
 import { AnimatePresence, LazyMotion, domAnimation, m } from '@/shared/ui/motion'
 import {
@@ -39,6 +39,13 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 
+const crispEdgesStyle: React.CSSProperties = { imageRendering: 'crisp-edges' }
+const whileHoverScale: { scale: number } = { scale: 1.1 }
+const whileTapScale: { scale: number } = { scale: 0.9 }
+const exitSlideLeft: { opacity: number; x: number } = { opacity: 0, x: -20 }
+const progressBarInitial: { width: number } = { width: 0 }
+const progressBarTransition = { duration: motionLoopSeconds.shimmer, ease: easings.easeOut }
+
 export type CreativePerformanceSummary = AdMetricsSummary & {
   ctr: number
   roas: number
@@ -61,11 +68,17 @@ export function CreativeSocialPreview(props: {
   const [aspectRatio, setAspectRatio] = useState<'feed' | 'reel'>('feed')
   const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = React.useRef<HTMLVideoElement>(null)
-  const efficiencyBarDurationSeconds = motionLoopSeconds.shimmer
 
   const mediaAspectClass = aspectRatio === 'reel' ? 'aspect-[9/16]' : 'aspect-square'
 
-  const togglePlayPause = () => {
+  const handlePlay = useCallback(() => setIsPlaying(true), [])
+  const handlePause = useCallback(() => setIsPlaying(false), [])
+  const handleEnded = useCallback(() => setIsPlaying(false), [])
+  const handleImageLoadFailed = useCallback(() => setImageLoadFailed(true), [])
+  const handleProfileImageError = useCallback(() => setProfileImageError(true), [])
+  const handleSetFeed = useCallback(() => setAspectRatio('feed'), [])
+  const handleSetReel = useCallback(() => setAspectRatio('reel'), [])
+  const togglePlayPause = useCallback(() => {
     if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause()
@@ -74,7 +87,10 @@ export function CreativeSocialPreview(props: {
       }
       setIsPlaying(!isPlaying)
     }
-  }
+  }, [isPlaying])
+
+  const scoreCardTransition = useMemo(() => ({ ...transitions.slow, delay: 0.2 }), [])
+  const progressBarAnimate = useMemo(() => ({ width: `${efficiencyScore}%` }), [efficiencyScore])
 
   const renderMedia = () => {
     if (creative.videoUrl && isDirectVideoUrl(creative.videoUrl)) {
@@ -85,10 +101,10 @@ export function CreativeSocialPreview(props: {
             src={creative.videoUrl}
             className="w-full h-full object-cover"
             poster={creative.imageUrl || creative.thumbnailUrl}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            onEnded={() => setIsPlaying(false)}
-            style={{ imageRendering: 'crisp-edges' }}
+            onPlay={handlePlay}
+            onPause={handlePause}
+            onEnded={handleEnded}
+            style={crispEdgesStyle}
           >
             <track kind="captions" />
           </video>
@@ -116,8 +132,8 @@ export function CreativeSocialPreview(props: {
               unoptimized
               sizes="(max-width: 768px) 100vw, 640px"
               className="object-cover opacity-70 group-hover:scale-105 transition-transform duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
-              onError={() => setImageLoadFailed(true)}
-              style={{ imageRendering: 'crisp-edges' }}
+              onError={handleImageLoadFailed}
+              style={crispEdgesStyle}
             />
           ) : (
             <div className="text-muted-foreground flex flex-col items-center">
@@ -127,8 +143,8 @@ export function CreativeSocialPreview(props: {
           )}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none">
           <m.div
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+            whileHover={whileHoverScale}
+            whileTap={whileTapScale}
             variants={scaleVariants}
             className="h-14 w-14 rounded-full bg-background/40 backdrop-blur-xl border border-background/20 flex items-center justify-center shadow-2xl cursor-pointer"
           >
@@ -160,8 +176,8 @@ export function CreativeSocialPreview(props: {
               unoptimized
               sizes="(max-width: 768px) 100vw, 640px"
               className="object-cover transition-transform duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-110"
-              onError={() => setImageLoadFailed(true)}
-              style={{ imageRendering: 'crisp-edges' }}
+              onError={handleImageLoadFailed}
+              style={crispEdgesStyle}
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none" />
@@ -184,7 +200,7 @@ export function CreativeSocialPreview(props: {
           key={activePlatform}
           initial="hidden"
           animate="visible"
-          exit={{ opacity: 0, x: -20 }}
+          exit={exitSlideLeft}
           variants={slideInLeftVariants}
           transition={transitions.normal}
           className="w-full"
@@ -203,8 +219,8 @@ export function CreativeSocialPreview(props: {
                           height={36}
                           unoptimized
                           className="h-full w-full object-cover"
-                          onError={() => setProfileImageError(true)}
-                          style={{ imageRendering: 'crisp-edges' }}
+                          onError={handleProfileImageError}
+                          style={crispEdgesStyle}
                         />
                       ) : (
                         (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()
@@ -260,8 +276,8 @@ export function CreativeSocialPreview(props: {
                       height={40}
                       unoptimized
                       className="h-full w-full object-cover"
-                      onError={() => setProfileImageError(true)}
-                      style={{ imageRendering: 'crisp-edges' }}
+                      onError={handleProfileImageError}
+                      style={crispEdgesStyle}
                     />
                   ) : (
                     (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()
@@ -314,8 +330,8 @@ export function CreativeSocialPreview(props: {
                         height={40}
                         unoptimized
                         className="h-full w-full object-cover"
-                        onError={() => setProfileImageError(true)}
-                        style={{ imageRendering: 'crisp-edges' }}
+                        onError={handleProfileImageError}
+                        style={crispEdgesStyle}
                       />
                     ) : (
                       (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()
@@ -367,8 +383,8 @@ export function CreativeSocialPreview(props: {
                       height={40}
                       unoptimized
                       className="h-full w-full object-cover"
-                      onError={() => setProfileImageError(true)}
-                      style={{ imageRendering: 'crisp-edges' }}
+                      onError={handleProfileImageError}
+                      style={crispEdgesStyle}
                     />
                   ) : (
                     (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()
@@ -434,8 +450,8 @@ export function CreativeSocialPreview(props: {
       ? ['tiktok' as Platform]
       : ['facebook', 'instagram'] // Meta ads show Facebook & Instagram
 
-  // Default to the first available platform
   const [activePlatform, setActivePlatform] = useState<Platform>(availablePlatforms[0] ?? 'facebook')
+  const handlePlatformChange = useCallback((v: string) => setActivePlatform(v as Platform), [])
 
   return (
     <LazyMotion features={domAnimation}>
@@ -452,7 +468,7 @@ export function CreativeSocialPreview(props: {
             <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/30 border border-muted-foreground/10">
               <button
                 type="button"
-                onClick={() => setAspectRatio('feed')}
+                onClick={handleSetFeed}
                 className={cn(
                   "h-8 w-8 rounded-md flex items-center justify-center transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
                   aspectRatio === 'feed' ? "bg-background shadow-sm" : "hover:bg-muted/50"
@@ -463,7 +479,7 @@ export function CreativeSocialPreview(props: {
               </button>
               <button
                 type="button"
-                onClick={() => setAspectRatio('reel')}
+                onClick={handleSetReel}
                 className={cn(
                   "h-8 w-8 rounded-md flex items-center justify-center transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
                   aspectRatio === 'reel' ? "bg-background shadow-sm" : "hover:bg-muted/50"
@@ -476,7 +492,7 @@ export function CreativeSocialPreview(props: {
 
             {/* Platform Toggle */}
             {availablePlatforms.length > 1 && (
-              <Tabs value={activePlatform} onValueChange={(v) => setActivePlatform(v as Platform)} className="w-auto">
+              <Tabs value={activePlatform} onValueChange={handlePlatformChange} className="w-auto">
                 <TabsList className="h-10 bg-muted/30 p-1 rounded-lg border border-muted-foreground/10">
                   {availablePlatforms.includes('facebook') && (
                     <TabsTrigger value="facebook" className="h-8 w-8 p-0 rounded-md">
@@ -519,7 +535,7 @@ export function CreativeSocialPreview(props: {
           initial="hidden"
           animate="visible"
           variants={fadeInUpVariants}
-          transition={{ ...transitions.slow, delay: 0.2 }}
+          transition={scoreCardTransition}
         >
           <Card className="border border-border/60 bg-card shadow-lg rounded-[2.5rem] overflow-hidden">
             <CardHeader className="pb-4 pt-8 px-8">
@@ -554,9 +570,9 @@ export function CreativeSocialPreview(props: {
               <div className="space-y-3">
                 <div className="h-3 w-full rounded-full bg-primary/5 border border-primary/5 p-0.5 overflow-hidden">
                   <m.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${efficiencyScore}%` }}
-                    transition={{ duration: efficiencyBarDurationSeconds, ease: easings.easeOut }}
+                    initial={progressBarInitial}
+                    animate={progressBarAnimate}
+                    transition={progressBarTransition}
                     className="h-full bg-info rounded-full shadow-sm"
                   />
                 </div>

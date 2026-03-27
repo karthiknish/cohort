@@ -92,6 +92,10 @@ export default function AdminFeaturesPage() {
     []
   )
 
+  const handleRefresh = useCallback(() => {
+    void fetchFeatures(true)
+  }, [fetchFeatures])
+
   const handleAddFeature = useCallback((status: FeatureStatus) => {
     setEditingFeature(null)
     setDefaultStatus(status)
@@ -243,7 +247,7 @@ export default function AdminFeaturesPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => fetchFeatures(true)}
+          onClick={handleRefresh}
           disabled={refreshing}
         >
           <RefreshCw className={cn('mr-2 h-4 w-4', refreshing && 'animate-spin')} />

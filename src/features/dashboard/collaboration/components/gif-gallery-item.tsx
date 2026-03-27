@@ -68,6 +68,14 @@ export function GifGalleryItem({
     link.click()
   }, [attachment])
 
+  const handlePreview = useCallback(() => {
+    onPreview?.(attachment)
+  }, [attachment, onPreview])
+
+  const handleVideoLoadedData = useCallback(() => {
+    setIsLoading(false)
+  }, [])
+
   // For regular images, show simple img tag
   if (!isGif && !isVideo) {
     return (
@@ -80,7 +88,7 @@ export function GifGalleryItem({
         {onPreview && (
           <button
             type="button"
-            onClick={() => onPreview(attachment)}
+            onClick={handlePreview}
             className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
           >
             <Maximize2 className="h-8 w-8 text-white" />
@@ -105,7 +113,7 @@ export function GifGalleryItem({
         muted={isMuted}
         loop
         playsInline
-        onLoadedData={() => setIsLoading(false)}
+        onLoadedData={handleVideoLoadedData}
         poster={attachment.url.replace(/\.(gif|mp4|webm|mov)$/i, '.jpg')} // Try to find poster image
       />
 
@@ -169,7 +177,7 @@ export function GifGalleryItem({
                 size="icon"
                 variant="ghost"
                 className="h-8 w-8 text-white hover:bg-white/20"
-                onClick={() => onPreview(attachment)}
+                onClick={handlePreview}
               >
                 <Maximize2 className="h-4 w-4" />
               </Button>
@@ -222,6 +230,10 @@ export function GifThumbnail({
     setIsHovered(true)
   }, [])
 
+  const handleMouseLeave = useCallback(() => {
+    setIsHovered(false)
+  }, [])
+
   const handleLoad = useCallback(() => {
     setIsLoaded(true)
   }, [])
@@ -240,7 +252,7 @@ export function GifThumbnail({
     <div
       className={cn('relative rounded-lg overflow-hidden bg-muted', className)}
       onMouseEnter={handleMouseEnter}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseLeave={handleMouseLeave}
     >
       {/* Static thumbnail - using first frame or poster */}
       <LazyImage

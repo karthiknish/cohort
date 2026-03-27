@@ -1,5 +1,7 @@
 'use client'
 
+import { useCallback } from 'react'
+
 import { AgentModeButton } from './agent-mode-button'
 import { AgentModePanel } from './agent-mode-panel'
 import { useAgentMode } from '@/shared/hooks/use-agent-mode'
@@ -41,12 +43,16 @@ export function AgentMode() {
     rateLimitCountdown,
   } = useAgentMode()
 
+  const handleClose = useCallback(() => {
+    setOpen(false)
+  }, [setOpen])
+
   return (
     <>
       <AgentModeButton onClick={toggle} isOpen={isOpen} />
       <AgentModePanel
         isOpen={isOpen}
-        onClose={() => setOpen(false)}
+        onClose={handleClose}
         messages={messages}
         isProcessing={isProcessing}
         onSendMessage={processInput}

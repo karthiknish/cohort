@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useMemo } from 'react'
 import { LoaderCircle, SmilePlus, Reply, MoreHorizontal, Trash2 } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
@@ -22,6 +23,87 @@ import type { CollaborationMessage } from '@/types/collaboration'
 import { COLLABORATION_REACTIONS } from '@/constants/collaboration-reactions'
 
 import { formatRelativeTime, formatTimestamp, getInitials } from '../utils'
+
+function ReactionEmojiButton({
+  disableReactionActions,
+  emoji,
+  onReaction,
+}: {
+  disableReactionActions: boolean
+  emoji: string
+  onReaction: (emoji: string) => void
+}) {
+  const handleClick = useCallback(() => onReaction(emoji), [emoji, onReaction])
+
+  return (
+    <Tooltip key={emoji}>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-base"
+          disabled={disableReactionActions}
+          onClick={handleClick}
+          aria-label={`React with ${emoji}`}
+        >
+          {emoji}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="text-xs">
+        React with {emoji}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+function ReactionEmojiMenuItem({
+  disableReactionActions,
+  emoji,
+  onReaction,
+}: {
+  disableReactionActions: boolean
+  emoji: string
+  onReaction: (emoji: string) => void
+}) {
+  const handleSelect = useCallback(() => onReaction(emoji), [emoji, onReaction])
+
+  return (
+    <DropdownMenuItem
+      className="flex items-center justify-center p-2 text-lg transition-transform hover:scale-110"
+      disabled={disableReactionActions}
+      onSelect={handleSelect}
+    >
+      {emoji}
+    </DropdownMenuItem>
+  )
+}
+
+function MessageActionMenuItem({
+  children,
+  className,
+  disabled,
+  onAction,
+}: {
+  children: React.ReactNode
+  className?: string
+  disabled: boolean
+  onAction: () => void
+}) {
+  const handleSelect = useCallback(
+    (event: Event) => {
+      event.preventDefault()
+      onAction()
+    },
+    [onAction]
+  )
+
+  return (
+    <DropdownMenuItem className={className} disabled={disabled} onSelect={handleSelect}>
+      {children}
+    </DropdownMenuItem>
+  )
+}
 
 export interface MessageActionsBarProps {
   message: CollaborationMessage
@@ -58,24 +140,12 @@ export function MessageActionsBar({
         {/* Quick Reactions */}
         {canReact &&
           COLLABORATION_REACTIONS.slice(0, 3).map((emoji) => (
-            <Tooltip key={emoji}>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-base"
-                  disabled={disableReactionActions}
-                  onClick={() => onReaction(emoji)}
-                  aria-label={`React with ${emoji}`}
-                >
-                  {emoji}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                React with {emoji}
-              </TooltipContent>
-            </Tooltip>
+            <ReactionEmojiButton
+              key={emoji}
+              disableReactionActions={disableReactionActions}
+              emoji={emoji}
+              onReaction={onReaction}
+            />
           ))}
 
         {/* More Reactions */}
@@ -105,14 +175,12 @@ export function MessageActionsBar({
               className="grid w-40 grid-cols-3 gap-1 p-2 text-lg"
             >
               {COLLABORATION_REACTIONS.map((emoji) => (
-                <DropdownMenuItem
+                <ReactionEmojiMenuItem
                   key={emoji}
-                  className="flex items-center justify-center p-2 text-lg transition-transform hover:scale-110"
-                  disabled={disableReactionActions}
-                  onSelect={() => onReaction(emoji)}
-                >
-                  {emoji}
-                </DropdownMenuItem>
+                  disableReactionActions={disableReactionActions}
+                  emoji={emoji}
+                  onReaction={onReaction}
+                />
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -161,35 +229,20 @@ export function MessageActionsBar({
               </TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end" className="w-44 text-sm">
-              <DropdownMenuItem
-                onSelect={(event) => {
-                  event.preventDefault()
-                  onEdit()
-                }}
-                disabled={isUpdating || isDeleting}
-              >
+              <MessageActionMenuItem disabled={isUpdating || isDeleting} onAction={onEdit}>
                 Edit message
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={(event) => {
-                  event.preventDefault()
-                  onCreateTask()
-                }}
-                disabled={isUpdating || isDeleting}
-              >
+              </MessageActionMenuItem>
+              <MessageActionMenuItem disabled={isUpdating || isDeleting} onAction={onCreateTask}>
                 Create task from message
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={(event) => {
-                  event.preventDefault()
-                  onDelete()
-                }}
+              </MessageActionMenuItem>
+              <MessageActionMenuItem
                 className="text-destructive focus:text-destructive"
                 disabled={isDeleting || isUpdating}
+                onAction={onDelete}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete message
-              </DropdownMenuItem>
+              </MessageActionMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -233,25 +286,16 @@ export function ReplyActionsBar({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44 text-sm">
-          <DropdownMenuItem
-            onSelect={(event) => {
-              event.preventDefault()
-              onEdit()
-            }}
-            disabled={isUpdating || isDeleting}
-          >
+          <MessageActionMenuItem disabled={isUpdating || isDeleting} onAction={onEdit}>
             Edit message
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={(event) => {
-              event.preventDefault()
-              onDelete()
-            }}
+          </MessageActionMenuItem>
+          <MessageActionMenuItem
             className="text-destructive focus:text-destructive"
             disabled={isDeleting || isUpdating}
+            onAction={onDelete}
           >
             Delete message
-          </DropdownMenuItem>
+          </MessageActionMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -275,11 +319,16 @@ export function MessageEditForm({
   isUpdating,
   editingPreview,
 }: MessageEditFormProps) {
+  const handleChange = useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value),
+    [onChange]
+  )
+
   return (
     <div className="space-y-2">
       <Textarea
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={handleChange}
         disabled={isUpdating}
         maxLength={2000}
         className="min-h-[88px]"
@@ -337,6 +386,37 @@ export function MessageHeader({
   channelMemberCount,
   readByNames,
 }: MessageHeaderProps) {
+  const readReceiptMessage = useMemo(
+    () => ({
+      id: messageId ?? '',
+      channelType: 'team' as const,
+      clientId: null,
+      projectId: null,
+      content: '',
+      senderId: currentUserId ?? null,
+      senderName,
+      senderRole: senderRole ?? null,
+      createdAt: createdAt ?? null,
+      updatedAt: null,
+      isEdited: Boolean(isEdited),
+      deletedAt: null,
+      deletedBy: null,
+      readBy,
+      deliveredTo: [],
+      isDeleted: isDeleted ?? false,
+    }),
+    [
+      createdAt,
+      currentUserId,
+      isDeleted,
+      isEdited,
+      messageId,
+      readBy,
+      senderName,
+      senderRole,
+    ]
+  )
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       <p className="text-sm font-semibold text-foreground">{senderName}</p>
@@ -351,24 +431,7 @@ export function MessageHeader({
       </span>
       {messageId && currentUserId && (
         <MessageReadReceipts
-          message={{
-            id: messageId,
-            channelType: 'team',
-            clientId: null,
-            projectId: null,
-            content: '',
-            senderId: currentUserId,
-            senderName,
-            senderRole: senderRole ?? null,
-            createdAt: createdAt ?? null,
-            updatedAt: null,
-            isEdited: Boolean(isEdited),
-            deletedAt: null,
-            deletedBy: null,
-            readBy,
-            deliveredTo: [],
-            isDeleted: isDeleted ?? false,
-          }}
+          message={readReceiptMessage}
           currentUserId={currentUserId}
           channelMemberCount={channelMemberCount}
           readByNames={readByNames}

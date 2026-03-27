@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import {
   MessageSquare,
   ChevronDown,
@@ -52,8 +52,8 @@ export function CollapsedThreadView({
           key={thread.rootMessage.id}
           thread={thread}
           isExpanded={expandedThreads.has(thread.rootMessage.id)}
-          onClick={() => onThreadClick?.(thread.rootMessage.id)}
-          onToggleExpand={() => onExpand?.(thread.rootMessage.id)}
+            onThreadClick={onThreadClick}
+            onExpand={onExpand}
         >
           {expandedThreads.has(thread.rootMessage.id) && renderExpandedThread
             ? renderExpandedThread(thread)
@@ -67,16 +67,16 @@ export function CollapsedThreadView({
 interface ThreadCardProps {
   thread: Thread
   isExpanded: boolean
-  onClick: () => void
-  onToggleExpand: () => void
+  onThreadClick?: (threadId: string) => void
+  onExpand?: (threadId: string) => void
   children?: React.ReactNode
 }
 
 function ThreadCard({
   thread,
   isExpanded,
-  onClick,
-  onToggleExpand,
+  onThreadClick,
+  onExpand,
   children,
 }: ThreadCardProps) {
   const { rootMessage, replies, lastReplyAt } = thread
@@ -93,12 +93,27 @@ function ThreadCard({
     (r) => !r.readBy || r.readBy.length === 0
   ).length
 
-  const handleCardKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault()
-      onClick()
-    }
-  }
+  const handleThreadClick = useCallback(() => {
+    onThreadClick?.(rootMessage.id)
+  }, [onThreadClick, rootMessage.id])
+
+  const handleCardKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        onThreadClick?.(rootMessage.id)
+      }
+    },
+    [onThreadClick, rootMessage.id],
+  )
+
+  const handleToggleExpandClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation()
+      onExpand?.(rootMessage.id)
+    },
+    [onExpand, rootMessage.id],
+  )
 
   return (
     <div
@@ -117,10 +132,7 @@ function ThreadCard({
             variant="ghost"
             size="icon"
             className="h-6 w-6 flex-shrink-0 mt-0.5"
-            onClick={(e) => {
-              e.stopPropagation()
-              onToggleExpand()
-            }}
+            onClick={handleToggleExpandClick}
           >
             {isExpanded ? (
               <ChevronDown className="h-4 w-4" />
@@ -132,7 +144,7 @@ function ThreadCard({
           <button
             type="button"
             className="flex min-w-0 flex-1 items-start gap-3 text-left"
-            onClick={onClick}
+            onClick={handleThreadClick}
             onKeyDown={handleCardKeyDown}
             aria-expanded={isExpanded}
           >
@@ -175,7 +187,6 @@ function ThreadCard({
                   <Avatar
                     key={name}
                     className="h-6 w-6 border-2 border-background"
-                    style={{ zIndex: participants.length - i }}
                   >
                     <AvatarFallback className="text-[10px]">
                       {name.charAt(0).toUpperCase()}

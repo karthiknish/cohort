@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { cn } from '@/lib/utils'
@@ -67,11 +67,32 @@ export function TimePicker({
   const hourValue = String(hour12)
   const minuteValue = minute.toString().padStart(2, '0')
 
+  const handleHourChange = useCallback(
+    (nextHour: string) => {
+      onChange(formatTimeValue(to24Hour(Number(nextHour), period as 'AM' | 'PM'), minute))
+    },
+    [minute, onChange, period],
+  )
+
+  const handleMinuteChange = useCallback(
+    (nextMinute: string) => {
+      onChange(formatTimeValue(hour24, Number(nextMinute)))
+    },
+    [hour24, onChange],
+  )
+
+  const handlePeriodChange = useCallback(
+    (nextPeriod: string) => {
+      onChange(formatTimeValue(to24Hour(hour12, nextPeriod as 'AM' | 'PM'), minute))
+    },
+    [hour12, minute, onChange],
+  )
+
   return (
     <div id={id} className={cn('grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2', className)}>
       <Select
         value={hourValue}
-        onValueChange={(nextHour) => onChange(formatTimeValue(to24Hour(Number(nextHour), period as 'AM' | 'PM'), minute))}
+        onValueChange={handleHourChange}
         disabled={disabled}
       >
         <SelectTrigger aria-label="Hour" className="min-w-0">
@@ -88,7 +109,7 @@ export function TimePicker({
 
       <Select
         value={minuteValue}
-        onValueChange={(nextMinute) => onChange(formatTimeValue(hour24, Number(nextMinute)))}
+        onValueChange={handleMinuteChange}
         disabled={disabled}
       >
         <SelectTrigger aria-label="Minutes" className="min-w-0">
@@ -108,7 +129,7 @@ export function TimePicker({
 
       <Select
         value={period}
-        onValueChange={(nextPeriod) => onChange(formatTimeValue(to24Hour(hour12, nextPeriod as 'AM' | 'PM'), minute))}
+        onValueChange={handlePeriodChange}
         disabled={disabled}
       >
         <SelectTrigger aria-label="AM or PM" className="w-[88px]">

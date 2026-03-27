@@ -17,6 +17,8 @@ vi.mock('@/shared/ui/select', () => ({
   SelectItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
+const formatDollarValue = (value: number) => `$${value}`
+
 import {
   ChartTooltipContent,
   InteractiveChartEmptyState,
@@ -58,12 +60,12 @@ describe('interactive chart sections', () => {
         payload={[{ payload: { date: '2026-03-11', value: 42, category: 'Paid' } }]}
         xAxisKey="date"
         dataKey="value"
-        valueFormatter={(value) => `$${value}`}
+          valueFormatter={formatDollarValue}
       />,
     )
 
     const pieMarkup = renderToStaticMarkup(
-      <PieTooltipContent active={true} payload={[{ name: 'Paid', value: 42 }]} valueFormatter={(value) => `$${value}`} />,
+      <PieTooltipContent active={true} payload={[{ name: 'Paid', value: 42 }]} valueFormatter={formatDollarValue} />,
     )
 
     expect(chartMarkup).toContain('2026-03-11')

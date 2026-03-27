@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useCallback, useId, useState } from 'react'
 
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment } from '@/types/collaboration'
@@ -26,10 +26,13 @@ export function CollaborationSidebar({
 }: CollaborationSidebarProps) {
   const collapseId = useId()
   const [open, setOpen] = useState(true)
+  const handleToggle = useCallback(() => {
+    setOpen((prev) => !prev)
+  }, [])
 
   return (
     <div className="border-t border-muted/40 lg:relative lg:h-[640px] lg:w-64 lg:border-t-0">
-      <CollaborationSidebarMobileHeader collapseId={collapseId} open={open} onToggle={() => setOpen((prev) => !prev)} />
+      <CollaborationSidebarMobileHeader collapseId={collapseId} open={open} onToggle={handleToggle} />
       <div
         className={cn(
           'grid overflow-hidden border-muted/40 transition-[grid-template-rows] duration-300 lg:hidden',

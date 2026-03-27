@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
@@ -56,6 +56,102 @@ interface ProblemReport {
   updatedAt: string
 }
 
+function getSeverityBadge(severity: string) {
+  switch (severity) {
+    case 'critical': return <Badge variant="destructive">Critical</Badge>
+    case 'high': return <Badge className="bg-warning/10 text-warning border border-warning/20 hover:bg-warning/20">High</Badge>
+    case 'medium': return <Badge variant="secondary">Medium</Badge>
+    case 'low': return <Badge variant="outline">Low</Badge>
+    default: return <Badge>{severity}</Badge>
+  }
+}
+
+function getStatusIcon(status: string) {
+  switch (status) {
+    case 'resolved': return <CheckCircle2 className="h-4 w-4 text-success" />
+    case 'in-progress': return <Clock className="h-4 w-4 text-info" />
+    case 'open': return <AlertCircle className="h-4 w-4 text-warning" />
+    default: return null
+  }
+}
+
+function formatDate(date: string | null) {
+  if (!date) return 'N/A'
+  const parsed = new Date(date)
+  return format(parsed, 'MMM d, h:mm a')
+}
+
+function ProblemReportRow({
+  deletingId,
+  onDeleteTarget,
+  onStatusUpdate,
+  report,
+  updatingId,
+}: {
+  deletingId: string | null
+  onDeleteTarget: (report: ProblemReport) => void
+  onStatusUpdate: (id: string, newStatus: string) => void
+  report: ProblemReport
+  updatingId: string | null
+}) {
+  const handleStatusChange = useCallback(
+    (value: string) => onStatusUpdate(report.id, value),
+    [onStatusUpdate, report.id]
+  )
+
+  const handleDeleteClick = useCallback(() => {
+    onDeleteTarget(report)
+  }, [onDeleteTarget, report])
+
+  return (
+    <TableRow key={report.id}>
+      <TableCell className="max-w-[300px]">
+        <div className="font-medium">{report.title}</div>
+        <div className="truncate text-xs text-muted-foreground" title={report.description}>
+          {report.description}
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="text-sm">{report.userName}</div>
+        <div className="text-xs text-muted-foreground">{report.userEmail}</div>
+      </TableCell>
+      <TableCell>{getSeverityBadge(report.severity)}</TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          {getStatusIcon(report.status)}
+          <Select
+            value={report.status}
+            onValueChange={handleStatusChange}
+            disabled={updatingId === report.id}
+          >
+            <SelectTrigger className="h-8 w-[130px] border-none bg-transparent p-0 hover:bg-accent focus:ring-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open">Open</SelectItem>
+              <SelectItem value="in-progress">In Progress</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </TableCell>
+      <TableCell className="text-sm whitespace-nowrap">{formatDate(report.createdAt)}</TableCell>
+      <TableCell className="text-right">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleDeleteClick}
+          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          disabled={deletingId === report.id}
+          aria-label={`Delete report ${report.title}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  )
+}
+
 export default function AdminIssuesPage() {
   const { toast } = useToast()
 
@@ -75,7 +171,7 @@ export default function AdminIssuesPage() {
 
   const loading = reports === undefined
 
-  const handleStatusUpdate = (id: string, newStatus: string) => {
+  const handleStatusUpdate = useCallback((id: string, newStatus: string) => {
     setUpdatingId(id)
 
     void updateReport({ legacyId: id, status: newStatus })
@@ -93,9 +189,9 @@ export default function AdminIssuesPage() {
       .finally(() => {
         setUpdatingId(null)
       })
-  }
+  }, [toast, updateReport])
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     if (!deleteTarget || deletingId === deleteTarget.id) return
 
     setDeletingId(deleteTarget.id)
@@ -116,7 +212,32 @@ export default function AdminIssuesPage() {
       .finally(() => {
         setDeletingId(null)
       })
-  }
+  }, [deleteTarget, deletingId, removeReport, toast])
+
+  const handleRefresh = useCallback(() => {
+    // Convex is realtime
+  }, [])
+
+  const handleSearchTermChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value)
+  }, [])
+
+  const handleDeleteTargetChange = useCallback((report: ProblemReport) => {
+    setDeleteTarget(report)
+  }, [])
+
+  const handleDeleteDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open && deletingId !== deleteTarget?.id) {
+        setDeleteTarget(null)
+      }
+    },
+    [deleteTarget?.id, deletingId]
+  )
+
+  const handleCancelDelete = useCallback(() => {
+    setDeleteTarget(null)
+  }, [])
 
   const filteredReports = (reports ?? []).filter((r: ProblemReport) => {
     const search = searchTerm.toLowerCase()
@@ -127,31 +248,6 @@ export default function AdminIssuesPage() {
     )
   })
 
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case 'critical': return <Badge variant="destructive">Critical</Badge>
-      case 'high': return <Badge className="bg-warning/10 text-warning border border-warning/20 hover:bg-warning/20">High</Badge>
-      case 'medium': return <Badge variant="secondary">Medium</Badge>
-      case 'low': return <Badge variant="outline">Low</Badge>
-      default: return <Badge>{severity}</Badge>
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'resolved': return <CheckCircle2 className="h-4 w-4 text-success" />
-      case 'in-progress': return <Clock className="h-4 w-4 text-info" />
-      case 'open': return <AlertCircle className="h-4 w-4 text-warning" />
-      default: return null
-    }
-  }
-
-  const formatDate = (date: string | null) => {
-    if (!date) return 'N/A'
-    const parsed = new Date(date)
-    return format(parsed, 'MMM d, h:mm a')
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -159,7 +255,7 @@ export default function AdminIssuesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Reported Issues</h1>
           <p className="text-muted-foreground">Manage and track user-submitted problem reports.</p>
         </div>
-        <Button onClick={() => { /* Convex is realtime */ }} variant="outline" size="sm" disabled={loading}>
+        <Button onClick={handleRefresh} variant="outline" size="sm" disabled={loading}>
           <RefreshCw className={cn('mr-2 h-4 w-4', loading && 'animate-spin')} />
           Refresh
         </Button>
@@ -174,7 +270,7 @@ export default function AdminIssuesPage() {
                 placeholder="Search by title, user, or email…"
                 className="pl-9"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={handleSearchTermChange}
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -216,55 +312,14 @@ export default function AdminIssuesPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredReports.map((report: ProblemReport) => (
-                    <TableRow key={report.id}>
-                      <TableCell className="max-w-[300px]">
-                        <div className="font-medium">{report.title}</div>
-                        <div className="truncate text-xs text-muted-foreground" title={report.description}>
-                          {report.description}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">{report.userName}</div>
-                        <div className="text-xs text-muted-foreground">{report.userEmail}</div>
-                      </TableCell>
-                      <TableCell>
-                        {getSeverityBadge(report.severity)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(report.status)}
-                          <Select
-                            value={report.status}
-                            onValueChange={(val) => handleStatusUpdate(report.id, val)}
-                            disabled={updatingId === report.id}
-                          >
-                            <SelectTrigger className="h-8 w-[130px] border-none bg-transparent p-0 hover:bg-accent focus:ring-0">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="open">Open</SelectItem>
-                              <SelectItem value="in-progress">In Progress</SelectItem>
-                              <SelectItem value="resolved">Resolved</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm whitespace-nowrap">
-                        {formatDate(report.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteTarget(report)}
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          disabled={deletingId === report.id}
-                          aria-label={`Delete report ${report.title}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                    <ProblemReportRow
+                      key={report.id}
+                      deletingId={deletingId}
+                      onDeleteTarget={handleDeleteTargetChange}
+                      onStatusUpdate={handleStatusUpdate}
+                      report={report}
+                      updatingId={updatingId}
+                    />
                   ))}
                 </TableBody>
               </Table>
@@ -275,11 +330,7 @@ export default function AdminIssuesPage() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        onOpenChange={(open) => {
-          if (!open && deletingId !== deleteTarget?.id) {
-            setDeleteTarget(null)
-          }
-        }}
+        onOpenChange={handleDeleteDialogOpenChange}
         title="Delete reported issue"
         description={deleteTarget ? `Delete “${deleteTarget.title}”? This action cannot be undone.` : 'This action cannot be undone.'}
         confirmLabel="Delete report"
@@ -287,7 +338,7 @@ export default function AdminIssuesPage() {
         variant="destructive"
         isLoading={deletingId === deleteTarget?.id}
         onConfirm={handleDelete}
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={handleCancelDelete}
       />
     </div>
   )

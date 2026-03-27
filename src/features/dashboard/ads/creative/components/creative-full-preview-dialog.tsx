@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { FileText } from 'lucide-react'
 
 import type { Creative } from './types'
@@ -25,6 +25,14 @@ export function CreativeFullPreviewDialog(props: {
 }) {
   const { open, onOpenChange, creative, displayName } = props
   const [imageLoadFailed, setImageLoadFailed] = useState(false)
+
+  const handleImageError = useCallback(() => {
+    setImageLoadFailed(true)
+  }, [])
+
+  const handleClose = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -51,7 +59,7 @@ export function CreativeFullPreviewDialog(props: {
               alt={displayName}
               className="w-full rounded-lg object-contain max-h-[60vh]"
               decoding="async"
-              onError={() => setImageLoadFailed(true)}
+              onError={handleImageError}
             />
           ) : creative.videoUrl ? (
             <div className="rounded-lg border p-6">
@@ -74,7 +82,7 @@ export function CreativeFullPreviewDialog(props: {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={handleClose}>
             Close
           </Button>
         </DialogFooter>

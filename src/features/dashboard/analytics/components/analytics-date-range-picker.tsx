@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import type { ChangeEvent, MouseEvent } from 'react'
 import { format, subDays, differenceInDays, startOfDay, endOfDay } from 'date-fns'
 import { CalendarIcon, ChevronDown, X } from 'lucide-react'
 
@@ -45,6 +46,24 @@ function formatDateRange(range: AnalyticsDateRange): string {
   return `${startStr} – ${endStr}`
 }
 
+function QuickPresetButton({
+  onSelect,
+  preset,
+}: {
+  onSelect: (days: number) => void
+  preset: { days: number; label: string }
+}) {
+  const handleClick = useCallback(() => {
+    onSelect(preset.days)
+  }, [onSelect, preset.days])
+
+  return (
+    <Button variant="ghost" size="sm" className="justify-start font-normal" onClick={handleClick}>
+      {preset.label}
+    </Button>
+  )
+}
+
 interface AnalyticsDateRangePickerProps {
   value: AnalyticsDateRange
   onChange: (range: AnalyticsDateRange, days?: number) => void
@@ -57,6 +76,11 @@ export function AnalyticsDateRangePicker({
   className,
 }: AnalyticsDateRangePickerProps) {
   const [open, setOpen] = useState(false)
+  const maxDisabledDate = useMemo(() => new Date(), [])
+  const minDisabledDate = useMemo(
+    () => new Date(maxDisabledDate.getTime() - 365 * 24 * 60 * 60 * 1000),
+    [maxDisabledDate]
+  )
 
   // Calculate current days in range
   const currentDays = useMemo(() => {
@@ -72,12 +96,15 @@ export function AnalyticsDateRangePicker({
     return 'custom'
   }, [currentDays])
 
-  const dateRange: DayPickerRange = {
-    from: value.start,
-    to: value.end,
-  }
+  const dateRange = useMemo<DayPickerRange>(
+    () => ({
+      from: value.start,
+      to: value.end,
+    }),
+    [value.start, value.end]
+  )
 
-  const handleSelect = (range: Partial<DayPickerRange> | undefined) => {
+  const handleSelect = useCallback((range: Partial<DayPickerRange> | undefined) => {
     if (range?.from && range?.to) {
       const newRange: AnalyticsDateRange = {
         start: startOfDay(range.from),
@@ -86,9 +113,9 @@ export function AnalyticsDateRangePicker({
       const days = differenceInDays(newRange.end, newRange.start) + 1
       onChange(newRange, days)
     }
-  }
+  }, [onChange])
 
-  const handlePresetSelect = (period: PeriodValue) => {
+  const handlePresetSelect = useCallback((period: PeriodValue) => {
     if (period === 'custom') {
       // Keep popover open for custom selection
       return
@@ -98,11 +125,39 @@ export function AnalyticsDateRangePicker({
       onChange(getPresetRange(option.days), option.days)
       setOpen(false)
     }
-  }
+  }, [onChange])
 
-  const handleClearCustom = () => {
+  const handleClearCustom = useCallback(() => {
     onChange(getPresetRange(30), 30)
-  }
+  }, [onChange])
+
+  const handlePresetChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      handlePresetSelect(event.target.value as PeriodValue)
+    },
+    [handlePresetSelect]
+  )
+
+  const handleClearClick = useCallback(
+    (event: MouseEvent<SVGElement>) => {
+      event.stopPropagation()
+      handleClearCustom()
+    },
+    [handleClearCustom]
+  )
+
+  const handleQuickPresetClick = useCallback(
+    (days: number) => {
+      onChange(getPresetRange(days), days)
+      setOpen(false)
+    },
+    [onChange]
+  )
+
+  const handleDisabledDate = useCallback(
+    (date: Date) => date > maxDisabledDate || date < minDisabledDate,
+    [maxDisabledDate, minDisabledDate]
+  )
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
@@ -111,7 +166,7 @@ export function AnalyticsDateRangePicker({
         <div className="absolute -left-3 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full bg-primary/40 opacity-0 transition-opacity group-focus-within:opacity-100" />
         <select
           value={currentPreset}
-          onChange={(e) => handlePresetSelect(e.target.value as PeriodValue)}
+          onChange={handlePresetChange}
           className="block w-full min-w-[140px] cursor-pointer appearance-none rounded-xl border border-muted/30 bg-background px-4 py-2.5 pr-10 text-xs font-bold uppercase tracking-wider shadow-sm transition-[border-color,box-shadow] hover:border-primary/40 focus:border-primary/60 focus:outline-none focus:ring-4 focus:ring-primary/5"
         >
           {PERIOD_OPTIONS.map((option) => (
@@ -138,10 +193,7 @@ export function AnalyticsDateRangePicker({
               {formatDateRange(value)}
               <X
                 className="ml-2 h-3 w-3 opacity-50 hover:opacity-100"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleClearCustom()
-                }}
+                onClick={handleClearClick}
               />
             </Button>
           </PopoverTrigger>
@@ -152,18 +204,7 @@ export function AnalyticsDateRangePicker({
                   Quick Select
                 </span>
                 {PERIOD_OPTIONS.filter((p) => p.value !== 'custom').map((preset) => (
-                  <Button
-                    key={preset.days}
-                    variant="ghost"
-                    size="sm"
-                    className="justify-start font-normal"
-                    onClick={() => {
-                      onChange(getPresetRange(preset.days), preset.days)
-                      setOpen(false)
-                    }}
-                  >
-                    {preset.label}
-                  </Button>
+                  <QuickPresetButton key={preset.days} preset={preset} onSelect={handleQuickPresetClick} />
                 ))}
               </div>
               <div className="p-1">
@@ -174,7 +215,7 @@ export function AnalyticsDateRangePicker({
                   selected={dateRange}
                   onSelect={handleSelect}
                   numberOfMonths={2}
-                  disabled={(date: Date) => date > new Date() || date < new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)}
+                  disabled={handleDisabledDate}
                 />
               </div>
             </div>

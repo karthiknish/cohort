@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, DragEvent } from 'react'
+import { useCallback, useState, type DragEvent } from 'react'
 import { Plus } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -74,6 +74,13 @@ export function FeatureKanbanBoard({
     [draggedFeature, onMoveFeature]
   )
 
+  const handleAddFeatureClick = useCallback(
+    (status: FeatureStatus) => {
+      onAddFeature(status)
+    },
+    [onAddFeature]
+  )
+
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
       {FEATURE_STATUSES.map((status) => {
@@ -82,84 +89,163 @@ export function FeatureKanbanBoard({
         const isDraggedFromThis = draggedFeature?.status === status
 
         return (
-          <div
+          <FeatureKanbanColumn
             key={status}
-            onDragOver={(e) => handleDragOver(e, status)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, status)}
-            className={cn(
-              'flex flex-col rounded-xl border bg-muted/30 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] min-h-[500px]',
-              isDropTarget && !isDraggedFromThis && 'border-primary bg-primary/5 ring-2 ring-primary/20'
-            )}
-          >
-            {/* Column Header */}
-            <div className="flex items-center justify-between border-b p-3">
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                    FEATURE_STATUS_COLORS[status]
-                  )}
-                >
-                  {FEATURE_STATUS_LABELS[status]}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {columnFeatures.length}
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => onAddFeature(status)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Column Content */}
-            <div className="flex-1 space-y-3 overflow-y-auto p-3">
-              {columnFeatures.length === 0 ? (
-                <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20">
-                  <p className="text-xs text-muted-foreground">
-                    No features
-                  </p>
-                </div>
-              ) : (
-                columnFeatures.map((feature) => (
-                  <div
-                    key={feature.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, feature)}
-                    onDragEnd={handleDragEnd}
-                    className="cursor-grab active:cursor-grabbing"
-                  >
-                    <FeatureCard
-                      feature={feature}
-                      onEdit={onEditFeature}
-                      onDelete={onDeleteFeature}
-                      isDragging={draggedFeature?.id === feature.id}
-                    />
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Add Button at Bottom */}
-            <div className="border-t p-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
-                onClick={() => onAddFeature(status)}
-              >
-                <Plus className="h-4 w-4" />
-                Add feature
-              </Button>
-            </div>
-          </div>
+            status={status}
+            features={columnFeatures}
+            isDropTarget={isDropTarget}
+            isDraggedFromThis={isDraggedFromThis}
+            draggedFeature={draggedFeature}
+            handleDragOver={handleDragOver}
+            handleDragLeave={handleDragLeave}
+            handleDrop={handleDrop}
+            handleDragStart={handleDragStart}
+            handleDragEnd={handleDragEnd}
+            onEditFeature={onEditFeature}
+            onDeleteFeature={onDeleteFeature}
+            onAddFeature={handleAddFeatureClick}
+          />
         )
       })}
+    </div>
+  )
+}
+
+function FeatureKanbanColumn({
+  status,
+  features,
+  isDropTarget,
+  isDraggedFromThis,
+  draggedFeature,
+  handleDragOver,
+  handleDragLeave,
+  handleDrop,
+  handleDragStart,
+  handleDragEnd,
+  onEditFeature,
+  onDeleteFeature,
+  onAddFeature,
+}: {
+  status: FeatureStatus
+  features: FeatureItem[]
+  isDropTarget: boolean
+  isDraggedFromThis: boolean
+  draggedFeature: FeatureItem | null
+  handleDragOver: (e: DragEvent<HTMLDivElement>, status: FeatureStatus) => void
+  handleDragLeave: () => void
+  handleDrop: (e: DragEvent<HTMLDivElement>, targetStatus: FeatureStatus) => void
+  handleDragStart: (e: DragEvent<HTMLDivElement>, feature: FeatureItem) => void
+  handleDragEnd: () => void
+  onEditFeature: (feature: FeatureItem) => void
+  onDeleteFeature: (feature: FeatureItem) => void
+  onAddFeature: (status: FeatureStatus) => void
+}) {
+  const handleColumnDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
+    handleDragOver(e, status)
+  }, [handleDragOver, status])
+
+  const handleColumnDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
+    handleDrop(e, status)
+  }, [handleDrop, status])
+
+  const handleAddClick = useCallback(() => {
+    onAddFeature(status)
+  }, [onAddFeature, status])
+
+  return (
+    <div
+      onDragOver={handleColumnDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleColumnDrop}
+      className={cn(
+        'flex flex-col rounded-xl border bg-muted/30 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] min-h-[500px]',
+        isDropTarget && !isDraggedFromThis && 'border-primary bg-primary/5 ring-2 ring-primary/20'
+      )}
+    >
+      <div className="flex items-center justify-between border-b p-3">
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+              FEATURE_STATUS_COLORS[status]
+            )}
+          >
+            {FEATURE_STATUS_LABELS[status]}
+          </span>
+          <span className="text-xs text-muted-foreground">{features.length}</span>
+        </div>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleAddClick}>
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="flex-1 space-y-3 overflow-y-auto p-3">
+        {features.length === 0 ? (
+          <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/20">
+            <p className="text-xs text-muted-foreground">No features</p>
+          </div>
+        ) : (
+          features.map((feature) => (
+            <FeatureKanbanDraggableItem
+              key={feature.id}
+              feature={feature}
+              draggedFeatureId={draggedFeature?.id}
+              handleDragStart={handleDragStart}
+              handleDragEnd={handleDragEnd}
+              onEditFeature={onEditFeature}
+              onDeleteFeature={onDeleteFeature}
+            />
+          ))
+        )}
+      </div>
+
+      <div className="border-t p-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+          onClick={handleAddClick}
+        >
+          <Plus className="h-4 w-4" />
+          Add feature
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function FeatureKanbanDraggableItem({
+  feature,
+  draggedFeatureId,
+  handleDragStart,
+  handleDragEnd,
+  onEditFeature,
+  onDeleteFeature,
+}: {
+  feature: FeatureItem
+  draggedFeatureId: string | undefined
+  handleDragStart: (e: DragEvent<HTMLDivElement>, feature: FeatureItem) => void
+  handleDragEnd: () => void
+  onEditFeature: (feature: FeatureItem) => void
+  onDeleteFeature: (feature: FeatureItem) => void
+}) {
+  const handleStart = useCallback((e: DragEvent<HTMLDivElement>) => {
+    handleDragStart(e, feature)
+  }, [feature, handleDragStart])
+
+  return (
+    <div
+      draggable
+      onDragStart={handleStart}
+      onDragEnd={handleDragEnd}
+      className="cursor-grab active:cursor-grabbing"
+    >
+      <FeatureCard
+        feature={feature}
+        onEdit={onEditFeature}
+        onDelete={onDeleteFeature}
+        isDragging={draggedFeatureId === feature.id}
+      />
     </div>
   )
 }

@@ -33,6 +33,18 @@ import { cn } from '@/lib/utils'
 import type { ProposalPresentationDeck } from '@/types/proposals'
 
 const deckTrackDurationSeconds = motionLoopSeconds.trackLong
+const proposalSubmittedHeroTransition = { ...transitions.slow, delay: 0.2 }
+const proposalAssetDeliveryTransition = { ...transitions.slow, delay: 0.3 }
+const proposalPulseAnimate = { scale: [1, 1.2, 1], opacity: [0.2, 0.5, 0.2] }
+const proposalPulseTransition = {
+  duration: motionLoopSeconds.pulse,
+  repeat: Infinity,
+  ease: motionEasing.inOut,
+}
+const proposalTrackInitial = { width: 0 }
+const proposalTrackAnimate = { width: '100%' }
+const proposalTrackTransition = { duration: deckTrackDurationSeconds, ease: 'linear' as const }
+const proposalTrackShimmerAnimate = { x: ['-100%', '100%'] }
 
 export function ProposalSubmittedHero({
   activeProposalIdForDeck,
@@ -94,7 +106,7 @@ export function ProposalSubmittedHero({
 
 export function ProposalStrategyBriefCard({ onCopySummary, summary }: { onCopySummary: () => void; summary: ProposalFormData }) {
   return (
-    <m.div initial="hidden" animate="visible" variants={slideInLeftVariants} transition={{ ...transitions.slow, delay: 0.2 }}>
+    <m.div initial="hidden" animate="visible" variants={slideInLeftVariants} transition={proposalSubmittedHeroTransition}>
       <Card className="flex h-full flex-col overflow-hidden border-muted/60 bg-background/50 shadow-sm backdrop-blur-sm">
         <CardHeader className="border-b border-muted/40 bg-muted/30 pb-4">
           <div className="flex items-center justify-between">
@@ -253,8 +265,8 @@ function ProposalDeckGeneratingState() {
     <div className="flex h-full flex-col items-center justify-center py-16 text-center">
       <div className="relative mb-6">
         <m.div
-          animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.5, 0.2] }}
-          transition={{ duration: motionLoopSeconds.pulse, repeat: Infinity, ease: motionEasing.inOut }}
+          animate={proposalPulseAnimate}
+          transition={proposalPulseTransition}
           className="absolute inset-0 rounded-full bg-primary/20 blur-2xl"
         />
         <div className="relative rounded-[2rem] border border-muted bg-muted/40 p-6 ring-1 ring-muted-foreground/10">
@@ -265,8 +277,8 @@ function ProposalDeckGeneratingState() {
       <p className="max-w-[280px] text-sm leading-relaxed text-muted-foreground">
         Our AI engine is currently structuring your presentation slides. It usually takes less than 60 seconds.
       </p>
-      <m.div initial={{ width: 0 }} animate={{ width: '100%' }} transition={{ duration: deckTrackDurationSeconds, ease: 'linear' }} className="relative mt-8 h-1 w-full max-w-[200px] overflow-hidden rounded-full bg-primary/30">
-        <m.div animate={{ x: ['-100%', '100%'] }} transition={transitions.shimmer} className="absolute inset-0 w-1/3 bg-primary" />
+      <m.div initial={proposalTrackInitial} animate={proposalTrackAnimate} transition={proposalTrackTransition} className="relative mt-8 h-1 w-full max-w-[200px] overflow-hidden rounded-full bg-primary/30">
+        <m.div animate={proposalTrackShimmerAnimate} transition={transitions.shimmer} className="absolute inset-0 w-1/3 bg-primary" />
       </m.div>
     </div>
   )
@@ -288,7 +300,7 @@ export function ProposalAssetDeliveryCard({
   viewerHref: string | null
 }) {
   return (
-    <m.div initial="hidden" animate="visible" variants={slideInRightVariants} transition={{ ...transitions.slow, delay: 0.3 }} className="lg:col-span-2">
+    <m.div initial="hidden" animate="visible" variants={slideInRightVariants} transition={proposalAssetDeliveryTransition} className="lg:col-span-2">
       <Card className="flex h-full flex-col overflow-hidden border-muted/60 bg-background/50 shadow-sm backdrop-blur-sm">
         <CardHeader className="border-b border-muted/40 bg-muted/30 pb-4">
           <div className="flex items-center justify-between">

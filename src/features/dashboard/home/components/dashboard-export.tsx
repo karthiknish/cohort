@@ -40,6 +40,64 @@ interface ExportOption {
   description: string
 }
 
+function DashboardExportMenuOption({
+  option,
+  isExporting,
+  onSelect,
+}: {
+  option: ExportOption
+  isExporting: boolean
+  onSelect: (format: ExportFormat) => void
+}) {
+  const handleClick = useCallback(() => {
+    onSelect(option.value)
+  }, [onSelect, option.value])
+
+  return (
+    <DropdownMenuItem onClick={handleClick} disabled={isExporting}>
+      <option.icon className="mr-2 h-4 w-4" />
+      <div>
+        <div className="font-medium">{option.label}</div>
+        <div className="text-xs text-muted-foreground">{option.description}</div>
+      </div>
+    </DropdownMenuItem>
+  )
+}
+
+function DashboardExportGridOption({
+  option,
+  isExporting,
+  onSelect,
+}: {
+  option: ExportOption
+  isExporting: boolean
+  onSelect: (format: ExportFormat) => void
+}) {
+  const handleClick = useCallback(() => {
+    onSelect(option.value)
+  }, [onSelect, option.value])
+  const Icon = option.icon
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={isExporting}
+      className={cn(
+        'flex items-center gap-2 rounded-lg border p-3 text-left transition-colors hover:bg-accent',
+        isExporting && 'pointer-events-none opacity-50'
+      )}
+    >
+      <Icon className="h-5 w-5 text-muted-foreground" />
+      <div>
+        <p className="font-medium">{option.label}</p>
+        <p className="text-xs text-muted-foreground">{option.description}</p>
+      </div>
+      {isExporting && <LoaderCircle className="ml-auto h-4 w-4 animate-spin" />}
+    </button>
+  )
+}
+
 const EXPORT_OPTIONS: ExportOption[] = [
   {
     value: 'csv',
@@ -109,6 +167,9 @@ export function DashboardExport({
   const [isExporting, setIsExporting] = useState(false)
   const [includeHeaders, setIncludeHeaders] = useState(true)
   const [includeMetadata, setIncludeMetadata] = useState(false)
+  const handleClose = useCallback(() => {
+    setOpen(false)
+  }, [])
 
   const handleExport = useCallback(
     async (format: ExportFormat) => {
@@ -149,19 +210,7 @@ export function DashboardExport({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         {formats.map((option) => (
-          <DropdownMenuItem
-            key={option.value}
-            onClick={() => handleExport(option.value)}
-            disabled={isExporting}
-          >
-            <option.icon className="h-4 w-4 mr-2" />
-            <div>
-              <div className="font-medium">{option.label}</div>
-              <div className="text-xs text-muted-foreground">
-                {option.description}
-              </div>
-            </div>
-          </DropdownMenuItem>
+          <DashboardExportMenuOption key={option.value} option={option} isExporting={isExporting} onSelect={handleExport} />
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
@@ -189,29 +238,8 @@ export function DashboardExport({
               <Label>Export Format</Label>
               <div className="grid grid-cols-2 gap-2">
                 {formats.map((option) => {
-                  const Icon = option.icon
                   return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleExport(option.value)}
-                      disabled={isExporting}
-                      className={cn(
-                        'flex items-center gap-2 p-3 rounded-lg border text-left hover:bg-accent transition-colors',
-                        isExporting && 'opacity-50 pointer-events-none'
-                      )}
-                    >
-                      <Icon className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">{option.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {option.description}
-                        </p>
-                      </div>
-                      {isExporting && (
-                        <LoaderCircle className="h-4 w-4 ml-auto animate-spin" />
-                      )}
-                    </button>
+                    <DashboardExportGridOption key={option.value} option={option} isExporting={isExporting} onSelect={handleExport} />
                   )
                 })}
               </div>
@@ -240,7 +268,7 @@ export function DashboardExport({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
           </DialogFooter>
@@ -379,6 +407,15 @@ export function ScheduledExportDialog({
   const [format, setFormat] = useState<ExportFormat>('csv')
   const [frequency, setFrequency] = useState<'daily' | 'weekly' | 'monthly'>('weekly')
   const [isScheduling, setIsScheduling] = useState(false)
+  const handleClose = useCallback(() => {
+    setOpen(false)
+  }, [])
+  const handleFormatChange = useCallback((value: ExportFormat) => {
+    setFormat(value)
+  }, [])
+  const handleFrequencyChange = useCallback((value: 'daily' | 'weekly' | 'monthly') => {
+    setFrequency(value)
+  }, [])
 
   const handleSchedule = useCallback(() => {
     const recipients: string[] = []
@@ -426,7 +463,7 @@ export function ScheduledExportDialog({
           {/* Format */}
           <div className="space-y-2">
             <Label>Format</Label>
-            <Select value={format} onValueChange={(v) => setFormat(v as ExportFormat)}>
+            <Select value={format} onValueChange={handleFormatChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -442,7 +479,7 @@ export function ScheduledExportDialog({
           {/* Frequency */}
           <div className="space-y-2">
             <Label>Frequency</Label>
-            <Select value={frequency} onValueChange={(v) => setFrequency(v as 'daily' | 'weekly' | 'monthly')}>
+            <Select value={frequency} onValueChange={handleFrequencyChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -461,7 +498,7 @@ export function ScheduledExportDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={handleClose}>
             Cancel
           </Button>
           <Button onClick={handleSchedule} disabled={isScheduling}>

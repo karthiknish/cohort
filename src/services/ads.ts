@@ -1,9 +1,9 @@
-import { CampaignMetrics } from '@/types'
+import type { CampaignMetrics } from '@/types'
 import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
 import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
 import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
-import { NormalizedMetric } from '@/types/integrations'
+import type { NormalizedMetric } from '@/types/integrations'
 import { BadRequestError } from '@/lib/api-errors'
 
 export type PlatformCredentials = Record<string, string>

@@ -4,6 +4,8 @@
 
 'use client'
 
+import { useCallback, type MouseEvent } from 'react'
+
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -23,6 +25,29 @@ const MOCK_EVENTS = [
 ]
 
 export function EngagementObjectiveSection({ formData, onChange, disabled }: ObjectiveComponentProps) {
+  const handleEngagementTypeChange = useCallback(
+    (value: string) => {
+      onChange({ engagementType: value as 'POST_ENGAGEMENT' | 'PAGE_ENGAGEMENT' | 'EVENT_RESPONSES' })
+    },
+    [onChange]
+  )
+
+  const handlePostSelect = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      const postId = event.currentTarget.dataset.postId
+      if (postId) onChange({ postId })
+    },
+    [onChange]
+  )
+
+  const handleEventSelect = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      const eventId = event.currentTarget.dataset.eventId
+      if (eventId) onChange({ eventId })
+    },
+    [onChange]
+  )
+
   return (
     <div className="space-y-6">
       {/* Engagement Type Selection */}
@@ -41,9 +66,7 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
             <Label htmlFor="engagement-type">Engagement Goal</Label>
             <Select
               value={formData.engagementType}
-              onValueChange={(value) =>
-                onChange({ engagementType: value as 'POST_ENGAGEMENT' | 'PAGE_ENGAGEMENT' | 'EVENT_RESPONSES' })
-              }
+              onValueChange={handleEngagementTypeChange}
               disabled={disabled}
             >
               <SelectTrigger id="engagement-type">
@@ -82,7 +105,8 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
                 <button
                   key={post.id}
                   type="button"
-                  onClick={() => onChange({ postId: post.id })}
+                  onClick={handlePostSelect}
+                  data-post-id={post.id}
                   disabled={disabled}
                   className={`w-full p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
                     formData.postId === post.id
@@ -125,7 +149,8 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
                 <button
                   key={event.id}
                   type="button"
-                  onClick={() => onChange({ eventId: event.id })}
+                  onClick={handleEventSelect}
+                  data-event-id={event.id}
                   disabled={disabled}
                   className={`w-full p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
                     formData.eventId === event.id

@@ -5,7 +5,7 @@
 import { formatDate } from '@/lib/dates'
 import { coerceNumber, DEFAULT_RETRY_CONFIG } from './client'
 import { tiktokAdsClient } from '@/services/integrations/shared/base-client'
-import {
+import type {
   TikTokMetricsOptions,
   TikTokAdAccount,
   TikTokReportResponse,

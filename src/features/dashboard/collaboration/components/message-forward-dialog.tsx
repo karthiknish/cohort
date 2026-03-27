@@ -155,6 +155,14 @@ export function MessageForwardDialog({
     [onOpenChange]
   )
 
+  const handleIncludeAttachmentsChange = useCallback((checked: boolean | 'indeterminate') => {
+    setIncludeAttachments(checked === true)
+  }, [])
+
+  const handleCloseClick = useCallback(() => {
+    handleOpenChange(false)
+  }, [handleOpenChange])
+
   if (!message) return null
 
   // Filter out current channel from options
@@ -236,7 +244,7 @@ export function MessageForwardDialog({
               <Checkbox
                 id="attachments"
                 checked={includeAttachments}
-                onCheckedChange={(checked) => setIncludeAttachments(checked as boolean)}
+                onCheckedChange={handleIncludeAttachmentsChange}
               />
               <Label
                 htmlFor="attachments"
@@ -252,7 +260,7 @@ export function MessageForwardDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => handleOpenChange(false)}
+            onClick={handleCloseClick}
             disabled={isForwarding}
           >
             Cancel

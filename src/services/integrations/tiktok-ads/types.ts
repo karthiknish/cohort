@@ -2,7 +2,7 @@
 // TIKTOK ADS API TYPES
 // =============================================================================
 
-import { NormalizedMetric } from '@/types/integrations'
+import type { NormalizedMetric } from '@/types/integrations'
 
 // =============================================================================
 // ERROR CODES
@@ -196,4 +196,3 @@ export type TikTokAudienceTargeting = {
 // =============================================================================
 
 export type { NormalizedMetric }
-

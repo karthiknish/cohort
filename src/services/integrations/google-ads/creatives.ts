@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { googleAdsSearch } from './client'
-import { GoogleCreative } from './types'
+import type { GoogleCreative } from './types'
 
 export async function fetchGoogleCreatives(options: {
     accessToken: string

@@ -78,7 +78,7 @@ export function DataExportCard() {
       <CardFooter className="flex justify-end">
         <Button
           variant="outline"
-          onClick={() => void handleExportData()}
+          onClick={handleExportData}
           disabled={exportingData}
         >
           {exportingData ? (

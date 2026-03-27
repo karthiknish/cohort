@@ -1,5 +1,6 @@
 'use client'
 
+import { createElement, useCallback } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, ReactNode, RefObject } from 'react'
 import { Send } from 'lucide-react'
 
@@ -131,6 +132,28 @@ export function UnifiedMessagePaneConversationLayout({
   typingIndicator,
   uploadingAttachments,
 }: UnifiedMessagePaneConversationLayoutProps) {
+  const handleMessageSearchChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onMessageSearchChange?.(event.target.value)
+    },
+    [onMessageSearchChange]
+  )
+
+  const handleAttachClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [fileInputRef])
+
+  const handleConfirmDeleteChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        handleCancelDelete()
+      }
+    },
+    [handleCancelDelete]
+  )
+
+  const resolvedEmptyState = isMessageSearchActive ? createElement(NoSearchResultsState) : emptyState
+
   return (
     <div className="flex min-h-[480px] flex-1 flex-col bg-background/50 lg:h-[640px] relative overflow-hidden">
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
@@ -143,7 +166,7 @@ export function UnifiedMessagePaneConversationLayout({
       {canSearchMessages && onMessageSearchChange ? (
         <MessageSearchBar
           value={messageSearchQuery}
-          onChange={(event) => onMessageSearchChange(event.target.value)}
+          onChange={handleMessageSearchChange}
           resultCount={messages.length}
           isActive={isMessageSearchActive}
           placeholder={header.type === 'dm' ? 'Search messages in this conversation…' : 'Search messages in this channel…'}
@@ -166,7 +189,7 @@ export function UnifiedMessagePaneConversationLayout({
             onDeleteMessage={onDeleteMessage}
             deletingMessageId={activeDeletingMessageId}
             updatingMessageId={messageUpdatingId}
-            emptyState={isMessageSearchActive ? <NoSearchResultsState /> : emptyState}
+            emptyState={resolvedEmptyState}
             variant={header.type === 'channel' ? 'channel' : 'dm'}
             editingMessageId={editingMessageId}
             focusMessageId={effectiveFocusMessageId}
@@ -192,7 +215,7 @@ export function UnifiedMessagePaneConversationLayout({
         onDrop={handleComposerDrop}
         onDragOver={handleComposerDragOver}
         onPaste={handleComposerPaste}
-        onAttachClick={onAddAttachments ? () => fileInputRef.current?.click() : undefined}
+        onAttachClick={onAddAttachments ? handleAttachClick : undefined}
         fileInputRef={fileInputRef}
         onAttachmentInputChange={handleAttachmentInputChange}
         typingIndicator={typingIndicator}
@@ -200,11 +223,7 @@ export function UnifiedMessagePaneConversationLayout({
 
       <ConfirmDialog
         open={Boolean(confirmingDeleteMessageId)}
-        onOpenChange={(open) => {
-          if (!open) {
-            handleCancelDelete()
-          }
-        }}
+        onOpenChange={handleConfirmDeleteChange}
         title="Delete message"
         description="This removes the message content for everyone in the conversation and keeps a deleted placeholder in the timeline."
         confirmLabel="Delete"

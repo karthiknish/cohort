@@ -2,7 +2,7 @@
 // ENGAGEMENT OBJECTIVE - Engagement campaign configuration
 // =============================================================================
 
-import { CampaignObjectiveConfig } from '../types'
+import type { CampaignObjectiveConfig } from '../types'
 
 export const ENGAGEMENT_OBJECTIVE_CONFIG: CampaignObjectiveConfig = {
   objective: 'OUTCOME_ENGAGEMENT',

@@ -1,6 +1,12 @@
 import { Skeleton } from '@/shared/ui/skeleton'
 import { Card, CardContent, CardHeader } from '@/shared/ui/card'
 
+const SUMMARY_CARD_KEYS = ['summary-a', 'summary-b', 'summary-c'] as const
+const OVERVIEW_CARD_KEYS = ['overview-a', 'overview-b', 'overview-c', 'overview-d'] as const
+const METRIC_CARD_KEYS = ['metric-a', 'metric-b', 'metric-c'] as const
+const METRIC_BAR_KEYS = ['bar-a', 'bar-b', 'bar-c'] as const
+const ROW_KEYS = ['row-a', 'row-b', 'row-c', 'row-d', 'row-e', 'row-f'] as const
+
 export default function AdsLoading() {
   return (
     <div className="space-y-6">
@@ -19,8 +25,8 @@ export default function AdsLoading() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, idx) => (
-              <Card key={idx} className="border-muted/60 bg-muted/10">
+            {SUMMARY_CARD_KEYS.map((key) => (
+              <Card key={key} className="border-muted/60 bg-muted/10">
                 <CardContent className="space-y-3 p-4">
                   <Skeleton className="h-5 w-32" />
                   <Skeleton className="h-4 w-40" />
@@ -33,8 +39,8 @@ export default function AdsLoading() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, idx) => (
-          <Card key={idx} className="border-muted/60 bg-background">
+        {OVERVIEW_CARD_KEYS.map((key) => (
+          <Card key={key} className="border-muted/60 bg-background">
             <CardContent className="space-y-3 p-5">
               <Skeleton className="h-3 w-20" />
               <Skeleton className="h-8 w-28" />
@@ -50,13 +56,13 @@ export default function AdsLoading() {
           <Skeleton className="mt-2 h-4 w-64" />
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, idx) => (
-            <div key={idx} className="rounded-lg border border-muted/60 bg-muted/10 p-4">
+          {METRIC_CARD_KEYS.map((key) => (
+            <div key={key} className="rounded-lg border border-muted/60 bg-muted/10 p-4">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="mt-2 h-3 w-40" />
               <div className="mt-3 grid grid-cols-3 gap-2">
-                {Array.from({ length: 3 }).map((__, metricIdx) => (
-                  <Skeleton key={metricIdx} className="h-3 w-full" />
+                {METRIC_BAR_KEYS.map((barKey) => (
+                  <Skeleton key={barKey} className="h-3 w-full" />
                 ))}
               </div>
             </div>
@@ -73,8 +79,8 @@ export default function AdsLoading() {
           <Skeleton className="h-9 w-36" />
         </CardHeader>
         <CardContent className="space-y-2">
-          {Array.from({ length: 6 }).map((_, idx) => (
-            <Skeleton key={idx} className="h-10 w-full rounded" />
+          {ROW_KEYS.map((key) => (
+            <Skeleton key={key} className="h-10 w-full rounded" />
           ))}
         </CardContent>
       </Card>

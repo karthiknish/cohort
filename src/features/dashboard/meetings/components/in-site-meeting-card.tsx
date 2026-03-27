@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import { useToast } from '@/shared/ui/use-toast'
 
@@ -108,6 +108,50 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
             ? 'Summary ready'
             : 'Listening'
 
+        const handleOpenSidebar = useCallback(() => {
+          handleOperationsOpenChange(true)
+        }, [handleOperationsOpenChange])
+
+        const handleCopyLink = useCallback(async () => {
+          if (typeof navigator === 'undefined' || !meetingLink) {
+            return
+          }
+
+          try {
+            await navigator.clipboard.writeText(meetingLink)
+            toast({
+              title: 'Room link copied',
+              description: 'Share the Cohorts room URL with attendees who need direct access.',
+            })
+          } catch {
+            toast({
+              variant: 'destructive',
+              title: 'Copy failed',
+              description: 'Clipboard access is unavailable. Copy the room URL manually from the address bar.',
+            })
+          }
+        }, [meetingLink, toast])
+
+        const handleDisconnected = useCallback(() => {
+          setJoinConfig(null)
+          setInterimTranscript('')
+          finalizeMeetingAfterRoomExit(false)
+        }, [finalizeMeetingAfterRoomExit, setInterimTranscript, setJoinConfig])
+
+        const handleBack = useCallback(() => {
+          if (joinConfig) {
+            setLeaveDialogOpen(true)
+            return
+          }
+
+          onClose()
+        }, [joinConfig, onClose])
+
+        const handleConfirmLeave = useCallback(() => {
+          setLeaveDialogOpen(false)
+          finalizeMeetingAfterRoomExit(true)
+        }, [finalizeMeetingAfterRoomExit])
+
   const meetingShell = (
     <>
       <div className="flex flex-col gap-5 px-5 py-5 lg:px-6">
@@ -125,28 +169,10 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
           canMinimizeRoom={canMinimizeRoom}
           isMinimized={isMinimized}
           meetingLink={meetingLink}
-          onOpenSidebar={() => handleOperationsOpenChange(true)}
+          onOpenSidebar={handleOpenSidebar}
           onTogglePictureInPicture={togglePictureInPicture}
           onToggleMinimize={toggleMinimizedRoom}
-          onCopyLink={async () => {
-            if (typeof navigator === 'undefined' || !meetingLink) {
-              return
-            }
-
-            try {
-              await navigator.clipboard.writeText(meetingLink)
-              toast({
-                title: 'Room link copied',
-                description: 'Share the Cohorts room URL with attendees who need direct access.',
-              })
-            } catch {
-              toast({
-                variant: 'destructive',
-                title: 'Copy failed',
-                description: 'Clipboard access is unavailable. Copy the room URL manually from the address bar.',
-              })
-            }
-          }}
+          onCopyLink={handleCopyLink}
         />
 
         <MeetingRoomCanvasSection
@@ -165,11 +191,7 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
           notesProcessingState={notesProcessingState}
           onAppendTranscript={appendTranscriptSnippet}
           onCaptureStatusChange={setCaptureStatus}
-          onDisconnected={() => {
-            setJoinConfig(null)
-            setInterimTranscript('')
-            finalizeMeetingAfterRoomExit(false)
-          }}
+          onDisconnected={handleDisconnected}
           onError={setJoinError}
           onInterimTranscriptChange={setInterimTranscript}
           onToggleMinimize={toggleMinimizedRoom}
@@ -204,7 +226,7 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
           isPreviewMeeting={isPreviewMeeting}
           hasJoinReference={hasJoinReference}
           roomActionLabel={roomActionLabel}
-          onOpenSidebar={() => handleOperationsOpenChange(true)}
+          onOpenSidebar={handleOpenSidebar}
           onToggleMinimize={toggleMinimizedRoom}
           onJoinRoom={handleJoinRoom}
         />
@@ -248,14 +270,7 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
     <div className="flex flex-col gap-4">
       <MeetingRoomPageHeader
         joinConfigPresent={Boolean(joinConfig)}
-        onBack={() => {
-          if (joinConfig) {
-            setLeaveDialogOpen(true)
-            return
-          }
-
-          onClose()
-        }}
+        onBack={handleBack}
       />
 
       <div className="overflow-hidden rounded-[32px] border border-border/80 bg-background shadow-sm">
@@ -265,10 +280,7 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
       <MeetingRoomLeaveDialog
         open={leaveDialogOpen}
         onOpenChange={setLeaveDialogOpen}
-        onConfirm={() => {
-          setLeaveDialogOpen(false)
-          finalizeMeetingAfterRoomExit(true)
-        }}
+        onConfirm={handleConfirmLeave}
       />
     </div>
   )

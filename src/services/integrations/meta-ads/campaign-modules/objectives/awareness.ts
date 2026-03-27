@@ -2,7 +2,7 @@
 // AWARENESS OBJECTIVE - Brand awareness campaign configuration
 // =============================================================================
 
-import { CampaignObjectiveConfig } from '../types'
+import type { CampaignObjectiveConfig } from '../types'
 
 export const AWARENESS_OBJECTIVE_CONFIG: CampaignObjectiveConfig = {
   objective: 'OUTCOME_AWARENESS',

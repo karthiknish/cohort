@@ -1,6 +1,6 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useCallback } from 'react'
 import Link from 'next/link'
 import {
   Calendar,
@@ -61,6 +61,17 @@ function TaskRowComponent({
 }: TaskRowProps) {
   const overdue = isOverdue(task)
   const dueSoon = isDueSoon(task)
+  const handleOpenClick = useCallback(() => {
+    onOpen?.(task)
+  }, [onOpen, task])
+
+  const handleEditClick = useCallback(() => {
+    onEdit(task)
+  }, [onEdit, task])
+
+  const handleDeleteClick = useCallback(() => {
+    onDelete(task)
+  }, [onDelete, task])
 
   return (
     <div
@@ -86,7 +97,7 @@ function TaskRowComponent({
             {onOpen ? (
               <button
                 type="button"
-                onClick={() => onOpen(task)}
+                onClick={handleOpenClick}
                 className="min-w-0 rounded-md text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
                 aria-label={`View task ${task.title}`}
               >
@@ -119,7 +130,7 @@ function TaskRowComponent({
                 variant="ghost"
                 size="sm"
                 className="h-8 text-xs gap-1.5 font-medium hover:bg-primary/5 hover:text-primary transition-colors"
-                onClick={() => onEdit(task)}
+                onClick={handleEditClick}
               >
                 <Pencil className="h-3.5 w-3.5" />
                 Edit
@@ -131,27 +142,22 @@ function TaskRowComponent({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {TASK_STATUSES.filter((status) => status !== task.status).map((status) => {
-                    const NextStatusIcon = STATUS_ICONS[status]
-
-                    return (
-                      <DropdownMenuItem
-                        key={status}
-                        onClick={() => onQuickStatusChange(task, status)}
-                      >
-                        <NextStatusIcon className="mr-2 h-4 w-4" />
-                        Move to {formatStatusLabel(status)}
-                      </DropdownMenuItem>
-                    )
-                  })}
+                  {TASK_STATUSES.filter((status) => status !== task.status).map((status) => (
+                    <TaskRowStatusMenuItem
+                      key={status}
+                      task={task}
+                      status={status}
+                      onQuickStatusChange={onQuickStatusChange}
+                    />
+                  ))}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onEdit(task)}>
+                  <DropdownMenuItem onClick={handleEditClick}>
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit task
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => onDelete(task)}
+                    onClick={handleDeleteClick}
                     className="text-destructive focus:text-destructive"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -241,4 +247,27 @@ function TaskRowComponent({
 }
 
 export const TaskRow = memo(TaskRowComponent)
+
+function TaskRowStatusMenuItem({
+  task,
+  status,
+  onQuickStatusChange,
+}: {
+  task: TaskRecord
+  status: TaskStatus
+  onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
+}) {
+  const handleClick = useCallback(() => {
+    onQuickStatusChange(task, status)
+  }, [onQuickStatusChange, status, task])
+
+  const NextStatusIcon = STATUS_ICONS[status]
+
+  return (
+    <DropdownMenuItem onClick={handleClick}>
+      <NextStatusIcon className="mr-2 h-4 w-4" />
+      Move to {formatStatusLabel(status)}
+    </DropdownMenuItem>
+  )
+}
 TaskRow.displayName = 'TaskRow'

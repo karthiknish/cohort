@@ -2,7 +2,7 @@
 // LEADS OBJECTIVE - Generate leads
 // =============================================================================
 
-import { GoogleCampaignObjectiveConfig } from '../types'
+import type { GoogleCampaignObjectiveConfig } from '../types'
 
 export const GOOGLE_LEADS_OBJECTIVE_CONFIG: GoogleCampaignObjectiveConfig = {
   objective: 'LEADS',

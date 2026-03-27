@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useCallback, useState, useMemo } from 'react'
 import { Search, User, Loader2 } from 'lucide-react'
 
 import {
@@ -78,7 +78,11 @@ export function NewDMDialog({
       })
   }, [currentUserId, dmParticipants, isPreviewMode, searchQuery])
 
-  const handleUserClick = async (user: { id: string; name?: string; role?: string | null }) => {
+  const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value)
+  }, [])
+
+  const handleUserClick = useCallback(async (user: { id: string; name?: string; role?: string | null }) => {
     setIsCreating(true)
     await onUserSelect({
       id: user.id,
@@ -88,7 +92,15 @@ export function NewDMDialog({
       setIsCreating(false)
       setSearchQuery('')
     })
-  }
+  }, [onUserSelect])
+
+  const userClickHandlers = useMemo(
+    () =>
+      Object.fromEntries(
+        filteredUsers.map((user) => [user.id, () => handleUserClick(user)])
+      ) as Record<string, () => void>,
+    [filteredUsers, handleUserClick]
+  )
 
   const getInitials = (name: string | null | undefined): string => {
     if (!name) return '?'
@@ -114,7 +126,7 @@ export function NewDMDialog({
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
             placeholder="Search teammates…"
             className="pl-9"
           />
@@ -134,7 +146,7 @@ export function NewDMDialog({
                 <button
                   key={user.id}
                   type="button"
-                  onClick={() => handleUserClick(user)}
+                  onClick={userClickHandlers[user.id]}
                   disabled={isCreating}
                   className="w-full flex items-center gap-3 p-3 rounded-lg text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/50 disabled:opacity-50"
                 >

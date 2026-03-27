@@ -4,6 +4,8 @@
 
 'use client'
 
+import { useCallback } from 'react'
+
 import { Label } from '@/shared/ui/label'
 import { Switch } from '@/shared/ui/switch'
 import { Slider } from '@/shared/ui/slider'
@@ -25,6 +27,45 @@ const FREQUENCY_CAP_TIME_UNITS = [
 ]
 
 export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: GoogleObjectiveComponentProps) {
+  const handleTargetLocationChange = useCallback(
+    (value: string) => {
+      onChange({ targetImpressionShareLocation: value })
+    },
+    [onChange]
+  )
+
+  const handleTargetPercentageChange = useCallback(
+    ([value]: [number]) => {
+      onChange({ targetImpressionSharePercentage: value })
+    },
+    [onChange]
+  )
+
+  const handleFrequencyCapChange = useCallback(
+    (checked: boolean) => {
+      onChange({
+        frequencyCapLevel: checked ? 'CAMPAIGN' : undefined,
+        frequencyCapEvents: checked ? 3 : undefined,
+        frequencyCapTimeUnit: checked ? 'WEEK' : undefined,
+      })
+    },
+    [onChange]
+  )
+
+  const handleFrequencyCapEventsChange = useCallback(
+    ([value]: [number]) => {
+      onChange({ frequencyCapEvents: value })
+    },
+    [onChange]
+  )
+
+  const handleFrequencyCapTimeUnitChange = useCallback(
+    (value: string) => {
+      onChange({ frequencyCapTimeUnit: value as 'DAY' | 'WEEK' | 'MONTH' })
+    },
+    [onChange]
+  )
+
   return (
     <div className="space-y-6">
       {/* Target Impression Share */}
@@ -43,7 +84,7 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
             <Label htmlFor="impression-share-target">Target Location</Label>
             <Select
               value={formData.targetImpressionShareLocation}
-              onValueChange={(value) => onChange({ targetImpressionShareLocation: value })}
+              onValueChange={handleTargetLocationChange}
               disabled={disabled}
             >
               <SelectTrigger id="impression-share-target">
@@ -69,7 +110,7 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
             </div>
             <Slider
               value={[formData.targetImpressionSharePercentage || 80]}
-              onValueChange={([value]) => onChange({ targetImpressionSharePercentage: value })}
+              onValueChange={handleTargetPercentageChange}
               min={1}
               max={100}
               step={1}
@@ -101,13 +142,7 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
             <Switch
               id="frequency-cap"
               checked={!!formData.frequencyCapLevel}
-              onCheckedChange={(checked) => 
-                onChange({ 
-                  frequencyCapLevel: checked ? 'CAMPAIGN' : undefined,
-                  frequencyCapEvents: checked ? 3 : undefined,
-                  frequencyCapTimeUnit: checked ? 'WEEK' : undefined,
-                })
-              }
+              onCheckedChange={handleFrequencyCapChange}
               disabled={disabled}
             />
           </div>
@@ -121,7 +156,7 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
                 </div>
                 <Slider
                   value={[formData.frequencyCapEvents || 3]}
-                  onValueChange={([value]) => onChange({ frequencyCapEvents: value })}
+                  onValueChange={handleFrequencyCapEventsChange}
                   min={1}
                   max={20}
                   step={1}
@@ -133,7 +168,7 @@ export function GoogleBrandAwarenessSection({ formData, onChange, disabled }: Go
                 <Label htmlFor="time-unit">Time Period</Label>
                 <Select
                   value={formData.frequencyCapTimeUnit}
-                  onValueChange={(value) => onChange({ frequencyCapTimeUnit: value as 'DAY' | 'WEEK' | 'MONTH' })}
+                  onValueChange={handleFrequencyCapTimeUnitChange}
                   disabled={disabled}
                 >
                   <SelectTrigger id="time-unit">

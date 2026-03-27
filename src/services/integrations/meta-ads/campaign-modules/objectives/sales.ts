@@ -2,7 +2,7 @@
 // SALES OBJECTIVE - Sales/Conversions campaign configuration
 // =============================================================================
 
-import { CampaignObjectiveConfig } from '../types'
+import type { CampaignObjectiveConfig } from '../types'
 
 export const SALES_OBJECTIVE_CONFIG: CampaignObjectiveConfig = {
   objective: 'OUTCOME_SALES',
