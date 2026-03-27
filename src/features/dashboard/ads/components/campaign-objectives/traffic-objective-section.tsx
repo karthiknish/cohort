@@ -10,7 +10,8 @@ import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { ExternalLink, Globe, MessageCircle } from 'lucide-react'
-import { DESTINATION_TYPES, ObjectiveComponentProps } from './types'
+import { DESTINATION_TYPES } from './types'
+import type { ObjectiveComponentProps } from './types'
 
 export function TrafficObjectiveSection({ formData, onChange, disabled }: ObjectiveComponentProps) {
   const handleDestinationTypeChange = useCallback(

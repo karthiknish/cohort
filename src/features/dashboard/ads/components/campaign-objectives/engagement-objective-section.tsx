@@ -10,7 +10,8 @@ import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Heart, MessageSquare, Calendar, ThumbsUp } from 'lucide-react'
-import { ENGAGEMENT_TYPES, ObjectiveComponentProps } from './types'
+import { ENGAGEMENT_TYPES } from './types'
+import type { ObjectiveComponentProps } from './types'
 
 // Mock posts - in real implementation, these would be fetched from the API
 const MOCK_POSTS = [

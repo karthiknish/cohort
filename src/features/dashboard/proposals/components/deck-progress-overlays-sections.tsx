@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { CircleCheck, LoaderCircle, TriangleAlert } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -54,6 +55,8 @@ export function ProposalGenerationOverlayContent({
   stageIndex: number
   stageLabels: string[]
 }) {
+  const progressStyle = useMemo(() => ({ width: `${progressPercent}%` }), [progressPercent])
+
   return (
     <div className="relative mx-auto flex w-full max-w-lg flex-col items-center gap-8 p-8">
       <ProposalGenerationStatusIcon isComplete={isComplete} />
@@ -72,7 +75,7 @@ export function ProposalGenerationOverlayContent({
           <div className="h-2 w-full overflow-hidden rounded-full border border-muted/20 bg-muted/30">
             <div
               className="relative h-full bg-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
-              style={{ width: `${progressPercent}%` }}
+              style={progressStyle}
             >
               <div className="absolute inset-0 animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
             </div>

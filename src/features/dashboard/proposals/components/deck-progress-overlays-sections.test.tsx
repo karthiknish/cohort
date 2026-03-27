@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest'
 
 import { DeckProgressOverlayContent, DeckProgressOverlayShell, ProposalGenerationOverlayContent } from './deck-progress-overlays-sections'
 
+const errorCopy = { title: 'Deck preparation failed', description: 'Please retry.' }
+
 describe('deck progress overlay sections', () => {
   it('renders the proposal generation overlay content', () => {
     const markup = renderToStaticMarkup(
@@ -30,7 +32,7 @@ describe('deck progress overlay sections', () => {
       <DeckProgressOverlayShell className="deck-shell">
         <DeckProgressOverlayContent
           stage="error"
-          copy={{ title: 'Deck preparation failed', description: 'Please retry.' }}
+          copy={errorCopy}
         />
       </DeckProgressOverlayShell>,
     )

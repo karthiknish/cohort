@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { LazyMotion, domAnimation, m } from '@/shared/ui/motion'
 
 import { motionEasing, motionLoopSeconds } from '@/lib/animation-system'
@@ -105,29 +106,38 @@ interface SectionGlowProps {
   className?: string
 }
 
+function GlowOrb({ shape }: { shape: GlowShape }) {
+  const sizeStyle = useMemo(() => ({ width: shape.size, height: shape.size }), [shape.size])
+  const transition = useMemo(
+    () => ({
+      duration: shape.duration,
+      repeat: Infinity,
+      repeatType: 'reverse' as const,
+      ease: motionEasing.out,
+      delay: shape.delay ?? 0,
+    }),
+    [shape.delay, shape.duration],
+  )
+
+  return (
+    <m.span
+      aria-hidden
+      className={cn('absolute inline-block rounded-full', shape.className)}
+      style={sizeStyle}
+      initial={shape.initial}
+      animate={shape.animate}
+      transition={transition}
+    />
+  )
+}
+
 export function SectionGlow({ variant, className }: SectionGlowProps) {
   const shapes = variantShapes[variant]
 
   return (
     <LazyMotion features={domAnimation}>
       <div className={cn('pointer-events-none absolute inset-0 -z-10 overflow-hidden', className)}>
-        {shapes.map((shape) => (
-          <m.span
-            key={shape.id}
-            aria-hidden
-            className={cn('absolute inline-block rounded-full', shape.className)}
-            style={{ width: shape.size, height: shape.size }}
-            initial={shape.initial}
-            animate={shape.animate}
-            transition={{
-              duration: shape.duration,
-              repeat: Infinity,
-              repeatType: 'reverse',
-              ease: motionEasing.out,
-              delay: shape.delay ?? 0,
-            }}
-          />
-        ))}
+        {shapes.map((shape) => <GlowOrb key={shape.id} shape={shape} />)}
       </div>
     </LazyMotion>
   )

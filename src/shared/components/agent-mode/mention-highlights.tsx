@@ -91,11 +91,16 @@ type AgentMentionTextProps = {
 
 export function AgentMentionText({ text, mentionLabels = EMPTY_MENTION_LABELS, className, mentionClassName }: AgentMentionTextProps) {
   const segments = splitAgentTextWithMentions(text, mentionLabels)
+  const occurrenceCounts = new Map<string, number>()
 
   return (
     <span className={className}>
-      {segments.map((segment, index) => (
-        <Fragment key={`${segment.text}-${index}`}>
+      {segments.map((segment) => {
+        const occurrence = (occurrenceCounts.get(segment.text) ?? 0) + 1
+        occurrenceCounts.set(segment.text, occurrence)
+
+        return (
+        <Fragment key={`${segment.text}-${occurrence}`}>
           {segment.isMention ? (
             <span
               className={cn(
@@ -110,7 +115,8 @@ export function AgentMentionText({ text, mentionLabels = EMPTY_MENTION_LABELS, c
             segment.text
           )}
         </Fragment>
-      ))}
+        )
+      })}
     </span>
   )
 }

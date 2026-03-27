@@ -21,21 +21,24 @@ import {
   MeetingOperationsSyncCards,
 } from './in-site-meeting-operations-sheet-sections'
 
+const joinConfig = { roomName: 'room-1', serverUrl: 'wss://lk.example.com', token: 'token' }
+const captureStatus = { error: null, listening: true, supported: true }
+
 describe('meeting operations sheet sections', () => {
   it('renders header and status cards', () => {
     const markup = renderToStaticMarkup(
       <>
-        <MeetingOperationsSheetHeader joinConfig={{ roomName: 'room-1', serverUrl: 'wss://lk.example.com', token: 'token' }} meetingRoomName="room-1" />
+        <MeetingOperationsSheetHeader joinConfig={joinConfig} meetingRoomName="room-1" />
         <MeetingOperationsCaptureCard
-          captureStatus={{ error: null, listening: true, supported: true }}
-          joinConfig={{ roomName: 'room-1', serverUrl: 'wss://lk.example.com', token: 'token' }}
+          captureStatus={captureStatus}
+          joinConfig={joinConfig}
           transcriptSource="livekit"
         />
         <MeetingOperationsAttendeesCard meetingAttendeeEmails={['alex@example.com', 'sam@example.com']} />
         <MeetingOperationsAutomationCard
           autoSyncing={true}
           finalizingSession={false}
-          joinConfig={{ roomName: 'room-1', serverUrl: 'wss://lk.example.com', token: 'token' }}
+          joinConfig={joinConfig}
           markCompleted={true}
           notesProcessingState="processing"
           retryingPostCallProcessing={false}

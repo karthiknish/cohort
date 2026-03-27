@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { LazyMotion, domAnimation, m } from '@/shared/ui/motion'
 
 import { motionEasing, motionLoopSeconds } from '@/lib/animation-system'
@@ -34,21 +35,30 @@ const orbs = [
   },
 ]
 
+function HeroOrb({ orb }: { orb: (typeof orbs)[number] }) {
+  const sizeStyle = useMemo(() => ({ width: orb.size, height: orb.size }), [orb.size])
+  const transition = useMemo(
+    () => ({ duration: motionLoopSeconds.heroOrbit, repeat: Infinity, repeatType: 'reverse' as const, ease: motionEasing.out, delay: orb.delay }),
+    [orb.delay],
+  )
+
+  return (
+    <m.span
+      aria-hidden
+      className={`absolute inline-block rounded-full bg-gradient-to-br ${orb.gradient} ${orb.blur}`}
+      style={sizeStyle}
+      initial={orb.initial}
+      animate={orb.animate}
+      transition={transition}
+    />
+  )
+}
+
 export function HeroBackground() {
   return (
     <LazyMotion features={domAnimation}>
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 mx-auto h-[32rem] w-full max-w-5xl overflow-visible">
-        {orbs.map((orb) => (
-          <m.span
-            key={orb.id}
-            aria-hidden
-            className={`absolute inline-block rounded-full bg-gradient-to-br ${orb.gradient} ${orb.blur}`}
-            style={{ width: orb.size, height: orb.size }}
-            initial={orb.initial}
-            animate={orb.animate}
-            transition={{ duration: motionLoopSeconds.heroOrbit, repeat: Infinity, repeatType: 'reverse', ease: motionEasing.out, delay: orb.delay }}
-          />
-        ))}
+        {orbs.map((orb) => <HeroOrb key={orb.id} orb={orb} />)}
       </div>
     </LazyMotion>
   )

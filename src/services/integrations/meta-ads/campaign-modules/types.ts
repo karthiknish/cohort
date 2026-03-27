@@ -2,9 +2,9 @@
 // CAMPAIGNS TYPES - Type definitions for campaign operations
 // =============================================================================
 
-import { 
-  AdvantageState, 
-  PlacementSoftOptOut 
+import type {
+  AdvantageState,
+  PlacementSoftOptOut,
 } from '../types'
 
 // =============================================================================

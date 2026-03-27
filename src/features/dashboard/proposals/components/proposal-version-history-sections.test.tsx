@@ -38,6 +38,8 @@ const version = {
   createdAt: '2026-03-11T12:00:00.000Z',
 }
 
+const previewCurrentFormData = { title: 'Current' } as never
+
 describe('proposal version history sections', () => {
   it('renders the trigger and menu content', () => {
     const markup = renderToStaticMarkup(
@@ -67,7 +69,7 @@ describe('proposal version history sections', () => {
   it('renders the preview and restore dialogs', () => {
     const markup = renderToStaticMarkup(
       <>
-        <ProposalVersionPreviewDialog currentFormData={{ title: 'Current' } as never} previewVersion={version as never} setPreviewVersion={vi.fn()} />
+        <ProposalVersionPreviewDialog currentFormData={previewCurrentFormData} previewVersion={version as never} setPreviewVersion={vi.fn()} />
         <ProposalVersionRestoreDialog
           handleRestoreVersion={vi.fn()}
           restoreConfirmVersion={version as never}

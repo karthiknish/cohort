@@ -12,6 +12,8 @@ const summary = {
   timelines: { startTime: 'Next month' },
 } as never
 
+const readyDeck = { status: 'ready', storageUrl: 'https://cdn.example.com/deck.pptx', pptxUrl: null } as never
+
 describe('proposal submitted panel sections', () => {
   it('renders the hero and strategy brief card', () => {
     const markup = renderToStaticMarkup(
@@ -41,7 +43,7 @@ describe('proposal submitted panel sections', () => {
         isRecheckingDeck={false}
         onCopyShareLink={vi.fn()}
         onRecheckDeck={vi.fn()}
-        presentationDeck={{ status: 'ready', storageUrl: 'https://cdn.example.com/deck.pptx', pptxUrl: null } as never}
+          presentationDeck={readyDeck}
         viewerHref="/dashboard/proposals/viewer?src=test"
       />,
     )

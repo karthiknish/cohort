@@ -12,6 +12,8 @@ vi.mock('@/shared/ui/dialog', () => ({
 
 import { CreateCreativeDialogForm, CreateCreativeDialogHeader } from './create-creative-dialog-sections'
 
+const selectedPage = { id: 'page-1', name: 'Brand Page', tasks: [], instagramBusinessAccountId: 'ig-1', instagramBusinessAccountName: 'Brand IG', instagramUsername: 'brand' }
+
 describe('create creative dialog sections', () => {
   it('renders the dialog header copy', () => {
     const markup = renderToStaticMarkup(<CreateCreativeDialogHeader providerId="facebook" />)
@@ -55,7 +57,7 @@ describe('create creative dialog sections', () => {
         onVideoIdChange={vi.fn()}
         pageId="page-1"
         selectedAdSetId="adset-1"
-        selectedPage={{ id: 'page-1', name: 'Brand Page', tasks: [], instagramBusinessAccountId: 'ig-1', instagramBusinessAccountName: 'Brand IG', instagramUsername: 'brand' }}
+        selectedPage={selectedPage}
         status="PAUSED"
         title="Headline"
         uploadingImage={false}

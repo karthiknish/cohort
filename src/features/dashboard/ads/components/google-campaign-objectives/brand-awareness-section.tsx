@@ -12,7 +12,7 @@ import { Slider } from '@/shared/ui/slider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Eye, Target } from 'lucide-react'
-import { GoogleObjectiveComponentProps } from './types'
+import type { GoogleObjectiveComponentProps } from './types'
 
 const IMPRESSION_SHARE_TARGETS = [
   { value: 'ABSOLUTE_TOP_OF_PAGE', label: 'Absolute Top of Page', description: 'Position 1 on search results' },

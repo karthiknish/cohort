@@ -11,6 +11,48 @@ import {
   MeetingChatPanel,
 } from './in-site-meeting-room-chat-sections'
 
+const launcherOpen = vi.fn()
+const panelHandler = vi.fn()
+const sharedFileInputRef = { current: null }
+const sharedMessageEndRef = { current: null }
+const sharedTextareaRef = { current: null }
+const sharedMentionResults = [{ avatarUrl: null, id: 'user-1', identity: 'alex', isLocal: false, label: 'Alex Kim' }]
+const sharedPendingAttachments = [
+  { file: new File(['notes'], 'notes.txt', { type: 'text/plain' }), id: 'att-1', mimeType: 'text/plain', name: 'notes.txt', sizeLabel: '1 KB' },
+]
+const sharedPanelProps = {
+  attachmentAccept: '.png,.pdf',
+  canSend: false,
+  chatMessages: [],
+  draft: '',
+  fileInputRef: sharedFileInputRef,
+  highlightedMentionIndex: 0,
+  isSending: false,
+  localAvatarUrl: null,
+  maxAttachments: 10,
+  mentionLabels: [],
+  mentionResults: [],
+  messageEndRef: sharedMessageEndRef,
+  onAttachmentSelection: panelHandler,
+  onClose: panelHandler,
+  onComposerBlur: panelHandler,
+  onDraftChange: panelHandler,
+  onKeyDown: panelHandler,
+  onMentionMouseDown: panelHandler,
+  onRemoveAttachment: panelHandler,
+  onSelectMention: panelHandler,
+  onSend: panelHandler,
+  pendingAttachments: [],
+  showMentionResults: false,
+  textareaRef: sharedTextareaRef,
+  uploadingFiles: false,
+}
+const dockPanelProps = {
+  ...sharedPanelProps,
+  mentionResults: sharedMentionResults,
+  pendingAttachments: sharedPendingAttachments,
+}
+
 vi.mock('@/shared/components/agent-mode/mention-highlights', () => ({
   AgentMentionText: ({ text }: { text: string }) => <span>{text}</span>,
 }))
@@ -37,7 +79,7 @@ describe('meeting room chat sections', () => {
 
     const markup = renderToStaticMarkup(
       <>
-        <MeetingChatLauncherButton unreadCount={3} onOpen={vi.fn()} />
+        <MeetingChatLauncherButton unreadCount={3} onOpen={launcherOpen} />
         <MeetingChatMessageItem mentionLabels={['Alex Kim']} localAvatarUrl={null} message={message} />
       </>,
     )
@@ -50,40 +92,32 @@ describe('meeting room chat sections', () => {
   })
 
   it('renders the open panel states', () => {
-    const fileInputRef = { current: null }
-    const messageEndRef = { current: null }
-    const textareaRef = { current: null }
-    const mentionResults = [{ avatarUrl: null, id: 'user-1', identity: 'alex', isLocal: false, label: 'Alex Kim' }]
-    const pendingAttachments = [
-      { file: new File(['notes'], 'notes.txt', { type: 'text/plain' }), id: 'att-1', mimeType: 'text/plain', name: 'notes.txt', sizeLabel: '1 KB' },
-    ]
-
     const markup = renderToStaticMarkup(
       <MeetingChatPanel
         attachmentAccept=".png,.pdf"
         canSend={true}
         chatMessages={[]}
         draft="@a"
-        fileInputRef={fileInputRef}
+        fileInputRef={sharedFileInputRef}
         highlightedMentionIndex={0}
         isSending={false}
         localAvatarUrl={null}
         maxAttachments={10}
         mentionLabels={[]}
-        mentionResults={mentionResults}
-        messageEndRef={messageEndRef}
-        onAttachmentSelection={vi.fn()}
-        onClose={vi.fn()}
-        onComposerBlur={vi.fn()}
-        onDraftChange={vi.fn()}
-        onKeyDown={vi.fn()}
-        onMentionMouseDown={vi.fn()}
-        onRemoveAttachment={vi.fn()}
-        onSelectMention={vi.fn()}
-        onSend={vi.fn()}
-        pendingAttachments={pendingAttachments}
+        mentionResults={sharedMentionResults}
+        messageEndRef={sharedMessageEndRef}
+        onAttachmentSelection={panelHandler}
+        onClose={panelHandler}
+        onComposerBlur={panelHandler}
+        onDraftChange={panelHandler}
+        onKeyDown={panelHandler}
+        onMentionMouseDown={panelHandler}
+        onRemoveAttachment={panelHandler}
+        onSelectMention={panelHandler}
+        onSend={panelHandler}
+        pendingAttachments={sharedPendingAttachments}
         showMentionResults={true}
-        textareaRef={textareaRef}
+        textareaRef={sharedTextareaRef}
         uploadingFiles={false}
       />,
     )
@@ -97,44 +131,13 @@ describe('meeting room chat sections', () => {
   })
 
   it('renders the floating dock launcher and panel branches', () => {
-    const fileInputRef = { current: null }
-    const messageEndRef = { current: null }
-    const textareaRef = { current: null }
-    const panelProps = {
-      attachmentAccept: '.png,.pdf',
-      canSend: false,
-      chatMessages: [],
-      draft: '',
-      fileInputRef,
-      highlightedMentionIndex: 0,
-      isSending: false,
-      localAvatarUrl: null,
-      maxAttachments: 10,
-      mentionLabels: [],
-      mentionResults: [],
-      messageEndRef,
-      onAttachmentSelection: vi.fn(),
-      onClose: vi.fn(),
-      onComposerBlur: vi.fn(),
-      onDraftChange: vi.fn(),
-      onKeyDown: vi.fn(),
-      onMentionMouseDown: vi.fn(),
-      onRemoveAttachment: vi.fn(),
-      onSelectMention: vi.fn(),
-      onSend: vi.fn(),
-      pendingAttachments: [],
-      showMentionResults: false,
-      textareaRef,
-      uploadingFiles: false,
-    }
-
     const closedMarkup = renderToStaticMarkup(
       <MeetingChatFloatingDock
         compact={false}
         isOpen={false}
-        onOpen={vi.fn()}
+        onOpen={launcherOpen}
         unreadCount={2}
-        panelProps={panelProps}
+        panelProps={dockPanelProps}
       />,
     )
 
@@ -142,9 +145,9 @@ describe('meeting room chat sections', () => {
       <MeetingChatFloatingDock
         compact={false}
         isOpen={true}
-        onOpen={vi.fn()}
+        onOpen={launcherOpen}
         unreadCount={0}
-        panelProps={panelProps}
+        panelProps={dockPanelProps}
       />,
     )
 

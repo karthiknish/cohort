@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo,useCallback } from 'react'
 import type { ChangeEvent, CSSProperties } from 'react'
 import {
   Check,
@@ -74,6 +74,175 @@ function getWidthStyle(width: number): CSSProperties {
   return { width: `${width}%` }
 }
 
+function HeadlineEditRow(props: {
+  value: string
+  index: number
+  onUpdate: (index: number, value: string) => void
+  onRemove: (index: number) => void
+}) {
+  const { value, index, onUpdate, onRemove } = props
+
+  const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    onUpdate(index, event.target.value)
+  }, [index, onUpdate])
+
+  const handleRemove = useCallback(() => {
+    onRemove(index)
+  }, [index, onRemove])
+
+  return (
+    <div className="group relative flex items-center gap-2">
+      <Input
+        value={value}
+        onChange={handleChange}
+        placeholder="Enter headline…"
+        className="flex-1 bg-background border-muted focus-visible:ring-primary/20"
+      />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+        onClick={handleRemove}
+        aria-label={`Remove headline ${index + 1}`}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+      {index === 0 && (
+        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-full" />
+      )}
+    </div>
+  )
+}
+
+function HeadlineDisplayRow(props: {
+  value: string
+  index: number
+  copiedField: string | null
+  onCopy: (text: string, field: string) => void
+}) {
+  const { value, index, copiedField, onCopy } = props
+
+  const handleCopy = useCallback(() => {
+    onCopy(value, `headline-${index}`)
+  }, [index, onCopy, value])
+
+  return (
+    <div className="group flex items-start justify-between gap-3 p-3 rounded-xl border bg-background hover:border-primary/20 transition-colors">
+      <div className="flex gap-3">
+        <span className="mt-0.5 text-[10px] font-bold text-muted-foreground/50">{index + 1}</span>
+        <p className="text-sm font-medium">{value}</p>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={handleCopy}
+        aria-label={`Copy headline ${index + 1}`}
+      >
+        {copiedField === `headline-${index}` ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+      </Button>
+    </div>
+  )
+}
+
+function DescriptionEditRow(props: {
+  value: string
+  index: number
+  onUpdate: (index: number, value: string) => void
+  onRemove: (index: number) => void
+}) {
+  const { value, index, onUpdate, onRemove } = props
+
+  const handleChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
+    onUpdate(index, event.target.value)
+  }, [index, onUpdate])
+
+  const handleRemove = useCallback(() => {
+    onRemove(index)
+  }, [index, onRemove])
+
+  return (
+    <div className="group relative flex items-start gap-2">
+      <Textarea
+        value={value}
+        onChange={handleChange}
+        placeholder="Enter primary text…"
+        className="flex-1 min-h-[100px] bg-background border-muted focus-visible:ring-primary/20 resize-none"
+      />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive mt-1"
+        onClick={handleRemove}
+        aria-label={`Remove primary text ${index + 1}`}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+      <div className="absolute bottom-2 right-12 text-[10px] text-muted-foreground">{value.length} chars</div>
+    </div>
+  )
+}
+
+function DescriptionDisplayRow(props: {
+  value: string
+  index: number
+  copiedField: string | null
+  onCopy: (text: string, field: string) => void
+}) {
+  const { value, index, copiedField, onCopy } = props
+
+  const handleCopy = useCallback(() => {
+    onCopy(value, `desc-${index}`)
+  }, [index, onCopy, value])
+
+  return (
+    <div className="group flex items-start justify-between gap-3 p-4 rounded-xl border bg-background hover:border-primary/20 transition-colors">
+      <div className="flex gap-3">
+        <span className="mt-0.5 text-[10px] font-bold text-muted-foreground/50">{index + 1}</span>
+        <p className="text-sm leading-relaxed">{value}</p>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={handleCopy}
+        aria-label={`Copy primary text ${index + 1}`}
+      >
+        {copiedField === `desc-${index}` ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+      </Button>
+    </div>
+  )
+}
+
+function CopyValueButton(props: {
+  value: string
+  field: string
+  copiedField: string | null
+  onCopy: (text: string, field: string) => void
+  className?: string
+  ariaLabel: string
+  iconClassName: string
+}) {
+  const { value, field, copiedField, onCopy, className, ariaLabel, iconClassName } = props
+
+  const handleCopy = useCallback(() => {
+    onCopy(value, field)
+  }, [field, onCopy, value])
+
+  return (
+    <Button variant="ghost" size="icon" className={className} onClick={handleCopy} aria-label={ariaLabel}>
+      {copiedField === field ? <Check className={iconClassName} /> : <Copy className={iconClassName} />}
+    </Button>
+  )
+}
+
+function InsightScoreBar(props: { score: number }) {
+  const { score } = props
+  const style = useMemo(() => ({ width: `${score}%` }), [score])
+
+  return <div className="h-full bg-primary" style={style} />
+}
+
 export function CreativeEditorTabs(props: {
   providerId: string
   creative: Creative
@@ -141,6 +310,10 @@ export function CreativeEditorTabs(props: {
     onRefreshPerformance,
     algorithmicInsights,
   } = props
+  const handleLandingPageChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    onChangeLandingPage(event.target.value)
+  }, [onChangeLandingPage])
+
   const editableHeadlineItems = useMemo(() => toStableStringItems(editedHeadlines), [editedHeadlines])
   const headlineItems = useMemo(() => toStableStringItems(creative.headlines ?? []), [creative.headlines])
   const editableDescriptionItems = useMemo(() => toStableStringItems(editedDescriptions), [editedDescriptions])
@@ -207,26 +380,13 @@ export function CreativeEditorTabs(props: {
               {isEditing ? (
                 editedHeadlines.length > 0 ? (
                   editableHeadlineItems.map((headlineItem) => (
-                    <div key={headlineItem.key} className="group relative flex items-center gap-2">
-                      <Input
-                        value={headlineItem.value}
-                        onChange={createTextChangeHandler(onUpdateHeadline, headlineItem.index)}
-                        placeholder="Enter headline…"
-                        className="flex-1 bg-background border-muted focus-visible:ring-primary/20"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                        onClick={createIndexClickHandler(onRemoveHeadline, headlineItem.index)}
-                        aria-label={`Remove headline ${headlineItem.index + 1}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      {headlineItem.index === 0 && (
-                        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-full" />
-                      )}
-                    </div>
+                    <HeadlineEditRow
+                      key={headlineItem.key}
+                      value={headlineItem.value}
+                      index={headlineItem.index}
+                      onUpdate={onUpdateHeadline}
+                      onRemove={onRemoveHeadline}
+                    />
                   ))
                 ) : (
                   <div className="border-2 border-dashed rounded-lg p-6 text-center">
@@ -238,21 +398,13 @@ export function CreativeEditorTabs(props: {
                 )
               ) : creative.headlines && creative.headlines.length > 0 ? (
                 headlineItems.map((headlineItem) => (
-                  <div key={headlineItem.key} className="group flex items-start justify-between gap-3 p-3 rounded-xl border bg-background hover:border-primary/20 transition-colors">
-                    <div className="flex gap-3">
-                      <span className="mt-0.5 text-[10px] font-bold text-muted-foreground/50">{headlineItem.index + 1}</span>
-                      <p className="text-sm font-medium">{headlineItem.value}</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={createCopyHandler(onCopy, headlineItem.value, `headline-${headlineItem.index}`)}
-                      aria-label={`Copy headline ${headlineItem.index + 1}`}
-                    >
-                      {copiedField === `headline-${headlineItem.index}` ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                    </Button>
-                  </div>
+                  <HeadlineDisplayRow
+                    key={headlineItem.key}
+                    value={headlineItem.value}
+                    index={headlineItem.index}
+                    copiedField={copiedField}
+                    onCopy={onCopy}
+                  />
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground py-4 text-center">No headlines available</p>
@@ -304,26 +456,13 @@ export function CreativeEditorTabs(props: {
               {isEditing ? (
                 editedDescriptions.length > 0 ? (
                   editableDescriptionItems.map((descriptionItem) => (
-                    <div key={descriptionItem.key} className="group relative flex items-start gap-2">
-                      <Textarea
-                        value={descriptionItem.value}
-                        onChange={createTextChangeHandler(onUpdateDescription, descriptionItem.index)}
-                        placeholder="Enter primary text…"
-                        className="flex-1 min-h-[100px] bg-background border-muted focus-visible:ring-primary/20 resize-none"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive mt-1"
-                        onClick={createIndexClickHandler(onRemoveDescription, descriptionItem.index)}
-                        aria-label={`Remove primary text ${descriptionItem.index + 1}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <div className="absolute bottom-2 right-12 text-[10px] text-muted-foreground">
-                        {descriptionItem.value.length} chars
-                      </div>
-                    </div>
+                    <DescriptionEditRow
+                      key={descriptionItem.key}
+                      value={descriptionItem.value}
+                      index={descriptionItem.index}
+                      onUpdate={onUpdateDescription}
+                      onRemove={onRemoveDescription}
+                    />
                   ))
                 ) : (
                   <div className="border-2 border-dashed rounded-lg p-6 text-center">
@@ -335,21 +474,13 @@ export function CreativeEditorTabs(props: {
                 )
               ) : creative.descriptions && creative.descriptions.length > 0 ? (
                 descriptionItems.map((descriptionItem) => (
-                  <div key={descriptionItem.key} className="group flex items-start justify-between gap-3 p-4 rounded-xl border bg-background hover:border-primary/20 transition-colors">
-                    <div className="flex gap-3">
-                      <span className="mt-0.5 text-[10px] font-bold text-muted-foreground/50">{descriptionItem.index + 1}</span>
-                      <p className="text-sm leading-relaxed">{descriptionItem.value}</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={createCopyHandler(onCopy, descriptionItem.value, `desc-${descriptionItem.index}`)}
-                      aria-label={`Copy primary text ${descriptionItem.index + 1}`}
-                    >
-                      {copiedField === `desc-${descriptionItem.index}` ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                    </Button>
-                  </div>
+                  <DescriptionDisplayRow
+                    key={descriptionItem.key}
+                    value={descriptionItem.value}
+                    index={descriptionItem.index}
+                    copiedField={copiedField}
+                    onCopy={onCopy}
+                  />
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground py-4 text-center">No primary text available</p>
@@ -424,9 +555,7 @@ export function CreativeEditorTabs(props: {
                   {isEditing ? (
                     <Input
                       value={editedLandingPage}
-                      onChange={createTextChangeHandler((index, value) => {
-                        if (index === 0) onChangeLandingPage(value)
-                      }, 0)}
+                      onChange={handleLandingPageChange}
                       placeholder="https://example.com/landing"
                       type="url"
                       className="bg-background"
@@ -434,9 +563,15 @@ export function CreativeEditorTabs(props: {
                   ) : creative.landingPageUrl ? (
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs truncate text-primary font-medium underline underline-offset-4">{creative.landingPageUrl}</p>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={createCopyHandler(onCopy, creative.landingPageUrl ?? '', 'landing')} aria-label="Copy landing page URL">
-                        {copiedField === 'landing' ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-                      </Button>
+                      <CopyValueButton
+                        value={creative.landingPageUrl ?? ''}
+                        field="landing"
+                        copiedField={copiedField}
+                        onCopy={onCopy}
+                        className="h-7 w-7 shrink-0"
+                        ariaLabel="Copy landing page URL"
+                        iconClassName="h-3 w-3"
+                      />
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground italic">No link configured</p>
@@ -574,7 +709,7 @@ export function CreativeEditorTabs(props: {
                         {typeof insight.score === 'number' ? (
                           <div className="flex items-center gap-2">
                             <div className="h-1.5 w-12 bg-muted rounded-full overflow-hidden">
-                              <div className="h-full bg-primary" style={getWidthStyle(insight.score)} />
+                              <InsightScoreBar score={insight.score} />
                             </div>
                             <span className="text-[10px] font-bold">{Math.round(insight.score)}%</span>
                           </div>
@@ -616,18 +751,30 @@ export function CreativeEditorTabs(props: {
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Creative ID</p>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-mono truncate">{creative.creativeId}</p>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={createCopyHandler(onCopy, creative.creativeId, 'creativeId')} aria-label="Copy creative ID">
-                      {copiedField === 'creativeId' ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-                    </Button>
+                    <CopyValueButton
+                      value={creative.creativeId}
+                      field="creativeId"
+                      copiedField={copiedField}
+                      onCopy={onCopy}
+                      className="h-6 w-6"
+                      ariaLabel="Copy creative ID"
+                      iconClassName="h-3 w-3"
+                    />
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-muted/30 border border-muted/20">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Campaign ID</p>
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-mono truncate">{creative.campaignId}</p>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={createCopyHandler(onCopy, creative.campaignId, 'campaignId')} aria-label="Copy campaign ID">
-                      {copiedField === 'campaignId' ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-                    </Button>
+                    <CopyValueButton
+                      value={creative.campaignId}
+                      field="campaignId"
+                      copiedField={copiedField}
+                      onCopy={onCopy}
+                      className="h-6 w-6"
+                      ariaLabel="Copy campaign ID"
+                      iconClassName="h-3 w-3"
+                    />
                   </div>
                 </div>
               </div>
@@ -646,9 +793,15 @@ export function CreativeEditorTabs(props: {
                         <p className="text-xs truncate text-primary">{creative.imageUrl}</p>
                       </div>
                     </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={createCopyHandler(onCopy, creative.imageUrl ?? '', 'imageUrl')} aria-label="Copy source image URL">
-                      {copiedField === 'imageUrl' ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                    </Button>
+                      <CopyValueButton
+                        value={creative.imageUrl ?? ''}
+                        field="imageUrl"
+                        copiedField={copiedField}
+                        onCopy={onCopy}
+                        className="h-8 w-8"
+                        ariaLabel="Copy source image URL"
+                        iconClassName="h-3.5 w-3.5"
+                      />
                   </div>
                 )}
 
@@ -663,9 +816,15 @@ export function CreativeEditorTabs(props: {
                         <p className="text-xs truncate text-primary">{creative.videoUrl}</p>
                       </div>
                     </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={createCopyHandler(onCopy, creative.videoUrl ?? '', 'videoUrl')} aria-label="Copy source video URL">
-                      {copiedField === 'videoUrl' ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                    </Button>
+                      <CopyValueButton
+                        value={creative.videoUrl ?? ''}
+                        field="videoUrl"
+                        copiedField={copiedField}
+                        onCopy={onCopy}
+                        className="h-8 w-8"
+                        ariaLabel="Copy source video URL"
+                        iconClassName="h-3.5 w-3.5"
+                      />
                   </div>
                 )}
               </div>

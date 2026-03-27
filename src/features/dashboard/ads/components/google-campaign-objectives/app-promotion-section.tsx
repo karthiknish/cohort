@@ -11,7 +11,8 @@ import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Smartphone, Store, Play } from 'lucide-react'
-import { GoogleObjectiveComponentProps, GOOGLE_BIDDING_STRATEGIES, APP_CAMPAIGN_SUBTYPES, APP_STORES } from './types'
+import { GOOGLE_BIDDING_STRATEGIES, APP_CAMPAIGN_SUBTYPES, APP_STORES } from './types'
+import type { GoogleObjectiveComponentProps } from './types'
 
 export function GoogleAppPromotionSection({ formData, onChange, disabled }: GoogleObjectiveComponentProps) {
   const biddingStrategies = GOOGLE_BIDDING_STRATEGIES['APP_PROMOTION'] || []

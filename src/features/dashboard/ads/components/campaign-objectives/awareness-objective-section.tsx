@@ -10,7 +10,7 @@ import { Switch } from '@/shared/ui/switch'
 import { Slider } from '@/shared/ui/slider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Eye, Target, Zap } from 'lucide-react'
-import { ObjectiveComponentProps } from './types'
+import type { ObjectiveComponentProps } from './types'
 
 export function AwarenessObjectiveSection({ formData, onChange, disabled }: ObjectiveComponentProps) {
   const handleReachClick = useCallback(() => onChange({ optimizationGoal: 'REACH' }), [onChange])
@@ -63,7 +63,7 @@ export function AwarenessObjectiveSection({ formData, onChange, disabled }: Obje
                 <OptimizationGoalButton
                   key={option.value}
                   active={formData.optimizationGoal === option.value}
-                  disabled={disabled}
+                  disabled={Boolean(disabled)}
                   icon={option.icon}
                   label={option.label}
                   description={option.desc}

@@ -9,7 +9,7 @@ import { GoogleLeadsSection } from './leads-section'
 import { GoogleTrafficSection } from './traffic-section'
 import { GoogleBrandAwarenessSection } from './brand-awareness-section'
 import { GoogleAppPromotionSection } from './app-promotion-section'
-import { GoogleCampaignObjective, GoogleObjectiveComponentProps } from './types'
+import type { GoogleCampaignObjective, GoogleObjectiveComponentProps } from './types'
 
 interface ObjectiveRendererProps extends GoogleObjectiveComponentProps {
   objective?: GoogleCampaignObjective
