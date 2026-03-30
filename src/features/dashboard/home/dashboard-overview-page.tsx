@@ -76,6 +76,14 @@ type SnapshotMetric = {
   helper: string
 }
 
+type RelatedPageDefinition = {
+  name: string
+  href: string
+  description: string
+  icon: LucideIcon
+  roles?: readonly ('admin' | 'team' | 'client')[]
+}
+
 const EMPTY_TASK_COUNTS: Record<TaskStatus, number> = {
   todo: 0,
   'in-progress': 0,
@@ -84,7 +92,7 @@ const EMPTY_TASK_COUNTS: Record<TaskStatus, number> = {
   archived: 0,
 }
 
-const RELATED_PAGES = [
+const RELATED_PAGES: readonly RelatedPageDefinition[] = [
   {
     name: 'Clients',
     href: '/dashboard/clients',
@@ -325,7 +333,12 @@ export function DashboardOverviewPage() {
     }).length
     const openTasks = rawTasks.filter((task) => task.status === 'todo' || task.status === 'in-progress').length
     const completedTasks = rawTasks.filter((task) => task.status === 'completed').length
-    const pendingProposals = proposals.filter((proposal) => proposal.status === 'draft' || proposal.status === 'pending' || proposal.status === 'sent').length
+    const pendingProposals = proposals.filter((proposal) => (
+      proposal.status === 'draft' ||
+      proposal.status === 'in_progress' ||
+      proposal.status === 'ready' ||
+      proposal.status === 'sent'
+    )).length
 
     return {
       activeProjects,
@@ -454,7 +467,7 @@ export function DashboardOverviewPage() {
     {
       label: 'Ad spend',
       value: formatCurrency(adsSummary.spend),
-      helper: adsSummary.providerCount > 0 ? `${adsSummary.providerCount} active channels` : 'Connect ad platforms to import spend',
+      helper: adsSummary.providers.size > 0 ? `${adsSummary.providers.size} active channels` : 'Connect ad platforms to import spend',
     },
     {
       label: 'Clicks',
@@ -466,7 +479,7 @@ export function DashboardOverviewPage() {
       value: formatCompactNumber(adsSummary.conversions),
       helper: adsSummary.revenue > 0 ? `${formatCurrency(adsSummary.revenue)} revenue attributed` : 'Revenue attribution not available yet',
     },
-  ], [adsSummary.clicks, adsSummary.conversions, adsSummary.impressions, adsSummary.providerCount, adsSummary.revenue, adsSummary.spend])
+  ], [adsSummary.clicks, adsSummary.conversions, adsSummary.impressions, adsSummary.providers, adsSummary.revenue, adsSummary.spend])
 
   const visibleRelatedPages = useMemo(() => {
     const role = userRole === 'admin' || userRole === 'team' || userRole === 'client' ? userRole : 'client'
