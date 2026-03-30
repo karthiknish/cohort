@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef, forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/shared/contexts/auth-context'
 import {
@@ -75,32 +75,57 @@ const allNavigation: NavItem[] = [
   { name: 'Manage Clients', href: '/admin/clients', icon: Shield, description: 'Admin client portal', roles: ['admin'] },
 ]
 
-function NavItemLink({
-  item,
-  linkClasses,
-  onNavigate,
-  prefetchRoute,
-  collapsed,
-}: {
-  item: NavItem
-  linkClasses: string
-  onNavigate?: () => void
-  prefetchRoute: (href: string) => void
-  collapsed: boolean
-}) {
-  const handleMouseEnter = useCallback(() => prefetchRoute(item.href), [prefetchRoute, item.href])
+const NavItemLink = forwardRef<
+  HTMLAnchorElement,
+  {
+    item: NavItem
+    linkClasses: string
+    onNavigate?: () => void
+    prefetchRoute: (href: string) => void
+    collapsed: boolean
+  } & Omit<React.ComponentPropsWithoutRef<typeof Link>, 'href' | 'className' | 'children'>
+>(function NavItemLink(
+  {
+    item,
+    linkClasses,
+    onNavigate,
+    prefetchRoute,
+    collapsed,
+    onClick,
+    onMouseEnter,
+    ...linkProps
+  },
+  ref,
+) {
+  const handleMouseEnter = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
+    onMouseEnter?.(event)
+    prefetchRoute(item.href)
+  }, [onMouseEnter, prefetchRoute, item.href])
+
+  const handleClick = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
+    onClick?.(event)
+
+    if (!event.defaultPrevented) {
+      onNavigate?.()
+    }
+  }, [onClick, onNavigate])
+
   return (
     <Link
+      ref={ref}
       href={item.href}
-      onClick={onNavigate}
+      onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       className={linkClasses}
+      aria-label={collapsed ? item.name : undefined}
+      title={collapsed ? item.name : undefined}
+      {...linkProps}
     >
       <item.icon className="h-4 w-4 shrink-0" />
       {!collapsed && <span className="truncate">{item.name}</span>}
     </Link>
   )
-}
+})
 
 function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname()

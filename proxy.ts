@@ -114,12 +114,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // For the home page (/), redirect authenticated users to dashboard
-  // This eliminates the brief flash of home page before client-side redirect
+  // For the home page (/), redirect authenticated users directly to their
+  // personalized workspace instead of bouncing through /dashboard.
   if (pathname === '/') {
     if (hasSession) {
       const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/dashboard'
+      redirectUrl.pathname = '/for-you'
       return NextResponse.redirect(redirectUrl)
     }
     // No valid session - allow access to home/login page
@@ -136,6 +136,14 @@ export async function proxy(request: NextRequest) {
     redirectUrl.pathname = '/'
     // Preserve querystring so users land back exactly where they intended.
     redirectUrl.searchParams.set('redirect', `${pathname}${request.nextUrl.search}`)
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  // Preserve the legacy /dashboard entrypoint, but redirect it before the page
+  // tree renders so dev profilers do not mount the redirect-only page.
+  if (pathname === '/dashboard') {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/for-you'
     return NextResponse.redirect(redirectUrl)
   }
 

@@ -9,10 +9,12 @@ import { Badge } from '@/shared/ui/badge'
 
 export default function MeetingsError({
   error,
+  unstable_retry,
   reset,
 }: {
   error: Error & { digest?: string }
-  reset: () => void
+  unstable_retry?: () => void
+  reset?: () => void
 }) {
   useEffect(() => {
     console.error('[MeetingsError]', error)
@@ -29,6 +31,17 @@ export default function MeetingsError({
     ].filter(Boolean).join('\n\n')
     void navigator.clipboard.writeText(details)
   }, [error])
+
+  const handleRetry = useCallback(() => {
+    if (typeof unstable_retry === 'function') {
+      unstable_retry()
+      return
+    }
+
+    if (typeof reset === 'function') {
+      reset()
+    }
+  }, [reset, unstable_retry])
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-4">
@@ -61,7 +74,7 @@ export default function MeetingsError({
           )}
 
           <div className="flex gap-2">
-            <Button onClick={reset} className="flex-1 gap-2">
+            <Button onClick={handleRetry} className="flex-1 gap-2">
               <RefreshCw className="h-4 w-4" />
               Try again
             </Button>

@@ -11,12 +11,15 @@ function dispatchLocationChange() {
     return
   }
 
-  // Defer via queueMicrotask so this never fires synchronously inside a React
-  // render/insertion-effect phase, which would violate the rule that
-  // useInsertionEffect must not schedule updates.
-  queueMicrotask(() => {
+  // Defer via setTimeout (macrotask) so this never fires during an in-progress
+  // React concurrent transition. queueMicrotask fires too early — it can land
+  // while Next.js App Router's startTransition is still scheduled, causing
+  // useSyncExternalStore.onStoreChange to preempt the render and throw
+  // "Should not already be working." / "headCacheNode in null".
+  // setTimeout(fn, 0) is a new macrotask that runs after React has committed.
+  setTimeout(() => {
     window.dispatchEvent(new Event(LOCATION_CHANGE_EVENT))
-  })
+  }, 0)
 }
 
 function ensureHistoryPatched() {
@@ -31,7 +34,16 @@ function ensureHistoryPatched() {
 
     window.history[method] = ((...args) => {
       const result = originalMethod.apply(window.history, args)
-      dispatchLocationChange()
+      // Skip notification for Next.js's own internal navigations (flagged with
+      // __NA or _N). Those transitions already re-render all consumers via the
+      // router context; firing an extra useSyncExternalStore update mid-transition
+      // is what corrupts the React fiber scheduler (headCacheNode / "Should not
+      // already be working"). External callers (non-Next.js pushState) still get
+      // the notification so popstate-style tracking continues to work.
+      const data = args[0] as Record<string, unknown> | null | undefined
+      if (!data?.__NA && !data?._N) {
+        dispatchLocationChange()
+      }
       return result
     }) as History[typeof method]
   }

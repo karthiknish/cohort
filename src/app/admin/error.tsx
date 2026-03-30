@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useCallback } from 'react'
-import Link from 'next/link'
 import { ShieldAlert, RefreshCw, Home, Copy, Code2 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -10,10 +9,12 @@ import { Badge } from '@/shared/ui/badge'
 
 export default function AdminError({
   error,
+  unstable_retry,
   reset,
 }: {
   error: Error & { digest?: string }
-  reset: () => void
+  unstable_retry?: () => void
+  reset?: () => void
 }) {
   useEffect(() => {
     console.error('[AdminErrorBoundary]', error)
@@ -32,6 +33,17 @@ export default function AdminError({
     ].filter(Boolean).join('\n\n')
     navigator.clipboard.writeText(details)
   }, [componentName, error.message, errorDigest, error.stack])
+
+  const handleRetry = useCallback(() => {
+    if (typeof unstable_retry === 'function') {
+      unstable_retry()
+      return
+    }
+
+    if (typeof reset === 'function') {
+      reset()
+    }
+  }, [reset, unstable_retry])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
@@ -101,15 +113,15 @@ export default function AdminError({
           )}
 
           <div className="flex flex-col gap-2 pt-2">
-            <Button onClick={reset} className="w-full">
+            <Button onClick={handleRetry} className="w-full">
               <RefreshCw className="mr-2 h-4 w-4" />
               Try again
             </Button>
             <Button variant="outline" asChild className="w-full">
-              <Link href="/dashboard">
+              <a href="/dashboard">
                 <Home className="mr-2 h-4 w-4" />
                 Back to dashboard
-              </Link>
+              </a>
             </Button>
           </div>
         </CardContent>

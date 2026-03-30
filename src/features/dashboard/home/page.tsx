@@ -1,5 +1,1 @@
-import { redirect } from 'next/navigation'
-
-export default function DashboardPage() {
-  redirect('/for-you')
-}
+export { DashboardOverviewPage as default } from './dashboard-overview-page'

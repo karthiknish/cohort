@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect } from 'react'
-import Link from 'next/link'
 import { Lock, RefreshCw, Copy, Code2 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -9,10 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 
 export default function AuthError({
   error,
+  unstable_retry,
   reset,
 }: {
   error: Error & { digest?: string }
-  reset: () => void
+  unstable_retry?: () => void
+  reset?: () => void
 }) {
   useEffect(() => {
     console.error('[AuthErrorBoundary]', error)
@@ -31,6 +32,17 @@ export default function AuthError({
     ].filter(Boolean).join('\n\n')
     navigator.clipboard.writeText(details)
   }, [componentName, error.message, error.stack, errorDigest])
+
+  const handleRetry = useCallback(() => {
+    if (typeof unstable_retry === 'function') {
+      unstable_retry()
+      return
+    }
+
+    if (typeof reset === 'function') {
+      reset()
+    }
+  }, [reset, unstable_retry])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
@@ -95,12 +107,12 @@ export default function AuthError({
           )}
 
           <div className="flex flex-col gap-2 pt-2">
-            <Button onClick={reset} className="w-full">
+            <Button onClick={handleRetry} className="w-full">
               <RefreshCw className="mr-2 h-4 w-4" />
               Try again
             </Button>
             <Button variant="outline" asChild className="w-full">
-              <Link href="/">Go to sign in</Link>
+              <a href="/">Go to sign in</a>
             </Button>
           </div>
         </CardContent>

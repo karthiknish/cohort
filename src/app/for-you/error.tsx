@@ -1,7 +1,6 @@
 'use client'
 
-import Link from 'next/link'
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { AlertTriangle, Home, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -9,14 +8,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 
 export default function ForYouError({
   error,
+  unstable_retry,
   reset,
 }: {
   error: Error & { digest?: string }
-  reset: () => void
+  unstable_retry?: () => void
+  reset?: () => void
 }) {
   useEffect(() => {
     console.error('[ForYouErrorBoundary]', error)
   }, [error])
+
+  const handleRetry = useCallback(() => {
+    if (typeof unstable_retry === 'function') {
+      unstable_retry()
+      return
+    }
+
+    if (typeof reset === 'function') {
+      reset()
+    }
+  }, [reset, unstable_retry])
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center bg-muted/20 p-4">
@@ -31,15 +43,15 @@ export default function ForYouError({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Button className="w-full" onClick={reset}>
+          <Button className="w-full" onClick={handleRetry}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Try again
           </Button>
           <Button variant="outline" asChild className="w-full">
-            <Link href="/">
+            <a href="/">
               <Home className="mr-2 h-4 w-4" />
               Go to home
-            </Link>
+            </a>
           </Button>
           {error.digest ? (
             <p className="pt-2 text-center text-xs text-muted-foreground">

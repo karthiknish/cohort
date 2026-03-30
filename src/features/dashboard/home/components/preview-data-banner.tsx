@@ -16,9 +16,9 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
     <div
       className={cn(
         'relative overflow-hidden rounded-lg border transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
-          isPreviewMode
-          ? 'border-info/20 bg-gradient-to-r from-info/10 via-info/5 to-success/10'
-          : 'border-warning/20 bg-gradient-to-r from-warning/10 via-warning/5 to-info/10',
+        isPreviewMode
+          ? 'border-warning/30 bg-warning/8'
+          : 'border-warning/20 bg-warning/6',
         className
       )}
     >
@@ -33,7 +33,7 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
             className={cn(
               'flex h-9 w-9 items-center justify-center rounded-full transition-colors',
               isPreviewMode
-                ? 'bg-info/10 text-info'
+                ? 'bg-warning/15 text-warning'
                 : 'bg-warning/10 text-warning'
             )}
           >
@@ -63,8 +63,8 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
             className={cn(
               'gap-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
               isPreviewMode
-                ? 'border-info/20 text-info hover:bg-info/10 hover:text-info'
-                : 'bg-gradient-to-r from-warning to-info hover:from-warning/90 hover:to-info/90 text-warning-foreground border-0'
+                ? 'border-warning/30 text-warning hover:bg-warning/10 hover:text-warning'
+                : 'border-warning/30 bg-warning text-warning-foreground hover:bg-warning/90'
             )}
           >
             <Eye className="h-3.5 w-3.5" />
@@ -75,7 +75,7 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
 
       {/* Preview mode indicator strip */}
       {isPreviewMode && (
-        <div className="h-1 w-full animate-pulse bg-gradient-to-r from-info via-success to-info" />
+        <div className="h-1 w-full animate-pulse bg-warning/70" />
       )}
     </div>
   )

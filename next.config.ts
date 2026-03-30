@@ -33,6 +33,20 @@ const nextConfig: NextConfig = {
     ],
   },
   cleanDistDir: true,
+  async redirects() {
+    return [
+      {
+        source: '/dashboard',
+        destination: '/for-you',
+        permanent: false,
+      },
+      {
+        source: '/dashboard/activity',
+        destination: '/for-you',
+        permanent: false,
+      },
+    ]
+  },
   async rewrites() {
     return [
       {
