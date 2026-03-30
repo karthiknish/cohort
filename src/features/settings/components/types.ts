@@ -53,27 +53,6 @@ export interface NotificationPreferencesCardProps {
   ) => Promise<void>
 }
 
-export interface RegionalPreferencesCardProps {
-  preferences: { currency: string }
-  preferencesLoading: boolean
-  savingCurrency: boolean
-  setSavingCurrency: (value: boolean) => void
-  updateCurrency: (value: string) => Promise<void>
-  toast: (options: { title: string; description?: string; variant?: 'default' | 'destructive' }) => void
-}
-
-// Account tab props
-export interface DataExportCardProps {
-  exportingData: boolean
-  exportError: string | null
-  handleExportData: () => Promise<void>
-}
-
-export interface DeleteAccountCardProps {
-  deleteDialogOpen: boolean
-  setDeleteDialogOpen: (value: boolean) => void
-}
-
 export interface DeleteAccountDialogProps {
   open: boolean
   onOpenChange: (value: boolean) => void

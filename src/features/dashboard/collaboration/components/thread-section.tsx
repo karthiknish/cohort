@@ -1,6 +1,5 @@
 'use client'
 
-import { Fragment } from 'react'
 import { ChevronDown, ChevronRight, LoaderCircle, MessageSquare, RefreshCw, Reply } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -216,6 +215,16 @@ export interface ThreadSectionProps {
   renderReply: (reply: CollaborationMessage) => React.ReactNode
 }
 
+function ThreadReplyContent({
+  renderReply,
+  reply,
+}: {
+  renderReply: (reply: CollaborationMessage) => React.ReactNode
+  reply: CollaborationMessage
+}) {
+  return <>{renderReply(reply)}</>
+}
+
 export function ThreadSection({
   threadRootId,
   replyCount,
@@ -279,7 +288,11 @@ export function ThreadSection({
           {threadState === 'ready' ? (
             <>
               {error ? <ThreadError error={error} isLoading={isLoading} onRetry={onRetry} /> : null}
-              <div className="space-y-2">{replies.map((reply) => <Fragment key={reply.id}>{renderReply(reply)}</Fragment>)}</div>
+              <div className="space-y-2">
+                {replies.map((reply) => (
+                  <ThreadReplyContent key={reply.id} renderReply={renderReply} reply={reply} />
+                ))}
+              </div>
             </>
           ) : null}
 

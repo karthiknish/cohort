@@ -1,4 +1,4 @@
-/* eslint_disable */
+/* eslint-disable */
 /**
  * Generated `ComponentApi` utility.
  *

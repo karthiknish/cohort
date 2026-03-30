@@ -156,8 +156,6 @@ export const toast = ({ ...props }: Omit<Toast, 'id'>) => {
   }
 }
 
-export type ToastT = ReturnType<typeof toast>
-
 /**
  * Hook for managing toasts.
  * Now powered by Sonner under the hood for better performance and UX.

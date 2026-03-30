@@ -27,7 +27,10 @@ type RenderLogWindow = Window & {
 export default function DashboardError({ error, reset }: DashboardErrorProps) {
   useEffect(() => {
     console.error('[DashboardErrorBoundary]', error)
-    console.error('[DashboardErrorBoundary] componentStack:', error.componentStack)
+
+    if (typeof error.componentStack === 'string' && error.componentStack.length > 0) {
+      console.error('[DashboardErrorBoundary] componentStack:', error.componentStack)
+    }
   }, [error])
 
   const isDev = process.env.NODE_ENV === 'development'

@@ -47,7 +47,6 @@ export function DesktopOnly({ children, breakpoint = 'md', className }: MobileRe
 
 interface MobileCollapsibleProps {
   title: string
-  defaultOpen?: boolean
   children: React.ReactNode
   className?: string
   triggerClassName?: string
@@ -60,13 +59,12 @@ interface MobileCollapsibleProps {
  */
 export function MobileCollapsible({
   title,
-  defaultOpen = true,
   children,
   className,
   triggerClassName,
   contentClassName,
 }: MobileCollapsibleProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
+  const [isOpen, setIsOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const handleToggle = useCallback(() => {
     setIsOpen((current) => !current)

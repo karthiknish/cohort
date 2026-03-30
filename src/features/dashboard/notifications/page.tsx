@@ -46,6 +46,7 @@ import { getPreviewNotifications } from '@/lib/preview-data'
 import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
 
 const PAGE_SIZE = 25
+const FILTER_VALUES = ['all', 'unread', 'mentions', 'system'] as const
 const NOTIFICATIONS_PAGE_FALLBACK = <NotificationsPageFallback />
 
 
@@ -107,7 +108,7 @@ function NotificationsPageContent() {
   const filterTabs = usePersistedTab<FilterType>({
     param: 'tab',
     defaultValue: 'all',
-    allowedValues: useMemo(() => ['all', 'unread', 'mentions', 'system'] as const, []),
+    allowedValues: FILTER_VALUES,
     storageNamespace: 'dashboard:notifications',
     syncToUrl: true,
   })
@@ -119,7 +120,7 @@ function NotificationsPageContent() {
     sourceKey: string
     notifications: WorkspaceNotification[]
   } | null>(null)
-  const previewSourceKey = useMemo(() => `preview:${selectedClientId ?? 'all'}`, [selectedClientId])
+  const previewSourceKey = `preview:${selectedClientId ?? 'all'}`
   const basePreviewNotifications = useMemo(
     () => getPreviewNotifications(selectedClientId ?? null),
     [selectedClientId]
@@ -325,7 +326,7 @@ function NotificationsPageContent() {
     void updateNotificationStatus(allIds, 'dismiss')
   }, [notifications, updateNotificationStatus, toast])
 
-  const unreadCount = useMemo(() => notifications.filter((item) => !item.read).length, [notifications])
+  const unreadCount = notifications.filter((item) => !item.read).length
 
   const renderTimestamp = useCallback((input: string | null) => {
     if (!input) {

@@ -2,7 +2,7 @@ import * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
-export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
+interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'shimmer' | 'pulse'
 }
 
@@ -50,7 +50,7 @@ export function SkeletonCard({ className, ...props }: SkeletonProps) {
 // TABLE SKELETON
 // =============================================================================
 
-export interface SkeletonTableProps extends React.HTMLAttributes<HTMLDivElement> {
+interface SkeletonTableProps extends React.HTMLAttributes<HTMLDivElement> {
   rows?: number
   columns?: number
   showHeader?: boolean
@@ -105,7 +105,7 @@ export function SkeletonTable({
 // LIST SKELETON
 // =============================================================================
 
-export interface SkeletonListProps extends React.HTMLAttributes<HTMLDivElement> {
+interface SkeletonListProps extends React.HTMLAttributes<HTMLDivElement> {
   items?: number
   showAvatar?: boolean
 }
@@ -156,7 +156,7 @@ export function SkeletonDashboardCard({ className, ...props }: SkeletonProps) {
 // STATS GRID SKELETON
 // =============================================================================
 
-export interface SkeletonStatsProps extends React.HTMLAttributes<HTMLDivElement> {
+interface SkeletonStatsProps extends React.HTMLAttributes<HTMLDivElement> {
   cards?: number
 }
 

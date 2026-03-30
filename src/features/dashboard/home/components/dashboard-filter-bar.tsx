@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Filter, ListFilter } from 'lucide-react'
 
 import type { ClientRecord } from '@/types/clients'
@@ -34,8 +34,6 @@ export function DashboardFilterBar({
   className,
 }: DashboardFilterBarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-
-  const availableClients = useMemo(() => clients, [clients])
 
   const handleClientChange = useCallback((clientId: string) => {
     if (!canCompare) return
@@ -81,7 +79,7 @@ export function DashboardFilterBar({
             {selectedLabel}
             {selectedClientIds.length > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs">
-                {selectedClientIds.length}/{Math.min(MAX_CLIENT_COMPARISONS, availableClients.length)}
+                {selectedClientIds.length}/{Math.min(MAX_CLIENT_COMPARISONS, clients.length)}
               </Badge>
             )}
           </Button>
@@ -92,10 +90,10 @@ export function DashboardFilterBar({
             <span className="text-[11px] font-normal text-muted-foreground/80">max {MAX_CLIENT_COMPARISONS}</span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {availableClients.length === 0 && (
+          {clients.length === 0 && (
             <div className="px-2 py-4 text-sm text-muted-foreground">No clients available.</div>
           )}
-          {availableClients.map((client) => {
+          {clients.map((client) => {
             const checked = selectedClientIds.includes(client.id)
             return (
               <DashboardFilterClientItem

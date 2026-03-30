@@ -3,20 +3,6 @@
 import { useMemo } from 'react'
 import type { MetricRecord } from './types'
 
-export interface ExportData {
-  date: string
-  platform: string
-  spend: number
-  impressions: number
-  clicks: number
-  conversions: number
-  revenue: number
-  roas: number
-  cpc: number
-  ctr: number
-  convRate: number
-}
-
 export function useAnalyticsExport(metrics: MetricRecord[]) {
   const exportData = useMemo(() => {
     return metrics.map((metric) => {

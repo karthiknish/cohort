@@ -324,27 +324,6 @@ export function InsightsChartsCard({ analysis, currency = 'USD', loading = false
     ? firstProvider.id
     : selectedProvider
 
-  const benchmarkChart = useMemo(
-    () => <BenchmarkChart data={analysis!.chartData.benchmarkCharts} providerId={activeProvider} />,
-    [analysis, activeProvider]
-  )
-  const comparisonChart = useMemo(
-    () => <ProviderComparisonChart currency={currency} data={analysis!.chartData.providerComparison} />,
-    [analysis, currency]
-  )
-  const efficiencyChart = useMemo(
-    () => <EfficiencyRadarChart data={analysis!.chartData.efficiencyBreakdown} providerId={activeProvider} />,
-    [analysis, activeProvider]
-  )
-  const funnelChart = useMemo(
-    () => <FunnelChart data={analysis!.chartData.funnelCharts} providerId={activeProvider} />,
-    [analysis, activeProvider]
-  )
-  const trendsChart = useMemo(
-    () => <TrendChart currency={currency} data={analysis!.chartData.trendCharts} providerId={activeProvider} />,
-    [analysis, currency, activeProvider]
-  )
-
   if (loading) {
     return <InsightsChartsLoadingState />
   }
@@ -352,6 +331,12 @@ export function InsightsChartsCard({ analysis, currency = 'USD', loading = false
   if (!analysis || analysis.summaries.length === 0) {
     return <InsightsChartsEmptyState />
   }
+
+  const benchmarkChart = <BenchmarkChart data={analysis.chartData.benchmarkCharts} providerId={activeProvider} />
+  const comparisonChart = <ProviderComparisonChart currency={currency} data={analysis.chartData.providerComparison} />
+  const efficiencyChart = <EfficiencyRadarChart data={analysis.chartData.efficiencyBreakdown} providerId={activeProvider} />
+  const funnelChart = <FunnelChart data={analysis.chartData.funnelCharts} providerId={activeProvider} />
+  const trendsChart = <TrendChart currency={currency} data={analysis.chartData.trendCharts} providerId={activeProvider} />
 
   return (
     <Card className="shadow-sm">

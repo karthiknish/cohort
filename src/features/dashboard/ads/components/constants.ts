@@ -128,8 +128,6 @@ export const ERROR_GUIDANCE = {
   },
 } as const
 
-export type ErrorGuidanceKey = keyof typeof ERROR_GUIDANCE
-
 // =============================================================================
 // SUCCESS MESSAGES
 // =============================================================================

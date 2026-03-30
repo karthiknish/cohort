@@ -1,7 +1,7 @@
 'use client'
 'use no memo'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, RefObject } from 'react'
 
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
@@ -28,6 +28,113 @@ import {
 } from './message-pane-sections'
 
 const MAX_PREVIEW_LENGTH = 80
+
+type MessagePaneState = {
+  editingMessageId: string | null
+  editingValue: string
+  replyingToMessage: CollaborationMessage | null
+  expandedThreadIds: Record<string, boolean>
+  confirmingDeleteMessageId: string | null
+  taskCreationModalOpen: boolean
+  selectedMessageForTask: CollaborationMessage | null
+}
+
+type MessagePaneAction =
+  | { type: 'start-edit'; message: CollaborationMessage }
+  | { type: 'set-editing-value'; value: string }
+  | { type: 'clear-edit' }
+  | { type: 'set-reply-target'; message: CollaborationMessage | null }
+  | { type: 'toggle-thread'; threadRootId: string }
+  | { type: 'reset-threads' }
+  | { type: 'open-delete-confirmation'; messageId: string }
+  | { type: 'close-delete-confirmation' }
+  | { type: 'open-task-modal'; message: CollaborationMessage }
+  | { type: 'close-task-modal' }
+
+const INITIAL_MESSAGE_PANE_STATE: MessagePaneState = {
+  editingMessageId: null,
+  editingValue: '',
+  replyingToMessage: null,
+  expandedThreadIds: {},
+  confirmingDeleteMessageId: null,
+  taskCreationModalOpen: false,
+  selectedMessageForTask: null,
+}
+
+function toggleExpandedThreadIds(expandedThreadIds: Record<string, boolean>, threadRootId: string) {
+  const next = { ...expandedThreadIds }
+
+  if (next[threadRootId]) {
+    delete next[threadRootId]
+    return next
+  }
+
+  next[threadRootId] = true
+  return next
+}
+
+function messagePaneReducer(state: MessagePaneState, action: MessagePaneAction): MessagePaneState {
+  switch (action.type) {
+    case 'start-edit':
+      return {
+        ...state,
+        editingMessageId: action.message.id,
+        editingValue: action.message.content ?? '',
+      }
+    case 'set-editing-value':
+      return {
+        ...state,
+        editingValue: action.value,
+      }
+    case 'clear-edit':
+      return {
+        ...state,
+        editingMessageId: null,
+        editingValue: '',
+      }
+    case 'set-reply-target':
+      return {
+        ...state,
+        replyingToMessage: action.message,
+      }
+    case 'toggle-thread':
+      return {
+        ...state,
+        expandedThreadIds: toggleExpandedThreadIds(state.expandedThreadIds, action.threadRootId),
+      }
+    case 'reset-threads':
+      return {
+        ...state,
+        expandedThreadIds: {},
+      }
+    case 'open-delete-confirmation':
+      return {
+        ...state,
+        confirmingDeleteMessageId: action.messageId,
+        editingMessageId: state.editingMessageId === action.messageId ? null : state.editingMessageId,
+        editingValue: state.editingMessageId === action.messageId ? '' : state.editingValue,
+      }
+    case 'close-delete-confirmation':
+      return {
+        ...state,
+        confirmingDeleteMessageId: null,
+      }
+    case 'open-task-modal':
+      return {
+        ...state,
+        taskCreationModalOpen: true,
+        selectedMessageForTask: action.message,
+      }
+    case 'close-task-modal':
+      return {
+        ...state,
+        taskCreationModalOpen: false,
+        selectedMessageForTask: null,
+      }
+    default:
+      return state
+  }
+}
 
 export interface CollaborationMessagePaneProps {
   channel: Channel | null
@@ -114,14 +221,18 @@ export function CollaborationMessagePane({
 }: CollaborationMessagePaneProps) {
   'use no memo'
 
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
-  const [editingValue, setEditingValue] = useState('')
-  const [replyingToMessage, setReplyingToMessage] = useState<CollaborationMessage | null>(null)
-  const [expandedThreadIds, setExpandedThreadIds] = useState<Record<string, boolean>>({})
-  const [confirmingDeleteMessageId, setConfirmingDeleteMessageId] = useState<string | null>(null)
-  const [taskCreationModalOpen, setTaskCreationModalOpen] = useState(false)
-  const [selectedMessageForTask, setSelectedMessageForTask] = useState<CollaborationMessage | null>(null)
+  const [paneState, dispatch] = useReducer(messagePaneReducer, INITIAL_MESSAGE_PANE_STATE)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const {
+    editingMessageId,
+    editingValue,
+    replyingToMessage,
+    expandedThreadIds,
+    confirmingDeleteMessageId,
+    taskCreationModalOpen,
+    selectedMessageForTask,
+  } = paneState
 
   const isSearchActive = messageSearchQuery.trim().length > 0
 
@@ -180,8 +291,7 @@ export function CollaborationMessagePane({
     const stillExists = channelMessages.some((message) => message.id === editingMessageId && !message.isDeleted)
     if (!stillExists) {
       const frame = requestAnimationFrame(() => {
-        setEditingMessageId(null)
-        setEditingValue('')
+        dispatch({ type: 'clear-edit' })
       })
 
       return () => {
@@ -195,7 +305,7 @@ export function CollaborationMessagePane({
   // Reset thread state when channel changes
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      setExpandedThreadIds({})
+      dispatch({ type: 'reset-threads' })
       onClearThreadReplies()
     })
 
@@ -224,21 +334,19 @@ export function CollaborationMessagePane({
   // Handlers
   const handleStartEdit = useCallback((message: CollaborationMessage) => {
     if (message.isDeleted || messageUpdatingId === message.id || messageDeletingId === message.id) return
-    setEditingMessageId(message.id)
-    setEditingValue(message.content ?? '')
+    dispatch({ type: 'start-edit', message })
   }, [messageUpdatingId, messageDeletingId])
 
   const handleReply = useCallback((message: CollaborationMessage) => {
-    setReplyingToMessage(message)
+    dispatch({ type: 'set-reply-target', message })
   }, [])
 
   const handleCancelReply = useCallback(() => {
-    setReplyingToMessage(null)
+    dispatch({ type: 'set-reply-target', message: null })
   }, [])
 
   const handleCancelEdit = useCallback(() => {
-    setEditingMessageId(null)
-    setEditingValue('')
+    dispatch({ type: 'clear-edit' })
   }, [])
 
   const handleConfirmEdit = useCallback(() => {
@@ -246,32 +354,26 @@ export function CollaborationMessagePane({
     const trimmed = editingValue.trim()
     if (!trimmed) return
     onEditMessage(editingMessageId, trimmed)
-    setEditingMessageId(null)
-    setEditingValue('')
+    dispatch({ type: 'clear-edit' })
   }, [editingMessageId, messageUpdatingId, editingValue, onEditMessage])
 
   const handleConfirmDelete = useCallback((messageId: string) => {
     if (messageDeletingId === messageId) return
-    if (editingMessageId === messageId) {
-      setEditingMessageId(null)
-      setEditingValue('')
-    }
-    setConfirmingDeleteMessageId(messageId)
-  }, [messageDeletingId, editingMessageId])
+    dispatch({ type: 'open-delete-confirmation', messageId })
+  }, [messageDeletingId])
 
   const handleExecuteDelete = useCallback(() => {
     if (!confirmingDeleteMessageId || messageDeletingId === confirmingDeleteMessageId) return
     onDeleteMessage(confirmingDeleteMessageId)
-    setConfirmingDeleteMessageId(null)
+    dispatch({ type: 'close-delete-confirmation' })
   }, [confirmingDeleteMessageId, messageDeletingId, onDeleteMessage])
 
   const handleCancelDelete = useCallback(() => {
-    setConfirmingDeleteMessageId(null)
+    dispatch({ type: 'close-delete-confirmation' })
   }, [])
 
   const handleCreateTaskFromMessage = useCallback((message: CollaborationMessage) => {
-    setSelectedMessageForTask(message)
-    setTaskCreationModalOpen(true)
+    dispatch({ type: 'open-task-modal', message })
   }, [])
 
   const handleTaskCreated = useCallback((task: TaskRecord) => {
@@ -321,16 +423,7 @@ export function CollaborationMessagePane({
 
     const isCurrentlyOpen = Boolean(expandedThreadIds[normalizedId])
 
-    // Update expansion state
-    setExpandedThreadIds((prev) => {
-      const next = { ...prev }
-      if (isCurrentlyOpen) {
-        delete next[normalizedId]
-      } else {
-        next[normalizedId] = true
-      }
-      return next
-    })
+    dispatch({ type: 'toggle-thread', threadRootId: normalizedId })
 
     // Side-effect: Load replies if opening and not loaded/loading
     if (!isCurrentlyOpen) {
@@ -394,11 +487,15 @@ export function CollaborationMessagePane({
 
   const handleSendWithReply = useCallback(() => {
     onSendMessage({ parentMessageId: replyingToMessage?.id })
-    setReplyingToMessage(null)
+    dispatch({ type: 'set-reply-target', message: null })
   }, [onSendMessage, replyingToMessage?.id])
 
   const handleCloseTaskModal = useCallback(() => {
-    setTaskCreationModalOpen(false)
+    dispatch({ type: 'close-task-modal' })
+  }, [])
+
+  const handleEditingValueChange = useCallback((value: string) => {
+    dispatch({ type: 'set-editing-value', value })
   }, [])
 
   const taskCreationInitialData = useMemo(() => ({
@@ -457,7 +554,7 @@ export function CollaborationMessagePane({
         onConfirmDelete={handleConfirmDelete}
         onConfirmEdit={handleConfirmEdit}
         onCreateTask={handleCreateTaskFromMessage}
-        onEditingValueChange={setEditingValue}
+        onEditingValueChange={handleEditingValueChange}
         onLoadMore={onLoadMore}
         onLoadMoreThread={handleLoadMoreThread}
         onReply={handleReply}

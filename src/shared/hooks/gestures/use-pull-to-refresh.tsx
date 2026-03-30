@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useEffect } from 'react'
+import { useRef, useCallback, useReducer, useEffect } from 'react'
 
 export interface PullToRefreshOptions {
   threshold?: number
@@ -13,7 +13,53 @@ export interface PullToRefreshState {
   progress: number
 }
 
+type PullToRefreshAction =
+  | { type: 'start-pull'; pullDistance: number; progress: number }
+  | { type: 'reset-pull' }
+  | { type: 'start-refresh' }
+  | { type: 'finish-refresh' }
+
 const DEFAULT_THRESHOLD = 80
+const INITIAL_PULL_TO_REFRESH_STATE: PullToRefreshState = {
+  isPulling: false,
+  isRefreshing: false,
+  pullDistance: 0,
+  progress: 0,
+}
+
+function pullToRefreshReducer(state: PullToRefreshState, action: PullToRefreshAction): PullToRefreshState {
+  switch (action.type) {
+    case 'start-pull':
+      return {
+        isPulling: true,
+        isRefreshing: false,
+        pullDistance: action.pullDistance,
+        progress: action.progress,
+      }
+    case 'reset-pull':
+      return {
+        ...state,
+        isPulling: false,
+        pullDistance: 0,
+        progress: 0,
+      }
+    case 'start-refresh':
+      return {
+        ...state,
+        isPulling: false,
+        isRefreshing: true,
+      }
+    case 'finish-refresh':
+      return {
+        ...state,
+        isRefreshing: false,
+        pullDistance: 0,
+        progress: 0,
+      }
+    default:
+      return state
+  }
+}
 
 function getPullToRefreshContainerStyle(pullDistance: number, threshold: number, progress: number) {
   return {
@@ -33,32 +79,35 @@ export function usePullToRefresh(
   options: PullToRefreshOptions
 ) {
   const threshold = options.threshold ?? DEFAULT_THRESHOLD
-  const [state, setState] = useState<PullToRefreshState>({
-    isPulling: false,
-    isRefreshing: false,
-    pullDistance: 0,
-    progress: 0,
-  })
+  const onRefresh = options.onRefresh
+  const disabled = options.disabled ?? false
+  const [state, dispatch] = useReducer(pullToRefreshReducer, INITIAL_PULL_TO_REFRESH_STATE)
   
   const startYRef = useRef<number>(0)
   const pullingRef = useRef<boolean>(false)
 
   const handleRefresh = useCallback(() => {
     if (state.isRefreshing) return
-    
-    setState(prev => ({ ...prev, isRefreshing: true, isPulling: false }))
 
-    void Promise.resolve(options.onRefresh())
+    dispatch({ type: 'start-refresh' })
+
+    void Promise.resolve(onRefresh())
       .finally(() => {
-        setState(prev => ({ ...prev, isRefreshing: false, pullDistance: 0, progress: 0 }))
+        dispatch({ type: 'finish-refresh' })
       })
-  }, [options, state.isRefreshing])
+  }, [onRefresh, state.isRefreshing])
 
   useEffect(() => {
-    if (options.disabled) return
+    if (disabled) return
     
     const element = ref.current
     if (!element) return
+
+    const previousTouchAction = element.style.touchAction
+    const previousOverscrollBehaviorY = element.style.overscrollBehaviorY
+
+    element.style.touchAction = 'pan-x'
+    element.style.overscrollBehaviorY = 'contain'
 
     const handleTouchStart = (e: TouchEvent) => {
       if (element.scrollTop <= 0 && e.touches.length === 1) {
@@ -76,20 +125,11 @@ export function usePullToRefresh(
       if (deltaY > 0 && element.scrollTop <= 0) {
         const pullDistance = Math.min(deltaY * 0.5, threshold * 1.5)
         const progress = Math.min(pullDistance / threshold, 1)
-        
-        setState({
-          isPulling: true,
-          isRefreshing: false,
-          pullDistance,
-          progress,
-        })
-        
-        if (deltaY > 10) {
-          e.preventDefault()
-        }
+
+        dispatch({ type: 'start-pull', pullDistance, progress })
       } else {
         pullingRef.current = false
-        setState(prev => ({ ...prev, isPulling: false, pullDistance: 0, progress: 0 }))
+        dispatch({ type: 'reset-pull' })
       }
     }
 
@@ -99,20 +139,22 @@ export function usePullToRefresh(
       if (state.progress >= 1 && !state.isRefreshing) {
         handleRefresh()
       } else {
-        setState(prev => ({ ...prev, isPulling: false, pullDistance: 0, progress: 0 }))
+        dispatch({ type: 'reset-pull' })
       }
     }
 
     element.addEventListener('touchstart', handleTouchStart, { passive: true })
-    element.addEventListener('touchmove', handleTouchMove, { passive: false })
+    element.addEventListener('touchmove', handleTouchMove, { passive: true })
     element.addEventListener('touchend', handleTouchEnd, { passive: true })
 
     return () => {
+      element.style.touchAction = previousTouchAction
+      element.style.overscrollBehaviorY = previousOverscrollBehaviorY
       element.removeEventListener('touchstart', handleTouchStart)
       element.removeEventListener('touchmove', handleTouchMove)
       element.removeEventListener('touchend', handleTouchEnd)
     }
-  }, [ref, threshold, state.isRefreshing, state.progress, handleRefresh, options.disabled])
+  }, [disabled, ref, threshold, state.isRefreshing, state.progress, handleRefresh])
 
   return state
 }

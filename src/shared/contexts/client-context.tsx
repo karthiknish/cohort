@@ -129,9 +129,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   const convexCreateClient = useMutation(clientsApi.create)
   const convexSoftDeleteClient = useMutation(clientsApi.softDelete)
 
-  const storageKey = useMemo(() => {
-    return workspaceId ? `${STORAGE_KEY_SELECTED}:${workspaceId}` : STORAGE_KEY_SELECTED
-  }, [workspaceId])
+  const storageKey = workspaceId ? `${STORAGE_KEY_SELECTED}:${workspaceId}` : STORAGE_KEY_SELECTED
 
   // Ref to track selectedClientId without triggering effect re-runs
   const selectedClientIdRef = useRef(selectedClientId)

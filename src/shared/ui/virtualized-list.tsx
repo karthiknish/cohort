@@ -157,7 +157,19 @@ function VirtualizedListRow<T>({
 
     return (
         <div data-index={index} style={rowStyle}>
-            {renderItem(value, index)}
+            <VirtualizedListItemContent index={index} renderItem={renderItem} value={value} />
         </div>
     )
+}
+
+function VirtualizedListItemContent<T>({
+    index,
+    renderItem,
+    value,
+}: {
+    index: number
+    renderItem: (item: T, index: number) => ReactNode
+    value: T
+}) {
+    return <>{renderItem(value, index)}</>
 }

@@ -1,5 +1,3 @@
-export type SocialSurfaceKey = 'facebook' | 'instagram'
-
 export type SocialsSurfaceStatus =
   | 'disconnected'
   | 'source_required'
@@ -16,12 +14,6 @@ export type SocialsMetaSetupStage =
   | 'partial'
   | 'ready'
   | 'connected_empty'
-
-export type SocialsSurfaceAvailability = {
-  status: SocialsSurfaceStatus
-  count: number
-  emptyMessage: string
-}
 
 export type SocialsMetaSetupState = {
   stage: SocialsMetaSetupStage

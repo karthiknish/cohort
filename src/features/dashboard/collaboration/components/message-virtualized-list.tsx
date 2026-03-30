@@ -75,7 +75,9 @@ export function VirtualizedMessageList({
 
           return (
             <div key={message.id} data-index={index}>
-              {renderItem(message, index)}
+              <VirtualizedMessageItem message={message} index={index}>
+                {renderItem}
+              </VirtualizedMessageItem>
             </div>
           )
         })}
@@ -145,7 +147,9 @@ export function ChunkedMessageList({
       onScroll={handleScroll}
     >
       {visibleMessages.map((message, index) => (
-        <div key={message.id}>{renderItem(message, index)}</div>
+        <VirtualizedMessageItem key={message.id} message={message} index={index}>
+          {renderItem}
+        </VirtualizedMessageItem>
       ))}
 
       {hasMore && (
