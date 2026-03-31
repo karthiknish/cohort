@@ -17,7 +17,10 @@ const SHADCN_WRAPPER_FILE_RE =
   /(?:^|[\\/])src[\\/]shared[\\/]/;
 
 const RATE_LIMIT_CONFIG_FILE_RE =
-  /(?:^|[\\/])(?:src[\\/]lib[\\/](?:rate-limiter(?:-convex)?|geminiRateLimits)\.ts|convex[\\/].*\.ts)$/;
+  /(?:^|[\\/])(?:src[\\/]lib[\\/](?:rate-limiter(?:-convex)?|geminiRateLimits)\.ts|convex[\\/](?:rateLimit|geminiRateLimit)\.ts)$/;
+
+const RATE_LIMIT_CONFIG_PROPERTY_NAMES = new Set(["maxRequests", "windowMs"]);
+const FIXED_WINDOW_RATE_LIMIT_CONFIG_PROPERTY_NAMES = new Set(["kind", "rate", "period"]);
 
 const ROUTE_FILE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx"];
 
@@ -62,6 +65,177 @@ const BANNED_UI_IMPORTS = [
 function normalizeFilename(context) {
   const filename = typeof context.getFilename === "function" ? context.getFilename() : context.filename;
   return String(filename || "").replace(/\\/g, "/");
+}
+
+function getStaticPropertyName(node) {
+  if (!node) {
+    return null;
+  }
+
+  if (node.type === "Identifier") {
+    return node.name;
+  }
+
+  if (node.type === "Literal" && typeof node.value === "string") {
+    return node.value;
+  }
+
+  return null;
+}
+
+function getObjectExpressionProperty(node, propertyName) {
+  for (const property of node.properties) {
+    if (!property || property.type !== "Property" || property.computed) {
+      continue;
+    }
+
+    if (getStaticPropertyName(property.key) === propertyName) {
+      return property;
+    }
+  }
+
+  return null;
+}
+
+function getObjectExpressionPropertyNames(node) {
+  const propertyNames = new Set();
+
+  for (const property of node.properties) {
+    if (!property || property.type !== "Property" || property.computed) {
+      continue;
+    }
+
+    const propertyName = getStaticPropertyName(property.key);
+    if (propertyName) {
+      propertyNames.add(propertyName);
+    }
+  }
+
+  return propertyNames;
+}
+
+function objectExpressionHasKeys(node, requiredPropertyNames) {
+  const propertyNames = getObjectExpressionPropertyNames(node);
+  for (const propertyName of requiredPropertyNames) {
+    if (!propertyNames.has(propertyName)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function getParentPropertyName(node) {
+  const parent = node?.parent;
+  if (!parent || parent.type !== "Property" || parent.value !== node || parent.computed) {
+    return null;
+  }
+
+  return getStaticPropertyName(parent.key);
+}
+
+function getCalleeName(node) {
+  if (!node) {
+    return null;
+  }
+
+  if (node.type === "Identifier") {
+    return node.name;
+  }
+
+  if (node.type === "MemberExpression" && !node.computed) {
+    return getStaticPropertyName(node.property);
+  }
+
+  return null;
+}
+
+function isNumericLikeLiteralExpression(node) {
+  if (!node) {
+    return false;
+  }
+
+  if (node.type === "Literal") {
+    return typeof node.value === "number";
+  }
+
+  if (node.type === "UnaryExpression" && (node.operator === "+" || node.operator === "-")) {
+    return isNumericLikeLiteralExpression(node.argument);
+  }
+
+  if (
+    node.type === "BinaryExpression" &&
+    ["+", "-", "*", "/", "%", "**", "<<", ">>", ">>>", "|", "&", "^"].includes(node.operator)
+  ) {
+    return isNumericLikeLiteralExpression(node.left) && isNumericLikeLiteralExpression(node.right);
+  }
+
+  if (
+    node.type === "ParenthesizedExpression" ||
+    node.type === "TSAsExpression" ||
+    node.type === "TSTypeAssertion"
+  ) {
+    return isNumericLikeLiteralExpression(node.expression);
+  }
+
+  return false;
+}
+
+function isInlineCreateRateLimitConfigCall(node) {
+  return (
+    getCalleeName(node.callee) === "createRateLimitConfig" &&
+    node.arguments.length >= 2 &&
+    node.arguments.some((argument) => isNumericLikeLiteralExpression(argument))
+  );
+}
+
+function isRateLimiterPresetDefinition(node) {
+  const parentProperty = node.parent;
+  if (!parentProperty || parentProperty.type !== "Property" || parentProperty.value !== node) {
+    return false;
+  }
+
+  const presetsObject = parentProperty.parent;
+  if (!presetsObject || presetsObject.type !== "ObjectExpression") {
+    return false;
+  }
+
+  const parentExpression = presetsObject.parent;
+  return (
+    parentExpression &&
+    parentExpression.type === "NewExpression" &&
+    getCalleeName(parentExpression.callee) === "RateLimiter" &&
+    parentExpression.arguments[1] === presetsObject
+  );
+}
+
+function isFixedWindowRateLimitConfigContext(node) {
+  if (getParentPropertyName(node) !== "config") {
+    return false;
+  }
+
+  const configProperty = node.parent;
+  const containerObject = configProperty?.parent;
+  if (!containerObject || containerObject.type !== "ObjectExpression") {
+    return false;
+  }
+
+  const propertyNames = getObjectExpressionPropertyNames(containerObject);
+  return propertyNames.has("key") || (propertyNames.has("name") && propertyNames.has("config"));
+}
+
+function isFixedWindowRateLimitConfigObject(node) {
+  if (!objectExpressionHasKeys(node, FIXED_WINDOW_RATE_LIMIT_CONFIG_PROPERTY_NAMES)) {
+    return false;
+  }
+
+  const kindProperty = getObjectExpressionProperty(node, "kind");
+  const kindValue = kindProperty?.value;
+  if (!kindValue || kindValue.type !== "Literal" || kindValue.value !== "fixed window") {
+    return false;
+  }
+
+  return isFixedWindowRateLimitConfigContext(node) || isRateLimiterPresetDefinition(node);
 }
 
 function hasRouteFileExtension(filename) {
@@ -339,8 +513,6 @@ function createOnlyShadcnComponentsRule() {
 }
 
 function createNoAdHocRateLimitRule() {
-  const rateLimitPropertyNames = new Set(["maxRequests", "windowMs"])
-
   return {
     meta: {
       type: "problem",
@@ -349,7 +521,7 @@ function createNoAdHocRateLimitRule() {
       },
       messages: {
         adHocRateLimit:
-          "Define rate limit presets in `src/lib/rate-limiter.ts` or `src/lib/geminiRateLimits.ts` instead of inlining `{ maxRequests, windowMs }` here.",
+          "Define rate limit presets in the shared rate limit modules instead of inlining rate limit config here.",
       },
     },
     create(context) {
@@ -358,29 +530,22 @@ function createNoAdHocRateLimitRule() {
         return {};
       }
 
+      function reportRateLimitConfig(node) {
+        context.report({
+          node,
+          messageId: "adHocRateLimit",
+        });
+      }
+
       return {
         ObjectExpression(node) {
-          const keys = new Set()
-
-          for (const property of node.properties) {
-            if (!property || property.type !== "Property" || property.computed) {
-              continue
-            }
-
-            if (property.key.type === "Identifier") {
-              keys.add(property.key.name)
-            } else if (property.key.type === "Literal" && typeof property.key.value === "string") {
-              keys.add(property.key.value)
-            }
+          if (objectExpressionHasKeys(node, RATE_LIMIT_CONFIG_PROPERTY_NAMES) || isFixedWindowRateLimitConfigObject(node)) {
+            reportRateLimitConfig(node);
           }
-
-          if (rateLimitPropertyNames.has("maxRequests") && rateLimitPropertyNames.has("windowMs")) {
-            if (keys.has("maxRequests") && keys.has("windowMs")) {
-              context.report({
-                node,
-                messageId: "adHocRateLimit",
-              })
-            }
+        },
+        CallExpression(node) {
+          if (isInlineCreateRateLimitConfigCall(node)) {
+            reportRateLimitConfig(node);
           }
         },
       };
