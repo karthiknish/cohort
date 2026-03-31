@@ -14,6 +14,7 @@ import { isPreviewRouteRequest } from '@/lib/preview-data'
 interface ProtectedRouteProps {
   children: React.ReactNode
   requiredRole?: 'admin' | 'team' | 'client'
+  allowPreviewAccess?: boolean
 }
 
 function hasValidSessionCookie(): boolean {
@@ -26,7 +27,7 @@ function hasValidSessionCookie(): boolean {
   return Number.isFinite(expiresAt) && expiresAt > Date.now()
 }
 
-function hasPreviewRouteAccess(): boolean {
+function resolvePreviewRouteAccessFromLocation(): boolean {
   if (typeof window === 'undefined') return false
 
   return isPreviewRouteRequest(
@@ -124,12 +125,23 @@ function AccessOverlay({
   )
 }
 
-export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = false }: ProtectedRouteProps) {
   const { user, loading, signOut } = useAuth()
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
   const router = useRouter()
+  const [hasPreviewAccess, setHasPreviewAccess] = useState(allowPreviewAccess)
   const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(() => hasValidSessionCookie())
-  const hasPreviewAccess = hasPreviewRouteAccess()
+
+  useEffect(() => {
+    if (allowPreviewAccess) {
+      setHasPreviewAccess(true)
+      return
+    }
+
+    if (!resolvePreviewRouteAccessFromLocation()) return
+
+    setHasPreviewAccess(true)
+  }, [allowPreviewAccess])
 
   // Clear awaiting state once auth loading completes or session cookie is gone.
   useEffect(() => {

@@ -1,3 +1,5 @@
+import { headers } from 'next/headers'
+
 import { Sidebar, Header } from '@/shared/layout/navigation'
 import { ProtectedRoute } from '@/shared/components/protected-route'
 import { NavigationProvider } from '@/shared/contexts/navigation-context'
@@ -8,14 +10,18 @@ import { ClientAccessGate } from '@/features/dashboard/home/components/client-ac
 import { PreviewDataBanner } from '@/features/dashboard/home/components/preview-data-banner'
 import { AgentMode } from '@/shared/components/agent-mode'
 import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
+import { PREVIEW_ROUTE_REQUEST_HEADER } from '@/lib/preview-data'
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const requestHeaders = await headers()
+  const allowPreviewAccess = requestHeaders.get(PREVIEW_ROUTE_REQUEST_HEADER) === '1'
+
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowPreviewAccess={allowPreviewAccess}>
       <WorkspaceProviders enablePreview enableProject>
         <NavigationProvider>
           <div className="relative flex min-h-screen bg-background">

@@ -6,6 +6,7 @@ export {
     PREVIEW_MODE_STORAGE_KEY,
     PREVIEW_MODE_EVENT,
     PREVIEW_MODE_QUERY_PARAM,
+    PREVIEW_ROUTE_REQUEST_HEADER,
     isPreviewModeEnabled,
     isPreviewModeQueryEnabled,
     isPublicPreviewPath,

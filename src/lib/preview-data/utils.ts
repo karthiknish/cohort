@@ -1,6 +1,7 @@
 export const PREVIEW_MODE_STORAGE_KEY = 'cohorts.previewMode'
 export const PREVIEW_MODE_EVENT = 'cohorts:previewModeChanged'
 export const PREVIEW_MODE_QUERY_PARAM = 'preview'
+export const PREVIEW_ROUTE_REQUEST_HEADER = 'x-cohorts-preview-route'
 
 type SearchParamsLike = {
     get(name: string): string | null
