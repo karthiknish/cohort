@@ -113,7 +113,7 @@ export default function AuthError({
               Try again
             </Button>
             <Button variant="outline" asChild className="w-full">
-              <Link href="/">Go to sign in</Link>
+              <Link href="/auth">Go to sign in</Link>
             </Button>
           </div>
         </CardContent>

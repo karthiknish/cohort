@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  isScreenRecordingAuthBypassEnabled,
   isPreviewModeEnabled,
   isPreviewRouteRequest,
   isScreenRecordingModeEnabled,
@@ -70,5 +71,17 @@ describe('preview route access helpers', () => {
 
     expect(isScreenRecordingModeEnabled()).toBe(true)
     expect(isPreviewModeEnabled()).toBe(true)
+  })
+
+  it('disables auth bypass in production unless explicitly allowed', () => {
+    vi.stubEnv('NEXT_PUBLIC_SCREEN_RECORDING_ENABLED', 'true')
+    vi.stubEnv('NODE_ENV', 'production')
+
+    expect(isScreenRecordingModeEnabled()).toBe(true)
+    expect(isScreenRecordingAuthBypassEnabled()).toBe(false)
+
+    vi.stubEnv('SCREEN_RECORDING_ALLOW_AUTH_BYPASS', 'true')
+
+    expect(isScreenRecordingAuthBypassEnabled()).toBe(true)
   })
 })

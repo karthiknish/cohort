@@ -87,6 +87,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     api.users.getByLegacyIdSafe,
     betterAuthUserId ? { legacyId: betterAuthUserId } : 'skip'
   )
+  const profileLoading = betterAuthUserId !== null && typeof convexUser === 'undefined'
 
   const lastAppliedUserKeyRef = useRef<string | null>(null)
   const currentUserRef = useRef<AuthUser | null>(null)
@@ -129,7 +130,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const updated = {
         ...prev,
         role: (convexUser.role as AuthUser['role']) || prev.role || 'client',
-        status: (convexUser.status as AuthUser['status']) || prev.status || 'active',
+        status: (convexUser.status as AuthUser['status']) || prev.status || 'pending',
         agencyId: convexUser.agencyId || prev.agencyId || prev.id,
       }
       currentUserRef.current = updated
@@ -380,7 +381,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value = useMemo<AuthContextType>(
     () => ({
       user,
-      loading,
+      loading: loading || profileLoading,
       isSyncing,
       authError,
       clearAuthError,
@@ -409,6 +410,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [
       user,
       loading,
+      profileLoading,
       isSyncing,
       authError,
       clearAuthError,

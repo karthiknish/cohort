@@ -4,12 +4,11 @@ import { useConvexAuth } from 'convex/react'
 import { LoaderCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useSyncExternalStore, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { Button } from '@/shared/ui/button'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { SESSION_EXPIRES_COOKIE } from '@/lib/auth-server'
-import { isPreviewRouteRequest, isScreenRecordingModeEnabled } from '@/lib/preview-data'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -25,19 +24,6 @@ function hasValidSessionCookie(): boolean {
   if (!encodedValue) return false
   const expiresAt = Number.parseInt(decodeURIComponent(encodedValue), 10)
   return Number.isFinite(expiresAt) && expiresAt > Date.now()
-}
-
-function resolvePreviewRouteAccessFromLocation(): boolean {
-  if (typeof window === 'undefined') return false
-
-  return isPreviewRouteRequest(
-    window.location.pathname,
-    new URLSearchParams(window.location.search),
-  )
-}
-
-function subscribeToPreviewRouteAccess(): () => void {
-  return () => {}
 }
 
 function hasRequiredRole(userRole: string, requiredRole?: string): boolean {
@@ -134,12 +120,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
   const router = useRouter()
   const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(() => hasValidSessionCookie())
-  const screenRecordingEnabled = isScreenRecordingModeEnabled()
-  const hasPreviewAccess = useSyncExternalStore(
-    subscribeToPreviewRouteAccess,
-    () => screenRecordingEnabled || allowPreviewAccess || resolvePreviewRouteAccessFromLocation(),
-    () => screenRecordingEnabled || allowPreviewAccess,
-  )
+  const hasPreviewAccess = allowPreviewAccess
 
   // Clear awaiting state once auth loading completes or session cookie is gone.
   useEffect(() => {
@@ -186,7 +167,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
         title="Sign in required"
         message="You need to sign in to access this area of the application."
         actionLabel="Go to sign in"
-        actionHref="/"
+        actionHref="/auth"
       />
     )
   }

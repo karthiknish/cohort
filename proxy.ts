@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import { convexSiteUrl } from '@/lib/auth-server'
 import {
   isPreviewRouteRequest,
-  isScreenRecordingModeEnabled,
+  isScreenRecordingAuthBypassEnabled,
   PREVIEW_ROUTE_REQUEST_HEADER,
 } from '@/lib/preview-data'
 import {
@@ -71,7 +71,7 @@ async function hasValidSession(request: NextRequest): Promise<boolean> {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const screenRecordingEnabled = isScreenRecordingModeEnabled()
+  const screenRecordingAuthBypassEnabled = isScreenRecordingAuthBypassEnabled()
 
   if (pathname.startsWith('/api/')) {
     // Block common monitoring/crawling user-agents from API routes
@@ -122,13 +122,13 @@ export async function proxy(request: NextRequest) {
     })
   }
 
-  if (screenRecordingEnabled && pathname === '/dashboard') {
+  if (screenRecordingAuthBypassEnabled && pathname === '/dashboard') {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/for-you'
     return NextResponse.redirect(redirectUrl)
   }
 
-  if (screenRecordingEnabled && pathname.startsWith('/dashboard/')) {
+  if (screenRecordingAuthBypassEnabled && pathname.startsWith('/dashboard/')) {
     return NextResponse.next()
   }
 
@@ -160,7 +160,7 @@ export async function proxy(request: NextRequest) {
   // Check if session is missing or expired
   if (!hasSession) {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/'
+    redirectUrl.pathname = '/auth'
     // Preserve querystring so users land back exactly where they intended.
     redirectUrl.searchParams.set('redirect', `${pathname}${request.nextUrl.search}`)
     return NextResponse.redirect(redirectUrl)

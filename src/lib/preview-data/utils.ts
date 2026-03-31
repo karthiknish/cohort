@@ -3,6 +3,7 @@ export const PREVIEW_MODE_EVENT = 'cohorts:previewModeChanged'
 export const PREVIEW_MODE_QUERY_PARAM = 'preview'
 export const PREVIEW_ROUTE_REQUEST_HEADER = 'x-cohorts-preview-route'
 export const SCREEN_RECORDING_ENABLED_ENV_KEY = 'NEXT_PUBLIC_SCREEN_RECORDING_ENABLED'
+export const SCREEN_RECORDING_AUTH_BYPASS_ENV_KEY = 'SCREEN_RECORDING_ALLOW_AUTH_BYPASS'
 
 type SearchParamsLike = {
     get(name: string): string | null
@@ -21,6 +22,18 @@ function isEnabledPreviewValue(value: string | null): boolean {
 
 export function isScreenRecordingModeEnabled(): boolean {
     return isEnabledPreviewValue(process.env.NEXT_PUBLIC_SCREEN_RECORDING_ENABLED ?? null)
+}
+
+export function isScreenRecordingAuthBypassEnabled(): boolean {
+    if (!isScreenRecordingModeEnabled()) {
+        return false
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+        return true
+    }
+
+    return isEnabledPreviewValue(process.env.SCREEN_RECORDING_ALLOW_AUTH_BYPASS ?? null)
 }
 
 export function isPreviewModeQueryEnabled(searchParams: SearchParamsLike): boolean {

@@ -118,9 +118,6 @@ export const POST = createApiHandler(
         legacyId,
         email: email.toLowerCase(),
         name,
-        role,
-        status,
-        agencyId,
       }),
       10000,
       'bootstrapUpsert'

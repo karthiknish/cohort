@@ -222,6 +222,37 @@ export function isValidRedirectUrl(url: string | null | undefined): boolean {
   }
 }
 
+export function getSafeRedirectPath(url: string | null | undefined): string | null {
+  const candidateUrl = typeof url === 'string' ? url : null
+
+  if (!candidateUrl || !isValidRedirectUrl(candidateUrl)) {
+    return null
+  }
+
+  if (candidateUrl.startsWith('/') && !candidateUrl.startsWith('//')) {
+    return candidateUrl
+  }
+
+  try {
+    const fallbackOrigin =
+      (typeof window !== 'undefined' ? window.location.origin : null)
+      ?? process.env.NEXT_PUBLIC_APP_URL
+      ?? process.env.NEXT_PUBLIC_SITE_URL
+      ?? 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || fallbackOrigin
+    const appBase = new URL(appUrl)
+    const redirectUrl = new URL(candidateUrl, fallbackOrigin)
+
+    if (redirectUrl.origin !== appBase.origin) {
+      return null
+    }
+
+    return `${redirectUrl.pathname}${redirectUrl.search}${redirectUrl.hash}`
+  } catch {
+    return null
+  }
+}
+
 /**
  * Gets the workspace ID from user data.
  * Uses agencyId if available and non-empty, otherwise falls back to user.id.

@@ -8,7 +8,7 @@ import {
   zCustomMutation,
   zCustomAction,
 } from 'convex-helpers/server/zod4'
-import { z } from 'zod/v4'
+import * as z from 'zod'
 import {
   mutation,
   query,

@@ -186,7 +186,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
   }, [oobCode, verifyPasswordResetCode])
 
   const handleReturnToSignIn = useCallback(() => {
-    router.push('/')
+    router.push('/auth')
   }, [router])
 
   const handleNewPasswordChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -251,7 +251,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
     <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">
       {/* Back Link */}
       <Link
-        href="/"
+        href="/auth"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />

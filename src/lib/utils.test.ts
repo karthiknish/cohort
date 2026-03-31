@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest'
-import { cn, formatCurrency, toISO, sanitizeInput, sanitizeCsvValue, coerceBoolean } from './utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cn, formatCurrency, toISO, sanitizeInput, sanitizeCsvValue, coerceBoolean, getSafeRedirectPath } from './utils'
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
 
 describe('utils', () => {
   describe('cn', () => {
@@ -69,6 +73,26 @@ describe('utils', () => {
       expect(coerceBoolean('0')).toBe(false)
       expect(coerceBoolean(0)).toBe(false)
       expect(coerceBoolean(null)).toBe(false)
+    })
+  })
+
+  describe('getSafeRedirectPath', () => {
+    it('keeps internal relative redirects unchanged', () => {
+      expect(getSafeRedirectPath('/dashboard?tab=overview')).toBe('/dashboard?tab=overview')
+    })
+
+    it('normalizes same-origin absolute redirects to internal paths', () => {
+      vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://cohorts.test')
+
+      expect(getSafeRedirectPath('https://cohorts.test/dashboard?tab=overview#activity')).toBe(
+        '/dashboard?tab=overview#activity',
+      )
+    })
+
+    it('rejects external redirects', () => {
+      vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://cohorts.test')
+
+      expect(getSafeRedirectPath('https://evil.example/phish')).toBeNull()
     })
   })
 })

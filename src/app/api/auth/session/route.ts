@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { z } from 'zod'
+import * as z from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { ForbiddenError, UnauthorizedError } from '@/lib/api-errors'
@@ -26,20 +26,9 @@ function generateCsrfToken(): string {
 function validateCsrfToken(
   request: Request,
   cookieStore: Awaited<ReturnType<typeof cookies>>,
-  isCreatingSession: boolean
 ): boolean {
   const headerToken = request.headers.get(CSRF_HEADER)
   const cookieToken = cookieStore.get(CSRF_COOKIE)?.value
-
-  // If no cookie exists yet (first session creation), allow the request
-  if (!cookieToken) {
-    return true
-  }
-
-  // When creating a new session (login), be more lenient
-  if (isCreatingSession && !headerToken) {
-    return true
-  }
 
   // Header must match cookie (double-submit pattern)
   return Boolean(headerToken && cookieToken && headerToken === cookieToken)
@@ -116,7 +105,7 @@ export const POST = createApiHandler(
     const cookieStore = await cookies()
 
     // Validate CSRF token (double-submit cookie pattern)
-    if (!validateCsrfToken(req, cookieStore, true)) {
+    if (!validateCsrfToken(req, cookieStore)) {
       throw new ForbiddenError('Security validation failed. Please refresh and try again.')
     }
 
@@ -176,8 +165,7 @@ export const DELETE = createApiHandler(
   async (req) => {
     const cookieStore = await cookies()
 
-    // Validate CSRF token for logout (not creating session, so stricter validation)
-    if (!validateCsrfToken(req, cookieStore, false)) {
+    if (!validateCsrfToken(req, cookieStore)) {
       throw new ForbiddenError('Security validation failed. Please refresh and try again.')
     }
 

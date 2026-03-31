@@ -53,16 +53,6 @@ type BetterAuthSessionPayload = {
   } | null
 }
 
-function readCookieClaim(request: NextRequest, name: string): string | undefined {
-  const value = request.cookies.get(name)?.value
-  if (typeof value !== 'string') {
-    return undefined
-  }
-
-  const normalized = value.trim()
-  return normalized.length > 0 ? normalized : undefined
-}
-
 async function fetchBetterAuthSession(request: NextRequest): Promise<BetterAuthSessionPayload | null> {
   const cookieHeader = request.headers.get('cookie')
   if (!cookieHeader) {
@@ -150,10 +140,7 @@ async function fetchConvexTokenFromBetterAuthRoute(request: NextRequest): Promis
   }
 }
 
-function buildAuthResultFromBetterAuthSession(
-  request: NextRequest,
-  sessionPayload: BetterAuthSessionPayload
-): AuthResult | null {
+function buildAuthResultFromBetterAuthSession(sessionPayload: BetterAuthSessionPayload): AuthResult | null {
   const user = sessionPayload.user
   if (!user || typeof user !== 'object') {
     return null
@@ -170,12 +157,10 @@ function buildAuthResultFromBetterAuthSession(
 
   const role =
     (typeof user.role === 'string' && user.role.length > 0 ? user.role : undefined)
-    ?? readCookieClaim(request, 'cohorts_role')
     ?? 'client'
 
   const status =
     (typeof user.status === 'string' && user.status.length > 0 ? user.status : undefined)
-    ?? readCookieClaim(request, 'cohorts_status')
     ?? 'pending'
 
   const agencyId =
@@ -183,7 +168,7 @@ function buildAuthResultFromBetterAuthSession(
     ?? (typeof sessionPayload.session?.activeOrganizationId === 'string' && sessionPayload.session.activeOrganizationId.length > 0
       ? sessionPayload.session.activeOrganizationId
       : undefined)
-    ?? readCookieClaim(request, 'cohorts_agency_id')
+    ?? uid
 
   return {
     uid,
@@ -293,14 +278,10 @@ async function buildAuthResultFromConvexToken(token: string): Promise<AuthResult
       // Ensure the user exists in the Convex `users` table so role/status lookups
       // and legacy-id bridging are stable going forward.
       try {
-        await convex.mutation(api.users.bulkUpsert, {
-          users: [
-            {
-              legacyId: betterAuthUserId,
-              email: normalizedEmail,
-              name,
-            },
-          ],
+        await convex.mutation(api.users.bootstrapUpsert, {
+          legacyId: betterAuthUserId,
+          email: normalizedEmail,
+          name: name ?? undefined,
         })
 
         const convexUser = await fetchUserByEmail(convex, normalizedEmail)
@@ -360,7 +341,7 @@ async function tryVerifyBetterAuthSession(request: NextRequest): Promise<AuthRes
     return null
   }
 
-  return buildAuthResultFromBetterAuthSession(request, sessionPayload)
+  return buildAuthResultFromBetterAuthSession(sessionPayload)
 }
 
 

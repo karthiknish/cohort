@@ -233,6 +233,26 @@ h6 {
     }
   }
 
+  @keyframes marquee-x {
+    0% {
+      transform: translateX(0);
+    }
+
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes badge-bob {
+    0%, 100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
   .animate-shimmer {
     animation: shimmer 3s infinite linear;
   }

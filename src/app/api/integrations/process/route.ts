@@ -28,17 +28,8 @@ import {
 } from '@/lib/integration-token-refresh'
 import { ValidationError, NotFoundError, ApiError } from '@/lib/api-errors'
 import { processWorkspaceAlerts } from '@/lib/alerts'
+import { createConvexAdminClient } from '@/lib/convex-admin'
 import { logger } from '@/lib/logger'
-
-// Convex client for user lookup
-let _convexClient: ConvexHttpClient | null = null
-function getConvexClient(): ConvexHttpClient | null {
-  if (_convexClient) return _convexClient
-  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
-  if (!url) return null
-  _convexClient = new ConvexHttpClient(url)
-  return _convexClient
-}
 
 async function getIntegrationForJob(options: { userId: string; providerId: string; clientId?: string | null }) {
   if (options.providerId === 'google-analytics') {
@@ -325,8 +316,17 @@ export const POST = createApiHandler(
       if (clientId) {
         after(async () => {
           try {
-            const convex = getConvexClient()
             let recipientEmail: string | null = null
+
+            const convex = createConvexAdminClient({
+              auth: {
+                uid: targetUserId,
+                email: null,
+                name: null,
+                claims: { provider: 'better-auth' },
+                isCron: false,
+              },
+            })
 
             if (convex) {
               try {

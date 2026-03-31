@@ -31,7 +31,7 @@ function normalizeRole(value: unknown): AuthRole {
 function normalizeStatus(value: unknown): AuthStatus {
   return value === 'active' || value === 'pending' || value === 'invited' || value === 'disabled' || value === 'suspended'
     ? value
-    : 'active'
+    : 'pending'
 }
 
 function createOauthStartError(response: Response, message: string) {
@@ -159,6 +159,55 @@ export class AuthService {
 
     this.setResolvedUser(freshUser)
     return freshUser
+  }
+
+  private readCsrfCookie(): string | null {
+    if (typeof document === 'undefined') {
+      return null
+    }
+
+    const csrfCookie = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('cohorts_csrf='))
+
+    if (!csrfCookie) {
+      return null
+    }
+
+    const [, value = ''] = csrfCookie.split('=', 2)
+    const csrfToken = decodeURIComponent(value)
+    return csrfToken.length > 0 ? csrfToken : null
+  }
+
+  private async resolveCsrfToken(): Promise<string | null> {
+    const existingToken = this.readCsrfCookie()
+    if (existingToken) {
+      return existingToken
+    }
+
+    try {
+      const response = await fetchWithTimeout('/api/auth/session', {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+        },
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        return null
+      }
+
+      const payload = await parseJsonBody<{ csrfToken?: unknown }>(response, {
+        context: 'AuthService resolveCsrfToken',
+      })
+      return typeof payload?.csrfToken === 'string' && payload.csrfToken.length > 0
+        ? payload.csrfToken
+        : this.readCsrfCookie()
+    } catch (error) {
+      console.warn('[AuthService] Failed to refresh CSRF token:', error)
+      return null
+    }
   }
 
   private async fetchGoogleWorkspaceOauthUrl(search: string): Promise<Response> {
@@ -408,17 +457,13 @@ export class AuthService {
 
   private async clearSessionCookies(): Promise<void> {
     try {
-      // Get CSRF token from cookie to pass in header
-      const csrfCookie = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('cohorts_csrf='))
-      const csrfToken = csrfCookie ? csrfCookie.split('=')[1] : ''
+      const csrfToken = await this.resolveCsrfToken()
 
       const response = await fetch('/api/auth/session', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'x-csrf-token': csrfToken || '',
+          'x-csrf-token': csrfToken ?? '',
         },
         credentials: 'include',
       })

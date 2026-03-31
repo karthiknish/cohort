@@ -1,5 +1,25 @@
 import { apiFetch, ApiClientError } from '@/lib/api-client'
 
+const CSRF_HEADER = 'x-csrf-token'
+
+type SessionMetadata = {
+  csrfToken?: string | null
+}
+
+async function fetchSessionCsrfToken(): Promise<string> {
+  const session = await apiFetch<SessionMetadata>('/api/auth/session', {
+    method: 'GET',
+    credentials: 'include',
+  })
+
+  const csrfToken = typeof session?.csrfToken === 'string' ? session.csrfToken : ''
+  if (!csrfToken) {
+    throw new Error('Missing CSRF token')
+  }
+
+  return csrfToken
+}
+
 export async function bootstrapAndSyncSession(): Promise<void> {
   try {
     await apiFetch('/api/auth/bootstrap', {
@@ -14,9 +34,14 @@ export async function bootstrapAndSyncSession(): Promise<void> {
   }
 
   try {
+    const csrfToken = await fetchSessionCsrfToken()
+
     await apiFetch('/api/auth/session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        [CSRF_HEADER]: csrfToken,
+      },
       body: JSON.stringify({}),
       credentials: 'include',
     })

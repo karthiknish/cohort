@@ -1,11 +1,13 @@
-import { mutation, query, internalQuery, internalMutation } from './_generated/server'
+import { mutation, query, internalQuery } from './_generated/server'
 import { v } from 'convex/values'
 import {
   authenticatedQuery,
-  zAuthenticatedMutation,
+  zAdminMutation,
+  zAdminQuery,
   zAuthenticatedQuery,
+  zWorkspaceQuery,
 } from './functions'
-import { z } from 'zod/v4'
+import * as z from 'zod'
 import { Errors } from './errors'
 
 
@@ -36,6 +38,62 @@ function pickMostRecentlyUpdated<T extends { updatedAtMs: number | null; created
   }
 
   return best
+}
+
+const DEFAULT_USER_ROLE = 'client'
+const DEFAULT_USER_STATUS = 'pending'
+
+function serializeUserRow(row: {
+  legacyId: string
+  email: string | null
+  name: string | null
+  role: string | null
+  status: string | null
+  agencyId: string | null
+  phoneNumber?: string | null
+  photoUrl?: string | null
+  notificationPreferences?: {
+    emailAdAlerts: boolean
+    emailPerformanceDigest: boolean
+    emailTaskActivity: boolean
+    emailCollaboration: boolean
+  } | null
+  regionalPreferences?: {
+    currency?: string | null
+    timezone?: string | null
+    locale?: string | null
+  } | null
+  createdAtMs: number | null
+  updatedAtMs: number | null
+}) {
+  return {
+    legacyId: row.legacyId,
+    email: row.email,
+    name: row.name,
+    role: row.role,
+    status: row.status,
+    agencyId: row.agencyId,
+    phoneNumber: row.phoneNumber ?? null,
+    photoUrl: row.photoUrl ?? null,
+    notificationPreferences: row.notificationPreferences ?? null,
+    regionalPreferences: row.regionalPreferences ?? null,
+    createdAtMs: row.createdAtMs,
+    updatedAtMs: row.updatedAtMs,
+  }
+}
+
+function serializeDirectoryUser(row: {
+  legacyId: string
+  email: string | null
+  name: string | null
+  role: string | null
+}) {
+  return {
+    id: row.legacyId,
+    name: row.name ?? row.email ?? 'Unnamed user',
+    email: row.email ?? undefined,
+    role: row.role ?? undefined,
+  }
 }
  
 const userZ = z.object({
@@ -70,6 +128,10 @@ export const getByLegacyId = zAuthenticatedQuery({
   args: { legacyId: z.string() },
   returns: userZ,
   handler: async (ctx, args) => {
+    if (ctx.user.role !== 'admin' && args.legacyId !== ctx.legacyId) {
+      throw Errors.auth.forbidden('You do not have access to this user profile')
+    }
+
     const row = await ctx.db
       .query('users')
       .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
@@ -77,20 +139,7 @@ export const getByLegacyId = zAuthenticatedQuery({
 
     if (!row) throw Errors.resource.notFound('User', args.legacyId)
 
-    return {
-      legacyId: row.legacyId,
-      email: row.email,
-      name: row.name,
-      role: row.role,
-      status: row.status,
-      agencyId: row.agencyId,
-      phoneNumber: row.phoneNumber ?? null,
-      photoUrl: row.photoUrl ?? null,
-      notificationPreferences: row.notificationPreferences ?? null,
-      regionalPreferences: row.regionalPreferences ?? null,
-      createdAtMs: row.createdAtMs,
-      updatedAtMs: row.updatedAtMs,
-    }
+    return serializeUserRow(row)
   },
 })
 
@@ -100,6 +149,11 @@ export const getByEmail = zAuthenticatedQuery({
   handler: async (ctx, args) => {
     const normalized = normalizeEmail(args.email)
     if (!normalized.emailLower) throw Errors.validation.invalidInput('Invalid email')
+
+    const currentUserEmail = normalizeEmail(ctx.user.email)
+    if (ctx.user.role !== 'admin' && normalized.emailLower !== currentUserEmail.emailLower) {
+      throw Errors.auth.forbidden('You do not have access to this user profile')
+    }
 
     // Historical data may contain duplicates; prefer the most recently updated record.
     const rows = await ctx.db
@@ -111,24 +165,11 @@ export const getByEmail = zAuthenticatedQuery({
 
     if (!best) throw Errors.resource.notFound('User', args.email)
 
-    return {
-      legacyId: best.legacyId,
-      email: best.email,
-      name: best.name,
-      role: best.role,
-      status: best.status,
-      agencyId: best.agencyId,
-      phoneNumber: best.phoneNumber ?? null,
-      photoUrl: best.photoUrl ?? null,
-      notificationPreferences: best.notificationPreferences ?? null,
-      regionalPreferences: best.regionalPreferences ?? null,
-      createdAtMs: best.createdAtMs,
-      updatedAtMs: best.updatedAtMs,
-    }
+    return serializeUserRow(best)
   },
 })
 
-export const listWorkspaceMembers = zAuthenticatedQuery({
+export const listWorkspaceMembers = zWorkspaceQuery({
   args: { workspaceId: z.string(), limit: z.number().optional() },
   returns: z.array(
     z.object({
@@ -162,16 +203,11 @@ export const listWorkspaceMembers = zAuthenticatedQuery({
     return allRows
       .slice(0, limit)
       .filter((row) => row.status !== 'disabled' && row.status !== 'suspended')
-      .map((row) => ({
-        id: row.legacyId,
-        name: row.name ?? row.email ?? 'Unnamed user',
-        email: row.email ?? undefined,
-        role: row.role ?? undefined,
-      }))
+      .map((row) => serializeDirectoryUser(row))
   },
 })
 
-export const listAllUsers = zAuthenticatedQuery({
+export const listAllUsers = zAdminQuery({
   args: { limit: z.number().optional() },
   returns: z.array(
     z.object({
@@ -190,16 +226,11 @@ export const listAllUsers = zAuthenticatedQuery({
 
     return rows
       .filter((row) => row.status !== 'disabled' && row.status !== 'suspended')
-      .map((row) => ({
-        id: row.legacyId,
-        name: row.name ?? row.email ?? 'Unnamed user',
-        email: row.email ?? undefined,
-        role: row.role ?? undefined,
-      }))
+      .map((row) => serializeDirectoryUser(row))
   },
 })
 
-export const listDMParticipants = zAuthenticatedQuery({
+export const listDMParticipants = zWorkspaceQuery({
   args: {
     workspaceId: z.string(),
     currentUserRole: z.string().nullable(),
@@ -215,8 +246,12 @@ export const listDMParticipants = zAuthenticatedQuery({
     })
   ),
   handler: async (ctx, args) => {
+    if (args.currentUserId !== ctx.legacyId) {
+      throw Errors.auth.forbidden('You can only list participants for the current user')
+    }
+
     const limit = Math.min(Math.max(args.limit ?? 200, 1), 500)
-    const role = args.currentUserRole?.toLowerCase()
+    const role = ctx.user.role?.toLowerCase()
 
     const [membersByAgency, agencyAdmin] = await Promise.all([
       ctx.db
@@ -237,23 +272,13 @@ export const listDMParticipants = zAuthenticatedQuery({
       return allRows
         .filter((row) => row.status !== 'disabled' && row.status !== 'suspended' && row.legacyId !== args.currentUserId && row.role !== 'client')
         .slice(0, limit)
-        .map((row) => ({
-          id: row.legacyId,
-          name: row.name ?? row.email ?? 'Unnamed user',
-          email: row.email ?? undefined,
-          role: row.role ?? undefined,
-        }))
+        .map((row) => serializeDirectoryUser(row))
     }
 
     return allRows
       .filter((row) => row.status !== 'disabled' && row.status !== 'suspended' && row.legacyId !== args.currentUserId)
       .slice(0, limit)
-      .map((row) => ({
-        id: row.legacyId,
-        name: row.name ?? row.email ?? 'Unnamed user',
-        email: row.email ?? undefined,
-        role: row.role ?? undefined,
-      }))
+      .map((row) => serializeDirectoryUser(row))
   },
 })
 
@@ -322,7 +347,7 @@ export const getNotificationPreferencesByEmail = internalQuery({
   },
 })
 
-export const bulkUpsert = zAuthenticatedMutation({
+export const bulkUpsert = zAdminMutation({
   args: {
     users: z.array(
       z.object({
@@ -494,9 +519,9 @@ export const bootstrapUpsert = mutation({
 
     const normalized = normalizeEmail(args.email ?? existing?.email ?? null)
     const timestamp = nowMs()
-    const role = args.role ?? existing?.role ?? 'client'
-    const status = args.status ?? existing?.status ?? 'pending'
-    const agencyId = args.agencyId ?? existing?.agencyId ?? args.legacyId
+    const role = existing?.role ?? DEFAULT_USER_ROLE
+    const status = existing?.status ?? DEFAULT_USER_STATUS
+    const agencyId = existing?.agencyId ?? args.legacyId
     const name = args.name ?? existing?.name ?? null
 
     const payload = {

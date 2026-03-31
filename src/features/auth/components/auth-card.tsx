@@ -26,7 +26,7 @@ import { PROVIDER_COLORS } from '@/lib/colors'
 
 import type { FormEventHandler } from 'react'
 
-import type { PasswordStrength } from './auth-utils'
+import type { PasswordStrength } from '../auth-utils'
 
 type SignInData = {
   email: string
@@ -99,7 +99,7 @@ export function AuthCard({
   onGoogleSignIn,
 }: AuthCardProps) {
   return (
-    <FadeIn as="section" className="w-full lg:max-w-[480px]">
+    <FadeIn as="section" className="w-full lg:max-w-120">
       <Card className="border-border/60 shadow-xl shadow-primary/5">
         <CardHeader className="space-y-1 pb-6 text-center">
           <CardTitle className="text-2xl">Welcome to Cohorts</CardTitle>
@@ -111,7 +111,7 @@ export function AuthCard({
         </CardHeader>
         <CardContent className="space-y-6">
           <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsList className="mb-6 grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign in</TabsTrigger>
               <TabsTrigger value="signup">Sign up</TabsTrigger>
             </TabsList>
@@ -139,13 +139,13 @@ export function AuthCard({
                       placeholder="name@company.com"
                       className={cn(
                         'pl-9',
-                        emailError && activeTab === 'signin' && 'border-destructive focus-visible:ring-destructive'
+                        emailError && activeTab === 'signin' && 'border-destructive focus-visible:ring-destructive',
                       )}
                       disabled={isSubmitting}
                     />
                   </div>
                   {emailError && activeTab === 'signin' && (
-                    <p className="text-xs text-destructive flex items-center gap-1">
+                    <p className="flex items-center gap-1 text-xs text-destructive">
                       <CircleAlert className="h-3 w-3" />
                       {emailError}
                     </p>
@@ -198,7 +198,7 @@ export function AuthCard({
                   />
                   <label
                     htmlFor="remember-me"
-                    className="text-sm font-medium text-muted-foreground leading-none cursor-pointer select-none"
+                    className="cursor-pointer select-none text-sm leading-none font-medium text-muted-foreground"
                   >
                     Remember me
                   </label>
@@ -259,13 +259,13 @@ export function AuthCard({
                       placeholder="name@company.com"
                       className={cn(
                         'pl-9',
-                        emailError && activeTab === 'signup' && 'border-destructive focus-visible:ring-destructive'
+                        emailError && activeTab === 'signup' && 'border-destructive focus-visible:ring-destructive',
                       )}
                       disabled={isSubmitting}
                     />
                   </div>
                   {emailError && activeTab === 'signup' && (
-                    <p className="text-xs text-destructive flex items-center gap-1">
+                    <p className="flex items-center gap-1 text-xs text-destructive">
                       <CircleAlert className="h-3 w-3" />
                       {emailError}
                     </p>
@@ -316,7 +316,7 @@ export function AuthCard({
                             passwordStrength.score <= 1 && 'text-destructive',
                             passwordStrength.score === 2 && 'text-warning',
                             passwordStrength.score === 3 && 'text-success',
-                            passwordStrength.score >= 4 && 'text-success'
+                            passwordStrength.score >= 4 && 'text-success',
                           )}
                         >
                           {passwordStrength.label}
@@ -328,7 +328,7 @@ export function AuthCard({
                             key={level}
                             className={cn(
                               'h-1 flex-1 rounded-full transition-colors',
-                              level <= passwordStrength.score ? passwordStrength.color : 'bg-muted'
+                              level <= passwordStrength.score ? passwordStrength.color : 'bg-muted',
                             )}
                           />
                         ))}
@@ -366,7 +366,7 @@ export function AuthCard({
                           'border-destructive focus-visible:ring-destructive',
                         signUpData.confirmPassword.length > 0 &&
                           passwordsMatch &&
-                          'border-success focus-visible:ring-success'
+                          'border-success focus-visible:ring-success',
                       )}
                       disabled={isSubmitting}
                     />
@@ -389,8 +389,8 @@ export function AuthCard({
                   {signUpData.confirmPassword.length > 0 && (
                     <p
                       className={cn(
-                        'text-xs flex items-center gap-1',
-                        passwordsMatch ? 'text-success' : 'text-destructive'
+                        'flex items-center gap-1 text-xs',
+                        passwordsMatch ? 'text-success' : 'text-destructive',
                       )}
                     >
                       {passwordsMatch ? (
@@ -470,7 +470,7 @@ export function AuthCard({
             <span>Secured with SSL encryption</span>
           </div>
 
-          <p className="text-center text-xs text-muted-foreground px-6">
+          <p className="px-6 text-center text-xs text-muted-foreground">
             By clicking continue, you agree to our{' '}
             <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
               Terms of Service
