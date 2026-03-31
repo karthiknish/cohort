@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { formatDate } from '@/lib/dates'
+import { parseJsonBodySafely, parseRequiredJsonBody } from '@/lib/response-json'
 import { coerceNumber, DEFAULT_RETRY_CONFIG } from './client'
 import { tiktokAdsClient } from '@/services/integrations/shared/base-client'
 import type {
@@ -223,7 +224,10 @@ export async function checkTikTokIntegrationHealth(options: {
     })
     
     if (!userResponse.ok) {
-      const errorData = await userResponse.json().catch(() => ({})) as TikTokApiErrorResponse
+      const errorData = await parseJsonBodySafely<TikTokApiErrorResponse>(userResponse, {
+        context: 'TikTok Ads health user info error',
+        allowEmpty: true,
+      })
       return {
         healthy: false,
         tokenValid: false,
@@ -232,7 +236,9 @@ export async function checkTikTokIntegrationHealth(options: {
       }
     }
     
-    const userData = await userResponse.json() as TikTokApiErrorResponse
+    const userData = await parseRequiredJsonBody<TikTokApiErrorResponse>(userResponse, {
+      context: 'TikTok Ads health user info response',
+    })
     if (userData.code && userData.code !== 0) {
       return {
         healthy: false,
@@ -255,7 +261,10 @@ export async function checkTikTokIntegrationHealth(options: {
       })
       
       if (!accountResponse.ok) {
-        const errorData = await accountResponse.json().catch(() => ({})) as TikTokApiErrorResponse
+        const errorData = await parseJsonBodySafely<TikTokApiErrorResponse>(accountResponse, {
+          context: 'TikTok Ads health advertiser error',
+          allowEmpty: true,
+        })
         return {
           healthy: false,
           tokenValid: true,
@@ -264,9 +273,11 @@ export async function checkTikTokIntegrationHealth(options: {
         }
       }
       
-      const accountData = await accountResponse.json() as TikTokApiErrorResponse & {
+      const accountData = await parseRequiredJsonBody<TikTokApiErrorResponse & {
         data?: { list?: Array<{ advertiser_id?: string }> }
-      }
+      }>(accountResponse, {
+        context: 'TikTok Ads health advertiser response',
+      })
       
       if (accountData.code && accountData.code !== 0) {
         return {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect } from 'react'
+import Link from 'next/link'
 
 type DashboardErrorProps = {
   error: Error & { digest?: string; componentStack?: string }
@@ -47,7 +48,7 @@ export default function DashboardError({ error, unstable_retry, reset }: Dashboa
 
         {isDevelopment ? (
           <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-left">
-            <p className="break-words text-xs font-mono text-destructive">{error.message}</p>
+            <p className="wrap-break-word text-xs font-mono text-destructive">{error.message}</p>
             {error.stack ? (
               <details className="mt-3">
                 <summary className="cursor-pointer text-xs text-muted-foreground">View stack trace</summary>
@@ -71,12 +72,12 @@ export default function DashboardError({ error, unstable_retry, reset }: Dashboa
           >
             Try again
           </button>
-          <a
+          <Link
             href="/"
             className="inline-flex w-full items-center justify-center rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
             Go to home
-          </a>
+          </Link>
         </div>
       </div>
     </div>

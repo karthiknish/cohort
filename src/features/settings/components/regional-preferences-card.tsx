@@ -5,17 +5,30 @@ import { LoaderCircle, Globe } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Label } from '@/shared/ui/label'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { useToast } from '@/shared/ui/use-toast'
 import { usePreferences } from '@/shared/contexts/preferences-context'
 import { CurrencySelect } from '@/shared/ui/currency-select'
 import type { CurrencyCode } from '@/constants/currencies'
+import { getPreviewSettingsRegionalPreferences } from '@/lib/preview-data'
 
 export function RegionalPreferencesCard() {
   const { preferences, loading: preferencesLoading, updateCurrency } = usePreferences()
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
   const [savingCurrency, setSavingCurrency] = useState(false)
+  const [previewCurrency, setPreviewCurrency] = useState<CurrencyCode>(() => getPreviewSettingsRegionalPreferences().currency)
 
   const handleCurrencyChange = useCallback((value: CurrencyCode) => {
+    if (isPreviewMode) {
+      setPreviewCurrency(value)
+      toast({
+        title: 'Preview mode',
+        description: `Default currency changed to ${value} for this session only.`,
+      })
+      return
+    }
+
     setSavingCurrency(true)
     void updateCurrency(value)
       .then(() => {
@@ -34,7 +47,7 @@ export function RegionalPreferencesCard() {
       .finally(() => {
         setSavingCurrency(false)
       })
-  }, [toast, updateCurrency])
+  }, [isPreviewMode, toast, updateCurrency])
 
   return (
     <Card>
@@ -54,10 +67,10 @@ export function RegionalPreferencesCard() {
             </p>
           </div>
           <CurrencySelect
-            value={preferences.currency}
+            value={isPreviewMode ? previewCurrency : preferences.currency}
             onValueChange={handleCurrencyChange}
-            disabled={preferencesLoading || savingCurrency}
-            className="w-[160px]"
+            disabled={(!isPreviewMode && preferencesLoading) || savingCurrency}
+            className="w-40"
           />
         </div>
         {savingCurrency && (

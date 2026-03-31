@@ -94,7 +94,7 @@
         "@types/react-dom": "^19.2.3",
         "babel-plugin-react-compiler": "1.0.0",
         "next": "^16.2.1",
-        "oxlint": "^1.57.0",
+        "oxlint": "1.57.0",
         "typescript": "^5",
         "vitest": "^4.0.18",
       },

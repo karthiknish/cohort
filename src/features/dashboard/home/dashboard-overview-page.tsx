@@ -490,6 +490,10 @@ export function DashboardOverviewPage() {
   const clientStatsLoading = tasksLoading || proposalsLoading || (!isPreviewMode && canQueryConvex && projectRows === undefined)
   const analyticsLoading = metricsLoading && analyticsMetrics.length === 0
   const adsLoading = metricsLoading && adMetrics.length === 0
+  const headerBadge = useMemo(() => ({
+    label: selectedClient ? 'Selected client' : 'Workspace overview',
+    variant: 'secondary' as const,
+  }), [selectedClient])
 
   return (
     <div className="space-y-8 pb-10">
@@ -497,10 +501,7 @@ export function DashboardOverviewPage() {
         title="Dashboard"
         description={`One overview for ${selectedClientLabel}, pulling the top-line stats from your core dashboard sections.`}
         icon={LayoutDashboard}
-        badge={{
-          label: selectedClient ? 'Selected client' : 'Workspace overview',
-          variant: 'secondary',
-        }}
+        badge={headerBadge}
       />
 
       <DashboardRoleBanner userRole={userRole} userDisplayName={user?.name ?? null} />

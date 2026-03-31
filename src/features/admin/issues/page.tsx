@@ -37,6 +37,8 @@ import {
   TableRow,
 } from '@/shared/ui/table'
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog'
+import { usePreview } from '@/shared/contexts/preview-context'
+import { getPreviewAdminProblemReports } from '@/lib/preview-data'
 import { useToast } from '@/shared/ui/use-toast'
 import { cn } from '@/lib/utils'
 
@@ -105,7 +107,7 @@ function ProblemReportRow({
 
   return (
     <TableRow key={report.id}>
-      <TableCell className="max-w-[300px]">
+      <TableCell className="max-w-75">
         <div className="font-medium">{report.title}</div>
         <div className="truncate text-xs text-muted-foreground" title={report.description}>
           {report.description}
@@ -124,7 +126,7 @@ function ProblemReportRow({
             onValueChange={handleStatusChange}
             disabled={updatingId === report.id}
           >
-            <SelectTrigger className="h-8 w-[130px] border-none bg-transparent p-0 hover:bg-accent focus:ring-0">
+            <SelectTrigger className="h-8 w-32.5 border-none bg-transparent p-0 hover:bg-accent focus:ring-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -153,6 +155,7 @@ function ProblemReportRow({
 }
 
 export default function AdminIssuesPage() {
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
   const [statusFilter, setStatusFilter] = useState('all')
@@ -160,18 +163,35 @@ export default function AdminIssuesPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ProblemReport | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [previewReports, setPreviewReports] = useState<ProblemReport[]>(() => getPreviewAdminProblemReports())
 
-  const reports = useQuery(api.problemReports.list, {
-    status: statusFilter === 'all' ? null : statusFilter,
-    limit: 200,
-  }) as ProblemReport[] | undefined
+  const reports = useQuery(
+    api.problemReports.list,
+    isPreviewMode
+      ? 'skip'
+      : {
+          status: statusFilter === 'all' ? null : statusFilter,
+          limit: 200,
+        }
+  ) as ProblemReport[] | undefined
 
   const updateReport = useMutation(api.problemReports.update)
   const removeReport = useMutation(api.problemReports.remove)
 
-  const loading = reports === undefined
+  const resolvedReports = isPreviewMode ? previewReports : (reports ?? [])
+  const loading = isPreviewMode ? false : reports === undefined
 
   const handleStatusUpdate = useCallback((id: string, newStatus: string) => {
+    if (isPreviewMode) {
+      setPreviewReports((current) => current.map((report) => (
+        report.id === id
+          ? { ...report, status: newStatus, updatedAt: new Date().toISOString() }
+          : report
+      )))
+      toast({ title: 'Preview mode', description: `Sample issue marked as ${newStatus}.` })
+      return
+    }
+
     setUpdatingId(id)
 
     void updateReport({ legacyId: id, status: newStatus })
@@ -189,10 +209,17 @@ export default function AdminIssuesPage() {
       .finally(() => {
         setUpdatingId(null)
       })
-  }, [toast, updateReport])
+  }, [isPreviewMode, toast, updateReport])
 
   const handleDelete = useCallback(() => {
     if (!deleteTarget || deletingId === deleteTarget.id) return
+
+    if (isPreviewMode) {
+      setPreviewReports((current) => current.filter((report) => report.id !== deleteTarget.id))
+      setDeleteTarget(null)
+      toast({ title: 'Preview mode', description: 'Sample issue removed locally for this session.' })
+      return
+    }
 
     setDeletingId(deleteTarget.id)
 
@@ -212,11 +239,14 @@ export default function AdminIssuesPage() {
       .finally(() => {
         setDeletingId(null)
       })
-  }, [deleteTarget, deletingId, removeReport, toast])
+  }, [deleteTarget, deletingId, isPreviewMode, removeReport, toast])
 
   const handleRefresh = useCallback(() => {
-    // Convex is realtime
-  }, [])
+    if (isPreviewMode) {
+      setPreviewReports(getPreviewAdminProblemReports())
+      toast({ title: 'Preview data refreshed', description: 'Showing sample admin issue reports.' })
+    }
+  }, [isPreviewMode, toast])
 
   const handleSearchTermChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value)
@@ -239,7 +269,7 @@ export default function AdminIssuesPage() {
     setDeleteTarget(null)
   }, [])
 
-  const filteredReports = (reports ?? []).filter((r: ProblemReport) => {
+  const filteredReports = resolvedReports.filter((r: ProblemReport) => {
     const search = searchTerm.toLowerCase()
     return (
       r.title.toLowerCase().includes(search) ||
@@ -274,7 +304,7 @@ export default function AdminIssuesPage() {
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
+              <SelectTrigger className="w-full md:w-45">
                 <SelectValue placeholder="Status Filter" />
               </SelectTrigger>
               <SelectContent>
@@ -287,7 +317,7 @@ export default function AdminIssuesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading && (reports ?? []).length === 0 ? (
+          {loading && resolvedReports.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <LoaderCircle className="mb-4 h-8 w-8 animate-spin" />
               <p>Loading reports...</p>

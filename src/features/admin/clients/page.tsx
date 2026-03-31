@@ -20,6 +20,8 @@ import {
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { usePreview } from '@/shared/contexts/preview-context'
+import { getPreviewAdminUsers } from '@/lib/preview-data'
 
 import { UserSearchPicker } from '../components/user-search-picker'
 import { buildClientAllocationSummary, getAssignableWorkspaceUsers } from '../lib/client-allocation'
@@ -278,7 +280,8 @@ function ClientTeamMemberBadge({ client, member, removingTeamMemberKey, onRemove
 
 export default function AdminClientsPage() {
   const { user } = useAuth()
-  const workspaceContext = useQuery(api.users.getMyWorkspaceContext, user ? {} : 'skip')
+  const { isPreviewMode } = usePreview()
+  const workspaceContext = useQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
   const workspaceId = workspaceContext?.workspaceId ?? null
   const includeAllWorkspaces = workspaceContext?.role === 'admin'
 
@@ -331,7 +334,7 @@ export default function AdminClientsPage() {
 
   const { results: adminUserRows } = usePaginatedQuery(
     api.adminUsers.listUsers,
-    workspaceId
+    !isPreviewMode && workspaceId
       ? {
           workspaceId,
           includeAllWorkspaces,
@@ -343,6 +346,18 @@ export default function AdminClientsPage() {
   const [clientSearch, setClientSearch] = useState('')
 
   const assignableUsers = useMemo(() => {
+    if (isPreviewMode) {
+      return getAssignableWorkspaceUsers(
+        getPreviewAdminUsers().map((row) => ({
+          id: row.id,
+          name: row.name,
+          email: row.email,
+          role: row.role,
+          status: row.status,
+        }))
+      )
+    }
+
     const normalizedUsers = (adminUserRows ?? []).map((row: AdminUserRow) => ({
       id: row.legacyId ?? row._id ?? '',
       name: row.name?.trim() || row.email?.trim() || 'Unknown user',
@@ -352,7 +367,7 @@ export default function AdminClientsPage() {
     }))
 
     return getAssignableWorkspaceUsers(normalizedUsers)
-  }, [adminUserRows])
+  }, [adminUserRows, isPreviewMode])
 
   const allocationSummary = useMemo(
     () => buildClientAllocationSummary(assignableUsers, clients),
@@ -422,7 +437,7 @@ export default function AdminClientsPage() {
     [handleRemoveTeamMember]
   )
 
-  if (!user) {
+  if (!user && !isPreviewMode) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
         <Card className="max-w-md border-muted/60">
@@ -442,7 +457,10 @@ export default function AdminClientsPage() {
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Client workspaces</h1>
-            <p className="text-muted-foreground">Allocate real internal teammates to each client workspace and keep ownership clean.</p>
+            <p className="text-muted-foreground">
+              Allocate real internal teammates to each client workspace and keep ownership clean.
+              {isPreviewMode ? ' Preview mode keeps client changes local to this session.' : ''}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button asChild variant="outline">

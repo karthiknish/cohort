@@ -1,4 +1,6 @@
 import { authService } from '@/services/auth'
+import { ResponseBodyParseError, parseJsonBody } from './response-json'
+import { composeAbortSignal, isAbortError, isTimeoutError, sleepWithSignal } from './retry-utils'
 import { UnifiedError } from './errors/unified-error'
 
 export class ApiClientError extends UnifiedError {
@@ -36,8 +38,70 @@ const responseCache = new CacheManager(new MemoryCacheBackend({ maxEntries: 300 
   backendName: 'memory',
 })
 
-export async function apiFetch<T = unknown>(input: RequestInfo | URL, init: RequestInit = {}): Promise<T> {
-  const method = init.method || 'GET'
+function mapCodeFromStatus(value: number) {
+  if (value === 401) return 'UNAUTHORIZED'
+  if (value === 403) return 'FORBIDDEN'
+  if (value === 404) return 'NOT_FOUND'
+  if (value === 429) return 'RATE_LIMIT_EXCEEDED'
+  if (value >= 500) return 'INTERNAL_ERROR'
+  return undefined
+}
+
+async function parseApiResponsePayload(response: Response, context: string): Promise<unknown | null> {
+  const status = response.status
+
+  try {
+    return await parseJsonBody<unknown>(response, {
+      context,
+      allowEmpty: status === 204 || status === 205,
+    })
+  } catch (error) {
+    if (error instanceof ResponseBodyParseError) {
+      if (!response.ok) {
+        throw new ApiClientError(defaultStatusMessage(status), {
+          status,
+          code: mapCodeFromStatus(status) ?? 'INVALID_RESPONSE',
+          cause: error,
+        })
+      }
+
+      throw new ApiClientError('The server returned an invalid response. Please try again.', {
+        status,
+        code: 'INVALID_RESPONSE',
+        cause: error,
+      })
+    }
+
+    throw error
+  }
+}
+
+function createNetworkApiClientError(error: unknown, timeoutMs?: number): ApiClientError {
+  if (isTimeoutError(error)) {
+    const timeoutSuffix = typeof timeoutMs === 'number' && timeoutMs > 0
+      ? ` after ${Math.ceil(timeoutMs / 1000)}s`
+      : ''
+
+    return new ApiClientError(`The request timed out${timeoutSuffix}. Please try again.`, {
+      code: 'REQUEST_TIMEOUT',
+      cause: error,
+    })
+  }
+
+  return new ApiClientError('Network error. Please check your connection and try again.', {
+    code: 'NETWORK_ERROR',
+    cause: error,
+  })
+}
+
+export type ApiFetchOptions = RequestInit & {
+  timeoutMs?: number
+}
+
+export async function apiFetch<T = unknown>(input: RequestInfo | URL, init: ApiFetchOptions = {}): Promise<T> {
+  const { timeoutMs, signal: requestSignal, ...requestInit } = init
+  const callerSignal = requestSignal ?? undefined
+  const method = requestInit.method || 'GET'
   const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
 
   // Preview mode: short-circuit certain read endpoints with demo data.
@@ -69,7 +133,7 @@ export async function apiFetch<T = unknown>(input: RequestInfo | URL, init: Requ
   }
 
   // Only deduplicate GET requests to avoid side-effect issues
-  const isDeduplicatable = method.toUpperCase() === 'GET'
+  const isDeduplicatable = method.toUpperCase() === 'GET' && !callerSignal && !timeoutMs
   // Include preview mode state in cache key to prevent stale data when mode changes
   const previewSuffix = typeof window !== 'undefined' && isPreviewModeEnabled() ? ':preview' : ''
   const cacheKey = `${method}:${url}${previewSuffix}`
@@ -92,53 +156,42 @@ export async function apiFetch<T = unknown>(input: RequestInfo | URL, init: Requ
         await authService.waitForInitialAuth().catch(() => {})
       }
 
-      const headers = new Headers(init.headers)
+      const headers = new Headers(requestInit.headers)
 
-      if (!headers.has('Content-Type') && init.method && init.method !== 'GET') {
+      if (!headers.has('Content-Type') && method.toUpperCase() !== 'GET') {
         headers.set('Content-Type', 'application/json')
       }
+
+      const { signal, cleanup } = composeAbortSignal({ signal: callerSignal, timeoutMs })
 
       let response: Response
       try {
         response = await fetch(input, {
-          ...init,
+          ...requestInit,
           headers,
-          credentials: init.credentials ?? 'same-origin',
+          credentials: requestInit.credentials ?? 'same-origin',
+          signal,
         })
-      } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          throw error
-        }
-
-        if (attempt < 2 && isDeduplicatable) {
-          await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1000))
-          return executeRequest(attempt + 1)
-        }
-        throw new ApiClientError('Network error', { code: 'NETWORK_ERROR', cause: error })
+      } finally {
+        cleanup()
       }
 
-      const payload = await response.json().catch(() => ({}))
       const status = response.status
-      const isEnvelope = payload && typeof payload === 'object' && 'success' in payload
+      const payload = await parseApiResponsePayload(response, `apiFetch ${method.toUpperCase()} ${url}`)
+      const payloadRecord = payload && typeof payload === 'object' && !Array.isArray(payload)
+        ? payload as Record<string, unknown>
+        : null
+      const isEnvelope = payloadRecord !== null && 'success' in payloadRecord
 
-      const mapCodeFromStatus = (value: number) => {
-        if (value === 401) return 'UNAUTHORIZED'
-        if (value === 403) return 'FORBIDDEN'
-        if (value === 404) return 'NOT_FOUND'
-        if (value === 429) return 'RATE_LIMIT_EXCEEDED'
-        if (value >= 500) return 'INTERNAL_ERROR'
-        return undefined
-      }
-
-      if (!response.ok || (isEnvelope && payload.success === false)) {
-        const code = payload?.code || mapCodeFromStatus(status)
-        const message = payload?.error || defaultStatusMessage(status)
-        throw new ApiClientError(message, { status, code, details: payload?.details })
+      if (!response.ok || (isEnvelope && payloadRecord.success === false)) {
+        const code = typeof payloadRecord?.code === 'string' ? payloadRecord.code : mapCodeFromStatus(status)
+        const message = typeof payloadRecord?.error === 'string' ? payloadRecord.error : defaultStatusMessage(status)
+        throw new ApiClientError(message, { status, code, details: payloadRecord?.details })
       }
 
       // Handle standardized envelope { success: true, data: T }
-      if (isEnvelope && 'data' in payload) {
-        const result = payload.data as T
+      if (isEnvelope && 'data' in payloadRecord) {
+        const result = payloadRecord.data as T
         if (isDeduplicatable) void responseCache.set(cacheKey, result, RESPONSE_CACHE_TTL_MS)
         return result
       }
@@ -147,11 +200,20 @@ export async function apiFetch<T = unknown>(input: RequestInfo | URL, init: Requ
       if (isDeduplicatable) void responseCache.set(cacheKey, payload as T, RESPONSE_CACHE_TTL_MS)
       return payload as T
     } catch (error) {
-      if (attempt < 2 && (error as ApiClientError).code === 'NETWORK_ERROR' && isDeduplicatable) {
-        await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1000))
+      if (isAbortError(error)) {
+        throw error
+      }
+
+      const normalizedError = error instanceof ApiClientError
+        ? error
+        : createNetworkApiClientError(error, timeoutMs)
+
+      if (attempt < 2 && isDeduplicatable && (normalizedError.code === 'NETWORK_ERROR' || normalizedError.code === 'REQUEST_TIMEOUT')) {
+        await sleepWithSignal((attempt + 1) * 1000, callerSignal)
         return executeRequest(attempt + 1)
       }
-      throw error
+
+      throw normalizedError
     }
   }
 

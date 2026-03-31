@@ -10,6 +10,7 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { normalizeAdsProviderId } from '@/domain/ads/provider'
 import { adsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { notifyFailure } from '@/lib/notifications'
 import { getPreviewAdsIntegrationStatuses } from '@/lib/preview-data'
 import { useToast } from '@/shared/ui/use-toast'
 
@@ -416,7 +417,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       logError(error, 'useAdsConnections:initializeGoogleIntegration')
       const message = asErrorMessage(error)
       setGoogleSetupMessage(message)
-      toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: message })
+      notifyFailure({ title: TOAST_TITLES.CONNECTION_FAILED, message })
     } finally {
       setInitializingGoogle(false)
     }
@@ -478,7 +479,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       logError(error, 'useAdsConnections:initializeMetaIntegration')
       const message = asErrorMessage(error)
       setMetaSetupMessage(message)
-      toast({ variant: 'destructive', title: TOAST_TITLES.META_SETUP_FAILED, description: message })
+      notifyFailure({ title: TOAST_TITLES.META_SETUP_FAILED, message })
     } finally {
       setInitializingMeta(false)
     }
@@ -511,7 +512,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       logError(error, 'useAdsConnections:initializeTikTokIntegration')
       const message = asErrorMessage(error)
       setTiktokSetupMessage(message)
-      toast({ variant: 'destructive', title: TOAST_TITLES.TIKTOK_SETUP_FAILED, description: message })
+      notifyFailure({ title: TOAST_TITLES.TIKTOK_SETUP_FAILED, message })
     } finally {
       setInitializingTikTok(false)
     }
@@ -581,7 +582,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
             logError(error, 'useAdsConnections:oauthSuccess:facebook')
             const message = asErrorMessage(error)
             setMetaSetupMessage(message)
-            toast({ variant: 'destructive', title: TOAST_TITLES.META_SETUP_FAILED, description: message })
+            notifyFailure({ title: TOAST_TITLES.META_SETUP_FAILED, message })
           })
       } else if (providerId === PROVIDER_IDS.TIKTOK) {
         void initializeTikTokIntegration(oauthClientId)
@@ -600,7 +601,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
             logError(error, 'useAdsConnections:oauthSuccess:google')
             const errorMessage = asErrorMessage(error)
             setGoogleSetupMessage(errorMessage)
-            toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: errorMessage })
+            notifyFailure({ title: TOAST_TITLES.CONNECTION_FAILED, message: errorMessage })
           })
        } else if (providerId === PROVIDER_IDS.LINKEDIN) {
         void initializeLinkedInIntegration().then(async () => {
@@ -608,7 +609,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
           triggerRefresh()
         }).catch(err => {
           logError(err, 'useAdsConnections:oauthSuccess:linkedin')
-          toast({ variant: 'destructive', title: TOAST_TITLES.CONNECTION_FAILED, description: asErrorMessage(err) })
+          notifyFailure({ title: TOAST_TITLES.CONNECTION_FAILED, error: err })
         })
       } else {
         toast({
@@ -623,11 +624,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
       console.error(`[useAdsConnections] Detected OAuth error for ${providerId}:`, errorMessage)
 
-      toast({
-        variant: 'destructive',
-        title: `${displayProvider} connection failed`,
-        description: errorMessage,
-      })
+      notifyFailure({ title: `${displayProvider} connection failed`, message: errorMessage })
 
       setConnectionErrors((prev) => ({ ...prev, [providerId]: errorMessage }))
     }
@@ -689,15 +686,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       const message = asErrorMessage(error)
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
       setConnectedProviders((prev) => ({ ...prev, [providerId]: false }))
-      toast({
-        variant: 'destructive',
-        title: TOAST_TITLES.CONNECTION_FAILED,
-        description: message,
-      })
+      notifyFailure({ title: TOAST_TITLES.CONNECTION_FAILED, message })
     } finally {
       setConnectingProvider(null)
     }
-  }, [initializeLinkedInIntegration, triggerRefresh, toast])
+  }, [initializeLinkedInIntegration, triggerRefresh])
 
   const handleOauthRedirect = useCallback(async (providerId: string) => {
     if (typeof window === 'undefined') return
@@ -708,11 +701,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     if (convexAuthLoading || !isAuthenticated || !user) {
       const message = ERROR_MESSAGES.SIGN_IN_REQUIRED
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
-      toast({
-        variant: 'destructive',
-        title: TOAST_TITLES.CONNECTION_FAILED,
-        description: message,
-      })
+      notifyFailure({ title: TOAST_TITLES.CONNECTION_FAILED, message })
       router.push('/')
       return
     }
@@ -774,21 +763,17 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       if (providerId === PROVIDER_IDS.TIKTOK && (isTikTokConfigError || message.toLowerCase().includes('tiktok oauth is not configured'))) {
         setTiktokSetupMessage('TikTok OAuth is not configured. Add TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET, and TIKTOK_OAUTH_REDIRECT_URI environment variables.')
       }
-      toast({
-        variant: 'destructive',
-        title: TOAST_TITLES.CONNECTION_FAILED,
-        description: message,
-      })
+      notifyFailure({ title: TOAST_TITLES.CONNECTION_FAILED, message })
     } finally {
       setConnectingProvider(null)
     }
-  }, [convexAuthLoading, isAuthenticated, router, selectedClientId, startGoogleOauth, startMetaOauth, startTikTokOauth, toast, user])
+  }, [convexAuthLoading, isAuthenticated, router, selectedClientId, startGoogleOauth, startMetaOauth, startTikTokOauth, user])
 
   const handleDisconnect = useCallback(async (providerId: string, options?: DisconnectOptions) => {
     const providerName = formatProviderName(providerId)
 
     if (!workspaceId) {
-      toast({ variant: 'destructive', title: TOAST_TITLES.DISCONNECT_FAILED, description: ERROR_MESSAGES.SIGN_IN_REQUIRED })
+      notifyFailure({ title: TOAST_TITLES.DISCONNECT_FAILED, message: ERROR_MESSAGES.SIGN_IN_REQUIRED })
       return
     }
 
@@ -821,7 +806,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       logError(error, 'useAdsConnections:handleDisconnect')
       const message = asErrorMessage(error)
       setConnectionErrors((prev) => ({ ...prev, [providerId]: message }))
-      toast({ variant: 'destructive', title: TOAST_TITLES.DISCONNECT_FAILED, description: message })
+      notifyFailure({ title: TOAST_TITLES.DISCONNECT_FAILED, message })
     } finally {
       setConnectingProvider(null)
     }
@@ -837,7 +822,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
   const handleSyncNow = useCallback(async (providerId: string) => {
     if (!workspaceId) {
-      toast({ variant: 'destructive', title: 'Sync failed', description: ERROR_MESSAGES.SIGN_IN_REQUIRED })
+      notifyFailure({ title: 'Sync failed', message: ERROR_MESSAGES.SIGN_IN_REQUIRED })
       return
     }
 
@@ -855,7 +840,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } catch (error: unknown) {
       logError(error, 'useAdsConnections:handleSyncNow')
       const message = asErrorMessage(error)
-      toast({ variant: 'destructive', title: 'Sync failed', description: message })
+      notifyFailure({ title: 'Sync failed', message })
     } finally {
       setSyncingProviders((prev) => ({ ...prev, [providerId]: false }))
     }

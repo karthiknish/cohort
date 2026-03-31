@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { googleAdsSearch, normalizeCost, DEFAULT_RETRY_CONFIG } from './client'
+import { parseJsonBodySafely } from '@/lib/response-json'
 import {
   GOOGLE_API_BASE,
 } from './types'
@@ -359,7 +360,10 @@ export async function checkGoogleAdsIntegrationHealth(options: {
     })
     
     if (!listResponse.ok) {
-      const errorData = await listResponse.json().catch(() => ({})) as { error?: { message?: string } }
+      const errorData = await parseJsonBodySafely<{ error?: { message?: string } }>(listResponse, {
+        context: 'Google Ads health accessible customers error',
+        allowEmpty: true,
+      })
       const isDeveloperTokenError = listResponse.status === 401 && 
         (errorData?.error?.message?.toLowerCase().includes('developer') ?? false)
       
@@ -392,7 +396,10 @@ export async function checkGoogleAdsIntegrationHealth(options: {
       })
       
       if (!searchResponse.ok) {
-        const errorData = await searchResponse.json().catch(() => ({})) as { error?: { message?: string } }
+        const errorData = await parseJsonBodySafely<{ error?: { message?: string } }>(searchResponse, {
+          context: 'Google Ads health account search error',
+          allowEmpty: true,
+        })
         return {
           healthy: false,
           tokenValid: true,

@@ -11,6 +11,7 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { apiFetch } from '@/lib/api-client'
 import { analyticsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { notifyFailure } from '@/lib/notifications'
 
 import type { AnalyticsDateRange } from '../components/analytics-date-range-picker'
 import { buildGoogleAnalyticsStory } from '../lib/google-analytics-story'
@@ -33,6 +34,8 @@ type GoogleAnalyticsStatusRow = {
   lastSyncedAtMs: number | null
   lastSyncRequestedAtMs: number | null
 }
+
+const GOOGLE_ANALYTICS_OAUTH_TIMEOUT_MS = 15_000
 
 function formatRelativeSyncTime(valueMs: number | null): string {
   if (!valueMs) return 'Never'
@@ -229,13 +232,12 @@ export function useAnalyticsPageController() {
         requestAnimationFrame(() => {
           setGaSetupMessage(mappedMessage)
         })
-        toast({ title: 'Property load failed', description: mappedMessage, variant: 'destructive' })
+        notifyFailure({ title: 'Property load failed', message: mappedMessage })
       })
     } else {
-      toast({
+      notifyFailure({
         title: 'Google Analytics connection failed',
-        description: mapOauthErrorToMessage(oauthError, message),
-        variant: 'destructive',
+        message: mapOauthErrorToMessage(oauthError, message),
       })
     }
   }, [loadGoogleAnalyticsPropertyOptions, toast])
@@ -299,9 +301,9 @@ export function useAnalyticsPageController() {
       await loadMoreMetrics()
     } catch (error) {
       logError(error, 'AnalyticsPage:handleLoadMoreMetrics')
-      toast({ title: 'Metrics pagination error', description: asErrorMessage(error), variant: 'destructive' })
+      notifyFailure({ title: 'Metrics pagination error', error })
     }
-  }, [loadMoreMetrics, metricsNextCursor, toast])
+  }, [loadMoreMetrics, metricsNextCursor])
 
   const selectedRangeDays = useMemo(() => {
     return Math.max(differenceInDays(dateRange.end, dateRange.start) + 1, 1)
@@ -330,7 +332,9 @@ export function useAnalyticsPageController() {
         ? `/api/integrations/google-analytics/oauth/start?${search.toString()}`
         : '/api/integrations/google-analytics/oauth/start'
 
-      const payload = await apiFetch<{ url?: string }>(target)
+      const payload = await apiFetch<{ url?: string }>(target, {
+        timeoutMs: GOOGLE_ANALYTICS_OAUTH_TIMEOUT_MS,
+      })
       if (typeof payload?.url !== 'string' || payload.url.length === 0) {
         throw new Error('Google Analytics OAuth did not return a URL.')
       }
@@ -338,11 +342,7 @@ export function useAnalyticsPageController() {
       window.location.href = payload.url
     } catch (error) {
       logError(error, 'AnalyticsPage:handleConnectGoogleAnalytics')
-      toast({
-        title: 'Unable to connect Google Analytics',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
+      notifyFailure({ title: 'Unable to connect Google Analytics', error })
       setGaLoading(false)
     }
   }, [isPreviewMode, selectedClientId, toast])
@@ -354,13 +354,13 @@ export function useAnalyticsPageController() {
     }
 
     if (!gaConnected) {
-      toast({ title: 'Not connected', description: 'Connect Google Analytics before running a sync.', variant: 'destructive' })
+      notifyFailure({ title: 'Not connected', message: 'Connect Google Analytics before running a sync.' })
       return
     }
 
     if (gaNeedsPropertySelection) {
       setGaSetupDialogOpen(true)
-      toast({ title: 'Property required', description: 'Select a Google Analytics property before syncing.', variant: 'destructive' })
+      notifyFailure({ title: 'Property required', message: 'Select a Google Analytics property before syncing.' })
       return
     }
 
@@ -379,7 +379,7 @@ export function useAnalyticsPageController() {
       .then(() => mutateMetrics())
       .catch((error: unknown) => {
         logError(error, 'AnalyticsPage:handleSyncGoogleAnalytics')
-        toast({ title: 'Sync failed', description: asErrorMessage(error), variant: 'destructive' })
+        notifyFailure({ title: 'Sync failed', error })
       })
   }, [
     gaConnected,
@@ -399,15 +399,15 @@ export function useAnalyticsPageController() {
     void loadGoogleAnalyticsPropertyOptions().catch((error) => {
       const message = asErrorMessage(error)
       setGaSetupMessage(message)
-      toast({ title: 'Property load failed', description: message, variant: 'destructive' })
+      notifyFailure({ title: 'Property load failed', message })
     })
-  }, [loadGoogleAnalyticsPropertyOptions, toast])
+  }, [loadGoogleAnalyticsPropertyOptions])
 
   const handleFinalizeGoogleAnalyticsSetup = useCallback(() => {
     if (isPreviewMode) return
 
     if (!workspaceId) {
-      toast({ title: 'Setup failed', description: 'Workspace context is required.', variant: 'destructive' })
+      notifyFailure({ title: 'Setup failed', message: 'Workspace context is required.' })
       return
     }
 
@@ -435,7 +435,7 @@ export function useAnalyticsPageController() {
       .catch((error) => {
         const message = asErrorMessage(error)
         setGaSetupMessage(message)
-        toast({ title: 'Setup failed', description: message, variant: 'destructive' })
+        notifyFailure({ title: 'Setup failed', message })
       })
       .finally(() => {
         setGaInitializingProperty(false)
@@ -457,7 +457,7 @@ export function useAnalyticsPageController() {
     }
 
     if (!workspaceId) {
-      toast({ title: 'Disconnect failed', description: 'Workspace context is required.', variant: 'destructive' })
+      notifyFailure({ title: 'Disconnect failed', message: 'Workspace context is required.' })
       return Promise.resolve()
     }
 
@@ -493,7 +493,7 @@ export function useAnalyticsPageController() {
         })
       })
       .catch((error) => {
-        toast({ title: 'Disconnect failed', description: asErrorMessage(error), variant: 'destructive' })
+        notifyFailure({ title: 'Disconnect failed', error })
       })
       .finally(() => {
         setGaDisconnecting(false)

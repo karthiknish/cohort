@@ -9,6 +9,7 @@ import {
   formatDate,
   DEFAULT_RETRY_CONFIG,
 } from './client'
+import { parseJsonBodySafely } from '@/lib/response-json'
 import { linkedinAdsClient } from '@/services/integrations/shared/base-client'
 import type {
   LinkedInAdsOptions,
@@ -180,7 +181,10 @@ export async function checkLinkedInIntegrationHealth(options: {
     })
     
     if (!profileResponse.ok) {
-      const errorData = await profileResponse.json().catch(() => ({})) as LinkedInApiErrorResponse
+      const errorData = await parseJsonBodySafely<LinkedInApiErrorResponse>(profileResponse, {
+        context: 'LinkedIn Ads health profile error',
+        allowEmpty: true,
+      })
       return {
         healthy: false,
         tokenValid: false,
@@ -200,7 +204,10 @@ export async function checkLinkedInIntegrationHealth(options: {
       })
       
       if (!accountResponse.ok) {
-        const errorData = await accountResponse.json().catch(() => ({})) as LinkedInApiErrorResponse
+        const errorData = await parseJsonBodySafely<LinkedInApiErrorResponse>(accountResponse, {
+          context: 'LinkedIn Ads health account error',
+          allowEmpty: true,
+        })
         return {
           healthy: false,
           tokenValid: true,

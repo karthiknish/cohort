@@ -15,6 +15,7 @@
  * - Dismissal handling
  */
 
+import { asErrorMessage } from '@/lib/convex-errors'
 import { toast as sonnerToast } from '@/shared/ui/sonner'
 import * as React from 'react'
 
@@ -71,6 +72,50 @@ type LoadingToastOptions = {
   position?: ToastPosition
 }
 
+type FailureToastOptions = Omit<ErrorToastOptions, 'message'> & {
+  error?: unknown
+  message?: string
+  fallbackMessage?: string
+}
+
+function resolveToastContent(options: BaseToastOptions): {
+  message: string
+  description?: string
+} {
+  const title = options.title?.trim()
+
+  if (!title) {
+    return {
+      message: options.message,
+      description: options.description,
+    }
+  }
+
+  return {
+    message: title,
+    description: options.description ?? options.message,
+  }
+}
+
+function resolveFailureMessage(options: FailureToastOptions): string {
+  const explicitMessage = options.message?.trim()
+  if (explicitMessage) {
+    return explicitMessage
+  }
+
+  const errorMessage = options.error ? asErrorMessage(options.error).trim() : ''
+  if (errorMessage && errorMessage !== 'An unexpected error occurred') {
+    return errorMessage
+  }
+
+  const fallbackMessage = options.fallbackMessage?.trim()
+  if (fallbackMessage) {
+    return fallbackMessage
+  }
+
+  return errorMessage || 'An unexpected error occurred'
+}
+
 // =============================================================================
 // NOTIFICATION FUNCTIONS
 // =============================================================================
@@ -79,9 +124,10 @@ type LoadingToastOptions = {
  * Show a success notification
  */
 export function notifySuccess(options: SuccessToastOptions): string | number {
-  return sonnerToast.success(options.message, {
-    id: options.title,
-    description: options.description,
+  const content = resolveToastContent(options)
+
+  return sonnerToast.success(content.message, {
+    description: content.description,
     duration: options.duration ?? 4000,
     position: options.position,
     icon: options.icon,
@@ -98,9 +144,10 @@ export function notifySuccess(options: SuccessToastOptions): string | number {
  * Show an error notification
  */
 export function notifyError(options: ErrorToastOptions): string | number {
-  return sonnerToast.error(options.message, {
-    id: options.title,
-    description: options.description,
+  const content = resolveToastContent(options)
+
+  return sonnerToast.error(content.message, {
+    description: content.description,
     duration: options.duration ?? 6000,
     position: options.position,
     icon: options.icon,
@@ -117,9 +164,10 @@ export function notifyError(options: ErrorToastOptions): string | number {
  * Show a warning notification
  */
 export function notifyWarning(options: WarningToastOptions): string | number {
-  return sonnerToast.warning(options.message, {
-    id: options.title,
-    description: options.description,
+  const content = resolveToastContent(options)
+
+  return sonnerToast.warning(content.message, {
+    description: content.description,
     duration: options.duration ?? 5000,
     position: options.position,
     icon: options.icon,
@@ -136,9 +184,10 @@ export function notifyWarning(options: WarningToastOptions): string | number {
  * Show an info notification
  */
 export function notifyInfo(options: InfoToastOptions): string | number {
-  return sonnerToast.info(options.message, {
-    id: options.title,
-    description: options.description,
+  const content = resolveToastContent(options)
+
+  return sonnerToast.info(content.message, {
+    description: content.description,
     duration: options.duration ?? 4000,
     position: options.position,
     icon: options.icon,
@@ -209,6 +258,16 @@ export async function notifyApiCall<T>(
     options?.onError?.(error as Error)
     return undefined
   }
+}
+
+/**
+ * Show a normalized failure toast for validation, network, and operation errors.
+ */
+export function notifyFailure(options: FailureToastOptions): string | number {
+  return notifyError({
+    ...options,
+    message: resolveFailureMessage(options),
+  })
 }
 
 /**

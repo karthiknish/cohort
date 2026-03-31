@@ -7,7 +7,9 @@ import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
+import { apiFetch } from '@/lib/api-client'
 import { meetingIntegrationsApi, meetingsApi, usersApi } from '@/lib/convex-api'
+import { notifyFailure } from '@/lib/notifications'
 import { getWorkspaceId } from '@/lib/utils'
 
 import { useMeetingAttendees } from './use-meeting-attendees'
@@ -23,6 +25,37 @@ import {
   isMeetingPostProcessing,
   toTimeValue,
 } from '../utils'
+
+const MEETING_ACTION_TIMEOUT_MS = 20_000
+
+type QuickMeetingResponse = {
+  meeting?: MeetingRecord
+  notificationSummary?: MeetingNotificationSummary
+  data?: {
+    meeting?: MeetingRecord
+    notificationSummary?: MeetingNotificationSummary
+  }
+}
+
+type CancelMeetingResponse = {
+  notificationSummary?: MeetingNotificationSummary
+  data?: {
+    notificationSummary?: MeetingNotificationSummary
+  }
+}
+
+type ScheduleMeetingResponse = {
+  meeting?: {
+    meetLink?: string | null
+  }
+  notificationSummary?: MeetingNotificationSummary
+  data?: {
+    meeting?: {
+      meetLink?: string | null
+    }
+    notificationSummary?: MeetingNotificationSummary
+  }
+}
 
 export function useMeetingsPageController() {
   const { user, startGoogleWorkspaceOauth } = useAuth()
@@ -145,11 +178,7 @@ export function useMeetingsPageController() {
           description: 'You can now schedule calendar-backed Cohorts meeting rooms from this tab.',
         })
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Google Workspace connection failed',
-          description: message || 'Please retry the OAuth flow.',
-        })
+        notifyFailure({ title: 'Google Workspace connection failed', message: message || 'Please retry the OAuth flow.' })
       }
     }
 
@@ -215,7 +244,7 @@ export function useMeetingsPageController() {
     }
 
     if (!canSchedule) {
-      toast({ variant: 'destructive', title: 'Read-only access', description: 'Client users cannot connect Google Workspace integrations.' })
+      notifyFailure({ title: 'Read-only access', message: 'Client users cannot connect Google Workspace integrations.' })
       return
     }
 
@@ -226,11 +255,7 @@ export function useMeetingsPageController() {
       const { url } = await startGoogleWorkspaceOauth(redirect)
       window.location.href = url
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Unable to connect Google Workspace',
-        description: error instanceof Error ? error.message : 'Unknown error',
-      })
+      notifyFailure({ title: 'Unable to connect Google Workspace', error })
     }
   }, [canSchedule, isPreviewMode, startGoogleWorkspaceOauth, toast])
 
@@ -241,7 +266,7 @@ export function useMeetingsPageController() {
     }
 
     if (!canSchedule) {
-      toast({ variant: 'destructive', title: 'Read-only access', description: 'Client users cannot disconnect Google Workspace integrations.' })
+      notifyFailure({ title: 'Read-only access', message: 'Client users cannot disconnect Google Workspace integrations.' })
       return
     }
 
@@ -251,11 +276,7 @@ export function useMeetingsPageController() {
       await disconnectGoogleWorkspace({ workspaceId })
       toast({ title: 'Google Workspace disconnected', description: 'Meeting scheduling is disabled until you reconnect.' })
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Disconnect failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-      })
+      notifyFailure({ title: 'Disconnect failed', error })
     }
   }, [canSchedule, disconnectGoogleWorkspace, isPreviewMode, toast, workspaceId])
 
@@ -339,46 +360,34 @@ export function useMeetingsPageController() {
     }
 
     if (!canSchedule) {
-      toast({ variant: 'destructive', title: 'Read-only access', description: 'Client users cannot start meetings.' })
+      notifyFailure({ title: 'Read-only access', message: 'Client users cannot start meetings.' })
       return
     }
 
     if (options.attendeeEmails.length === 0) {
-      toast({ variant: 'destructive', title: 'Add a participant', description: 'Add at least one participant before starting a room.' })
+      notifyFailure({ title: 'Add a participant', message: 'Add at least one participant before starting a room.' })
       return
     }
 
     if (!resolvedGoogleWorkspaceStatus?.connected) {
-      toast({ variant: 'destructive', title: 'Google Workspace required', description: 'Connect Google Workspace before starting a meeting room.' })
+      notifyFailure({ title: 'Google Workspace required', message: 'Connect Google Workspace before starting a meeting room.' })
       return
     }
 
     setQuickStarting(true)
     const quickMeetClientId = selectedClientId === undefined ? null : selectedClientId
 
-    void fetch('/api/meetings/quick', {
+    void apiFetch<QuickMeetingResponse>('/api/meetings/quick', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...options, clientId: quickMeetClientId }),
+      timeoutMs: MEETING_ACTION_TIMEOUT_MS,
     })
-      .then(async (response) => {
-        const payload = (await response.json().catch(() => ({}))) as {
-          success?: boolean
-          error?: string
-          data?: { meeting?: MeetingRecord; notificationSummary?: MeetingNotificationSummary }
-          meeting?: MeetingRecord
-          notificationSummary?: MeetingNotificationSummary
-        }
-
-        if (!response.ok || payload.success === false) {
-          toast({ variant: 'destructive', title: 'Meeting launch failed', description: payload.error || 'Unable to start meeting room' })
-          return
-        }
-
+      .then((payload) => {
         const meeting = payload.data?.meeting ?? payload.meeting
         const notificationSummary = payload.data?.notificationSummary ?? payload.notificationSummary
         if (!meeting) {
-          toast({ variant: 'destructive', title: 'Meeting launch failed', description: 'The room started without a meeting record' })
+          notifyFailure({ title: 'Meeting launch failed', message: 'The room started without a meeting record.' })
           return
         }
 
@@ -408,7 +417,7 @@ export function useMeetingsPageController() {
         })
       })
       .catch((error) => {
-        toast({ variant: 'destructive', title: 'Meeting launch failed', description: error instanceof Error ? error.message : 'Unknown error' })
+        notifyFailure({ title: 'Meeting launch failed', error, fallbackMessage: 'Unable to start meeting room.' })
       })
       .finally(() => {
         setQuickStarting(false)
@@ -434,7 +443,7 @@ export function useMeetingsPageController() {
     }
 
     if (!canSchedule) {
-      toast({ variant: 'destructive', title: 'Read-only access', description: 'Client users cannot cancel meetings.' })
+      notifyFailure({ title: 'Read-only access', message: 'Client users cannot cancel meetings.' })
       return
     }
 
@@ -446,23 +455,13 @@ export function useMeetingsPageController() {
     if (!meeting) return
 
     setCancellingMeetingId(meeting.legacyId)
-    void fetch('/api/meetings/cancel', {
+    void apiFetch<CancelMeetingResponse>('/api/meetings/cancel', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ legacyId: meeting.legacyId }),
+      timeoutMs: MEETING_ACTION_TIMEOUT_MS,
     })
-      .then(async (response) => {
-        const payload = (await response.json().catch(() => ({}))) as {
-          success?: boolean
-          error?: string
-          data?: { notificationSummary?: MeetingNotificationSummary }
-        }
-
-        if (!response.ok || payload.success === false) {
-          toast({ variant: 'destructive', title: 'Cancel failed', description: payload.error || 'Unable to cancel meeting' })
-          return
-        }
-
+      .then((payload) => {
         if (editingMeetingId === meeting.legacyId) {
           resetScheduleForm()
         }
@@ -488,7 +487,7 @@ export function useMeetingsPageController() {
         })
       })
       .catch((error) => {
-        toast({ variant: 'destructive', title: 'Cancel failed', description: error instanceof Error ? error.message : 'Unknown error' })
+        notifyFailure({ title: 'Cancel failed', error, fallbackMessage: 'Unable to cancel meeting.' })
       })
       .finally(() => {
         setCancellingMeetingId(null)
@@ -504,19 +503,19 @@ export function useMeetingsPageController() {
       return
     }
     if (!canSchedule) {
-      toast({ variant: 'destructive', title: 'Read-only access', description: 'Client users can view meetings but cannot schedule them.' })
+      notifyFailure({ title: 'Read-only access', message: 'Client users can view meetings but cannot schedule them.' })
       return
     }
     if (hasPendingInvalidInput) {
-      toast({ variant: 'destructive', title: 'Invalid attendee email', description: 'Enter a valid email before scheduling the meeting.' })
+      notifyFailure({ title: 'Invalid attendee email', message: 'Enter a valid email before scheduling the meeting.' })
       return
     }
     if (!hasParticipants) {
-      toast({ variant: 'destructive', title: 'Add a participant', description: 'Add at least one participant before scheduling a meeting.' })
+      notifyFailure({ title: 'Add a participant', message: 'Add at least one participant before scheduling a meeting.' })
       return
     }
     if (!meetingDate) {
-      toast({ variant: 'destructive', title: 'Missing date', description: 'Choose a meeting date before scheduling.' })
+      notifyFailure({ title: 'Missing date', message: 'Choose a meeting date before scheduling.' })
       return
     }
 
@@ -529,7 +528,7 @@ export function useMeetingsPageController() {
     const normalizedTitle = title.replace(/\s+/g, ' ').trim()
 
     if (!Number.isFinite(start.getTime()) || !Number.isFinite(duration) || duration <= 0 || !Number.isFinite(parsedHours) || !Number.isFinite(parsedMinutes)) {
-      toast({ variant: 'destructive', title: 'Invalid schedule', description: 'Please provide a valid start time and duration.' })
+      notifyFailure({ title: 'Invalid schedule', message: 'Please provide a valid start time and duration.' })
       return
     }
 
@@ -538,27 +537,27 @@ export function useMeetingsPageController() {
     const now = Date.now()
 
     if (normalizedTitle.length < 3) {
-      toast({ variant: 'destructive', title: 'Title too short', description: 'Meeting titles should be at least 3 characters long.' })
+      notifyFailure({ title: 'Title too short', message: 'Meeting titles should be at least 3 characters long.' })
       return
     }
     if (normalizedTitle.length > 120) {
-      toast({ variant: 'destructive', title: 'Title too long', description: 'Meeting titles must stay within 120 characters.' })
+      notifyFailure({ title: 'Title too long', message: 'Meeting titles must stay within 120 characters.' })
       return
     }
     if (startTimeMs < now + 5 * 60_000) {
-      toast({ variant: 'destructive', title: 'Start time too soon', description: 'Schedule meetings at least 5 minutes in advance.' })
+      notifyFailure({ title: 'Start time too soon', message: 'Schedule meetings at least 5 minutes in advance.' })
       return
     }
     if (startTimeMs > now + 365 * 24 * 60 * 60 * 1000) {
-      toast({ variant: 'destructive', title: 'Start time too far away', description: 'Meetings cannot be scheduled more than 12 months ahead.' })
+      notifyFailure({ title: 'Start time too far away', message: 'Meetings cannot be scheduled more than 12 months ahead.' })
       return
     }
     if (endTimeMs - startTimeMs < 10 * 60_000 || endTimeMs - startTimeMs > 8 * 60 * 60 * 1000) {
-      toast({ variant: 'destructive', title: 'Invalid duration', description: 'Meetings must be between 10 minutes and 8 hours long.' })
+      notifyFailure({ title: 'Invalid duration', message: 'Meetings must be between 10 minutes and 8 hours long.' })
       return
     }
     if (editingMeeting?.status === 'cancelled') {
-      toast({ variant: 'destructive', title: 'Cannot edit cancelled meeting', description: 'Create a new meeting instead.' })
+      notifyFailure({ title: 'Cannot edit cancelled meeting', message: 'Create a new meeting instead.' })
       return
     }
 
@@ -570,7 +569,7 @@ export function useMeetingsPageController() {
     const payloadDescription = trimmedDescription.length > 0 ? trimmedDescription : null
     const schedulingClientId = selectedClientId === undefined ? null : selectedClientId
 
-    void fetch(endpoint, {
+    void apiFetch<ScheduleMeetingResponse>(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -583,21 +582,11 @@ export function useMeetingsPageController() {
         attendeeEmails,
         clientId: schedulingClientId,
       }),
+      timeoutMs: MEETING_ACTION_TIMEOUT_MS,
     })
-      .then(async (response) => {
-        const payload = (await response.json().catch(() => ({}))) as {
-          success?: boolean
-          error?: string
-          data?: { meeting?: { meetLink?: string | null }; notificationSummary?: MeetingNotificationSummary }
-        }
-
-        if (!response.ok || payload.success === false) {
-          toast({ variant: 'destructive', title: isEditing ? 'Reschedule failed' : 'Schedule failed', description: payload.error || 'Unable to schedule meeting' })
-          return
-        }
-
-        const meetLink = payload.data?.meeting?.meetLink
-        const notificationSummary = payload.data?.notificationSummary
+      .then((payload) => {
+        const meetLink = payload.data?.meeting?.meetLink ?? payload.meeting?.meetLink
+        const notificationSummary = payload.data?.notificationSummary ?? payload.notificationSummary
 
         if (isEditing) {
           toast({
@@ -647,7 +636,11 @@ export function useMeetingsPageController() {
         resetScheduleForm()
       })
       .catch((error) => {
-        toast({ variant: 'destructive', title: isEditing ? 'Reschedule failed' : 'Schedule failed', description: error instanceof Error ? error.message : 'Unknown error' })
+        notifyFailure({
+          title: isEditing ? 'Reschedule failed' : 'Schedule failed',
+          error,
+          fallbackMessage: 'Unable to schedule meeting.',
+        })
       })
       .finally(() => {
         setScheduling(false)
@@ -674,15 +667,15 @@ export function useMeetingsPageController() {
     const duration = Number(quickMeetDurationMinutes)
 
     if (!Number.isFinite(duration) || duration < 10 || duration > 240) {
-      toast({ variant: 'destructive', title: 'Invalid duration', description: 'Quick meet duration must be between 10 and 240 minutes.' })
+      notifyFailure({ title: 'Invalid duration', message: 'Quick meet duration must be between 10 and 240 minutes.' })
       return
     }
     if (hasPendingInvalidInput) {
-      toast({ variant: 'destructive', title: 'Invalid attendee email', description: 'Enter a valid email before starting the room.' })
+      notifyFailure({ title: 'Invalid attendee email', message: 'Enter a valid email before starting the room.' })
       return
     }
     if (!hasParticipants) {
-      toast({ variant: 'destructive', title: 'Add a participant', description: 'Add at least one participant before starting a room.' })
+      notifyFailure({ title: 'Add a participant', message: 'Add at least one participant before starting a room.' })
       return
     }
 
@@ -696,7 +689,7 @@ export function useMeetingsPageController() {
       attendeeEmails,
       timezone,
     })
-  }, [handleStartQuickMeet, quickAttendeeDraft, quickMeetDescription, quickMeetDurationMinutes, quickMeetTitle, timezone, toast])
+  }, [handleStartQuickMeet, quickAttendeeDraft, quickMeetDescription, quickMeetDurationMinutes, quickMeetTitle, timezone])
 
   const handleMarkCompleted = useCallback(async (legacyId: string) => {
     if (isPreviewMode) {
@@ -716,7 +709,7 @@ export function useMeetingsPageController() {
       setActiveInSiteMeeting((current) => (current?.legacyId === legacyId ? { ...current, status: 'completed' } : current))
       toast({ title: 'Meeting updated', description: 'Status marked as completed.' })
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Status update failed', description: error instanceof Error ? error.message : 'Unknown error' })
+      notifyFailure({ title: 'Status update failed', error })
     }
   }, [canSchedule, isPreviewMode, toast, upcomingMeetings, updateMeetingStatus, workspaceId])
 

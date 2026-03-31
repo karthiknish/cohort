@@ -5,13 +5,16 @@ import { LoaderCircle, Download } from 'lucide-react'
 import { useAction } from 'convex/react'
 
 import { Button } from '@/shared/ui/button'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card'
 import { useToast } from '@/shared/ui/use-toast'
 import { authActionsApi } from '@/lib/convex-api'
+import { getPreviewSettingsExportData } from '@/lib/preview-data'
 import { useAuth } from '@/shared/contexts/auth-context'
 
 export function DataExportCard() {
   const { user } = useAuth()
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
   const [exportingData, setExportingData] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
@@ -19,7 +22,7 @@ export function DataExportCard() {
   const exportUserData = useAction(authActionsApi.exportUserData)
 
   const handleExportData = useCallback(() => {
-    if (!user) {
+    if (!user && !isPreviewMode) {
       setExportError('You must be signed in to export your data.')
       return
     }
@@ -27,7 +30,11 @@ export function DataExportCard() {
     setExportingData(true)
     setExportError(null)
 
-    void exportUserData()
+    const exportPromise = isPreviewMode
+      ? Promise.resolve(getPreviewSettingsExportData())
+      : exportUserData()
+
+    void exportPromise
       .then((exportData) => {
         const filename = `cohort-data-export-${new Date().toISOString().split('T')[0]}.json`
 
@@ -42,8 +49,10 @@ export function DataExportCard() {
         URL.revokeObjectURL(url)
 
         toast({
-          title: 'Data exported successfully',
-          description: 'Your personal data has been downloaded as a JSON file.',
+          title: isPreviewMode ? 'Preview export downloaded' : 'Data exported successfully',
+          description: isPreviewMode
+            ? 'Sample account data has been downloaded for this demo session.'
+            : 'Your personal data has been downloaded as a JSON file.',
         })
       })
       .catch((exportErr) => {
@@ -54,7 +63,7 @@ export function DataExportCard() {
       .finally(() => {
         setExportingData(false)
       })
-  }, [toast, user, exportUserData])
+  }, [isPreviewMode, toast, user, exportUserData])
 
   return (
     <Card>

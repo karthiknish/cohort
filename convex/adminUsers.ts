@@ -28,16 +28,27 @@ function throwAdminUsersError(operation: string, error: unknown, context?: Recor
 function parseGlobalUsersCursor(cursor: string | null | undefined) {
   if (!cursor) return null
 
-  try {
-    const parsed = JSON.parse(cursor) as { updatedAtMs?: unknown; legacyId?: unknown }
-    if (typeof parsed.updatedAtMs !== 'number' || typeof parsed.legacyId !== 'string') {
-      return null
-    }
+  let parsed: { updatedAtMs?: unknown; legacyId?: unknown }
 
-    return { fieldValue: parsed.updatedAtMs, legacyId: parsed.legacyId }
-  } catch {
+  try {
+    parsed = JSON.parse(cursor) as { updatedAtMs?: unknown; legacyId?: unknown }
+  } catch (error) {
+    console.warn('[adminUsers:parseGlobalUsersCursor] Invalid cursor JSON', {
+      cursorLength: cursor.length,
+    }, error)
     return null
   }
+
+  if (typeof parsed.updatedAtMs !== 'number' || typeof parsed.legacyId !== 'string') {
+    console.warn('[adminUsers:parseGlobalUsersCursor] Invalid cursor shape', {
+      cursorLength: cursor.length,
+      updatedAtMsType: typeof parsed.updatedAtMs,
+      legacyIdType: typeof parsed.legacyId,
+    })
+    return null
+  }
+
+  return { fieldValue: parsed.updatedAtMs, legacyId: parsed.legacyId }
 }
 
 function serializeGlobalUsersCursor(cursor: { fieldValue: number | string; legacyId: string } | null) {

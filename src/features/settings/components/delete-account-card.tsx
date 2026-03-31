@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { LoaderCircle, Trash2 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { useToast } from '@/shared/ui/use-toast'
@@ -20,6 +21,7 @@ import {
 } from '@/shared/ui/dialog'
 
 export function DeleteAccountCard() {
+  const { isPreviewMode } = usePreview()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
   const handleOpenDeleteDialog = useCallback(() => {
@@ -42,6 +44,11 @@ export function DeleteAccountCard() {
           <p className="text-sm text-muted-foreground">
             Deleting your account will revoke access across all connected workspaces, stop integrations, and permanently erase stored reports, messages, and personal information. This action cannot be undone. We recommend exporting your data before proceeding.
           </p>
+          {isPreviewMode ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Preview mode keeps this action local-only and does not remove any real account data.
+            </p>
+          ) : null}
         </CardContent>
         <CardFooter className="flex justify-end">
           <Button variant="destructive" onClick={handleOpenDeleteDialog}>
@@ -66,6 +73,7 @@ interface DeleteAccountDialogProps {
 
 export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogProps) {
   const { user, deleteAccount } = useAuth()
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
   const router = useRouter()
 
@@ -88,6 +96,15 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
   }, [open])
 
   const handleAccountDeletion = useCallback(() => {
+    if (isPreviewMode) {
+      toast({
+        title: 'Preview mode',
+        description: 'Sample account deletion is disabled. No real data was changed.',
+      })
+      onOpenChange(false)
+      return
+    }
+
     if (!user) {
       setDeleteAccountError('You must be signed in to delete your account.')
       return
@@ -123,7 +140,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       .finally(() => {
         setDeleteAccountLoading(false)
       })
-  }, [deleteAccount, deleteConfirm, onOpenChange, router, toast, user])
+  }, [deleteAccount, deleteConfirm, isPreviewMode, onOpenChange, router, toast, user])
 
   const handleDeleteConfirmChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setDeleteConfirm(event.target.value)

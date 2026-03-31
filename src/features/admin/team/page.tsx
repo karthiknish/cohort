@@ -34,8 +34,10 @@ import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
+import { getPreviewAdminClients, getPreviewAdminUsers } from '@/lib/preview-data'
 import { cn } from '@/lib/utils'
 import { ADMIN_USER_ROLES, ADMIN_USER_STATUSES, type AdminUserRecord, type AdminUserRole, type AdminUserStatus } from '@/types/admin'
 import { buildClientAllocationSummary } from '../lib/client-allocation'
@@ -70,21 +72,23 @@ function isAdminUserStatus(value: unknown): value is AdminUserStatus {
 
 export default function AdminTeamPage() {
   const { user } = useAuth()
+  const { isPreviewMode } = usePreview()
   const [usersOverride, setUsersOverride] = useState<AdminUserRecord[] | null>(null)
+  const [previewUsers, setPreviewUsers] = useState<AdminUserRecord[]>(() => getPreviewAdminUsers())
   const [loadingMore, setLoadingMore] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
-  const workspaceContext = useQuery(api.users.getMyWorkspaceContext, user ? {} : 'skip')
+  const workspaceContext = useQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
   const workspaceId = workspaceContext?.workspaceId ?? null
   const includeAllWorkspaces = workspaceContext?.role === 'admin'
   const { toast } = useToast()
 
   const { results: usersPage, status, loadMore, isLoading } = usePaginatedQuery(
     api.adminUsers.listUsers,
-    workspaceId
+    !isPreviewMode && workspaceId
       ? {
           workspaceId,
           includeAllWorkspaces,
@@ -97,7 +101,7 @@ export default function AdminTeamPage() {
   const createInvitation = useMutation(api.adminInvitations.createInvitation)
   const clientsData = useQuery(
     api.clients.list,
-    workspaceId
+    !isPreviewMode && workspaceId
       ? {
           workspaceId,
           limit: 200,
@@ -150,6 +154,7 @@ export default function AdminTeamPage() {
   }
 
   const handleLoadMore = useCallback(() => {
+    if (isPreviewMode) return
     if (loadingMore) return
     setLoadingMore(true)
 
@@ -161,9 +166,10 @@ export default function AdminTeamPage() {
       .finally(() => {
         setLoadingMore(false)
       })
-  }, [loadMore, loadingMore])
+  }, [isPreviewMode, loadMore, loadingMore])
 
   const users: AdminUserRecord[] = useMemo(() => {
+    if (isPreviewMode) return previewUsers
     if (usersOverride) return usersOverride
 
     // Convex returns a simplified record; adapt to existing AdminUserRecord expectations.
@@ -180,10 +186,17 @@ export default function AdminTeamPage() {
       updatedAt: typedRow.updatedAtMs ? new Date(typedRow.updatedAtMs).toISOString() : null,
       lastLoginAt: null,
     }})
-  }, [usersOverride, usersPage])
+  }, [isPreviewMode, previewUsers, usersOverride, usersPage])
 
-  const loading = (user != null && workspaceContext === undefined) || isLoading
-  const clientItems = clientsData?.items
+  const loading = isPreviewMode ? false : (user != null && workspaceContext === undefined) || isLoading
+  const clientItems = isPreviewMode
+    ? getPreviewAdminClients().map((client) => ({
+        legacyId: client.id,
+        name: client.name,
+        accountManager: client.accountManager,
+        teamMembers: client.teamMembers,
+      }))
+    : clientsData?.items
 
   const internalUsers = useMemo(() => users.filter((candidate) => candidate.role !== 'client'), [users])
 
@@ -238,6 +251,14 @@ export default function AdminTeamPage() {
   }, [allocationSummary.byUserId, internalUsers])
 
   const handleRoleChange = (userId: string, role: AdminUserRecord['role']) => {
+    if (isPreviewMode) {
+      setPreviewUsers((current) => current.map((record) => (
+        record.id === userId ? { ...record, role, updatedAt: new Date().toISOString() } : record
+      )))
+      toast({ title: 'Preview mode', description: `Member role updated to ${role} in the sample workspace.` })
+      return
+    }
+
     setSavingId(userId)
     setError(null)
 
@@ -274,10 +295,21 @@ export default function AdminTeamPage() {
   }
 
   const handleStatusAction = (userRecord: AdminUserRecord) => {
+    const nextStatus = deriveNextStatus(userRecord.status)
+
+    if (isPreviewMode) {
+      setPreviewUsers((current) => current.map((record) => (
+        record.id === userRecord.id ? { ...record, status: nextStatus, updatedAt: new Date().toISOString() } : record
+      )))
+      toast({
+        title: 'Preview mode',
+        description: `Member is now ${nextStatus.replace('_', ' ')} in the sample workspace.`,
+      })
+      return
+    }
+
     setSavingId(userRecord.id)
     setError(null)
-
-    const nextStatus = deriveNextStatus(userRecord.status)
 
     void updateUserRoleStatus({ legacyId: userRecord.id, status: nextStatus })
       .then(() => {
@@ -302,7 +334,34 @@ export default function AdminTeamPage() {
   }
 
   const handleInviteUser = useCallback(() => {
-    if (!inviteEmail || !user?.id) return
+    if (!inviteEmail) return
+
+    if (isPreviewMode) {
+      setPreviewUsers((current) => [
+        {
+          id: `preview-user-${Date.now()}`,
+          email: inviteEmail,
+          name: inviteEmail.split('@')[0] ?? 'Preview User',
+          role: inviteRole,
+          status: 'invited',
+          agencyId: 'preview-agency',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastLoginAt: null,
+        },
+        ...current,
+      ])
+      toast({
+        title: 'Preview mode',
+        description: `Invitation created for ${inviteEmail} in the sample workspace.`,
+      })
+      setInviteOpen(false)
+      setInviteEmail('')
+      setInviteRole('team')
+      return
+    }
+
+    if (!user?.id) return
 
     setInviteSending(true)
 
@@ -329,7 +388,7 @@ export default function AdminTeamPage() {
       .finally(() => {
         setInviteSending(false)
       })
-  }, [createInvitation, inviteEmail, inviteRole, toast, user])
+  }, [createInvitation, inviteEmail, inviteRole, isPreviewMode, toast, user])
 
   const handleRefresh = useCallback(() => {
     if (loading) return
@@ -337,9 +396,13 @@ export default function AdminTeamPage() {
     setRoleFilter('all')
     setSearchTerm('')
     setUsersOverride(null)
-  }, [loading])
 
-  if (!user) {
+    if (isPreviewMode) {
+      setPreviewUsers(getPreviewAdminUsers())
+    }
+  }, [isPreviewMode, loading])
+
+  if (!user && !isPreviewMode) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
         <Card className="max-w-md border-muted/60">
@@ -358,7 +421,10 @@ export default function AdminTeamPage() {
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Team management</h1>
-            <p className="text-muted-foreground">Manage internal staff, their roles, and how they are allocated across client workspaces.</p>
+            <p className="text-muted-foreground">
+              Manage internal staff, their roles, and how they are allocated across client workspaces.
+              {isPreviewMode ? ' Preview mode keeps staffing changes local to this session.' : ''}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button asChild variant="outline">

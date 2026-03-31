@@ -501,9 +501,7 @@ export function useAgentMode(): UseAgentModeReturn {
       setIsProcessing(false)
     }
   }, [
-    activeContext.activeClientId,
-    activeContext.activeProjectId,
-    activeContext.activeProposalId,
+    activeContext,
     addMessage,
     clearError,
     conversationId,

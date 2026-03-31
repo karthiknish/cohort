@@ -7,8 +7,10 @@ import { useConvex, useQuery as useConvexQuery } from 'convex/react'
 
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { clientsApi } from '@/lib/convex-api'
+import { getPreviewClients } from '@/lib/preview-data'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 import { dedupeClientTeamMembers } from '../../lib/client-allocation'
 
@@ -90,13 +92,15 @@ export interface UseAdminClientsReturn {
 
 export function useAdminClients(): UseAdminClientsReturn {
     const { user } = useAuth()
+    const { isPreviewMode } = usePreview()
     const { toast } = useToast()
     const convex = useConvex()
 
-    const workspaceContext = useConvexQuery(api.users.getMyWorkspaceContext, user ? {} : 'skip')
+    const workspaceContext = useConvexQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
     const workspaceId = workspaceContext?.workspaceId ?? null
     const includeAllWorkspaces = workspaceContext?.role === 'admin'
-    const workspaceLoading = user != null && workspaceContext === undefined
+    const workspaceLoading = !isPreviewMode && user != null && workspaceContext === undefined
+    const [previewClients, setPreviewClients] = useState<ClientRecord[]>(() => getPreviewClients())
 
     const clientsQuery = useQuery({
         queryKey: ['adminClients', workspaceId],
@@ -109,7 +113,7 @@ export function useAdminClients(): UseAdminClientsReturn {
                 includeAllWorkspaces,
             } as never)
         },
-        enabled: Boolean(workspaceId),
+        enabled: !isPreviewMode && Boolean(workspaceId),
     })
 
     const createClientMutation = useMutation({
@@ -160,7 +164,7 @@ export function useAdminClients(): UseAdminClientsReturn {
     const [teamMemberFields, setTeamMemberFields] = useState<TeamMemberField[]>([createEmptyMemberField()])
 
     // Transform Convex data to ClientRecord format
-    const clients = useMemo<ClientRecord[]>(() => {
+    const liveClients = useMemo<ClientRecord[]>(() => {
         const data = clientsQuery.data
         if (!data || typeof data !== 'object') return []
 
@@ -179,14 +183,20 @@ export function useAdminClients(): UseAdminClientsReturn {
         return list
     }, [clientsQuery.data])
 
-    // Dummy setClients for backward compatibility (TanStack handles state)
-    const setClients = useCallback((updater: React.SetStateAction<ClientRecord[]>) => {
-        void updater
-        // No-op: TanStack Query automatically updates
-    }, [])
+    const clients = isPreviewMode ? previewClients : liveClients
 
-    const clientsLoading = workspaceLoading || clientsQuery.isLoading
-    const clientsError = clientsQuery.error ? asErrorMessage(clientsQuery.error) : null
+    // Backward-compatible setter used by existing consumers.
+    const setClients = useCallback((updater: React.SetStateAction<ClientRecord[]>) => {
+        if (!isPreviewMode) {
+            void updater
+            return
+        }
+
+        setPreviewClients((current) => (typeof updater === 'function' ? updater(current) : updater))
+    }, [isPreviewMode])
+
+    const clientsLoading = isPreviewMode ? false : workspaceLoading || clientsQuery.isLoading
+    const clientsError = isPreviewMode ? null : clientsQuery.error ? asErrorMessage(clientsQuery.error) : null
     const loadingMore = false
     const nextCursor = null
 
@@ -196,13 +206,23 @@ export function useAdminClients(): UseAdminClientsReturn {
     )
 
     const loadClients = useCallback(async () => {
+        if (isPreviewMode) {
+            setPreviewClients(getPreviewClients())
+            toast({ title: 'Preview data refreshed', description: 'Showing sample client workspaces.' })
+            return
+        }
+
         await clientsQuery.refetch()
-    }, [clientsQuery])
+    }, [clientsQuery, isPreviewMode, toast])
 
     const handleLoadMore = useCallback(async () => {
+        if (isPreviewMode) {
+            return
+        }
+
         // No infinite scroll with single query
         await clientsQuery.refetch()
-    }, [clientsQuery])
+    }, [clientsQuery, isPreviewMode])
 
     // Delete dialog handlers
     const handleDeleteDialogChange = useCallback((open: boolean) => {
@@ -218,7 +238,19 @@ export function useAdminClients(): UseAdminClientsReturn {
     }, [])
 
     const handleDeleteClient = useCallback(async () => {
-        if (!clientPendingDelete || !workspaceId) return
+        if (!clientPendingDelete) return
+
+        if (isPreviewMode) {
+            setDeletingClientId(clientPendingDelete.id)
+            setPreviewClients((current) => current.filter((client) => client.id !== clientPendingDelete.id))
+            toast({ title: 'Preview mode', description: `${clientPendingDelete.name} was removed locally for this session.` })
+            setClientPendingDelete(null)
+            setIsDeleteDialogOpen(false)
+            setDeletingClientId(null)
+            return
+        }
+
+        if (!workspaceId) return
 
         try {
             setDeletingClientId(clientPendingDelete.id)
@@ -238,7 +270,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setDeletingClientId(null)
         }
-    }, [clientPendingDelete, workspaceId, softDeleteClientMutation, toast])
+    }, [clientPendingDelete, isPreviewMode, workspaceId, softDeleteClientMutation, toast])
 
     // Team member dialog handlers
     const handleTeamDialogChange = useCallback((open: boolean) => {
@@ -259,7 +291,7 @@ export function useAdminClients(): UseAdminClientsReturn {
     }, [])
 
     const handleAddTeamMember = useCallback(async () => {
-        if (!clientPendingMembers || !workspaceId) return
+        if (!clientPendingMembers) return
 
         const name = memberName.trim()
         if (!name) {
@@ -280,6 +312,30 @@ export function useAdminClients(): UseAdminClientsReturn {
         }
 
         const role = memberRole.trim()
+
+        if (isPreviewMode) {
+            setAddingMember(true)
+            setPreviewClients((current) => current.map((client) => {
+                if (client.id !== clientPendingMembers.id) {
+                    return client
+                }
+
+                return {
+                    ...client,
+                    teamMembers: [...client.teamMembers, { name, role: role || 'Contributor' }],
+                    updatedAt: new Date().toISOString(),
+                }
+            }))
+            toast({ title: 'Preview mode', description: `${name} joined ${clientPendingMembers.name} in the sample workspace.` })
+            setMemberName('')
+            setMemberRole('')
+            setIsTeamDialogOpen(false)
+            setClientPendingMembers(null)
+            setAddingMember(false)
+            return
+        }
+
+        if (!workspaceId) return
 
         try {
             setAddingMember(true)
@@ -302,11 +358,9 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setAddingMember(false)
         }
-    }, [clientPendingMembers, workspaceId, memberName, memberRole, addTeamMemberMutation, toast])
+    }, [clientPendingMembers, isPreviewMode, workspaceId, memberName, memberRole, addTeamMemberMutation, toast])
 
     const handleRemoveTeamMember = useCallback(async (client: ClientRecord, memberName: string) => {
-        if (!workspaceId) return
-
         const normalizedName = memberName.trim()
         if (!normalizedName) return
 
@@ -318,6 +372,27 @@ export function useAdminClients(): UseAdminClientsReturn {
             })
             return
         }
+
+        if (isPreviewMode) {
+            const removeKey = `${client.id}:${normalizedName.toLowerCase()}`
+            setRemovingTeamMemberKey(removeKey)
+            setPreviewClients((current) => current.map((candidate) => {
+                if (candidate.id !== client.id) {
+                    return candidate
+                }
+
+                return {
+                    ...candidate,
+                    teamMembers: candidate.teamMembers.filter((member) => member.name.trim().toLowerCase() !== normalizedName.toLowerCase()),
+                    updatedAt: new Date().toISOString(),
+                }
+            }))
+            toast({ title: 'Preview mode', description: `${normalizedName} was removed from ${client.name} locally.` })
+            setRemovingTeamMemberKey(null)
+            return
+        }
+
+        if (!workspaceId) return
 
         const removeKey = `${client.id}:${normalizedName.toLowerCase()}`
 
@@ -340,7 +415,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setRemovingTeamMemberKey(null)
         }
-    }, [workspaceId, removeTeamMemberMutation, toast])
+    }, [isPreviewMode, workspaceId, removeTeamMemberMutation, toast])
 
     // Client form handlers
     const resetClientForm = useCallback(() => {
@@ -362,8 +437,6 @@ export function useAdminClients(): UseAdminClientsReturn {
     }, [])
 
     const handleCreateClient = useCallback(async () => {
-        if (!workspaceId) return
-
         const name = clientName.trim()
         const accountManager = clientAccountManager.trim()
 
@@ -385,6 +458,32 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         setClientSaving(true)
 
+        if (isPreviewMode) {
+            setPreviewClients((current) => {
+                const normalizedPreviewTeamMembers = teamMembers.map((member) => ({
+                    ...member,
+                    role: member.role || 'Contributor',
+                }))
+
+                const nextClient: ClientRecord = {
+                    id: `preview-client-${Date.now()}`,
+                    name,
+                    accountManager,
+                    teamMembers: normalizedPreviewTeamMembers,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                }
+                return [...current, nextClient].sort((left, right) => left.name.localeCompare(right.name))
+            })
+
+            toast({ title: 'Preview mode', description: `${name} was created in the sample workspace.` })
+            resetClientForm()
+            setClientSaving(false)
+            return
+        }
+
+        if (!workspaceId) return
+
         try {
             await createClientMutation.mutateAsync({
                 workspaceId,
@@ -403,7 +502,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setClientSaving(false)
         }
-    }, [workspaceId, clientAccountManager, clientName, resetClientForm, teamMemberFields, createClientMutation, user?.id, toast])
+    }, [isPreviewMode, workspaceId, clientAccountManager, clientName, resetClientForm, teamMemberFields, createClientMutation, user?.id, toast])
 
     return {
         // Client list

@@ -18,7 +18,11 @@ import {
   NetworkTimeoutError,
   RateLimitError,
 } from '@/lib/api-errors'
+import { composeAbortSignal, isTimeoutError } from '@/lib/retry-utils'
+import { ResponseBodyParseError, parseJsonBody } from '@/lib/response-json'
 import { parseAuthError, isNetworkError } from './error-utils'
+
+const OAUTH_START_TIMEOUT_MS = 15_000
 
 function normalizeRole(value: unknown): AuthRole {
   return value === 'admin' || value === 'team' || value === 'client' ? value : 'client'
@@ -28,6 +32,61 @@ function normalizeStatus(value: unknown): AuthStatus {
   return value === 'active' || value === 'pending' || value === 'invited' || value === 'disabled' || value === 'suspended'
     ? value
     : 'active'
+}
+
+function createOauthStartError(response: Response, message: string) {
+  if (response.status === 401) {
+    return new SessionExpiredError(message)
+  }
+
+  if (response.status >= 500 || response.ok) {
+    return new ServiceUnavailableError(message)
+  }
+
+  return new BadRequestError(message)
+}
+
+async function parseOauthStartPayload(response: Response, context: string, message: string): Promise<unknown> {
+  try {
+    const payload = await parseJsonBody<unknown>(response, { context })
+    if (payload === null) {
+      throw new ResponseBodyParseError(context, 'empty')
+    }
+    return payload
+  } catch (error) {
+    if (error instanceof ResponseBodyParseError) {
+      throw createOauthStartError(response, message)
+    }
+
+    throw error
+  }
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
+  const { signal, cleanup } = composeAbortSignal({
+    signal: init.signal ?? undefined,
+    timeoutMs: OAUTH_START_TIMEOUT_MS,
+    timeoutMessage: 'The authentication service took too long to respond.',
+  })
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal,
+    })
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      throw new NetworkTimeoutError('The authentication service took too long to respond. Please try again.')
+    }
+
+    if (isNetworkError(error)) {
+      throw new NetworkError('Unable to reach the authentication service. Please check your connection and try again.')
+    }
+
+    throw error
+  } finally {
+    cleanup()
+  }
 }
 
 export class AuthService {
@@ -103,7 +162,7 @@ export class AuthService {
   }
 
   private async fetchGoogleWorkspaceOauthUrl(search: string): Promise<Response> {
-    return await fetch(`/api/integrations/google-workspace/oauth/url${search}`, {
+    return await fetchWithTimeout(`/api/integrations/google-workspace/oauth/url${search}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -113,7 +172,7 @@ export class AuthService {
   }
 
   private async fetchGoogleOauthUrl(search: string): Promise<Response> {
-    return await fetch(`/api/integrations/google/oauth/url${search}`, {
+    return await fetchWithTimeout(`/api/integrations/google/oauth/url${search}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -415,7 +474,7 @@ export class AuthService {
       response = await this.fetchGoogleOauthUrl(search)
     }
 
-    const payload = (await response.json().catch(() => ({}))) as unknown
+    const payload = await parseOauthStartPayload(response, 'Google OAuth start', 'Failed to start Google OAuth')
 
     if (payload && typeof payload === 'object' && 'success' in payload) {
       const record = payload as { success: boolean; data?: unknown; error?: unknown }
@@ -467,7 +526,7 @@ export class AuthService {
       response = await this.fetchGoogleWorkspaceOauthUrl(search)
     }
 
-    const payload = (await response.json().catch(() => ({}))) as unknown
+    const payload = await parseOauthStartPayload(response, 'Google Workspace OAuth start', 'Failed to start Google Workspace OAuth')
 
     if (payload && typeof payload === 'object' && 'success' in payload) {
       const record = payload as { success: boolean; data?: unknown; error?: unknown }
@@ -520,7 +579,7 @@ export class AuthService {
     if (entryPoint) params.set('entryPoint', entryPoint)
     const search = params.toString() ? `?${params.toString()}` : ''
 
-    const fetchMetaOauthUrl = async () => await fetch(`/api/integrations/meta/oauth/url${search}`, {
+    const fetchMetaOauthUrl = async () => await fetchWithTimeout(`/api/integrations/meta/oauth/url${search}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -535,7 +594,7 @@ export class AuthService {
       response = await fetchMetaOauthUrl()
     }
 
-    const payload = (await response.json().catch(() => ({}))) as unknown
+    const payload = await parseOauthStartPayload(response, 'Meta OAuth start', 'Failed to start Meta OAuth')
 
     if (payload && typeof payload === 'object' && 'success' in payload) {
       const record = payload as { success: boolean; data?: unknown; error?: unknown }
@@ -579,7 +638,7 @@ export class AuthService {
     if (clientId) params.set('clientId', clientId)
     const search = params.toString() ? `?${params.toString()}` : ''
 
-    const response = await fetch(`/api/integrations/tiktok/oauth/url${search}`, {
+    const response = await fetchWithTimeout(`/api/integrations/tiktok/oauth/url${search}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -587,7 +646,7 @@ export class AuthService {
       credentials: 'same-origin',
     })
 
-    const payload = (await response.json().catch(() => ({}))) as unknown
+    const payload = await parseOauthStartPayload(response, 'TikTok OAuth start', 'Failed to start TikTok OAuth')
 
     if (payload && typeof payload === 'object' && 'success' in payload) {
       const record = payload as { success: boolean; data?: unknown; error?: unknown }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { ShieldAlert, RefreshCw, Home, Copy, Code2 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -118,10 +119,10 @@ export default function AdminError({
               Try again
             </Button>
             <Button variant="outline" asChild className="w-full">
-              <a href="/dashboard">
+              <Link href="/dashboard">
                 <Home className="mr-2 h-4 w-4" />
                 Back to dashboard
-              </a>
+              </Link>
             </Button>
           </div>
         </CardContent>

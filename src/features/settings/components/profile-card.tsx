@@ -5,12 +5,14 @@ import { LoaderCircle, ImagePlus, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useConvex } from 'convex/react'
 
 import { Button } from '@/shared/ui/button'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import { useToast } from '@/shared/ui/use-toast'
 import { settingsApi, filesApi } from '@/lib/convex-api'
+import { getPreviewSettingsProfile } from '@/lib/preview-data'
 import { getAvatarInitials } from './utils'
 import { validateFile } from '@/lib/utils'
 
@@ -29,12 +31,14 @@ export function ProfileCard({
   onPhoneChange,
 }: ProfileCardProps) {
   const { toast } = useToast()
+  const { isPreviewMode } = usePreview()
   const convex = useConvex()
   const profile = useQuery(settingsApi.getMyProfile)
   const updateMyProfile = useMutation(settingsApi.updateMyProfile)
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const [previewUser, setPreviewUser] = useState(() => getPreviewSettingsProfile())
 
-  const user = profile
+  const user = isPreviewMode ? previewUser : profile
 
   const [profileNameDraft, setProfileNameDraft] = useState<string | null>(null)
   const [profilePhoneDraft, setProfilePhoneDraft] = useState<string | null>(null)
@@ -77,12 +81,12 @@ export function ProfileCard({
   }, [profileName, user?.email, user?.name])
 
   const isProfileNameValid = profileName.trim().length >= 2
-  const canSaveProfile = Boolean(user) && hasProfileChanges && isProfileNameValid && !phoneError && !savingProfile
+  const canSaveProfile = (isPreviewMode || Boolean(user)) && hasProfileChanges && isProfileNameValid && !phoneError && !savingProfile
 
   const handleProfileSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault()
-      if (!user) {
+      if (!user && !isPreviewMode) {
         setProfileError('You must be signed in to update your profile.')
         return
       }
@@ -103,6 +107,22 @@ export function ProfileCard({
       setSavingProfile(true)
       setProfileError(null)
 
+      if (isPreviewMode) {
+        setPreviewUser((current) => ({
+          ...current,
+          name: nextName,
+          phoneNumber: nextPhone.length ? nextPhone : null,
+        }))
+        setProfileNameDraft(nextName)
+        setProfilePhoneDraft(nextPhone)
+        setSavingProfile(false)
+        toast({
+          title: 'Preview mode',
+          description: 'Profile changes were applied locally for this session.',
+        })
+        return
+      }
+
       await updateMyProfile({
         name: nextName,
         phoneNumber: nextPhone.length ? nextPhone : null,
@@ -121,10 +141,24 @@ export function ProfileCard({
           setSavingProfile(false)
         })
     },
-    [profileName, profilePhone, toast, updateMyProfile, user],
+    [isPreviewMode, profileName, profilePhone, toast, updateMyProfile, user],
   )
 
   const handleAvatarRemove = useCallback(async () => {
+    if (isPreviewMode) {
+      if (tempAvatarUrlRef.current) {
+        URL.revokeObjectURL(tempAvatarUrlRef.current)
+        tempAvatarUrlRef.current = null
+      }
+      setAvatarPreviewOverride(null)
+      setPreviewUser((current) => ({ ...current, photoUrl: null }))
+      toast({
+        title: 'Preview mode',
+        description: 'Sample profile photo removed locally for this session.',
+      })
+      return
+    }
+
     if (!user) {
       setAvatarError('You must be signed in to update your avatar.')
       return
@@ -151,7 +185,7 @@ export function ProfileCard({
       .finally(() => {
         setAvatarUploading(false)
       })
-  }, [toast, updateMyProfile, user])
+  }, [isPreviewMode, toast, updateMyProfile, user])
 
   const handleAvatarButtonClick = useCallback(() => {
     setAvatarError(null)
@@ -192,7 +226,7 @@ export function ProfileCard({
       const file = event.target.files?.[0]
       if (!file) return
 
-      if (!user) {
+      if (!user && !isPreviewMode) {
         setAvatarError('You must be signed in to update your avatar.')
         event.target.value = ''
         return
@@ -210,6 +244,25 @@ export function ProfileCard({
       }
 
       const previousUrl = avatarPreview
+
+      if (isPreviewMode) {
+        if (tempAvatarUrlRef.current) {
+          URL.revokeObjectURL(tempAvatarUrlRef.current)
+          tempAvatarUrlRef.current = null
+        }
+
+        const objectUrl = URL.createObjectURL(file)
+        tempAvatarUrlRef.current = objectUrl
+        setAvatarPreviewOverride(objectUrl)
+        setPreviewUser((current) => ({ ...current, photoUrl: objectUrl }))
+        toast({
+          title: 'Preview mode',
+          description: 'Sample profile photo updated locally for this session.',
+        })
+        event.target.value = ''
+        return
+      }
+
       setAvatarUploading(true)
       setAvatarError(null)
 
@@ -243,7 +296,7 @@ export function ProfileCard({
           event.target.value = ''
         })
     },
-    [avatarPreview, toast, updateMyProfile, user, uploadAvatarImage],
+    [avatarPreview, isPreviewMode, toast, updateMyProfile, user, uploadAvatarImage],
   )
 
   const handleProfileNameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {

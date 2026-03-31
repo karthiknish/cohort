@@ -1,3 +1,6 @@
+const fs = require("fs");
+const path = require("path");
+
 const DIRECT_COLOR_CLASS_RE =
   /(?:^|[^A-Za-z0-9_-])(?:[a-z-]+:)*(?:bg|text|border|ring|fill|stroke|from|via|to|accent|caret|placeholder|divide|outline|shadow|decoration)-(?:\[(?:[^\]]*(?:#|rgb|rgba|hsl|hsla|oklch|oklab|lab|lch|color\())[^\]]*\]|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black|transparent)-\d{2,3}(?:\/\d{1,3})?)(?=$|[^A-Za-z0-9_-])/i;
 
@@ -15,6 +18,28 @@ const SHADCN_WRAPPER_FILE_RE =
 
 const RATE_LIMIT_CONFIG_FILE_RE =
   /(?:^|[\\/])(?:src[\\/]lib[\\/](?:rate-limiter(?:-convex)?|geminiRateLimits)\.ts|convex[\\/].*\.ts)$/;
+
+const ROUTE_FILE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx"];
+
+const ROUTE_BOUNDARY_REQUIREMENTS = [
+  {
+    messageId: "missingLoading",
+    conventions: [{ baseName: "loading", scope: "ancestors" }],
+  },
+  {
+    messageId: "missingError",
+    conventions: [
+      { baseName: "error", scope: "ancestors" },
+      { baseName: "global-error", scope: "root" },
+    ],
+  },
+  {
+    messageId: "missingNotFound",
+    conventions: [{ baseName: "not-found", scope: "ancestors" }],
+  },
+];
+
+const routeConventionExistsCache = new Map();
 
 const BANNED_UI_IMPORTS = [
   /^@radix-ui\//,
@@ -37,6 +62,91 @@ const BANNED_UI_IMPORTS = [
 function normalizeFilename(context) {
   const filename = typeof context.getFilename === "function" ? context.getFilename() : context.filename;
   return String(filename || "").replace(/\\/g, "/");
+}
+
+function hasRouteFileExtension(filename) {
+  return ROUTE_FILE_EXTENSIONS.includes(path.extname(filename).toLowerCase());
+}
+
+function getRouteConventionBaseName(filename) {
+  if (!hasRouteFileExtension(filename)) {
+    return null;
+  }
+
+  const basename = path.basename(filename);
+  for (const extension of ROUTE_FILE_EXTENSIONS) {
+    if (basename.endsWith(extension)) {
+      return basename.slice(0, -extension.length);
+    }
+  }
+
+  return null;
+}
+
+function getAppRoot(filename) {
+  let currentDir = path.dirname(path.normalize(filename));
+
+  while (true) {
+    if (path.basename(currentDir) === "app" && path.basename(path.dirname(currentDir)) === "src") {
+      return currentDir;
+    }
+
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      return null;
+    }
+
+    currentDir = parentDir;
+  }
+}
+
+function isWithinDirectory(targetDir, rootDir) {
+  const relativePath = path.relative(rootDir, targetDir);
+  return relativePath === "" || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath));
+}
+
+function isAppPageFile(filename) {
+  return getRouteConventionBaseName(filename) === "page" && getAppRoot(filename) !== null;
+}
+
+function hasConventionFileInDir(dir, baseName) {
+  const cacheKey = `${dir}::${baseName}`;
+  if (routeConventionExistsCache.has(cacheKey)) {
+    return routeConventionExistsCache.get(cacheKey);
+  }
+
+  const exists = ROUTE_FILE_EXTENSIONS.some((extension) => fs.existsSync(path.join(dir, `${baseName}${extension}`)));
+  routeConventionExistsCache.set(cacheKey, exists);
+  return exists;
+}
+
+function hasConventionFileAtOrAbove(startDir, appRoot, baseName) {
+  let currentDir = path.normalize(startDir);
+  const normalizedAppRoot = path.normalize(appRoot);
+
+  while (isWithinDirectory(currentDir, normalizedAppRoot)) {
+    if (hasConventionFileInDir(currentDir, baseName)) {
+      return true;
+    }
+
+    if (currentDir === normalizedAppRoot) {
+      break;
+    }
+
+    currentDir = path.dirname(currentDir);
+  }
+
+  return false;
+}
+
+function isBoundaryRequirementSatisfied(pageDir, appRoot, requirement) {
+  return requirement.conventions.some((convention) => {
+    if (convention.scope === "root") {
+      return hasConventionFileInDir(appRoot, convention.baseName);
+    }
+
+    return hasConventionFileAtOrAbove(pageDir, appRoot, convention.baseName);
+  });
 }
 
 function isIgnoredColorFile(filename) {
@@ -278,6 +388,53 @@ function createNoAdHocRateLimitRule() {
   };
 }
 
+function createRequireRouteBoundariesRule() {
+  return {
+    meta: {
+      type: "problem",
+      docs: {
+        description: "Require App Router pages to be covered by loading, error, and not-found UI.",
+      },
+      messages: {
+        missingLoading:
+          "This route page is not covered by a `loading` boundary file in the current segment or an ancestor segment.",
+        missingError:
+          "This route page is not covered by an `error` boundary file in the current segment or an ancestor segment, and no `global-error` boundary file exists at the app root.",
+        missingNotFound:
+          "This route page is not covered by a `not-found` boundary file in the current segment or an ancestor segment.",
+      },
+    },
+    create(context) {
+      const filename = normalizeFilename(context);
+      if (!isAppPageFile(filename) || /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(filename)) {
+        return {};
+      }
+
+      const appRoot = getAppRoot(filename);
+      if (!appRoot) {
+        return {};
+      }
+
+      const pageDir = path.dirname(path.normalize(filename));
+
+      return {
+        Program(node) {
+          for (const requirement of ROUTE_BOUNDARY_REQUIREMENTS) {
+            if (isBoundaryRequirementSatisfied(pageDir, appRoot, requirement)) {
+              continue;
+            }
+
+            context.report({
+              node,
+              messageId: requirement.messageId,
+            });
+          }
+        },
+      };
+    },
+  };
+}
+
 module.exports = {
   meta: {
     name: "cohort",
@@ -287,5 +444,6 @@ module.exports = {
     "no-direct-colors": createNoDirectColorsRule(),
     "only-shadcn-components": createOnlyShadcnComponentsRule(),
     "no-ad-hoc-rate-limits": createNoAdHocRateLimitRule(),
+    "require-route-boundaries": createRequireRouteBoundariesRule(),
   },
 };

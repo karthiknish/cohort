@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect } from 'react'
+import Link from 'next/link'
 import { AlertTriangle, Home, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -48,10 +49,10 @@ export default function SettingsError({
             Try again
           </Button>
           <Button variant="outline" asChild className="w-full">
-            <a href="/">
+            <Link href="/">
               <Home className="mr-2 h-4 w-4" />
               Go to home
-            </a>
+            </Link>
           </Button>
           {error.digest ? (
             <p className="pt-2 text-center text-xs text-muted-foreground">

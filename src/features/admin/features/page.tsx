@@ -4,12 +4,14 @@ import { useCallback, useMemo, useState } from 'react'
 import { Lightbulb, LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { useToast } from '@/shared/ui/use-toast'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '/_generated/api'
 import type { Id } from '/_generated/dataModel'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
+import { getPreviewAdminFeatures } from '@/lib/preview-data'
 import type { FeatureItem, FeatureStatus, FeaturePriority, FeatureReference } from '@/types/features'
 import { FeatureKanbanBoard } from './components/feature-kanban-board'
 import { FeatureFormDialog } from './components/feature-form-dialog'
@@ -46,9 +48,11 @@ export default function AdminFeaturesPage() {
   // Convex identity auth is handled by Convex client.
   // This page no longer calls `/api/admin/*`.
 
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
   const [refreshing, setRefreshing] = useState(false)
+  const [previewFeatures, setPreviewFeatures] = useState<FeatureItem[]>(() => getPreviewAdminFeatures())
 
   // Dialog states
   const [formDialogOpen, setFormDialogOpen] = useState(false)
@@ -60,12 +64,16 @@ export default function AdminFeaturesPage() {
   const [featureToDelete, setFeatureToDelete] = useState<FeatureItem | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const featuresResponse = useQuery(api.adminFeatures.listFeatures, {})
+  const featuresResponse = useQuery(api.adminFeatures.listFeatures, isPreviewMode ? 'skip' : {})
   const createFeature = useMutation(api.adminFeatures.createFeature)
   const updateFeature = useMutation(api.adminFeatures.updateFeature)
   const deleteFeature = useMutation(api.adminFeatures.deleteFeature)
 
   const features: FeatureItem[] = useMemo(() => {
+    if (isPreviewMode) {
+      return previewFeatures
+    }
+
     const raw = (featuresResponse?.features ?? []) as FeatureRow[]
     return raw.map((row) => ({
       id: row.id,
@@ -78,18 +86,23 @@ export default function AdminFeaturesPage() {
       createdAt: new Date(row.createdAtMs).toISOString(),
       updatedAt: new Date(row.updatedAtMs).toISOString(),
     }))
-  }, [featuresResponse])
+  }, [featuresResponse, isPreviewMode, previewFeatures])
 
-  const loading = featuresResponse === undefined
+  const loading = isPreviewMode ? false : featuresResponse === undefined
 
   const fetchFeatures = useCallback(
     async (isRefresh = false) => {
       if (!isRefresh) return
       setRefreshing(true)
+      if (isPreviewMode) {
+        setPreviewFeatures(getPreviewAdminFeatures())
+        setTimeout(() => setRefreshing(false), 250)
+        return
+      }
       // Convex is realtime; keep button for UX.
       setTimeout(() => setRefreshing(false), 400)
     },
-    []
+    [isPreviewMode]
   )
 
   const handleRefresh = useCallback(() => {
@@ -116,6 +129,17 @@ export default function AdminFeaturesPage() {
   const confirmDelete = useCallback(() => {
     if (!featureToDelete) return
 
+    if (isPreviewMode) {
+      setPreviewFeatures((current) => current.filter((feature) => feature.id !== featureToDelete.id))
+      toast({
+        title: 'Preview mode',
+        description: 'Sample feature removed locally for this session.',
+      })
+      setDeleteConfirmOpen(false)
+      setFeatureToDelete(null)
+      return
+    }
+
     setIsDeleting(true)
 
     void deleteFeature({ id: toFeatureDocId(featureToDelete.id) })
@@ -139,12 +163,23 @@ export default function AdminFeaturesPage() {
         setDeleteConfirmOpen(false)
         setFeatureToDelete(null)
       })
-  }, [featureToDelete, toast, deleteFeature])
+  }, [deleteFeature, featureToDelete, isPreviewMode, toast])
 
   const handleMoveFeature = useCallback(
     (featureId: string, newStatus: FeatureStatus) => {
       const feature = features.find((f) => f.id === featureId)
       if (!feature || feature.status === newStatus) return
+
+      if (isPreviewMode) {
+        setPreviewFeatures((current) => current.map((item) => (
+          item.id === featureId ? { ...item, status: newStatus, updatedAt: new Date().toISOString() } : item
+        )))
+        toast({
+          title: 'Preview mode',
+          description: `Sample feature moved to ${newStatus.replace('_', ' ')}.`,
+        })
+        return
+      }
 
       void updateFeature({ id: toFeatureDocId(featureId), status: newStatus })
         .then(() => {
@@ -164,7 +199,7 @@ export default function AdminFeaturesPage() {
           })
         })
     },
-    [features, toast, updateFeature]
+    [features, isPreviewMode, toast, updateFeature]
   )
 
   const handleSubmitFeature = useCallback(
@@ -176,6 +211,46 @@ export default function AdminFeaturesPage() {
       imageUrl: string | null
       references: FeatureReference[]
     }) => {
+      if (isPreviewMode) {
+        return Promise.resolve().then(() => {
+          if (editingFeature) {
+            setPreviewFeatures((current) => current.map((feature) => (
+              feature.id === editingFeature.id
+                ? {
+                    ...feature,
+                    title: data.title,
+                    description: data.description,
+                    status: data.status,
+                    priority: data.priority,
+                    imageUrl: data.imageUrl,
+                    references: data.references,
+                    updatedAt: new Date().toISOString(),
+                  }
+                : feature
+            )))
+          } else {
+            setPreviewFeatures((current) => [
+              {
+                id: `preview-feature-${Date.now()}`,
+                title: data.title,
+                description: data.description,
+                status: data.status,
+                priority: data.priority,
+                imageUrl: data.imageUrl,
+                references: data.references,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+              ...current,
+            ])
+          }
+
+          toast({
+            title: editingFeature ? 'Preview feature updated' : 'Preview feature added',
+            description: 'Changes apply only to the sample board in this session.',
+          })
+        })
+      }
 
       const operation = editingFeature
         ? updateFeature({
@@ -215,7 +290,7 @@ export default function AdminFeaturesPage() {
           })
         })
     },
-    [editingFeature, toast, createFeature, updateFeature]
+    [createFeature, editingFeature, isPreviewMode, toast, updateFeature]
   )
 
   if (loading) {
@@ -230,7 +305,7 @@ export default function AdminFeaturesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-400 px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -241,6 +316,7 @@ export default function AdminFeaturesPage() {
             <h1 className="text-2xl font-bold tracking-tight">Feature Planning</h1>
             <p className="text-sm text-muted-foreground">
               Plan and track platform features with a visual Kanban board.
+              {isPreviewMode ? ' Preview mode uses a local sample backlog.' : ''}
             </p>
           </div>
         </div>

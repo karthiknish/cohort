@@ -30,6 +30,7 @@ import {
 import { ImageUploader } from '@/shared/ui/image-uploader'
 import { useToast } from '@/shared/ui/use-toast'
 import { filesApi } from '@/lib/convex-api'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { validateFile } from '@/lib/utils'
 import type {
   FeatureItem,
@@ -104,6 +105,7 @@ export function FeatureFormDialog({
   onSubmit,
 }: FeatureFormDialogProps) {
   const { toast } = useToast()
+  const { isPreviewMode } = usePreview()
   useAuth()
   const convex = useConvex()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -172,6 +174,10 @@ export function FeatureFormDialog({
       throw new Error(validation.error || 'Invalid image file')
     }
 
+    if (isPreviewMode) {
+      return URL.createObjectURL(file)
+    }
+
     const { url: uploadUrl } = await generateUploadUrl()
 
     const uploadResponse = await fetch(uploadUrl, {
@@ -198,13 +204,33 @@ export function FeatureFormDialog({
     }
 
     return publicUrl.url
-  }, [generateUploadUrl, getPublicUrl])
+  }, [generateUploadUrl, getPublicUrl, isPreviewMode])
 
   const handleGenerateAI = useCallback((field: 'title' | 'description') => {
     if (field === 'title') {
       setIsGeneratingTitle(true)
     } else {
       setIsGeneratingDescription(true)
+    }
+
+    if (isPreviewMode) {
+      const previewTitle = title.trim() || `${FEATURE_STATUS_LABELS[status]} ${FEATURE_PRIORITY_LABELS[priority]} initiative`
+      const previewDescription = description.trim() || `Sample feature brief: tighten the ${status.replace('_', ' ')} workflow, improve stakeholder clarity, and keep the next release visible in the admin roadmap.`
+
+      if (field === 'title') {
+        setTitle(previewTitle)
+      } else {
+        setDescription(previewDescription)
+      }
+
+      toast({
+        title: 'Preview mode',
+        description: `Sample ${field} generated locally for this feature.`,
+      })
+
+      setIsGeneratingTitle(false)
+      setIsGeneratingDescription(false)
+      return
     }
 
     void generateFeatureAi({
@@ -238,7 +264,7 @@ export function FeatureFormDialog({
         setIsGeneratingTitle(false)
         setIsGeneratingDescription(false)
       })
-  }, [title, description, status, priority, toast, generateFeatureAi])
+  }, [description, generateFeatureAi, isPreviewMode, priority, status, title, toast])
 
   const handleAddReference = useCallback(() => {
     const trimmedUrl = newRefUrl.trim()

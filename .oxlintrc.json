@@ -60,6 +60,7 @@
     "cohort/no-direct-colors": "warn",
     "cohort/only-shadcn-components": "warn",
     "cohort/no-ad-hoc-rate-limits": "warn",
+    "cohort/require-route-boundaries": "error",
     "convex-unused/no-unused-functions": "warn"
   },
   "settings": {

@@ -28,6 +28,7 @@ import {
   InsightsChartsEmptyState,
   InsightsChartsHeader,
   InsightsChartsLoadingState,
+  InsightsChartPanel,
   InsightsChartsTabs,
 } from './insights-charts-card-sections'
 
@@ -332,22 +333,27 @@ export function InsightsChartsCard({ analysis, currency = 'USD', loading = false
     return <InsightsChartsEmptyState />
   }
 
-  const benchmarkChart = <BenchmarkChart data={analysis.chartData.benchmarkCharts} providerId={activeProvider} />
-  const comparisonChart = <ProviderComparisonChart currency={currency} data={analysis.chartData.providerComparison} />
-  const efficiencyChart = <EfficiencyRadarChart data={analysis.chartData.efficiencyBreakdown} providerId={activeProvider} />
-  const funnelChart = <FunnelChart data={analysis.chartData.funnelCharts} providerId={activeProvider} />
-  const trendsChart = <TrendChart currency={currency} data={analysis.chartData.trendCharts} providerId={activeProvider} />
-
   return (
     <Card className="shadow-sm">
       <InsightsChartsHeader onSelectedProviderChange={setSelectedProvider} providers={providers} providersCount={providers.length} selectedProvider={selectedProvider} />
       <InsightsChartsTabs
-        benchmarkChart={benchmarkChart}
-        comparisonChart={comparisonChart}
-        efficiencyChart={efficiencyChart}
-        funnelChart={funnelChart}
-        trendsChart={trendsChart}
-      />
+      >
+        <InsightsChartPanel value="comparison" title="Spend vs Revenue by Platform" description="Compare financial performance across connected platforms">
+          <ProviderComparisonChart currency={currency} data={analysis.chartData.providerComparison} />
+        </InsightsChartPanel>
+        <InsightsChartPanel value="efficiency" title="Efficiency Breakdown" description="Multi-dimensional performance analysis">
+          <EfficiencyRadarChart data={analysis.chartData.efficiencyBreakdown} providerId={activeProvider} />
+        </InsightsChartPanel>
+        <InsightsChartPanel value="trends" title="Spend Trend Analysis" description="Historical spend with trend line">
+          <TrendChart currency={currency} data={analysis.chartData.trendCharts} providerId={activeProvider} />
+        </InsightsChartPanel>
+        <InsightsChartPanel value="funnel" title="Conversion Funnel" description="Impressions → Clicks → Conversions drop-off analysis">
+          <FunnelChart data={analysis.chartData.funnelCharts} providerId={activeProvider} />
+        </InsightsChartPanel>
+        <InsightsChartPanel value="benchmarks" title="Industry Benchmarks" description="How you compare to industry averages">
+          <BenchmarkChart data={analysis.chartData.benchmarkCharts} providerId={activeProvider} />
+        </InsightsChartPanel>
+      </InsightsChartsTabs>
     </Card>
   )
 }

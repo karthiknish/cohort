@@ -24,6 +24,7 @@ import type {
     GammaTemplateRequest,
     GammaTheme,
 } from './types'
+import { parseJsonBody } from '@/lib/response-json'
 
 const GAMMA_BASE_URL = 'https://public-api.gamma.app/v1.0'
 
@@ -76,6 +77,15 @@ async function wait(delayMs: number): Promise<void> {
     await new Promise((resolve) => {
         setTimeout(resolve, delayMs)
     })
+}
+
+async function parseGammaPayload<T>(response: Response, context: string): Promise<T> {
+    const payload = await parseJsonBody<T>(response, { context })
+    if (payload === null) {
+        throw new Error(`${context} returned an empty response body.`)
+    }
+
+    return payload
 }
 
 // ============================================================================
@@ -149,7 +159,7 @@ export class GammaService {
             throw new Error(`Gamma API listThemes failed (${response.status}): ${details || 'Unknown error'}`)
         }
 
-        const payload = await response.json().catch(() => ({})) as Record<string, unknown>
+        const payload = await parseGammaPayload<Record<string, unknown>>(response, 'Gamma API listThemes')
         const data = Array.isArray(payload.data)
             ? (payload.data as GammaTheme[])
             : []
@@ -217,7 +227,7 @@ export class GammaService {
             throw new Error(`Gamma API listFolders failed (${response.status}): ${details || 'Unknown error'}`)
         }
 
-        const payload = await response.json().catch(() => ({})) as Record<string, unknown>
+        const payload = await parseGammaPayload<Record<string, unknown>>(response, 'Gamma API listFolders')
         const data = Array.isArray(payload.data)
             ? (payload.data as GammaFolder[])
             : []
@@ -326,8 +336,8 @@ export class GammaService {
             throw new Error(`Gamma API generation failed (${response.status}): ${details || 'Unknown error'}`)
         }
 
-        const payload = (await response.json().catch(() => null)) as { generationId?: unknown } | null
-        const generationId = typeof payload?.generationId === 'string' ? payload.generationId : null
+        const payload = await parseGammaPayload<{ generationId?: unknown }>(response, 'Gamma API createGeneration')
+        const generationId = typeof payload.generationId === 'string' ? payload.generationId : null
 
         if (!generationId) {
             throw new Error('Gamma API did not return a generationId')
@@ -383,8 +393,8 @@ export class GammaService {
             throw new Error(`Gamma API createFromTemplate failed (${response.status}): ${details || 'Unknown error'}`)
         }
 
-        const payload = (await response.json().catch(() => null)) as { generationId?: unknown } | null
-        const generationId = typeof payload?.generationId === 'string' ? payload.generationId : null
+        const payload = await parseGammaPayload<{ generationId?: unknown }>(response, 'Gamma API createFromTemplate')
+        const generationId = typeof payload.generationId === 'string' ? payload.generationId : null
 
         if (!generationId) {
             throw new Error('Gamma API did not return a generationId')
@@ -416,7 +426,7 @@ export class GammaService {
                     throw new Error(`Gamma API status failed (${response.status}): ${details || 'Unknown error'}`)
                 }
 
-                const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>
+                const payload = await parseGammaPayload<Record<string, unknown>>(response, 'Gamma API getGeneration')
                 const status = typeof payload.status === 'string' ? payload.status : 'unknown'
 
                 const generatedFiles = Array.isArray(payload.generatedFiles)

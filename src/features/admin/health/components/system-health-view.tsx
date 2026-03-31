@@ -1,7 +1,7 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
     Activity,
     AlertCircle,
@@ -21,7 +21,9 @@ import {
 
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { getPreviewAdminHealthData } from '@/lib/preview-data'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -235,13 +237,21 @@ function ServiceHealthCard({ name, check, isExpanded, onToggleExpand }: ServiceH
 
 export function SystemHealthView() {
     const [expandedServices, setExpandedServices] = useState<Set<string>>(new Set())
+    const { isPreviewMode } = usePreview()
+    const previewData = useMemo(() => getPreviewAdminHealthData(), [])
 
-    const { data, isLoading: loading, error, isFetching: refreshing, refetch } = useQuery({
+    const { data, isLoading, error, isFetching, refetch } = useQuery({
         queryKey: ['system-health'],
         queryFn: fetchHealthData,
+        enabled: !isPreviewMode,
         refetchInterval: 30000,
         staleTime: 10000,
     })
+
+    const resolvedData = isPreviewMode ? previewData : data
+    const loading = !isPreviewMode && isLoading
+    const refreshing = !isPreviewMode && isFetching
+    const resolvedError = isPreviewMode ? null : error
 
     const toggleExpand = useCallback((service: string) => {
         setExpandedServices(prev => {
@@ -253,10 +263,13 @@ export function SystemHealthView() {
     }, [])
 
     const handleRefetch = useCallback(() => {
+        if (isPreviewMode) {
+            return
+        }
         void refetch()
-    }, [refetch])
+    }, [isPreviewMode, refetch])
 
-    if (loading && !data) {
+    if (loading && !resolvedData) {
         return (
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -277,13 +290,13 @@ export function SystemHealthView() {
         )
     }
 
-    if (error && !data) {
+    if (resolvedError && !resolvedData) {
         return (
             <Card className="border-destructive/20 bg-destructive/5">
                 <CardContent className="flex flex-col items-center justify-center py-10 text-center">
                     <AlertCircle className="mb-4 h-10 w-10 text-destructive" />
                     <h3 className="text-lg font-semibold text-destructive">Monitoring Offline</h3>
-                    <p className="max-w-xs text-sm text-muted-foreground">{error instanceof Error ? error.message : 'Failed to fetch health status'}</p>
+                    <p className="max-w-xs text-sm text-muted-foreground">{resolvedError instanceof Error ? resolvedError.message : 'Failed to fetch health status'}</p>
                     <Button variant="outline" className="mt-4" onClick={handleRefetch}>
                         Try Again
                     </Button>
@@ -292,9 +305,9 @@ export function SystemHealthView() {
         )
     }
 
-    const okCount = data ? Object.values(data.checks).filter(c => c.status === 'ok').length : 0
-    const warningCount = data ? Object.values(data.checks).filter(c => c.status === 'warning').length : 0
-    const totalCount = data ? Object.keys(data.checks).length : 0
+    const okCount = resolvedData ? Object.values(resolvedData.checks).filter(c => c.status === 'ok').length : 0
+    const warningCount = resolvedData ? Object.values(resolvedData.checks).filter(c => c.status === 'warning').length : 0
+    const totalCount = resolvedData ? Object.keys(resolvedData.checks).length : 0
 
     return (
         <div className="space-y-6">
@@ -302,23 +315,23 @@ export function SystemHealthView() {
                 <div className="flex items-center gap-3">
                     <div className={cn(
                         "flex h-12 w-12 items-center justify-center rounded-full",
-                        data?.status === 'healthy'
+                        resolvedData?.status === 'healthy'
                             ? "bg-success/10"
-                            : data?.status === 'degraded'
+                            : resolvedData?.status === 'degraded'
                                 ? "bg-warning/10"
                                 : "bg-destructive/10"
                     )}>
-                        {getStatusIcon(data?.status || 'unhealthy')}
+                        {getStatusIcon(resolvedData?.status || 'unhealthy')}
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
                             <h2 className="text-xl font-bold">System Status</h2>
-                            <Badge className={cn("text-xs", getStatusBadgeColor(data?.status || 'unhealthy'))}>
-                                {data?.status?.toUpperCase()}
+                            <Badge className={cn("text-xs", getStatusBadgeColor(resolvedData?.status || 'unhealthy'))}>
+                                {resolvedData?.status?.toUpperCase()}
                             </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                            {okCount}/{totalCount} services operational{warningCount > 0 ? ` · ${warningCount} need configuration` : ''} · Last checked: {data ? new Date(data.timestamp).toLocaleTimeString() : 'Never'}
+                            {okCount}/{totalCount} services operational{warningCount > 0 ? ` · ${warningCount} need configuration` : ''} · Last checked: {resolvedData ? new Date(resolvedData.timestamp).toLocaleTimeString() : 'Never'}
                         </p>
                     </div>
                 </div>
@@ -339,7 +352,7 @@ export function SystemHealthView() {
                         <CardTitle className="text-sm font-medium text-muted-foreground">Response Time</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{data?.responseTime ?? 0}ms</div>
+                        <div className="text-2xl font-bold">{resolvedData?.responseTime ?? 0}ms</div>
                         <p className="text-xs text-muted-foreground">Full health check roundtrip</p>
                     </CardContent>
                 </Card>
@@ -349,7 +362,7 @@ export function SystemHealthView() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {data ? formatUptime(data.uptime) : '0m'}
+                            {resolvedData ? formatUptime(resolvedData.uptime) : '0m'}
                         </div>
                         <p className="text-xs text-muted-foreground">Server process duration</p>
                     </CardContent>
@@ -359,7 +372,7 @@ export function SystemHealthView() {
                         <CardTitle className="text-sm font-medium text-muted-foreground">Version</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">v{data?.version ?? '0.0.0'}</div>
+                        <div className="text-2xl font-bold">v{resolvedData?.version ?? '0.0.0'}</div>
                         <p className="text-xs text-muted-foreground">
                             {process.env.NODE_ENV === 'production' ? 'Production' : 'Development'}
                         </p>
@@ -370,7 +383,7 @@ export function SystemHealthView() {
             <div>
                 <h3 className="mb-4 text-lg font-semibold">Service Health</h3>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {data && Object.entries(data.checks).map(([name, check]) => (
+                    {resolvedData && Object.entries(resolvedData.checks).map(([name, check]) => (
                         <ServiceHealthCard
                             key={name}
                             name={name}
@@ -382,12 +395,12 @@ export function SystemHealthView() {
                 </div>
             </div>
 
-            {error && data && (
+            {resolvedError && resolvedData && (
                 <Card className="border-warning/20 bg-warning/10">
                     <CardContent className="flex items-center gap-3 py-3">
                         <AlertCircle className="h-5 w-5 text-warning" />
                         <p className="text-sm text-warning">
-                            Last refresh failed: {error instanceof Error ? error.message : 'Unknown error'}. Showing cached data.
+                            Last refresh failed: {resolvedError instanceof Error ? resolvedError.message : 'Unknown error'}. Showing cached data.
                         </p>
                     </CardContent>
                 </Card>

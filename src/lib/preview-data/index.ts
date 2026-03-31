@@ -51,5 +51,24 @@ export { getPreviewAdsMetrics, getPreviewAdsIntegrationStatuses, getPreviewCampa
 // Socials
 export { getPreviewSocialConnectionStatus, getPreviewSocialOverview } from './socials'
 
+// Settings
+export {
+    getPreviewSettingsExportData,
+    getPreviewSettingsNotificationPreferences,
+    getPreviewSettingsProfile,
+    getPreviewSettingsRegionalPreferences,
+} from './settings'
+
+// Admin
+export {
+    getPreviewAdminClients,
+    getPreviewAdminDashboardData,
+    getPreviewAdminFeatures,
+    getPreviewAdminHealthData,
+    getPreviewAdminInvitations,
+    getPreviewAdminProblemReports,
+    getPreviewAdminUsers,
+} from './admin'
+
 // Agent mode
 export { getPreviewAgentModeResponse } from './agent'

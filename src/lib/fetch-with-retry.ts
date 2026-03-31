@@ -1,6 +1,7 @@
 'use client'
 
 import { AgentAuthError, AgentNetworkError, AgentRateLimitError, AgentServerError, parseAgentError, type AgentError } from './agent-errors'
+import { composeAbortSignal, isAbortError, isTimeoutError, sleepWithSignal } from './retry-utils'
 
 /**
  * Fetch wrapper with exponential backoff retry logic.
@@ -22,6 +23,8 @@ export interface FetchWithRetryOptions {
   onFinalFailure?: (error: AgentError) => void
   /** AbortSignal to cancel the request */
   signal?: AbortSignal
+  /** Timeout for each request attempt in milliseconds */
+  timeoutMs?: number
 }
 
 export interface FetchWithRetryResult<T> {
@@ -59,17 +62,12 @@ function isRetryableError(error: AgentError): boolean {
   return error.isRetryable
 }
 
-/**
- * Wait for a specified duration
- */
-function wait(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(resolve, ms)
-    signal?.addEventListener('abort', () => {
-      clearTimeout(timeout)
-      reject(new DOMException('Aborted', 'AbortError'))
-    })
-  })
+function createTimeoutAgentError(timeoutMs?: number, originalError?: unknown): AgentError {
+  const timeoutSuffix = typeof timeoutMs === 'number' && timeoutMs > 0
+    ? ` after ${Math.ceil(timeoutMs / 1000)}s`
+    : ''
+
+  return new AgentNetworkError(`Request timed out${timeoutSuffix}. Please try again.`, originalError)
 }
 
 /**
@@ -88,6 +86,7 @@ export async function fetchWithRetry<T = unknown>(
     onRetry,
     onFinalFailure,
     signal,
+    timeoutMs,
   } = options
 
   let attempts = 0
@@ -104,15 +103,26 @@ export async function fetchWithRetry<T = unknown>(
         throw new DOMException('Aborted', 'AbortError')
       }
 
-      const response = await fetch(url, {
-        ...init,
-        signal,
-      })
+      const { signal: requestSignal, cleanup } = composeAbortSignal({ signal, timeoutMs })
+
+      let response: Response
+      try {
+        response = await fetch(url, {
+          ...init,
+          signal: requestSignal,
+        })
+      } finally {
+        cleanup()
+      }
 
       lastResponse = response
 
       // Success case
       if (response.ok) {
+        if (response.status === 204 || response.status === 205) {
+          return { data: null, error: null, response, attempts }
+        }
+
         const data = await response.json() as T
         return { data, error: null, response, attempts }
       }
@@ -147,7 +157,7 @@ export async function fetchWithRetry<T = unknown>(
         if (attempts < maxRetries) {
           const delayMs = retryAfterSeconds * 1000
           onRetry?.(attempts, error, delayMs)
-          await wait(delayMs, signal)
+          await sleepWithSignal(delayMs, signal)
           continue
         }
       }
@@ -157,7 +167,7 @@ export async function fetchWithRetry<T = unknown>(
         if (attempts < maxRetries) {
           const delayMs = calculateBackoffDelay(attempts, baseDelayMs, maxDelayMs)
           onRetry?.(attempts, error, delayMs)
-          await wait(delayMs, signal)
+          await sleepWithSignal(delayMs, signal)
           continue
         }
       }
@@ -166,17 +176,19 @@ export async function fetchWithRetry<T = unknown>(
       return { data: null, error, response, attempts }
     } catch (fetchError) {
       // Aborted - don't retry
-      if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
+      if (isAbortError(fetchError)) {
         throw fetchError
       }
 
       // Network error - retry with backoff
-      lastError = parseAgentError(fetchError, null)
+      lastError = isTimeoutError(fetchError)
+        ? createTimeoutAgentError(timeoutMs, fetchError)
+        : parseAgentError(fetchError, null)
 
       if (isRetryableError(lastError) && attempts < maxRetries) {
         const delayMs = calculateBackoffDelay(attempts, baseDelayMs, maxDelayMs)
         onRetry?.(attempts, lastError, delayMs)
-        await wait(delayMs, signal)
+        await sleepWithSignal(delayMs, signal)
         continue
       }
 

@@ -42,8 +42,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { DATE_FORMATS, formatDate as formatDateLib, formatRelativeTime } from '@/lib/dates'
+import { getPreviewAdminInvitations, getPreviewAdminUsers } from '@/lib/preview-data'
 import { cn } from '@/lib/utils'
 import { ADMIN_USER_ROLES, ADMIN_USER_STATUSES, type AdminUserRecord, type AdminUserRole, type AdminUserStatus } from '@/types/admin'
 
@@ -264,9 +266,12 @@ function InvitationRow({
 
 export default function AdminUsersPage() {
   const { user } = useAuth()
+  const { isPreviewMode } = usePreview()
   const { toast } = useToast()
 
   const [usersOverride, setUsersOverride] = useState<AdminUserRecord[] | null>(null)
+  const [previewUsers, setPreviewUsers] = useState<AdminUserRecord[]>(() => getPreviewAdminUsers())
+  const [previewInvitations, setPreviewInvitations] = useState<AdminInvitationRecord[]>(() => getPreviewAdminInvitations())
   const [loadingMore, setLoadingMore] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
@@ -276,13 +281,13 @@ export default function AdminUsersPage() {
   const [error] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [invitationActionKey, setInvitationActionKey] = useState<string | null>(null)
-  const workspaceContext = useQuery(api.users.getMyWorkspaceContext, user ? {} : 'skip')
+  const workspaceContext = useQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
   const workspaceId = workspaceContext?.workspaceId ?? null
   const includeAllWorkspaces = workspaceContext?.role === 'admin'
 
   const { results: usersPage, status, loadMore, isLoading } = usePaginatedQuery(
     api.adminUsers.listUsers,
-    workspaceId
+    !isPreviewMode && workspaceId
       ? {
           workspaceId,
           includeAllWorkspaces,
@@ -295,7 +300,7 @@ export default function AdminUsersPage() {
   const createInvitation = useMutation(api.adminInvitations.createInvitation)
   const resendInvitation = useMutation(api.adminInvitations.resendInvitation)
   const revokeInvitation = useMutation(api.adminInvitations.revokeInvitation)
-  const invitationResponse = useQuery(api.adminInvitations.listInvitations, { limit: 100 }) as
+  const invitationResponse = useQuery(api.adminInvitations.listInvitations, isPreviewMode ? 'skip' : { limit: 100 }) as
     | { invitations?: Array<Record<string, unknown>> }
     | undefined
 
@@ -308,6 +313,7 @@ export default function AdminUsersPage() {
   const [inviteSending, setInviteSending] = useState(false)
 
   const users: AdminUserRecord[] = useMemo(() => {
+    if (isPreviewMode) return previewUsers
     if (usersOverride) return usersOverride
 
     return (Array.isArray(usersPage) ? usersPage : []).map((row) => ({
@@ -321,9 +327,9 @@ export default function AdminUsersPage() {
       updatedAt: row.updatedAtMs ? new Date(row.updatedAtMs).toISOString() : null,
       lastLoginAt: null,
     }))
-  }, [usersOverride, usersPage])
+  }, [isPreviewMode, previewUsers, usersOverride, usersPage])
 
-  const loading = (user != null && workspaceContext === undefined) || isLoading
+  const loading = isPreviewMode ? false : (user != null && workspaceContext === undefined) || isLoading
   const filteredUsers = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()
     return users.filter((record) => {
@@ -350,9 +356,13 @@ export default function AdminUsersPage() {
     return { total, pending, active, internal, clients }
   }, [users])
 
-  const invitationsLoading = invitationResponse === undefined
+  const invitationsLoading = isPreviewMode ? false : invitationResponse === undefined
 
   const invitations: AdminInvitationRecord[] = useMemo(() => {
+    if (isPreviewMode) {
+      return previewInvitations
+    }
+
     const rows = Array.isArray(invitationResponse?.invitations) ? invitationResponse.invitations : []
 
     return rows
@@ -394,7 +404,7 @@ export default function AdminUsersPage() {
         }
       })
       .filter((invitation) => invitation.id.length > 0)
-  }, [invitationResponse])
+  }, [invitationResponse, isPreviewMode, previewInvitations])
 
   const invitationSummary = useMemo(() => {
     return invitations.reduce<Record<InvitationLifecycleStatus, number>>(
@@ -439,6 +449,14 @@ export default function AdminUsersPage() {
       return
     }
 
+    if (isPreviewMode) {
+      setPreviewUsers((current) => current.map((userRecord) => (
+        userRecord.id === record.id ? { ...userRecord, role: nextRole, updatedAt: new Date().toISOString() } : userRecord
+      )))
+      toast({ title: 'Preview mode', description: `${record.name} is now ${nextRole} in the sample workspace.` })
+      return
+    }
+
     setSavingId(record.id)
 
     void updateUserRoleStatus({ legacyId: record.id, role: nextRole })
@@ -456,7 +474,7 @@ export default function AdminUsersPage() {
       .finally(() => {
         setSavingId(null)
       })
-  }, [toast, updateUserRoleStatus, users])
+  }, [isPreviewMode, toast, updateUserRoleStatus, users])
 
   const handleApprovalToggle = useCallback((record: AdminUserRecord, approved: boolean) => {
     if (record.role === 'admin' && !approved) {
@@ -466,6 +484,18 @@ export default function AdminUsersPage() {
 
     const nextStatus: AdminUserStatus = approved ? 'active' : 'pending'
     if (record.status === nextStatus) {
+      return
+    }
+
+    if (isPreviewMode) {
+      setPreviewUsers((current) => current.map((userRecord) => (
+        userRecord.id === record.id ? { ...userRecord, status: nextStatus, updatedAt: new Date().toISOString() } : userRecord
+      )))
+      toast({
+        title: 'Preview mode',
+        description: `${record.name} status set to ${nextStatus} in the sample workspace.`,
+      })
+      setRevokeOpen(false)
       return
     }
 
@@ -488,10 +518,41 @@ export default function AdminUsersPage() {
       .finally(() => {
         setSavingId(null)
       })
-  }, [toast, updateUserRoleStatus, users])
+  }, [isPreviewMode, toast, updateUserRoleStatus, users])
 
   const handleInviteUser = useCallback(() => {
-    if (!inviteEmail || !user?.id) return
+    if (!inviteEmail) return
+
+    if (isPreviewMode) {
+      const nowMs = Date.now()
+      setPreviewInvitations((current) => [
+        {
+          id: `preview-invite-${nowMs}`,
+          email: inviteEmail,
+          role: inviteRole,
+          name: null,
+          message: 'Created from the preview admin invite flow.',
+          status: 'pending',
+          effectiveStatus: 'pending',
+          invitedBy: user?.id ?? 'preview-admin-1',
+          invitedByName: user?.name ?? 'Avery Stone',
+          createdAtMs: nowMs,
+          expiresAtMs: nowMs + 7 * 24 * 60 * 60 * 1000,
+          acceptedAtMs: null,
+        },
+        ...current,
+      ])
+      toast({
+        title: 'Preview mode',
+        description: `Invitation queued for ${inviteEmail} in the sample workspace.`,
+      })
+      setInviteOpen(false)
+      setInviteEmail('')
+      setInviteRole('team')
+      return
+    }
+
+    if (!user?.id) return
     
     setInviteSending(true)
 
@@ -518,9 +579,26 @@ export default function AdminUsersPage() {
       .finally(() => {
         setInviteSending(false)
       })
-  }, [inviteEmail, inviteRole, user, createInvitation, toast])
+  }, [createInvitation, inviteEmail, inviteRole, isPreviewMode, toast, user])
 
   const handleResendInvitation = useCallback((invitation: AdminInvitationRecord) => {
+    if (isPreviewMode) {
+      const nowMs = Date.now()
+      setPreviewInvitations((current) => current.map((record) => (
+        record.id === invitation.id
+          ? {
+              ...record,
+              status: 'pending',
+              effectiveStatus: 'pending',
+              createdAtMs: nowMs,
+              expiresAtMs: nowMs + 7 * 24 * 60 * 60 * 1000,
+            }
+          : record
+      )))
+      toast({ title: 'Preview mode', description: `Sample invitation resent to ${invitation.email}.` })
+      return
+    }
+
     const actionKey = `resend:${invitation.id}`
     setInvitationActionKey(actionKey)
 
@@ -539,9 +617,19 @@ export default function AdminUsersPage() {
       .finally(() => {
         setInvitationActionKey((current) => (current === actionKey ? null : current))
       })
-  }, [resendInvitation, toast])
+  }, [isPreviewMode, resendInvitation, toast])
 
   const handleRevokeInvitation = useCallback((invitation: AdminInvitationRecord) => {
+    if (isPreviewMode) {
+      setPreviewInvitations((current) => current.map((record) => (
+        record.id === invitation.id
+          ? { ...record, status: 'revoked', effectiveStatus: 'revoked' }
+          : record
+      )))
+      toast({ title: 'Preview mode', description: `${invitation.email} was revoked in the sample workspace.` })
+      return
+    }
+
     const actionKey = `revoke:${invitation.id}`
     setInvitationActionKey(actionKey)
 
@@ -560,7 +648,7 @@ export default function AdminUsersPage() {
       .finally(() => {
         setInvitationActionKey((current) => (current === actionKey ? null : current))
       })
-  }, [revokeInvitation, toast])
+  }, [isPreviewMode, revokeInvitation, toast])
 
   const handleRefresh = useCallback(() => {
     if (loading) return
@@ -570,7 +658,12 @@ export default function AdminUsersPage() {
     setInvitationStatusFilter('pending')
     setInvitationSearchTerm('')
     setUsersOverride(null)
-  }, [loading])
+
+    if (isPreviewMode) {
+      setPreviewUsers(getPreviewAdminUsers())
+      setPreviewInvitations(getPreviewAdminInvitations())
+    }
+  }, [isPreviewMode, loading])
 
   const handleInviteEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setInviteEmail(e.target.value)
@@ -615,6 +708,7 @@ export default function AdminUsersPage() {
   }, [selectedUser, handleApprovalToggle])
 
   const handleLoadMore = useCallback(() => {
+    if (isPreviewMode) return
     if (loadingMore) return
     setLoadingMore(true)
     void Promise.resolve()
@@ -625,13 +719,13 @@ export default function AdminUsersPage() {
       .finally(() => {
         setLoadingMore(false)
       })
-  }, [loadingMore, loadMore])
+  }, [isPreviewMode, loadingMore, loadMore])
 
   const handleRevokeOpen = useCallback(() => {
     setRevokeOpen(true)
   }, [])
 
-  if (!user) {
+  if (!user && !isPreviewMode) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
         <Card className="max-w-md border-muted/60">
@@ -650,7 +744,10 @@ export default function AdminUsersPage() {
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Users & approvals</h1>
-            <p className="text-muted-foreground">Approve new accounts and assign access. Use Team Management for internal staffing and Client Workspaces for client allocation.</p>
+            <p className="text-muted-foreground">
+              Approve new accounts and assign access. Use Team Management for internal staffing and Client Workspaces for client allocation.
+              {isPreviewMode ? ' Preview mode keeps user changes local to this session.' : ''}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button asChild variant="outline">

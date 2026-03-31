@@ -5,6 +5,12 @@ export type RetryConfig = {
   jitterFactor: number
 }
 
+export type AbortSignalOptions = {
+  signal?: AbortSignal
+  timeoutMs?: number
+  timeoutMessage?: string
+}
+
 export const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   baseDelayMs: 1000,
@@ -20,14 +26,87 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-function createAbortError(): Error {
+export function createAbortError(message = 'Aborted'): Error {
   try {
     // DOMException exists in browsers and modern Node.
-    return new DOMException('Aborted', 'AbortError')
+    return new DOMException(message, 'AbortError')
   } catch {
-    const error = new Error('Aborted')
+    const error = new Error(message)
     ;(error as { name: string }).name = 'AbortError'
     return error
+  }
+}
+
+export function createTimeoutError(ms: number, message?: string): Error {
+  const timeoutMessage = message ?? `Request timed out after ${Math.ceil(ms / 1000)}s.`
+
+  try {
+    return new DOMException(timeoutMessage, 'TimeoutError')
+  } catch {
+    const error = new Error(timeoutMessage)
+    ;(error as { name: string }).name = 'TimeoutError'
+    return error
+  }
+}
+
+export function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError'
+}
+
+export function isTimeoutError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'TimeoutError'
+}
+
+export function composeAbortSignal(options: AbortSignalOptions = {}): {
+  signal?: AbortSignal
+  cleanup: () => void
+} {
+  const { signal, timeoutMs, timeoutMessage } = options
+  const hasTimeout = Number.isFinite(timeoutMs) && typeof timeoutMs === 'number' && timeoutMs > 0
+
+  if (!signal && !hasTimeout) {
+    return {
+      signal: undefined,
+      cleanup: () => {},
+    }
+  }
+
+  if (signal && !hasTimeout) {
+    return {
+      signal,
+      cleanup: () => {},
+    }
+  }
+
+  const controller = new AbortController()
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  const abortFromSource = () => {
+    controller.abort(signal?.reason ?? createAbortError())
+  }
+
+  if (signal?.aborted) {
+    abortFromSource()
+  } else if (signal) {
+    signal.addEventListener('abort', abortFromSource, { once: true })
+  }
+
+  if (hasTimeout && !controller.signal.aborted) {
+    timeoutId = setTimeout(() => {
+      controller.abort(createTimeoutError(timeoutMs, timeoutMessage))
+    }, timeoutMs)
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+      if (signal) {
+        signal.removeEventListener('abort', abortFromSource)
+      }
+    },
   }
 }
 

@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { googleAdsSearch } from './client'
+import { parseJsonBodySafely } from '@/lib/response-json'
 import { GoogleAdsApiError } from './errors'
 import {
     GOOGLE_API_BASE,
@@ -11,6 +12,13 @@ import type {
     GoogleCampaign,
     GoogleAdsApiErrorResponse,
 } from './types'
+
+async function parseGoogleAdsErrorResponse(response: Response, context: string): Promise<GoogleAdsApiErrorResponse | null> {
+    return await parseJsonBodySafely<GoogleAdsApiErrorResponse>(response, {
+        context,
+        allowEmpty: true,
+    })
+}
 
 // =============================================================================
 // LIST CAMPAIGNS
@@ -206,7 +214,7 @@ export async function updateGoogleCampaignStatus(options: {
     })
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})) as GoogleAdsApiErrorResponse
+        const errorData = await parseGoogleAdsErrorResponse(response, 'Google Ads campaign status mutation error')
         throw new GoogleAdsApiError({
             message: errorData?.error?.message ?? 'Campaign update failed',
             httpStatus: response.status,
@@ -269,7 +277,7 @@ export async function updateGoogleAdStatus(options: {
     })
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})) as GoogleAdsApiErrorResponse
+        const errorData = await parseGoogleAdsErrorResponse(response, 'Google Ads ad status mutation error')
         throw new GoogleAdsApiError({
             message: errorData?.error?.message ?? 'Ad update failed',
             httpStatus: response.status,
@@ -330,7 +338,7 @@ export async function updateGoogleCampaignBudget(options: {
     })
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})) as GoogleAdsApiErrorResponse
+        const errorData = await parseGoogleAdsErrorResponse(response, 'Google Ads budget mutation error')
         throw new GoogleAdsApiError({
             message: errorData?.error?.message ?? 'Budget update failed',
             httpStatus: response.status,
@@ -513,7 +521,7 @@ export async function updateGoogleCampaignBidding(options: {
     })
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})) as GoogleAdsApiErrorResponse
+        const errorData = await parseGoogleAdsErrorResponse(response, 'Google Ads bidding mutation error')
         throw new GoogleAdsApiError({
             message: errorData?.error?.message ?? 'Bidding update failed',
             httpStatus: response.status,

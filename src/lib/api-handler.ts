@@ -32,6 +32,49 @@ function getConvexIdempotencyClient(): ConvexHttpClient | null {
   return _convexClient
 }
 
+type BestEffortIdempotencyCleanupOptions =
+  | {
+      operation: 'release'
+      key: string
+      requestId: string
+      path: string
+    }
+  | {
+      operation: 'complete'
+      key: string
+      response: IdempotencyLayer2
+      httpStatus: number
+      requestId: string
+      path: string
+    }
+
+async function runBestEffortIdempotencyCleanup(options: BestEffortIdempotencyCleanupOptions): Promise<void> {
+  const convex = getConvexIdempotencyClient()
+  if (!convex) {
+    return
+  }
+
+  try {
+    if (options.operation === 'release') {
+      await convex.mutation(api.apiIdempotency.release, { key: options.key })
+      return
+    }
+
+    await convex.mutation(api.apiIdempotency.complete, {
+      key: options.key,
+      response: options.response,
+      httpStatus: options.httpStatus,
+    })
+  } catch (error) {
+    logger.error('Idempotency cleanup failed', error, {
+      operation: options.operation,
+      path: options.path,
+      requestId: options.requestId,
+      key: options.key,
+    })
+  }
+}
+
 /**
  * Standard API Response structure
  */
@@ -406,21 +449,23 @@ export function createApiHandler<
           })
 
           if (!payload.success && idempotencyKey) {
-            const convex = getConvexIdempotencyClient()
-            if (convex) {
-              await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
-            }
+            await runBestEffortIdempotencyCleanup({
+              operation: 'release',
+              key: idempotencyKey,
+              requestId,
+              path: req.nextUrl.pathname,
+            })
           }
 
           if (payload.success && idempotencyKey) {
-            const convex = getConvexIdempotencyClient()
-            if (convex) {
-              await convex.mutation(api.apiIdempotency.complete, {
-                key: idempotencyKey,
-                response: toIdempotencyLayer2(payload),
-                httpStatus: status,
-              }).catch(() => {})
-            }
+            await runBestEffortIdempotencyCleanup({
+              operation: 'complete',
+              key: idempotencyKey,
+              response: toIdempotencyLayer2(payload),
+              httpStatus: status,
+              requestId,
+              path: req.nextUrl.pathname,
+            })
           }
         })
 
@@ -449,14 +494,14 @@ export function createApiHandler<
         })
 
         if (idempotencyKey) {
-          const convex = getConvexIdempotencyClient()
-          if (convex) {
-            await convex.mutation(api.apiIdempotency.complete, {
-              key: idempotencyKey,
-              response: toIdempotencyLayer2(successResponse),
-              httpStatus: 200,
-            }).catch(() => {})
-          }
+          await runBestEffortIdempotencyCleanup({
+            operation: 'complete',
+            key: idempotencyKey,
+            response: toIdempotencyLayer2(successResponse),
+            httpStatus: 200,
+            requestId,
+            path: req.nextUrl.pathname,
+          })
         }
       })
 
@@ -478,10 +523,12 @@ export function createApiHandler<
           logApiError(error, req, { ...logContext })
 
           if (idempotencyKey) {
-            const convex = getConvexIdempotencyClient()
-            if (convex) {
-              await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
-            }
+            await runBestEffortIdempotencyCleanup({
+              operation: 'release',
+              key: idempotencyKey,
+              requestId,
+              path: req.nextUrl.pathname,
+            })
           }
         })
 
@@ -503,10 +550,12 @@ export function createApiHandler<
           logApiError(error, req, { ...logContext })
           
           if (idempotencyKey) {
-            const convex = getConvexIdempotencyClient()
-            if (convex) {
-              await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
-            }
+            await runBestEffortIdempotencyCleanup({
+              operation: 'release',
+              key: idempotencyKey,
+              requestId,
+              path: req.nextUrl.pathname,
+            })
           }
         })
 
@@ -527,10 +576,12 @@ export function createApiHandler<
           logApiError(error, req, { ...logContext })
 
           if (idempotencyKey) {
-            const convex = getConvexIdempotencyClient()
-            if (convex) {
-              await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
-            }
+            await runBestEffortIdempotencyCleanup({
+              operation: 'release',
+              key: idempotencyKey,
+              requestId,
+              path: req.nextUrl.pathname,
+            })
           }
         })
 
@@ -556,10 +607,12 @@ export function createApiHandler<
         logApiError(error, req, { ...logContext, includeStack: isDev })
 
         if (idempotencyKey) {
-          const convex = getConvexIdempotencyClient()
-          if (convex) {
-            await convex.mutation(api.apiIdempotency.release, { key: idempotencyKey }).catch(() => {})
-          }
+          await runBestEffortIdempotencyCleanup({
+            operation: 'release',
+            key: idempotencyKey,
+            requestId,
+            path: req.nextUrl.pathname,
+          })
         }
       })
 

@@ -7,8 +7,11 @@ import type { ChangeEvent, FormEvent } from "react"
 
 import { AuthCard } from "@/features/marketing/home/components/auth-card"
 import { bootstrapAndSyncSession, calculatePasswordStrength } from "@/features/marketing/home/components/auth-utils"
-import { HERO_HEADLINE, HERO_HIGHLIGHTS, HERO_SUBHEAD } from "@/features/marketing/home/components/home-content"
-import { HomeHero } from "@/features/marketing/home/components/home-hero"
+import { DashboardPreview } from "@/features/marketing/home/components/dashboard-preview"
+import { FeaturesBento } from "@/features/marketing/home/components/features-bento"
+import { HeroBackground } from "@/features/marketing/home/components/hero-background"
+import { HERO_HEADLINE, HERO_SUBHEAD } from "@/features/marketing/home/components/home-content"
+import { FadeIn } from "@/shared/ui/animate-in"
 import { useToast } from "@/shared/ui/use-toast"
 import { authClient } from "@/lib/auth-client"
 import { getFriendlyAuthErrorMessage } from "@/services/auth/error-utils"
@@ -304,32 +307,96 @@ function HomePageContent() {
   )
 
   return (
-    <div className="flex min-h-screen w-full bg-muted/30">
-      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-12 px-6 py-10 lg:flex-row lg:items-center lg:justify-between lg:gap-20 lg:px-10 lg:py-20">
-        <HomeHero headline={HERO_HEADLINE} subhead={HERO_SUBHEAD} highlights={HERO_HIGHLIGHTS} />
-        <AuthCard
-          activeTab={activeTab}
-          emailError={emailError}
-          isSubmitting={isSubmitting}
-          isAuthLoading={isAuthLoading}
-          rememberMe={rememberMe}
-          showPassword={showPassword}
-          showConfirmPassword={showConfirmPassword}
-          passwordsMatch={passwordsMatch}
-          signInData={signInData}
-          signUpData={signUpData}
-          passwordStrength={passwordStrength}
-          onTabChange={handleTabChange}
-          onRememberMeChange={handleRememberMeChange}
-          onToggleShowPassword={handleToggleShowPassword}
-          onToggleShowConfirmPassword={handleToggleShowConfirmPassword}
-          onSignInChange={handleSignInChange}
-          onSignUpChange={handleSignUpChange}
-          onSubmitSignIn={handleSubmitSignIn}
-          onSubmitSignUp={handleSubmitSignUp}
-          onGoogleSignIn={handleGoogleSignIn}
-        />
-      </div>
+    <div className="w-full">
+      {/* ── Hero ── */}
+      <section className="relative overflow-hidden bg-primary px-6 pb-20 pt-24 text-center">
+        <HeroBackground />
+        <div className="relative z-10 mx-auto max-w-4xl">
+          <div className="mb-8 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm font-medium text-white/80 backdrop-blur-sm">
+            <span className="mr-2 h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
+            Now in public beta
+          </div>
+
+          <h1 className="text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl xl:text-7xl">
+            {HERO_HEADLINE}
+          </h1>
+
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/60 sm:text-lg">
+            {HERO_SUBHEAD}
+          </p>
+
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <a
+              href="#auth-section"
+              className="rounded-full bg-accent px-8 py-3 text-sm font-semibold text-accent-foreground shadow-lg transition-all duration-200 hover:scale-[1.02] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+            >
+              Get started free
+            </a>
+            <a
+              href="#auth-section"
+              className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold text-white/80 transition-colors duration-200 hover:border-white/60 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            >
+              Sign in
+            </a>
+          </div>
+
+          <div className="mt-16">
+            <DashboardPreview />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Features ── */}
+      <section className="bg-background px-6 py-24">
+        <div className="mx-auto max-w-6xl">
+          <FadeIn className="mb-16 text-center">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary/50">Features</p>
+            <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
+              Everything your agency runs on
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+              One platform. Every workflow. From first proposal to final report.
+            </p>
+          </FadeIn>
+          <FeaturesBento />
+        </div>
+      </section>
+
+      {/* ── Auth ── */}
+      <section id="auth-section" className="bg-muted/30 px-6 py-24">
+        <div className="mx-auto max-w-md">
+          <FadeIn className="mb-8 text-center">
+            <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
+              Start your free workspace
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Join agencies already using Cohorts to work smarter.
+            </p>
+          </FadeIn>
+          <AuthCard
+            activeTab={activeTab}
+            emailError={emailError}
+            isSubmitting={isSubmitting}
+            isAuthLoading={isAuthLoading}
+            rememberMe={rememberMe}
+            showPassword={showPassword}
+            showConfirmPassword={showConfirmPassword}
+            passwordsMatch={passwordsMatch}
+            signInData={signInData}
+            signUpData={signUpData}
+            passwordStrength={passwordStrength}
+            onTabChange={handleTabChange}
+            onRememberMeChange={handleRememberMeChange}
+            onToggleShowPassword={handleToggleShowPassword}
+            onToggleShowConfirmPassword={handleToggleShowConfirmPassword}
+            onSignInChange={handleSignInChange}
+            onSignUpChange={handleSignUpChange}
+            onSubmitSignIn={handleSubmitSignIn}
+            onSubmitSignUp={handleSubmitSignUp}
+            onGoogleSignIn={handleGoogleSignIn}
+          />
+        </div>
+      </section>
     </div>
   )
 }

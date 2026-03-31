@@ -27,6 +27,7 @@ import { useQuery, usePaginatedQuery } from 'convex/react'
 
 import { api } from '/_generated/api'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { usePreview } from '@/shared/contexts/preview-context'
 import {
   Card,
   CardContent,
@@ -37,6 +38,7 @@ import {
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { getPreviewAdminDashboardData } from '@/lib/preview-data'
 import { cn } from '@/lib/utils'
 
 interface DashboardStats {
@@ -88,12 +90,14 @@ type AdminSection = {
 
 export default function AdminPage() {
   const { user } = useAuth()
-  const workspaceContext = useQuery(api.users.getMyWorkspaceContext, user ? {} : 'skip')
+  const { isPreviewMode } = usePreview()
+  const previewDashboardData = useMemo(() => getPreviewAdminDashboardData(), [])
+  const workspaceContext = useQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
   const workspaceId = workspaceContext?.workspaceId ?? null
   const includeAllWorkspaces = workspaceContext?.role === 'admin'
   const { results: usersPage } = usePaginatedQuery(
     api.adminUsers.listUsers,
-    workspaceId
+    !isPreviewMode && workspaceId
       ? {
           workspaceId,
           includeAllWorkspaces,
@@ -104,7 +108,7 @@ export default function AdminPage() {
 
   const clientsRealtime = useQuery(
     api.clients.list,
-    workspaceId
+    !isPreviewMode && workspaceId
       ? {
           workspaceId,
           limit: 100,
@@ -113,29 +117,32 @@ export default function AdminPage() {
       : 'skip'
   ) as { items?: Array<unknown> } | undefined
 
-  const schedulerEventsRealtime = useQuery(api.schedulerEvents.list, {
+  const schedulerEventsRealtime = useQuery(api.schedulerEvents.list, isPreviewMode ? 'skip' : {
     limit: 10,
   }) as
     | { events?: Array<{ severity?: string; source?: string; createdAt?: string }> }
     | Array<{ severity?: string; source?: string; createdAt?: string }>
     | undefined
 
-  const adminNotificationsRealtime = useQuery(api.adminNotifications.list, {
+  const adminNotificationsRealtime = useQuery(api.adminNotifications.list, isPreviewMode ? 'skip' : {
     limit: 10,
   }) as
     | { notifications?: Array<{ id?: string; type?: string; title?: string; message?: string; createdAt?: string }> }
     | Array<{ id?: string; type?: string; title?: string; message?: string; createdAt?: string }>
     | undefined
 
-  const usageStatsRealtime = useQuery(api.adminUsage.getStats, {}) as UsageStats | undefined
+  const usageStatsRealtime = useQuery(api.adminUsage.getStats, isPreviewMode ? 'skip' : {}) as UsageStats | undefined
 
-  const statsLoading =
+  const statsLoading = isPreviewMode
+    ? false
+    : (
     usersPage === undefined ||
     clientsRealtime === undefined ||
     schedulerEventsRealtime === undefined ||
     adminNotificationsRealtime === undefined
+    )
 
-  const usageLoading = usageStatsRealtime === undefined
+  const usageLoading = isPreviewMode ? false : usageStatsRealtime === undefined
 
   const derived = useCallback(() => {
     const usersPayload = usersPage
@@ -215,9 +222,15 @@ export default function AdminPage() {
     }
   }, [usersPage, clientsRealtime, schedulerEventsRealtime, adminNotificationsRealtime])
 
-  const derivedResult = derived()
+  const derivedResult = isPreviewMode
+    ? {
+        stats: previewDashboardData.stats,
+        activities: previewDashboardData.activities,
+      }
+    : derived()
   const stats = derivedResult.stats
   const activities = derivedResult.activities
+  const usageStats = isPreviewMode ? previewDashboardData.usageStats : usageStatsRealtime
 
   const skeletonData = useMemo(() => [
     { id: 'daily-skeleton-mon', height: 65 },
@@ -230,24 +243,24 @@ export default function AdminPage() {
   ], [])
 
   const dailyActiveUsersData = useMemo(() => {
-    if (!usageStatsRealtime?.dailyActiveUsers) return []
-    const maxCount = Math.max(...usageStatsRealtime.dailyActiveUsers.map(d => d.count), 1)
-    return usageStatsRealtime.dailyActiveUsers.map((day) => ({
+    if (!usageStats?.dailyActiveUsers) return []
+    const maxCount = Math.max(...usageStats.dailyActiveUsers.map(d => d.count), 1)
+    return usageStats.dailyActiveUsers.map((day) => ({
       ...day,
       height: maxCount > 0 ? (day.count / maxCount) * 100 : 0,
       maxCount,
     }))
-  }, [usageStatsRealtime])
+  }, [usageStats])
 
   const featureUsageData = useMemo(() => {
-    if (!usageStatsRealtime?.featureUsage) return []
-    const maxCount = Math.max(...usageStatsRealtime.featureUsage.map(f => f.count), 1)
-    return usageStatsRealtime.featureUsage.slice(0, 5).map((feature) => ({
+    if (!usageStats?.featureUsage) return []
+    const maxCount = Math.max(...usageStats.featureUsage.map(f => f.count), 1)
+    return usageStats.featureUsage.slice(0, 5).map((feature) => ({
       ...feature,
       percentage: maxCount > 0 ? (feature.count / maxCount) * 100 : 0,
       maxCount,
     }))
-  }, [usageStatsRealtime])
+  }, [usageStats])
 
   const adminSections: AdminSection[] = [
     {
@@ -286,7 +299,7 @@ export default function AdminPage() {
     },
   ]
 
-  if (!user) {
+  if (!user && !isPreviewMode) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4 py-16">
         <Card className="max-w-md border-border">
@@ -315,7 +328,8 @@ export default function AdminPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
             <p className="mt-1 text-muted-foreground">
-              Welcome back, {user.name?.split(' ')[0] ?? 'Admin'}. Here&apos;s your agency overview.
+              Welcome back, {(user?.name ?? 'Avery Stone').split(' ')[0] ?? 'Admin'}. Here&apos;s your agency overview.
+              {isPreviewMode ? ' Preview mode is showing sample admin telemetry and local-only interactions.' : ''}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -439,9 +453,9 @@ export default function AdminPage() {
                   <Skeleton className="h-8 w-20" />
                 ) : (
                   <>
-                    <div className="text-2xl font-bold">{usageStatsRealtime?.activeUsersWeek ?? 0}</div>
+                    <div className="text-2xl font-bold">{usageStats?.activeUsersWeek ?? 0}</div>
                     <p className="text-xs text-muted-foreground">
-                      {usageStatsRealtime?.activeUsersToday ?? 0} today · {usageStatsRealtime?.newUsersWeek ?? 0} new
+                      {usageStats?.activeUsersToday ?? 0} today · {usageStats?.newUsersWeek ?? 0} new
                     </p>
                   </>
                 )}
@@ -459,9 +473,9 @@ export default function AdminPage() {
                   <Skeleton className="h-8 w-20" />
                 ) : (
                   <>
-                    <div className="text-2xl font-bold">{usageStatsRealtime?.totalProjects ?? 0}</div>
+                    <div className="text-2xl font-bold">{usageStats?.totalProjects ?? 0}</div>
                     <p className="text-xs text-muted-foreground">
-                      +{usageStatsRealtime?.projectsThisWeek ?? 0} this week
+                      +{usageStats?.projectsThisWeek ?? 0} this week
                     </p>
                   </>
                 )}
@@ -479,9 +493,9 @@ export default function AdminPage() {
                   <Skeleton className="h-8 w-20" />
                 ) : (
                   <>
-                    <div className="text-2xl font-bold">{usageStatsRealtime?.tasksCompletedThisWeek ?? 0}</div>
+                    <div className="text-2xl font-bold">{usageStats?.tasksCompletedThisWeek ?? 0}</div>
                     <p className="text-xs text-muted-foreground">
-                      {usageStatsRealtime?.totalTasks ?? 0} total tasks
+                      {usageStats?.totalTasks ?? 0} total tasks
                     </p>
                   </>
                 )}
@@ -499,9 +513,9 @@ export default function AdminPage() {
                   <Skeleton className="h-8 w-20" />
                 ) : (
                   <>
-                    <div className="text-2xl font-bold">{usageStatsRealtime?.agentConversations ?? 0}</div>
+                    <div className="text-2xl font-bold">{usageStats?.agentConversations ?? 0}</div>
                     <p className="text-xs text-muted-foreground">
-                      +{usageStatsRealtime?.agentActionsThisWeek ?? 0} this week
+                      +{usageStats?.agentActionsThisWeek ?? 0} this week
                     </p>
                   </>
                 )}

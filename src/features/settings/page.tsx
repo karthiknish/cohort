@@ -1,12 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { User, Shield } from 'lucide-react'
 import { useMutation, useQuery } from 'convex/react'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { useToast } from '@/shared/ui/use-toast'
 import { settingsApi } from '@/lib/convex-api'
+import { getPreviewSettingsNotificationPreferences, getPreviewSettingsProfile } from '@/lib/preview-data'
 
 import {
   ProfileCard,
@@ -20,8 +22,11 @@ import {
 
 export default function SettingsPage() {
   const { toast } = useToast()
+  const { isPreviewMode } = usePreview()
   const profile = useQuery(settingsApi.getMyProfile)
-  const user = profile
+  const previewProfile = useMemo(() => getPreviewSettingsProfile(), [])
+  const [previewNotificationPrefs, setPreviewNotificationPrefs] = useState(() => getPreviewSettingsNotificationPreferences())
+  const user = isPreviewMode ? previewProfile : profile
 
   const notificationPrefs = useQuery(settingsApi.getMyNotificationPreferences) as
     | {
@@ -65,6 +70,20 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
+      if (isPreviewMode) {
+        setEmailAdAlertsEnabled(Boolean(previewNotificationPrefs.emailAdAlerts))
+        setEmailPerformanceDigestEnabled(Boolean(previewNotificationPrefs.emailPerformanceDigest))
+        setEmailTaskActivityEnabled(Boolean(previewNotificationPrefs.emailTaskActivity))
+        setEmailCollaborationEnabled(Boolean(previewNotificationPrefs.emailCollaboration))
+        setNotificationError(null)
+        setNotificationsLoading(false)
+
+        if (!profilePhone.trim() && previewNotificationPrefs.phoneNumber) {
+          setProfilePhone(previewNotificationPrefs.phoneNumber)
+        }
+        return
+      }
+
       if (!user) {
         setNotificationsLoading(false)
         setEmailAdAlertsEnabled(true)
@@ -101,7 +120,7 @@ export default function SettingsPage() {
     return () => {
       cancelAnimationFrame(frame)
     }
-  }, [notificationPrefs, profilePhone, user])
+  }, [isPreviewMode, notificationPrefs, previewNotificationPrefs, profilePhone, user])
 
   const saveNotificationPreferences = useCallback(
     (
@@ -113,6 +132,40 @@ export default function SettingsPage() {
       },
       options: { silent?: boolean } = {}
     ): Promise<NotificationPreferencesResponse | null> => {
+      if (isPreviewMode) {
+        const nextPreferences: NotificationPreferencesResponse = {
+          emailAdAlerts: input.emailAdAlerts ?? emailAdAlertsEnabled,
+          emailPerformanceDigest: input.emailPerformanceDigest ?? emailPerformanceDigestEnabled,
+          emailTaskActivity: input.emailTaskActivity ?? emailTaskActivityEnabled,
+          emailCollaboration: input.emailCollaboration ?? emailCollaborationEnabled,
+          phoneNumber: profilePhone.trim().length ? profilePhone.trim() : null,
+        }
+
+        if (isMountedRef.current) {
+          setSavingPreferences(true)
+          setNotificationError(null)
+        }
+
+        return Promise.resolve()
+          .then(() => {
+            setPreviewNotificationPrefs(nextPreferences)
+
+            if (!options.silent) {
+              toast({
+                title: 'Preview mode',
+                description: 'Sample notification settings updated locally for this session.',
+              })
+            }
+
+            return nextPreferences
+          })
+          .finally(() => {
+            if (isMountedRef.current) {
+              setSavingPreferences(false)
+            }
+          })
+      }
+
       if (!user) return Promise.resolve(null)
 
       if (isMountedRef.current) {
@@ -174,7 +227,17 @@ export default function SettingsPage() {
           }
         })
     },
-    [emailCollaborationEnabled, profilePhone, toast, updateNotificationPrefs, user]
+    [
+      emailAdAlertsEnabled,
+      emailCollaborationEnabled,
+      emailPerformanceDigestEnabled,
+      emailTaskActivityEnabled,
+      isPreviewMode,
+      profilePhone,
+      toast,
+      updateNotificationPrefs,
+      user,
+    ]
   )
 
   const handlePreferenceToggle = useCallback(
@@ -238,7 +301,10 @@ export default function SettingsPage() {
     <div className="container mx-auto max-w-6xl py-10">
       <div className="mb-8 space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Manage your profile and account preferences.</p>
+        <p className="text-muted-foreground">
+          Manage your profile and account preferences.
+          {isPreviewMode ? ' Preview mode uses sample account data and local-only actions.' : ''}
+        </p>
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">

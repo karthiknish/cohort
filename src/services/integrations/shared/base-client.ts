@@ -6,7 +6,18 @@
  */
 
 import { parseIntegrationError, type IntegrationPlatform } from '@/lib/errors'
-import { calculateBackoffDelay, sleep, isRetryableStatus, parseRetryAfterMs, DEFAULT_RETRY_CONFIG } from '@/lib/retry-utils'
+import {
+    calculateBackoffDelay,
+    composeAbortSignal,
+    DEFAULT_RETRY_CONFIG,
+    isAbortError,
+    isRetryableStatus,
+    isTimeoutError,
+    parseRetryAfterMs,
+    sleepWithSignal,
+} from '@/lib/retry-utils'
+
+const DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS = 45_000
 
 // =============================================================================
 // TYPES
@@ -19,6 +30,8 @@ export interface BaseRequestOptions {
     body?: string | Record<string, unknown>
     operation: string
     maxRetries?: number
+    timeoutMs?: number
+    signal?: AbortSignal
     onAuthError?: () => Promise<{ retry: boolean; newToken?: string }>
     onRateLimitHit?: (retryAfterMs: number) => void
 }
@@ -33,6 +46,7 @@ export interface ClientConfig {
     baseUrl?: string
     defaultHeaders?: Record<string, string>
     maxRetries?: number
+    defaultTimeoutMs?: number
     /** Custom success check - return true if response is successful */
     isSuccess?: (response: Response, payload: unknown) => boolean
 }
@@ -91,6 +105,7 @@ export class IntegrationApiClient {
     private readonly baseUrl: string
     private readonly defaultHeaders: Record<string, string>
     private readonly maxRetries: number
+    private readonly defaultTimeoutMs: number
     private readonly isSuccess: (response: Response, payload: unknown) => boolean
 
     constructor(config: ClientConfig) {
@@ -98,6 +113,7 @@ export class IntegrationApiClient {
         this.baseUrl = config.baseUrl ?? ''
         this.defaultHeaders = config.defaultHeaders ?? {}
         this.maxRetries = config.maxRetries ?? DEFAULT_RETRY_CONFIG.maxRetries
+        this.defaultTimeoutMs = config.defaultTimeoutMs ?? DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS
         this.isSuccess = config.isSuccess ?? ((response) => response.ok)
     }
 
@@ -112,6 +128,8 @@ export class IntegrationApiClient {
             body,
             operation,
             maxRetries = this.maxRetries,
+            timeoutMs = this.defaultTimeoutMs,
+            signal,
             onAuthError,
             onRateLimitHit,
         } = options
@@ -123,19 +141,31 @@ export class IntegrationApiClient {
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             const startTime = Date.now()
             let response: Response
+            const { signal: requestSignal, cleanup } = composeAbortSignal({
+                signal,
+                timeoutMs,
+                timeoutMessage: `${this.platform} ${operation} timed out.`,
+            })
 
             try {
                 response = await fetch(currentUrl, {
                     method,
                     headers: currentHeaders,
+                    signal: requestSignal,
                     ...(body && {
                         body: typeof body === 'string' ? body : JSON.stringify(body)
                     }),
                 })
             } catch (networkError) {
-                lastError = networkError instanceof Error
-                    ? networkError
-                    : new Error('Network request failed')
+                if (isAbortError(networkError)) {
+                    throw networkError
+                }
+
+                lastError = isTimeoutError(networkError)
+                    ? new Error(`${this.platform} ${operation} timed out. Please try again.`)
+                    : networkError instanceof Error
+                        ? networkError
+                        : new Error('Network request failed')
 
                 logRequest({
                     platform: this.platform,
@@ -148,10 +178,12 @@ export class IntegrationApiClient {
                 })
 
                 if (attempt < maxRetries - 1) {
-                    await sleep(calculateBackoffDelay(attempt))
+                    await sleepWithSignal(calculateBackoffDelay(attempt), signal)
                     continue
                 }
                 throw lastError
+            } finally {
+                cleanup()
             }
 
             const duration = Date.now() - startTime
@@ -230,7 +262,7 @@ export class IntegrationApiClient {
 
                 if (attempt < maxRetries - 1) {
                     console.warn(`[${this.platform.toUpperCase()} API] Rate limited, waiting ${retryAfterMs}ms`)
-                    await sleep(retryAfterMs)
+                    await sleepWithSignal(retryAfterMs, signal)
                     continue
                 }
                 throw error
@@ -238,7 +270,7 @@ export class IntegrationApiClient {
 
             // Handle retryable errors
             if ((error.isRetryable || isRetryableStatus(response.status)) && attempt < maxRetries - 1) {
-                await sleep(calculateBackoffDelay(attempt))
+                await sleepWithSignal(calculateBackoffDelay(attempt), signal)
                 continue
             }
 
@@ -313,6 +345,7 @@ export class IntegrationApiClient {
 export const metaAdsClient = new IntegrationApiClient({
     platform: 'meta',
     baseUrl: 'https://graph.facebook.com/v24.0',
+    defaultTimeoutMs: DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS,
     isSuccess: (response, payload) => {
         // Meta returns 200 even for errors - check for error object in payload
         if (!response.ok) return false
@@ -324,11 +357,13 @@ export const metaAdsClient = new IntegrationApiClient({
 export const googleAdsClient = new IntegrationApiClient({
     platform: 'google',
     baseUrl: 'https://googleads.googleapis.com/v15',
+    defaultTimeoutMs: DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS,
 })
 
 export const tiktokAdsClient = new IntegrationApiClient({
     platform: 'tiktok',
     baseUrl: 'https://business-api.tiktok.com/open_api/v1.3',
+    defaultTimeoutMs: DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS,
     isSuccess: (response, payload) => {
         // TikTok uses code: 0 for success
         const data = payload as { code?: number }
@@ -339,7 +374,8 @@ export const tiktokAdsClient = new IntegrationApiClient({
 export const linkedinAdsClient = new IntegrationApiClient({
     platform: 'linkedin',
     baseUrl: 'https://api.linkedin.com/v2',
+    defaultTimeoutMs: DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS,
 })
 
 // Re-export utilities
-export { calculateBackoffDelay, sleep, isRetryableStatus, parseRetryAfterMs, DEFAULT_RETRY_CONFIG }
+export { calculateBackoffDelay, isRetryableStatus, parseRetryAfterMs, DEFAULT_RETRY_CONFIG }

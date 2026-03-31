@@ -99,113 +99,51 @@ export const generateFromProposal = zWorkspaceAction({
     // Mark as in-progress
     markGenerationInProgress(args.workspaceId, args.legacyId)
 
-    const circuitBreaker = getGammaCircuitBreaker()
-
-    // Check circuit breaker before starting
-    if (!circuitBreaker.canExecute()) {
-      const state = circuitBreaker.getState()
-      markGenerationComplete(args.workspaceId, args.legacyId)
-      throw new Error(
-        `Gamma API is temporarily unavailable due to too many recent failures. Circuit breaker state: ${state.state}. Please try again in a minute.`
-      )
-    }
-
-    const gammaService = new GammaService()
-    if (!gammaService.isConfigured()) {
-      markGenerationComplete(args.workspaceId, args.legacyId)
-      throw Errors.integration.notConfigured('Gamma', 'Gamma API not configured')
-    }
-
-    let instructions: string
-    let suggestions: string | null
-    let inputText: string
-
-    await enforceGeminiActionRateLimit(ctx, {
-      name: 'proposalGeneration',
-      userId: ctx.legacyId,
-      workspaceId: args.workspaceId,
-      resourceId: args.legacyId,
-      count: 2,
-    })
-
     try {
+      const circuitBreaker = getGammaCircuitBreaker()
+
+      // Check circuit breaker before starting
+      if (!circuitBreaker.canExecute()) {
+        const state = circuitBreaker.getState()
+        throw new Error(
+          `Gamma API is temporarily unavailable due to too many recent failures. Circuit breaker state: ${state.state}. Please try again in a minute.`
+        )
+      }
+
+      const gammaService = new GammaService()
+      if (!gammaService.isConfigured()) {
+        throw Errors.integration.notConfigured('Gamma', 'Gamma API not configured')
+      }
+
+      let instructions: string
+      let suggestions: string | null
+      let inputText: string
+
+      await enforceGeminiActionRateLimit(ctx, {
+        name: 'proposalGeneration',
+        userId: ctx.legacyId,
+        workspaceId: args.workspaceId,
+        resourceId: args.legacyId,
+        count: 2,
+      })
+
       const formData = mergeProposalForm(proposal.formData ?? null)
       instructions = await generateGammaInstructions(formData, null)
       suggestions = await generateProposalSuggestions(formData, instructions)
       inputText = buildGammaInputText(formData, instructions)
-    } catch (error) {
-      markGenerationComplete(args.workspaceId, args.legacyId)
-      throw error
-    }
 
-    const now = Date.now()
-    const warnings: string[] = []
+      const now = Date.now()
+      const warnings: string[] = []
 
-    await ctx.runMutation(api.proposals.update, {
-      workspaceId: args.workspaceId,
-      legacyId: args.legacyId,
-      status: 'in_progress',
-      aiInsights: { summary: instructions, instructions },
-      aiSuggestions: suggestions ?? null,
-      presentationDeck: {
-        generationId: null,
-        status: 'processing',
-        instructions,
-        webUrl: null,
-        shareUrl: null,
-        pptxUrl: null,
-        pdfUrl: null,
-        generatedFiles: [],
-        storageUrl: null,
-        pdfStorageUrl: null,
-        warnings: [],
-      },
-      updatedAtMs: now,
-      lastAutosaveAtMs: now,
-    })
-
-    const rawThemeValue = proposal.formData?.presentationTheme
-    const rawThemeId = typeof rawThemeValue === 'string' ? rawThemeValue.trim() : ''
-    let themeId: string | undefined
-
-    if (rawThemeId) {
-      if (isLegacyThemeName(rawThemeId)) {
-        const resolvedTheme = await gammaService.findTheme(rawThemeId)
-        themeId = resolvedTheme?.id
-      } else {
-        themeId = rawThemeId
-      }
-    }
-
-    let pptGeneration: Awaited<ReturnType<typeof gammaService.generatePresentation>>
-    let pptxUrl: string | null = null
-    let pdfUrl: string | null = null
-    let generatedFiles: Array<{ fileType: string; fileUrl: string }> = []
-
-    // Generate PPTX with circuit breaker protection
-    try {
-      pptGeneration = await circuitBreaker.execute(() =>
-        gammaService.generatePresentation(
-          createPresentationRequest(inputText, {
-            themeId: themeId || undefined,
-            additionalInstructions: instructions,
-            exportAs: 'pptx',
-          })
-        )
-      )
-      generatedFiles = pptGeneration.generatedFiles ?? []
-      pptxUrl = getGammaFileUrl(generatedFiles, 'pptx')
-    } catch (error) {
-      console.error('[ProposalGeneration] PPTX generation failed', error)
-
-      // Update proposal to failed state
       await ctx.runMutation(api.proposals.update, {
         workspaceId: args.workspaceId,
         legacyId: args.legacyId,
-        status: 'failed',
+        status: 'in_progress',
+        aiInsights: { summary: instructions, instructions },
+        aiSuggestions: suggestions ?? null,
         presentationDeck: {
           generationId: null,
-          status: 'failed',
+          status: 'processing',
           instructions,
           webUrl: null,
           shareUrl: null,
@@ -214,81 +152,136 @@ export const generateFromProposal = zWorkspaceAction({
           generatedFiles: [],
           storageUrl: null,
           pdfStorageUrl: null,
-          warnings: ['PPTX generation failed'],
-          error: String(error),
+          warnings: [],
         },
-        updatedAtMs: Date.now(),
-        lastAutosaveAtMs: Date.now(),
+        updatedAtMs: now,
+        lastAutosaveAtMs: now,
       })
 
-      markGenerationComplete(args.workspaceId, args.legacyId)
-      throw error
-    }
+      const rawThemeValue = proposal.formData?.presentationTheme
+      const rawThemeId = typeof rawThemeValue === 'string' ? rawThemeValue.trim() : ''
+      let themeId: string | undefined
 
-    // Try to generate PDF
-    pdfUrl = getGammaFileUrl(generatedFiles, 'pdf')
-    let pdfStorageUrl = pdfUrl
+      if (rawThemeId) {
+        if (isLegacyThemeName(rawThemeId)) {
+          const resolvedTheme = await gammaService.findTheme(rawThemeId)
+          themeId = resolvedTheme?.id
+        } else {
+          themeId = rawThemeId
+        }
+      }
 
-    if (!pdfUrl) {
+      let pptGeneration: Awaited<ReturnType<typeof gammaService.generatePresentation>>
+      let pptxUrl: string | null = null
+      let pdfUrl: string | null = null
+      let generatedFiles: Array<{ fileType: string; fileUrl: string }> = []
+
+      // Generate PPTX with circuit breaker protection
       try {
-        const pdfGeneration = await circuitBreaker.execute(() =>
+        pptGeneration = await circuitBreaker.execute(() =>
           gammaService.generatePresentation(
             createPresentationRequest(inputText, {
               themeId: themeId || undefined,
               additionalInstructions: instructions,
-              exportAs: 'pdf',
+              exportAs: 'pptx',
             })
           )
         )
-        const pdfFiles = pdfGeneration.generatedFiles ?? []
-        generatedFiles = mergeGeneratedFiles(generatedFiles, pdfFiles)
-        pdfUrl = getGammaFileUrl(pdfFiles, 'pdf') ?? pdfUrl
-        pdfStorageUrl = pdfUrl ?? pdfStorageUrl
+        generatedFiles = pptGeneration.generatedFiles ?? []
+        pptxUrl = getGammaFileUrl(generatedFiles, 'pptx')
       } catch (error) {
-        console.warn('[ProposalGeneration] PDF generation failed', error)
-        warnings.push('PDF generation failed - PPTX is available')
+        console.error('[ProposalGeneration] PPTX generation failed', error)
+
+        // Update proposal to failed state
+        await ctx.runMutation(api.proposals.update, {
+          workspaceId: args.workspaceId,
+          legacyId: args.legacyId,
+          status: 'failed',
+          presentationDeck: {
+            generationId: null,
+            status: 'failed',
+            instructions,
+            webUrl: null,
+            shareUrl: null,
+            pptxUrl: null,
+            pdfUrl: null,
+            generatedFiles: [],
+            storageUrl: null,
+            pdfStorageUrl: null,
+            warnings: ['PPTX generation failed'],
+            error: String(error),
+          },
+          updatedAtMs: Date.now(),
+          lastAutosaveAtMs: Date.now(),
+        })
+
+        throw error
       }
+
+      // Try to generate PDF
+      pdfUrl = getGammaFileUrl(generatedFiles, 'pdf')
+      let pdfStorageUrl = pdfUrl
+
+      if (!pdfUrl) {
+        try {
+          const pdfGeneration = await circuitBreaker.execute(() =>
+            gammaService.generatePresentation(
+              createPresentationRequest(inputText, {
+                themeId: themeId || undefined,
+                additionalInstructions: instructions,
+                exportAs: 'pdf',
+              })
+            )
+          )
+          const pdfFiles = pdfGeneration.generatedFiles ?? []
+          generatedFiles = mergeGeneratedFiles(generatedFiles, pdfFiles)
+          pdfUrl = getGammaFileUrl(pdfFiles, 'pdf') ?? pdfUrl
+          pdfStorageUrl = pdfUrl ?? pdfStorageUrl
+        } catch (error) {
+          console.warn('[ProposalGeneration] PDF generation failed', error)
+          warnings.push('PDF generation failed - PPTX is available')
+        }
+      }
+
+      // Determine final status based on what succeeded
+      let finalStatus: 'ready' | 'partial_success' | 'failed' = 'failed'
+      if (pptxUrl && pdfUrl) {
+        finalStatus = 'ready'
+      } else if (pptxUrl) {
+        finalStatus = 'partial_success'
+      }
+
+      const deckPayload = {
+        generationId: pptGeneration.generationId,
+        status: pptGeneration.status ?? 'unknown',
+        instructions,
+        webUrl: pptGeneration.webAppUrl ?? null,
+        shareUrl: pptGeneration.shareUrl ?? null,
+        pptxUrl,
+        pdfUrl,
+        generatedFiles,
+        storageUrl: pptxUrl,
+        pdfStorageUrl,
+        warnings: warnings.length > 0 ? warnings : null,
+        error: finalStatus === 'failed' ? 'Generation failed' : null,
+      }
+
+      await ctx.runMutation(api.proposals.update, {
+        workspaceId: args.workspaceId,
+        legacyId: args.legacyId,
+        status: finalStatus,
+        aiInsights: { summary: instructions, instructions },
+        aiSuggestions: suggestions ?? null,
+        presentationDeck: deckPayload,
+        pptUrl: pptxUrl,
+        pdfUrl: pdfUrl,
+        updatedAtMs: Date.now(),
+        lastAutosaveAtMs: Date.now(),
+      })
+
+      return { ok: true, status: finalStatus, warnings }
+    } finally {
+      markGenerationComplete(args.workspaceId, args.legacyId)
     }
-
-    // Determine final status based on what succeeded
-    let finalStatus: 'ready' | 'partial_success' | 'failed' = 'failed'
-    if (pptxUrl && pdfUrl) {
-      finalStatus = 'ready'
-    } else if (pptxUrl) {
-      finalStatus = 'partial_success'
-    }
-
-    const deckPayload = {
-      generationId: pptGeneration.generationId,
-      status: pptGeneration.status ?? 'unknown',
-      instructions,
-      webUrl: pptGeneration.webAppUrl ?? null,
-      shareUrl: pptGeneration.shareUrl ?? null,
-      pptxUrl,
-      pdfUrl,
-      generatedFiles,
-      storageUrl: pptxUrl,
-      pdfStorageUrl,
-      warnings: warnings.length > 0 ? warnings : null,
-      error: finalStatus === 'failed' ? 'Generation failed' : null,
-    }
-
-    await ctx.runMutation(api.proposals.update, {
-      workspaceId: args.workspaceId,
-      legacyId: args.legacyId,
-      status: finalStatus,
-      aiInsights: { summary: instructions, instructions },
-      aiSuggestions: suggestions ?? null,
-      presentationDeck: deckPayload,
-      pptUrl: pptxUrl,
-      pdfUrl: pdfUrl,
-      updatedAtMs: Date.now(),
-      lastAutosaveAtMs: Date.now(),
-    })
-
-    // Mark generation as complete
-    markGenerationComplete(args.workspaceId, args.legacyId)
-
-    return { ok: true, status: finalStatus, warnings }
   },
 })

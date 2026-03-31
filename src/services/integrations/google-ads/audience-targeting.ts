@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { googleAdsSearch } from './client'
+import { parseJsonBodySafely, parseRequiredJsonBody } from '@/lib/response-json'
 import { GoogleAdsApiError } from './errors'
 import {
     GOOGLE_API_BASE,
@@ -315,7 +316,10 @@ export async function createGoogleAudience(options: {
     })
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})) as GoogleAdsApiErrorResponse
+        const errorData = await parseJsonBodySafely<GoogleAdsApiErrorResponse>(response, {
+            context: 'Google Ads audience creation error',
+            allowEmpty: true,
+        })
         throw new GoogleAdsApiError({
             message: errorData?.error?.message ?? 'Audience creation failed',
             httpStatus: response.status,
@@ -323,9 +327,12 @@ export async function createGoogleAudience(options: {
         })
     }
 
-    const result = await response.json()
+    const result = await parseRequiredJsonBody<{ results?: Array<{ resourceName?: string }> }>(response, {
+        context: 'Google Ads audience creation response',
+    })
+
     return {
         success: true,
-        resourceName: result.results?.[0]?.resourceName
+        resourceName: result.results?.[0]?.resourceName ?? ''
     }
 }
