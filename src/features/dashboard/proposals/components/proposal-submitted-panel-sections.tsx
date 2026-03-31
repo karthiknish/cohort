@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
+import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -59,6 +60,13 @@ export function ProposalSubmittedHero({
   isSubmitting: boolean
   onResumeSubmission: () => void
 }) {
+  const presentationHref = activeProposalIdForDeck
+    ? withPreviewModeSearchParamIfEnabled(
+        `/dashboard/proposals/${activeProposalIdForDeck}/deck`,
+        isPreviewModeEnabled(),
+      )
+    : null
+
   return (
     <m.div initial="hidden" animate="visible" variants={fadeInUpVariants} className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-background p-10 shadow-2xl shadow-primary/5">
       <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-40">
@@ -83,9 +91,9 @@ export function ProposalSubmittedHero({
             Success! We&apos;ve synthesized your inputs into a strategic brief and an AI-powered presentation deck, ready for your next big pitch.
           </p>
           <div className="flex flex-wrap justify-center gap-4 pt-4 md:justify-start">
-            {deckDownloadUrl && activeProposalIdForDeck ? (
+            {deckDownloadUrl && presentationHref ? (
               <Button size="lg" className="h-14 rounded-2xl bg-primary px-8 text-base font-bold shadow-xl shadow-primary/25 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:scale-105 hover:bg-primary/90 active:scale-95" asChild>
-                <Link href={`/dashboard/proposals/${activeProposalIdForDeck}/deck`}>
+                <Link href={presentationHref}>
                   <Presentation className="mr-3 h-6 w-6" />
                   View Presentation
                 </Link>
@@ -183,6 +191,13 @@ function ProposalDeckReadyState({
   presentationDeck: ProposalPresentationDeck
   viewerHref: string | null
 }) {
+  const presentationHref = activeProposalIdForDeck
+    ? withPreviewModeSearchParamIfEnabled(
+        `/dashboard/proposals/${activeProposalIdForDeck}/deck`,
+        isPreviewModeEnabled(),
+      )
+    : null
+
   return (
     <div className="flex h-full flex-col gap-6">
       <div className="grid gap-6 sm:grid-cols-2">
@@ -202,7 +217,7 @@ function ProposalDeckReadyState({
             </div>
             <p className="mt-4 text-xs font-black uppercase tracking-widest text-foreground">Launch Interactive Viewer</p>
           </div>
-          {activeProposalIdForDeck ? <Link href={`/dashboard/proposals/${activeProposalIdForDeck}/deck`} className="absolute inset-0 z-10" /> : null}
+          {presentationHref ? <Link href={presentationHref} className="absolute inset-0 z-10" /> : null}
         </div>
 
         <div className="flex flex-col gap-4">

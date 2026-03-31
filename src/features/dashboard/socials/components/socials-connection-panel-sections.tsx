@@ -242,7 +242,7 @@ export function SocialsSurfaceInventoryCard(props: {
     items,
   } = props
   const retryDiscoveryAction = useMemo(
-    () => ({ label: 'Retry', onClick: onRetry, icon: RefreshCw }),
+    () => ({ label: 'Retry discovery', onClick: onRetry, icon: RefreshCw }),
     [onRetry],
   )
 

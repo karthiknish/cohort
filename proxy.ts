@@ -2,6 +2,7 @@ import { getToken } from '@convex-dev/better-auth/utils'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { convexSiteUrl } from '@/lib/auth-server'
+import { isPreviewRouteRequest } from '@/lib/preview-data'
 import {
   buildRateLimitHeaders,
   createRateLimitConfig,
@@ -103,6 +104,10 @@ export async function proxy(request: NextRequest) {
       response.headers.set(key, value)
     })
     return response
+  }
+
+  if (isPreviewRouteRequest(pathname, request.nextUrl.searchParams)) {
+    return NextResponse.next()
   }
 
   const hasSession = await hasValidSession(request)

@@ -25,6 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Badge } from '@/shared/ui/badge'
 import { Input } from '@/shared/ui/input'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data'
 import {
   Select,
   SelectContent,
@@ -792,7 +793,10 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     const cName = creative.name || creative.headlines?.[0] || creative.creativeId
     params.set('creativeName', cName)
     params.set('currency', displayCurrency)
-    router.push(`/dashboard/ads/campaigns/${providerId}/${campaignId}/creative/${creative.creativeId}?${params.toString()}`)
+    router.push(withPreviewModeSearchParamIfEnabled(
+      `/dashboard/ads/campaigns/${providerId}/${campaignId}/creative/${creative.creativeId}?${params.toString()}`,
+      isPreviewModeEnabled(),
+    ))
   }, [campaignId, displayCurrency, providerId, router])
 
   const toggleAdStatus = useCallback((ad: CampaignAd, newStatus: string) => {

@@ -199,7 +199,7 @@ function CampaignInsightsPageContent() {
   const [insightsError, setInsightsError] = useState<string | null>(null)
   const [insights, setInsights] = useState<CampaignInsightsResponse | null>(null)
 
-  const formulaEditor = useFormulaEditor()
+  const formulaEditor = useFormulaEditor({ isPreviewMode })
 
   useEffect(() => {
     // Only update if user hasn't manually changed the date range

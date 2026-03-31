@@ -14,6 +14,7 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsCampaignGroupsApi, adsCampaignsApi } from '@/lib/convex-api'
+import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data'
 
 import {
   CampaignManagementConnectedView,
@@ -404,7 +405,10 @@ export function CampaignManagementCard({
       if (selectedClientId) params.set('clientId', selectedClientId)
       params.set('campaignName', name)
 
-      router.push(`/dashboard/ads/campaigns/${providerId}/${campaignOrGroupId}?${params.toString()}`)
+      router.push(withPreviewModeSearchParamIfEnabled(
+        `/dashboard/ads/campaigns/${providerId}/${campaignOrGroupId}?${params.toString()}`,
+        isPreviewModeEnabled(),
+      ))
     },
     [endDate, providerId, router, selectedClientId, startDate]
   )

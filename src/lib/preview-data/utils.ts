@@ -1,8 +1,57 @@
 export const PREVIEW_MODE_STORAGE_KEY = 'cohorts.previewMode'
 export const PREVIEW_MODE_EVENT = 'cohorts:previewModeChanged'
+export const PREVIEW_MODE_QUERY_PARAM = 'preview'
+
+type SearchParamsLike = {
+    get(name: string): string | null
+}
+
+const PREVIEW_ROUTE_PATTERNS = [
+    /^\/dashboard\/proposals\/[^/]+\/deck$/,
+    /^\/dashboard\/ads\/campaigns\/[^/]+\/[^/]+$/,
+    /^\/dashboard\/ads\/campaigns\/[^/]+\/[^/]+\/creative\/[^/]+$/,
+]
+
+function isEnabledPreviewValue(value: string | null): boolean {
+    if (!value) return false
+    return value === '1' || value.toLowerCase() === 'true'
+}
+
+export function isPreviewModeQueryEnabled(searchParams: SearchParamsLike): boolean {
+    return isEnabledPreviewValue(searchParams.get(PREVIEW_MODE_QUERY_PARAM))
+}
+
+export function isPublicPreviewPath(pathname: string): boolean {
+    return PREVIEW_ROUTE_PATTERNS.some((pattern) => pattern.test(pathname))
+}
+
+export function isPreviewRouteRequest(pathname: string, searchParams: SearchParamsLike): boolean {
+    return isPublicPreviewPath(pathname) && isPreviewModeQueryEnabled(searchParams)
+}
+
+export function withPreviewModeSearchParam(href: string): string {
+    const [hrefWithoutHash, hashFragment] = href.split('#', 2)
+    const url = new URL(hrefWithoutHash ?? href, 'https://preview.local')
+
+    url.searchParams.set(PREVIEW_MODE_QUERY_PARAM, '1')
+
+    return `${url.pathname}${url.search}${hashFragment ? `#${hashFragment}` : ''}`
+}
+
+export function withPreviewModeSearchParamIfEnabled(href: string, enabled: boolean): string {
+    return enabled ? withPreviewModeSearchParam(href) : href
+}
 
 export function isPreviewModeEnabled(): boolean {
     if (typeof window === 'undefined') return false
+    try {
+        if (isPreviewModeQueryEnabled(new URLSearchParams(window.location.search))) {
+            return true
+        }
+    } catch {
+        // ignore
+    }
+
     try {
         return window.localStorage.getItem(PREVIEW_MODE_STORAGE_KEY) === '1'
     } catch {

@@ -85,7 +85,7 @@ export default function AdsPage() {
   } = useAdsMetrics()
 
   const derivedMetrics = useDerivedMetrics({ metrics: processedMetrics })
-  const formulaEditor = useFormulaEditor()
+  const formulaEditor = useFormulaEditor({ isPreviewMode })
   const { periodComparison, providerComparison } = useMetricsComparison({
     metrics: processedMetrics,
     dateRange,

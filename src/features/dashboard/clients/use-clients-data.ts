@@ -47,11 +47,17 @@ export function useClientsData(selectedClient: ClientRecord | null, isPreviewMod
   // Formulas connectivity check
   const formulasConnectivity = useQuery(
     customFormulasApi.listByWorkspace,
-    selectedClient ? { workspaceId: selectedClient.id, activeOnly: true } : 'skip'
+    !isPreviewMode && selectedClient ? { workspaceId: selectedClient.id, activeOnly: true } : 'skip'
   ) as QueryRow[] | undefined
 
   // Check ad connectivity
   useEffect(() => {
+    if (isPreviewMode) {
+      setAdAccountsConnected(true)
+      setAdStatusLoading(false)
+      return
+    }
+
     if (!selectedClient) {
       setAdAccountsConnected(null)
       return
@@ -64,7 +70,7 @@ export function useClientsData(selectedClient: ClientRecord | null, isPreviewMod
 
     setAdAccountsConnected(Array.isArray(formulasConnectivity) ? formulasConnectivity.length > 0 : false)
     setAdStatusLoading(false)
-  }, [selectedClient, formulasConnectivity])
+  }, [formulasConnectivity, isPreviewMode, selectedClient])
 
   // Compute stats reactively from Convex queries
   const stats = useMemo(() => {

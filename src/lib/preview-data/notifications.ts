@@ -1,5 +1,5 @@
 import type { WorkspaceNotification } from './types'
-import { isoDaysAgo } from './utils'
+import { isoDaysAgo, withPreviewModeSearchParam } from './utils'
 
 export function getPreviewNotifications(clientId: string | null = null): WorkspaceNotification[] {
     const notifications: WorkspaceNotification[] = [
@@ -39,7 +39,7 @@ export function getPreviewNotifications(clientId: string | null = null): Workspa
             actor: { id: null, name: 'System' },
             resource: { type: 'proposal', id: 'preview-proposal-1' },
             recipients: { roles: ['team'], clientId: 'preview-tech-corp', clientIds: ['preview-tech-corp'] },
-            navigationUrl: '/dashboard/proposals/preview-proposal-1/deck',
+            navigationUrl: withPreviewModeSearchParam('/dashboard/proposals/preview-proposal-1/deck'),
             createdAt: isoDaysAgo(2),
             updatedAt: isoDaysAgo(2),
             read: true,

@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react'
 
+import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data'
 import type { ProposalFormData } from '@/lib/proposals'
 import type { ProposalDraft } from '@/types/proposals'
 
@@ -28,6 +29,13 @@ export function useProposalPageInteractions(props: {
     handleContinueEditingFromSnapshot,
   } = props
 
+  const buildProposalDeckHref = useCallback((proposalId: string) => {
+    return withPreviewModeSearchParamIfEnabled(
+      `/dashboard/proposals/${proposalId}/deck`,
+      isPreviewModeEnabled(),
+    )
+  }, [])
+
   const handleSelectTemplate = useCallback((templateFormData: ProposalFormData) => {
     setFormState(templateFormData)
     setCurrentStep(0)
@@ -53,13 +61,13 @@ export function useProposalPageInteractions(props: {
 
   const handleResumeProposalInModal = useCallback((proposal: ProposalDraft, forceEdit?: boolean) => {
     if (proposal.status === 'ready' && !forceEdit) {
-      routerPush(`/dashboard/proposals/${proposal.id}/deck`)
+      routerPush(buildProposalDeckHref(proposal.id))
       return
     }
 
     handleResumeProposal(proposal, forceEdit)
     setIsWizardOpen(true)
-  }, [handleResumeProposal, routerPush, setIsWizardOpen])
+  }, [buildProposalDeckHref, handleResumeProposal, routerPush, setIsWizardOpen])
 
   const handleContinueEditingInModal = useCallback(async () => {
     await handleContinueEditingFromSnapshot()
@@ -72,7 +80,7 @@ export function useProposalPageInteractions(props: {
 
   const handlePreviewResume = useCallback((proposal: ProposalDraft) => {
     if (proposal.status === 'ready' || proposal.status === 'sent') {
-      routerPush(`/dashboard/proposals/${proposal.id}/deck`)
+      routerPush(buildProposalDeckHref(proposal.id))
       return
     }
 
@@ -80,7 +88,7 @@ export function useProposalPageInteractions(props: {
       title: 'Preview mode',
       description: 'Sample proposals are read-only. Exit preview mode to create or edit live proposals.',
     })
-  }, [routerPush, toast])
+  }, [buildProposalDeckHref, routerPush, toast])
 
   const handlePreviewRequestDelete = useCallback(() => {
     toast({
@@ -90,8 +98,8 @@ export function useProposalPageInteractions(props: {
   }, [toast])
 
   const handlePreviewDownloadDeck = useCallback((proposal: ProposalDraft) => {
-    routerPush(`/dashboard/proposals/${proposal.id}/deck`)
-  }, [routerPush])
+    routerPush(buildProposalDeckHref(proposal.id))
+  }, [buildProposalDeckHref, routerPush])
 
   const handlePreviewCreateNew = useCallback(() => {
     toast({

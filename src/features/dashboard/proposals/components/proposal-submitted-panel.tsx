@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
+import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data'
 import { useToast } from '@/shared/ui/use-toast'
 import type { ProposalFormData } from '@/lib/proposals'
 import type { ProposalPresentationDeck } from '@/types/proposals'
@@ -56,7 +57,11 @@ Timeline: ${summary.timelines.startTime}
 
   const handleCopyShareLink = useCallback(() => {
     if (activeProposalIdForDeck) {
-      const shareLink = `${window.location.origin}/dashboard/proposals/${activeProposalIdForDeck}/deck`
+      const sharePath = withPreviewModeSearchParamIfEnabled(
+        `/dashboard/proposals/${activeProposalIdForDeck}/deck`,
+        isPreviewModeEnabled(),
+      )
+      const shareLink = `${window.location.origin}${sharePath}`
       navigator.clipboard.writeText(shareLink)
       toast({ title: 'Share link copied!' })
     }

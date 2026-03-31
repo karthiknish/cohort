@@ -5,8 +5,14 @@ export * from './types'
 export {
     PREVIEW_MODE_STORAGE_KEY,
     PREVIEW_MODE_EVENT,
+    PREVIEW_MODE_QUERY_PARAM,
     isPreviewModeEnabled,
+    isPreviewModeQueryEnabled,
+    isPublicPreviewPath,
+    isPreviewRouteRequest,
     setPreviewModeEnabled,
+    withPreviewModeSearchParam,
+    withPreviewModeSearchParamIfEnabled,
     isoDaysAgo,
 } from './utils'
 

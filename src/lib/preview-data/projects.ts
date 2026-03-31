@@ -2,10 +2,10 @@ import type { ProjectRecord, TaskRecord } from './types'
 import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import { mergeProposalForm } from '@/lib/proposals'
 import { getPreviewClients } from './clients'
-import { isoDaysAgo } from './utils'
+import { isoDaysAgo, withPreviewModeSearchParam } from './utils'
 
 function buildPreviewDeck(proposalId: string, instructions: string): ProposalPresentationDeck {
-    const previewRoute = `/dashboard/proposals/${proposalId}/deck`
+    const previewRoute = withPreviewModeSearchParam(`/dashboard/proposals/${proposalId}/deck`)
 
     return {
         generationId: `preview-deck-${proposalId}`,
@@ -235,7 +235,7 @@ export function getPreviewProposals(clientId: string | null): ProposalDraft[] {
                 'preview-proposal-1',
                 'Slide 1: Executive Growth Snapshot * Position Cohorts as the paid growth partner for Tech Corp * Align around pipeline quality, brand recall, and faster sales cycles Slide 2: Market Opportunity * Capture high-intent demand on Google Search * Build category authority with LinkedIn thought leadership Slide 3: Campaign Architecture * Search for intent capture * LinkedIn for ICP education and retargeting * Landing pages tuned for demo conversion Slide 4: Creative Direction * Executive-proof messaging * Proof-led customer stories * Clear value framing by funnel stage Slide 5: Measurement Plan * Weekly pacing and creative diagnostics * Pipeline contribution dashboard * Monthly board-ready narrative recap'
             ),
-            pptUrl: '/dashboard/proposals/preview-proposal-1/deck',
+            pptUrl: withPreviewModeSearchParam('/dashboard/proposals/preview-proposal-1/deck'),
             pdfUrl: null,
             createdAt: isoDaysAgo(7),
             updatedAt: isoDaysAgo(5),
@@ -347,7 +347,7 @@ export function getPreviewProposals(clientId: string | null): ProposalDraft[] {
                 'preview-proposal-3',
                 'Slide 1: Retention Growth Plan * Focus on repeat purchase rate and AOV expansion * Align promotions to lifecycle triggers Slide 2: Audience Segments * VIP loyalists * Recent one-time buyers * Lapsed holiday purchasers Slide 3: Channel Mix * Meta dynamic remarketing for product recall * Email journeys for replenishment and loyalty nudges * Referral loop for advocacy Slide 4: Offer Strategy * Tiered loyalty perks * Bundled spring promotions * Margin-safe win-back offers Slide 5: Measurement Plan * Repeat purchase rate by segment * Revenue per recipient * Incremental ROAS from remarketing cohorts'
             ),
-            pptUrl: '/dashboard/proposals/preview-proposal-3/deck',
+            pptUrl: withPreviewModeSearchParam('/dashboard/proposals/preview-proposal-3/deck'),
             pdfUrl: null,
             createdAt: isoDaysAgo(14),
             updatedAt: isoDaysAgo(10),

@@ -70,6 +70,10 @@ export interface UseFormulaEditorReturn {
     executeFormula: (formula: string, inputs: Record<string, number>) => number | null
 }
 
+type UseFormulaEditorOptions = {
+    isPreviewMode?: boolean
+}
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -135,7 +139,8 @@ function safeEvaluate(formula: string, inputs: Record<string, number>): number |
 /**
  * Hook for managing custom formula definitions
  */
-export function useFormulaEditor(): UseFormulaEditorReturn {
+export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseFormulaEditorReturn {
+    const { isPreviewMode = false } = options
     const { user } = useAuth()
     const { selectedClientId } = useClientContext()
     const { toast } = useToast()
@@ -146,7 +151,7 @@ export function useFormulaEditor(): UseFormulaEditorReturn {
 
     const formulasResult = useQuery(
         customFormulasApi.listByWorkspace,
-        selectedClientId ? { workspaceId: selectedClientId } : 'skip'
+        !isPreviewMode && selectedClientId ? { workspaceId: selectedClientId } : 'skip'
     )
 
     const createFormulaMutation = useMutation(customFormulasApi.create)

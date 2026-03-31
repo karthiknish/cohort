@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/shared/ui/button'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { SESSION_EXPIRES_COOKIE } from '@/lib/auth-server'
+import { isPreviewRouteRequest } from '@/lib/preview-data'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -23,6 +24,15 @@ function hasValidSessionCookie(): boolean {
   if (!encodedValue) return false
   const expiresAt = Number.parseInt(decodeURIComponent(encodedValue), 10)
   return Number.isFinite(expiresAt) && expiresAt > Date.now()
+}
+
+function hasPreviewRouteAccess(): boolean {
+  if (typeof window === 'undefined') return false
+
+  return isPreviewRouteRequest(
+    window.location.pathname,
+    new URLSearchParams(window.location.search),
+  )
 }
 
 function hasRequiredRole(userRole: string, requiredRole?: string): boolean {
@@ -119,6 +129,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
   const router = useRouter()
   const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(() => hasValidSessionCookie())
+  const hasPreviewAccess = hasPreviewRouteAccess()
 
   // Clear awaiting state once auth loading completes or session cookie is gone.
   useEffect(() => {
@@ -143,6 +154,10 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
         router.push('/')
       })
   }, [signOut, router])
+
+  if (hasPreviewAccess) {
+    return <>{children}</>
+  }
 
   if (loading || convexAuthLoading || isAwaitingAuthRestore) {
     return (
