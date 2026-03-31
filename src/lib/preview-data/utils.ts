@@ -2,6 +2,7 @@ export const PREVIEW_MODE_STORAGE_KEY = 'cohorts.previewMode'
 export const PREVIEW_MODE_EVENT = 'cohorts:previewModeChanged'
 export const PREVIEW_MODE_QUERY_PARAM = 'preview'
 export const PREVIEW_ROUTE_REQUEST_HEADER = 'x-cohorts-preview-route'
+export const SCREEN_RECORDING_ENABLED_ENV_KEY = 'NEXT_PUBLIC_SCREEN_RECORDING_ENABLED'
 
 type SearchParamsLike = {
     get(name: string): string | null
@@ -16,6 +17,10 @@ const PREVIEW_ROUTE_PATTERNS = [
 function isEnabledPreviewValue(value: string | null): boolean {
     if (!value) return false
     return value === '1' || value.toLowerCase() === 'true'
+}
+
+export function isScreenRecordingModeEnabled(): boolean {
+    return isEnabledPreviewValue(process.env.NEXT_PUBLIC_SCREEN_RECORDING_ENABLED ?? null)
 }
 
 export function isPreviewModeQueryEnabled(searchParams: SearchParamsLike): boolean {
@@ -44,6 +49,10 @@ export function withPreviewModeSearchParamIfEnabled(href: string, enabled: boole
 }
 
 export function isPreviewModeEnabled(): boolean {
+    if (isScreenRecordingModeEnabled()) {
+        return true
+    }
+
     if (typeof window === 'undefined') return false
     try {
         if (isPreviewModeQueryEnabled(new URLSearchParams(window.location.search))) {
@@ -62,6 +71,8 @@ export function isPreviewModeEnabled(): boolean {
 
 export function setPreviewModeEnabled(enabled: boolean) {
     if (typeof window === 'undefined') return
+    if (isScreenRecordingModeEnabled()) return
+
     try {
         window.localStorage.setItem(PREVIEW_MODE_STORAGE_KEY, enabled ? '1' : '0')
     } catch {

@@ -2,7 +2,13 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useMemo, type PropsWithChildren } from 'react'
 
-import { isPreviewModeEnabled, setPreviewModeEnabled, PREVIEW_MODE_EVENT, PREVIEW_MODE_STORAGE_KEY } from '@/lib/preview-data'
+import {
+  isPreviewModeEnabled,
+  isScreenRecordingModeEnabled,
+  setPreviewModeEnabled,
+  PREVIEW_MODE_EVENT,
+  PREVIEW_MODE_STORAGE_KEY,
+} from '@/lib/preview-data'
 
 interface PreviewContextValue {
   isPreviewMode: boolean
@@ -13,11 +19,13 @@ interface PreviewContextValue {
 const PreviewContext = createContext<PreviewContextValue | undefined>(undefined)
 
 export function PreviewProvider({ children }: PropsWithChildren) {
-  const [isPreviewMode, setIsPreviewMode] = useState(() => isPreviewModeEnabled())
+  const [storedPreviewMode, setStoredPreviewMode] = useState(() => isPreviewModeEnabled())
+  const isPreviewModeForced = isScreenRecordingModeEnabled()
+  const isPreviewMode = isPreviewModeForced || storedPreviewMode
 
   useEffect(() => {
     const syncFromStorage = () => {
-      setIsPreviewMode(isPreviewModeEnabled())
+      setStoredPreviewMode(isPreviewModeEnabled())
     }
 
     const onStorage = (event: StorageEvent) => {
@@ -40,9 +48,11 @@ export function PreviewProvider({ children }: PropsWithChildren) {
   }, [])
 
   const updatePreviewMode = useCallback((enabled: boolean) => {
-    setIsPreviewMode(enabled)
+    if (isPreviewModeForced) return
+
+    setStoredPreviewMode(enabled)
     setPreviewModeEnabled(enabled)
-  }, [])
+  }, [isPreviewModeForced])
 
   const togglePreviewMode = useCallback(() => {
     const nextValue = !isPreviewMode

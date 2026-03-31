@@ -439,6 +439,55 @@ function mapCollaborationMessage(message: CollaborationMessage, viewerId?: strin
     }
 }
 
+function selectPreviewChannelResponder(
+    channelType: CollaborationChannelType,
+    clientId: string | null,
+    projectId: string | null,
+    viewerId?: string | null,
+): PreviewCollaborationParticipant {
+    const preferredParticipantId =
+        channelType === 'team'
+            ? 'preview-user-5'
+            : channelType === 'project' && projectId === 'preview-project-1'
+                ? 'preview-user-2'
+                : channelType === 'project' && projectId === 'preview-project-5'
+                    ? 'preview-user-4'
+                    : channelType === 'client' && clientId === 'preview-startupxyz'
+                        ? 'preview-user-3'
+                        : channelType === 'client' && clientId === 'preview-retail-store'
+                            ? 'preview-user-5'
+                            : 'preview-user-1'
+
+    const preferred = PREVIEW_PARTICIPANTS.find((participant) => participant.id === preferredParticipantId)
+    if (preferred && preferred.id !== viewerId) {
+        return preferred
+    }
+
+    return PREVIEW_PARTICIPANTS.find((participant) => participant.id !== viewerId) ?? PREVIEW_PARTICIPANTS[0]!
+}
+
+function buildPreviewAutoReplyContent(content: string, responderName: string): string {
+    const normalized = content.trim().toLowerCase()
+
+    if (normalized.includes('timeline') || normalized.includes('schedule') || normalized.includes('when')) {
+        return `${responderName}: for the sample timeline, kickoff stays on Monday, internal review lands mid-week, and the client-ready deck can go out Friday morning.`
+    }
+
+    if (normalized.includes('budget') || normalized.includes('spend') || normalized.includes('pacing')) {
+        return `${responderName}: sample pacing still looks healthy. I would hold spend flat for now and push the next budget move after the retargeting review.`
+    }
+
+    if (normalized.includes('launch') || normalized.includes('ship') || normalized.includes('publish')) {
+        return `${responderName}: for the demo flow, I would lock approvals today, QA tomorrow, and keep the post-launch recap draft ready before we publish.`
+    }
+
+    if (normalized.includes('approve') || normalized.includes('review') || normalized.includes('feedback')) {
+        return `${responderName}: looks solid from the sample side. I would mark this ready for review and add one short stakeholder summary before sharing.`
+    }
+
+    return `${responderName}: received. I added a sample follow-up so the conversation stays active during the demo.`
+}
+
 export function getPreviewCollaborationParticipants(): PreviewCollaborationParticipant[] {
     return PREVIEW_PARTICIPANTS.map((participant) => ({ ...participant }))
 }
@@ -507,4 +556,82 @@ export function getPreviewDirectMessages(conversationLegacyId: string, self?: Pr
     return seeds
         .map((message) => mapDirectMessage(message, self))
         .sort((a, b) => b.createdAtMs - a.createdAtMs)
+}
+
+export function getPreviewCollaborationAutoReply(params: {
+    channelType: CollaborationChannelType
+    clientId: string | null
+    projectId: string | null
+    content: string
+    viewerId?: string | null
+    parentMessageId?: string | null
+    threadRootId?: string | null
+    createdAt?: Date
+}): CollaborationMessage {
+    const responder = selectPreviewChannelResponder(
+        params.channelType,
+        params.clientId,
+        params.projectId,
+        params.viewerId,
+    )
+    const timestamp = params.createdAt ?? new Date()
+    const createdAt = timestamp.toISOString()
+
+    return {
+        id: `preview-collab-reply-${timestamp.getTime()}`,
+        channelType: params.channelType,
+        clientId: params.clientId,
+        projectId: params.projectId,
+        content: buildPreviewAutoReplyContent(params.content, responder.name),
+        senderId: responder.id,
+        senderName: responder.name,
+        senderRole: responder.role,
+        createdAt,
+        updatedAt: createdAt,
+        isEdited: false,
+        deletedAt: null,
+        deletedBy: null,
+        isDeleted: false,
+        format: 'markdown',
+        reactions: [],
+        readBy: params.viewerId ? [params.viewerId] : undefined,
+        deliveredTo: params.viewerId ? [params.viewerId, responder.id] : [responder.id],
+        parentMessageId: params.parentMessageId ?? null,
+        threadRootId: params.threadRootId ?? null,
+    }
+}
+
+export function getPreviewDirectAutoReply(params: {
+    conversationLegacyId: string
+    otherParticipantId: string
+    otherParticipantName: string
+    otherParticipantRole?: string | null
+    content: string
+    currentUserId?: string | null
+    createdAt?: number
+}): DirectMessage {
+    const timestamp = params.createdAt ?? Date.now()
+    const responder = PREVIEW_PARTICIPANTS.find((participant) => participant.id === params.otherParticipantId)
+
+    return {
+        id: `preview-dm-auto-reply-${timestamp}`,
+        legacyId: `preview-dm-auto-reply-${timestamp}`,
+        senderId: params.otherParticipantId,
+        senderName: responder?.name ?? params.otherParticipantName,
+        senderRole: responder?.role ?? params.otherParticipantRole ?? null,
+        content: buildPreviewAutoReplyContent(params.content, responder?.name ?? params.otherParticipantName),
+        edited: false,
+        editedAtMs: null,
+        deleted: false,
+        deletedAtMs: null,
+        deletedBy: null,
+        attachments: null,
+        reactions: null,
+        readBy: params.currentUserId ? [params.currentUserId] : [],
+        deliveredTo: params.currentUserId ? [params.currentUserId, params.otherParticipantId] : [params.otherParticipantId],
+        readAtMs: params.currentUserId ? timestamp : null,
+        sharedTo: null,
+        createdAtMs: timestamp,
+        updatedAtMs: timestamp,
+    }
 }

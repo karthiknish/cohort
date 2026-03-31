@@ -2,11 +2,12 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useConvex, useMutation, useQuery } from 'convex/react'
+import { useRef } from 'react'
 
 import { usePreview } from '@/shared/contexts/preview-context'
 import { api, directMessagesApi } from '@/lib/convex-api'
 import { logError } from '@/lib/convex-errors'
-import { getPreviewDirectConversations, getPreviewDirectMessages } from '@/lib/preview-data'
+import { getPreviewDirectAutoReply, getPreviewDirectConversations, getPreviewDirectMessages } from '@/lib/preview-data'
 import type { DirectConversation, DirectMessage } from '@/types/collaboration'
 import { MESSAGE_PAGE_SIZE } from './constants'
 import { filterDirectMessagesForSearch, parseDirectMessageSearchQuery } from './direct-message-search'
@@ -86,6 +87,7 @@ export function useDirectMessages({
   const [searchingMessages, setSearchingMessages] = useState(false)
   const [previewConversations, setPreviewConversations] = useState<DirectConversation[]>([])
   const [previewMessagesByConversation, setPreviewMessagesByConversation] = useState<Record<string, DirectMessage[]>>({})
+  const previewReplyTimersRef = useRef<number[]>([])
 
   const conversationsQuery = useQuery(
     api.directMessages.listConversations,
@@ -111,6 +113,13 @@ export function useDirectMessages({
   )
   const selectedConversationLegacyId = selectedConversation?.legacyId ?? null
   const normalizedMessageSearch = messageSearchQuery.trim()
+
+  useEffect(() => {
+    return () => {
+      previewReplyTimersRef.current.forEach((timerId) => window.clearTimeout(timerId))
+      previewReplyTimersRef.current = []
+    }
+  }, [])
 
   useEffect(() => {
     if (!isPreviewMode) {
@@ -539,6 +548,51 @@ export function useDirectMessages({
               )
               .sort((a, b) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0))
           )
+
+          if (typeof window !== 'undefined') {
+            const conversationSnapshot = selectedConversation
+            const timerId = window.setTimeout(() => {
+              previewReplyTimersRef.current = previewReplyTimersRef.current.filter((id) => id !== timerId)
+
+              const autoReply = getPreviewDirectAutoReply({
+                conversationLegacyId: conversationSnapshot.legacyId,
+                otherParticipantId: conversationSnapshot.otherParticipantId,
+                otherParticipantName: conversationSnapshot.otherParticipantName,
+                otherParticipantRole: conversationSnapshot.otherParticipantRole,
+                content,
+                currentUserId,
+              })
+
+              setPreviewMessagesByConversation((prev) => {
+                const existing = prev[conversationSnapshot.legacyId] ?? []
+                return {
+                  ...prev,
+                  [conversationSnapshot.legacyId]: [...existing, autoReply].sort(
+                    (a, b) => b.createdAtMs - a.createdAtMs
+                  ),
+                }
+              })
+
+              setPreviewConversations((prev) =>
+                [...prev]
+                  .map((conversation) =>
+                    conversation.legacyId === conversationSnapshot.legacyId
+                      ? {
+                          ...conversation,
+                          lastMessageSnippet: autoReply.content,
+                          lastMessageAtMs: autoReply.createdAtMs,
+                          lastMessageSenderId: autoReply.senderId,
+                          isRead: true,
+                          updatedAtMs: autoReply.updatedAtMs ?? autoReply.createdAtMs,
+                        }
+                      : conversation
+                  )
+                  .sort((a, b) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0))
+              )
+            }, 900)
+
+            previewReplyTimersRef.current.push(timerId)
+          }
 
           return
         }

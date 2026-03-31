@@ -10,7 +10,7 @@ import { ClientAccessGate } from '@/features/dashboard/home/components/client-ac
 import { PreviewDataBanner } from '@/features/dashboard/home/components/preview-data-banner'
 import { AgentMode } from '@/shared/components/agent-mode'
 import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
-import { PREVIEW_ROUTE_REQUEST_HEADER } from '@/lib/preview-data'
+import { isScreenRecordingModeEnabled, PREVIEW_ROUTE_REQUEST_HEADER } from '@/lib/preview-data'
 
 export default async function DashboardLayout({
   children,
@@ -18,7 +18,7 @@ export default async function DashboardLayout({
   children: React.ReactNode
 }) {
   const requestHeaders = await headers()
-  const allowPreviewAccess = requestHeaders.get(PREVIEW_ROUTE_REQUEST_HEADER) === '1'
+  const allowPreviewAccess = isScreenRecordingModeEnabled() || requestHeaders.get(PREVIEW_ROUTE_REQUEST_HEADER) === '1'
 
   return (
     <ProtectedRoute allowPreviewAccess={allowPreviewAccess}>

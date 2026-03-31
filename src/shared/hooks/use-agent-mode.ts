@@ -7,6 +7,7 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useNavigationContext } from '@/shared/contexts/navigation-context'
 import type { AgentError } from '@/lib/agent-errors'
+import { getPreviewAgentModeResponse, isPreviewModeEnabled } from '@/lib/preview-data'
 import {
   buildAgentAttachmentContext,
   hasUsableAttachmentContext,
@@ -140,6 +141,7 @@ export interface UseAgentModeReturn {
 const MAX_MESSAGE_LENGTH = 500
 const MIN_MESSAGE_LENGTH = 1
 const DEBOUNCE_MS = 300
+const PREVIEW_AGENT_CONVERSATION_ID = 'preview-agent-conversation'
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
@@ -373,6 +375,47 @@ export function useAgentMode(): UseAgentModeReturn {
     addMessage('user', trimmedText)
 
     try {
+      if (isPreviewModeEnabled()) {
+        const previewResponse = getPreviewAgentModeResponse(trimmedText, activeContext)
+
+        if (!conversationId) {
+          setConversationId(PREVIEW_AGENT_CONVERSATION_ID)
+        }
+
+        if (previewResponse.action === 'navigate' && previewResponse.route) {
+          addMessage('agent', previewResponse.message, previewResponse.route, 'success', {
+            action: 'navigate',
+            success: true,
+          })
+          if (!hasUsableAttachmentContext(pendingAttachments)) {
+            setPendingAttachments([])
+          }
+          setTimeout(() => {
+            router.push(previewResponse.route!)
+            setOpen(false)
+          }, 800)
+        } else if (previewResponse.action === 'execute') {
+          addMessage('agent', previewResponse.message, previewResponse.route, previewResponse.success === false ? 'error' : 'success', {
+            action: 'execute',
+            operation: previewResponse.operation,
+            success: previewResponse.success,
+            data: previewResponse.data,
+          })
+          setPendingAttachments([])
+        } else {
+          addMessage('agent', previewResponse.message, previewResponse.route, 'info', {
+            action: 'response',
+            success: true,
+          })
+          if (!hasUsableAttachmentContext(pendingAttachments)) {
+            setPendingAttachments([])
+          }
+        }
+
+        setLastFailedMessage(null)
+        return
+      }
+
       if (!workspaceId) {
         throw new Error('Workspace context is required')
       }
@@ -490,6 +533,17 @@ export function useAgentMode(): UseAgentModeReturn {
   const fetchHistory = useCallback(async () => {
     setIsHistoryLoading(true)
     try {
+      if (isPreviewModeEnabled()) {
+        setHistory([{
+          id: conversationId ?? PREVIEW_AGENT_CONVERSATION_ID,
+          title: 'Sample actions',
+          startedAt: messages[0]?.timestamp.toISOString() ?? new Date().toISOString(),
+          lastMessageAt: messages[messages.length - 1]?.timestamp.toISOString() ?? new Date().toISOString(),
+          messageCount: messages.length,
+        }])
+        return
+      }
+
       if (!workspaceId) {
         throw new Error('Workspace context is required')
       }
@@ -501,10 +555,15 @@ export function useAgentMode(): UseAgentModeReturn {
     } finally {
       setIsHistoryLoading(false)
     }
-  }, [listConversations, workspaceId])
+  }, [conversationId, listConversations, messages, workspaceId])
 
   const loadConversation = useCallback(async (targetConversationId: string) => {
     if (!targetConversationId) return
+
+    if (isPreviewModeEnabled()) {
+      setConversationId(targetConversationId)
+      return
+    }
 
     setLoadingConversationId(targetConversationId)
     setIsConversationLoading(true)
@@ -586,6 +645,15 @@ export function useAgentMode(): UseAgentModeReturn {
     const trimmed = title.trim()
     if (!targetConversationId || !trimmed) return
 
+    if (isPreviewModeEnabled()) {
+      setHistory((prev) => prev.map((conversation) => (
+        conversation.id === targetConversationId
+          ? { ...conversation, title: trimmed }
+          : conversation
+      )))
+      return
+    }
+
     try {
       if (!workspaceId) {
         throw new Error('Workspace context is required')
@@ -601,6 +669,15 @@ export function useAgentMode(): UseAgentModeReturn {
 
   const deleteConversation = useCallback(async (targetConversationId: string) => {
     if (!targetConversationId) return
+
+    if (isPreviewModeEnabled()) {
+      setHistory((prev) => prev.filter((conversation) => conversation.id !== targetConversationId))
+      if (conversationId === targetConversationId) {
+        setMessages([])
+        setConversationId(null)
+      }
+      return
+    }
 
     try {
       if (!workspaceId) {

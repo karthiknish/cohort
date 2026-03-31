@@ -88,15 +88,19 @@ function resolveSelectedClientId(
   return clients[0]?.id ?? null
 }
 
+function getInitialPreviewClientId(): string | null {
+  return isPreviewModeEnabled() ? getPreviewClients()[0]?.id ?? null : null
+}
+
 export function ClientProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading, isSyncing } = useAuth()
 
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(() => getInitialPreviewClientId())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [retryKey, setRetryKey] = useState(0)
 
-  const [previewEnabled, setPreviewEnabled] = useState(false)
+  const [previewEnabled, setPreviewEnabled] = useState(() => isPreviewModeEnabled())
   const selectionBeforePreviewRef = useRef<string | null>(null)
 
   // Tracks whether we've completed at least one successful client resolution.

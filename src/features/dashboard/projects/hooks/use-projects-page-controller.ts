@@ -13,7 +13,7 @@ import { useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
 import { projectMilestonesApi, projectsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { buildProjectTasksRoute } from '@/lib/project-routes'
-import { getPreviewProjects } from '@/lib/preview-data'
+import { getPreviewProjectMilestones, getPreviewProjects } from '@/lib/preview-data'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { type MilestoneRecord, MILESTONE_STATUSES } from '@/types/milestones'
 import { type ProjectRecord, type ProjectStatus, PROJECT_STATUSES } from '@/types/projects'
@@ -190,9 +190,41 @@ export function useProjectsPageController() {
   }, [isPreviewMode, projectsRealtime, selectedClientId, statusFilter, user?.id, workspaceId])
 
   const loadMilestones = useCallback(async (projectIds: string[]) => {
-    void projectIds
-    return
-  }, [])
+    if (viewMode !== 'gantt') return
+
+    setMilestonesLoading(true)
+    setMilestonesError(null)
+
+    try {
+      if (isPreviewMode) {
+        setMilestonesByProject(getPreviewProjectMilestones(selectedClientId, projectIds))
+        return
+      }
+
+      if (!milestonesRealtime) {
+        setMilestonesByProject({})
+        return
+      }
+
+      const mapped: Record<string, MilestoneRecord[]> = {}
+
+      for (const [projectId, rows] of Object.entries(milestonesRealtime)) {
+        if (projectIds.length > 0 && !projectIds.includes(projectId)) {
+          continue
+        }
+
+        mapped[projectId] = (Array.isArray(rows) ? rows : []).map(mapMilestoneRecord)
+      }
+
+      setMilestonesByProject(mapped)
+    } catch (err) {
+      logError(err, 'ProjectsPage:loadMilestones')
+      setMilestonesError(asErrorMessage(err))
+      setMilestonesByProject({})
+    } finally {
+      setMilestonesLoading(false)
+    }
+  }, [isPreviewMode, milestonesRealtime, selectedClientId, viewMode])
 
   useEffect(() => {
     return () => {
@@ -213,41 +245,16 @@ export function useProjectsPageController() {
   }, [loadProjects])
 
   useEffect(() => {
-    if (isPreviewMode || viewMode !== 'gantt') return
+    if (viewMode !== 'gantt') return
 
     const frame = requestAnimationFrame(() => {
-      setMilestonesLoading(true)
-      setMilestonesError(null)
-
-      if (!milestonesRealtime) {
-        setMilestonesLoading(false)
-        return
-      }
-
-      Promise.resolve()
-        .then(() => {
-          const mapped: Record<string, MilestoneRecord[]> = {}
-
-          for (const [projectId, rows] of Object.entries(milestonesRealtime)) {
-            mapped[projectId] = (Array.isArray(rows) ? rows : []).map(mapMilestoneRecord)
-          }
-
-          setMilestonesByProject(mapped)
-        })
-        .catch((err) => {
-          logError(err, 'ProjectsPage:milestonesEffect')
-          setMilestonesError(asErrorMessage(err))
-          setMilestonesByProject({})
-        })
-        .finally(() => {
-          setMilestonesLoading(false)
-        })
+      void loadMilestones(projects.map((project) => project.id))
     })
 
     return () => {
       cancelAnimationFrame(frame)
     }
-  }, [isPreviewMode, milestonesRealtime, viewMode])
+  }, [loadMilestones, projects, viewMode])
 
   useKeyboardShortcut({
     combo: 'mod+k',

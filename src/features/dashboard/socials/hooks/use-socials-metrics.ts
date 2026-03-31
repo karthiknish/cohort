@@ -6,7 +6,9 @@ import { useConvexAuth, useQuery } from 'convex/react'
 
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { socialMetricsApi } from '@/lib/convex-api'
+import { getPreviewSocialOverview } from '@/lib/preview-data'
 import type { DateRange } from '@/features/dashboard/ads/components/date-range-picker'
 
 export type SocialOverview = {
@@ -42,12 +44,13 @@ function defaultDateRange(): DateRange {
 export function useSocialsMetrics(): UseSocialsMetricsReturn {
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
+  const { isPreviewMode } = usePreview()
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
 
   const [dateRange, setDateRange] = useState<DateRange>(defaultDateRange)
 
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
-  const canQuery = isAuthenticated && !convexAuthLoading && Boolean(workspaceId)
+  const canQuery = !isPreviewMode && isAuthenticated && !convexAuthLoading && Boolean(workspaceId)
 
   const startDate = dateRange.start.toISOString().split('T')[0] ?? ''
   const endDate = dateRange.end.toISOString().split('T')[0] ?? ''
@@ -70,13 +73,13 @@ export function useSocialsMetrics(): UseSocialsMetricsReturn {
     canQuery && (facebookRaw === undefined || instagramRaw === undefined)
 
   const facebookOverview = useMemo<SocialOverview | null>(
-    () => (facebookRaw ? { ...facebookRaw } : null),
-    [facebookRaw],
+    () => (isPreviewMode ? getPreviewSocialOverview('facebook') : facebookRaw ? { ...facebookRaw } : null),
+    [facebookRaw, isPreviewMode],
   )
 
   const instagramOverview = useMemo<SocialOverview | null>(
-    () => (instagramRaw ? { ...instagramRaw } : null),
-    [instagramRaw],
+    () => (isPreviewMode ? getPreviewSocialOverview('instagram') : instagramRaw ? { ...instagramRaw } : null),
+    [instagramRaw, isPreviewMode],
   )
 
   return {

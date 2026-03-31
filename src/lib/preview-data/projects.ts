@@ -1,5 +1,6 @@
 import type { ProjectRecord, TaskRecord } from './types'
 import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
+import type { MilestoneRecord } from '@/types/milestones'
 import { mergeProposalForm } from '@/lib/proposals'
 import { getPreviewClients } from './clients'
 import { isoDaysAgo, withPreviewModeSearchParam } from './utils'
@@ -117,6 +118,159 @@ export function getPreviewProjects(clientId: string | null): ProjectRecord[] {
 
     if (!clientId) return projects
     return projects.filter((p) => p.clientId === clientId)
+}
+
+export function getPreviewProjectMilestones(
+    clientId: string | null,
+    projectIds?: string[],
+): Record<string, MilestoneRecord[]> {
+    const visibleProjectIds = new Set(getPreviewProjects(clientId).map((project) => project.id))
+    const scopedProjectIds = Array.isArray(projectIds) && projectIds.length > 0
+        ? new Set(projectIds.filter((projectId) => visibleProjectIds.has(projectId)))
+        : visibleProjectIds
+
+    const milestones: MilestoneRecord[] = [
+        {
+            id: 'preview-milestone-1',
+            projectId: 'preview-project-1',
+            title: 'Discovery workshop complete',
+            description: 'Stakeholder interviews, positioning review, and existing asset audit are wrapped.',
+            status: 'completed',
+            startDate: isoDaysAgo(28),
+            endDate: isoDaysAgo(24),
+            ownerId: null,
+            order: 1,
+            createdAt: isoDaysAgo(30),
+            updatedAt: isoDaysAgo(24),
+        },
+        {
+            id: 'preview-milestone-2',
+            projectId: 'preview-project-1',
+            title: 'Visual system approval',
+            description: 'Palette, typography, and layout system are queued for final client sign-off.',
+            status: 'in_progress',
+            startDate: isoDaysAgo(12),
+            endDate: isoDaysAgo(-2),
+            ownerId: null,
+            order: 2,
+            createdAt: isoDaysAgo(15),
+            updatedAt: isoDaysAgo(1),
+        },
+        {
+            id: 'preview-milestone-3',
+            projectId: 'preview-project-1',
+            title: 'Launch kit rollout',
+            description: 'Delivery pack for paid, lifecycle, and sales enablement assets.',
+            status: 'planned',
+            startDate: isoDaysAgo(-4),
+            endDate: isoDaysAgo(-18),
+            ownerId: null,
+            order: 3,
+            createdAt: isoDaysAgo(8),
+            updatedAt: isoDaysAgo(2),
+        },
+        {
+            id: 'preview-milestone-4',
+            projectId: 'preview-project-2',
+            title: 'Launch brief signed off',
+            description: 'Final campaign brief, audience angles, and success metrics are approved.',
+            status: 'completed',
+            startDate: isoDaysAgo(10),
+            endDate: isoDaysAgo(7),
+            ownerId: null,
+            order: 1,
+            createdAt: isoDaysAgo(12),
+            updatedAt: isoDaysAgo(7),
+        },
+        {
+            id: 'preview-milestone-5',
+            projectId: 'preview-project-2',
+            title: 'Creator shortlist finalization',
+            description: 'Shortlist, rate cards, and draft outreach notes are in review.',
+            status: 'in_progress',
+            startDate: isoDaysAgo(3),
+            endDate: isoDaysAgo(-5),
+            ownerId: null,
+            order: 2,
+            createdAt: isoDaysAgo(4),
+            updatedAt: isoDaysAgo(1),
+        },
+        {
+            id: 'preview-milestone-6',
+            projectId: 'preview-project-3',
+            title: 'Holiday recap delivered',
+            description: 'Final revenue recap, annotated learnings, and creative archive shared with the client.',
+            status: 'completed',
+            startDate: isoDaysAgo(40),
+            endDate: isoDaysAgo(30),
+            ownerId: null,
+            order: 1,
+            createdAt: isoDaysAgo(42),
+            updatedAt: isoDaysAgo(30),
+        },
+        {
+            id: 'preview-milestone-7',
+            projectId: 'preview-project-4',
+            title: 'Monthly content sprint',
+            description: 'April content calendar, edit queue, and approval stack are being assembled.',
+            status: 'in_progress',
+            startDate: isoDaysAgo(2),
+            endDate: isoDaysAgo(-12),
+            ownerId: null,
+            order: 1,
+            createdAt: isoDaysAgo(5),
+            updatedAt: isoDaysAgo(0),
+        },
+        {
+            id: 'preview-milestone-8',
+            projectId: 'preview-project-4',
+            title: 'Executive reporting template',
+            description: 'Board-facing summary with channel pacing and experiment notes.',
+            status: 'planned',
+            startDate: isoDaysAgo(-7),
+            endDate: isoDaysAgo(-21),
+            ownerId: null,
+            order: 2,
+            createdAt: isoDaysAgo(1),
+            updatedAt: isoDaysAgo(0),
+        },
+        {
+            id: 'preview-milestone-9',
+            projectId: 'preview-project-5',
+            title: 'Technical SEO audit',
+            description: 'Crawl, template review, and indexation diagnosis delivered to the client.',
+            status: 'completed',
+            startDate: isoDaysAgo(38),
+            endDate: isoDaysAgo(32),
+            ownerId: null,
+            order: 1,
+            createdAt: isoDaysAgo(40),
+            updatedAt: isoDaysAgo(32),
+        },
+        {
+            id: 'preview-milestone-10',
+            projectId: 'preview-project-5',
+            title: 'Redirect cleanup batch',
+            description: 'Remaining redirect and canonical fixes are waiting on engineering bandwidth.',
+            status: 'blocked',
+            startDate: isoDaysAgo(15),
+            endDate: isoDaysAgo(-4),
+            ownerId: null,
+            order: 2,
+            createdAt: isoDaysAgo(18),
+            updatedAt: isoDaysAgo(6),
+        },
+    ]
+
+    return milestones.reduce<Record<string, MilestoneRecord[]>>((acc, milestone) => {
+        if (!scopedProjectIds.has(milestone.projectId)) {
+            return acc
+        }
+
+        const existing = acc[milestone.projectId] ?? []
+        acc[milestone.projectId] = [...existing, milestone].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        return acc
+    }, {})
 }
 
 export function getPreviewTasks(clientId: string | null): TaskRecord[] {

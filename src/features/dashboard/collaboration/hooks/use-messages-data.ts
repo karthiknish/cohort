@@ -9,7 +9,7 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { api, collaborationApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { decodeTimestampIdCursor, encodeTimestampIdCursor } from '@/lib/pagination'
-import { getPreviewCollaborationMessages } from '@/lib/preview-data'
+import { getPreviewCollaborationAutoReply, getPreviewCollaborationMessages } from '@/lib/preview-data'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 
@@ -69,6 +69,7 @@ export function useMessagesData({
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const lastMarkedMessageByChannelRef = useRef<Record<string, string>>({})
+  const previewReplyTimersRef = useRef<number[]>([])
 
   const unreadCountsResult = useQuery(
     collaborationApi.getUnreadCountsByChannel,
@@ -159,6 +160,13 @@ export function useMessagesData({
       return changed ? next : prev
     })
   }, [channels, currentUserId, isPreviewMode])
+
+  useEffect(() => {
+    return () => {
+      previewReplyTimersRef.current.forEach((timerId) => window.clearTimeout(timerId))
+      previewReplyTimersRef.current = []
+    }
+  }, [])
 
   const participantNameMap = useMemo(
     () => new Map(channelParticipants.map((participant) => [participant.name.toLowerCase(), participant])),
@@ -510,6 +518,56 @@ export function useMessagesData({
     return !hasContent && !hasAttachments
   }, [messageInput, pendingAttachments.length, sending, uploading])
 
+  const schedulePreviewAutoReply = useCallback((params: {
+    channelId: string
+    channelType: Channel['type']
+    clientId: string | null
+    projectId: string | null
+    content: string
+    parentMessageId?: string | null
+    threadRootId?: string | null
+  }) => {
+    if (typeof window === 'undefined') return
+
+    const timerId = window.setTimeout(() => {
+      previewReplyTimersRef.current = previewReplyTimersRef.current.filter((id) => id !== timerId)
+
+      const reply = getPreviewCollaborationAutoReply({
+        channelType: params.channelType,
+        clientId: params.clientId,
+        projectId: params.projectId,
+        content: params.content,
+        viewerId: currentUserId,
+        parentMessageId: params.parentMessageId ?? null,
+        threadRootId: params.threadRootId ?? null,
+      })
+
+      mutateChannelMessages(params.channelId, (messages) => {
+        if (reply.parentMessageId && reply.threadRootId) {
+          return messages.map((message) => {
+            if (message.id !== reply.threadRootId) {
+              return message
+            }
+
+            return {
+              ...message,
+              threadReplyCount: (message.threadReplyCount ?? 0) + 1,
+              threadLastReplyAt: reply.createdAt,
+            }
+          })
+        }
+
+        return [...messages, reply]
+      })
+
+      if (reply.threadRootId) {
+        addThreadReplyToState(reply.threadRootId, reply)
+      }
+    }, 900)
+
+    previewReplyTimersRef.current.push(timerId)
+  }, [addThreadReplyToState, currentUserId, mutateChannelMessages])
+
   const handleSendMessage = useCallback(
     async (options?: SendMessageOptions) => {
       const trimmedContent = messageInput.trim()
@@ -606,6 +664,16 @@ export function useMessagesData({
           if (resolvedThreadRootId) {
             addThreadReplyToState(resolvedThreadRootId, createdMessage)
           }
+
+          schedulePreviewAutoReply({
+            channelId,
+            channelType: selectedChannel.type,
+            clientId: selectedChannel.clientId ?? null,
+            projectId: selectedChannel.projectId ?? null,
+            content: trimmedContent,
+            parentMessageId: options?.parentMessageId ? createdMessage.id : null,
+            threadRootId: resolvedThreadRootId,
+          })
 
           clearAttachments()
           setMessageInputState('')
@@ -726,6 +794,7 @@ export function useMessagesData({
       toast,
       uploadAttachments,
       workspaceId,
+      schedulePreviewAutoReply,
     ]
   )
 

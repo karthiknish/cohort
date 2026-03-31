@@ -204,6 +204,7 @@ Env vars (Next.js):
 - `NEXT_PUBLIC_CONVEX_SITE_URL` (ends in `.convex.site`)
 - `NEXT_PUBLIC_SITE_URL` (e.g. `http://localhost:3000`)
 - Optional: `NEXT_PUBLIC_USE_BETTER_AUTH=true` (enables client-side syncing of `cohorts_role`/`cohorts_session_expires`)
+- Optional: `NEXT_PUBLIC_SCREEN_RECORDING_ENABLED=true` (forces sample data across dashboard and for-you surfaces and hides the preview banner for recordings/demo sessions)
 
 Env vars (Convex dashboard / `bunx convex env set`):
 - `BETTER_AUTH_SECRET` (>= 32 chars)

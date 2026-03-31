@@ -7,7 +7,9 @@ export {
     PREVIEW_MODE_EVENT,
     PREVIEW_MODE_QUERY_PARAM,
     PREVIEW_ROUTE_REQUEST_HEADER,
+    SCREEN_RECORDING_ENABLED_ENV_KEY,
     isPreviewModeEnabled,
+    isScreenRecordingModeEnabled,
     isPreviewModeQueryEnabled,
     isPublicPreviewPath,
     isPreviewRouteRequest,
@@ -24,7 +26,7 @@ export { getPreviewClients, getPreviewMetrics, getPreviewClientSummaries } from 
 export { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from './analytics'
 
 // Projects, tasks, proposals
-export { getPreviewProjects, getPreviewTasks, getPreviewProposals } from './projects'
+export { getPreviewProjects, getPreviewProjectMilestones, getPreviewTasks, getPreviewProposals } from './projects'
 
 // Activity
 export { getPreviewActivity } from './activity'
@@ -35,11 +37,19 @@ export { getPreviewNotifications } from './notifications'
 // Collaboration
 export {
     getPreviewCollaborationMessages,
+    getPreviewCollaborationAutoReply,
     getPreviewCollaborationParticipants,
     getPreviewCollaborationThreadReplies,
     getPreviewDirectConversations,
+    getPreviewDirectAutoReply,
     getPreviewDirectMessages,
 } from './collaboration'
 
 // Ads
 export { getPreviewAdsMetrics, getPreviewAdsIntegrationStatuses, getPreviewCampaigns, getPreviewCampaignInsights } from './ads'
+
+// Socials
+export { getPreviewSocialConnectionStatus, getPreviewSocialOverview } from './socials'
+
+// Agent mode
+export { getPreviewAgentModeResponse } from './agent'

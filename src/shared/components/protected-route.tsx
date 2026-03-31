@@ -4,12 +4,12 @@ import { useConvexAuth } from 'convex/react'
 import { LoaderCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useSyncExternalStore, useState } from 'react'
 
 import { Button } from '@/shared/ui/button'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { SESSION_EXPIRES_COOKIE } from '@/lib/auth-server'
-import { isPreviewRouteRequest } from '@/lib/preview-data'
+import { isPreviewRouteRequest, isScreenRecordingModeEnabled } from '@/lib/preview-data'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -34,6 +34,10 @@ function resolvePreviewRouteAccessFromLocation(): boolean {
     window.location.pathname,
     new URLSearchParams(window.location.search),
   )
+}
+
+function subscribeToPreviewRouteAccess(): () => void {
+  return () => {}
 }
 
 function hasRequiredRole(userRole: string, requiredRole?: string): boolean {
@@ -129,19 +133,13 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
   const { user, loading, signOut } = useAuth()
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
   const router = useRouter()
-  const [hasPreviewAccess, setHasPreviewAccess] = useState(allowPreviewAccess)
   const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(() => hasValidSessionCookie())
-
-  useEffect(() => {
-    if (allowPreviewAccess) {
-      setHasPreviewAccess(true)
-      return
-    }
-
-    if (!resolvePreviewRouteAccessFromLocation()) return
-
-    setHasPreviewAccess(true)
-  }, [allowPreviewAccess])
+  const screenRecordingEnabled = isScreenRecordingModeEnabled()
+  const hasPreviewAccess = useSyncExternalStore(
+    subscribeToPreviewRouteAccess,
+    () => screenRecordingEnabled || allowPreviewAccess || resolvePreviewRouteAccessFromLocation(),
+    () => screenRecordingEnabled || allowPreviewAccess,
+  )
 
   // Clear awaiting state once auth loading completes or session cookie is gone.
   useEffect(() => {

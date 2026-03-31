@@ -1,10 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  isPreviewModeEnabled,
   isPreviewRouteRequest,
+  isScreenRecordingModeEnabled,
   withPreviewModeSearchParam,
   withPreviewModeSearchParamIfEnabled,
 } from './utils'
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
 
 describe('preview route access helpers', () => {
   it('allows preview-marked proposal and ad detail routes', () => {
@@ -57,5 +63,12 @@ describe('preview route access helpers', () => {
     expect(withPreviewModeSearchParamIfEnabled('/dashboard/proposals/demo/deck', false)).toBe(
       '/dashboard/proposals/demo/deck',
     )
+  })
+
+  it('forces preview mode when screen recording is enabled', () => {
+    vi.stubEnv('NEXT_PUBLIC_SCREEN_RECORDING_ENABLED', 'true')
+
+    expect(isScreenRecordingModeEnabled()).toBe(true)
+    expect(isPreviewModeEnabled()).toBe(true)
   })
 })

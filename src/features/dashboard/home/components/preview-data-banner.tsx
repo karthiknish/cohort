@@ -2,6 +2,7 @@
 
 import { Database, Eye } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { isScreenRecordingModeEnabled } from '@/lib/preview-data'
 import { cn } from '@/lib/utils'
 import { usePreview } from '@/shared/contexts/preview-context'
 
@@ -11,6 +12,10 @@ interface PreviewDataBannerProps {
 
 export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
   const { isPreviewMode, togglePreviewMode } = usePreview()
+
+  if (isScreenRecordingModeEnabled()) {
+    return null
+  }
 
   return (
     <div

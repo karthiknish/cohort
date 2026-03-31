@@ -2,7 +2,11 @@ import { getToken } from '@convex-dev/better-auth/utils'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { convexSiteUrl } from '@/lib/auth-server'
-import { isPreviewRouteRequest, PREVIEW_ROUTE_REQUEST_HEADER } from '@/lib/preview-data'
+import {
+  isPreviewRouteRequest,
+  isScreenRecordingModeEnabled,
+  PREVIEW_ROUTE_REQUEST_HEADER,
+} from '@/lib/preview-data'
 import {
   buildRateLimitHeaders,
   createRateLimitConfig,
@@ -67,6 +71,7 @@ async function hasValidSession(request: NextRequest): Promise<boolean> {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const screenRecordingEnabled = isScreenRecordingModeEnabled()
 
   if (pathname.startsWith('/api/')) {
     // Block common monitoring/crawling user-agents from API routes
@@ -115,6 +120,16 @@ export async function proxy(request: NextRequest) {
         headers: requestHeaders,
       },
     })
+  }
+
+  if (screenRecordingEnabled && pathname === '/dashboard') {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/for-you'
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  if (screenRecordingEnabled && pathname.startsWith('/dashboard/')) {
+    return NextResponse.next()
   }
 
   const hasSession = await hasValidSession(request)
