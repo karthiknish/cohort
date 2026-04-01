@@ -5,10 +5,10 @@ import { LoaderCircle } from "lucide-react"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
-import { DashboardPreview } from "@/features/marketing/home/components/dashboard-preview"
 import { FeaturesBento } from "@/features/marketing/home/components/features-bento"
 import { HeroBackground } from "@/features/marketing/home/components/hero-background"
 import { HERO_HEADLINE, HERO_SUBHEAD } from "@/features/marketing/home/components/home-content"
+import { MinifiedSoftwarePreview } from "@/features/marketing/home/components/minified-software-preview"
 import { authClient } from "@/lib/auth-client"
 import { FadeIn } from "@/shared/ui/animate-in"
 
@@ -75,7 +75,7 @@ function HomePageContent() {
           </div>
 
           <div className="mt-16">
-            <DashboardPreview />
+            <MinifiedSoftwarePreview />
           </div>
         </div>
       </section>
