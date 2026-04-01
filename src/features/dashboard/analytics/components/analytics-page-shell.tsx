@@ -76,6 +76,7 @@ function GoogleAnalyticsConnectionSection() {
     handleConnectGoogleAnalytics,
     handleOpenGoogleAnalyticsSetup,
     handleSyncGoogleAnalytics,
+    isPreviewMode,
     isSyncPending,
     setGaDisconnectDialogOpen,
   } = useAnalyticsPageContext()
@@ -110,7 +111,9 @@ function GoogleAnalyticsConnectionSection() {
             <div
               className={cn(
                 'inline-flex animate-in fade-in slide-in-from-right-2 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium duration-300',
-                gaLastSyncStatus === 'error'
+                isPreviewMode
+                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                  : gaLastSyncStatus === 'error'
                   ? 'bg-destructive/10 text-destructive'
                   : gaNeedsPropertySelection
                     ? 'bg-accent text-accent-foreground'
@@ -127,75 +130,92 @@ function GoogleAnalyticsConnectionSection() {
             </div>
           )}
 
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleConnectClick}
-              disabled={gaLoading}
-              className="h-9 rounded-md border-border/60 bg-background text-primary text-sm font-medium transition-colors hover:bg-muted/40"
-            >
-              {gaLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
-              {gaConnected ? 'Reconnect account' : 'Connect Google'}
-            </Button>
-            {gaConnected ? (
+          {isPreviewMode ? (
+            <div className="rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+              Read-only sample data
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={handleOpenGoogleAnalyticsSetup}
-                disabled={gaLoadingProperties || gaInitializingProperty}
-                className="h-9 rounded-md border-border/60 bg-background text-muted-foreground text-sm font-medium transition-colors hover:bg-muted/40"
+                onClick={handleConnectClick}
+                disabled={gaLoading}
+                className="h-9 rounded-md border-border/60 bg-background text-primary text-sm font-medium transition-colors hover:bg-muted/40"
               >
-                {gaNeedsPropertySelection ? 'Select property' : 'Change property'}
+                {gaLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
+                {gaConnected ? 'Reconnect account' : 'Connect Google'}
               </Button>
-            ) : null}
-            {gaConnected ? (
+              {gaConnected ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenGoogleAnalyticsSetup}
+                  disabled={gaLoadingProperties || gaInitializingProperty}
+                  className="h-9 rounded-md border-border/60 bg-background text-muted-foreground text-sm font-medium transition-colors hover:bg-muted/40"
+                >
+                  {gaNeedsPropertySelection ? 'Select property' : 'Change property'}
+                </Button>
+              ) : null}
+              {gaConnected ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDisconnectClick}
+                  className="h-9 rounded-md border-border/60 bg-background text-destructive text-sm font-medium transition-colors hover:bg-destructive/10"
+                >
+                  <Unlink className="mr-2 h-4 w-4" />
+                  Disconnect
+                </Button>
+              ) : null}
               <Button
                 type="button"
-                variant="outline"
                 size="sm"
-                onClick={handleDisconnectClick}
-                className="h-9 rounded-md border-border/60 bg-background text-destructive text-sm font-medium transition-colors hover:bg-destructive/10"
+                onClick={handleSyncClick}
+                disabled={isSyncPending || gaLoading || !gaConnected || gaNeedsPropertySelection}
+                className="h-9 rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-none transition-colors hover:bg-primary/90"
               >
-                <Unlink className="mr-2 h-4 w-4" />
-                Disconnect
+                {isSyncPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
+                Sync data
               </Button>
-            ) : null}
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleSyncClick}
-              disabled={isSyncPending || gaLoading || !gaConnected || gaNeedsPropertySelection}
-              className="h-9 rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-none transition-colors hover:bg-primary/90"
-            >
-              {isSyncPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
-              Sync data
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
       </CardHeader>
 
       <CardContent className="bg-muted/20 px-4 py-3">
-        <div className="flex flex-col gap-2">
+        {isPreviewMode ? (
           <div className="flex items-center gap-2">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10">
-              <TrendingUp className="h-3 w-3 text-primary" />
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+              <TrendingUp className="h-3 w-3" />
             </div>
             <p className="text-xs text-muted-foreground">
-              Last successful sync: <span className="font-medium text-foreground">{gaLastSyncedLabel}</span>
-              {' · '}
-              Last sync request: <span className="font-medium text-foreground">{gaLastRequestedLabel}</span>
+              Showing read-only Google Analytics preview metrics and insights for demos and screen recordings.
             </p>
           </div>
-          {gaNeedsPropertySelection ? (
-            <p className="pl-7 text-xs text-accent-foreground">Property selection is required before sync can run.</p>
-          ) : null}
-          {gaLastSyncStatus === 'error' && gaLastSyncMessage ? (
-            <p className="pl-7 text-xs text-destructive">{gaLastSyncMessage}</p>
-          ) : null}
-        </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10">
+                <TrendingUp className="h-3 w-3 text-primary" />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Last successful sync: <span className="font-medium text-foreground">{gaLastSyncedLabel}</span>
+                {' · '}
+                Last sync request: <span className="font-medium text-foreground">{gaLastRequestedLabel}</span>
+              </p>
+            </div>
+            {gaNeedsPropertySelection ? (
+              <p className="pl-7 text-xs text-accent-foreground">Property selection is required before sync can run.</p>
+            ) : null}
+            {gaLastSyncStatus === 'error' && gaLastSyncMessage ? (
+              <p className="pl-7 text-xs text-destructive">{gaLastSyncMessage}</p>
+            ) : null}
+          </div>
+        )}
       </CardContent>
     </Card>
   )
@@ -457,10 +477,23 @@ function AnalyticsPerformanceSection() {
 function GoogleAnalyticsIcon({ className = 'h-8 w-8' }: { className?: string }) {
   return (
     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-      <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
-        <path d="M22 12c0 5.523-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2s10 4.477 10 10z" />
-        <path d="M12 2C6.477 2 2 6.477 2 12h10V2z" />
-        <circle cx="12" cy="12" r="3" fill="hsl(var(--background))" />
+      <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+        <path
+          d="M21.805 10.023H12v4.042h5.615c-.242 1.304-.967 2.409-2.056 3.147v2.617h3.33c1.948-1.793 3.076-4.434 3.076-7.564 0-.739-.067-1.449-.16-2.242Z"
+          fill="#4285F4"
+        />
+        <path
+          d="M12 22c2.79 0 5.13-.925 6.84-2.51l-3.33-2.617c-.925.62-2.109.986-3.51.986-2.698 0-4.983-1.821-5.804-4.27H2.754v2.698A9.999 9.999 0 0 0 12 22Z"
+          fill="#34A853"
+        />
+        <path
+          d="M6.196 13.59A5.996 5.996 0 0 1 5.87 11.9c0-.587.105-1.155.326-1.69V7.512H2.754A9.998 9.998 0 0 0 2 11.9c0 1.61.386 3.131 1.07 4.388l3.126-2.698Z"
+          fill="#FBBC05"
+        />
+        <path
+          d="M12 5.94c1.517 0 2.88.522 3.95 1.547l2.96-2.96C17.125 2.865 14.786 2 12 2A9.999 9.999 0 0 0 2.754 7.512l3.442 2.698C7.017 7.761 9.302 5.94 12 5.94Z"
+          fill="#EA4335"
+        />
       </svg>
     </div>
   )

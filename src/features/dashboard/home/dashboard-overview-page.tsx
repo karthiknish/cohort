@@ -5,29 +5,19 @@ import { formatDistanceToNowStrict } from 'date-fns'
 import { useConvexAuth, useQuery } from 'convex/react'
 import {
   ArrowUpRight,
-  BarChart3,
-  Briefcase,
-  CalendarClock,
   CheckSquare,
   FileText,
   LayoutDashboard,
-  Megaphone,
   MessageSquare,
-  Share2,
   Users,
-  Video,
   type LucideIcon,
 } from 'lucide-react'
 import { useMemo } from 'react'
 
 import { AnalyticsSummaryCards } from '@/features/dashboard/analytics/components/analytics-summary-cards'
-import { ClientStatsGrid } from '@/features/dashboard/clients/components/client-stats-grid'
-import { getPreviewGoogleWorkspaceStatus, getPreviewMeetings } from '@/features/dashboard/meetings/lib/preview-data'
-import type { MeetingRecord } from '@/features/dashboard/meetings/types'
 import { ProposalMetrics } from '@/features/dashboard/proposals/components/proposal-metrics'
-import type { SocialOverview } from '@/features/dashboard/socials/hooks/use-socials-metrics'
 import { TaskSummaryCards } from '@/features/dashboard/tasks/task-summary-cards'
-import { analyticsIntegrationsApi, meetingIntegrationsApi, meetingsApi, projectsApi, socialMetricsApi, socialsIntegrationsApi } from '@/lib/convex-api'
+import { analyticsIntegrationsApi, projectsApi } from '@/lib/convex-api'
 import { getPreviewProjects } from '@/lib/preview-data'
 import { formatCurrency, getWorkspaceId } from '@/lib/utils'
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -42,8 +32,6 @@ import type { TaskRecord, TaskStatus } from '@/types/tasks'
 
 import { DashboardPageHeader } from './components/dashboard-page-header'
 import { DashboardRoleBanner } from './components/dashboard-role-banner'
-import { QuickActions } from './components/quick-actions'
-import { RelatedPages } from './components/related-pages'
 import { StatsCards } from './components/stats-cards'
 import { useDashboardData, useDashboardStats } from './hooks'
 
@@ -51,19 +39,6 @@ type AnalyticsStatusRow = {
   accountName: string | null
   lastSyncStatus: string | null
   lastSyncedAtMs: number | null
-}
-
-type SocialStatusRow = {
-  connected: boolean
-  accountName: string | null
-  lastSyncStatus: 'never' | 'pending' | 'success' | 'error' | null
-  lastSyncedAtMs: number | null
-}
-
-type MeetingWorkspaceStatusRow = {
-  connected: boolean
-  linkedAtMs: number | null
-  scopes: string[]
 }
 
 type ProjectRow = {
@@ -76,14 +51,6 @@ type SnapshotMetric = {
   helper: string
 }
 
-type RelatedPageDefinition = {
-  name: string
-  href: string
-  description: string
-  icon: LucideIcon
-  roles?: readonly ('admin' | 'team' | 'client')[]
-}
-
 const EMPTY_TASK_COUNTS: Record<TaskStatus, number> = {
   todo: 0,
   'in-progress': 0,
@@ -91,67 +58,6 @@ const EMPTY_TASK_COUNTS: Record<TaskStatus, number> = {
   completed: 0,
   archived: 0,
 }
-
-const RELATED_PAGES: readonly RelatedPageDefinition[] = [
-  {
-    name: 'Clients',
-    href: '/dashboard/clients',
-    description: 'Client workloads, staffing, and delivery health.',
-    icon: Users,
-    roles: ['admin', 'team'] as const,
-  },
-  {
-    name: 'Analytics',
-    href: '/dashboard/analytics',
-    description: 'Traffic, sessions, conversions, and GA sync status.',
-    icon: BarChart3,
-  },
-  {
-    name: 'Ads',
-    href: '/dashboard/ads',
-    description: 'Spend, clicks, conversions, and channel performance.',
-    icon: Megaphone,
-    roles: ['admin', 'team'] as const,
-  },
-  {
-    name: 'Socials',
-    href: '/dashboard/socials',
-    description: 'Facebook and Instagram reach, engagement, and sync health.',
-    icon: Share2,
-    roles: ['admin', 'team'] as const,
-  },
-  {
-    name: 'Meetings',
-    href: '/dashboard/meetings',
-    description: 'Upcoming rooms, schedule health, and workspace connection.',
-    icon: Video,
-  },
-  {
-    name: 'Tasks',
-    href: '/dashboard/tasks',
-    description: 'Task flow, due dates, and completion rate.',
-    icon: CheckSquare,
-  },
-  {
-    name: 'Proposals',
-    href: '/dashboard/proposals',
-    description: 'Pipeline, ready decks, and sent proposals.',
-    icon: FileText,
-    roles: ['admin', 'team', 'client'] as const,
-  },
-  {
-    name: 'Collaboration',
-    href: '/dashboard/collaboration',
-    description: 'Team channels, client threads, and shared files.',
-    icon: MessageSquare,
-  },
-  {
-    name: 'Projects',
-    href: '/dashboard/projects',
-    description: 'Project status, milestones, and open delivery work.',
-    icon: Briefcase,
-  },
-] as const
 
 export function DashboardOverviewPage() {
   const { user } = useAuth()
@@ -199,68 +105,6 @@ export function DashboardOverviewPage() {
         }
       : 'skip',
   ) as ProjectRow[] | undefined
-
-  const socialsStatus = useQuery(
-    socialsIntegrationsApi.getStatus,
-    !isPreviewMode && canQueryConvex && workspaceId
-      ? { workspaceId, clientId: selectedClientId ?? null }
-      : 'skip',
-  ) as SocialStatusRow | null | undefined
-
-  const socialRange = useMemo(() => {
-    const end = new Date()
-    const start = new Date(end)
-    start.setDate(end.getDate() - 29)
-    return {
-      startDate: start.toISOString().split('T')[0] ?? '',
-      endDate: end.toISOString().split('T')[0] ?? '',
-    }
-  }, [])
-
-  const facebookOverview = useQuery(
-    socialMetricsApi.listOverview,
-    !isPreviewMode && canQueryConvex && workspaceId
-      ? {
-          workspaceId,
-          clientId: selectedClientId ?? null,
-          startDate: socialRange.startDate,
-          endDate: socialRange.endDate,
-          surface: 'facebook',
-        }
-      : 'skip',
-  ) as SocialOverview | null | undefined
-
-  const instagramOverview = useQuery(
-    socialMetricsApi.listOverview,
-    !isPreviewMode && canQueryConvex && workspaceId
-      ? {
-          workspaceId,
-          clientId: selectedClientId ?? null,
-          startDate: socialRange.startDate,
-          endDate: socialRange.endDate,
-          surface: 'instagram',
-        }
-      : 'skip',
-  ) as SocialOverview | null | undefined
-
-  const meetingWorkspaceStatus = useQuery(
-    meetingIntegrationsApi.getGoogleWorkspaceStatus,
-    !isPreviewMode && canQueryConvex && workspaceId
-      ? { workspaceId }
-      : 'skip',
-  ) as MeetingWorkspaceStatusRow | undefined
-
-  const meetings = useQuery(
-    meetingsApi.list,
-    !isPreviewMode && canQueryConvex && workspaceId
-      ? {
-          workspaceId,
-          clientId: selectedClientId ?? null,
-          includePast: false,
-          limit: 30,
-        }
-      : 'skip',
-  ) as MeetingRecord[] | undefined
 
   const dashboardErrors = [metricsError, tasksError, proposalsError].filter(
     (value): value is string => typeof value === 'string' && value.trim().length > 0,
@@ -366,103 +210,6 @@ export function DashboardOverviewPage() {
     }
   }, [analyticsStatus, isPreviewMode])
 
-  const analyticsStatusDetail = useMemo(() => {
-    if (isPreviewMode) return 'Using preview dashboard metrics.'
-    if (!analyticsStatus) return 'Connect Google Analytics to unlock traffic and revenue totals.'
-    if (analyticsStatus.lastSyncedAtMs) {
-      return `Last sync ${formatDistanceToNowStrict(analyticsStatus.lastSyncedAtMs, { addSuffix: true })}`
-    }
-    return analyticsStatus.accountName ? `Connected to ${analyticsStatus.accountName}` : 'Google Analytics is connected.'
-  }, [analyticsStatus, isPreviewMode])
-
-  const socialsLoading = !isPreviewMode && canQueryConvex && (
-    socialsStatus === undefined || facebookOverview === undefined || instagramOverview === undefined
-  )
-
-  const socialsMetrics = useMemo<SnapshotMetric[]>(() => {
-    const statusLabel = isPreviewMode
-      ? 'Preview'
-      : socialsStatus?.connected
-        ? 'Connected'
-        : 'Setup required'
-
-    return [
-      {
-        label: 'Connection',
-        value: statusLabel,
-        helper: socialsStatus?.accountName || 'Meta surfaces for the selected workspace',
-      },
-      {
-        label: 'Facebook reach',
-        value: formatCompactNumber(facebookOverview?.reach ?? 0),
-        helper: 'Rolling 30-day organic reach',
-      },
-      {
-        label: 'Instagram engaged',
-        value: formatCompactNumber(instagramOverview?.engagedUsers ?? 0),
-        helper: 'Rolling 30-day engaged users',
-      },
-    ]
-  }, [facebookOverview?.reach, instagramOverview?.engagedUsers, isPreviewMode, socialsStatus?.accountName, socialsStatus?.connected])
-
-  const resolvedMeetingWorkspaceStatus = useMemo(() => {
-    if (isPreviewMode) {
-      return getPreviewGoogleWorkspaceStatus()
-    }
-    return meetingWorkspaceStatus ?? null
-  }, [isPreviewMode, meetingWorkspaceStatus])
-
-  const upcomingMeetings = useMemo(() => {
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-    const source = isPreviewMode
-      ? getPreviewMeetings(selectedClientId ?? null, timezone)
-      : Array.isArray(meetings)
-        ? meetings
-        : []
-
-    return [...source].sort((left, right) => left.startTimeMs - right.startTimeMs)
-  }, [isPreviewMode, meetings, selectedClientId])
-
-  const meetingsLoading = !isPreviewMode && canQueryConvex && (meetings === undefined || meetingWorkspaceStatus === undefined)
-  const liveMeetingCount = upcomingMeetings.filter((meeting) => meeting.status === 'in_progress').length
-  const nextMeeting = upcomingMeetings[0] ?? null
-
-  const meetingMetrics = useMemo<SnapshotMetric[]>(() => [
-    {
-      label: 'Workspace',
-      value: resolvedMeetingWorkspaceStatus?.connected ? 'Connected' : 'Setup required',
-      helper: resolvedMeetingWorkspaceStatus?.connected ? 'Google Workspace scheduling ready' : 'Connect Workspace for calendar-backed rooms',
-    },
-    {
-      label: 'Upcoming',
-      value: String(upcomingMeetings.length),
-      helper: nextMeeting ? formatMeetingTimestamp(nextMeeting.startTimeMs) : 'No meetings scheduled',
-    },
-    {
-      label: 'Live rooms',
-      value: String(liveMeetingCount),
-      helper: liveMeetingCount > 0 ? 'An in-site room is active now' : 'No meetings currently in progress',
-    },
-  ], [liveMeetingCount, nextMeeting, resolvedMeetingWorkspaceStatus?.connected, upcomingMeetings.length])
-
-  const projectMetrics = useMemo<SnapshotMetric[]>(() => [
-    {
-      label: 'Active projects',
-      value: String(clientStats.activeProjects),
-      helper: `${clientStats.totalProjects} total in ${selectedClientLabel}`,
-    },
-    {
-      label: 'Planning',
-      value: String(clientStats.planningProjects),
-      helper: `${clientStats.onHoldProjects} on hold`,
-    },
-    {
-      label: 'Open tasks',
-      value: String(clientStats.openTasks),
-      helper: `${clientStats.completedTasks} completed in delivery`,
-    },
-  ], [clientStats.activeProjects, clientStats.completedTasks, clientStats.onHoldProjects, clientStats.openTasks, clientStats.planningProjects, clientStats.totalProjects, selectedClientLabel])
-
   const adsMetricsList = useMemo<SnapshotMetric[]>(() => [
     {
       label: 'Ad spend',
@@ -481,10 +228,14 @@ export function DashboardOverviewPage() {
     },
   ], [adsSummary.clicks, adsSummary.conversions, adsSummary.impressions, adsSummary.providers, adsSummary.revenue, adsSummary.spend])
 
-  const visibleRelatedPages = useMemo(() => {
-    const role = userRole === 'admin' || userRole === 'team' || userRole === 'client' ? userRole : 'client'
-    return RELATED_PAGES.filter((page) => !page.roles || page.roles.includes(role))
-  }, [userRole])
+  const analyticsStatusDetail = useMemo(() => {
+    if (isPreviewMode) return 'Using preview dashboard metrics.'
+    if (!analyticsStatus) return 'Connect Google Analytics to unlock traffic and revenue totals.'
+    if (analyticsStatus.lastSyncedAtMs) {
+      return `Last sync ${formatDistanceToNowStrict(analyticsStatus.lastSyncedAtMs, { addSuffix: true })}`
+    }
+    return analyticsStatus.accountName ? `Connected to ${analyticsStatus.accountName}` : 'Google Analytics is connected.'
+  }, [analyticsStatus, isPreviewMode])
 
   const statsLoading = metricsLoading || tasksLoading
   const clientStatsLoading = tasksLoading || proposalsLoading || (!isPreviewMode && canQueryConvex && projectRows === undefined)
@@ -521,113 +272,51 @@ export function DashboardOverviewPage() {
         <StatsCards stats={orderedStats} loading={statsLoading} primaryCount={4} />
       </section>
 
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.95fr)]">
-        <div className="space-y-8">
-          <section className="space-y-4">
-            <SectionHeading
-              title="Clients"
-              description={`The same account health summary surfaced on the clients page, scoped to ${selectedClientLabel}.`}
-              href="/dashboard/clients"
-              hrefLabel="Open clients"
-            />
-            <ClientStatsGrid
-              stats={clientStats}
-              statsLoading={clientStatsLoading}
-              teamMembersCount={teamMembersCount}
-              managersCount={managersCount}
-            />
-          </section>
-
-          <section className="space-y-4">
-            <SectionHeading
-              title="Analytics"
-              description={analyticsStatusDetail}
-              href="/dashboard/analytics"
-              hrefLabel="Open analytics"
-              badgeLabel={analyticsStatusLabel}
-            />
-            <AnalyticsSummaryCards
-              totals={analyticsTotals}
-              conversionRate={analyticsConversionRate}
-              isLoading={analyticsLoading}
-            />
-          </section>
-
-          <section className="space-y-4">
-            <SectionHeading
-              title="Tasks"
-              description="Current task volume and flow efficiency from the tasks workspace."
-              href="/dashboard/tasks"
-              hrefLabel="Open tasks"
-            />
-            <TaskSummaryCards taskCounts={taskCounts} completionRate={taskCompletionRate} />
-          </section>
-
-          <section className="space-y-4">
-            <SectionHeading
-              title="Proposals"
-              description="Pipeline summary showing draft volume, ready decks, and proposals awaiting a client response."
-              href="/dashboard/proposals"
-              hrefLabel="Open proposals"
-            />
-            <ProposalMetrics proposals={proposals} isLoading={proposalsLoading} />
-          </section>
-        </div>
-
-        <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
-          <FeatureSnapshotCard
+      <div className="space-y-8">
+        <section className="space-y-4">
+          <SectionHeading
             title="Ads"
-            description="Performance summary pulled from the Ads hub."
+            description="Cross-channel performance summary pulled from the Ads workspace."
             href="/dashboard/ads"
             hrefLabel="Open ads"
-            icon={Megaphone}
-            loading={adsLoading}
-            metrics={adsMetricsList}
           />
+          <SnapshotMetricGrid metrics={adsMetricsList} loading={adsLoading} />
+        </section>
 
-          <FeatureSnapshotCard
-            title="Socials"
-            description="Connection health plus the latest Facebook and Instagram overview KPIs."
-            href="/dashboard/socials"
-            hrefLabel="Open socials"
-            icon={Share2}
-            loading={socialsLoading}
-            metrics={socialsMetrics}
+        <section className="space-y-4">
+          <SectionHeading
+            title="Analytics"
+            description={analyticsStatusDetail}
+            href="/dashboard/analytics"
+            hrefLabel="Open analytics"
+            badgeLabel={analyticsStatusLabel}
           />
-
-          <FeatureSnapshotCard
-            title="Meetings"
-            description="Scheduling and room readiness from the Meetings page."
-            href="/dashboard/meetings"
-            hrefLabel="Open meetings"
-            icon={Video}
-            loading={meetingsLoading}
-            metrics={meetingMetrics}
+          <AnalyticsSummaryCards
+            totals={analyticsTotals}
+            conversionRate={analyticsConversionRate}
+            isLoading={analyticsLoading}
           />
+        </section>
 
-          <FeatureSnapshotCard
-            title="Projects"
-            description="A compact view of delivery volume and project stage distribution."
-            href="/dashboard/projects"
-            hrefLabel="Open projects"
-            icon={Briefcase}
-            loading={clientStatsLoading}
-            metrics={projectMetrics}
+        <section className="space-y-4">
+          <SectionHeading
+            title="Tasks"
+            description="Current task volume and flow efficiency from the tasks workspace."
+            href="/dashboard/tasks"
+            hrefLabel="Open tasks"
           />
+          <TaskSummaryCards taskCounts={taskCounts} />
+        </section>
 
-          <QuickActions />
-
-          <RelatedPages
-            title="More dashboard sections"
-            description="Jump directly into the detailed workspaces behind this overview."
-            pages={visibleRelatedPages.map((page) => ({
-              name: page.name,
-              href: page.href,
-              description: page.description,
-              icon: page.icon,
-            }))}
+        <section className="space-y-4">
+          <SectionHeading
+            title="Proposals"
+            description="Pipeline summary showing draft volume, ready decks, and proposals awaiting a client response."
+            href="/dashboard/proposals"
+            hrefLabel="Open proposals"
           />
-        </div>
+          <ProposalMetrics proposals={proposals} isLoading={proposalsLoading} />
+        </section>
       </div>
     </div>
   )
@@ -665,59 +354,13 @@ function SectionHeading({ title, description, href, hrefLabel, badgeLabel }: Sec
   )
 }
 
-type FeatureSnapshotCardProps = {
-  title: string
-  description: string
-  href: string
-  hrefLabel: string
-  icon: LucideIcon
-  metrics: SnapshotMetric[]
-  loading: boolean
-}
-
-function FeatureSnapshotCard({ title, description, href, hrefLabel, icon: Icon, metrics, loading }: FeatureSnapshotCardProps) {
-  return (
-    <Link href={href} className="group block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
-      <Card className="h-full border-muted/50 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] group-hover:border-primary/40 group-hover:shadow-md">
-        <CardHeader className="space-y-3 pb-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1.5">
-              <CardTitle className="text-base">{title}</CardTitle>
-              <CardDescription>{description}</CardDescription>
-            </div>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Icon className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="inline-flex items-center gap-1 text-xs font-medium text-primary">
-            {hrefLabel}
-            <ArrowUpRight className="h-3.5 w-3.5" />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {metrics.map((metric) => (
-            <div key={`${title}-${metric.label}`} className="rounded-xl border border-muted/50 bg-muted/20 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
-                  {metric.label}
-                </p>
-                {loading ? (
-                  <Skeleton className="h-5 w-16 rounded-md" />
-                ) : (
-                  <p className="text-sm font-semibold text-foreground">{metric.value}</p>
-                )}
-              </div>
-              {loading ? (
-                <Skeleton className="mt-2 h-3.5 w-36 rounded-md" />
-              ) : (
-                <p className="mt-1.5 text-xs text-muted-foreground">{metric.helper}</p>
-              )}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </Link>
-  )
+function buildTaskCounts(tasks: TaskRecord[]): Record<TaskStatus, number> {
+  return tasks.reduce((counts, task) => {
+    if (task.status in counts) {
+      counts[task.status] += 1
+    }
+    return counts
+  }, { ...EMPTY_TASK_COUNTS })
 }
 
 function buildAdsSummary(metrics: MetricRecord[]) {
@@ -742,15 +385,6 @@ function buildAdsSummary(metrics: MetricRecord[]) {
   )
 }
 
-function buildTaskCounts(tasks: TaskRecord[]): Record<TaskStatus, number> {
-  return tasks.reduce((counts, task) => {
-    if (task.status in counts) {
-      counts[task.status] += 1
-    }
-    return counts
-  }, { ...EMPTY_TASK_COUNTS })
-}
-
 function formatCompactNumber(value: number): string {
   return new Intl.NumberFormat('en-US', {
     notation: 'compact',
@@ -758,11 +392,30 @@ function formatCompactNumber(value: number): string {
   }).format(value)
 }
 
-function formatMeetingTimestamp(startTimeMs: number): string {
-  return new Date(startTimeMs).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })
+function SnapshotMetricGrid({ metrics, loading }: { metrics: SnapshotMetric[]; loading: boolean }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      {metrics.map((metric) => (
+        <Card key={metric.label} className="border-muted/60 bg-background shadow-sm">
+          <CardHeader className="pb-3">
+            <CardDescription className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
+              {metric.label}
+            </CardDescription>
+            {loading ? (
+              <Skeleton className="h-8 w-28 rounded-md" />
+            ) : (
+              <CardTitle className="text-2xl tracking-tight">{metric.value}</CardTitle>
+            )}
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-4 w-40 rounded-md" />
+            ) : (
+              <p className="text-sm text-muted-foreground">{metric.helper}</p>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
 }

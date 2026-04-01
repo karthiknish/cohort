@@ -6,6 +6,7 @@ import { ArrowUpRight, Shield, Trophy } from 'lucide-react'
 import { FadeIn } from '@/shared/ui/animate-in'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent } from '@/shared/ui/card'
+import { usePreview } from '@/shared/contexts/preview-context'
 
 type DashboardRoleBannerProps = {
   userRole?: string | null
@@ -13,6 +14,10 @@ type DashboardRoleBannerProps = {
 }
 
 export function DashboardRoleBanner({ userRole, userDisplayName }: DashboardRoleBannerProps) {
+  const { isPreviewMode } = usePreview()
+
+  if (isPreviewMode) return null
+
   if (userRole === 'admin') {
     return (
       <FadeIn>

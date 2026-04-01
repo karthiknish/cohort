@@ -1,48 +1,24 @@
 'use client'
 
-import Link from 'next/link'
-import { ArrowLeft, LayoutDashboard, LoaderCircle, Mic2, ShieldCheck, Sparkles } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 import { useRouter, redirect } from 'next/navigation'
 import { Suspense, useCallback, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 
 import { AuthCard } from '@/features/auth/components/auth-card'
 import { bootstrapAndSyncSession, calculatePasswordStrength } from '@/features/auth/auth-utils'
-import { HeroBackground } from '@/features/marketing/home/components/hero-background'
 import { authClient } from '@/lib/auth-client'
 import { getSafeRedirectPath } from '@/lib/utils'
 import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
-import { FadeIn, FadeInItem, FadeInStagger } from '@/shared/ui/animate-in'
 import { useToast } from '@/shared/ui/use-toast'
 
 const TAB_STORAGE_KEY = 'cohorts.auth.activeTab'
 const REMEMBER_ME_KEY = 'cohorts.auth.rememberMe'
 const AUTH_PAGE_FALLBACK = (
-  <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
+  <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12">
     <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
   </div>
 )
-
-const AUTH_VALUE_PROPS = [
-  {
-    id: 'campaigns',
-    Icon: LayoutDashboard,
-    title: 'Run every client account in one place',
-    description: 'Campaigns, reporting, proposals, and delivery workflows stay in one shared system.',
-  },
-  {
-    id: 'agents',
-    Icon: Sparkles,
-    title: 'Use AI where the work actually happens',
-    description: 'Draft proposals, summarize meetings, and surface risks without jumping between tools.',
-  },
-  {
-    id: 'security',
-    Icon: ShieldCheck,
-    title: 'Built for teams, clients, and permissions',
-    description: 'Role-based access keeps internal operations and client visibility clearly separated.',
-  },
-] as const
 
 function getInitialTab(): 'signin' | 'signup' {
   if (typeof window === 'undefined') {
@@ -315,75 +291,30 @@ function HomeAuthPageContent() {
   }, [handleSubmit])
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-primary px-6 py-10">
-      <HeroBackground />
-
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl items-center">
-        <div className="grid w-full gap-10 py-8 lg:grid-cols-2 lg:items-center lg:gap-14">
-          <FadeIn as="section" className="text-white">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-sm text-white/70 transition-colors hover:text-white"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to home
-            </Link>
-
-            <div className="mt-8 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm font-medium text-white/80 backdrop-blur-sm">
-              <Mic2 className="mr-2 h-4 w-4" />
-              Secure access for teams and clients
-            </div>
-
-            <h1 className="mt-6 max-w-xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-              Start or return to your agency workspace
-            </h1>
-
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-white/70 sm:text-lg">
-              Sign in or create your Cohorts account to run campaigns, proposals, meetings, and client delivery from one AI-native workspace.
-            </p>
-
-            <FadeInStagger as="div" className="mt-10 grid gap-4 sm:grid-cols-3">
-              {AUTH_VALUE_PROPS.map((item) => (
-                <FadeInItem
-                  key={item.id}
-                  as="div"
-                  className="rounded-2xl border border-white/15 bg-white/8 p-4 backdrop-blur-sm"
-                >
-                  <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/12">
-                    <item.Icon className="h-5 w-5" />
-                  </div>
-                  <h2 className="text-sm font-semibold text-white">{item.title}</h2>
-                  <p className="mt-2 text-sm leading-relaxed text-white/65">{item.description}</p>
-                </FadeInItem>
-              ))}
-            </FadeInStagger>
-          </FadeIn>
-
-          <div className="mx-auto w-full max-w-120 lg:justify-self-end">
-            <AuthCard
-              activeTab={activeTab}
-              emailError={emailError}
-              isSubmitting={isSubmitting}
-              isAuthLoading={isAuthLoading}
-              rememberMe={rememberMe}
-              showPassword={showPassword}
-              showConfirmPassword={showConfirmPassword}
-              passwordsMatch={passwordsMatch}
-              signInData={signInData}
-              signUpData={signUpData}
-              passwordStrength={passwordStrength}
-              onTabChange={handleTabChange}
-              onRememberMeChange={handleRememberMeChange}
-              onToggleShowPassword={handleToggleShowPassword}
-              onToggleShowConfirmPassword={handleToggleShowConfirmPassword}
-              onSignInChange={handleSignInChange}
-              onSignUpChange={handleSignUpChange}
-              onSubmitSignIn={handleSubmitSignIn}
-              onSubmitSignUp={handleSubmitSignUp}
-              onGoogleSignIn={handleGoogleSignIn}
-            />
-          </div>
-        </div>
+    <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12">
+      <div className="w-full max-w-120">
+        <AuthCard
+          activeTab={activeTab}
+          emailError={emailError}
+          isSubmitting={isSubmitting}
+          isAuthLoading={isAuthLoading}
+          rememberMe={rememberMe}
+          showPassword={showPassword}
+          showConfirmPassword={showConfirmPassword}
+          passwordsMatch={passwordsMatch}
+          signInData={signInData}
+          signUpData={signUpData}
+          passwordStrength={passwordStrength}
+          onTabChange={handleTabChange}
+          onRememberMeChange={handleRememberMeChange}
+          onToggleShowPassword={handleToggleShowPassword}
+          onToggleShowConfirmPassword={handleToggleShowConfirmPassword}
+          onSignInChange={handleSignInChange}
+          onSignUpChange={handleSignUpChange}
+          onSubmitSignIn={handleSubmitSignIn}
+          onSubmitSignUp={handleSubmitSignUp}
+          onGoogleSignIn={handleGoogleSignIn}
+        />
       </div>
     </div>
   )

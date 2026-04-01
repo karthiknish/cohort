@@ -4,7 +4,9 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useMemo, useEffect, useCallback, useRef, forwardRef } from 'react'
 import { cn } from '@/lib/utils'
+import { getPreviewSettingsProfile } from '@/lib/preview-data'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { usePreview } from '@/shared/contexts/preview-context'
 import {
   BarChart3,
   CheckSquare,
@@ -342,12 +344,17 @@ export function Sidebar() {
 
 export function Header() {
   const { user, signOut } = useAuth()
+  const { isPreviewMode } = usePreview()
   const [open, setOpen] = useState(false)
   const { open: helpOpen, onOpenChange: onHelpOpenChange, showWelcome, setShowWelcome } = useHelpModal()
   const [problemReportOpen, setProblemReportOpen] = useState(false)
+  const previewProfile = getPreviewSettingsProfile()
+  const displayedName = isPreviewMode ? previewProfile.name : (user?.name ?? 'Account')
+  const displayedEmail = isPreviewMode ? previewProfile.email : (user?.email ?? 'user@example.com')
 
-  const initials = user?.name
-    ? user.name
+  const initialsSource = displayedName
+  const initials = initialsSource
+    ? initialsSource
       .split(' ')
       .map((n) => n[0])
       .join('')
@@ -489,8 +496,13 @@ export function Header() {
                     <AvatarFallback className="text-xs sm:text-sm">{initials}</AvatarFallback>
                   </Avatar>
                   <span className="hidden text-sm font-medium sm:ml-2 sm:inline">
-                    {user?.name ?? 'Account'}
+                    {displayedName}
                   </span>
+                  {isPreviewMode ? (
+                    <Badge variant="secondary" className="hidden sm:ml-1.5 sm:inline-flex text-[10px] px-1.5 py-0">
+                      Preview
+                    </Badge>
+                  ) : null}
                   {roleLabel && (
                     <Badge variant={roleBadgeVariant as 'default' | 'secondary' | 'outline'} className="hidden sm:ml-1.5 sm:inline-flex text-[10px] px-1.5 py-0">
                       {roleLabel}
@@ -502,14 +514,19 @@ export function Header() {
                 <DropdownMenuLabel>
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">{user?.name ?? 'Account User'}</span>
+                      <span className="text-sm font-semibold">{displayedName}</span>
+                      {isPreviewMode ? (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          Preview
+                        </Badge>
+                      ) : null}
                       {roleLabel && (
                         <Badge variant={roleBadgeVariant as 'default' | 'secondary' | 'outline'} className="text-[10px] px-1.5 py-0">
                           {roleLabel}
                         </Badge>
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground">{user?.email ?? 'user@example.com'}</span>
+                    <span className="text-xs text-muted-foreground">{displayedEmail}</span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

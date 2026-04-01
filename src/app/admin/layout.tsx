@@ -157,7 +157,7 @@ function AdminBreadcrumb() {
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <ProtectedRoute requiredRole="admin">
-      <WorkspaceProviders>
+      <WorkspaceProviders enablePreview>
         <NavigationProvider>
           <div className="relative min-h-screen bg-background">
             <main className="min-h-screen">

@@ -263,7 +263,7 @@ function CollaborationInboxSection() {
 
   return (
     <Card className={DASHBOARD_THEME.cards.base}>
-      <CardContent className="flex flex-col p-0 lg:flex-row">
+      <CardContent className="flex min-h-0 flex-col overflow-hidden p-0 lg:flex-row">
         <UnifiedInbox
           currentUserId={currentUserId}
           sidebar={sidebar}

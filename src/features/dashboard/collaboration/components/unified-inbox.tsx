@@ -365,7 +365,7 @@ export function UnifiedInbox({
   )
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row min-h-[500px] lg:h-[640px]">
+    <div className="flex min-h-[500px] min-h-0 flex-1 flex-col overflow-hidden lg:h-[640px] lg:flex-row">
       <ConversationListPane
         channelCount={channelCount}
         dmCount={dmCount}

@@ -125,5 +125,6 @@ describe('UnifiedInbox', () => {
     expect(markup).toContain('Select a conversation')
     expect(markup).toContain('1 Channels')
     expect(markup).toContain('1 Direct Messages')
+    expect(markup).toContain('min-h-0 flex-1')
   })
 })

@@ -2,9 +2,11 @@ import { useCallback, useRef, useState } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { usePreview } from '@/shared/contexts/preview-context'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { proposalGenerationApi, proposalsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { getPreviewProposals } from '@/lib/preview-data'
 import type { ProposalFormData } from '@/lib/proposals'
 import {
     trackAiGenerationCompleted,
@@ -55,6 +57,29 @@ function getDeckWarnings(deck: ProposalPresentationDeck | null | undefined): str
 
 function getDeckError(deck: ProposalPresentationDeck | null | undefined): string | undefined {
     return typeof deck?.error === 'string' ? deck.error : undefined
+}
+
+export function getPreviewProposalSimulation(clientId: string | null) {
+    const scopedProposals = getPreviewProposals(clientId)
+    const fallbackProposals = getPreviewProposals(null).filter((proposal) => proposal.clientId !== clientId)
+    const previewProposal = [...scopedProposals, ...fallbackProposals].find((proposal) => proposal.presentationDeck)
+
+    if (!previewProposal?.presentationDeck) {
+        return null
+    }
+
+    return {
+        aiSuggestions: previewProposal.aiSuggestions ?? null,
+        draftId: previewProposal.id,
+        presentationDeck: {
+            ...previewProposal.presentationDeck,
+            storageUrl:
+                previewProposal.presentationDeck.storageUrl
+                ?? previewProposal.pptUrl
+                ?? previewProposal.presentationDeck.pptxUrl
+                ?? null,
+        },
+    }
 }
 
 export interface UseProposalSubmissionOptions {
@@ -114,6 +139,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
     const { toast } = useToast()
     const { user, getIdToken, isSyncing, authError } = useAuth()
     const { selectedClient, selectedClientId } = useClientContext()
+    const { isPreviewMode } = usePreview()
 
     const workspaceId = user?.agencyId ?? null
     const convexUpdateProposal = useMutation(proposalsApi.update)
@@ -156,6 +182,44 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             setIsPresentationReady(false)
             clearErrors(stepErrorPaths.value)
             setAiSuggestions(null)
+
+            if (isPreviewMode) {
+                const previewSimulation = getPreviewProposalSimulation(selectedClientId ?? null)
+
+                if (!previewSimulation) {
+                    toast({
+                        title: 'Preview result unavailable',
+                        description: 'Sample proposal output is not available right now.',
+                        variant: 'destructive',
+                    })
+                    return
+                }
+
+                const formSnapshot = structuredClone(formState) as ProposalFormData
+
+                setLastSubmissionSnapshot({
+                    draftId: previewSimulation.draftId,
+                    form: formSnapshot,
+                    step: currentStep,
+                    clientId: selectedClientId ?? null,
+                    clientName: selectedClient?.name ?? null,
+                })
+                setSubmitted(true)
+                setPresentationDeck(previewSimulation.presentationDeck)
+                setAiSuggestions(previewSimulation.aiSuggestions)
+                setIsPresentationReady(true)
+                setFormState(createInitialProposalFormState())
+                setCurrentStep(0)
+                setDraftId(null)
+                setAutosaveStatus('idle')
+
+                toast({
+                    title: 'Preview proposal ready',
+                    description: 'Showing a simulated proposal result using sample deck output.',
+                })
+                return
+            }
+
             let activeDraftId = draftId
             if (!activeDraftId) {
                 activeDraftId = await ensureDraftId()
@@ -376,7 +440,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         } finally {
             setIsSubmitting(false)
         }
-    }, [activeConvexProposal, clearErrors, convexUpdateProposal, currentStep, draftId, ensureDraftId, formState, generateProposalDeck, getIdToken, refreshProposals, selectedClient, selectedClientId, setAutosaveStatus, setCurrentStep, setDraftId, setFormState, toast, workspaceId])
+    }, [activeConvexProposal, clearErrors, convexUpdateProposal, currentStep, draftId, ensureDraftId, formState, generateProposalDeck, getIdToken, isPreviewMode, refreshProposals, selectedClient, selectedClientId, setAutosaveStatus, setCurrentStep, setDraftId, setFormState, toast, workspaceId])
 
     const handleContinueEditingFromSnapshot = useCallback(async () => {
         if (!lastSubmissionSnapshot) {
@@ -400,9 +464,14 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         setSubmitted(false)
         setPresentationDeck(null)
         setAiSuggestions(null)
-        setDraftId(lastSubmissionSnapshot.draftId)
+        setDraftId(isPreviewMode ? null : lastSubmissionSnapshot.draftId)
         setLastSubmissionSnapshot(null)
         setAutosaveStatus('idle')
+
+        if (isPreviewMode) {
+            toast({ title: 'Editing restored', description: 'Your preview responses have been reloaded.' })
+            return
+        }
 
         try {
             if (!workspaceId) {
@@ -427,7 +496,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             const message = asErrorMessage(error)
             toast({ title: 'Unable to resume editing', description: message, variant: 'destructive' })
         }
-    }, [lastSubmissionSnapshot, refreshProposals, selectedClientId, steps, toast, setFormState, setCurrentStep, setDraftId, setAutosaveStatus, workspaceId, convexUpdateProposal])
+    }, [convexUpdateProposal, isPreviewMode, lastSubmissionSnapshot, refreshProposals, selectedClientId, setAutosaveStatus, setCurrentStep, setDraftId, setFormState, steps, toast, workspaceId])
 
     const handleRecheckDeck = useCallback(async () => {
         const proposalId = lastSubmissionSnapshot?.draftId ?? draftId

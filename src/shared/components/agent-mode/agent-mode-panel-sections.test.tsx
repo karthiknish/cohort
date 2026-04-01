@@ -66,7 +66,6 @@ const sharedDockComposerProps = {
   users: emptyArray,
   mentionsLoading: false,
   pendingAttachments: emptyArray,
-  isDraggingFiles: false,
   isExtractingAttachments: false,
   disabled: false,
   onInputChange: noop,
@@ -171,7 +170,6 @@ describe('agent mode panel sections', () => {
             users={[]}
             mentionsLoading={false}
             pendingAttachments={[]}
-            isDraggingFiles={true}
             isExtractingAttachments={false}
             disabled={false}
             onInputChange={noop}
@@ -193,7 +191,6 @@ describe('agent mode panel sections', () => {
     )
 
     expect(markup).toContain('Where would you like to go?')
-    expect(markup).toContain('Drop docs here for context')
     expect(markup).toContain('Mention Dropdown')
     expect(markup).toContain('Voice')
     expect(markup).toContain('Schedule a meeting')

@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Skeleton } from '@/shared/ui/skeleton'
 import { formatCurrency } from '@/lib/utils'
 import {
+    Area,
+    AreaChart,
     Bar,
     BarChart,
     CartesianGrid,
@@ -13,8 +15,6 @@ import {
     ChartLegendContent,
     ChartTooltip,
     ChartTooltipContent,
-    Line,
-    LineChart,
     XAxis,
     YAxis,
 } from './chart-imports'
@@ -34,7 +34,7 @@ const AXIS_TICK_STYLE = {
 } as const
 
 const CHART_TOOLTIP_CLASS_NAME = 'rounded-xl border-muted/40 shadow-lg backdrop-blur-md'
-const CHART_TOOLTIP_CURSOR = { stroke: 'rgba(var(--primary), 0.2)', strokeWidth: 1 } as const
+const CHART_TOOLTIP_CURSOR = { strokeDasharray: '3 3' } as const
 const CHART_ACTIVE_DOT = { r: 6, strokeWidth: 0 } as const
 const CHART_LEGEND_CONTENT = <ChartLegendContent className="pt-4 text-[10px] font-bold uppercase tracking-widest opacity-80" />
 
@@ -152,8 +152,18 @@ export function AnalyticsCharts({
                         />
                     ) : (
                         <ChartContainer config={usersSessionsChartConfig} className="h-[300px] w-full">
-                            <LineChart data={chartData} accessibilityLayer>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--muted-foreground)" opacity={0.1} />
+                            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} accessibilityLayer>
+                                <defs>
+                                    <linearGradient id="fillUsersAnalytics" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="var(--color-users)" stopOpacity={0.28} />
+                                        <stop offset="95%" stopColor="var(--color-users)" stopOpacity={0.04} />
+                                    </linearGradient>
+                                    <linearGradient id="fillSessionsAnalytics" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="var(--color-sessions)" stopOpacity={0.24} />
+                                        <stop offset="95%" stopColor="var(--color-sessions)" stopOpacity={0.03} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.12} />
                                 <XAxis
                                     dataKey="date"
                                     tickLine={false}
@@ -174,23 +184,25 @@ export function AnalyticsCharts({
                                     content={USERS_SESSIONS_TOOLTIP_CONTENT}
                                 />
                                 <ChartLegend content={CHART_LEGEND_CONTENT} />
-                                <Line
+                                <Area
                                     type="monotone"
                                     dataKey="users"
                                     stroke="var(--color-users)"
-                                    strokeWidth={3}
+                                    strokeWidth={2}
+                                    fill="url(#fillUsersAnalytics)"
                                     dot={false}
                                     activeDot={CHART_ACTIVE_DOT}
                                 />
-                                <Line
+                                <Area
                                     type="monotone"
                                     dataKey="sessions"
                                     stroke="var(--color-sessions)"
-                                    strokeWidth={3}
+                                    strokeWidth={2}
+                                    fill="url(#fillSessionsAnalytics)"
                                     dot={false}
                                     activeDot={CHART_ACTIVE_DOT}
                                 />
-                            </LineChart>
+                            </AreaChart>
                         </ChartContainer>
                     )}
                 </CardContent>
@@ -217,8 +229,14 @@ export function AnalyticsCharts({
                         />
                     ) : (
                         <ChartContainer config={revenueChartConfig} className="h-[300px] w-full">
-                            <LineChart data={chartData} accessibilityLayer>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--muted-foreground)" opacity={0.1} />
+                            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} accessibilityLayer>
+                                <defs>
+                                    <linearGradient id="fillRevenueAnalytics" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.05} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.12} />
                                 <XAxis
                                     dataKey="date"
                                     tickLine={false}
@@ -239,15 +257,16 @@ export function AnalyticsCharts({
                                     content={REVENUE_TOOLTIP_CONTENT}
                                 />
                                 <ChartLegend content={CHART_LEGEND_CONTENT} />
-                                <Line
+                                <Area
                                     type="monotone"
                                     dataKey="revenue"
                                     stroke="var(--color-revenue)"
-                                    strokeWidth={3}
+                                    strokeWidth={2}
+                                    fill="url(#fillRevenueAnalytics)"
                                     dot={false}
                                     activeDot={CHART_ACTIVE_DOT}
                                 />
-                            </LineChart>
+                            </AreaChart>
                         </ChartContainer>
                     )}
                 </CardContent>
@@ -274,8 +293,14 @@ export function AnalyticsCharts({
                         />
                     ) : (
                         <ChartContainer config={conversionsChartConfig} className="h-[300px] w-full">
-                            <BarChart data={chartData} accessibilityLayer>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--muted-foreground)" opacity={0.1} />
+                            <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} accessibilityLayer>
+                                <defs>
+                                    <linearGradient id="fillConversionsAnalytics" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="var(--color-conversions)" stopOpacity={0.95} />
+                                        <stop offset="100%" stopColor="var(--color-conversions)" stopOpacity={0.45} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.12} />
                                 <XAxis
                                     dataKey="date"
                                     tickLine={false}
@@ -295,7 +320,7 @@ export function AnalyticsCharts({
                                     content={CONVERSIONS_TOOLTIP_CONTENT}
                                 />
                                 <ChartLegend content={CHART_LEGEND_CONTENT} />
-                                <Bar dataKey="conversions" fill="var(--color-conversions)" radius={[6, 6, 0, 0]} barSize={24} />
+                                <Bar dataKey="conversions" fill="url(#fillConversionsAnalytics)" radius={[6, 6, 0, 0]} barSize={24} />
                             </BarChart>
                         </ChartContainer>
                     )}
@@ -323,8 +348,14 @@ export function AnalyticsCharts({
                         />
                     ) : (
                         <ChartContainer config={conversionRateChartConfig} className="h-[300px] w-full">
-                            <LineChart data={chartData} accessibilityLayer>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--muted-foreground)" opacity={0.1} />
+                            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} accessibilityLayer>
+                                <defs>
+                                    <linearGradient id="fillConversionRateAnalytics" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="var(--color-conversionRate)" stopOpacity={0.24} />
+                                        <stop offset="95%" stopColor="var(--color-conversionRate)" stopOpacity={0.04} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.12} />
                                 <XAxis
                                     dataKey="date"
                                     tickLine={false}
@@ -345,15 +376,16 @@ export function AnalyticsCharts({
                                     content={CONVERSION_RATE_TOOLTIP_CONTENT}
                                 />
                                 <ChartLegend content={CHART_LEGEND_CONTENT} />
-                                <Line
+                                <Area
                                     type="monotone"
                                     dataKey="conversionRate"
                                     stroke="var(--color-conversionRate)"
-                                    strokeWidth={3}
+                                    strokeWidth={2}
+                                    fill="url(#fillConversionRateAnalytics)"
                                     dot={false}
                                     activeDot={CHART_ACTIVE_DOT}
                                 />
-                            </LineChart>
+                            </AreaChart>
                         </ChartContainer>
                     )}
                 </CardContent>

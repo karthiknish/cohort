@@ -36,11 +36,6 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: '/dashboard',
-        destination: '/for-you',
-        permanent: false,
-      },
-      {
         source: '/dashboard/activity',
         destination: '/for-you',
         permanent: false,

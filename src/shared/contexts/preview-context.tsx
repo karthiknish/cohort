@@ -17,6 +17,11 @@ interface PreviewContextValue {
 }
 
 const PreviewContext = createContext<PreviewContextValue | undefined>(undefined)
+const DEFAULT_PREVIEW_CONTEXT: PreviewContextValue = {
+  isPreviewMode: false,
+  togglePreviewMode: () => {},
+  setPreviewMode: () => {},
+}
 
 export function PreviewProvider({ children }: PropsWithChildren) {
   const [storedPreviewMode, setStoredPreviewMode] = useState(() => isPreviewModeEnabled())
@@ -79,7 +84,7 @@ export function PreviewProvider({ children }: PropsWithChildren) {
 export function usePreview() {
   const context = useContext(PreviewContext)
   if (context === undefined) {
-    throw new Error('usePreview must be used within a PreviewProvider')
+    return DEFAULT_PREVIEW_CONTEXT
   }
   return context
 }

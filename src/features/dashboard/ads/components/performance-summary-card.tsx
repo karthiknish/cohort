@@ -18,6 +18,7 @@ import { normalizeAdsProviderId } from '@/domain/ads/provider'
 import { cn, formatCurrency } from '@/lib/utils'
 
 import type { ProviderSummary } from './types'
+import { PROVIDER_ICON_MAP } from '../constants'
 
 interface PerformanceSummaryCardProps {
   providerSummaries: Record<string, ProviderSummary>
@@ -125,6 +126,7 @@ export function PerformanceSummaryCard({
               const cpa = summary.conversions > 0 ? summary.spend / summary.conversions : null
               const roas =
                 summary.spend > 0 && Number.isFinite(summary.revenue) ? summary.revenue / summary.spend : null
+              const ProviderIcon = PROVIDER_ICON_MAP[normalizeAdsProviderId(providerId) ?? providerId]
 
               const dynamicStats = [
                 { id: 'impressions', label: 'Impressions', value: formatNumber(summary.impressions) },
@@ -150,7 +152,7 @@ export function PerformanceSummaryCard({
                     <CardHeader className="pb-3">
                       <div className="flex items-center gap-2">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-muted/60 bg-muted/30">
-                          <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                          {ProviderIcon ? <ProviderIcon className="h-4 w-4" /> : <BarChart3 className="h-4 w-4 text-muted-foreground" />}
                         </div>
                         <CardTitle className="text-base">
                           {formatProviderName(providerId)}

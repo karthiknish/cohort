@@ -28,7 +28,7 @@ import { useDashboardData } from '@/features/dashboard/home/hooks/use-dashboard-
 import { useIntegrationStatusSummary } from '@/features/dashboard/home/hooks/use-integration-status-summary'
 import { getPreviewGoogleWorkspaceStatus, getPreviewMeetings } from '@/features/dashboard/meetings/lib/preview-data'
 import type { MeetingRecord } from '@/features/dashboard/meetings/types'
-import { buildActivityHubModel, type FeatureSpace, type GoogleAnalyticsStatusSummary, type HubTone, type SpotlightItem } from '@/features/dashboard/activity/for-you'
+import { buildActivityHubModel, type GoogleAnalyticsStatusSummary, type HubTone, type SpotlightItem } from '@/features/dashboard/activity/for-you'
 import { useRealtimeActivity } from '@/features/dashboard/activity/hooks/use-realtime-activity'
 import type { ActivityType, EnhancedActivity } from '@/features/dashboard/activity/types'
 import { ClientsSummarySection } from '@/features/dashboard/home/components/clients-summary-section'
@@ -84,77 +84,6 @@ function mapProjectRows(rows: unknown[] | undefined): ProjectRecord[] {
   })
 }
 
-function SpotlightList({ items }: { items: SpotlightItem[] }) {
-  if (items.length === 0) {
-    return (
-      <div className="rounded-xl border border-dashed bg-muted/20 p-5 text-sm text-muted-foreground">
-        No items here yet. Live work will surface in this queue as it arrives.
-      </div>
-    )
-  }
-
-  return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-      {items.map((item) => (
-        <Link
-          key={item.id}
-          href={item.href}
-          className={cn(
-            'group rounded-xl border bg-background/70 p-4 transition-[colors,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-sm',
-            toneBorder[item.tone],
-          )}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-2">
-              <Badge variant={toneToVariant[item.tone]} className="rounded-full text-[11px] capitalize">
-                {item.badge}
-              </Badge>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
-              </div>
-            </div>
-            <ArrowUpRight aria-hidden="true" className="mt-0.5 h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-          </div>
-          <p className="mt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{item.meta}</p>
-        </Link>
-      ))}
-    </div>
-  )
-}
-
-function FeatureSpaceCard({ space }: { space: FeatureSpace }) {
-  return (
-    <Link
-      href={space.href}
-      className={cn(
-        'group rounded-2xl border bg-background/70 p-4 transition-[colors,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md',
-        toneBorder[space.tone],
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">{space.title}</p>
-          <p className="text-xs text-muted-foreground">{space.subtitle}</p>
-        </div>
-        <Badge variant={toneToVariant[space.tone]} className="rounded-full text-[11px]">
-          {space.badge}
-        </Badge>
-      </div>
-
-      <div className="mt-4 flex items-end justify-between gap-3">
-        <div>
-          <p className="text-2xl font-semibold tracking-tight text-foreground">{space.metric}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{space.secondary}</p>
-        </div>
-        <ArrowUpRight aria-hidden="true" className="h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-      </div>
-
-      <p className="mt-4 text-xs text-muted-foreground">{space.hint}</p>
-    </Link>
-  )
-}
-
 function PinnedSectionCard({
   title,
   description,
@@ -178,7 +107,7 @@ function PinnedSectionCard({
             <CardTitle className="text-base text-balance">{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </div>
-          <Button asChild variant="ghost" size="sm" className="w-fit">
+          <Button asChild variant="outline" size="sm" className={cn('w-fit bg-background shadow-sm', getButtonClasses('outline'))}>
             <Link href={href}>{actionLabel}</Link>
           </Button>
         </div>
@@ -343,11 +272,6 @@ export default function ForYouPage() {
     taskSummary,
   ])
 
-  const spotlightItems = useMemo(
-    () => activityHub.spotlightTabs.flatMap((tab) => tab.items).slice(0, 6),
-    [activityHub.spotlightTabs]
-  )
-
   const handleRetry = useCallback(() => {
     retry()
   }, [retry])
@@ -368,58 +292,49 @@ export default function ForYouPage() {
         </Alert>
       ) : null}
 
-      {/* Client summaries — always visible (admin/team only) */}
-      <ClientsSummarySection />
-
-      {/* My tasks — always visible, independent of client selection */}
-      <MyTasksSection />
-
-      {/* Workspace-wide summary — independent of client selection */}
-      <>
-          {/* Header */}
-          <div className={DASHBOARD_THEME.layout.header}>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-primary">
-                  <Zap aria-hidden="true" className="mr-1 h-3.5 w-3.5" />
-                  Personal summary
-                </Badge>
-                <Badge variant="secondary" className="rounded-full">
-                  {resolvedClients.length > 0 ? `${resolvedClients.length} client${resolvedClients.length === 1 ? '' : 's'}` : 'Workspace-wide'}
-                </Badge>
-              </div>
-              <h1 className={cn(DASHBOARD_THEME.layout.title, 'mt-3 text-balance')}>{activityHub.heroTitle}</h1>
-              <p className={cn(DASHBOARD_THEME.layout.subtitle, 'mt-1')}>
-                {activityHub.heroSummary}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <Badge variant="default" className="text-xs">{unreadCount} unread</Badge>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRetry}
-                disabled={loading}
-                title="Refresh (Cmd+R)"
-                className={getButtonClasses('outline')}
-              >
-                <RefreshCw className={cn('mr-2 h-4 w-4', loading && DASHBOARD_THEME.animations.spin)} />
-                Refresh
-              </Button>
-              <Button asChild variant="default" size="sm" className={getButtonClasses('primary')}>
-                <Link href="/dashboard">
-                  <LayoutDashboard aria-hidden="true" className="mr-2 h-4 w-4" />
-                  Go to Dashboard
-                </Link>
-              </Button>
-            </div>
+      <div className={DASHBOARD_THEME.layout.header}>
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-primary">
+              <Zap aria-hidden="true" className="mr-1 h-3.5 w-3.5" />
+              Personal summary
+            </Badge>
+            <Badge variant="secondary" className="rounded-full">
+              {resolvedClients.length > 0 ? `${resolvedClients.length} client${resolvedClients.length === 1 ? '' : 's'}` : 'Workspace-wide'}
+            </Badge>
           </div>
+          <h1 className={cn(DASHBOARD_THEME.layout.title, 'mt-3 text-balance')}>{activityHub.heroTitle}</h1>
+          <p className={cn(DASHBOARD_THEME.layout.subtitle, 'mt-1')}>
+            {activityHub.heroSummary}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <Badge variant="default" className="text-xs">{unreadCount} unread</Badge>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRetry}
+            disabled={loading}
+            title="Refresh (Cmd+R)"
+            className={getButtonClasses('outline')}
+          >
+            <RefreshCw className={cn('mr-2 h-4 w-4', loading && DASHBOARD_THEME.animations.spin)} />
+            Refresh
+          </Button>
+          <Button asChild variant="default" size="sm" className={getButtonClasses('primary')}>
+            <Link href="/dashboard">
+              <LayoutDashboard aria-hidden="true" className="mr-2 h-4 w-4" />
+              Go to Dashboard
+            </Link>
+          </Button>
+        </div>
+      </div>
 
-          <FadeInStagger as="div" className={DASHBOARD_THEME.layout.container} delay={0.05} stagger={0.07}>
-            <FadeIn as="div">
-              <div className="grid gap-6 xl:grid-cols-2">
+      <FadeInStagger as="div" className={DASHBOARD_THEME.layout.container} delay={0.05} stagger={0.07}>
+        <FadeIn as="div">
+          <div className="grid gap-6 xl:grid-cols-2">
             <PinnedSectionCard
               title="Upcoming meetings"
               description="Pinned to the top so the next live and scheduled conversations are always first."
@@ -437,49 +352,14 @@ export default function ForYouPage() {
               emptyMessage="No urgent or high-priority tasks are active right now."
             />
           </div>
-            </FadeIn>
+        </FadeIn>
+      </FadeInStagger>
 
-          <FadeIn as="div">
-            <Card className={DASHBOARD_THEME.cards.base}>
-            <CardHeader className={DASHBOARD_THEME.cards.header}>
-              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <CardTitle className="text-base text-balance">Recommended Spaces</CardTitle>
-                  <CardDescription>Jump straight into the parts of the workspace that matter most right now.</CardDescription>
-                </div>
-                <Button asChild variant="ghost" size="sm" className="w-fit">
-                  <Link href="/dashboard/clients">View all clients</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {activityHub.featureSpaces.slice(0, 4).map((space) => (
-                <FeatureSpaceCard key={space.id} space={space} />
-              ))}
-            </CardContent>
-            </Card>
-          </FadeIn>
+      {/* Client summaries — always visible (admin/team only) */}
+      <ClientsSummarySection />
 
-          <FadeIn as="div">
-            <Card className={DASHBOARD_THEME.cards.base}>
-            <CardHeader className={DASHBOARD_THEME.cards.header}>
-              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <CardTitle className="text-base text-balance">Next Up</CardTitle>
-                  <CardDescription>A short list of the most relevant live items across the workspace.</CardDescription>
-                </div>
-                <Button asChild variant="ghost" size="sm" className="w-fit">
-                  <Link href="/dashboard/tasks">Open tasks</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <SpotlightList items={spotlightItems} />
-            </CardContent>
-            </Card>
-          </FadeIn>
-          </FadeInStagger>
-      </>
+      {/* My tasks — always visible, independent of client selection */}
+      <MyTasksSection />
     </div>
   )
 }

@@ -4,6 +4,20 @@ import { describe, expect, it } from 'vitest'
 
 import { SocialSurfacePanel } from './social-surface-panel'
 
+const overview = {
+  surface: 'facebook',
+  impressions: 45000,
+  reach: 12300,
+  engagedUsers: 1200,
+  reactions: 620,
+  comments: 140,
+  shares: 90,
+  saves: 35,
+  followerCountLatest: 5000,
+  followerDeltaTotal: 250,
+  rowCount: 28,
+} as const
+
 const organicKpis = [
   { id: 'reach', label: 'Reach', value: '12.3K', detail: '45K total impressions this period' },
   { id: 'impressions', label: 'Impressions', value: '45K', detail: 'Avg 3.7x per person reached' },
@@ -17,6 +31,7 @@ describe('SocialSurfacePanel', () => {
       <SocialSurfacePanel
         surface="facebook"
         kpis={[]}
+        overview={null}
         overviewLoading={true}
         connected={true}
       />,
@@ -29,6 +44,7 @@ describe('SocialSurfacePanel', () => {
       <SocialSurfacePanel
         surface="facebook"
         kpis={organicKpis}
+        overview={overview}
         overviewLoading={false}
         connected={true}
       />,
@@ -36,6 +52,10 @@ describe('SocialSurfacePanel', () => {
     expect(markup).toContain('Facebook organic performance')
     expect(markup).toContain('Reach')
     expect(markup).toContain('12.3K')
+    expect(markup).toContain('Audience footprint')
+    expect(markup).toContain('Interaction mix')
+    expect(markup).toContain('Insight signals')
+    expect(markup).toContain('Engagement rate')
   })
 
   it('renders empty state when not connected', () => {
@@ -43,6 +63,7 @@ describe('SocialSurfacePanel', () => {
       <SocialSurfacePanel
         surface="instagram"
         kpis={[]}
+        overview={null}
         overviewLoading={false}
         connected={false}
       />,

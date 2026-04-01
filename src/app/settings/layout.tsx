@@ -9,7 +9,7 @@ import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
     <ProtectedRoute>
-      <WorkspaceProviders enablePreferences>
+      <WorkspaceProviders enablePreview enablePreferences>
         <NavigationProvider>
           <div className="relative flex min-h-screen bg-background">
             <div className="flex h-full w-full">

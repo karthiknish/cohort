@@ -102,7 +102,7 @@ export function ConversationListPane({
   )
 
   return (
-    <div className="flex h-full w-full flex-col border-b border-muted/40 lg:w-80 lg:border-b-0 lg:border-r">
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden border-b border-muted/40 lg:w-80 lg:border-b-0 lg:border-r">
       <div className="space-y-3 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -137,7 +137,7 @@ export function ConversationListPane({
         </Tabs>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 w-full flex-1">
         {isLoading ? (
           <div className="space-y-3 p-4">
             {['inbox-skeleton-1', 'inbox-skeleton-2', 'inbox-skeleton-3', 'inbox-skeleton-4', 'inbox-skeleton-5'].map((slotKey) => (
@@ -193,17 +193,17 @@ export function ConversationListPane({
                       ) : null}
                     </div>
 
-                    <div className="mt-0.5 flex items-center gap-1.5">
+                    <div className="mt-0.5 flex min-w-0 items-center gap-1.5 overflow-hidden">
                       {item.type === 'channel' ? (
-                        <Badge variant="outline" className={cn('h-4 px-1 py-0 text-[10px]', CHANNEL_TYPE_COLORS[item.metadata.channelType || 'team'])}>
+                        <Badge variant="outline" className={cn('h-4 shrink-0 px-1 py-0 text-[10px]', CHANNEL_TYPE_COLORS[item.metadata.channelType || 'team'])}>
                           {item.metadata.channelType || 'channel'}
                         </Badge>
                       ) : item.metadata.otherParticipantRole ? (
-                        <Badge variant="outline" className="h-4 px-1 py-0 text-[10px]">
+                        <Badge variant="outline" className="h-4 shrink-0 px-1 py-0 text-[10px]">
                           {item.metadata.otherParticipantRole}
                         </Badge>
                       ) : null}
-                      <p className="truncate text-xs text-muted-foreground">{item.lastMessageSnippet || 'No messages yet'}</p>
+                      <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{item.lastMessageSnippet || 'No messages yet'}</p>
                     </div>
                   </div>
 

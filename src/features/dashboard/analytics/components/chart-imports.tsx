@@ -1,7 +1,7 @@
 'use client'
 
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/shared/ui/chart'
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid } from '@/shared/ui/recharts-dynamic'
+import { AreaChart, Area, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid } from '@/shared/ui/recharts-dynamic'
 
 // Re-export chart components
 export {
@@ -10,6 +10,8 @@ export {
   ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
+  AreaChart,
+  Area,
   LineChart,
   Line,
   BarChart,

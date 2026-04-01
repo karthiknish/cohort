@@ -480,7 +480,7 @@ function TasksPageContent({
         {/* Summary Cards */}
         {initialLoading ? (
           <div className={DASHBOARD_THEME.stats.container}>
-            {['task-stats-1', 'task-stats-2', 'task-stats-3', 'task-stats-4', 'task-stats-5'].map((key) => (
+            {['task-stats-1', 'task-stats-2', 'task-stats-3', 'task-stats-4'].map((key) => (
               <Card key={key} className={DASHBOARD_THEME.cards.base}>
                 <CardContent className="flex items-center gap-3 p-4">
                   <Skeleton className={DASHBOARD_THEME.skeletons.avatar} />
@@ -495,7 +495,6 @@ function TasksPageContent({
         ) : (
           <TaskSummaryCards
             taskCounts={filters.taskCounts}
-            completionRate={filters.completionRate}
           />
         )}
 

@@ -62,6 +62,39 @@ describe('interactive preview helpers', () => {
     expect(response.route).toContain('/dashboard/projects')
   })
 
+  it('simulates the common preview agent actions exposed by the panel shortcuts', () => {
+    const scheduleResponse = getPreviewAgentModeResponse('Schedule a meeting', {
+      activeClientId: 'preview-tech-corp',
+    })
+    const updateResponse = getPreviewAgentModeResponse('Update this project status to active', {
+      activeClientId: 'preview-tech-corp',
+      activeProjectId: 'preview-project-1',
+    })
+    const adsResponse = getPreviewAgentModeResponse('How are my Meta ads doing this week?', {
+      activeClientId: 'preview-tech-corp',
+    })
+    const reportResponse = getPreviewAgentModeResponse('Generate weekly report', {
+      activeClientId: 'preview-tech-corp',
+    })
+
+    expect(scheduleResponse).toMatchObject({ action: 'execute', operation: 'createMeeting', success: true })
+    expect(updateResponse).toMatchObject({ action: 'execute', operation: 'updateProject', success: true })
+    expect(adsResponse).toMatchObject({ action: 'execute', operation: 'summarizeAdsPerformance', success: true })
+    expect(reportResponse).toMatchObject({ action: 'execute', operation: 'generatePerformanceReport', success: true })
+  })
+
+  it('simulates preview task creation and direct messages', () => {
+    const taskResponse = getPreviewAgentModeResponse('Create a task follow up on approvals', {
+      activeClientId: 'preview-tech-corp',
+    })
+    const messageResponse = getPreviewAgentModeResponse('Send a message to Alex about the launch notes', {
+      activeClientId: 'preview-tech-corp',
+    })
+
+    expect(taskResponse).toMatchObject({ action: 'execute', operation: 'createTask', success: true })
+    expect(messageResponse).toMatchObject({ action: 'execute', operation: 'sendDirectMessage', success: true })
+  })
+
   it('keeps preview datasets broad and cross-linked for realistic demos', () => {
     const clients = getPreviewClients()
     const projects = getPreviewProjects(null)

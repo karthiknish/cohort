@@ -19,10 +19,9 @@ import { ProposalMetrics } from './components/proposal-metrics'
 import {
   ProposalBuilderOverlay,
   ProposalPageActions,
-  ProposalPreviewModeSection,
   ProposalStartStateCard,
 } from './components/proposal-page-sections'
-import { stepRequiredFieldLabels } from './utils/form-steps'
+import { createInitialProposalFormState, stepRequiredFieldLabels } from './utils/form-steps'
 
 // Extracted hooks
 import {
@@ -37,7 +36,7 @@ function ProposalsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
-  const { selectedClientId, selectClient } = useClientContext()
+  const { selectedClient, selectedClientId, selectClient } = useClientContext()
   const { isPreviewMode } = usePreview()
   const [isWizardOpen, setIsWizardOpen] = useState(false)
   const clientIdParam = searchParams.get('clientId')
@@ -196,6 +195,30 @@ function ProposalsPageContent() {
 
   const activeDeckStage: DeckProgressStage = deckProgressStage ?? 'polling'
   const previewProposals = getPreviewProposals(selectedClientId ?? null)
+  const previewDraftId = previewProposals.find((proposal) => proposal.status === 'draft')?.id ?? null
+  const displayedProposals = isPreviewMode ? previewProposals : proposals
+  const displayedDraftId = isPreviewMode ? previewDraftId : draftId
+  const displayedLoadingState = isPreviewMode ? false : isLoadingProposals
+
+  const handleStartPreviewProposal = useCallback(() => {
+    const initialForm = createInitialProposalFormState()
+
+    submission.setSubmitted(false)
+    submission.setPresentationDeck(null)
+    submission.setAiSuggestions(null)
+    submission.setLastSubmissionSnapshot(null)
+    setDraftId(null)
+    setAutosaveStatus('idle')
+    setFormState({
+      ...initialForm,
+      company: {
+        ...initialForm.company,
+        name: selectedClient?.name ?? initialForm.company.name,
+      },
+    })
+    setCurrentStep(0)
+    setIsWizardOpen(true)
+  }, [selectedClient?.name, setAutosaveStatus, setCurrentStep, setDraftId, setFormState, submission])
 
   const {
     handleSelectTemplate,
@@ -204,10 +227,8 @@ function ProposalsPageContent() {
     handleResumeProposalInModal,
     handleContinueEditingInModal,
     handlePreviewRefresh,
-    handlePreviewResume,
     handlePreviewRequestDelete,
     handlePreviewDownloadDeck,
-    handlePreviewCreateNew,
   } = useProposalPageInteractions({
     toast,
     routerPush: router.push,
@@ -248,24 +269,6 @@ function ProposalsPageContent() {
     [formState, handleSocialHandleChange, step.id, summary, toggleArrayValue, updateField, validationErrors]
   )
 
-  if (isPreviewMode) {
-    const previewDraftId = previewProposals.find((proposal) => proposal.status === 'draft')?.id ?? null
-
-    return (
-      <div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
-        <ProposalPreviewModeSection
-          previewProposals={previewProposals}
-          previewDraftId={previewDraftId}
-          onRefreshPreview={handlePreviewRefresh}
-          onResume={handlePreviewResume}
-          onRequestDelete={handlePreviewRequestDelete}
-          onDownloadDeck={handlePreviewDownloadDeck}
-          onCreateNew={handlePreviewCreateNew}
-        />
-      </div>
-    )
-  }
-
   return (
     <div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
       <div className={DASHBOARD_THEME.layout.header}>
@@ -278,32 +281,32 @@ function ProposalsPageContent() {
           isCreatingDraft={isCreatingDraft}
           onApplyTemplate={handleSelectTemplate}
           onVersionRestored={handleVersionRestored}
-          onStartProposal={handleStartProposal}
+          onStartProposal={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
         />
       </div>
 
-      <ProposalMetrics proposals={proposals} isLoading={isLoadingProposals} />
+      <ProposalMetrics proposals={displayedProposals} isLoading={displayedLoadingState} />
 
       {!isWizardOpen && (
         <ProposalStartStateCard
           canStart={Boolean(selectedClientId)}
           isCreatingDraft={isCreatingDraft}
-          onStartProposal={handleStartProposal}
+          onStartProposal={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
         />
       )}
 
       <ProposalHistory
-        proposals={proposals}
-        draftId={draftId}
-        isLoading={isLoadingProposals}
+        proposals={displayedProposals}
+        draftId={displayedDraftId}
+        isLoading={displayedLoadingState}
         deletingProposalId={deletingProposalId}
-        onRefresh={handleRefreshProposals}
+        onRefresh={isPreviewMode ? handlePreviewRefresh : handleRefreshProposals}
         onResume={handleResumeProposalInModal}
-        onRequestDelete={requestDeleteProposal}
+        onRequestDelete={isPreviewMode ? handlePreviewRequestDelete : requestDeleteProposal}
         isGenerating={isSubmitting}
         downloadingDeckId={downloadingDeckId}
-        onDownloadDeck={handleDownloadDeck}
-        onCreateNew={handleStartProposal}
+        onDownloadDeck={isPreviewMode ? handlePreviewDownloadDeck : handleDownloadDeck}
+        onCreateNew={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
         canCreate={Boolean(selectedClientId)}
         isCreating={isCreatingDraft}
       />

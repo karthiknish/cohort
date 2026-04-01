@@ -11,6 +11,7 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { apiFetch } from '@/lib/api-client'
 import { analyticsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { getPreviewAnalyticsMetrics } from '@/lib/preview-data'
 import { notifyFailure } from '@/lib/notifications'
 
 import type { AnalyticsDateRange } from '../components/analytics-date-range-picker'
@@ -36,6 +37,27 @@ type GoogleAnalyticsStatusRow = {
 }
 
 const GOOGLE_ANALYTICS_OAUTH_TIMEOUT_MS = 15_000
+const PREVIEW_GA_ACCOUNT_LABEL = 'Preview Google Analytics'
+const PREVIEW_GA_PROPERTY_ID = 'preview-google-analytics-property'
+
+function getPreviewGoogleAnalyticsStatus() {
+  const latestMetricDate = getPreviewAnalyticsMetrics()
+    .filter((metric) => metric.providerId === 'google-analytics')
+    .map((metric) => new Date(`${metric.date}T12:00:00Z`).getTime())
+    .reduce<number | null>((latest, value) => {
+      if (!Number.isFinite(value)) return latest
+      return latest === null || value > latest ? value : latest
+    }, null)
+
+  return {
+    accountLabel: PREVIEW_GA_ACCOUNT_LABEL,
+    propertyId: PREVIEW_GA_PROPERTY_ID,
+    lastSyncStatus: 'success',
+    lastSyncMessage: null,
+    lastSyncedAtMs: latestMetricDate,
+    lastSyncRequestedAtMs: latestMetricDate,
+  }
+}
 
 function formatRelativeSyncTime(valueMs: number | null): string {
   if (!valueMs) return 'Never'
@@ -76,6 +98,7 @@ export function useAnalyticsPageController() {
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
   const { user } = useAuth()
+  const previewGoogleAnalyticsStatus = useMemo(() => getPreviewGoogleAnalyticsStatus(), [])
 
   const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => {
     const end = endOfDay(new Date())
@@ -83,13 +106,23 @@ export function useAnalyticsPageController() {
     return { start, end }
   })
   const [periodDays, setPeriodDays] = useState(30)
-  const [gaConnected, setGaConnected] = useState(false)
-  const [gaAccountLabel, setGaAccountLabel] = useState<string | null>(null)
-  const [gaPropertyId, setGaPropertyId] = useState<string | null>(null)
-  const [gaLastSyncStatus, setGaLastSyncStatus] = useState<string | null>(null)
+  const [gaConnected, setGaConnected] = useState(isPreviewMode)
+  const [gaAccountLabel, setGaAccountLabel] = useState<string | null>(
+    isPreviewMode ? previewGoogleAnalyticsStatus.accountLabel : null,
+  )
+  const [gaPropertyId, setGaPropertyId] = useState<string | null>(
+    isPreviewMode ? previewGoogleAnalyticsStatus.propertyId : null,
+  )
+  const [gaLastSyncStatus, setGaLastSyncStatus] = useState<string | null>(
+    isPreviewMode ? previewGoogleAnalyticsStatus.lastSyncStatus : null,
+  )
   const [gaLastSyncMessage, setGaLastSyncMessage] = useState<string | null>(null)
-  const [gaLastSyncedAtMs, setGaLastSyncedAtMs] = useState<number | null>(null)
-  const [gaLastSyncRequestedAtMs, setGaLastSyncRequestedAtMs] = useState<number | null>(null)
+  const [gaLastSyncedAtMs, setGaLastSyncedAtMs] = useState<number | null>(
+    isPreviewMode ? previewGoogleAnalyticsStatus.lastSyncedAtMs : null,
+  )
+  const [gaLastSyncRequestedAtMs, setGaLastSyncRequestedAtMs] = useState<number | null>(
+    isPreviewMode ? previewGoogleAnalyticsStatus.lastSyncRequestedAtMs : null,
+  )
   const [gaLoading, setGaLoading] = useState(false)
   const [gaSetupDialogOpen, setGaSetupDialogOpen] = useState(false)
   const [gaSetupMessage, setGaSetupMessage] = useState<string | null>(null)
@@ -106,7 +139,6 @@ export function useAnalyticsPageController() {
   const deleteGoogleAnalyticsIntegrationMutation = useMutation(analyticsIntegrationsApi.deleteGoogleAnalyticsIntegration)
   const deleteGoogleAnalyticsSyncJobsMutation = useMutation(analyticsIntegrationsApi.deleteGoogleAnalyticsSyncJobs)
   const deleteGoogleAnalyticsMetricsMutation = useMutation(analyticsIntegrationsApi.deleteGoogleAnalyticsMetrics)
-
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const googleAnalyticsStatus = useQuery(
     analyticsIntegrationsApi.getGoogleAnalyticsStatus,
@@ -125,13 +157,13 @@ export function useAnalyticsPageController() {
 
   const refreshGoogleAnalyticsStatus = useCallback(async () => {
     if (isPreviewMode) {
-      setGaConnected(false)
-      setGaAccountLabel(null)
-      setGaPropertyId(null)
-      setGaLastSyncStatus(null)
-      setGaLastSyncMessage(null)
-      setGaLastSyncedAtMs(null)
-      setGaLastSyncRequestedAtMs(null)
+      setGaConnected(true)
+      setGaAccountLabel(previewGoogleAnalyticsStatus.accountLabel)
+      setGaPropertyId(previewGoogleAnalyticsStatus.propertyId)
+      setGaLastSyncStatus(previewGoogleAnalyticsStatus.lastSyncStatus)
+      setGaLastSyncMessage(previewGoogleAnalyticsStatus.lastSyncMessage)
+      setGaLastSyncedAtMs(previewGoogleAnalyticsStatus.lastSyncedAtMs)
+      setGaLastSyncRequestedAtMs(previewGoogleAnalyticsStatus.lastSyncRequestedAtMs)
       return
     }
 
@@ -151,7 +183,7 @@ export function useAnalyticsPageController() {
     setGaLastSyncMessage(syncMessage)
     setGaLastSyncedAtMs(lastSynced)
     setGaLastSyncRequestedAtMs(lastRequested)
-  }, [googleAnalyticsStatus, isPreviewMode])
+  }, [googleAnalyticsStatus, isPreviewMode, previewGoogleAnalyticsStatus])
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -585,13 +617,14 @@ export function useAnalyticsPageController() {
   const isGaSelectedWithoutData = gaConnected && !hasGaData && !initialMetricsLoading
 
   const gaStatusLabel = useMemo(() => {
+    if (isPreviewMode) return 'Preview dataset'
     if (!gaConnected) return 'Not connected'
     if (gaNeedsPropertySelection) return 'Property setup required'
     if (gaLastSyncStatus === 'error') return 'Last sync failed'
     if (gaLastSyncStatus === 'pending') return 'Sync queued'
     if (gaLastSyncStatus === 'success') return 'Synced'
     return 'Connected'
-  }, [gaConnected, gaLastSyncStatus, gaNeedsPropertySelection])
+  }, [gaConnected, gaLastSyncStatus, gaNeedsPropertySelection, isPreviewMode])
 
   const gaLastSyncedLabel = useMemo(() => formatRelativeSyncTime(gaLastSyncedAtMs), [gaLastSyncedAtMs])
   const gaLastRequestedLabel = useMemo(() => formatRelativeSyncTime(gaLastSyncRequestedAtMs), [gaLastSyncRequestedAtMs])

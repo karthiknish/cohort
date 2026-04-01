@@ -6,14 +6,21 @@ import { usePathname } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { LayoutDashboard, LogOut } from 'lucide-react'
 
+import { getPreviewSettingsProfile } from '@/lib/preview-data'
 import { Button } from '@/shared/ui/button'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { usePreview } from '@/shared/contexts/preview-context'
+import { Badge } from '@/shared/ui/badge'
 
 export function SiteHeader() {
   const { user, loading, signOut } = useAuth()
+  const { isPreviewMode } = usePreview()
   const pathname = usePathname()
   const [signingOut, setSigningOut] = useState(false)
-  const showAccountActions = pathname === '/for-you'
+  const showAccountActions = pathname === '/for-you' && (Boolean(user) || isPreviewMode)
+  const previewProfile = getPreviewSettingsProfile()
+  const displayedName = isPreviewMode ? previewProfile.name : (user?.name ?? user?.email ?? null)
+  const displayedEmail = isPreviewMode ? previewProfile.email : (user?.email ?? null)
 
   const handleSignOut = useCallback(() => {
     setSigningOut(true)
@@ -36,35 +43,44 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-3">
           {/* Mobile actions */}
-          {user && showAccountActions && (
+          {showAccountActions && (
             <div className="flex items-center gap-2 md:hidden">
               <Button asChild variant="default" size="icon" aria-label="Go to Dashboard">
                 <Link href="/dashboard">
                   <LayoutDashboard className="h-5 w-5" />
                 </Link>
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleSignOut}
-                disabled={signingOut || loading}
-                aria-label="Sign out"
-              >
-                <LogOut className="h-5 w-5" />
-              </Button>
+              {user ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSignOut}
+                  disabled={signingOut || loading}
+                  aria-label="Sign out"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              ) : null}
             </div>
           )}
 
           {/* Desktop account actions */}
-          {user && showAccountActions && (
+          {showAccountActions && (
             <div className="hidden items-center gap-3 md:flex">
               <div className="text-right">
-                <p className="max-w-[180px] truncate text-sm font-medium text-foreground">
-                  {user.name ?? user.email}
-                </p>
+                <div className="flex items-center justify-end gap-2">
+                  {isPreviewMode ? (
+                    <Badge variant="secondary" className="h-5 rounded-full px-2 text-[10px] uppercase tracking-[0.14em]">
+                      Preview
+                    </Badge>
+                  ) : null}
+                  <p className="max-w-[180px] truncate text-sm font-medium text-foreground">
+                    {displayedName}
+                  </p>
+                </div>
                 <p className="max-w-[220px] truncate text-xs text-muted-foreground">
-                  {user.email}
+                  {displayedEmail}
                 </p>
               </div>
               <Button asChild variant="default" size="sm" className="gap-2">
@@ -73,17 +89,19 @@ export function SiteHeader() {
                   Go to Dashboard
                 </Link>
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleSignOut}
-                disabled={signingOut || loading}
-                className="gap-2"
-              >
-                <LogOut className="h-4 w-4" />
-                {signingOut ? 'Signing out…' : 'Sign out'}
-              </Button>
+              {user ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSignOut}
+                  disabled={signingOut || loading}
+                  className="gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  {signingOut ? 'Signing out…' : 'Sign out'}
+                </Button>
+              ) : null}
             </div>
           )}
         </div>

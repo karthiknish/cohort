@@ -21,6 +21,7 @@ export function WorkspaceProviders({
   enablePreferences = false,
 }: WorkspaceProvidersProps) {
   let content = children
+  const shouldEnablePreview = enablePreview || enablePreferences
 
   if (enableProject) {
     content = (
@@ -30,7 +31,7 @@ export function WorkspaceProviders({
     )
   }
 
-  if (enablePreview) {
+  if (shouldEnablePreview) {
     content = <PreviewProvider>{content}</PreviewProvider>
   }
 

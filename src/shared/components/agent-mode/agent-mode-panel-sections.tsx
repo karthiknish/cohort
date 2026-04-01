@@ -23,7 +23,6 @@ import {
   Sparkles,
   SquarePen,
   Trash2,
-  Upload,
   WifiOff,
   X,
 } from 'lucide-react'
@@ -81,43 +80,6 @@ function AttachmentStatusBadge({ attachment }: { attachment: AgentAttachmentCont
   }
 
   return <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">Needs Review</span>
-}
-
-function AttachmentDropzone({
-  isDraggingFiles,
-  isExtractingAttachments,
-  onOpenFilePicker,
-}: {
-  isDraggingFiles: boolean
-  isExtractingAttachments: boolean
-  onOpenFilePicker: () => void
-}) {
-  return (
-    <div
-      className={cn(
-        'mb-3 rounded-2xl border border-dashed px-4 py-3 transition-colors',
-        isDraggingFiles ? 'border-primary bg-primary/5' : 'border-border/70 bg-background/70',
-      )}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-            {isExtractingAttachments ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-          </div>
-          <div>
-            <p className="text-sm font-medium">Drop docs here for context</p>
-            <p className="text-xs text-muted-foreground">
-              ODF, Office, text, and PDF files can be attached. The assistant uses them to draft tasks and projects, then asks follow-up questions if required details are still unclear.
-            </p>
-          </div>
-        </div>
-        <Button type="button" variant="outline" size="sm" className="gap-2 rounded-full" onClick={onOpenFilePicker}>
-          <Paperclip className="h-4 w-4" />
-          Attach
-        </Button>
-      </div>
-    </div>
-  )
 }
 
 function AttachmentItem({
@@ -304,7 +266,6 @@ export type AgentComposerSectionProps = {
   users: MentionDropdownProps['users']
   mentionsLoading: MentionDropdownProps['isLoading']
   pendingAttachments: AgentAttachmentContext[]
-  isDraggingFiles: boolean
   isExtractingAttachments: boolean
   disabled: boolean
   onInputChange: (event: ChangeEvent<HTMLInputElement>) => void
@@ -360,7 +321,6 @@ export function AgentComposerSection({
   users,
   mentionsLoading,
   pendingAttachments,
-  isDraggingFiles,
   isExtractingAttachments,
   disabled,
   onInputChange,
@@ -379,11 +339,6 @@ export function AgentComposerSection({
 
   return (
     <div className={cn(isCentered ? 'rounded-2xl border bg-background p-3' : 'relative border-t bg-muted/30 p-3')}>
-      <AttachmentDropzone
-        isDraggingFiles={isDraggingFiles}
-        isExtractingAttachments={isExtractingAttachments}
-        onOpenFilePicker={onOpenFilePicker}
-      />
       <AttachmentList attachments={pendingAttachments} onRemoveAttachment={onRemoveAttachment} />
 
       <div className={cn('relative flex items-center gap-2', isCentered && 'justify-center')}>
