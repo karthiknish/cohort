@@ -164,7 +164,7 @@ const HUB_DOT_DELAYS = [0.44, 0.22, 0, 0.22, 0.44] as const
 
 function ScrollGroup() {
   return (
-    <div className="flex flex-col gap-2 pb-2">
+    <div className="flex flex-col gap-2 py-1">
       {PORTAL_CLIENTS.map((client) => (
         <div
           key={client.id}
@@ -396,13 +396,13 @@ function PortalIllustration() {
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-t from-background via-background/80 to-transparent" />
 
             <m.div
-              className="flex flex-col gap-0"
-              initial={prefersReducedMotion ? false : { y: 0 }}
-              animate={prefersReducedMotion ? { y: 0 } : { y: ['0%', '-50%'] }}
+              className="flex flex-col"
+              animate={prefersReducedMotion ? undefined : { y: ['0%', '-50%'] }}
               transition={{
                 duration: 12,
                 repeat: Infinity,
-                ease: motionEasing.linear,
+                repeatType: 'loop',
+                ease: 'linear',
               }}
             >
               <ScrollGroup />
