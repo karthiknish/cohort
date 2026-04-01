@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import type { ComponentType, CSSProperties } from 'react'
 
+import { RetainerSlider } from '@/features/marketing/home/components/retainer-slider'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/shared/ui/badge'
 import { FadeIn } from '@/shared/ui/animate-in'
@@ -79,8 +80,6 @@ const MARQUEE_STYLE: CSSProperties = {
   animationDirection: 'reverse',
 }
 const BADGE_BOB_STYLE: CSSProperties = { animation: 'badge-bob 3s ease-in-out infinite alternate' }
-const SLIDER_FILL_STYLE: CSSProperties = { left: '0%', right: '30%' }
-const SLIDER_THUMB_STYLE: CSSProperties = { left: 'calc(70% - 8px)' }
 const PLATFORM_BAR_HEIGHT_STYLES: readonly CSSProperties[] = [
   { height: '52%' },
   { height: '31%' },
@@ -243,30 +242,7 @@ export function FeaturesBento() {
         <FadeIn>
           <div className="flex h-84 flex-col gap-6 rounded-xl border bg-card py-6 shadow-none">
             <div className="flex flex-col gap-6 px-6">
-              {/* Static slider visual */}
-              <div className="flex flex-col gap-3 rounded-xl border px-5 py-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Monthly retainer target</span>
-                  <Badge className="rounded-full px-1.5">$48K</Badge>
-                </div>
-                <div className="relative flex w-full items-center">
-                  <div className="relative h-1.5 grow overflow-hidden rounded-full bg-muted">
-                    <div className="absolute h-full bg-primary" style={SLIDER_FILL_STYLE} />
-                  </div>
-                  <div
-                    className="absolute size-4 rounded-full border border-primary bg-white shadow-sm"
-                    style={SLIDER_THUMB_STYLE}
-                    aria-hidden="true"
-                  />
-                </div>
-                <div className="flex items-center justify-between px-0.5 text-sm font-medium text-muted-foreground">
-                  <span>$0</span>
-                  <span>$12K</span>
-                  <span>$24K</span>
-                  <span>$36K</span>
-                  <span>$48K</span>
-                </div>
-              </div>
+              <RetainerSlider />
 
               {/* Text */}
               <div className="flex flex-col gap-4">
