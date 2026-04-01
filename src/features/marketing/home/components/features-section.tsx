@@ -134,12 +134,12 @@ function DotConnector() {
   return (
     <LazyMotion features={domAnimation}>
       <div className="relative hidden h-32 w-10 items-center justify-center lg:flex" aria-hidden="true">
-        <div className="absolute inset-y-4 left-1/2 h-auto w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-primary/15 to-transparent" />
+        <div className="absolute inset-y-4 left-1/2 h-auto w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-primary/40 to-transparent" />
         <div className="flex flex-col items-center gap-3.5">
           {HUB_DOT_DELAYS.map((delay, index) => (
             <m.span
               key={index}
-              className="block h-[5px] w-[5px] rounded-full bg-primary/35 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+              className="block h-[5px] w-[5px] rounded-full bg-primary/60 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
               initial={prefersReducedMotion ? false : { opacity: 0.3, scale: 0.8 }}
               animate={
                 prefersReducedMotion
@@ -185,7 +185,7 @@ function HubCore() {
   return (
     <LazyMotion features={domAnimation}>
       <m.div
-        className="relative hidden items-center overflow-hidden rounded-full bg-primary px-5 py-2.5 shadow-2xl lg:flex"
+        className="relative hidden items-center rounded-full bg-primary px-5 py-2.5 shadow-2xl lg:flex"
         initial={prefersReducedMotion ? false : { scale: 0.97, opacity: 0.95 }}
         animate={
           prefersReducedMotion
@@ -296,16 +296,12 @@ function PortalIllustration() {
             </Badge>
           </div>
 
-          <div className="relative h-[176px] overflow-hidden rounded-2xl border border-border/50 bg-muted/20 px-2 py-2">
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-10 bg-gradient-to-b from-background via-background/70 to-transparent" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-t from-background via-background/80 to-transparent" />
-
-            {PORTAL_AVATAR_POSITIONS.map((position, index) => {
+          {PORTAL_AVATAR_POSITIONS.map((position, index) => {
               const member = PORTAL_CLIENTS[index]!
               return (
                 <m.div
                   key={member.id}
-                  className={cn('absolute z-20 hidden rounded-full border border-white/70 bg-background/90 p-1 shadow-lg md:block', position)}
+                  className={cn('absolute z-10 hidden rounded-full border border-white/70 bg-background/90 p-1 shadow-lg md:block', position)}
                   initial={prefersReducedMotion ? false : { y: 0, opacity: 0.7 }}
                   animate={
                     prefersReducedMotion
@@ -320,13 +316,17 @@ function PortalIllustration() {
                   }}
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarFallback className={cn('text-[10px] font-semibold text-white', member!.color)}>
-                      {member!.initials}
+                    <AvatarFallback className={cn('text-[10px] font-semibold text-white', member.color)}>
+                      {member.initials}
                     </AvatarFallback>
                   </Avatar>
                 </m.div>
               )
             })}
+
+          <div className="relative h-[176px] overflow-hidden rounded-2xl border border-border/50 bg-muted/20 px-2 py-2">
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-10 bg-gradient-to-b from-background via-background/70 to-transparent" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-t from-background via-background/80 to-transparent" />
 
             <m.div
               className="space-y-2"
