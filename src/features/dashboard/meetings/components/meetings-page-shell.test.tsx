@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { getPreviewMeetings } from '../lib/preview-data'
+
 let mockContext: Record<string, unknown>
 
 vi.mock('./meetings-page-provider', () => ({
@@ -29,7 +31,15 @@ vi.mock('./meeting-schedule-card', () => ({
 }))
 
 vi.mock('./upcoming-meetings-card', () => ({
-  UpcomingMeetingsCard: () => <div>Upcoming Meetings Card</div>,
+  UpcomingMeetingsCard: ({ meetings }: { meetings: Array<{ status: string; notesProcessingState?: string | null; transcriptProcessingState?: string | null }> }) => (
+    <div>
+      Upcoming Meetings Card
+      <span>{meetings.map((meeting) => meeting.status).join(',')}</span>
+      <span>
+        {meetings.map((meeting) => `${meeting.transcriptProcessingState ?? 'idle'}:${meeting.notesProcessingState ?? 'idle'}`).join(',')}
+      </span>
+    </div>
+  ),
 }))
 
 vi.mock('./meeting-room-loading-state', () => ({
@@ -141,5 +151,23 @@ describe('MeetingsPageShell', () => {
 
     expect(markup).toContain('Meeting Room meeting-1')
     expect(markup).not.toContain('Create Meeting Card')
+  })
+
+  it('passes preview meetings with lifecycle and processing states into the upcoming meetings card', () => {
+    mockContext = {
+      ...mockContext,
+      isPreviewMode: true,
+      canSchedule: false,
+      upcomingMeetings: getPreviewMeetings(null, 'UTC'),
+    }
+
+    const markup = renderToStaticMarkup(<MeetingsPageShell />)
+
+    expect(markup).toContain('Preview mode')
+    expect(markup).toContain('scheduled')
+    expect(markup).toContain('completed')
+    expect(markup).toContain('cancelled')
+    expect(markup).toContain('processing:processing')
+    expect(markup).toContain('idle:failed')
   })
 })
