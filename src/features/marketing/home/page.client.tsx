@@ -6,6 +6,7 @@ import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 import { FeaturesBento } from "@/features/marketing/home/components/features-bento"
+import { FeaturesSection } from "@/features/marketing/home/components/features-section"
 import { HeroBackground } from "@/features/marketing/home/components/hero-background"
 import { HERO_HEADLINE, HERO_SUBHEAD } from "@/features/marketing/home/components/home-content"
 import { MinifiedSoftwarePreview } from "@/features/marketing/home/components/minified-software-preview"
@@ -80,7 +81,10 @@ function HomePageContent() {
         </div>
       </section>
 
-      {/* ── Features ── */}
+      {/* ── Features highlight ── */}
+      <FeaturesSection />
+
+      {/* ── Features bento ── */}
       <section className="bg-muted/40 py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-6">
           <FadeIn className="mb-16 text-center">
