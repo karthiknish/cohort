@@ -7,7 +7,7 @@ export function SiteFooter() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="border-t border-muted/50 bg-background/95">
+    <footer className="border-t border-muted/50 bg-background/95" style={{ viewTransitionName: 'site-footer' }}>
       <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
         <div className="grid gap-10 sm:grid-cols-2">
           <div className="space-y-3">

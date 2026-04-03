@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { ViewTransition } from 'react'
 import { ArrowLeft, Chrome, Facebook, Linkedin, Music4 } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -53,6 +54,9 @@ export function CampaignHeader({
   refreshing,
 }: CampaignHeaderProps) {
   const providerDisplay = formatProviderName(campaign?.providerId ?? '')
+  const sharedCampaignKey = campaign ? `${campaign.providerId}-${campaign.id}` : null
+  const campaignName = campaign?.name ?? ''
+  const campaignStatus = campaign?.status ?? ''
 
   const getProviderIcon = () => {
     if (!campaign?.providerId) return null
@@ -78,7 +82,7 @@ export function CampaignHeader({
     <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
       <div className="space-y-4">
         <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground hover:text-foreground">
-          <Link href="/dashboard/ads">
+          <Link href="/dashboard/ads" transitionTypes={['nav-back']}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Ads
           </Link>
@@ -113,21 +117,33 @@ export function CampaignHeader({
                   {getProviderIcon()}
                   {providerDisplay}
                 </Badge>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    'ml-1 px-1.5 py-0 text-[9px] font-black uppercase tracking-tight opacity-70',
-                    campaign?.status === 'ACTIVE'
-                      ? 'border-success/20 bg-success/10 text-success'
-                      : 'border-warning/20 bg-warning/10 text-warning'
-                  )}
-                >
-                  {campaign?.status}
-                </Badge>
+                {sharedCampaignKey ? (
+                  <ViewTransition name={`campaign-status-${sharedCampaignKey}`} share="morph" default="none">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'ml-1 px-1.5 py-0 text-[9px] font-black uppercase tracking-tight opacity-70',
+                        campaignStatus === 'ACTIVE'
+                          ? 'border-success/20 bg-success/10 text-success'
+                          : 'border-warning/20 bg-warning/10 text-warning'
+                      )}
+                    >
+                      {campaignStatus}
+                    </Badge>
+                  </ViewTransition>
+                ) : null}
               </div>
-              <h1 className="text-4xl font-black tracking-tighter whitespace-pre-wrap">
-                {campaign?.name}
-              </h1>
+              {sharedCampaignKey ? (
+                <ViewTransition name={`campaign-title-${sharedCampaignKey}`} share="text-morph" default="none">
+                  <h1 className="text-4xl font-black tracking-tighter whitespace-pre-wrap">
+                    {campaignName}
+                  </h1>
+                </ViewTransition>
+              ) : (
+                <h1 className="text-4xl font-black tracking-tighter whitespace-pre-wrap">
+                  {campaign?.name}
+                </h1>
+              )}
             </div>
           )}
           {!loading && (

@@ -44,10 +44,15 @@ import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { parsePageSize } from '@/lib/pagination'
 import { getPreviewNotifications } from '@/lib/preview-data'
 import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
+import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 
 const PAGE_SIZE = 25
 const FILTER_VALUES = ['all', 'unread', 'mentions', 'system'] as const
-const NOTIFICATIONS_PAGE_FALLBACK = <NotificationsPageFallback />
+const NOTIFICATIONS_PAGE_FALLBACK = (
+  <RevealTransitionFallback>
+    <NotificationsPageFallback />
+  </RevealTransitionFallback>
+)
 
 
 type AckAction = 'read' | 'dismiss'
@@ -88,13 +93,15 @@ export default function NotificationsPage() {
 
 function NotificationsPageFallback() {
   return (
-    <div className={DASHBOARD_THEME.layout.container}>
+    <RevealTransition>
+      <div className={DASHBOARD_THEME.layout.container}>
       <Card>
         <CardContent className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
           <LoaderCircle className="h-5 w-5 animate-spin" /> Loading notifications…
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </RevealTransition>
   )
 }
 

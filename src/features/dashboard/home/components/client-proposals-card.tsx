@@ -3,6 +3,7 @@
 import React, { memo } from 'react'
 import Link from 'next/link'
 import { FileText, ArrowRight, Clock } from 'lucide-react'
+import { ViewTransition } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
@@ -79,20 +80,24 @@ function ClientProposalsCardComponent({ proposals, loading }: ClientProposalsCar
                                 className="group flex flex-col gap-1 p-3 rounded-xl border bg-card hover:border-primary/30 transition-colors shadow-none"
                             >
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm font-semibold truncate group-hover:text-primary transition-colors">
-                                        {proposal.clientName || 'Strategy Proposal'}
-                                    </span>
-                                    <Badge
-                                        variant={proposal.status === 'ready' || proposal.status === 'sent' ? 'default' : 'secondary'}
-                                        className={cn(
-                                            "text-[9px] h-4 px-1.5 uppercase font-bold tracking-tighter",
-                                            proposal.status === 'ready' && "bg-success text-success-foreground hover:bg-success",
-                                            proposal.status === 'sent' && "bg-info text-info-foreground hover:bg-info",
-                                            proposal.status === 'draft' && "bg-warning/10 text-warning border-none shadow-none"
-                                        )}
-                                    >
-                                        {proposal.status}
-                                    </Badge>
+                                    <ViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" default="none">
+                                        <span className="text-sm font-semibold truncate group-hover:text-primary transition-colors">
+                                            {proposal.clientName || 'Strategy Proposal'}
+                                        </span>
+                                    </ViewTransition>
+                                    <ViewTransition name={`proposal-status-${proposal.id}`} share="morph" default="none">
+                                        <Badge
+                                            variant={proposal.status === 'ready' || proposal.status === 'sent' ? 'default' : 'secondary'}
+                                            className={cn(
+                                                "text-[9px] h-4 px-1.5 uppercase font-bold tracking-tighter",
+                                                proposal.status === 'ready' && "bg-success text-success-foreground hover:bg-success",
+                                                proposal.status === 'sent' && "bg-info text-info-foreground hover:bg-info",
+                                                proposal.status === 'draft' && "bg-warning/10 text-warning border-none shadow-none"
+                                            )}
+                                        >
+                                            {proposal.status}
+                                        </Badge>
+                                    </ViewTransition>
                                 </div>
                                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                                     <span className="flex items-center gap-1">
@@ -102,6 +107,7 @@ function ClientProposalsCardComponent({ proposals, loading }: ClientProposalsCar
                                     <span className="h-2 w-px bg-muted-foreground/20" />
                                     <Link
                                         href={proposal.status === 'ready' ? `/dashboard/proposals/${proposal.id}/deck` : '/dashboard/proposals'}
+                                        transitionTypes={proposal.status === 'ready' ? ['nav-forward'] : undefined}
                                         className="text-primary hover:underline font-medium"
                                     >
                                         {proposal.status === 'ready' ? 'Preview Deck' : 'Resume Editing'}

@@ -25,6 +25,7 @@ import { BudgetControlSection } from '../../components/budget-control-section'
 import { CampaignAdsSection } from '../../components/campaign-ads-section'
 import { FormulaBuilderCard } from '@/features/dashboard/ads/components/formula-builder-card'
 import { useFormulaEditor } from '@/features/dashboard/ads/hooks/use-formula-editor'
+import { DirectionalPageTransition, RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 
 type Campaign = {
   id: string
@@ -587,8 +588,12 @@ function CampaignInsightsPageContent() {
 
 export default function CampaignInsightsPage() {
   return (
-    <Suspense fallback={campaignInsightsSuspenseFallback}>
-      <CampaignInsightsPageContent />
-    </Suspense>
+    <DirectionalPageTransition>
+      <Suspense fallback={<RevealTransitionFallback>{campaignInsightsSuspenseFallback}</RevealTransitionFallback>}>
+        <RevealTransition>
+          <CampaignInsightsPageContent />
+        </RevealTransition>
+      </Suspense>
+    </DirectionalPageTransition>
   )
 }

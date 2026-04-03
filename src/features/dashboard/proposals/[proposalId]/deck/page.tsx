@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowLeft, Download, LoaderCircle, Presentation, Target, Layers, BarChart3, Rocket, Users, Lightbulb, Wallet, Calendar, Sparkles, Clock } from 'lucide-react'
+import { ViewTransition } from 'react'
 
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -15,6 +16,7 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { useQuery } from 'convex/react'
 import { proposalsApi } from '@/lib/convex-api'
 import { getPreviewProposals } from '@/lib/preview-data'
+import { DirectionalPageTransition } from '@/shared/ui/page-transition'
 
 export default function ProposalDeckPage() {
   const params = useParams<{ proposalId: string }>()
@@ -121,21 +123,33 @@ export default function ProposalDeckPage() {
     return <Icon className="h-4 w-4" />
   }
 
+  const proposalDisplayName = proposal?.clientName ?? 'Strategy Proposal'
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/dashboard/proposals">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to proposals
-          </Link>
-        </Button>
-        {proposal && (
-          <Badge variant={proposal.status === 'ready' ? 'default' : 'outline'} className="uppercase tracking-wide">
-            {proposal.status}
-          </Badge>
-        )}
-      </div>
+    <DirectionalPageTransition>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/dashboard/proposals" transitionTypes={['nav-back']}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to proposals
+              </Link>
+            </Button>
+            {proposal ? (
+              <ViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" default="none">
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">{proposalDisplayName}</h1>
+              </ViewTransition>
+            ) : null}
+          </div>
+          {proposal ? (
+            <ViewTransition name={`proposal-status-${proposal.id}`} share="morph" default="none">
+              <Badge variant={proposal.status === 'ready' ? 'default' : 'outline'} className="uppercase tracking-wide">
+                {proposal.status}
+              </Badge>
+            </ViewTransition>
+          ) : null}
+        </div>
 
       {isLoading ? (
         <div className="flex min-h-[60vh] items-center justify-center">
@@ -152,7 +166,7 @@ export default function ProposalDeckPage() {
           </CardHeader>
           <CardContent>
             <Button variant="outline" asChild>
-              <Link href="/dashboard/proposals">Return to proposals</Link>
+                <Link href="/dashboard/proposals" transitionTypes={['nav-back']}>Return to proposals</Link>
             </Button>
           </CardContent>
         </Card>
@@ -253,11 +267,12 @@ export default function ProposalDeckPage() {
           </CardHeader>
           <CardContent>
             <Button variant="outline" asChild>
-              <Link href="/dashboard/proposals">Return to proposals</Link>
+              <Link href="/dashboard/proposals" transitionTypes={['nav-back']}>Return to proposals</Link>
             </Button>
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+    </DirectionalPageTransition>
   )
 }

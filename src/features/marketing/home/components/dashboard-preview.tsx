@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
+import { ViewTransition } from 'react'
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 
 import { cn } from '@/lib/utils'
@@ -483,6 +484,7 @@ export function DashboardPreview() {
                 </div>
                 <Link
                   href="/dashboard"
+                  transitionTypes={['nav-forward']}
                   className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
                 >
                   Open dashboard
@@ -548,36 +550,38 @@ export function DashboardPreview() {
                       const isActive = metric.id === currentMetric.id
 
                       return (
-                        <button
-                          key={metric.id}
-                          type="button"
-                          data-metric-id={metric.id}
-                          aria-pressed={isActive}
-                          onClick={handleMetricSelect}
-                          className={cn(
-                            'rounded-2xl border px-3 py-3 text-left transition-colors',
-                            isActive
-                              ? cn('border-transparent bg-muted/90', TONE_BADGE_CLASSES[metric.tone])
-                              : 'border-border/60 bg-muted/30 text-foreground hover:bg-muted/60',
-                          )}
-                        >
-                          <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-muted-foreground">
-                            {metric.label}
-                          </p>
-                          <div className="mt-2 flex items-end justify-between gap-3">
-                            <span className="text-2xl font-semibold text-foreground">{metric.value}</span>
-                            <span className={cn('rounded-full border px-2 py-1 text-[11px] font-semibold', TONE_BADGE_CLASSES[metric.tone])}>
-                              {metric.delta}
-                            </span>
-                          </div>
-                        </button>
+                        <ViewTransition key={metric.id}>
+                          <button
+                            type="button"
+                            data-metric-id={metric.id}
+                            aria-pressed={isActive}
+                            onClick={handleMetricSelect}
+                            className={cn(
+                              'rounded-2xl border px-3 py-3 text-left transition-colors',
+                              isActive
+                                ? cn('border-transparent bg-muted/90', TONE_BADGE_CLASSES[metric.tone])
+                                : 'border-border/60 bg-muted/30 text-foreground hover:bg-muted/60',
+                            )}
+                          >
+                            <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-muted-foreground">
+                              {metric.label}
+                            </p>
+                            <div className="mt-2 flex items-end justify-between gap-3">
+                              <span className="text-2xl font-semibold text-foreground">{metric.value}</span>
+                              <span className={cn('rounded-full border px-2 py-1 text-[11px] font-semibold', TONE_BADGE_CLASSES[metric.tone])}>
+                                {metric.delta}
+                              </span>
+                            </div>
+                          </button>
+                        </ViewTransition>
                       )
                     })}
                   </div>
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(250px,0.85fr)]">
-                  <div className="rounded-3xl border border-border/60 bg-background/90 p-4 sm:p-5">
+                  <ViewTransition key={currentMetric.id}>
+                    <div className="rounded-3xl border border-border/60 bg-background/90 p-4 sm:p-5">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
@@ -606,9 +610,11 @@ export function DashboardPreview() {
                     </div>
 
                     <p className="mt-5 text-sm leading-6 text-muted-foreground">{currentMetric.detail}</p>
-                  </div>
+                    </div>
+                  </ViewTransition>
 
-                  <div className="rounded-3xl border border-border/60 bg-muted/35 p-4 sm:p-5">
+                  <ViewTransition key={`${currentMetric.id}-focus`}>
+                    <div className="rounded-3xl border border-border/60 bg-muted/35 p-4 sm:p-5">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-primary" />
                       <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
@@ -618,13 +624,16 @@ export function DashboardPreview() {
 
                     <div className="mt-4 space-y-3">
                       {currentMetric.focusItems.map((item) => (
-                        <div key={item} className="flex items-start gap-3 rounded-2xl border border-border/50 bg-background/85 px-3 py-3">
-                          <span className={cn('mt-1 h-2.5 w-2.5 rounded-full', TONE_DOT_CLASSES[currentMetric.tone])} />
-                          <p className="text-sm leading-6 text-foreground">{item}</p>
-                        </div>
+                        <ViewTransition key={item}>
+                          <div className="flex items-start gap-3 rounded-2xl border border-border/50 bg-background/85 px-3 py-3">
+                            <span className={cn('mt-1 h-2.5 w-2.5 rounded-full', TONE_DOT_CLASSES[currentMetric.tone])} />
+                            <p className="text-sm leading-6 text-foreground">{item}</p>
+                          </div>
+                        </ViewTransition>
                       ))}
                     </div>
-                  </div>
+                    </div>
+                  </ViewTransition>
                 </div>
               </div>
 
@@ -642,17 +651,19 @@ export function DashboardPreview() {
 
                   <div className="mt-4 space-y-3">
                     {currentView.queue.map((item) => (
-                      <div key={item.id} className="rounded-2xl border border-border/50 bg-muted/35 px-3 py-3 transition-colors hover:bg-muted/60">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                            <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.meta}</p>
+                      <ViewTransition key={item.id}>
+                        <div className="rounded-2xl border border-border/50 bg-muted/35 px-3 py-3 transition-colors hover:bg-muted/60">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                              <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.meta}</p>
+                            </div>
+                            <span className={cn('rounded-full border px-2 py-1 text-[11px] font-semibold', TONE_BADGE_CLASSES[item.tone])}>
+                              {item.stage}
+                            </span>
                           </div>
-                          <span className={cn('rounded-full border px-2 py-1 text-[11px] font-semibold', TONE_BADGE_CLASSES[item.tone])}>
-                            {item.stage}
-                          </span>
                         </div>
-                      </div>
+                      </ViewTransition>
                     ))}
                   </div>
                 </div>
@@ -668,22 +679,25 @@ export function DashboardPreview() {
 
                   <div className="mt-4 space-y-3">
                     {currentView.agentItems.map((item) => (
-                      <div key={item.id} className="rounded-2xl border border-primary-foreground/12 bg-primary-foreground/8 px-3 py-3">
-                        <div className="flex items-start gap-3">
-                          <Bot className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                          <div>
-                            <p className="text-sm font-semibold text-primary-foreground">{item.label}</p>
-                            <p className="mt-1 text-[11px] font-medium tracking-[0.16em] text-primary-foreground/70 uppercase">
-                              {item.meta}
-                            </p>
+                      <ViewTransition key={item.id}>
+                        <div className="rounded-2xl border border-primary-foreground/12 bg-primary-foreground/8 px-3 py-3">
+                          <div className="flex items-start gap-3">
+                            <Bot className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                            <div>
+                              <p className="text-sm font-semibold text-primary-foreground">{item.label}</p>
+                              <p className="mt-1 text-[11px] font-medium tracking-[0.16em] text-primary-foreground/70 uppercase">
+                                {item.meta}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      </ViewTransition>
                     ))}
                   </div>
 
                   <Link
                     href="/dashboard"
+                    transitionTypes={['nav-forward']}
                     className="mt-5 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90"
                   >
                     Launch workspace

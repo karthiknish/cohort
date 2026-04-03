@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { memo, useCallback, useMemo, useState } from 'react'
+import { ViewTransition } from 'react'
+import { memo, startTransition, useCallback, useMemo, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 
 import { Card, CardContent, CardDescription } from '@/shared/ui/card'
@@ -19,7 +20,9 @@ export function StatsCards({ stats, loading, primaryCount = 4 }: StatsCardsProps
   const [expanded, setExpanded] = useState(false)
 
   const handleToggleExpanded = useCallback(() => {
-    setExpanded((current) => !current)
+    startTransition(() => {
+      setExpanded((current) => !current)
+    })
   }, [])
 
   const { visibleStats, hiddenCount } = useMemo(() => {
@@ -41,7 +44,9 @@ export function StatsCards({ stats, loading, primaryCount = 4 }: StatsCardsProps
       <FadeInStagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {visibleStats.map((stat) => (
           <FadeInItem key={stat.id}>
-            <StatsCard stat={stat} loading={loading} />
+            <ViewTransition>
+              <StatsCard stat={stat} loading={loading} />
+            </ViewTransition>
           </FadeInItem>
         ))}
       </FadeInStagger>
@@ -107,7 +112,7 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
 
   if (stat.href) {
     return (
-      <Link href={stat.href} className="group block h-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+      <Link href={stat.href} transitionTypes={['nav-forward']} className="group block h-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
         {cardBody}
       </Link>
     )

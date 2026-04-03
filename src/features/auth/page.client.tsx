@@ -12,11 +12,16 @@ import { authClient } from '@/lib/auth-client'
 import { getSafeRedirectPath } from '@/lib/utils'
 import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 import { useToast } from '@/shared/ui/use-toast'
 
 const TAB_STORAGE_KEY = 'cohorts.auth.activeTab'
 const REMEMBER_ME_KEY = 'cohorts.auth.rememberMe'
-const AUTH_PAGE_FALLBACK = <AuthPageSkeleton />
+const AUTH_PAGE_FALLBACK = (
+  <RevealTransitionFallback>
+    <AuthPageSkeleton />
+  </RevealTransitionFallback>
+)
 const FIXTURE_PASSWORD_STRENGTH = {
   score: 3,
   label: 'Strong',
@@ -332,39 +337,41 @@ function HomeAuthPageContent() {
   }, [handleSubmit])
 
   return (
-    <BoneyardSkeletonBoundary
-      name="auth-main-page"
-      loading={isAuthLoading && !user}
-      loadingContent={loadingContent}
-      fixture={fixtureContent}
-    >
-      <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12">
-        <div className="w-full max-w-120">
-          <AuthCard
-            activeTab={activeTab}
-            emailError={emailError}
-            isSubmitting={isSubmitting}
-            isAuthLoading={isAuthLoading}
-            rememberMe={rememberMe}
-            showPassword={showPassword}
-            showConfirmPassword={showConfirmPassword}
-            passwordsMatch={passwordsMatch}
-            signInData={signInData}
-            signUpData={signUpData}
-            passwordStrength={passwordStrength}
-            onTabChange={handleTabChange}
-            onRememberMeChange={handleRememberMeChange}
-            onToggleShowPassword={handleToggleShowPassword}
-            onToggleShowConfirmPassword={handleToggleShowConfirmPassword}
-            onSignInChange={handleSignInChange}
-            onSignUpChange={handleSignUpChange}
-            onSubmitSignIn={handleSubmitSignIn}
-            onSubmitSignUp={handleSubmitSignUp}
-            onGoogleSignIn={handleGoogleSignIn}
-          />
+    <RevealTransition>
+      <BoneyardSkeletonBoundary
+        name="auth-main-page"
+        loading={isAuthLoading && !user}
+        loadingContent={loadingContent}
+        fixture={fixtureContent}
+      >
+        <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12">
+          <div className="w-full max-w-120">
+            <AuthCard
+              activeTab={activeTab}
+              emailError={emailError}
+              isSubmitting={isSubmitting}
+              isAuthLoading={isAuthLoading}
+              rememberMe={rememberMe}
+              showPassword={showPassword}
+              showConfirmPassword={showConfirmPassword}
+              passwordsMatch={passwordsMatch}
+              signInData={signInData}
+              signUpData={signUpData}
+              passwordStrength={passwordStrength}
+              onTabChange={handleTabChange}
+              onRememberMeChange={handleRememberMeChange}
+              onToggleShowPassword={handleToggleShowPassword}
+              onToggleShowConfirmPassword={handleToggleShowConfirmPassword}
+              onSignInChange={handleSignInChange}
+              onSignUpChange={handleSignUpChange}
+              onSubmitSignIn={handleSubmitSignIn}
+              onSubmitSignUp={handleSubmitSignUp}
+              onGoogleSignIn={handleGoogleSignIn}
+            />
+          </div>
         </div>
-      </div>
-    </BoneyardSkeletonBoundary>
+      </BoneyardSkeletonBoundary>
+    </RevealTransition>
   )
 }
 

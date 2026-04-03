@@ -4,6 +4,7 @@ import type { ColumnDef } from '@tanstack/react-table'
 import type { CellContext, HeaderContext } from '@tanstack/react-table'
 import { useAction } from 'convex/react'
 import { useRouter } from 'next/navigation'
+import { ViewTransition } from 'react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 import { Badge } from '@/shared/ui/badge'
@@ -140,7 +141,11 @@ function CampaignNameHeader({ column }: HeaderContext<Campaign, unknown>) {
 }
 
 function CampaignNameCell({ row }: CellContext<Campaign, unknown>) {
-  return <span className="font-medium hover:underline">{row.getValue('name')}</span>
+  return (
+    <ViewTransition name={`campaign-title-${row.original.providerId}-${row.original.id}`} share="text-morph" default="none">
+      <span className="font-medium hover:underline">{row.getValue('name')}</span>
+    </ViewTransition>
+  )
 }
 
 function CampaignStatusHeader({ column }: HeaderContext<Campaign, unknown>) {
@@ -148,7 +153,11 @@ function CampaignStatusHeader({ column }: HeaderContext<Campaign, unknown>) {
 }
 
 function CampaignStatusCell({ row }: CellContext<Campaign, unknown>) {
-  return getStatusBadge(row.getValue('status'))
+  return (
+    <ViewTransition name={`campaign-status-${row.original.providerId}-${row.original.id}`} share="morph" default="none">
+      {getStatusBadge(row.getValue('status'))}
+    </ViewTransition>
+  )
 }
 
 function CampaignRunsCell({ row }: CellContext<Campaign, unknown>) {
@@ -408,7 +417,7 @@ export function CampaignManagementCard({
       router.push(withPreviewModeSearchParamIfEnabled(
         `/dashboard/ads/campaigns/${providerId}/${campaignOrGroupId}?${params.toString()}`,
         isPreviewModeEnabled(),
-      ))
+      ), { transitionTypes: ['nav-forward'] })
     },
     [endDate, providerId, router, selectedClientId, startDate]
   )

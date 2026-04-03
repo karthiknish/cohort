@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useMemo } from 'react'
 import Link from 'next/link'
+import { ViewTransition } from 'react'
 import {
   ListChecks,
   LoaderCircle,
@@ -81,10 +82,11 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
   )
 
   return (
-    <div className={cn(
-      "group relative flex flex-col justify-between rounded-xl border border-muted/40 bg-background p-5 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/40 hover:shadow-md dark:hover:bg-muted/10",
-      isPendingUpdate && "opacity-75 pointer-events-none"
-    )}>
+    <ViewTransition>
+      <div className={cn(
+        "group relative flex flex-col justify-between rounded-xl border border-muted/40 bg-background p-5 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/40 hover:shadow-md dark:hover:bg-muted/10",
+        isPendingUpdate && "opacity-75 pointer-events-none"
+      )}>
       {/* Status accent bar */}
       <div
         className={cn(
@@ -235,7 +237,8 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
           </Link>
         </Button>
       </div>
-    </div>
+      </div>
+    </ViewTransition>
   )
 }
 

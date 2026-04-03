@@ -1,6 +1,6 @@
 'use client'
 
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 
 import { extractErrorCode, logError } from '@/lib/convex-errors'
 import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
@@ -17,6 +17,7 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { useToast } from '@/shared/ui/use-toast'
 import { DateRangePicker } from './components/date-range-picker'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 
 // Static imports for critical components
 import {
@@ -49,6 +50,14 @@ import {
 const ADS_SKELETON_200 = <Skeleton className="h-[200px] w-full" />
 const ADS_SKELETON_250 = <Skeleton className="h-[250px] w-full" />
 const ADS_SKELETON_300 = <Skeleton className="h-[300px] w-full" />
+
+function AdsSuspenseReveal({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
+  return (
+    <Suspense fallback={<RevealTransitionFallback>{fallback}</RevealTransitionFallback>}>
+      <RevealTransition>{children}</RevealTransition>
+    </Suspense>
+  )
+}
 
 /**
  * Ads Hub Page
@@ -338,7 +347,7 @@ export default function AdsPage() {
                   <h2 className="text-lg font-semibold">Campaign Management</h2>
                   <DateRangePicker value={dateRange} onChange={setDateRange} />
                 </div>
-                <Suspense fallback={ADS_SKELETON_200}>
+                <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
                   <div className="mt-4 grid gap-4">
                     {adPlatforms
                       .filter((p) => connectedProviders[p.id])
@@ -384,7 +393,7 @@ export default function AdsPage() {
                         />
                       ))}
                   </div>
-                </Suspense>
+                </AdsSuspenseReveal>
               </FadeIn>
             )}
           </>
@@ -419,56 +428,56 @@ export default function AdsPage() {
         </FadeIn>
 
         <FadeIn>
-          <Suspense fallback={ADS_SKELETON_200}>
+          <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
             <AlgorithmicInsightsCard
               insights={algorithmicInsights.insights}
               globalEfficiencyScore={algorithmicInsights.globalEfficiencyScore}
               providerEfficiencyScores={algorithmicInsights.providerEfficiencyScores}
               loading={metricsLoading || initialMetricsLoading}
             />
-          </Suspense>
+          </AdsSuspenseReveal>
         </FadeIn>
 
         <FadeIn>
-          <Suspense fallback={ADS_SKELETON_300}>
+          <AdsSuspenseReveal fallback={ADS_SKELETON_300}>
             <InsightsChartsCard
               analysis={algorithmicInsights.analysis}
               currency={activeCurrency}
               loading={metricsLoading || initialMetricsLoading}
             />
-          </Suspense>
+          </AdsSuspenseReveal>
         </FadeIn>
 
         <FadeIn>
-          <Suspense fallback={ADS_SKELETON_250}>
+          <AdsSuspenseReveal fallback={ADS_SKELETON_250}>
             <ComparisonViewCard
               periodComparison={periodComparison}
               providerComparison={providerComparison}
               currency={activeCurrency}
               loading={metricsLoading || initialMetricsLoading}
             />
-          </Suspense>
+          </AdsSuspenseReveal>
         </FadeIn>
 
         <FadeIn>
-          <Suspense fallback={ADS_SKELETON_200}>
+          <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
             <CustomInsightsCard
               derivedMetrics={hasMetricData ? derivedMetrics : null}
               processedMetrics={processedMetrics}
               currency={activeCurrency}
               loading={metricsLoading || initialMetricsLoading}
             />
-          </Suspense>
+          </AdsSuspenseReveal>
         </FadeIn>
 
         <FadeIn>
-          <Suspense fallback={ADS_SKELETON_300}>
+          <AdsSuspenseReveal fallback={ADS_SKELETON_300}>
             <FormulaBuilderCard
               formulaEditor={formulaEditor}
               metricTotals={hasMetricData ? derivedMetrics.totals : undefined}
               loading={metricsLoading || initialMetricsLoading}
             />
-          </Suspense>
+          </AdsSuspenseReveal>
         </FadeIn>
 
         <FadeIn>

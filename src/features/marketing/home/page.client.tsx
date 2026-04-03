@@ -13,11 +13,14 @@ import { MinifiedSoftwarePreview } from "@/features/marketing/home/components/mi
 import { authClient } from "@/lib/auth-client"
 import { FadeIn } from "@/shared/ui/animate-in"
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 
 const HOME_PAGE_FALLBACK = (
-  <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
-    <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
-  </div>
+  <RevealTransitionFallback>
+    <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
+      <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
+    </div>
+  </RevealTransitionFallback>
 )
 
 function resolveDashboardDestination(): string {
@@ -41,12 +44,13 @@ function HomePageContent() {
   }
 
   return (
-    <BoneyardSkeletonBoundary
-      name="marketing-home-page"
-      loading={sessionPending && !user}
-      loadingContent={HOME_PAGE_FALLBACK}
-    >
-    <div className="w-full">
+    <RevealTransition>
+      <BoneyardSkeletonBoundary
+        name="marketing-home-page"
+        loading={sessionPending && !user}
+        loadingContent={HOME_PAGE_FALLBACK}
+      >
+      <div className="w-full">
       {/* ── Hero ── */}
       <section className="relative overflow-hidden bg-primary px-6 pb-20 pt-24 text-center">
         <HeroBackground />
@@ -134,8 +138,9 @@ function HomePageContent() {
           </FadeIn>
         </div>
       </section>
-    </div>
-    </BoneyardSkeletonBoundary>
+      </div>
+      </BoneyardSkeletonBoundary>
+    </RevealTransition>
   )
 }
 

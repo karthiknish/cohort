@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 import { Clock, Download, ExternalLink, FileText, Layout, LoaderCircle, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import { ViewTransition } from 'react'
 
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -116,18 +117,22 @@ export function ProposalHistoryRow({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h4 className="text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">{displayName}</h4>
-            <Badge
-              variant={proposal.status === 'ready' ? 'default' : 'outline'}
-              className={cn(
-                'h-5 px-2 text-[10px] font-bold uppercase tracking-wider',
-                proposal.status === 'ready' && 'border-none bg-success hover:bg-success/90',
-                proposal.status === 'sent' && 'border-none bg-accent text-accent-foreground hover:bg-accent/90',
-                proposal.status === 'draft' && 'border-muted-foreground/30 text-muted-foreground',
-              )}
-            >
-              {proposal.status}
-            </Badge>
+            <ViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" default="none">
+              <h4 className="text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">{displayName}</h4>
+            </ViewTransition>
+            <ViewTransition name={`proposal-status-${proposal.id}`} share="morph" default="none">
+              <Badge
+                variant={proposal.status === 'ready' ? 'default' : 'outline'}
+                className={cn(
+                  'h-5 px-2 text-[10px] font-bold uppercase tracking-wider',
+                  proposal.status === 'ready' && 'border-none bg-success hover:bg-success/90',
+                  proposal.status === 'sent' && 'border-none bg-accent text-accent-foreground hover:bg-accent/90',
+                  proposal.status === 'draft' && 'border-muted-foreground/30 text-muted-foreground',
+                )}
+              >
+                {proposal.status}
+              </Badge>
+            </ViewTransition>
             {isActiveDraft && proposal.status !== 'ready' ? (
               <Badge variant="secondary" className="h-5 border-none bg-warning/10 px-2 text-[10px] font-bold uppercase tracking-wider text-warning hover:bg-warning/10">
                 Active draft
@@ -160,7 +165,7 @@ export function ProposalHistoryRow({
           {presentationUrl ? (
             <div className="flex items-center gap-1.5">
               <Button asChild size="sm" variant="secondary" className="h-9 px-3">
-                <Link href={`/dashboard/proposals/${proposal.id}/deck`}>
+                <Link href={`/dashboard/proposals/${proposal.id}/deck`} transitionTypes={['nav-forward']}>
                   <ExternalLink className="mr-2 h-3.5 w-3.5" />
                   Preview
                 </Link>

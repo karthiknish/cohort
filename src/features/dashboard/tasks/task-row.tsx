@@ -2,6 +2,7 @@
 
 import { memo, useCallback } from 'react'
 import Link from 'next/link'
+import { ViewTransition } from 'react'
 import {
   Calendar,
   FolderKanban,
@@ -74,13 +75,14 @@ function TaskRowComponent({
   }, [onDelete, task])
 
   return (
-    <div
-      className={cn(
-        'group relative border-b border-border/60 px-6 py-5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/40 last:border-0',
-        isPendingUpdate && 'opacity-75 pointer-events-none',
-        selected && 'bg-primary/5'
-      )}
-    >
+    <ViewTransition>
+      <div
+        className={cn(
+          'group relative border-b border-border/60 px-6 py-5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/40 last:border-0',
+          isPendingUpdate && 'opacity-75 pointer-events-none',
+          selected && 'bg-primary/5'
+        )}
+      >
       {/* Priority accent bar */}
       <div
         className={cn(
@@ -242,7 +244,8 @@ function TaskRowComponent({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ViewTransition>
   )
 }
 

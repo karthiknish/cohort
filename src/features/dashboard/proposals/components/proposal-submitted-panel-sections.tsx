@@ -93,7 +93,7 @@ export function ProposalSubmittedHero({
           <div className="flex flex-wrap justify-center gap-4 pt-4 md:justify-start">
             {deckDownloadUrl && presentationHref ? (
               <Button size="lg" className="h-14 rounded-2xl bg-primary px-8 text-base font-bold shadow-xl shadow-primary/25 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:scale-105 hover:bg-primary/90 active:scale-95" asChild>
-                <Link href={presentationHref}>
+                <Link href={presentationHref} transitionTypes={['nav-forward']}>
                   <Presentation className="mr-3 h-6 w-6" />
                   View Presentation
                 </Link>

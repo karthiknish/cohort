@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     root: process.cwd(),
   },
   experimental: {
+    viewTransition: true,
     staticGenerationRetryCount: 2,
     optimizePackageImports: [
       'lucide-react',

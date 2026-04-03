@@ -319,6 +319,7 @@ export function Sidebar() {
         'hidden h-full border-r bg-background/60 backdrop-blur-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-in-out)] motion-reduce:transition-none lg:flex',
         collapsed ? 'w-16 flex-col items-center p-3' : 'w-64 flex-col p-4'
       )}
+      style={{ viewTransitionName: 'dashboard-sidebar' }}
     >
       <button
         type="button"
@@ -396,7 +397,10 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-[1000] border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header
+        className="sticky top-0 z-[1000] border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/60"
+        style={{ viewTransitionName: 'dashboard-header' }}
+      >
         <div className="flex h-14 items-center justify-between gap-2 px-3 sm:h-16 sm:gap-4 sm:px-6 lg:px-8">
           {/* Mobile menu button */}
           <div className="lg:hidden">

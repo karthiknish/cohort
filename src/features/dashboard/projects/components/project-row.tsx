@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useMemo } from 'react'
 import Link from 'next/link'
+import { ViewTransition } from 'react'
 import {
   Calendar,
   ListChecks,
@@ -77,10 +78,11 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
   )
 
   return (
-    <div className={cn(
-      "group relative rounded-xl border border-muted/30 bg-background p-5 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/30 sm:p-6",
-      isPendingUpdate && "opacity-75 pointer-events-none"
-    )}>
+    <ViewTransition>
+      <div className={cn(
+        "group relative rounded-xl border border-muted/30 bg-background p-5 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/30 sm:p-6",
+        isPendingUpdate && "opacity-75 pointer-events-none"
+      )}>
       {/* Status accent bar */}
       <div
         className={cn(
@@ -243,7 +245,8 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ViewTransition>
   )
 }
 
