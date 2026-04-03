@@ -37,6 +37,7 @@ const CHART_TOOLTIP_CLASS_NAME = 'rounded-xl border-muted/40 shadow-lg backdrop-
 const CHART_TOOLTIP_CURSOR = { strokeDasharray: '3 3' } as const
 const CHART_ACTIVE_DOT = { r: 6, strokeWidth: 0 } as const
 const CHART_LEGEND_CONTENT = <ChartLegendContent className="pt-4 text-[10px] font-bold uppercase tracking-widest opacity-80" />
+const CHART_MARGIN = { top: 8, right: 8, left: 0, bottom: 0 } as const
 
 function formatDateTick(value: string) {
     const date = new Date(value)
@@ -152,7 +153,7 @@ export function AnalyticsCharts({
                         />
                     ) : (
                         <ChartContainer config={usersSessionsChartConfig} className="h-[300px] w-full">
-                            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} accessibilityLayer>
+                            <AreaChart data={chartData} margin={CHART_MARGIN} accessibilityLayer>
                                 <defs>
                                     <linearGradient id="fillUsersAnalytics" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="var(--color-users)" stopOpacity={0.28} />
@@ -229,7 +230,7 @@ export function AnalyticsCharts({
                         />
                     ) : (
                         <ChartContainer config={revenueChartConfig} className="h-[300px] w-full">
-                            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} accessibilityLayer>
+                            <AreaChart data={chartData} margin={CHART_MARGIN} accessibilityLayer>
                                 <defs>
                                     <linearGradient id="fillRevenueAnalytics" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.3} />
@@ -293,7 +294,7 @@ export function AnalyticsCharts({
                         />
                     ) : (
                         <ChartContainer config={conversionsChartConfig} className="h-[300px] w-full">
-                            <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} accessibilityLayer>
+                            <BarChart data={chartData} margin={CHART_MARGIN} accessibilityLayer>
                                 <defs>
                                     <linearGradient id="fillConversionsAnalytics" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="0%" stopColor="var(--color-conversions)" stopOpacity={0.95} />
@@ -348,7 +349,7 @@ export function AnalyticsCharts({
                         />
                     ) : (
                         <ChartContainer config={conversionRateChartConfig} className="h-[300px] w-full">
-                            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} accessibilityLayer>
+                            <AreaChart data={chartData} margin={CHART_MARGIN} accessibilityLayer>
                                 <defs>
                                     <linearGradient id="fillConversionRateAnalytics" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="var(--color-conversionRate)" stopOpacity={0.24} />

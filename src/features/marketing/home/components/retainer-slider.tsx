@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import type { ChangeEvent } from 'react'
 
 import { Badge } from '@/shared/ui/badge'
 
@@ -19,6 +20,11 @@ export function RetainerSlider() {
   const [value, setValue] = useState(33600) // 70% of max → matches old static thumb
 
   const pct = ((value - MIN) / (MAX - MIN)) * 100
+  const fillStyle = useMemo(() => ({ width: `${pct}%` }), [pct])
+  const thumbStyle = useMemo(() => ({ left: `calc(${pct}% - 8px)` }), [pct])
+  const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setValue(Number(event.target.value))
+  }, [])
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border px-5 py-4 shadow-sm">
@@ -32,7 +38,7 @@ export function RetainerSlider() {
         <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div
             className="absolute h-full bg-primary transition-[width] duration-75"
-            style={{ width: `${pct}%` }}
+            style={fillStyle}
           />
         </div>
 
@@ -43,7 +49,7 @@ export function RetainerSlider() {
           max={MAX}
           step={STEP}
           value={value}
-          onChange={(e) => setValue(Number(e.target.value))}
+          onChange={handleChange}
           className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           aria-label="Monthly retainer target"
         />
@@ -51,7 +57,7 @@ export function RetainerSlider() {
         {/* Thumb */}
         <div
           className="pointer-events-none absolute size-4 rounded-full border border-primary bg-white shadow-sm transition-[left] duration-75"
-          style={{ left: `calc(${pct}% - 8px)` }}
+          style={thumbStyle}
           aria-hidden="true"
         />
       </div>

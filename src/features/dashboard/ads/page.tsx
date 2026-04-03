@@ -52,8 +52,13 @@ const ADS_SKELETON_250 = <Skeleton className="h-[250px] w-full" />
 const ADS_SKELETON_300 = <Skeleton className="h-[300px] w-full" />
 
 function AdsSuspenseReveal({ children, fallback }: { children: ReactNode; fallback: ReactNode }) {
+  const suspenseFallback = useMemo(
+    () => <RevealTransitionFallback>{fallback}</RevealTransitionFallback>,
+    [fallback],
+  )
+
   return (
-    <Suspense fallback={<RevealTransitionFallback>{fallback}</RevealTransitionFallback>}>
+    <Suspense fallback={suspenseFallback}>
       <RevealTransition>{children}</RevealTransition>
     </Suspense>
   )

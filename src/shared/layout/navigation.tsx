@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import type { CSSProperties } from 'react'
 import { useState, useMemo, useEffect, useCallback, useRef, forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 import { getPreviewSettingsProfile } from '@/lib/preview-data'
@@ -38,6 +39,9 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
+
+const DASHBOARD_SIDEBAR_TRANSITION_STYLE = { viewTransitionName: 'dashboard-sidebar' } satisfies CSSProperties
+const DASHBOARD_HEADER_TRANSITION_STYLE = { viewTransitionName: 'dashboard-header' } satisfies CSSProperties
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/shared/ui/sheet'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Badge } from '@/shared/ui/badge'
@@ -316,16 +320,16 @@ export function Sidebar() {
     <aside
       id="tour-sidebar"
       className={cn(
-        'hidden h-full border-r bg-background/60 backdrop-blur-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-in-out)] motion-reduce:transition-none lg:flex',
+        'hidden h-full border-r bg-background/60 backdrop-blur-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-(--motion-duration-normal) ease-(--motion-ease-in-out) motion-reduce:transition-none lg:flex',
         collapsed ? 'w-16 flex-col items-center p-3' : 'w-64 flex-col p-4'
       )}
-      style={{ viewTransitionName: 'dashboard-sidebar' }}
+      style={DASHBOARD_SIDEBAR_TRANSITION_STYLE}
     >
       <button
         type="button"
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         className={cn(
-          'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:border-primary/40 hover:text-primary hover:bg-muted/50',
+          'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-(--motion-duration-fast) ease-(--motion-ease-standard) motion-reduce:transition-none hover:border-primary/40 hover:text-primary hover:bg-muted/50',
           collapsed && 'mt-2'
         )}
         onClick={toggleCollapsed}
@@ -398,8 +402,8 @@ export function Header() {
   return (
     <>
       <header
-        className="sticky top-0 z-[1000] border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/60"
-        style={{ viewTransitionName: 'dashboard-header' }}
+        className="sticky top-0 z-1000 border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-backdrop-filter:bg-background/60"
+        style={DASHBOARD_HEADER_TRANSITION_STYLE}
       >
         <div className="flex h-14 items-center justify-between gap-2 px-3 sm:h-16 sm:gap-4 sm:px-6 lg:px-8">
           {/* Mobile menu button */}
@@ -411,7 +415,7 @@ export function Header() {
                   <span className="sr-only">Toggle navigation</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[280px] p-0">
+              <SheetContent side="left" className="w-70 p-0">
                 <SheetHeader className="border-b px-4 py-3">
                   <SheetTitle className="text-base font-semibold">Workspace</SheetTitle>
                 </SheetHeader>
@@ -431,7 +435,7 @@ export function Header() {
           </div>
 
           {/* Workspace selector */}
-          <div className="min-w-0 flex-1 sm:flex-none sm:max-w-[260px]">
+          <div className="min-w-0 flex-1 sm:flex-none sm:max-w-65">
             <ClientWorkspaceSelector className="w-full" />
           </div>
 

@@ -184,6 +184,7 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
   }, [teamMembers, teamSearch])
 
   const isInitialLoading = loading && !selectedClient
+  const loadingContent = useMemo(() => <ClientsDashboardSkeleton />, [])
 
   if (!selectedClient && !isInitialLoading) {
     return (
@@ -201,7 +202,6 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
     )
   }
 
-  const loadingContent = useMemo(() => <ClientsDashboardSkeleton />, [])
   const clientIndex = selectedClient ? clients.findIndex((record) => record.id === selectedClient.id) : -1
   const clientAge = selectedClient?.createdAt
     ? getRelativeTimeString(new Date(selectedClient.createdAt))

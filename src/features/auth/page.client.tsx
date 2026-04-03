@@ -34,10 +34,23 @@ const FIXTURE_PASSWORD_STRENGTH = {
     special: false,
   },
 } as const
+const FIXTURE_SIGN_IN_DATA = { email: 'alex@northstar.studio', password: 'password123' } as const
+const FIXTURE_SIGN_UP_DATA = {
+  email: 'alex@northstar.studio',
+  password: 'SamplePass123',
+  confirmPassword: 'SamplePass123',
+  displayName: 'Alex Morgan',
+} as const
+
+function noop() {}
+
+function preventDefault(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault()
+}
 
 function AuthPageFixture() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12">
+    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-6 py-12">
       <div className="w-full max-w-120">
         <AuthCard
           activeTab="signin"
@@ -48,23 +61,18 @@ function AuthPageFixture() {
           showPassword={false}
           showConfirmPassword={false}
           passwordsMatch={true}
-          signInData={{ email: 'alex@northstar.studio', password: 'password123' }}
-          signUpData={{
-            email: 'alex@northstar.studio',
-            password: 'SamplePass123',
-            confirmPassword: 'SamplePass123',
-            displayName: 'Alex Morgan',
-          }}
+          signInData={FIXTURE_SIGN_IN_DATA}
+          signUpData={FIXTURE_SIGN_UP_DATA}
           passwordStrength={FIXTURE_PASSWORD_STRENGTH}
-          onTabChange={() => {}}
-          onRememberMeChange={() => {}}
-          onToggleShowPassword={() => {}}
-          onToggleShowConfirmPassword={() => {}}
-          onSignInChange={() => {}}
-          onSignUpChange={() => {}}
-          onSubmitSignIn={(event) => event.preventDefault()}
-          onSubmitSignUp={(event) => event.preventDefault()}
-          onGoogleSignIn={() => {}}
+          onTabChange={noop}
+          onRememberMeChange={noop}
+          onToggleShowPassword={noop}
+          onToggleShowConfirmPassword={noop}
+          onSignInChange={noop}
+          onSignUpChange={noop}
+          onSubmitSignIn={preventDefault}
+          onSubmitSignUp={preventDefault}
+          onGoogleSignIn={noop}
         />
       </div>
     </div>
@@ -344,7 +352,7 @@ function HomeAuthPageContent() {
         loadingContent={loadingContent}
         fixture={fixtureContent}
       >
-        <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12">
+        <div className="flex min-h-screen items-center justify-center bg-muted/30 px-6 py-12">
           <div className="w-full max-w-120">
             <AuthCard
               activeTab={activeTab}

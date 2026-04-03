@@ -47,6 +47,10 @@ export function AnalyticsPageShell() {
   )
 }
 
+const PREVIEW_CONNECTED_BADGE_CLASS = 'bg-success/10 text-success'
+const PREVIEW_SAMPLE_BADGE_CLASS = 'rounded-full border border-success/20 bg-success/10 px-3 py-1.5 text-xs font-medium text-success'
+const PREVIEW_SAMPLE_ICON_CLASS = 'flex h-5 w-5 items-center justify-center rounded-full bg-success/10 text-success'
+
 function AnalyticsHeaderSection() {
   const { dateRange, handleDateRangeChange } = useAnalyticsPageContext()
 
@@ -123,7 +127,7 @@ function GoogleAnalyticsConnectionSection() {
               className={cn(
                 'inline-flex animate-in fade-in slide-in-from-right-2 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium duration-300',
                 isPreviewMode
-                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                  ? PREVIEW_CONNECTED_BADGE_CLASS
                   : gaLastSyncStatus === 'error'
                   ? 'bg-destructive/10 text-destructive'
                   : gaNeedsPropertySelection
@@ -142,7 +146,7 @@ function GoogleAnalyticsConnectionSection() {
           )}
 
           {isPreviewMode ? (
-            <div className="rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+            <div className={PREVIEW_SAMPLE_BADGE_CLASS}>
               Read-only sample data
             </div>
           ) : (
@@ -200,7 +204,7 @@ function GoogleAnalyticsConnectionSection() {
       <CardContent className="bg-muted/20 px-4 py-3">
         {isPreviewMode ? (
           <div className="flex items-center gap-2">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+            <div className={PREVIEW_SAMPLE_ICON_CLASS}>
               <TrendingUp className="h-3 w-3" />
             </div>
             <p className="text-xs text-muted-foreground">
@@ -491,19 +495,19 @@ function GoogleAnalyticsIcon({ className = 'h-8 w-8' }: { className?: string }) 
       <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
         <path
           d="M21.805 10.023H12v4.042h5.615c-.242 1.304-.967 2.409-2.056 3.147v2.617h3.33c1.948-1.793 3.076-4.434 3.076-7.564 0-.739-.067-1.449-.16-2.242Z"
-          fill="#4285F4"
+          fill="currentColor"
         />
         <path
           d="M12 22c2.79 0 5.13-.925 6.84-2.51l-3.33-2.617c-.925.62-2.109.986-3.51.986-2.698 0-4.983-1.821-5.804-4.27H2.754v2.698A9.999 9.999 0 0 0 12 22Z"
-          fill="#34A853"
+          fill="currentColor"
         />
         <path
           d="M6.196 13.59A5.996 5.996 0 0 1 5.87 11.9c0-.587.105-1.155.326-1.69V7.512H2.754A9.998 9.998 0 0 0 2 11.9c0 1.61.386 3.131 1.07 4.388l3.126-2.698Z"
-          fill="#FBBC05"
+          fill="currentColor"
         />
         <path
           d="M12 5.94c1.517 0 2.88.522 3.95 1.547l2.96-2.96C17.125 2.865 14.786 2 12 2A9.999 9.999 0 0 0 2.754 7.512l3.442 2.698C7.017 7.761 9.302 5.94 12 5.94Z"
-          fill="#EA4335"
+          fill="currentColor"
         />
       </svg>
     </div>

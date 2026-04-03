@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { FaGoogle, FaLinkedin, FaMeta, FaTiktok } from 'react-icons/fa6'
+import { Chrome, Facebook, Linkedin, Music4 } from 'lucide-react'
 
 export const METRICS_PAGE_SIZE = 100
 
@@ -24,11 +24,11 @@ export const TIMEFRAME_OPTIONS: Array<{ label: string; value: number }> = [
 ]
 
 export const PROVIDER_ICON_MAP: Record<string, ComponentType<{ className?: string }>> = {
-    google: FaGoogle,
-    facebook: FaMeta,
-    meta: FaMeta,
-    linkedin: FaLinkedin,
-    tiktok: FaTiktok,
+    google: Chrome,
+    facebook: Facebook,
+    meta: Facebook,
+    linkedin: Linkedin,
+    tiktok: Music4,
 }
 
 export const DISPLAY_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {

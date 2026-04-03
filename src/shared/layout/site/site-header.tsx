@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useCallback, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { LayoutDashboard, LogOut } from 'lucide-react'
 
 import { getPreviewSettingsProfile } from '@/lib/preview-data'
@@ -11,6 +12,8 @@ import { Button } from '@/shared/ui/button'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { Badge } from '@/shared/ui/badge'
+
+const SITE_HEADER_TRANSITION_STYLE = { viewTransitionName: 'site-header' } satisfies CSSProperties
 
 export function SiteHeader() {
   const { user, loading, signOut } = useAuth()
@@ -37,7 +40,7 @@ export function SiteHeader() {
   return (
     <header
       className="sticky top-0 z-40 border-b border-muted/50 bg-background/90 backdrop-blur"
-      style={{ viewTransitionName: 'site-header' }}
+      style={SITE_HEADER_TRANSITION_STYLE}
     >
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-primary">
@@ -78,11 +81,11 @@ export function SiteHeader() {
                       Preview
                     </Badge>
                   ) : null}
-                  <p className="max-w-[180px] truncate text-sm font-medium text-foreground">
+                  <p className="max-w-45 truncate text-sm font-medium text-foreground">
                     {displayedName}
                   </p>
                 </div>
-                <p className="max-w-[220px] truncate text-xs text-muted-foreground">
+                <p className="max-w-55 truncate text-xs text-muted-foreground">
                   {displayedEmail}
                 </p>
               </div>

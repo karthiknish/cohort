@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { Activity, Facebook, Instagram, MessageSquareMore, Repeat2, Sparkles, UsersRound } from 'lucide-react'
+import { Activity, Facebook, Instagram, MessageSquareMore, Repeat2, UsersRound } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
@@ -33,7 +34,7 @@ type InsightMetric = {
   title: string
   value: string
   detail: string
-  icon: typeof Sparkles
+  icon: LucideIcon
 }
 
 const SURFACE_COPY = {
@@ -70,6 +71,12 @@ function formatSignedNumber(value: number): string {
   return `${value > 0 ? '+' : '-'}${formatCompactNumber(Math.abs(value))}`
 }
 
+function SocialMetricBarFill({ colorClass, width }: { colorClass: string; width: number }) {
+  const widthStyle = useMemo(() => ({ width: `${width}%` }), [width])
+
+  return <div className={cn('h-full rounded-full transition-[width]', colorClass)} style={widthStyle} />
+}
+
 function SocialMetricBars({ metrics }: { metrics: GraphMetric[] }) {
   const maxValue = Math.max(...metrics.map((metric) => metric.value), 0)
 
@@ -88,7 +95,7 @@ function SocialMetricBars({ metrics }: { metrics: GraphMetric[] }) {
               <p className="text-sm font-semibold text-foreground">{metric.valueLabel}</p>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-muted/60">
-              <div className={cn('h-full rounded-full transition-[width]', metric.colorClass)} style={{ width: `${width}%` }} />
+              <SocialMetricBarFill colorClass={metric.colorClass} width={width} />
             </div>
           </div>
         )

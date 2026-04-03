@@ -198,9 +198,9 @@ const CLIENT_ACCOUNTS: readonly {
   id: string; initials: string; name: string; tag: string
   health: number; revenue: string; tone: Tone; color: string
 }[] = [
-  { id: 'c1', initials: 'NT', name: 'NovaTech Digital', tag: 'SaaS', health: 94, revenue: '$12.4K', tone: 'success', color: 'bg-blue-500' },
-  { id: 'c2', initials: 'BO', name: 'BlueOrbit Media', tag: 'E-commerce', health: 71, revenue: '$8.6K', tone: 'accent', color: 'bg-sky-500' },
-  { id: 'c3', initials: 'MH', name: 'Meridian Health', tag: 'Healthcare', health: 52, revenue: '$9.1K', tone: 'warning', color: 'bg-emerald-500' },
+  { id: 'c1', initials: 'NT', name: 'NovaTech Digital', tag: 'SaaS', health: 94, revenue: '$12.4K', tone: 'success', color: 'bg-primary' },
+  { id: 'c2', initials: 'BO', name: 'BlueOrbit Media', tag: 'E-commerce', health: 71, revenue: '$8.6K', tone: 'accent', color: 'bg-info' },
+  { id: 'c3', initials: 'MH', name: 'Meridian Health', tag: 'Healthcare', health: 52, revenue: '$9.1K', tone: 'warning', color: 'bg-success' },
 ]
 
 /* ------------------------------------------------------------------ */
@@ -232,8 +232,33 @@ const MEETING_ITEMS: readonly {
 ]
 
 const ATTENDEE_COLORS: Record<string, string> = {
-  JL: 'bg-violet-500', SR: 'bg-blue-500', KP: 'bg-emerald-500',
-  MA: 'bg-amber-500', DW: 'bg-rose-500',
+  JL: 'bg-accent', SR: 'bg-primary', KP: 'bg-success',
+  MA: 'bg-warning', DW: 'bg-destructive',
+}
+
+const BOUNCE_DOT_STYLES = [
+  { id: 'mini-bounce-1', style: { animationDelay: '0ms' } },
+  { id: 'mini-bounce-2', style: { animationDelay: '150ms' } },
+  { id: 'mini-bounce-3', style: { animationDelay: '300ms' } },
+] as const
+
+const WINDOW_STATUS_DOTS = [
+  { id: 'window-close', className: 'bg-destructive' },
+  { id: 'window-minimize', className: 'bg-warning' },
+  { id: 'window-expand', className: 'bg-success' },
+] as const
+
+function BouncingStatusDot({ style }: { style: { animationDelay: string } }) {
+  const dotStyle = useMemo(() => style, [style])
+
+  return <span className="block h-1.5 w-1.5 animate-bounce rounded-full bg-accent" style={dotStyle} />
+}
+
+function ClientHealthMeter({ health }: { health: number }) {
+  const widthStyle = useMemo(() => ({ width: `${health}%` }), [health])
+  const toneClass = health >= 80 ? 'bg-success' : health >= 60 ? 'bg-accent' : 'bg-warning'
+
+  return <div className={cn('h-full rounded-full transition-[width]', toneClass)} style={widthStyle} />
 }
 
 /* ------------------------------------------------------------------ */
@@ -362,8 +387,8 @@ function ProposalsPanel() {
         <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent" />
         <span className="flex-1 text-[11px] font-medium text-foreground/70">AI generating: NovaTech Digital proposal…</span>
         <div className="flex items-center gap-[3px]">
-          {[0, 150, 300].map((d) => (
-            <span key={d} className="block h-1.5 w-1.5 animate-bounce rounded-full bg-accent" style={{ animationDelay: `${d}ms` }} />
+          {BOUNCE_DOT_STYLES.map((dot) => (
+            <BouncingStatusDot key={dot.id} style={dot.style} />
           ))}
         </div>
       </div>
@@ -393,10 +418,7 @@ function ClientsPanel() {
               </div>
               <div className="mt-1.5 flex items-center gap-2">
                 <div className="h-1 flex-1 overflow-hidden rounded-full bg-border/50">
-                  <div
-                    className={cn('h-full rounded-full transition-[width]', client.health >= 80 ? 'bg-success' : client.health >= 60 ? 'bg-accent' : 'bg-warning')}
-                    style={{ width: `${client.health}%` }}
-                  />
+                  <ClientHealthMeter health={client.health} />
                 </div>
                 <span className={cn('text-[9px] font-bold', client.health >= 80 ? 'text-success' : client.health >= 60 ? 'text-accent' : 'text-warning')}>
                   {client.health}%
@@ -553,14 +575,14 @@ export function MinifiedSoftwarePreview() {
       <div aria-hidden="true" className="absolute -right-8 top-16 h-40 w-40 rounded-full bg-info/10 blur-3xl" />
 
       {/* Window frame */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-background/95 shadow-[0_20px_60px_-12px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+      <div className="relative overflow-hidden rounded-2xl border border-border/40 bg-background/95 shadow-2xl backdrop-blur-xl">
         {/* ── Title bar ── */}
         <div className="flex items-center justify-between border-b border-border/40 bg-muted/60 px-4 py-2.5">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-[7px]">
-              <span className="block h-[11px] w-[11px] rounded-full bg-[#ff5f57]" />
-              <span className="block h-[11px] w-[11px] rounded-full bg-[#febc2e]" />
-              <span className="block h-[11px] w-[11px] rounded-full bg-[#28c840]" />
+              {WINDOW_STATUS_DOTS.map((dot) => (
+                <span key={dot.id} className={cn('block h-[11px] w-[11px] rounded-full', dot.className)} />
+              ))}
             </div>
             <div className="flex items-center gap-2 rounded-md border border-border/50 bg-background/80 px-3 py-1">
               <Search className="h-3 w-3 text-muted-foreground/50" />
