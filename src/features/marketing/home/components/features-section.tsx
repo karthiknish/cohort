@@ -47,7 +47,7 @@ const HUB_CONNECTOR_DOTS = [
 
 const CONNECTOR_DOT_INITIAL = { opacity: 0.15, scale: 0.7 } as const
 const CONNECTOR_DOT_REDUCED = { opacity: 0.35 } as const
-const CONNECTOR_DOT_ANIMATE = { opacity: [0.15, 1, 0.15], scale: [0.7, 1.3, 0.7] } as const
+const CONNECTOR_DOT_ANIMATE = { opacity: [0.15, 1, 0.15], scale: [0.7, 1.3, 0.7] }
 const HUB_CORE_INITIAL = { scale: 0.97, opacity: 0.95 } as const
 const HUB_CORE_REDUCED = { opacity: 1 } as const
 const HUB_CORE_ANIMATE = {
@@ -58,7 +58,7 @@ const HUB_CORE_ANIMATE = {
     '0 22px 52px hsl(var(--primary) / 0.28)',
     '0 18px 40px hsl(var(--foreground) / 0.18)',
   ],
-} as const
+}
 const HUB_CORE_TRANSITION = {
   duration: motionLoopSeconds.pulse,
   repeat: Infinity,
@@ -66,10 +66,10 @@ const HUB_CORE_TRANSITION = {
 } as const
 const HUB_RING_INITIAL = { opacity: 0.25, scale: 0.96 } as const
 const HUB_RING_REDUCED = { opacity: 0.2 } as const
-const HUB_RING_ANIMATE = { opacity: [0.15, 0.5, 0.15], scale: [0.96, 1.06, 0.96] } as const
+const HUB_RING_ANIMATE = { opacity: [0.15, 0.5, 0.15], scale: [0.96, 1.06, 0.96] }
 const HUB_GLOW_INITIAL = { opacity: 0, scale: 0.85 } as const
 const HUB_GLOW_REDUCED = { opacity: 0 } as const
-const HUB_GLOW_ANIMATE = { opacity: [0, 0.35, 0], scale: [0.85, 1.16, 1.22] } as const
+const HUB_GLOW_ANIMATE = { opacity: [0, 0.35, 0], scale: [0.85, 1.16, 1.22] }
 const HUB_GLOW_TRANSITION = {
   duration: motionLoopSeconds.pulse,
   repeat: Infinity,
@@ -80,7 +80,7 @@ const PROPOSAL_BOUNCE_DOTS = [
   { id: 'proposal-bounce-2', style: { animationDelay: '150ms' } },
   { id: 'proposal-bounce-3', style: { animationDelay: '300ms' } },
 ] as const satisfies readonly { id: string; style: CSSProperties }[]
-const PORTAL_SCROLL_ANIMATE = { y: ['0%', '-50%'] } as const
+const PORTAL_SCROLL_ANIMATE = { y: ['0%', '-50%'] }
 const PORTAL_SCROLL_TRANSITION = {
   duration: 12,
   repeat: Infinity,
