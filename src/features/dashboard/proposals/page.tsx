@@ -7,6 +7,7 @@ import type { ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/shared/ui/use-toast'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { getPreviewProposals } from '@/lib/preview-data'
 import { ProposalStepContent } from './components/proposal-step-content'
@@ -199,6 +200,8 @@ function ProposalsPageContent() {
   const displayedProposals = isPreviewMode ? previewProposals : proposals
   const displayedDraftId = isPreviewMode ? previewDraftId : draftId
   const displayedLoadingState = isPreviewMode ? false : isLoadingProposals
+  const isInitialLoading = displayedLoadingState && displayedProposals.length === 0 && !isWizardOpen
+  const loadingContent = useMemo(() => <DashboardSkeleton />, [])
 
   const handleStartPreviewProposal = useCallback(() => {
     const initialForm = createInitialProposalFormState()
@@ -270,83 +273,89 @@ function ProposalsPageContent() {
   )
 
   return (
-    <div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
-      <div className={DASHBOARD_THEME.layout.header}>
-        <ProposalWizardHeader />
-        <ProposalPageActions
-          currentFormData={formState}
-          draftId={draftId}
+    <BoneyardSkeletonBoundary
+      name="dashboard-proposals-page"
+      loading={isInitialLoading}
+      loadingContent={loadingContent}
+    >
+      <div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
+        <div className={DASHBOARD_THEME.layout.header}>
+          <ProposalWizardHeader />
+          <ProposalPageActions
+            currentFormData={formState}
+            draftId={draftId}
+            isSubmitting={isSubmitting}
+            selectedClientId={selectedClientId}
+            isCreatingDraft={isCreatingDraft}
+            onApplyTemplate={handleSelectTemplate}
+            onVersionRestored={handleVersionRestored}
+            onStartProposal={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
+          />
+        </div>
+
+        <ProposalMetrics proposals={displayedProposals} isLoading={displayedLoadingState} />
+
+        {!isWizardOpen && (
+          <ProposalStartStateCard
+            canStart={Boolean(selectedClientId)}
+            isCreatingDraft={isCreatingDraft}
+            onStartProposal={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
+          />
+        )}
+
+        <ProposalHistory
+          proposals={displayedProposals}
+          draftId={displayedDraftId}
+          isLoading={displayedLoadingState}
+          deletingProposalId={deletingProposalId}
+          onRefresh={isPreviewMode ? handlePreviewRefresh : handleRefreshProposals}
+          onResume={handleResumeProposalInModal}
+          onRequestDelete={isPreviewMode ? handlePreviewRequestDelete : requestDeleteProposal}
+          isGenerating={isSubmitting}
+          downloadingDeckId={downloadingDeckId}
+          onDownloadDeck={isPreviewMode ? handlePreviewDownloadDeck : handleDownloadDeck}
+          onCreateNew={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
+          canCreate={Boolean(selectedClientId)}
+          isCreating={isCreatingDraft}
+        />
+        <ProposalDeleteDialog
+          open={isDeleteDialogOpen}
+          isDeleting={Boolean(deletingProposalId)}
+          proposalName={proposalPendingDelete?.clientName ?? proposalPendingDelete?.id ?? null}
+          onOpenChange={handleDeleteDialogChange}
+          onConfirm={handleConfirmDeleteProposal}
+        />
+        <ProposalGenerationOverlay isSubmitting={isSubmitting} isPresentationReady={isPresentationReady} />
+        <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)} />
+
+        <ProposalBuilderOverlay
+          open={isWizardOpen}
+          onClose={handleCloseWizard}
+          isBootstrapping={isBootstrapping}
+          submitted={submitted}
+          summary={summary}
+          presentationDeck={presentationDeck}
+          deckDownloadUrl={deckDownloadUrl}
+          activeProposalIdForDeck={activeProposalIdForDeck}
+          canResumeSubmission={canResumeSubmission}
+          onResumeSubmission={handleContinueEditingInModal}
           isSubmitting={isSubmitting}
-          selectedClientId={selectedClientId}
-          isCreatingDraft={isCreatingDraft}
-          onApplyTemplate={handleSelectTemplate}
-          onVersionRestored={handleVersionRestored}
-          onStartProposal={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
+          onRecheckDeck={handleRecheckDeck}
+          isRecheckingDeck={isRecheckingDeck}
+          steps={steps}
+          currentStep={currentStep}
+          draftId={draftId}
+          autosaveStatus={autosaveStatus}
+          stepContent={stepContent}
+          onBack={handleBack}
+          onNext={handleNext}
+          isFirstStep={isFirstStep}
+          isLastStep={isLastStep}
+          validationMessages={Object.values(validationErrors)}
+          requiredFieldLabels={stepRequiredFieldLabels[step.id]}
         />
       </div>
-
-      <ProposalMetrics proposals={displayedProposals} isLoading={displayedLoadingState} />
-
-      {!isWizardOpen && (
-        <ProposalStartStateCard
-          canStart={Boolean(selectedClientId)}
-          isCreatingDraft={isCreatingDraft}
-          onStartProposal={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
-        />
-      )}
-
-      <ProposalHistory
-        proposals={displayedProposals}
-        draftId={displayedDraftId}
-        isLoading={displayedLoadingState}
-        deletingProposalId={deletingProposalId}
-        onRefresh={isPreviewMode ? handlePreviewRefresh : handleRefreshProposals}
-        onResume={handleResumeProposalInModal}
-        onRequestDelete={isPreviewMode ? handlePreviewRequestDelete : requestDeleteProposal}
-        isGenerating={isSubmitting}
-        downloadingDeckId={downloadingDeckId}
-        onDownloadDeck={isPreviewMode ? handlePreviewDownloadDeck : handleDownloadDeck}
-        onCreateNew={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
-        canCreate={Boolean(selectedClientId)}
-        isCreating={isCreatingDraft}
-      />
-      <ProposalDeleteDialog
-        open={isDeleteDialogOpen}
-        isDeleting={Boolean(deletingProposalId)}
-        proposalName={proposalPendingDelete?.clientName ?? proposalPendingDelete?.id ?? null}
-        onOpenChange={handleDeleteDialogChange}
-        onConfirm={handleConfirmDeleteProposal}
-      />
-      <ProposalGenerationOverlay isSubmitting={isSubmitting} isPresentationReady={isPresentationReady} />
-      <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)} />
-
-      <ProposalBuilderOverlay
-        open={isWizardOpen}
-        onClose={handleCloseWizard}
-        isBootstrapping={isBootstrapping}
-        submitted={submitted}
-        summary={summary}
-        presentationDeck={presentationDeck}
-        deckDownloadUrl={deckDownloadUrl}
-        activeProposalIdForDeck={activeProposalIdForDeck}
-        canResumeSubmission={canResumeSubmission}
-        onResumeSubmission={handleContinueEditingInModal}
-        isSubmitting={isSubmitting}
-        onRecheckDeck={handleRecheckDeck}
-        isRecheckingDeck={isRecheckingDeck}
-        steps={steps}
-        currentStep={currentStep}
-        draftId={draftId}
-        autosaveStatus={autosaveStatus}
-        stepContent={stepContent}
-        onBack={handleBack}
-        onNext={handleNext}
-        isFirstStep={isFirstStep}
-        isLastStep={isLastStep}
-        validationMessages={Object.values(validationErrors)}
-        requiredFieldLabels={stepRequiredFieldLabels[step.id]}
-      />
-    </div>
+    </BoneyardSkeletonBoundary>
   )
 }
 

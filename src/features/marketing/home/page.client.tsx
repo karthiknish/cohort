@@ -12,6 +12,7 @@ import { HERO_HEADLINE, HERO_SUBHEAD } from "@/features/marketing/home/component
 import { MinifiedSoftwarePreview } from "@/features/marketing/home/components/minified-software-preview"
 import { authClient } from "@/lib/auth-client"
 import { FadeIn } from "@/shared/ui/animate-in"
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 
 const HOME_PAGE_FALLBACK = (
   <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
@@ -40,6 +41,11 @@ function HomePageContent() {
   }
 
   return (
+    <BoneyardSkeletonBoundary
+      name="marketing-home-page"
+      loading={sessionPending && !user}
+      loadingContent={HOME_PAGE_FALLBACK}
+    >
     <div className="w-full">
       {/* ── Hero ── */}
       <section className="relative overflow-hidden bg-primary px-6 pb-20 pt-24 text-center">
@@ -129,6 +135,7 @@ function HomePageContent() {
         </div>
       </section>
     </div>
+    </BoneyardSkeletonBoundary>
   )
 }
 

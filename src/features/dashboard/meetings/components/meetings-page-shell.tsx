@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { useMeetingsPageContext } from './meetings-page-provider'
 import {
   ActiveMeetingRoomSection,
   MeetingsDefaultView,
   SharedRoomLoadingSection,
 } from './meetings-page-shell-sections'
+import { MeetingsPageSkeleton } from './meetings-page-skeleton'
 
 export function MeetingsPageShell() {
   const {
@@ -296,33 +298,30 @@ export function MeetingsPageShell() {
     ]
   )
 
-  if (resolvedActiveInSiteMeeting) {
-    return (
-      <ActiveMeetingRoomSection
-        meetingRoomKey={
-          [
-            resolvedActiveInSiteMeeting.legacyId,
-            resolvedActiveInSiteMeeting.calendarEventId,
-            resolvedActiveInSiteMeeting.roomName,
-            sharedRoomName,
-          ]
-            .filter(Boolean)
-            .join(':') || 'active-meeting'
-        }
-        meeting={resolvedActiveInSiteMeeting}
-        canRecord={canSchedule && !isPreviewMode}
-        onMeetingUpdated={handleMeetingUpdated}
-        fallbackRoomName={sharedRoomName}
-        onClose={closeMeetingRoom}
-      />
-    )
-  }
+  const isInitialLoading = !resolvedActiveInSiteMeeting && !sharedRoomName && googleWorkspaceStatusLoading && upcomingMeetingsLoading
+  const loadingContent = useMemo(() => <MeetingsPageSkeleton />, [])
 
-  if (sharedRoomName) {
-    return <SharedRoomLoadingSection sharedRoomName={sharedRoomName} onBack={closeMeetingRoom} />
-  }
-
-  return (
+  const pageContent = resolvedActiveInSiteMeeting ? (
+    <ActiveMeetingRoomSection
+      meetingRoomKey={
+        [
+          resolvedActiveInSiteMeeting.legacyId,
+          resolvedActiveInSiteMeeting.calendarEventId,
+          resolvedActiveInSiteMeeting.roomName,
+          sharedRoomName,
+        ]
+          .filter(Boolean)
+          .join(':') || 'active-meeting'
+      }
+      meeting={resolvedActiveInSiteMeeting}
+      canRecord={canSchedule && !isPreviewMode}
+      onMeetingUpdated={handleMeetingUpdated}
+      fallbackRoomName={sharedRoomName}
+      onClose={closeMeetingRoom}
+    />
+  ) : sharedRoomName ? (
+    <SharedRoomLoadingSection sharedRoomName={sharedRoomName} onBack={closeMeetingRoom} />
+  ) : (
     <MeetingsDefaultView
       createMeetingCardProps={scheduleCardSharedProps}
       editingMeeting={Boolean(editingMeeting)}
@@ -335,5 +334,15 @@ export function MeetingsPageShell() {
       showReadOnlyAccessAlert={!canSchedule}
       upcomingMeetingsCardProps={upcomingMeetingsCardProps}
     />
+  )
+
+  return (
+    <BoneyardSkeletonBoundary
+      name="dashboard-meetings-page"
+      loading={isInitialLoading}
+      loadingContent={loadingContent}
+    >
+      {pageContent}
+    </BoneyardSkeletonBoundary>
   )
 }

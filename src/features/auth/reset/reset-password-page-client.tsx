@@ -1,16 +1,18 @@
 'use client'
 
-import { useCallback, useEffect, useReducer, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Lock, ArrowLeft, Shield, Check, X, LoaderCircle, CircleCheck } from 'lucide-react'
 
 import { useAuth } from '@/shared/contexts/auth-context'
+import { AuthPageSkeleton } from '@/features/auth/components/auth-page-skeleton'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { FadeIn, FadeInItem, FadeInStagger } from '@/shared/ui/animate-in'
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { useToast } from '@/shared/ui/use-toast'
 import { cn } from '@/lib/utils'
 import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
@@ -109,6 +111,74 @@ const initialVerificationState: VerificationState = {
   status: 'loading',
   email: null,
   verificationError: null,
+}
+
+function ResetPasswordFixture() {
+  return (
+    <div className="mx-auto w-full max-w-md space-y-6">
+      <Link
+        href="/auth"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to sign in
+      </Link>
+
+      <div className="space-y-2 text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+          <Lock className="h-6 w-6 text-primary" />
+        </div>
+        <h1 className="text-2xl font-semibold text-foreground">Set new password</h1>
+        <p className="text-sm text-muted-foreground">
+          Your new password must be different from your previous password.
+        </p>
+      </div>
+
+      <form className="space-y-5">
+        <FadeInStagger as="div" className="space-y-5">
+          <FadeInItem as="div">
+            <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
+              <p className="text-sm text-muted-foreground">
+                Resetting password for <span className="font-medium text-foreground">alex@northstar.studio</span>
+              </p>
+            </div>
+          </FadeInItem>
+
+          <FadeInItem as="div" className="space-y-2">
+            <Label htmlFor="fixture-new-password">New password</Label>
+            <Input
+              id="fixture-new-password"
+              type="password"
+              autoComplete="new-password"
+              value="SamplePass123!"
+              readOnly
+            />
+          </FadeInItem>
+
+          <FadeInItem as="div" className="space-y-2">
+            <Label htmlFor="fixture-confirm-password">Confirm new password</Label>
+            <Input
+              id="fixture-confirm-password"
+              type="password"
+              autoComplete="new-password"
+              value="SamplePass123!"
+              readOnly
+            />
+            <p className="flex items-center gap-1 text-xs text-success">
+              <Check className="h-3 w-3" />
+              Passwords match
+            </p>
+          </FadeInItem>
+
+          <FadeInItem as="div">
+            <Button type="button" className="w-full">
+              Reset password
+            </Button>
+          </FadeInItem>
+        </FadeInStagger>
+      </form>
+    </div>
+  )
 }
 
 function verificationReducer(state: VerificationState, action: VerificationAction): VerificationState {
@@ -246,8 +316,16 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
   )
 
   const { status, email, verificationError } = verificationState
+  const loadingContent = useMemo(() => <AuthPageSkeleton />, [])
+  const fixtureContent = useMemo(() => <ResetPasswordFixture />, [])
 
   return (
+    <BoneyardSkeletonBoundary
+      name="auth-reset-page"
+      loading={status === 'loading'}
+      loadingContent={loadingContent}
+      fixture={fixtureContent}
+    >
     <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">
       {/* Back Link */}
       <Link
@@ -472,6 +550,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
         </FadeIn>
       )}
     </FadeIn>
+    </BoneyardSkeletonBoundary>
   )
 }
 

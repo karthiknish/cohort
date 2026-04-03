@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/shared/ui/card'
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
 import { FadeIn, FadeInStagger, FadeInItem } from '@/shared/ui/animate-in'
@@ -83,6 +84,7 @@ const sections = [
 
 export default function TermsPage() {
   return (
+    <BoneyardSkeletonBoundary name="marketing-terms-page" loading={false}>
     <div className="mx-auto max-w-4xl space-y-8 px-6 py-12 md:py-20">
       <FadeIn>
         <div className="flex flex-col gap-4">
@@ -147,5 +149,6 @@ export default function TermsPage() {
         </Card>
       </FadeIn>
     </div>
+    </BoneyardSkeletonBoundary>
   )
 }

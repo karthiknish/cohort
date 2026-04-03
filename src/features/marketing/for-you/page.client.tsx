@@ -13,6 +13,7 @@ import { useCallback, useMemo } from 'react'
 import { Badge } from '@/shared/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { FadeIn, FadeInStagger } from '@/shared/ui/animate-in'
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -33,6 +34,7 @@ import { useRealtimeActivity } from '@/features/dashboard/activity/hooks/use-rea
 import type { ActivityType, EnhancedActivity } from '@/features/dashboard/activity/types'
 import { ClientsSummarySection } from '@/features/dashboard/home/components/clients-summary-section'
 import { MyTasksSection } from '@/features/dashboard/home/components/my-tasks-section'
+import { ForYouPageSkeleton } from './components/for-you-page-skeleton'
 
 const toneBorder: Record<HubTone, string> = {
   neutral: 'border-border/80 hover:border-border',
@@ -278,8 +280,15 @@ export default function ForYouPage() {
 
   const unreadCount = enhancedActivities.filter((a) => !a.isRead).length
   const dashboardErrors = [metricsError, tasksError, proposalsError].filter(Boolean) as string[]
+  const isInitialLoading = !shouldUseSampleData && loading && enhancedActivities.length === 0
+  const loadingContent = useMemo(() => <ForYouPageSkeleton />, [])
 
   return (
+    <BoneyardSkeletonBoundary
+      name="for-you-page"
+      loading={isInitialLoading}
+      loadingContent={loadingContent}
+    >
     <div className={cn(DASHBOARD_THEME.layout.container, 'w-full')}>
       {dashboardErrors.length > 0 ? (
         <Alert variant="destructive" className="mb-6">
@@ -361,5 +370,6 @@ export default function ForYouPage() {
       {/* My tasks — always visible, independent of client selection */}
       <MyTasksSection />
     </div>
+    </BoneyardSkeletonBoundary>
   )
 }

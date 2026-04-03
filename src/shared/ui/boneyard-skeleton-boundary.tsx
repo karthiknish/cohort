@@ -6,7 +6,7 @@ import { Skeleton as BoneyardSkeleton } from 'boneyard-js/react'
 type BoneyardSkeletonBoundaryProps = {
   name: string
   loading: boolean
-  loadingContent: ReactNode
+  loadingContent?: ReactNode
   children: ReactNode
   className?: string
   fixture?: ReactNode

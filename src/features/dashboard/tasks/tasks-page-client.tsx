@@ -28,6 +28,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/shared/ui/card'
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { TooltipProvider } from '@/shared/ui/tooltip'
@@ -42,6 +43,8 @@ import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { isFeatureEnabled } from '@/lib/features'
 import { exportToCsv } from '@/lib/utils'
 import type { TaskStatus } from '@/types/tasks'
+
+import { TasksPageSkeleton } from './tasks-page-skeleton'
 
 const TaskList = dynamic(() => import('@/features/dashboard/tasks/task-list').then((mod) => mod.TaskList), {
   loading: () => <div className="p-6 text-sm text-muted-foreground">Loading tasks…</div>,
@@ -457,6 +460,7 @@ function TasksPageContent({
 
 
   const initialLoading = loading && tasks.length === 0
+  const loadingContent = useMemo(() => <TasksPageSkeleton />, [])
 
   const scopeLabel = selectedClient?.name ?? (selectedClientId ? 'Selected client' : 'All clients')
   const scopeHelper = selectedClient ? 'Scoped to the selected client' : 'Showing tasks across all clients'
@@ -466,6 +470,11 @@ function TasksPageContent({
 
   return (
     <TooltipProvider>
+      <BoneyardSkeletonBoundary
+        name="dashboard-tasks-page"
+        loading={initialLoading}
+        loadingContent={loadingContent}
+      >
       <div className={DASHBOARD_THEME.layout.container}>
         {/* Header */}
         <TasksHeader
@@ -680,6 +689,7 @@ function TasksPageContent({
 
 
       </div>
+      </BoneyardSkeletonBoundary>
     </TooltipProvider>
   )
 }

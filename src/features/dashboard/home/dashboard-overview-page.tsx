@@ -25,6 +25,7 @@ import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Badge } from '@/shared/ui/badge'
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
 import type { MetricRecord } from '@/types/dashboard'
@@ -32,6 +33,7 @@ import type { TaskRecord, TaskStatus } from '@/types/tasks'
 
 import { DashboardPageHeader } from './components/dashboard-page-header'
 import { DashboardRoleBanner } from './components/dashboard-role-banner'
+import { DashboardSkeleton } from './components/dashboard-skeleton'
 import { StatsCards } from './components/stats-cards'
 import { useDashboardData, useDashboardStats } from './hooks'
 
@@ -245,80 +247,97 @@ export function DashboardOverviewPage() {
     label: selectedClient ? 'Selected client' : 'Workspace overview',
     variant: 'secondary' as const,
   }), [selectedClient])
+  const isInitialLoading =
+    !isPreviewMode &&
+    metrics.length === 0 &&
+    rawTasks.length === 0 &&
+    proposals.length === 0 &&
+    statsLoading &&
+    analyticsLoading &&
+    adsLoading &&
+    proposalsLoading &&
+    clientStatsLoading
+  const loadingContent = useMemo(() => <DashboardSkeleton />, [])
 
   return (
-    <div className="space-y-8 pb-10">
-      <DashboardPageHeader
-        title="Dashboard"
-        description={`One overview for ${selectedClientLabel}, pulling the top-line stats from your core dashboard sections.`}
-        icon={LayoutDashboard}
-        badge={headerBadge}
-      />
-
-      <DashboardRoleBanner userRole={userRole} userDisplayName={user?.name ?? null} />
-
-      {dashboardErrors.length > 0 && (
-        <Alert variant="destructive">
-          <AlertTitle>Some dashboard data is unavailable</AlertTitle>
-          <AlertDescription>{dashboardErrors.join(' ')}</AlertDescription>
-        </Alert>
-      )}
-
-      <section className="space-y-4">
-        <SectionHeading
-          title="Top summary"
-          description="Primary KPI cards distilled from analytics, ads, and task flow."
+    <BoneyardSkeletonBoundary
+      name="dashboard-overview-page"
+      loading={isInitialLoading}
+      loadingContent={loadingContent}
+    >
+      <div className="space-y-8 pb-10">
+        <DashboardPageHeader
+          title="Dashboard"
+          description={`One overview for ${selectedClientLabel}, pulling the top-line stats from your core dashboard sections.`}
+          icon={LayoutDashboard}
+          badge={headerBadge}
         />
-        <StatsCards stats={orderedStats} loading={statsLoading} primaryCount={4} />
-      </section>
 
-      <div className="space-y-8">
-        <section className="space-y-4">
-          <SectionHeading
-            title="Ads"
-            description="Cross-channel performance summary pulled from the Ads workspace."
-            href="/dashboard/ads"
-            hrefLabel="Open ads"
-          />
-          <SnapshotMetricGrid metrics={adsMetricsList} loading={adsLoading} />
-        </section>
+        <DashboardRoleBanner userRole={userRole} userDisplayName={user?.name ?? null} />
+
+        {dashboardErrors.length > 0 && (
+          <Alert variant="destructive">
+            <AlertTitle>Some dashboard data is unavailable</AlertTitle>
+            <AlertDescription>{dashboardErrors.join(' ')}</AlertDescription>
+          </Alert>
+        )}
 
         <section className="space-y-4">
           <SectionHeading
-            title="Analytics"
-            description={analyticsStatusDetail}
-            href="/dashboard/analytics"
-            hrefLabel="Open analytics"
-            badgeLabel={analyticsStatusLabel}
+            title="Top summary"
+            description="Primary KPI cards distilled from analytics, ads, and task flow."
           />
-          <AnalyticsSummaryCards
-            totals={analyticsTotals}
-            conversionRate={analyticsConversionRate}
-            isLoading={analyticsLoading}
-          />
+          <StatsCards stats={orderedStats} loading={statsLoading} primaryCount={4} />
         </section>
 
-        <section className="space-y-4">
-          <SectionHeading
-            title="Tasks"
-            description="Current task volume and flow efficiency from the tasks workspace."
-            href="/dashboard/tasks"
-            hrefLabel="Open tasks"
-          />
-          <TaskSummaryCards taskCounts={taskCounts} />
-        </section>
+        <div className="space-y-8">
+          <section className="space-y-4">
+            <SectionHeading
+              title="Ads"
+              description="Cross-channel performance summary pulled from the Ads workspace."
+              href="/dashboard/ads"
+              hrefLabel="Open ads"
+            />
+            <SnapshotMetricGrid metrics={adsMetricsList} loading={adsLoading} />
+          </section>
 
-        <section className="space-y-4">
-          <SectionHeading
-            title="Proposals"
-            description="Pipeline summary showing draft volume, ready decks, and proposals awaiting a client response."
-            href="/dashboard/proposals"
-            hrefLabel="Open proposals"
-          />
-          <ProposalMetrics proposals={proposals} isLoading={proposalsLoading} />
-        </section>
+          <section className="space-y-4">
+            <SectionHeading
+              title="Analytics"
+              description={analyticsStatusDetail}
+              href="/dashboard/analytics"
+              hrefLabel="Open analytics"
+              badgeLabel={analyticsStatusLabel}
+            />
+            <AnalyticsSummaryCards
+              totals={analyticsTotals}
+              conversionRate={analyticsConversionRate}
+              isLoading={analyticsLoading}
+            />
+          </section>
+
+          <section className="space-y-4">
+            <SectionHeading
+              title="Tasks"
+              description="Current task volume and flow efficiency from the tasks workspace."
+              href="/dashboard/tasks"
+              hrefLabel="Open tasks"
+            />
+            <TaskSummaryCards taskCounts={taskCounts} />
+          </section>
+
+          <section className="space-y-4">
+            <SectionHeading
+              title="Proposals"
+              description="Pipeline summary showing draft volume, ready decks, and proposals awaiting a client response."
+              href="/dashboard/proposals"
+              hrefLabel="Open proposals"
+            />
+            <ProposalMetrics proposals={proposals} isLoading={proposalsLoading} />
+          </section>
+        </div>
       </div>
-    </div>
+    </BoneyardSkeletonBoundary>
   )
 }
 

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Mail, CircleCheck, LoaderCircle } from 'lucide-react'
 
 import { useAuth } from '@/shared/contexts/auth-context'
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
@@ -73,8 +74,9 @@ export default function ForgotPasswordPage() {
   }, [])
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12">
-      <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">
+    <BoneyardSkeletonBoundary name="auth-forgot-page" loading={false}>
+      <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12">
+        <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">
         {/* Back Link */}
         <Link
           href="/auth"
@@ -180,8 +182,9 @@ export default function ForgotPasswordPage() {
             Return to sign in
           </Link>
         </div>
-      </FadeIn>
-    </div>
+        </FadeIn>
+      </div>
+    </BoneyardSkeletonBoundary>
   )
 }
 

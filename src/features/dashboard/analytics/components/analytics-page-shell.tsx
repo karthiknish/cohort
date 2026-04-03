@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { CheckCircle2, Link2, LoaderCircle, RotateCw, TrendingUp, Unlink } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { AutoRefreshControls } from '@/shared/ui/auto-refresh-controls'
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { asErrorMessage } from '@/lib/convex-errors'
@@ -18,21 +19,31 @@ import { AnalyticsDeepDiveSection } from './analytics-deep-dive-section'
 import { AnalyticsExportButton } from './analytics-export-button'
 import { AnalyticsInsightsSection } from './analytics-insights-section'
 import { AnalyticsMetricCards } from './analytics-metric-cards'
+import { AnalyticsPageSkeleton } from './analytics-page-skeleton'
 import { useAnalyticsPageContext } from './analytics-page-provider'
 import { AnalyticsSummaryCards } from './analytics-summary-cards'
 import { GoogleAnalyticsSetupDialog } from './google-analytics-setup-dialog'
 
 export function AnalyticsPageShell() {
+  const { initialMetricsLoading } = useAnalyticsPageContext()
+  const loadingContent = useMemo(() => <AnalyticsPageSkeleton />, [])
+
   return (
-    <div className={DASHBOARD_THEME.layout.container}>
-      <div className="space-y-8 pb-10">
-        <AnalyticsHeaderSection />
-        <GoogleAnalyticsConnectionSection />
-        <AnalyticsDialogs />
-        <AnalyticsErrorAlert />
-        <AnalyticsBodySection />
+    <BoneyardSkeletonBoundary
+      name="dashboard-analytics-page"
+      loading={initialMetricsLoading}
+      loadingContent={loadingContent}
+    >
+      <div className={DASHBOARD_THEME.layout.container}>
+        <div className="space-y-8 pb-10">
+          <AnalyticsHeaderSection />
+          <GoogleAnalyticsConnectionSection />
+          <AnalyticsDialogs />
+          <AnalyticsErrorAlert />
+          <AnalyticsBodySection />
+        </div>
       </div>
-    </div>
+    </BoneyardSkeletonBoundary>
   )
 }
 
