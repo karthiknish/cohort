@@ -227,13 +227,6 @@ function HomeAuthPageContent() {
     setIsSubmitting(true)
 
     await authClient.signIn.social({ provider: 'google' })
-      .then(async () => {
-        await authClient.getSession().catch(() => null)
-        await Promise.all([
-          authClient.getSession().catch(() => null),
-          bootstrapAndSyncSession(),
-        ])
-      })
       .catch((error) => {
         toast({
           title: 'Google sign-in failed',

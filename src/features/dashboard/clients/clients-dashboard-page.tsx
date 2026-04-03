@@ -12,6 +12,7 @@ import {
 import { ClientAccessGate } from '@/features/dashboard/home/components/client-access-gate'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { useToast } from '@/shared/ui/use-toast'
 import { exportToCsv, cn } from '@/lib/utils'
 import { DASHBOARD_THEME, getButtonClasses } from '@/lib/dashboard-theme'
@@ -182,12 +183,9 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
     )
   }, [teamMembers, teamSearch])
 
-  // Show skeleton while loading
-  if (loading && !selectedClient) {
-    return <ClientsDashboardSkeleton />
-  }
+  const isInitialLoading = loading && !selectedClient
 
-  if (!selectedClient) {
+  if (!selectedClient && !isInitialLoading) {
     return (
       <Card className={cn('mx-auto max-w-2xl', DASHBOARD_THEME.cards.base, 'bg-gradient-to-br from-muted/20 to-background')}>
         <CardHeader className="text-center">
@@ -203,140 +201,144 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
     )
   }
 
-  const clientIndex = clients.findIndex((record) => record.id === selectedClient.id)
-  const clientAge = selectedClient.createdAt
+  const loadingContent = useMemo(() => <ClientsDashboardSkeleton />, [])
+  const clientIndex = selectedClient ? clients.findIndex((record) => record.id === selectedClient.id) : -1
+  const clientAge = selectedClient?.createdAt
     ? getRelativeTimeString(new Date(selectedClient.createdAt))
     : null
   const managersCount = teamMembers.filter((m) => m.role?.toLowerCase().includes('manager')).length
 
-  return (
-    <TooltipProvider>
-      <div className={cn(DASHBOARD_THEME.layout.container, DASHBOARD_THEME.animations.fadeIn)}>
-        {/* Header */}
-        <div className={DASHBOARD_THEME.layout.header}>
-          <div className="flex items-center gap-4">
-            <div className={DASHBOARD_THEME.icons.container}>
-              <UsersIcon className={DASHBOARD_THEME.icons.small} />
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <h1 className={DASHBOARD_THEME.layout.title}>{selectedClient.name}</h1>
-              </div>
-              <p className={DASHBOARD_THEME.layout.subtitle}>
-                Managed by <span className="font-bold text-foreground/80">{selectedClient.accountManager || 'your team'}</span>
-                {clientAge && <span className="text-muted-foreground/70 font-normal"> · Partnered {clientAge}</span>}
-              </p>
-            </div>
+  const readyContent = selectedClient ? (
+    <div className={cn(DASHBOARD_THEME.layout.container, DASHBOARD_THEME.animations.fadeIn)}>
+      <div className={DASHBOARD_THEME.layout.header}>
+        <div className="flex items-center gap-4">
+          <div className={DASHBOARD_THEME.icons.container}>
+            <UsersIcon className={DASHBOARD_THEME.icons.small} />
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className={cn(getButtonClasses('outline'), 'h-10 px-4')}>
-                  <Settings className="mr-2 h-3.5 w-3.5" />
-                  Settings
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 rounded-xl border-muted/40 shadow-xl backdrop-blur-md">
-                <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-primary/5 focus:text-primary">
-                  <Link href="/admin/clients" className="flex items-center">
-                    <Settings className="mr-2 h-4 w-4 opacity-70" />
-                    Manage client
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExport} className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-primary/5 focus:text-primary">
-                  <Download className="mr-2 h-4 w-4 opacity-70" />
-                  Export data
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-primary/5 focus:text-primary">
-                  <Link href={`/dashboard/collaboration?clientId=${selectedClient.id}`} className="flex items-center">
-                    <UsersIcon className="mr-2 h-4 w-4 opacity-70" />
-                    Collaboration
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  className={cn(getButtonClasses('outline'), 'h-10 w-10 p-0')}
-                >
-                  <RefreshCcw className={cn('h-4 w-4', refreshing && DASHBOARD_THEME.animations.pulse)} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent className="rounded-lg border-muted/40 font-bold uppercase tracking-widest text-[10px]">Refresh data</TooltipContent>
-            </Tooltip>
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <h1 className={DASHBOARD_THEME.layout.title}>{selectedClient.name}</h1>
+            </div>
+            <p className={DASHBOARD_THEME.layout.subtitle}>
+              Managed by <span className="font-bold text-foreground/80">{selectedClient.accountManager || 'your team'}</span>
+              {clientAge && <span className="font-normal text-muted-foreground/70"> · Partnered {clientAge}</span>}
+            </p>
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <ClientStatsGrid
-          stats={clientsData.stats}
-          statsLoading={clientsData.statsLoading}
-          teamMembersCount={teamMembers.length}
-          managersCount={managersCount}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className={cn(getButtonClasses('outline'), 'h-10 px-4')}>
+                <Settings className="mr-2 h-3.5 w-3.5" />
+                Settings
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 rounded-xl border-muted/40 shadow-xl backdrop-blur-md">
+              <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-primary/5 focus:text-primary">
+                <Link href="/admin/clients" className="flex items-center">
+                  <Settings className="mr-2 h-4 w-4 opacity-70" />
+                  Manage client
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExport} className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-primary/5 focus:text-primary">
+                <Download className="mr-2 h-4 w-4 opacity-70" />
+                Export data
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-primary/5 focus:text-primary">
+                <Link href={`/dashboard/collaboration?clientId=${selectedClient.id}`} className="flex items-center">
+                  <UsersIcon className="mr-2 h-4 w-4 opacity-70" />
+                  Collaboration
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-        {/* Quick Actions */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className={cn(getButtonClasses('outline'), 'h-9 px-4')}
-          >
-            <Link href={`/dashboard/projects?clientId=${selectedClient.id}`}>Projects</Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className={cn(getButtonClasses('outline'), 'h-9 px-4')}
-          >
-            <Link href={`/dashboard/tasks?clientId=${selectedClient.id}`}>Tasks</Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className={cn(getButtonClasses('outline'), 'h-9 px-4')}
-          >
-            <Link href={`/dashboard/proposals?clientId=${selectedClient.id}`}>Proposals</Link>
-          </Button>
-        </div>
-
-        <ClientPipelineBoard clients={clients} selectedClientId={selectedClient.id} />
-
-        {/* Main Content Grid */}
-        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-          {/* Team Members */}
-          <TeamMembersCard
-            teamMembers={teamMembers}
-            filteredTeamMembers={filteredTeamMembers}
-            teamSearch={teamSearch}
-            onTeamSearchChange={setTeamSearch}
-          />
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <ClientOnboardingChecklist items={onboardingItems} />
-
-            {/* Client Details Card */}
-            <ClientDetailsCard
-              teamMembersCount={teamMembers.length}
-              clientIndex={clientIndex}
-              totalClients={clients.length}
-              createdAt={selectedClient.createdAt ?? null}
-            />
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className={cn(getButtonClasses('outline'), 'h-10 w-10 p-0')}
+              >
+                <RefreshCcw className={cn('h-4 w-4', refreshing && DASHBOARD_THEME.animations.pulse)} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="rounded-lg border-muted/40 font-bold uppercase tracking-widest text-[10px]">Refresh data</TooltipContent>
+          </Tooltip>
         </div>
       </div>
+
+      <ClientStatsGrid
+        stats={clientsData.stats}
+        statsLoading={clientsData.statsLoading}
+        teamMembersCount={teamMembers.length}
+        managersCount={managersCount}
+      />
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className={cn(getButtonClasses('outline'), 'h-9 px-4')}
+        >
+          <Link href={`/dashboard/projects?clientId=${selectedClient.id}`}>Projects</Link>
+        </Button>
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className={cn(getButtonClasses('outline'), 'h-9 px-4')}
+        >
+          <Link href={`/dashboard/tasks?clientId=${selectedClient.id}`}>Tasks</Link>
+        </Button>
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className={cn(getButtonClasses('outline'), 'h-9 px-4')}
+        >
+          <Link href={`/dashboard/proposals?clientId=${selectedClient.id}`}>Proposals</Link>
+        </Button>
+      </div>
+
+      <ClientPipelineBoard clients={clients} selectedClientId={selectedClient.id} />
+
+      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+        <TeamMembersCard
+          teamMembers={teamMembers}
+          filteredTeamMembers={filteredTeamMembers}
+          teamSearch={teamSearch}
+          onTeamSearchChange={setTeamSearch}
+        />
+
+        <div className="space-y-6">
+          <ClientOnboardingChecklist items={onboardingItems} />
+
+          <ClientDetailsCard
+            teamMembersCount={teamMembers.length}
+            clientIndex={clientIndex}
+            totalClients={clients.length}
+            createdAt={selectedClient.createdAt ?? null}
+          />
+        </div>
+      </div>
+    </div>
+  ) : null
+
+  return (
+    <TooltipProvider>
+      <BoneyardSkeletonBoundary
+        name="dashboard-clients-page"
+        loading={isInitialLoading}
+        loadingContent={loadingContent}
+      >
+        {readyContent}
+      </BoneyardSkeletonBoundary>
     </TooltipProvider>
   )
 }

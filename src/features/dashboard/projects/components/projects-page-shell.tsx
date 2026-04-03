@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog'
 import { Button } from '@/shared/ui/button'
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Separator } from '@/shared/ui/separator'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -32,20 +33,30 @@ import { ProjectFilters } from './project-filters'
 import { ProjectKanban } from './project-kanban'
 import { ProjectRow } from './project-row'
 import { ProjectSearch } from './project-search'
+import { ProjectsPageSkeleton } from './projects-page-skeleton'
 import { SummaryCard } from './summary-card'
 import { ViewModeSelector } from './view-mode-selector'
 import { RETRY_CONFIG } from './utils'
 import { useProjectsPageContext } from './projects-page-provider'
 
 export function ProjectsPageShell() {
+  const { initialLoading } = useProjectsPageContext()
+  const loadingContent = useMemo(() => <ProjectsPageSkeleton />, [])
+
   return (
     <TooltipProvider>
-      <div className={DASHBOARD_THEME.layout.container}>
-        <ProjectsHeaderSection />
-        <ProjectsDialogs />
-        <ProjectsSummarySection />
-        <ProjectsBacklogSection />
-      </div>
+      <BoneyardSkeletonBoundary
+        name="dashboard-projects-page"
+        loading={initialLoading}
+        loadingContent={loadingContent}
+      >
+        <div className={DASHBOARD_THEME.layout.container}>
+          <ProjectsHeaderSection />
+          <ProjectsDialogs />
+          <ProjectsSummarySection />
+          <ProjectsBacklogSection />
+        </div>
+      </BoneyardSkeletonBoundary>
     </TooltipProvider>
   )
 }

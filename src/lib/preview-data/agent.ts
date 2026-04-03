@@ -258,7 +258,7 @@ function summarizeProviderMetrics(providerId: string) {
     const metrics = getPreviewAdsMetrics().filter((metric) => metric.providerId === providerId).slice(0, 7)
     const totals = metrics.reduce((accumulator, metric) => {
         accumulator.spend += metric.spend
-        accumulator.revenue += metric.revenue
+        accumulator.revenue += metric.revenue ?? 0
         accumulator.impressions += metric.impressions
         accumulator.clicks += metric.clicks
         accumulator.conversions += metric.conversions

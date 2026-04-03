@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { X } from 'lucide-react'
 
 import { Card, CardContent } from '@/shared/ui/card'
+import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Button } from '@/shared/ui/button'
 import type { ClientTeamMember } from '@/types/clients'
 
@@ -146,18 +147,21 @@ export function CollaborationDashboard() {
 
 function CollaborationDashboardContent() {
   const { collab } = useCollaborationDashboardContext()
-
-  if (collab.isBootstrapping) {
-    return <CollaborationSkeleton />
-  }
+  const loadingContent = useMemo(() => <CollaborationSkeleton />, [])
 
   return (
-    <div className={DASHBOARD_THEME.layout.container}>
-      <CollaborationHeaderSection />
-      <CollaborationProjectBanner />
-      <CollaborationInboxSection />
-      <ChannelMembersDialogSection />
-    </div>
+    <BoneyardSkeletonBoundary
+      name="dashboard-collaboration-page"
+      loading={collab.isBootstrapping}
+      loadingContent={loadingContent}
+    >
+      <div className={DASHBOARD_THEME.layout.container}>
+        <CollaborationHeaderSection />
+        <CollaborationProjectBanner />
+        <CollaborationInboxSection />
+        <ChannelMembersDialogSection />
+      </div>
+    </BoneyardSkeletonBoundary>
   )
 }
 

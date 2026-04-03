@@ -4,6 +4,7 @@ import { Geist, Geist_Mono, Anybody } from 'next/font/google'
 import { Agentation } from "agentation";
 export const dynamic = 'force-dynamic'
 import './globals.css'
+import '@/bones/registry.js'
 import { cn } from '@/lib/utils'
 import '@/shared/ui/livekit-styles'
 import { SiteHeader } from '@/shared/layout/site/site-header'
