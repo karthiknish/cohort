@@ -3,15 +3,12 @@
 import type { CSSProperties, ReactNode } from 'react'
 import Image from 'next/image'
 import {
-  BarChart3,
   Bot,
-  BriefcaseBusiness,
-  CreditCard,
   FileText,
   Sparkles,
-  Target,
   Users,
 } from 'lucide-react'
+import { SiGoogleads, SiLinkedin, SiMeta, SiStripe } from 'react-icons/si'
 
 import { motionDurationSeconds, motionEasing, motionLoopSeconds } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
@@ -104,9 +101,9 @@ const INTEGRATIONS_LEFT: Integration[] = [
   {
     id: 'google',
     label: 'Google Ads',
-    icon: <BarChart3 className="h-3.5 w-3.5 text-primary" />,
-    iconBg: 'bg-primary/10',
-    accentColor: 'text-primary',
+    icon: <SiGoogleads className="h-3.5 w-3.5 text-[#4285F4]" aria-hidden="true" />,
+    iconBg: 'bg-[#4285F4]/10',
+    accentColor: 'text-[#4285F4]',
     insights: [
       { stat: '4.2×', label: 'Avg. ROAS', trend: '+18% MoM', trendUp: true },
       { stat: '3.8%', label: 'Click-through rate', trend: '+0.4pp', trendUp: true },
@@ -116,9 +113,9 @@ const INTEGRATIONS_LEFT: Integration[] = [
   {
     id: 'meta',
     label: 'Meta',
-    icon: <Target className="h-3.5 w-3.5 text-info" />,
-    iconBg: 'bg-info/10',
-    accentColor: 'text-info',
+    icon: <SiMeta className="h-3.5 w-3.5 text-[#0668E1]" aria-hidden="true" />,
+    iconBg: 'bg-[#0668E1]/10',
+    accentColor: 'text-[#0668E1]',
     insights: [
       { stat: '$8.40', label: 'Avg. CPM', trend: '−12% vs last week', trendUp: true },
       { stat: '2.4M', label: 'Total reach', trend: '+22% MoM', trendUp: true },
@@ -131,9 +128,9 @@ const INTEGRATIONS_RIGHT: Integration[] = [
   {
     id: 'linkedin',
     label: 'LinkedIn',
-    icon: <BriefcaseBusiness className="h-3.5 w-3.5 text-accent" />,
-    iconBg: 'bg-accent/15',
-    accentColor: 'text-accent',
+    icon: <SiLinkedin className="h-3.5 w-3.5 text-[#0A66C2]" aria-hidden="true" />,
+    iconBg: 'bg-[#0A66C2]/10',
+    accentColor: 'text-[#0A66C2]',
     insights: [
       { stat: '$34', label: 'Cost per lead', trend: '−8% vs last month', trendUp: true },
       { stat: '890', label: 'Leads this month', trend: '+11% MoM', trendUp: true },
@@ -143,9 +140,9 @@ const INTEGRATIONS_RIGHT: Integration[] = [
   {
     id: 'stripe',
     label: 'Stripe',
-    icon: <CreditCard className="h-3.5 w-3.5 text-success" />,
-    iconBg: 'bg-success/10',
-    accentColor: 'text-success',
+    icon: <SiStripe className="h-3.5 w-3.5 text-[#635BFF]" aria-hidden="true" />,
+    iconBg: 'bg-[#635BFF]/10',
+    accentColor: 'text-[#635BFF]',
     insights: [
       { stat: '$48.2K', label: 'MRR tracked', trend: '+9% MoM', trendUp: true },
       { stat: '98.4%', label: 'Payment success rate', trend: 'Above benchmark', trendUp: true },
