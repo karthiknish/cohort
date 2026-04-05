@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildAdminUserPage } from './admin-user-list'
+import { buildAdminUserPage } from './adminUserPage'
 
 describe('buildAdminUserPage', () => {
   it('prepends the workspace owner and dedupes repeated users', () => {

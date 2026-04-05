@@ -24,25 +24,16 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { getPreviewAdminUsers } from '@/lib/preview-data'
 
 import { UserSearchPicker } from '../components/user-search-picker'
-import { buildClientAllocationSummary, getAssignableWorkspaceUsers } from '../lib/client-allocation'
+import {
+  buildClientAllocationSummary,
+  countUnmatchedClientAllocations,
+  filterAllocationClients,
+  getAssignableWorkspaceUsers,
+  normalizeAllocationUsers,
+  type AllocationUser,
+  type AllocationUserRow,
+} from '../lib/client-allocation'
 import { useAdminClients } from './hooks'
-
-type AdminUserRow = {
-  _id?: string
-  legacyId?: string | null
-  name?: string | null
-  email?: string | null
-  role?: string | null
-  status?: string | null
-}
-
-type AssignableUser = {
-  id: string
-  name: string
-  email: string | null
-  role: string
-  status: string
-}
 
 type TeamMemberField = {
   key: string
@@ -60,7 +51,7 @@ type ClientRecord = {
 type TeamMemberFieldRowProps = {
   member: TeamMemberField
   index: number
-  assignableUsers: AssignableUser[]
+  assignableUsers: AllocationUser[]
   clientSaving: boolean
   teamMembersLength: number
   onUpdateName: (key: string, value: string) => void
@@ -358,13 +349,7 @@ export default function AdminClientsPage() {
       )
     }
 
-    const normalizedUsers = (adminUserRows ?? []).map((row: AdminUserRow) => ({
-      id: row.legacyId ?? row._id ?? '',
-      name: row.name?.trim() || row.email?.trim() || 'Unknown user',
-      email: row.email?.trim() || null,
-      role: row.role ?? 'team',
-      status: row.status ?? 'pending',
-    }))
+    const normalizedUsers = normalizeAllocationUsers((adminUserRows ?? []) as AllocationUserRow[])
 
     return getAssignableWorkspaceUsers(normalizedUsers)
   }, [adminUserRows, isPreviewMode])
@@ -374,23 +359,15 @@ export default function AdminClientsPage() {
     [assignableUsers, clients]
   )
 
-  const filteredClients = useMemo(() => {
-    const query = clientSearch.trim().toLowerCase()
-    if (!query) return clients
+  const filteredClients = useMemo(
+    () => filterAllocationClients(clients, clientSearch),
+    [clients, clientSearch]
+  )
 
-    return clients.filter((client) => {
-      const teamText = client.teamMembers.map((member) => `${member.name} ${member.role}`).join(' ')
-      const haystack = `${client.name} ${client.accountManager} ${teamText}`.toLowerCase()
-      return haystack.includes(query)
-    })
-  }, [clients, clientSearch])
-
-  const unmatchedByClientId = useMemo(() => {
-    return allocationSummary.unmatched.reduce<Record<string, number>>((acc, item) => {
-      acc[item.clientId] = (acc[item.clientId] ?? 0) + 1
-      return acc
-    }, {})
-  }, [allocationSummary.unmatched])
+  const unmatchedByClientId = useMemo(
+    () => countUnmatchedClientAllocations(allocationSummary.unmatched),
+    [allocationSummary.unmatched]
+  )
 
   const handleRefresh = useCallback(() => void loadClients(), [loadClients])
   const handleFormSubmit = useCallback(

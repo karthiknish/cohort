@@ -41,46 +41,40 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { getPreviewAdminProblemReports } from '@/lib/preview-data'
 import { useToast } from '@/shared/ui/use-toast'
 import { cn } from '@/lib/utils'
+import {
+  filterProblemReports,
+  formatProblemReportDate,
+  getProblemReportSeverityDisplay,
+  getProblemReportStatusDisplay,
+  type ProblemReport,
+} from '../lib/problem-reports'
 
-interface ProblemReport {
-  id: string
-  userId: string | null
-  userEmail: string | null
-  userName: string | null
-  workspaceId: string | null
-  title: string
-  description: string
-  severity: string
-  status: string
-  fixed: boolean | null
-  resolution: string | null
-  createdAt: string
-  updatedAt: string
+function renderSeverityBadge(severity: string) {
+  const display = getProblemReportSeverityDisplay(severity)
+
+  return (
+    <Badge
+      variant={display.variant === 'default' ? undefined : display.variant}
+      className={display.className}
+    >
+      {display.label}
+    </Badge>
+  )
 }
 
-function getSeverityBadge(severity: string) {
-  switch (severity) {
-    case 'critical': return <Badge variant="destructive">Critical</Badge>
-    case 'high': return <Badge className="bg-warning/10 text-warning border border-warning/20 hover:bg-warning/20">High</Badge>
-    case 'medium': return <Badge variant="secondary">Medium</Badge>
-    case 'low': return <Badge variant="outline">Low</Badge>
-    default: return <Badge>{severity}</Badge>
+function renderStatusIcon(status: string) {
+  const display = getProblemReportStatusDisplay(status)
+
+  switch (display.icon) {
+    case 'resolved':
+      return <CheckCircle2 className={display.className} />
+    case 'in-progress':
+      return <Clock className={display.className} />
+    case 'open':
+      return <AlertCircle className={display.className} />
+    default:
+      return null
   }
-}
-
-function getStatusIcon(status: string) {
-  switch (status) {
-    case 'resolved': return <CheckCircle2 className="h-4 w-4 text-success" />
-    case 'in-progress': return <Clock className="h-4 w-4 text-info" />
-    case 'open': return <AlertCircle className="h-4 w-4 text-warning" />
-    default: return null
-  }
-}
-
-function formatDate(date: string | null) {
-  if (!date) return 'N/A'
-  const parsed = new Date(date)
-  return format(parsed, 'MMM d, h:mm a')
 }
 
 function ProblemReportRow({
@@ -117,10 +111,10 @@ function ProblemReportRow({
         <div className="text-sm">{report.userName}</div>
         <div className="text-xs text-muted-foreground">{report.userEmail}</div>
       </TableCell>
-      <TableCell>{getSeverityBadge(report.severity)}</TableCell>
+      <TableCell>{renderSeverityBadge(report.severity)}</TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
-          {getStatusIcon(report.status)}
+          {renderStatusIcon(report.status)}
           <Select
             value={report.status}
             onValueChange={handleStatusChange}
@@ -137,7 +131,9 @@ function ProblemReportRow({
           </Select>
         </div>
       </TableCell>
-      <TableCell className="text-sm whitespace-nowrap">{formatDate(report.createdAt)}</TableCell>
+      <TableCell className="text-sm whitespace-nowrap">
+        {formatProblemReportDate(report.createdAt, (value) => format(value, 'MMM d, h:mm a'))}
+      </TableCell>
       <TableCell className="text-right">
         <Button
           variant="ghost"
@@ -269,13 +265,9 @@ export default function AdminIssuesPage() {
     setDeleteTarget(null)
   }, [])
 
-  const filteredReports = resolvedReports.filter((r: ProblemReport) => {
-    const search = searchTerm.toLowerCase()
-    return (
-      r.title.toLowerCase().includes(search) ||
-      (r.userEmail ?? '').toLowerCase().includes(search) ||
-      (r.userName ?? '').toLowerCase().includes(search)
-    )
+  const filteredReports = filterProblemReports(resolvedReports, {
+    searchTerm,
+    statusFilter,
   })
 
   return (

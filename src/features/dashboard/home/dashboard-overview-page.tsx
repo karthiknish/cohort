@@ -289,53 +289,6 @@ export function DashboardOverviewPage() {
           />
           <StatsCards stats={orderedStats} loading={statsLoading} primaryCount={4} />
         </section>
-
-        <div className="space-y-8">
-          <section className="space-y-4">
-            <SectionHeading
-              title="Ads"
-              description="Cross-channel performance summary pulled from the Ads workspace."
-              href="/dashboard/ads"
-              hrefLabel="Open ads"
-            />
-            <SnapshotMetricGrid metrics={adsMetricsList} loading={adsLoading} />
-          </section>
-
-          <section className="space-y-4">
-            <SectionHeading
-              title="Analytics"
-              description={analyticsStatusDetail}
-              href="/dashboard/analytics"
-              hrefLabel="Open analytics"
-              badgeLabel={analyticsStatusLabel}
-            />
-            <AnalyticsSummaryCards
-              totals={analyticsTotals}
-              conversionRate={analyticsConversionRate}
-              isLoading={analyticsLoading}
-            />
-          </section>
-
-          <section className="space-y-4">
-            <SectionHeading
-              title="Tasks"
-              description="Current task volume and flow efficiency from the tasks workspace."
-              href="/dashboard/tasks"
-              hrefLabel="Open tasks"
-            />
-            <TaskSummaryCards taskCounts={taskCounts} />
-          </section>
-
-          <section className="space-y-4">
-            <SectionHeading
-              title="Proposals"
-              description="Pipeline summary showing draft volume, ready decks, and proposals awaiting a client response."
-              href="/dashboard/proposals"
-              hrefLabel="Open proposals"
-            />
-            <ProposalMetrics proposals={proposals} isLoading={proposalsLoading} />
-          </section>
-        </div>
       </div>
     </BoneyardSkeletonBoundary>
   )

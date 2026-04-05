@@ -8,7 +8,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { cn } from '@/lib/utils'
 
-import type { AllocationUser } from '../lib/client-allocation'
+import type { AllocationUser } from '../../lib/client-allocation'
 
 const EMPTY_EXCLUDE_NAMES: string[] = []
 
