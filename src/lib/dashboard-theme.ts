@@ -76,7 +76,6 @@ export const PAGE_ICONS = {
   meetings: 'Video',
   collaboration: 'MessageSquare',
   proposals: 'FileText',
-  integrations: 'Plug',
   notifications: 'Bell',
   activity: 'Activity',
   time: 'Clock3',
@@ -128,10 +127,6 @@ export const PAGE_TITLES: Record<string, { title: string; description: string }>
   proposals: {
     title: 'Proposals',
     description: 'Create and manage business proposals.',
-  },
-  integrations: {
-    title: 'Integrations',
-    description: 'Connect external tools and services.',
   },
   notifications: {
     title: 'Notifications',

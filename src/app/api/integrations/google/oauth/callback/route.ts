@@ -31,7 +31,7 @@ export const GET = createApiHandler(
 
       if (error) {
         console.error('[google.oauth.callback] OAuth error from Google:', { error, errorDescription })
-        const errorUrl = new URL('/dashboard/integrations', appUrl)
+        const errorUrl = new URL('/dashboard/ads', appUrl)
         errorUrl.searchParams.set('oauth_error', 'google_error')
         errorUrl.searchParams.set('provider', 'google')
         errorUrl.searchParams.set('message', errorDescription || error)
@@ -40,13 +40,13 @@ export const GET = createApiHandler(
 
       if (!code) {
         console.error('[google.oauth.callback] Missing authorization code')
-        return NextResponse.redirect(`${appUrl}/dashboard/integrations?oauth_error=missing_code&provider=google`)
+        return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=missing_code&provider=google`)
       }
 
       const redirectUri = resolveGoogleAdsOAuthRedirectUri(appUrl)
       if (!redirectUri) {
         console.error('[google.oauth.callback] Google Ads OAuth redirect URI not configured')
-        return NextResponse.redirect(`${appUrl}/dashboard/integrations?oauth_error=config_error&provider=google`)
+        return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=config_error&provider=google`)
       }
 
       // Validate state to prevent CSRF attacks
@@ -55,12 +55,12 @@ export const GET = createApiHandler(
         context = validateGoogleOAuthState(state ?? '')
       } catch (stateError) {
         console.error('[google.oauth.callback] State validation failed:', stateError)
-        return NextResponse.redirect(`${appUrl}/dashboard/integrations?oauth_error=invalid_state&provider=google`)
+        return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=invalid_state&provider=google`)
       }
 
       if (!context.state) {
         console.error('[google.oauth.callback] Invalid state - missing user ID')
-        return NextResponse.redirect(`${appUrl}/dashboard/integrations?oauth_error=invalid_state&provider=google`)
+        return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=invalid_state&provider=google`)
       }
 
       // Complete the OAuth flow
@@ -73,7 +73,7 @@ export const GET = createApiHandler(
 
       console.log(`[google.oauth.callback] Successfully completed OAuth for user ${context.state}`)
 
-      let redirectTarget = context.redirect ?? `${appUrl}/dashboard/integrations`
+      let redirectTarget = context.redirect ?? `${appUrl}/dashboard/ads`
 
       // Standardize success signaling via query parameters
       const url = new URL(redirectTarget, appUrl)
@@ -86,7 +86,7 @@ export const GET = createApiHandler(
 
       // Final safety check on redirect target
       if (!isValidRedirectUrl(redirectTarget)) {
-        return NextResponse.redirect(new URL('/dashboard/integrations?oauth_success=true&provider=google', req.url))
+        return NextResponse.redirect(new URL('/dashboard/ads?oauth_success=true&provider=google', req.url))
       }
 
       return NextResponse.redirect(new URL(redirectTarget, req.url))
@@ -117,7 +117,7 @@ export const GET = createApiHandler(
       })
 
       // Redirect to dashboard with error signaling
-      const errorUrl = new URL('/dashboard/integrations', appUrl)
+      const errorUrl = new URL('/dashboard/ads', appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'google')
       errorUrl.searchParams.set('message', userFacingMessage)

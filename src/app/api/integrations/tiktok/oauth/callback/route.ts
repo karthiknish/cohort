@@ -66,7 +66,7 @@ export const GET = createApiHandler(
       console.error('[tiktok.oauth.callback] Error completing OAuth flow:', errorMessage)
 
       // Redirect to dashboard with error signaling
-      const errorUrl = new URL('/dashboard/integrations', appUrl)
+      const errorUrl = new URL('/dashboard/ads', appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'tiktok')
       errorUrl.searchParams.set('message', errorMessage)

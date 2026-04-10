@@ -27,7 +27,7 @@ export const GET = createApiHandler(
 
       if (error) {
         console.error('[linkedin.oauth.callback] OAuth error from LinkedIn:', { error, errorDescription })
-        const errorUrl = new URL('/dashboard/integrations', appUrl)
+        const errorUrl = new URL('/dashboard/ads', appUrl)
         errorUrl.searchParams.set('oauth_error', 'linkedin_error')
         errorUrl.searchParams.set('provider', 'linkedin')
         errorUrl.searchParams.set('message', errorDescription || error)
@@ -36,13 +36,13 @@ export const GET = createApiHandler(
 
       if (!code) {
         console.error('[linkedin.oauth.callback] Missing authorization code')
-        return NextResponse.redirect(`${appUrl}/dashboard/integrations?oauth_error=missing_code&provider=linkedin`)
+        return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=missing_code&provider=linkedin`)
       }
 
       const redirectUri = process.env.LINKEDIN_OAUTH_REDIRECT_URI
       if (!redirectUri) {
         console.error('[linkedin.oauth.callback] LINKEDIN_OAUTH_REDIRECT_URI not configured')
-        return NextResponse.redirect(`${appUrl}/dashboard/integrations?oauth_error=config_error&provider=linkedin`)
+        return NextResponse.redirect(`${appUrl}/dashboard/ads?oauth_error=config_error&provider=linkedin`)
       }
 
       // Validate state to prevent CSRF attacks
@@ -51,12 +51,12 @@ export const GET = createApiHandler(
         context = validateLinkedInOAuthState(state ?? '')
       } catch (stateError) {
         console.error('[linkedin.oauth.callback] State validation failed:', stateError)
-        return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=invalid_state`)
+        return NextResponse.redirect(`${appUrl}/dashboard/ads?error=invalid_state`)
       }
 
       if (!context.state) {
         console.error('[linkedin.oauth.callback] Invalid state - missing user ID')
-        return NextResponse.redirect(`${appUrl}/dashboard/integrations?error=invalid_state`)
+        return NextResponse.redirect(`${appUrl}/dashboard/ads?error=invalid_state`)
       }
 
       // Complete the OAuth flow
@@ -69,7 +69,7 @@ export const GET = createApiHandler(
 
       console.log(`[linkedin.oauth.callback] Successfully completed OAuth for user ${context.state}`)
 
-      let redirectTarget = context.redirect ?? `${appUrl}/dashboard/integrations`
+      let redirectTarget = context.redirect ?? `${appUrl}/dashboard/ads`
 
       // Standardize success signaling via query parameters
       const url = new URL(redirectTarget, appUrl)
@@ -82,7 +82,7 @@ export const GET = createApiHandler(
 
       // Final safety check on redirect target
       if (!isValidRedirectUrl(redirectTarget)) {
-        return NextResponse.redirect(new URL('/dashboard/integrations?oauth_success=true&provider=linkedin', req.url))
+        return NextResponse.redirect(new URL('/dashboard/ads?oauth_success=true&provider=linkedin', req.url))
       }
 
       return NextResponse.redirect(new URL(redirectTarget, req.url))
@@ -94,7 +94,7 @@ export const GET = createApiHandler(
       })
 
       // Redirect to dashboard with error signaling
-      const errorUrl = new URL('/dashboard/integrations', appUrl)
+      const errorUrl = new URL('/dashboard/ads', appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'linkedin')
       errorUrl.searchParams.set('message', errorMessage)

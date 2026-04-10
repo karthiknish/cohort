@@ -25,7 +25,7 @@ export function WorkflowCard() {
           </CardDescription>
         </div>
         <Button asChild size="sm" variant="outline">
-          <Link href="/dashboard/integrations">View integration checklist</Link>
+          <Link href="/dashboard/ads">Manage ad integrations</Link>
         </Button>
       </CardHeader>
       <CardContent className="grid gap-4 sm:grid-cols-3">
