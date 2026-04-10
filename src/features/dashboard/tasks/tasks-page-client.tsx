@@ -21,6 +21,7 @@ import {
   useTaskForm,
   useTasks,
 } from '@/features/dashboard/tasks'
+import { TaskOperationsPanel } from '@/features/dashboard/workforce/task-operations-panel'
 import {
   Card,
   CardContent,
@@ -506,6 +507,8 @@ function TasksPageContent({
             taskCounts={filters.taskCounts}
           />
         )}
+
+        <TaskOperationsPanel />
 
         {/* Main Content */}
         <Tabs

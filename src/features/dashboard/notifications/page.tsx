@@ -34,6 +34,7 @@ import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { ScrollArea } from '@/shared/ui/scroll-area'
+import { Skeleton } from '@/shared/ui/skeleton'
 import { useToast } from '@/shared/ui/use-toast'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { Badge } from '@/shared/ui/badge'
@@ -91,13 +92,36 @@ export default function NotificationsPage() {
   )
 }
 
+function NotificationsLoadingSkeleton() {
+  return (
+    <div
+      className="space-y-3 py-2"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      aria-label="Loading notifications"
+    >
+      {['n-sk-1', 'n-sk-2', 'n-sk-3', 'n-sk-4', 'n-sk-5'].map((key) => (
+        <div key={key} className="flex items-start gap-4 rounded-lg border p-4">
+          <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-4 w-full max-w-[240px]" />
+            <Skeleton className="h-3 w-full max-w-[320px]" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function NotificationsPageFallback() {
   return (
     <RevealTransition>
       <div className={DASHBOARD_THEME.layout.container}>
       <Card>
-        <CardContent className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
-          <LoaderCircle className="h-5 w-5 animate-spin" /> Loading notifications…
+        <CardContent className="pt-6">
+          <NotificationsLoadingSkeleton />
         </CardContent>
       </Card>
       </div>
@@ -271,6 +295,10 @@ function NotificationsPageContent() {
     void notificationsInfiniteQuery.refetch()
   }, [basePreviewNotifications, isPreviewMode, notificationsInfiniteQuery, previewSourceKey, toast])
 
+  const handleRetryNotificationsQuery = useCallback(() => {
+    void notificationsInfiniteQuery.refetch()
+  }, [notificationsInfiniteQuery])
+
   const handleLoadMore = useCallback(() => {
     if (isPreviewMode) {
       return
@@ -355,8 +383,16 @@ function NotificationsPageContent() {
           <p className={DASHBOARD_THEME.layout.subtitle}>{PAGE_TITLES.notifications?.description ?? 'Stay updated on what matters most'}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading} className={getButtonClasses('outline')}>
-            {loading ? <LoaderCircle className={cn('mr-2 h-4 w-4', DASHBOARD_THEME.animations.spin)} /> : null}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={loading || (!isPreviewMode && notificationsInfiniteQuery.isFetching)}
+            className={getButtonClasses('outline')}
+          >
+            {!isPreviewMode && notificationsInfiniteQuery.isFetching ? (
+              <LoaderCircle className={cn('mr-2 h-4 w-4', DASHBOARD_THEME.animations.spin)} />
+            ) : null}
             Refresh
           </Button>
           <Button variant="outline" size="sm" onClick={handleMarkAllRead} disabled={unreadCount === 0 || ackInFlight} className={getButtonClasses('outline')}>
@@ -382,7 +418,24 @@ function NotificationsPageContent() {
       {error && (
         <Alert variant="destructive">
           <AlertTitle>Failed to load notifications</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <span className="min-w-0 flex-1">{error}</span>
+            {!isPreviewMode ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 border-destructive/40"
+                onClick={handleRetryNotificationsQuery}
+                disabled={notificationsInfiniteQuery.isFetching}
+              >
+                {notificationsInfiniteQuery.isFetching ? (
+                  <LoaderCircle className={cn('mr-2 h-4 w-4', DASHBOARD_THEME.animations.spin)} />
+                ) : null}
+                Try again
+              </Button>
+            ) : null}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -439,10 +492,8 @@ function NotificationsPageContent() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
-                  <LoaderCircle className="h-5 w-5 animate-spin" /> Loading notifications…
-                </div>
-              ) : notifications.length === 0 ? (
+                <NotificationsLoadingSkeleton />
+              ) : notifications.length === 0 && !error ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
                   <div className="rounded-full bg-muted p-4">
                     <BellOff className="h-8 w-8 text-muted-foreground" />
@@ -457,7 +508,7 @@ function NotificationsPageContent() {
                     </p>
                   </div>
                 </div>
-              ) : (
+              ) : notifications.length > 0 ? (
                 <ScrollArea className="h-[calc(100vh-24rem)]">
                   <div className="space-y-2">
                     {notifications.map((notification) => (
@@ -475,7 +526,7 @@ function NotificationsPageContent() {
                     ))}
                   </div>
                 </ScrollArea>
-              )}
+              ) : null}
 
               {!loading && notifications.length > 0 && nextCursor && (
                 <div className="mt-4 flex justify-center">

@@ -229,6 +229,8 @@ describe('unified inbox sections', () => {
           threadNextCursorByRootId={EMPTY_STRING_MAP}
           threadUnreadCountsByRootId={EMPTY_NUMBER_MAP}
           uploading={false}
+          messagesError={null}
+          onRetryMessages={vi.fn()}
         />
         <DirectMessageConversationPane
           currentUserId="user-1"
@@ -257,6 +259,8 @@ describe('unified inbox sections', () => {
           setActiveDmMessageInput={vi.fn()}
           uploading={false}
           onStartNewDM={vi.fn()}
+          messagesError={null}
+          onRetryMessages={vi.fn()}
         />
       </>,
     )
@@ -315,6 +319,8 @@ describe('unified inbox sections', () => {
         threadNextCursorByRootId={EMPTY_STRING_MAP}
         threadUnreadCountsByRootId={EMPTY_NUMBER_MAP}
         uploading={false}
+        messagesError={null}
+        onRetryMessages={vi.fn()}
       />,
     )
 

@@ -142,6 +142,8 @@ export interface CollaborationMessagePaneProps {
   visibleMessages: CollaborationMessage[]
   channelParticipants: ClientTeamMember[]
   messagesError: string | null
+  onRetryMessages?: () => void
+  messagesRetrying?: boolean
   isLoading: boolean
   onLoadMore?: () => void
   canLoadMore?: boolean
@@ -184,6 +186,8 @@ export function CollaborationMessagePane({
   visibleMessages,
   channelParticipants,
   messagesError,
+  onRetryMessages,
+  messagesRetrying,
   isLoading,
   onLoadMore,
   canLoadMore = false,
@@ -550,6 +554,8 @@ export function CollaborationMessagePane({
         messageUpdatingId={messageUpdatingId}
         messagesEndRef={messagesEndRef}
         messagesError={messagesError}
+        onRetryMessages={onRetryMessages}
+        messagesRetrying={messagesRetrying}
         onCancelEdit={handleCancelEdit}
         onConfirmDelete={handleConfirmDelete}
         onConfirmEdit={handleConfirmEdit}

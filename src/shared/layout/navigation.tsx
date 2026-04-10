@@ -6,27 +6,18 @@ import type { CSSProperties } from 'react'
 import { useState, useMemo, useEffect, useCallback, useRef, forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 import { getPreviewSettingsProfile } from '@/lib/preview-data'
+import { DASHBOARD_NAVIGATION_GROUPS } from '@/lib/workforce-routes'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import {
-  BarChart3,
-  CheckSquare,
-  FileText,
-  MessageSquare,
   Settings,
-  Home,
-  Briefcase,
   LogOut,
   Menu,
-  Megaphone,
-  Video,
   ChevronLeft,
   ChevronRight,
-  Users,
   Shield,
   Rocket,
   AlertCircle,
-  Share2,
 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -65,21 +56,6 @@ type NavItem = {
   description: string
   roles?: ('admin' | 'team' | 'client')[] // If undefined, available to all roles
 }
-
-// Define navigation items with role-based access
-const allNavigation: NavItem[] = [
-  { name: 'For You', href: '/for-you', icon: Home, description: 'Your workspace overview' },
-  { name: 'Clients', href: '/dashboard/clients', icon: Users, description: 'Manage workspaces', roles: ['admin', 'team'] },
-  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, description: 'Performance insights' },
-  { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad integrations', roles: ['admin', 'team'] },
-  { name: 'Socials', href: '/dashboard/socials', icon: Share2, description: 'Meta & Instagram insights', roles: ['admin', 'team'] },
-  { name: 'Meetings', href: '/dashboard/meetings', icon: Video, description: 'Schedule and run meetings' },
-  { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare, description: 'Task management' },
-  { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Create proposals', roles: ['admin', 'team'] },
-  { name: 'Collaboration', href: '/dashboard/collaboration', icon: MessageSquare, description: 'Team chat' },
-  { name: 'Projects', href: '/dashboard/projects', icon: Briefcase, description: 'Project management' },
-  { name: 'Manage Clients', href: '/admin/clients', icon: Shield, description: 'Admin client portal', roles: ['admin'] },
-]
 
 const NavItemLink = forwardRef<
   HTMLAnchorElement,
@@ -163,60 +139,72 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
   }, [pathname])
 
   // Filter navigation items based on user role
-  const navigation = useMemo(() => {
+  const navigationGroups = useMemo(() => {
     const userRole = user?.role ?? 'client'
-    return allNavigation.filter(item => {
-      if (!item.roles) return true // Available to all roles
-      return item.roles.includes(userRole as 'admin' | 'team' | 'client')
-    })
+    return DASHBOARD_NAVIGATION_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (!item.roles) return true
+        return item.roles.includes(userRole as 'admin' | 'team' | 'client')
+      }),
+    })).filter((group) => group.items.length > 0)
   }, [user?.role])
 
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={100}>
       <nav className="flex flex-1 flex-col space-y-4">
         <ScrollArea className="flex-1">
-          <div className="space-y-1 px-1">
-            {navigation.map((item) => {
-              const isDashboardRoot = item.href === '/dashboard'
-              const isActive = isDashboardRoot
-                ? pathname === item.href
-                : pathname === item.href || pathname.startsWith(`${item.href}/`)
+          <div className="space-y-4 px-1">
+            {navigationGroups.map((group) => (
+              <div key={group.id} className="space-y-1.5">
+                {!collapsed ? (
+                  <p className="px-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/65">
+                    {group.label}
+                  </p>
+                ) : null}
+                {group.items.map((item) => {
+                  const isDashboardRoot = item.href === '/dashboard'
+                  const isActive = isDashboardRoot
+                    ? pathname === item.href
+                    : pathname === item.href || pathname.startsWith(`${item.href}/`)
 
-              const linkClasses = cn(
-                'flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
-                collapsed ? 'justify-center px-0' : 'justify-start',
-                isActive
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
-              )
+                  const linkClasses = cn(
+                    'flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
+                    collapsed ? 'justify-center px-0' : 'justify-start',
+                    isActive
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
+                  )
 
-              const navLink = (
-                <NavItemLink
-                  key={item.name}
-                  item={item}
-                  linkClasses={linkClasses}
-                  onNavigate={onNavigate}
-                  prefetchRoute={prefetchRoute}
-                  collapsed={collapsed}
-                />
-              )
+                  const navLink = (
+                    <NavItemLink
+                      key={item.name}
+                      item={item}
+                      linkClasses={linkClasses}
+                      onNavigate={onNavigate}
+                      prefetchRoute={prefetchRoute}
+                      collapsed={collapsed}
+                    />
+                  )
 
-              if (collapsed) {
-                return (
-                  <Tooltip key={item.name}>
-                    <TooltipTrigger asChild>
-                      {navLink}
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="flex flex-col gap-0.5">
-                      <span className="font-medium">{item.name}</span>
-                      <span className="text-xs text-muted-foreground">{item.description}</span>
-                    </TooltipContent>
-                  </Tooltip>
-                )
-              }
+                  if (collapsed) {
+                    return (
+                      <Tooltip key={item.name}>
+                        <TooltipTrigger asChild>
+                          {navLink}
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="flex flex-col gap-0.5">
+                          <span className="font-medium">{item.name}</span>
+                          <span className="text-xs text-muted-foreground">{item.description}</span>
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  }
 
-              return navLink
-            })}
+                  return navLink
+                })}
+              </div>
+            ))}
           </div>
         </ScrollArea>
 

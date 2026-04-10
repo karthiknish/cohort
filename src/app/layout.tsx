@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono, Anybody } from 'next/font/google'
-import { Agentation } from "agentation";
+import { Agentation } from 'agentation'
 export const dynamic = 'force-dynamic'
 import './globals.css'
 import '@/bones/registry.js'
@@ -44,6 +44,9 @@ export const viewport = {
   themeColor: 'hsl(var(--background))',
 }
 
+const showAgentation = process.env.NODE_ENV === 'development'
+  && process.env.NEXT_PUBLIC_ENABLE_AGENTATION === 'true'
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -74,7 +77,7 @@ export default function RootLayout({
             <SiteHeader />
             <main id="main-content" className="flex-1">
               <MotionProvider>{children}</MotionProvider>
-               {process.env.NODE_ENV === "development" && <Agentation />}
+              {showAgentation ? <Agentation /> : null}
             </main>
             <SiteFooter />
           </div>

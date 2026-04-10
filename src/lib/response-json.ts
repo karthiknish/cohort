@@ -40,7 +40,14 @@ export async function parseJsonBody<T>(response: Response, options: ParseJsonBod
 
   let rawBody: string
   try {
-    rawBody = await response.text()
+    if (typeof response.text === 'function') {
+      rawBody = await response.text()
+    } else if (typeof response.json === 'function') {
+      const jsonPayload = await response.json()
+      rawBody = JSON.stringify(jsonPayload)
+    } else {
+      throw new TypeError('Response body readers are unavailable.')
+    }
   } catch (error) {
     logError(error, `${context}:readResponseBody`)
     throw new ResponseBodyParseError(context, 'unreadable', error)

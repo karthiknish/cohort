@@ -18,6 +18,7 @@ import { isFeatureEnabled } from '@/lib/features'
 import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
 import { CreateChannelDialog } from './create-channel-dialog'
 import { ChannelMembersDialog } from './channel-members-dialog'
+import { CollaborationOperationsDialogs } from './collaboration-operations-dialogs'
 
 type CollaborationDashboardContext = ReturnType<typeof useCollaborationDashboardContext>
 
@@ -89,6 +90,8 @@ function createUnifiedInboxChannelPaneProps(
     onClearDeepLink: clearMessageFocus,
     deepLinkMessageId: requestedMessageId,
     deepLinkThreadId: requestedThreadId,
+    messagesError: collab.messagesError,
+    onRetryMessages: collab.retryMessagesError,
   }
 }
 
@@ -121,6 +124,8 @@ function createUnifiedInboxDirectMessagePaneProps(context: CollaborationDashboar
     onAddAttachments: collab.handleAddAttachments,
     onRemoveAttachment: collab.handleRemoveAttachment,
     onStartNewDM: openNewDMDialog,
+    messagesError: dm.messagesError,
+    onRetryMessages: dm.retryMessagesError,
   }
 }
 
@@ -166,7 +171,7 @@ function CollaborationDashboardContent() {
 }
 
 function CollaborationHeaderSection() {
-  const { currentUserId, handleCreateChannel, isAdmin, workspaceId, workspaceMembers } =
+  const { currentUserId, currentUserRole, handleCreateChannel, isAdmin, workspaceId, workspaceMembers } =
     useCollaborationDashboardContext()
 
   return (
@@ -177,14 +182,17 @@ function CollaborationHeaderSection() {
           {PAGE_TITLES.collaboration?.description ?? 'Coordinate with teammates and clients in dedicated workspaces.'}
         </p>
       </div>
-      {isAdmin ? (
+      {currentUserRole !== 'client' ? (
         <div className="flex items-center gap-3">
-          <CreateChannelDialog
-            workspaceId={workspaceId}
-            userId={currentUserId}
-            teamMembers={workspaceMembers}
-            onCreate={handleCreateChannel}
-          />
+          <CollaborationOperationsDialogs />
+          {isAdmin ? (
+            <CreateChannelDialog
+              workspaceId={workspaceId}
+              userId={currentUserId}
+              teamMembers={workspaceMembers}
+              onCreate={handleCreateChannel}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>

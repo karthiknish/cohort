@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState, type ChangeEvent, type DragEvent, type KeyboardEvent } from 'react'
+import { useCallback, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { ImagePlus, LoaderCircle, Trash2, Upload } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -98,26 +98,20 @@ export function ImageUploader({
     [processFile]
   )
 
-  const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+  const handleDragOver = useCallback((event: DragEvent<HTMLButtonElement>) => {
     event.preventDefault()
     event.stopPropagation()
     setIsDragging(true)
   }, [])
 
-  const handleDragLeave = useCallback((event: DragEvent<HTMLDivElement>) => {
+  const handleDragLeave = useCallback((event: DragEvent<HTMLButtonElement>) => {
     event.preventDefault()
     event.stopPropagation()
     setIsDragging(false)
   }, [])
 
-  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter') {
-      handleClick()
-    }
-  }, [handleClick])
-
   const handleDrop = useCallback(
-    (event: DragEvent<HTMLDivElement>) => {
+    (event: DragEvent<HTMLButtonElement>) => {
       event.preventDefault()
       event.stopPropagation()
       setIsDragging(false)
@@ -190,11 +184,9 @@ export function ImageUploader({
           </div>
         </div>
       ) : (
-        <div
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           onClick={handleClick}
-          onKeyDown={handleKeyDown}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -221,7 +213,7 @@ export function ImageUploader({
               Drag and drop or click to browse
             </p>
           </div>
-        </div>
+        </button>
       )}
 
       {error && (

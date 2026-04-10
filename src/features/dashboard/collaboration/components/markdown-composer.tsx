@@ -16,7 +16,9 @@ function MarkdownPreviewLink(props: AnchorHTMLAttributes<HTMLAnchorElement>) {
       target="_blank"
       rel="noopener noreferrer"
       className="text-primary underline underline-offset-2 hover:no-underline"
-    />
+    >
+      {props.children}
+    </a>
   )
 }
 

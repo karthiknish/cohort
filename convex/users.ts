@@ -347,6 +347,7 @@ export const getNotificationPreferencesByEmail = internalQuery({
   },
 })
 
+// oxlint-disable-next-line convex-unused/no-unused-functions
 export const bulkUpsert = zAdminMutation({
   args: {
     users: z.array(

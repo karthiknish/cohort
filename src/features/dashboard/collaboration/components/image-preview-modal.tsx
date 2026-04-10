@@ -389,7 +389,8 @@ export function ImagePreviewModal({
       )}
 
       {/* Image */}
-      <div
+      <button
+        type="button"
         className="flex h-full w-full items-center justify-center overflow-hidden p-16"
         onClick={handleStopPropagation}
         onMouseDown={handleMouseDown}
@@ -397,8 +398,6 @@ export function ImagePreviewModal({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         onKeyDown={handleImageAreaKeyDown}
-        role="button"
-        tabIndex={0}
         aria-label={`Preview image ${currentImage.name}`}
       >
         <LazyImage
@@ -413,7 +412,7 @@ export function ImagePreviewModal({
           onClick={handleImageClick}
           draggable={false}
         />
-      </div>
+      </button>
 
       {/* Thumbnails */}
       {hasMultipleImages && (

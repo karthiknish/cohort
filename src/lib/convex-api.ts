@@ -258,6 +258,18 @@ export const problemReportsApi = {
   remove: looseApi.problemReports.remove,
 }
 
+export const workforceApi = {
+  getTimeDashboard: looseApi.workforce.getTimeDashboard,
+  seedTimeModule: looseApi.workforce.seedTimeModule,
+  clockAction: looseApi.workforce.clockAction,
+  getSchedulingDashboard: looseApi.workforce.getSchedulingDashboard,
+  seedSchedulingModule: looseApi.workforce.seedSchedulingModule,
+  createCoverageShift: looseApi.workforce.createCoverageShift,
+  getFormsDashboard: looseApi.workforce.getFormsDashboard,
+  seedFormsModule: looseApi.workforce.seedFormsModule,
+  createChecklistTemplate: looseApi.workforce.createChecklistTemplate,
+}
+
 export const gammaApi = {
   getStatus: looseApi.gamma.getStatus,
   listFolders: looseApi.gamma.listFolders,

@@ -17,6 +17,7 @@ import type * as adminInvitations from "../adminInvitations.js";
 import type * as adminMigrations from "../adminMigrations.js";
 import type * as adminNotifications from "../adminNotifications.js";
 import type * as adminUsage from "../adminUsage.js";
+import type * as adminUserPage from "../adminUserPage.js";
 import type * as adminUsers from "../adminUsers.js";
 import type * as adsAdMetrics from "../adsAdMetrics.js";
 import type * as adsAudiences from "../adsAudiences.js";
@@ -130,6 +131,7 @@ import type * as socialMetrics from "../socialMetrics.js";
 import type * as taskComments from "../taskComments.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
+import type * as workforce from "../workforce.js";
 
 import type {
   ApiFromModules,
@@ -147,6 +149,7 @@ declare const fullApi: ApiFromModules<{
   adminMigrations: typeof adminMigrations;
   adminNotifications: typeof adminNotifications;
   adminUsage: typeof adminUsage;
+  adminUserPage: typeof adminUserPage;
   adminUsers: typeof adminUsers;
   adsAdMetrics: typeof adsAdMetrics;
   adsAudiences: typeof adsAudiences;
@@ -260,6 +263,7 @@ declare const fullApi: ApiFromModules<{
   taskComments: typeof taskComments;
   tasks: typeof tasks;
   users: typeof users;
+  workforce: typeof workforce;
 }>;
 
 /**

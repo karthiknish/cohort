@@ -8,6 +8,7 @@ import {
   CheckSquare,
   FileText,
   LayoutDashboard,
+  LoaderCircle,
   MessageSquare,
   Users,
   type LucideIcon,
@@ -17,6 +18,7 @@ import { useMemo } from 'react'
 import { AnalyticsSummaryCards } from '@/features/dashboard/analytics/components/analytics-summary-cards'
 import { ProposalMetrics } from '@/features/dashboard/proposals/components/proposal-metrics'
 import { TaskSummaryCards } from '@/features/dashboard/tasks/task-summary-cards'
+import { OperationsPulseCard } from '@/features/dashboard/workforce/operations-pulse-card'
 import { analyticsIntegrationsApi, projectsApi } from '@/lib/convex-api'
 import { getPreviewProjects } from '@/lib/preview-data'
 import { formatCurrency, getWorkspaceId } from '@/lib/utils'
@@ -25,6 +27,7 @@ import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Badge } from '@/shared/ui/badge'
+import { Button } from '@/shared/ui/button'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -82,6 +85,8 @@ export function DashboardOverviewPage() {
     proposals,
     proposalsLoading,
     proposalsError,
+    handleRefresh,
+    isRefreshing,
   } = useDashboardData({ selectedClientId })
 
   const { orderedStats } = useDashboardStats({
@@ -277,8 +282,23 @@ export function DashboardOverviewPage() {
 
         {dashboardErrors.length > 0 && (
           <Alert variant="destructive">
-            <AlertTitle>Some dashboard data is unavailable</AlertTitle>
-            <AlertDescription>{dashboardErrors.join(' ')}</AlertDescription>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 space-y-1">
+                <AlertTitle>Some dashboard data is unavailable</AlertTitle>
+                <AlertDescription>{dashboardErrors.join(' ')}</AlertDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 border-destructive/40 bg-background hover:bg-destructive/10"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Try again
+              </Button>
+            </div>
           </Alert>
         )}
 
@@ -288,6 +308,14 @@ export function DashboardOverviewPage() {
             description="Primary KPI cards distilled from analytics, ads, and task flow."
           />
           <StatsCards stats={orderedStats} loading={statsLoading} primaryCount={4} />
+        </section>
+
+        <section className="space-y-4">
+          <SectionHeading
+            title="Operations pulse"
+            description="Attendance, coverage, and checklist readiness folded into the main workspace overview."
+          />
+          <OperationsPulseCard />
         </section>
       </div>
     </BoneyardSkeletonBoundary>

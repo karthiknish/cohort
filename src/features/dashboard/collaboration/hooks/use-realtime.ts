@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useQuery } from 'convex/react'
+import { useEffect, useMemo, useState } from 'react'
+import { useQueries, useQuery } from 'convex/react'
 
 import { usePreview } from '@/shared/contexts/preview-context'
 import { collaborationApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { getPreviewCollaborationMessages } from '@/lib/preview-data'
 import type {
   CollaborationAttachment,
@@ -118,6 +119,7 @@ interface UseRealtimeMessagesOptions {
   workspaceId: string | null
   selectedChannel: Channel | null
   currentUserId?: string | null
+  channelListRetryNonce: number
   setMessagesByChannel: React.Dispatch<React.SetStateAction<MessagesByChannelState>>
   setNextCursorByChannel: React.Dispatch<React.SetStateAction<Record<string, string | null>>>
   setLoadingChannelId: React.Dispatch<React.SetStateAction<string | null>>
@@ -129,6 +131,7 @@ export function useRealtimeMessages({
   workspaceId,
   selectedChannel,
   currentUserId,
+  channelListRetryNonce,
   setMessagesByChannel,
   setNextCursorByChannel,
   setLoadingChannelId,
@@ -148,19 +151,43 @@ export function useRealtimeMessages({
     Boolean(channelId) &&
     Boolean(channelType)
 
-  const convexRows = useQuery(
-    collaborationApi.listChannel,
-    convexEnabled
-      ? {
+  const channelListQueryId = useMemo(
+    () => `channelList:${channelId ?? 'none'}:${channelListRetryNonce}`,
+    [channelId, channelListRetryNonce],
+  )
+
+  const channelListQueries = useMemo(() => {
+    if (!convexEnabled) {
+      return {}
+    }
+
+    return {
+      [channelListQueryId]: {
+        query: collaborationApi.listChannel,
+        args: {
           workspaceId: String(workspaceId),
           channelId: channelScopeId,
           channelType: String(channelType),
           clientId: channelType === 'client' ? (channelClientId ?? null) : null,
           projectId: channelType === 'project' ? (channelProjectId ?? null) : null,
           limit: REALTIME_MESSAGE_LIMIT + 1,
-        }
-      : 'skip'
-  ) as { items: Array<ConvexMessageRow>; nextCursor: string | null } | undefined
+        },
+      },
+    }
+  }, [
+    channelClientId,
+    channelListQueryId,
+    channelProjectId,
+    channelScopeId,
+    channelType,
+    convexEnabled,
+    workspaceId,
+  ])
+
+  const channelListResults = useQueries(channelListQueries)
+  const channelListResult = channelListQueries[channelListQueryId]
+    ? channelListResults[channelListQueryId]
+    : undefined
 
   useEffect(() => {
     if (!convexEnabled || !channelId) {
@@ -176,9 +203,11 @@ export function useRealtimeMessages({
       return
     }
 
-    if (!convexRows) {
+    if (channelListResult === undefined || channelListResult instanceof Error) {
       return
     }
+
+    const convexRows = channelListResult as { items: Array<ConvexMessageRow>; nextCursor: string | null }
 
     const rows = Array.isArray(convexRows.items) ? convexRows.items : []
     const hasMore = Boolean(convexRows.nextCursor)
@@ -217,13 +246,26 @@ export function useRealtimeMessages({
     setMessagesError(null)
   }, [
     channelId,
+    channelListResult,
     convexEnabled,
-    convexRows,
     setLoadingChannelId,
     setMessagesByChannel,
     setMessagesError,
     setNextCursorByChannel,
   ])
+
+  useEffect(() => {
+    if (!convexEnabled || !channelId) {
+      return
+    }
+
+    if (channelListResult === undefined || !(channelListResult instanceof Error)) {
+      return
+    }
+
+    setMessagesError(asErrorMessage(channelListResult))
+    setLoadingChannelId((current) => (current === channelId ? null : current))
+  }, [channelId, channelListResult, convexEnabled, setLoadingChannelId, setMessagesError])
 
   useEffect(() => {
     if (convexEnabled) {

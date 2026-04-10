@@ -4,7 +4,9 @@ import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME, PAGE_TITLES, getIconContainerClasses, getStatCardClasses } from '@/lib/dashboard-theme'
 import type { LucideIcon } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
-import type { ReactNode } from 'react'
+import { Button } from '@/shared/ui/button'
+import { Skeleton } from '@/shared/ui/skeleton'
+import { useId, type ReactNode } from 'react'
 
 interface DashboardPageHeaderProps {
   title: string
@@ -137,15 +139,66 @@ interface EmptyStateProps {
   title: string
   description: string
   action?: ReactNode
+  actionLabel?: string
+  onAction?: () => void
+  actionDisabled?: boolean
 }
 
-export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+  actionLabel,
+  onAction,
+  actionDisabled = false,
+}: EmptyStateProps) {
+  const headingId = useId()
   return (
-    <div className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center">
-      <Icon className="mx-auto h-12 w-12 text-muted-foreground/40" />
-      <h3 className="mt-4 text-lg font-medium text-foreground">{title}</h3>
+    <div className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center" role="region" aria-labelledby={headingId}>
+      <Icon className="mx-auto h-12 w-12 text-muted-foreground/40" aria-hidden />
+      <h3 id={headingId} className="mt-4 text-lg font-medium text-foreground">
+        {title}
+      </h3>
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-      {action && <div className="mt-4">{action}</div>}
+      {action ? <div className="mt-4">{action}</div> : null}
+      {!action && actionLabel && onAction ? (
+        <div className="mt-4">
+          <Button type="button" onClick={onAction} disabled={actionDisabled}>
+            {actionLabel}
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/**
+ * Use while Convex/workspace data is loading — distinct from empty states so users do not confuse “no data” with “still fetching”.
+ */
+export function ModulePageLoadingPlaceholder({ message = 'Loading…' }: { message?: string }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      className="space-y-4"
+    >
+      <span className="sr-only">{message}</span>
+      <div className="rounded-lg border border-muted/50 bg-muted/20 p-6">
+        <div className="mx-auto max-w-lg space-y-3">
+          <div className="flex justify-center">
+            <Skeleton className="h-12 w-12 rounded-full" />
+          </div>
+          <Skeleton className="mx-auto h-5 w-2/3 max-w-sm" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="mx-auto h-4 w-4/5" />
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Skeleton className="h-36 rounded-xl" />
+        <Skeleton className="h-36 rounded-xl" />
+      </div>
     </div>
   )
 }

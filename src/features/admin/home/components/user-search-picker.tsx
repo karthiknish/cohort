@@ -62,7 +62,6 @@ export function UserSearchPicker({ id, value, onChange, options, placeholder, se
           role="combobox"
           aria-expanded={open}
           aria-controls={listboxId}
-          aria-haspopup="listbox"
           disabled={disabled}
           className={cn('w-full justify-between font-normal', !selectedLabel && 'text-muted-foreground')}
         >

@@ -53,6 +53,28 @@ export { getPreviewAdsMetrics, getPreviewAdsIntegrationStatuses, getPreviewCampa
 // Socials
 export { getPreviewSocialConnectionStatus, getPreviewSocialOverview } from './socials'
 
+// Workforce
+export {
+    getPreviewChecklistSubmissions,
+    getPreviewChecklistTemplates,
+    getPreviewCoverageAlerts,
+    getPreviewDirectoryContacts,
+    getPreviewFormFields,
+    getPreviewHelpDeskRequests,
+    getPreviewKnowledgeArticles,
+    getPreviewKnowledgeCollections,
+    getPreviewRecognitionEntries,
+    getPreviewShiftSwaps,
+    getPreviewShifts,
+    getPreviewTeamTree,
+    getPreviewTimeOffBalances,
+    getPreviewTimeOffRequests,
+    getPreviewTimeSessions,
+    getPreviewTimeSummary,
+    getPreviewTrainingModules,
+    getPreviewUpdates,
+} from './workforce'
+
 // Settings
 export {
     getPreviewSettingsExportData,

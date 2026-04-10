@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "import", "typescript", "react", "react-perf", "nextjs"],
+  "plugins": ["eslint", "import", "typescript", "react", "react-perf", "nextjs", "jsx-a11y"],
   "jsPlugins": [
     {
       "name": "convex",

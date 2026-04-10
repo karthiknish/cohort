@@ -2,7 +2,7 @@
 
 import type { ChangeEvent } from 'react'
 import Link from 'next/link'
-import { Download, MessageSquare, Search } from 'lucide-react'
+import { Download, LoaderCircle, MessageSquare, Search } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -144,12 +144,30 @@ export function NoSearchResultsState() {
 
 export interface MessagesErrorStateProps {
   error: string
+  onRetry?: () => void
+  isRetrying?: boolean
+  retryLabel?: string
 }
 
-export function MessagesErrorState({ error }: MessagesErrorStateProps) {
+export function MessagesErrorState({ error, onRetry, isRetrying, retryLabel = 'Try again' }: MessagesErrorStateProps) {
   return (
-    <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-      {error}
+    <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive" role="alert">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <p className="min-w-0 flex-1">{error}</p>
+        {onRetry ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onRetry}
+            disabled={isRetrying}
+            className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            {isRetrying ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {retryLabel}
+          </Button>
+        ) : null}
+      </div>
     </div>
   )
 }

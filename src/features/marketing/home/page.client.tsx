@@ -10,6 +10,8 @@ import { FeaturesSection } from "@/features/marketing/home/components/features-s
 import { HeroBackground } from "@/features/marketing/home/components/hero-background"
 import { HERO_HEADLINE, HERO_SUBHEAD } from "@/features/marketing/home/components/home-content"
 import { MinifiedSoftwarePreview } from "@/features/marketing/home/components/minified-software-preview"
+import { OperationsExpansionSection } from "@/features/marketing/home/components/operations-expansion-section"
+import { SupportProofSection } from "@/features/marketing/home/components/support-proof-section"
 import { authClient } from "@/lib/auth-client"
 import { FadeIn } from "@/shared/ui/animate-in"
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
@@ -100,15 +102,18 @@ function HomePageContent() {
           <FadeIn className="mb-16 text-center">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary/50">Features</p>
             <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">
-              Everything your agency runs on
+              Everything your agency runs on, now with operational depth
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-              One platform. Every workflow. From first proposal to final report.
+              One platform. Every workflow. From first proposal to daily operations and internal support.
             </p>
           </FadeIn>
           <FeaturesBento />
         </div>
       </section>
+
+      <OperationsExpansionSection />
+      <SupportProofSection />
 
       {/* ── CTA ── */}
       <section className="bg-muted/30 px-6 py-24">

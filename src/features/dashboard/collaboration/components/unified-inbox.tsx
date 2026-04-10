@@ -76,6 +76,8 @@ type UnifiedInboxChannelPaneProps = {
   onClearDeepLink?: () => void
   deepLinkMessageId?: string | null
   deepLinkThreadId?: string | null
+  messagesError: string | null
+  onRetryMessages: () => void
 }
 
 type UnifiedInboxDirectMessagePaneProps = {
@@ -104,6 +106,8 @@ type UnifiedInboxDirectMessagePaneProps = {
   onAddAttachments: (files: FileList | File[]) => void
   onRemoveAttachment: (attachmentId: string) => void
   onStartNewDM?: () => void
+  messagesError: string | null
+  onRetryMessages: () => void
 }
 
 type UnifiedInboxManageChannelProps = {
@@ -182,6 +186,8 @@ export function UnifiedInbox({
     onClearDeepLink,
     deepLinkMessageId,
     deepLinkThreadId,
+    messagesError,
+    onRetryMessages,
   } = channelPane
   const {
     messages: dmMessages,
@@ -204,6 +210,8 @@ export function UnifiedInbox({
     clearPendingAttachments,
     uploadPendingAttachments,
     onStartNewDM,
+    messagesError: dmMessagesError,
+    onRetryMessages: onDmRetryMessages,
   } = directMessagePane
   const canManageSelectedChannel = manageChannel?.canManageSelectedChannel ?? false
   const onManageSelectedChannel = manageChannel?.onManageSelectedChannel
@@ -418,6 +426,8 @@ export function UnifiedInbox({
           searchHighlights={searchHighlights}
           searchingMessages={searchingMessages}
           onClearDeepLink={onClearDeepLink}
+          messagesError={messagesError}
+          onRetryMessages={onRetryMessages}
           selectedChannel={selectedChannel}
           sending={sending}
           threadErrorsByRootId={threadErrorsByRootId}
@@ -456,6 +466,8 @@ export function UnifiedInbox({
           setActiveDmMessageInput={setActiveDmMessageInput}
           uploading={uploading}
           onStartNewDM={onStartNewDM}
+          messagesError={dmMessagesError}
+          onRetryMessages={onDmRetryMessages}
         />
       ) : (
         <EmptyConversationPane channelCount={channelCount} dmCount={dmCount} />

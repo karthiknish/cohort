@@ -88,6 +88,8 @@ const baseProps = {
     sharedFiles: [],
     deepLinkMessageId: null,
     deepLinkThreadId: null,
+    messagesError: null,
+    onRetryMessages: () => {},
   },
   directMessagePane: {
     selectedDM: null,
@@ -115,6 +117,8 @@ const baseProps = {
     onAddAttachments: () => {},
     onRemoveAttachment: () => {},
     onStartNewDM: () => {},
+    messagesError: null,
+    onRetryMessages: () => {},
   },
 }
 

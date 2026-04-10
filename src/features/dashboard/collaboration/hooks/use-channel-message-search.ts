@@ -1,7 +1,7 @@
 'use client'
 
 import type { ConvexReactClient } from 'convex/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { collaborationApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
@@ -35,6 +35,11 @@ export function useChannelMessageSearch({
   const [searchHighlights, setSearchHighlights] = useState<string[]>([])
   const [searchingMessages, setSearchingMessages] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [searchRetryNonce, setSearchRetryNonce] = useState(0)
+
+  const retrySearch = useCallback(() => {
+    setSearchRetryNonce((n) => n + 1)
+  }, [])
 
   const normalizedMessageSearch = messageSearchQuery.trim()
   const parsedSearch = useMemo(
@@ -109,7 +114,7 @@ export function useChannelMessageSearch({
       .finally(() => {
         setSearchingMessages(false)
       })
-  }, [convex, isPreviewMode, messagesByChannel, normalizedMessageSearch, parsedSearch, selectedChannel, workspaceId])
+  }, [convex, isPreviewMode, messagesByChannel, normalizedMessageSearch, parsedSearch, searchRetryNonce, selectedChannel, workspaceId])
 
   const visibleMessages = useMemo(() => {
     if (normalizedMessageSearch) {
@@ -128,5 +133,6 @@ export function useChannelMessageSearch({
     searchingMessages,
     searchHighlights,
     searchError,
+    retrySearch,
   }
 }

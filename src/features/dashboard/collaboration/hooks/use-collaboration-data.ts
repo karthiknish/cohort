@@ -173,6 +173,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     isCurrentChannelLoading: messages.isCurrentChannelLoading,
     isBootstrapping,
     messagesError: messages.messagesError,
+    retryMessagesError: messages.retryMessagesError,
     messageSearchQuery: messages.messageSearchQuery,
     setMessageSearchQuery: messages.setMessageSearchQuery,
 

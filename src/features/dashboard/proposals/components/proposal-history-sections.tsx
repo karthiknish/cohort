@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { Fragment, type ReactNode, useCallback } from 'react'
 import { Clock, Download, ExternalLink, FileText, Layout, LoaderCircle, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { ViewTransition } from 'react'
@@ -9,6 +9,28 @@ import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
 import type { ProposalDraft } from '@/types/proposals'
+
+function MaybeViewTransition({
+  children,
+  defaultType,
+  name,
+  share,
+}: {
+  children: ReactNode
+  defaultType: 'none' | 'auto'
+  name: string
+  share: string
+}) {
+  if (typeof ViewTransition !== 'function') {
+    return <Fragment>{children}</Fragment>
+  }
+
+  return (
+    <ViewTransition name={name} share={share} default={defaultType}>
+      {children}
+    </ViewTransition>
+  )
+}
 
 export function ProposalHistoryHeader({
   isLoading,
@@ -117,10 +139,10 @@ export function ProposalHistoryRow({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <ViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" default="none">
+            <MaybeViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" defaultType="none">
               <h4 className="text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">{displayName}</h4>
-            </ViewTransition>
-            <ViewTransition name={`proposal-status-${proposal.id}`} share="morph" default="none">
+            </MaybeViewTransition>
+            <MaybeViewTransition name={`proposal-status-${proposal.id}`} share="morph" defaultType="none">
               <Badge
                 variant={proposal.status === 'ready' ? 'default' : 'outline'}
                 className={cn(
@@ -132,7 +154,7 @@ export function ProposalHistoryRow({
               >
                 {proposal.status}
               </Badge>
-            </ViewTransition>
+            </MaybeViewTransition>
             {isActiveDraft && proposal.status !== 'ready' ? (
               <Badge variant="secondary" className="h-5 border-none bg-warning/10 px-2 text-[10px] font-bold uppercase tracking-wider text-warning hover:bg-warning/10">
                 Active draft

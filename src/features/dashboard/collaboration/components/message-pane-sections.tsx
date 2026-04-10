@@ -859,6 +859,8 @@ type CollaborationMessageViewportProps = {
   messageUpdatingId: string | null
   messagesEndRef: RefObject<HTMLDivElement | null>
   messagesError: string | null
+  onRetryMessages?: () => void
+  messagesRetrying?: boolean
   onConfirmDelete: (messageId: string) => void
   onConfirmEdit: () => void
   onCreateTask: (message: CollaborationMessage) => void
@@ -896,6 +898,8 @@ export function CollaborationMessageViewport({
   messageUpdatingId,
   messagesEndRef,
   messagesError,
+  onRetryMessages,
+  messagesRetrying,
   onCancelEdit,
   onConfirmDelete,
   onConfirmEdit,
@@ -926,7 +930,9 @@ export function CollaborationMessageViewport({
 
         {!isLoading && channelMessages.length === 0 && !messagesError && !isSearchActive ? <EmptyMessagesState /> : null}
         {!isLoading && isSearchActive && visibleMessages.length === 0 && !messagesError ? <NoSearchResultsState /> : null}
-        {messagesError ? <MessagesErrorState error={messagesError} /> : null}
+        {messagesError ? (
+          <MessagesErrorState error={messagesError} onRetry={onRetryMessages} isRetrying={messagesRetrying} />
+        ) : null}
 
         {!isLoading && !messagesError && !isSearchActive && canLoadMore && onLoadMore ? (
           <div className="flex justify-center">

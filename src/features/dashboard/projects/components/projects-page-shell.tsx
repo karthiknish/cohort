@@ -6,6 +6,7 @@ import Link from 'next/link'
 
 import { CreateProjectDialog } from '@/features/dashboard/projects/create-project-dialog'
 import { EditProjectDialog } from '@/features/dashboard/projects/edit-project-dialog'
+import { ProjectReadinessPanel } from '@/features/dashboard/workforce/project-readiness-panel'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +35,7 @@ import { ProjectKanban } from './project-kanban'
 import { ProjectRow } from './project-row'
 import { ProjectSearch } from './project-search'
 import { ProjectsPageSkeleton } from './projects-page-skeleton'
+import { ProjectsSchedulingPanel } from './projects-scheduling-panel'
 import { SummaryCard } from './summary-card'
 import { ViewModeSelector } from './view-mode-selector'
 import { RETRY_CONFIG } from './utils'
@@ -54,6 +56,8 @@ export function ProjectsPageShell() {
           <ProjectsHeaderSection />
           <ProjectsDialogs />
           <ProjectsSummarySection />
+          <ProjectReadinessPanel />
+          <ProjectsSchedulingPanel />
           <ProjectsBacklogSection />
         </div>
       </BoneyardSkeletonBoundary>

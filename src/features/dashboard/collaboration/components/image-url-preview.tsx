@@ -70,15 +70,14 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
 
   return (
     <>
-      <figure
+      <button
+        type="button"
         className={cn(
           "group relative block max-w-md overflow-hidden rounded-lg border border-muted/60 bg-muted/10 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted my-2",
           className
         )}
         onClick={handleOpenPreview}
         onKeyDown={handleKeyDown}
-        role="button"
-        tabIndex={0}
         aria-label={`Preview image ${fileName}`}
       >
         <div className="relative overflow-hidden">
@@ -105,7 +104,7 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
             </div>
           </div>
         </div>
-      </figure>
+      </button>
 
       <ImagePreviewModal
         images={[{ url, name: fileName }]}

@@ -52,7 +52,9 @@ export function CreativeFullPreviewDialog(props: {
               controls
               className="w-full rounded-lg"
               poster={creative.imageUrl || creative.thumbnailUrl}
-            />
+            >
+              <track kind="captions" srcLang="en" label="No captions available" />
+            </video>
           ) : creative.imageUrl && !imageLoadFailed ? (
             <LazyImage
               src={creative.imageUrl}

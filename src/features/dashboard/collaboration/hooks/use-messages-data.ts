@@ -63,6 +63,7 @@ export function useMessagesData({
   const [loadingMoreChannelId, setLoadingMoreChannelId] = useState<string | null>(null)
   const [loadingChannelId, setLoadingChannelId] = useState<string | null>(null)
   const [messagesError, setMessagesError] = useState<string | null>(null)
+  const [channelListRetryNonce, setChannelListRetryNonce] = useState(0)
   const [messageInput, setMessageInputState] = useState('')
   const [sending, setSending] = useState(false)
   const [messageSearchQuery, setMessageSearchQuery] = useState('')
@@ -179,6 +180,7 @@ export function useMessagesData({
     searchingMessages,
     searchHighlights,
     searchError,
+    retrySearch,
   } = useChannelMessageSearch({
     convex,
     workspaceId,
@@ -191,6 +193,23 @@ export function useMessagesData({
 
   const isSearchActive = Boolean(normalizedMessageSearch)
   const activeMessagesError = isSearchActive ? searchError : messagesError
+
+  const retryMessagesError = useCallback(() => {
+    if (isSearchActive) {
+      retrySearch()
+      return
+    }
+
+    setMessagesError(null)
+    if (selectedChannel) {
+      setLoadingChannelId(selectedChannel.id)
+    }
+    setChannelListRetryNonce((n) => n + 1)
+  }, [isSearchActive, retrySearch, selectedChannel])
+
+  useEffect(() => {
+    setChannelListRetryNonce(0)
+  }, [selectedChannel?.id])
   const channelUnreadCounts = useMemo(() => {
     if (isPreviewMode) {
       return Object.fromEntries(
@@ -314,6 +333,7 @@ export function useMessagesData({
     workspaceId,
     selectedChannel,
     currentUserId,
+    channelListRetryNonce,
     setMessagesByChannel,
     setNextCursorByChannel,
     setLoadingChannelId,
@@ -883,6 +903,7 @@ export function useMessagesData({
     setMessageSearchQuery,
     isCurrentChannelLoading,
     messagesError: activeMessagesError,
+    retryMessagesError,
     channelSummaries,
     messageInput,
     setMessageInput,

@@ -11,6 +11,7 @@ import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
+import { Skeleton } from '@/shared/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
@@ -21,6 +22,7 @@ import type { PendingAttachment, ReactionPendingState, SendMessageOptions, Threa
 import type { Channel } from '../types'
 import { CHANNEL_TYPE_COLORS, formatRelativeTime } from '../utils'
 import { collaborationToUnifiedMessage } from './message-list'
+import { MessagesErrorState } from './message-pane-parts'
 import { UnifiedMessagePane } from './unified-message-pane'
 
 export type SourceFilter = 'all' | 'direct_message' | 'channel'
@@ -139,13 +141,19 @@ export function ConversationListPane({
 
       <ScrollArea className="min-h-0 w-full flex-1">
         {isLoading ? (
-          <div className="space-y-3 p-4">
+          <div
+            className="space-y-3 p-4"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            aria-label="Loading conversations"
+          >
             {['inbox-skeleton-1', 'inbox-skeleton-2', 'inbox-skeleton-3', 'inbox-skeleton-4', 'inbox-skeleton-5'].map((slotKey) => (
               <div key={slotKey} className="flex items-center gap-3 p-3">
-                <div className="h-10 w-10 animate-pulse rounded-full bg-muted" />
+                <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-                  <div className="h-3 w-32 animate-pulse rounded bg-muted" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-32" />
                 </div>
               </div>
             ))}
@@ -268,6 +276,8 @@ export type ChannelConversationPaneProps = {
   threadUnreadCountsByRootId: Record<string, number>
   typingIndicatorText?: string
   uploading: boolean
+  messagesError: string | null
+  onRetryMessages: () => void
 }
 
 function hasRequestedDeepLinkTarget(
@@ -347,6 +357,8 @@ export function ChannelConversationPane({
   threadUnreadCountsByRootId,
   typingIndicatorText,
   uploading,
+  messagesError,
+  onRetryMessages,
 }: ChannelConversationPaneProps) {
   const showMissingDeepLinkNotice =
     (Boolean(deepLinkMessageId?.trim()) || Boolean(deepLinkThreadId?.trim())) &&
@@ -379,6 +391,29 @@ export function ChannelConversationPane({
       </Alert>
     )
   }, [onClearDeepLink, selectedChannel.name, showMissingDeepLinkNotice])
+
+  const combinedStatusBanner = useMemo(() => {
+    const errorBanner = messagesError ? (
+      <div className="mx-4 mt-4">
+        <MessagesErrorState
+          error={messagesError}
+          onRetry={onRetryMessages}
+          isRetrying={searchingMessages && isChannelSearchActive}
+        />
+      </div>
+    ) : null
+
+    if (!missingDeepLinkBanner && !errorBanner) {
+      return null
+    }
+
+    return (
+      <>
+        {missingDeepLinkBanner}
+        {errorBanner}
+      </>
+    )
+  }, [isChannelSearchActive, messagesError, missingDeepLinkBanner, onRetryMessages, searchingMessages])
 
   const handleLoadMore = useCallback(() => {
     onLoadMore(selectedChannel.id)
@@ -429,7 +464,7 @@ export function ChannelConversationPane({
       onDeleteMessage={handleDeleteMessage}
       onEditMessage={handleEditMessage}
       participants={mentionParticipants}
-      statusBanner={missingDeepLinkBanner}
+      statusBanner={combinedStatusBanner}
       channelMessages={channelMessages}
       threadMessagesByRootId={threadMessagesByRootId}
       threadNextCursorByRootId={threadNextCursorByRootId}
@@ -474,6 +509,8 @@ export type DirectMessageConversationPaneProps = {
   setActiveDmMessageInput: (value: string) => void
   uploading: boolean
   onStartNewDM?: () => void
+  messagesError: string | null
+  onRetryMessages: () => void
 }
 
 export function DirectMessageConversationPane({
@@ -503,6 +540,8 @@ export function DirectMessageConversationPane({
   setActiveDmMessageInput,
   uploading,
   onStartNewDM,
+  messagesError,
+  onRetryMessages,
 }: DirectMessageConversationPaneProps) {
   const dmHeader = useMemo(() => ({
     name: selectedDM.otherParticipantName,
@@ -515,6 +554,22 @@ export function DirectMessageConversationPane({
     primaryActionLabel: 'New chat',
     onPrimaryAction: onStartNewDM,
   }), [dmMuteConversation, onArchiveConversation, onStartNewDM, selectedDM])
+
+  const dmStatusBanner = useMemo(() => {
+    if (!messagesError) {
+      return null
+    }
+
+    return (
+      <div className="mx-4 mt-4">
+        <MessagesErrorState
+          error={messagesError}
+          onRetry={onRetryMessages}
+          isRetrying={dmSearchingMessages && isDmSearchActive}
+        />
+      </div>
+    )
+  }, [dmSearchingMessages, isDmSearchActive, messagesError, onRetryMessages])
 
   return (
     <UnifiedMessagePane
@@ -540,6 +595,7 @@ export function DirectMessageConversationPane({
       onDeleteMessage={dmDeleteMessage}
       onEditMessage={dmEditMessage}
       placeholder={`Message ${selectedDM.otherParticipantName}...`}
+      statusBanner={dmStatusBanner}
     />
   )
 }

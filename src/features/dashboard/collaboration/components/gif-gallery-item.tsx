@@ -115,7 +115,9 @@ export function GifGalleryItem({
         playsInline
         onLoadedData={handleVideoLoadedData}
         poster={attachment.url.replace(/\.(gif|mp4|webm|mov)$/i, '.jpg')} // Try to find poster image
-      />
+      >
+        <track kind="captions" srcLang="en" label="No captions available" />
+      </video>
 
       {/* Loading indicator */}
       {isLoading && (

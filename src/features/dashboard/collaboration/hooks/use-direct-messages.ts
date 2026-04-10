@@ -6,7 +6,7 @@ import { useRef } from 'react'
 
 import { usePreview } from '@/shared/contexts/preview-context'
 import { api, directMessagesApi } from '@/lib/convex-api'
-import { logError } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { getPreviewDirectAutoReply, getPreviewDirectConversations, getPreviewDirectMessages } from '@/lib/preview-data'
 import type { DirectConversation, DirectMessage } from '@/types/collaboration'
 import { MESSAGE_PAGE_SIZE } from './constants'
@@ -36,6 +36,8 @@ export type UseDirectMessagesReturn = {
   setMessageSearchQuery: (value: string) => void
   searchHighlights: string[]
   searchingMessages: boolean
+  messagesError: string | null
+  retryMessagesError: () => void
   sendMessage: (content: string, attachments?: DirectMessage['attachments']) => Promise<void>
   isSending: boolean
   markAsRead: () => Promise<void>
@@ -85,6 +87,8 @@ export function useDirectMessages({
   const [searchResults, setSearchResults] = useState<DirectMessage[]>([])
   const [searchHighlights, setSearchHighlights] = useState<string[]>([])
   const [searchingMessages, setSearchingMessages] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const [searchRetryNonce, setSearchRetryNonce] = useState(0)
   const [previewConversations, setPreviewConversations] = useState<DirectConversation[]>([])
   const [previewMessagesByConversation, setPreviewMessagesByConversation] = useState<Record<string, DirectMessage[]>>({})
   const previewReplyTimersRef = useRef<number[]>([])
@@ -305,16 +309,22 @@ export function useDirectMessages({
     return normalizedMessageSearch ? searchResults : currentMessages
   }, [currentMessages, normalizedMessageSearch, searchResults])
 
+  const retryDirectMessageSearch = useCallback(() => {
+    setSearchRetryNonce((n) => n + 1)
+  }, [])
+
   useEffect(() => {
     if (!selectedConversation || !normalizedMessageSearch) {
       setSearchResults([])
       setSearchHighlights([])
       setSearchingMessages(false)
+      setSearchError(null)
       return
     }
 
     const parsed = parseDirectMessageSearchQuery(normalizedMessageSearch)
     setSearchingMessages(true)
+    setSearchError(null)
 
     if (isPreviewMode) {
       const previewMessages = previewMessagesByConversation[selectedConversation.legacyId] ?? []
@@ -384,10 +394,12 @@ export function useDirectMessages({
 
         setSearchResults(mapped)
         setSearchHighlights(highlights)
+        setSearchError(null)
       })
       .catch((error: unknown) => {
         if (cancelled) return
         logError(error, 'useDirectMessages:searchMessages')
+        setSearchError(asErrorMessage(error))
         setSearchResults([])
         setSearchHighlights(parsed.highlights)
       })
@@ -400,7 +412,7 @@ export function useDirectMessages({
     return () => {
       cancelled = true
     }
-  }, [convex, isPreviewMode, normalizedMessageSearch, previewMessagesByConversation, selectedConversation, workspaceId])
+  }, [convex, isPreviewMode, normalizedMessageSearch, previewMessagesByConversation, searchRetryNonce, selectedConversation, workspaceId])
 
   const selectConversation = useCallback((conversation: DirectConversation | null) => {
     setSelectedConversation(conversation)
@@ -856,6 +868,8 @@ export function useDirectMessages({
     }
   }, [selectedConversation, markAsRead])
 
+  const messagesError = normalizedMessageSearch ? searchError : null
+
   return {
     conversations,
     selectedConversation,
@@ -871,6 +885,8 @@ export function useDirectMessages({
     setMessageSearchQuery,
     searchHighlights,
     searchingMessages,
+    messagesError,
+    retryMessagesError: retryDirectMessageSearch,
     sendMessage,
     isSending,
     markAsRead,

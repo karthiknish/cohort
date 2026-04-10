@@ -71,6 +71,7 @@ export interface UseCollaborationDataReturn {
   isCurrentChannelLoading: boolean
   isBootstrapping: boolean
   messagesError: string | null
+  retryMessagesError: () => void
   messageSearchQuery: string
   setMessageSearchQuery: (query: string) => void
 

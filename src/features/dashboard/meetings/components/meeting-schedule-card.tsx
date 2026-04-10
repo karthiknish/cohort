@@ -8,6 +8,8 @@ import {
   type SharedMeetingScheduleCardProps,
 } from './meeting-schedule-card-sections'
 
+export { MeetingScheduleCardFrame } from './meeting-schedule-card-sections'
+
 type CreateMeetingCardProps = SharedMeetingScheduleCardProps
 
 type RescheduleMeetingCardProps = SharedMeetingScheduleCardProps & {

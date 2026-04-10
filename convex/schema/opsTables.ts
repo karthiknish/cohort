@@ -8,6 +8,124 @@ import {
 } from './jsonValidators'
 
 export const opsTables = {
+  workforceTimeSessions: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    personId: v.string(),
+    personName: v.string(),
+    role: v.string(),
+    project: v.string(),
+    status: v.union(
+      v.literal('clocked-in'),
+      v.literal('on-break'),
+      v.literal('clocked-out'),
+      v.literal('needs-review'),
+    ),
+    startedAtMs: v.number(),
+    endedAtMs: v.union(v.number(), v.null()),
+    durationMinutes: v.number(),
+    locationLabel: v.string(),
+    flaggedReason: v.union(v.string(), v.null()),
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_updatedAtMs_legacyId', ['workspaceId', 'updatedAtMs', 'legacyId'])
+    .index('by_workspace_status_updatedAtMs_legacyId', ['workspaceId', 'status', 'updatedAtMs', 'legacyId'])
+    .index('by_workspace_personId_updatedAtMs_legacyId', ['workspaceId', 'personId', 'updatedAtMs', 'legacyId']),
+
+  workforceShifts: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    title: v.string(),
+    assigneeId: v.union(v.string(), v.null()),
+    assigneeName: v.string(),
+    team: v.string(),
+    dayStartMs: v.number(),
+    dayLabel: v.string(),
+    timeLabel: v.string(),
+    coverageLabel: v.string(),
+    status: v.union(
+      v.literal('scheduled'),
+      v.literal('open'),
+      v.literal('swap-requested'),
+    ),
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_dayStartMs_legacyId', ['workspaceId', 'dayStartMs', 'legacyId'])
+    .index('by_workspace_status_dayStartMs_legacyId', ['workspaceId', 'status', 'dayStartMs', 'legacyId']),
+
+  workforceShiftSwaps: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    shiftLegacyId: v.string(),
+    shiftTitle: v.string(),
+    requestedBy: v.string(),
+    requestedTo: v.string(),
+    windowLabel: v.string(),
+    status: v.union(
+      v.literal('pending'),
+      v.literal('approved'),
+      v.literal('blocked'),
+    ),
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_updatedAtMs_legacyId', ['workspaceId', 'updatedAtMs', 'legacyId'])
+    .index('by_workspace_status_updatedAtMs_legacyId', ['workspaceId', 'status', 'updatedAtMs', 'legacyId']),
+
+  workforceFormTemplates: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    title: v.string(),
+    category: v.string(),
+    completionRate: v.number(),
+    fieldsCount: v.number(),
+    frequency: v.string(),
+    fields: v.array(
+      v.object({
+        id: v.string(),
+        label: v.string(),
+        type: v.union(
+          v.literal('text'),
+          v.literal('select'),
+          v.literal('photo'),
+          v.literal('checklist'),
+          v.literal('number'),
+        ),
+        required: v.boolean(),
+      }),
+    ),
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_updatedAtMs_legacyId', ['workspaceId', 'updatedAtMs', 'legacyId']),
+
+  workforceFormSubmissions: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    templateLegacyId: v.string(),
+    templateTitle: v.string(),
+    submittedBy: v.string(),
+    submittedAtMs: v.number(),
+    status: v.union(
+      v.literal('ready'),
+      v.literal('needs-follow-up'),
+      v.literal('in-review'),
+    ),
+    scoreCompleted: v.number(),
+    scoreTotal: v.number(),
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_submittedAtMs_legacyId', ['workspaceId', 'submittedAtMs', 'legacyId'])
+    .index('by_workspace_status_submittedAtMs_legacyId', ['workspaceId', 'status', 'submittedAtMs', 'legacyId']),
+
   proposals: defineTable({
     workspaceId: v.string(),
     legacyId: v.string(),
