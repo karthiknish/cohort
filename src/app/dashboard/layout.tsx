@@ -7,6 +7,7 @@ import { NavigationBreadcrumbs } from '@/shared/layout/navigation/breadcrumbs'
 
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { ClientAccessGate } from '@/features/dashboard/home/components/client-access-gate'
+import { DashboardMainRoleFrame } from '@/features/dashboard/home/components/dashboard-main-role-frame'
 import { PreviewDataBanner } from '@/features/dashboard/home/components/preview-data-banner'
 import { AgentMode } from '@/shared/components/agent-mode'
 import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
@@ -30,12 +31,14 @@ export default async function DashboardLayout({
               <div className="flex min-h-0 flex-1 flex-col bg-muted/20">
                 <Header />
                 <ScrollArea className="min-h-0 flex-1">
-                  <main className="min-h-full space-y-6 px-6 py-6">
-                    <NavigationBreadcrumbs />
-                    <PreviewDataBanner />
-                    <ClientAccessGate>
-                      {children}
-                    </ClientAccessGate>
+                  <main className="min-h-full">
+                    <DashboardMainRoleFrame>
+                      <NavigationBreadcrumbs />
+                      <PreviewDataBanner />
+                      <ClientAccessGate>
+                        {children}
+                      </ClientAccessGate>
+                    </DashboardMainRoleFrame>
                   </main>
                 </ScrollArea>
               </div>

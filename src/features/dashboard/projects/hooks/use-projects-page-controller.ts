@@ -267,7 +267,7 @@ export function useProjectsPageController() {
   useKeyboardShortcut({
     combo: 'mod+shift+n',
     callback: () => {
-      // Trigger is handled by the CreateProjectDialog.
+      document.getElementById('create-project-trigger')?.click()
     },
   })
 
@@ -525,6 +525,7 @@ export function useProjectsPageController() {
     clearAllFilters,
     clearFocusedProject,
     completionRate,
+    debouncedSearchQuery: debouncedQuery,
     deleteDialogOpen,
     deleting,
     editDialogOpen,

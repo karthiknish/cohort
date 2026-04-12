@@ -300,9 +300,9 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Project
+          <Button id="create-project-trigger" type="button" className="gap-2 shadow-sm transition-shadow hover:shadow-md">
+            <Plus className="h-4 w-4" aria-hidden />
+            New project
           </Button>
         )}
       </DialogTrigger>

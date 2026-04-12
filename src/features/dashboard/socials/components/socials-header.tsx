@@ -26,13 +26,13 @@ export function SocialsHeader({
             <div className={DASHBOARD_THEME.icons.container}>
               <Share2 className="h-6 w-6" />
             </div>
-            <div>
-              <h1 className={DASHBOARD_THEME.layout.title}>
+            <div className="min-w-0 max-w-2xl space-y-1">
+              <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl">
                 {PAGE_TITLES.socials?.title ?? 'Socials'}
               </h1>
-              <p className={DASHBOARD_THEME.layout.subtitle}>
+              <p className="text-pretty text-sm leading-relaxed text-muted-foreground md:text-[15px]">
                 {PAGE_TITLES.socials?.description ??
-                  'Connect Meta business accounts to monitor Facebook and Instagram performance.'}
+                  'Organic reach, engagement, and follower trends from Meta—use the date range to compare periods.'}
               </p>
             </div>
           </div>

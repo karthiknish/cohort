@@ -74,27 +74,39 @@ function formatSignedNumber(value: number): string {
 function SocialMetricBarFill({ colorClass, width }: { colorClass: string; width: number }) {
   const widthStyle = useMemo(() => ({ width: `${width}%` }), [width])
 
-  return <div className={cn('h-full rounded-full transition-[width]', colorClass)} style={widthStyle} />
+  return (
+    <div
+      className={cn('h-full rounded-full transition-[width] motion-reduce:transition-none', colorClass)}
+      style={widthStyle}
+    />
+  )
 }
 
-function SocialMetricBars({ metrics }: { metrics: GraphMetric[] }) {
+function SocialMetricBars({ metrics, labelledBy }: { metrics: GraphMetric[]; labelledBy?: string }) {
   const maxValue = Math.max(...metrics.map((metric) => metric.value), 0)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5" role="list" aria-labelledby={labelledBy}>
       {metrics.map((metric) => {
         const width = maxValue > 0 ? Math.max((metric.value / maxValue) * 100, metric.value > 0 ? 6 : 0) : 0
 
         return (
-          <div key={metric.label} className="space-y-1.5">
-            <div className="flex items-center justify-between gap-3">
-              <div>
+          <div key={metric.label} className="space-y-2" role="listitem">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground">{metric.label}</p>
-                <p className="text-xs text-muted-foreground">{metric.detail}</p>
+                <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{metric.detail}</p>
               </div>
-              <p className="text-sm font-semibold text-foreground">{metric.valueLabel}</p>
+              <p className="shrink-0 text-sm font-bold tabular-nums text-foreground">{metric.valueLabel}</p>
             </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-muted/60">
+            <div
+              className="h-3 overflow-hidden rounded-full bg-muted/50 ring-1 ring-muted/30"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={maxValue}
+              aria-valuenow={metric.value}
+              aria-label={`${metric.label}: ${metric.valueLabel}`}
+            >
               <SocialMetricBarFill colorClass={metric.colorClass} width={width} />
             </div>
           </div>
@@ -111,18 +123,24 @@ function SocialInsightCards({ insights }: { insights: InsightMetric[] }) {
         const Icon = insight.icon
 
         return (
-          <Card key={insight.title} className={cn('overflow-hidden', DASHBOARD_THEME.cards.base)}>
+          <Card
+            key={insight.title}
+            className={cn(
+              'overflow-hidden border-muted/50 bg-linear-to-b from-muted/20 to-background shadow-sm transition-shadow hover:shadow-md',
+              DASHBOARD_THEME.cards.base,
+            )}
+          >
             <CardContent className="p-5">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
                   <p className={DASHBOARD_THEME.stats.label}>{insight.title}</p>
-                  <p className={`mt-2 tracking-tight ${DASHBOARD_THEME.stats.value}`}>{insight.value}</p>
+                  <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-foreground">{insight.value}</p>
                 </div>
-                <div className={DASHBOARD_THEME.icons.container}>
-                  <Icon className="h-5 w-5" />
+                <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 shrink-0')}>
+                  <Icon className="h-5 w-5" aria-hidden />
                 </div>
               </div>
-              <p className={DASHBOARD_THEME.stats.description}>{insight.detail}</p>
+              <p className="text-xs leading-relaxed text-muted-foreground md:text-sm">{insight.detail}</p>
             </CardContent>
           </Card>
         )
@@ -248,15 +266,17 @@ export function SocialSurfacePanel({
         <CardHeader className={DASHBOARD_THEME.cards.header}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
-              <div className={DASHBOARD_THEME.icons.container}>
-                <SurfaceIcon className="h-6 w-6" />
+              <div className={cn(DASHBOARD_THEME.icons.container, 'h-12 w-12 shadow-sm')}>
+                <SurfaceIcon className="h-6 w-6" aria-hidden />
               </div>
-              <div className="space-y-1">
-                <CardTitle className="text-xl">{copy.summaryTitle}</CardTitle>
-                <CardDescription>{copy.summaryDescription}</CardDescription>
+              <div className="max-w-2xl space-y-1.5">
+                <CardTitle className="text-balance text-xl md:text-2xl">{copy.summaryTitle}</CardTitle>
+                <CardDescription className="text-pretty text-sm leading-relaxed md:text-[15px]">
+                  {copy.summaryDescription}
+                </CardDescription>
               </div>
             </div>
-            <Badge variant="outline" className={cn(DASHBOARD_THEME.badges.base, 'w-fit')}>
+            <Badge variant="outline" className={cn(DASHBOARD_THEME.badges.base, 'w-fit shrink-0')}>
               {overviewLoading ? 'Loading…' : connected ? 'Organic data' : 'Not connected'}
             </Badge>
           </div>
@@ -273,31 +293,39 @@ export function SocialSurfacePanel({
               <SocialsKpiGrid items={kpis} />
 
               <div className="grid gap-4 xl:grid-cols-2">
-                <Card className={cn('overflow-hidden', DASHBOARD_THEME.cards.base)}>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-base">Audience footprint</CardTitle>
-                    <CardDescription>Compare total visibility against engaged audience size for this range.</CardDescription>
+                <Card className={cn('overflow-hidden border-muted/50 shadow-sm', DASHBOARD_THEME.cards.base)}>
+                  <CardHeader className="pb-3">
+                    <CardTitle id={`${surface}-audience-title`} className="text-base">
+                      Audience footprint
+                    </CardTitle>
+                    <CardDescription className="text-xs leading-relaxed sm:text-sm">
+                      Relative mix of reach, impressions, and engaged users for the selected date range.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="p-5 pt-0">
-                    <SocialMetricBars metrics={performanceGraph} />
+                    <SocialMetricBars metrics={performanceGraph} labelledBy={`${surface}-audience-title`} />
                   </CardContent>
                 </Card>
 
-                <Card className={cn('overflow-hidden', DASHBOARD_THEME.cards.base)}>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-base">Interaction mix</CardTitle>
-                    <CardDescription>See where people are reacting, replying, amplifying, and saving content.</CardDescription>
+                <Card className={cn('overflow-hidden border-muted/50 shadow-sm', DASHBOARD_THEME.cards.base)}>
+                  <CardHeader className="pb-3">
+                    <CardTitle id={`${surface}-interaction-title`} className="text-base">
+                      Interaction mix
+                    </CardTitle>
+                    <CardDescription className="text-xs leading-relaxed sm:text-sm">
+                      Reactions, comments, shares, and saves—scaled so you can compare channel behavior at a glance.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="p-5 pt-0">
-                    <SocialMetricBars metrics={interactionGraph} />
+                    <SocialMetricBars metrics={interactionGraph} labelledBy={`${surface}-interaction-title`} />
                   </CardContent>
                 </Card>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <MessageSquareMore className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">Insight signals</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 border-b border-muted/30 pb-2">
+                  <MessageSquareMore className="h-4 w-4 text-primary" aria-hidden />
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Derived signals</h3>
                 </div>
                 <SocialInsightCards insights={insightCards} />
               </div>

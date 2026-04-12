@@ -39,6 +39,7 @@ export function AgentMode() {
     clearError,
     lastFailedMessage,
     retryLastMessage,
+    retryLastUserTurn,
     connectionStatus,
     rateLimitCountdown,
   } = useAgentMode()
@@ -75,6 +76,7 @@ export function AgentMode() {
         onClearError={clearError}
         lastFailedMessage={lastFailedMessage}
         onRetry={retryLastMessage}
+        onRetryLastUserTurn={retryLastUserTurn}
         connectionStatus={connectionStatus}
         rateLimitCountdown={rateLimitCountdown}
       />

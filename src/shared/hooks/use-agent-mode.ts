@@ -31,7 +31,7 @@ export interface AgentMessage {
   content: string
   timestamp: Date
   route?: string | null
-  status?: 'success' | 'error' | 'info'
+  status?: 'success' | 'error' | 'info' | 'warning'
   metadata?: AgentMessageMetadata
 }
 
@@ -63,17 +63,31 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 function parseStoredExecuteResultData(executeResult: Record<string, unknown> | null): Record<string, unknown> | undefined {
   if (!executeResult) return undefined
 
+  let data: Record<string, unknown> = {}
+
   const directData = asRecord(executeResult.data)
-  if (directData) return directData
-
-  const dataJson = typeof executeResult.dataJson === 'string' ? executeResult.dataJson : null
-  if (!dataJson) return undefined
-
-  try {
-    return asRecord(JSON.parse(dataJson)) ?? undefined
-  } catch {
-    return undefined
+  if (directData) {
+    data = { ...directData }
+  } else {
+    const dataJson = typeof executeResult.dataJson === 'string' ? executeResult.dataJson : null
+    if (dataJson) {
+      try {
+        const parsed = asRecord(JSON.parse(dataJson))
+        if (parsed) data = { ...parsed }
+      } catch {
+        // ignore malformed JSON
+      }
+    }
   }
+
+  if (typeof executeResult.retryable === 'boolean') {
+    data = { ...data, retryable: executeResult.retryable }
+  }
+  if (typeof executeResult.userMessage === 'string' && executeResult.userMessage.trim().length > 0) {
+    data = { ...data, userMessage: executeResult.userMessage }
+  }
+
+  return Object.keys(data).length > 0 ? data : undefined
 }
 
 export type ConnectionStatus = 'connected' | 'retrying' | 'disconnected'
@@ -131,6 +145,8 @@ export interface UseAgentModeReturn {
   lastFailedMessage: string | null
   /** Retry the last failed message */
   retryLastMessage: () => void
+  /** Re-submit the most recent user message (e.g. after a retryable agent action error) */
+  retryLastUserTurn: () => void
   /** Connection status */
   connectionStatus: ConnectionStatus
   /** Rate limit countdown (seconds remaining) */
@@ -256,7 +272,7 @@ export function useAgentMode(): UseAgentModeReturn {
     type: 'user' | 'agent',
     content: string | unknown,
     route?: string | null,
-    status?: 'success' | 'error' | 'info',
+    status?: 'success' | 'error' | 'info' | 'warning',
     metadata?: AgentMessageMetadata
   ) => {
     // Ensure content is always a string to prevent React error #301
@@ -355,12 +371,15 @@ export function useAgentMode(): UseAgentModeReturn {
     const validationError = validateInput(text)
     if (validationError) {
       setError(new AgentValidationError(validationError))
-      addMessage('agent', validationError, null, 'error')
+      addMessage('agent', validationError, null, 'error', { action: 'response', success: false })
       return
     }
 
     if (isExtractingAttachments) {
-      addMessage('agent', 'I’m still reading the attached files. Send the message again in a moment.', null, 'error')
+      addMessage('agent', 'I’m still reading the attached files. Send the message again in a moment.', null, 'warning', {
+        action: 'response',
+        success: false,
+      })
       return
     }
 
@@ -454,7 +473,7 @@ export function useAgentMode(): UseAgentModeReturn {
       }
 
       // Determine status and metadata for enhanced UX
-      let status: 'success' | 'error' | 'info' = 'info'
+      let status: 'success' | 'error' | 'info' | 'warning' = 'info'
       const metadata: AgentMessageMetadata = {
         action: responseData?.action as AgentMessageMetadata['action'],
         operation: responseData?.operation,
@@ -473,12 +492,25 @@ export function useAgentMode(): UseAgentModeReturn {
       } else if (responseData?.action === 'execute' && responseData?.executeResult) {
         status = responseData.executeResult.success ? 'success' : 'error'
         metadata.success = responseData.executeResult.success
-        metadata.data = responseData.executeResult.data
+        const exec = responseData.executeResult as {
+          success: boolean
+          data?: Record<string, unknown>
+          retryable?: boolean
+          userMessage?: string
+        }
+        const mergedData: Record<string, unknown> = {
+          ...(exec.data && typeof exec.data === 'object' && !Array.isArray(exec.data) ? exec.data : {}),
+        }
+        if (typeof exec.retryable === 'boolean') mergedData.retryable = exec.retryable
+        if (typeof exec.userMessage === 'string' && exec.userMessage.trim().length > 0) {
+          mergedData.userMessage = exec.userMessage
+        }
+        metadata.data = Object.keys(mergedData).length > 0 ? mergedData : undefined
         const executeRoute =
           typeof responseData.route === 'string' && responseData.route.length > 0
             ? responseData.route
-            : typeof responseData.executeResult.data?.route === 'string' && responseData.executeResult.data.route.length > 0
-              ? responseData.executeResult.data.route
+            : typeof exec.data?.route === 'string' && exec.data.route.length > 0
+              ? exec.data.route
               : null
 
         addMessage('agent', responseData.message || 'Action completed', executeRoute, status, metadata)
@@ -520,6 +552,16 @@ export function useAgentMode(): UseAgentModeReturn {
       processInput(lastFailedMessage)
     }
   }, [lastFailedMessage, clearError, processInput])
+
+  const retryLastUserTurn = useCallback(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const entry = messages[i]
+      if (entry?.type === 'user') {
+        void processInput(entry.content)
+        return
+      }
+    }
+  }, [messages, processInput])
 
   const clearMessages = useCallback(() => {
     setMessages([])
@@ -605,7 +647,9 @@ export function useAgentMode(): UseAgentModeReturn {
             ? executionSuccess
               ? 'success'
               : 'error'
-            : 'info'
+            : normalizedAction === 'navigate'
+              ? 'success'
+              : 'info'
 
         return {
           id: msg.id,
@@ -661,7 +705,7 @@ export function useAgentMode(): UseAgentModeReturn {
       setHistory((prev) => prev.map((c) => (c.id === targetConversationId ? { ...c, title: trimmed } : c)))
     } catch (err) {
       console.error('[useAgentMode] Failed to update title:', err)
-      addMessage('agent', 'Sorry  I couldn\'t update that chat title. Please try again.')
+      addMessage('agent', 'Sorry — I couldn\'t update that chat title. Please try again.')
     }
   }, [addMessage, updateTitle, workspaceId])
 
@@ -691,7 +735,7 @@ export function useAgentMode(): UseAgentModeReturn {
       }
     } catch (err) {
       console.error('[useAgentMode] Failed to delete conversation:', err)
-      addMessage('agent', 'Sorry  I couldn\'t delete that chat. Please try again.')
+      addMessage('agent', 'Sorry — I couldn\'t delete that chat. Please try again.')
     }
   }, [addMessage, conversationId, deleteConversationMutation, workspaceId])
 
@@ -721,6 +765,7 @@ export function useAgentMode(): UseAgentModeReturn {
     clearError,
     lastFailedMessage,
     retryLastMessage,
+    retryLastUserTurn,
     connectionStatus,
     rateLimitCountdown,
   }

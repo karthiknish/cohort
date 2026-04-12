@@ -40,6 +40,8 @@ interface AgentModePanelProps {
   onClearError?: () => void
   lastFailedMessage?: string | null
   onRetry?: () => void
+  /** Re-send the latest user turn (retryable failed execute actions) */
+  onRetryLastUserTurn?: () => void
   connectionStatus?: ConnectionStatus
   rateLimitCountdown?: number | null
 }
@@ -77,6 +79,7 @@ export function AgentModePanel({
   onClearError,
   lastFailedMessage,
   onRetry,
+  onRetryLastUserTurn,
   connectionStatus = 'connected',
   rateLimitCountdown,
 }: AgentModePanelProps) {
@@ -418,6 +421,7 @@ export function AgentModePanel({
               mentionLabels={mentionLabels}
               messages={messages}
               onRetry={handleRetry}
+              onRetryLastUserTurn={onRetryLastUserTurn}
               scrollAreaRef={scrollAreaRef}
               showEmptyState={showEmptyState}
             />

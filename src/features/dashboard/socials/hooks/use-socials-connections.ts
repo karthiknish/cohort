@@ -24,10 +24,10 @@ export type SocialsConnectionStatus = {
 export type UseSocialsConnectionsReturn = {
   status: SocialsConnectionStatus | null
   statusLoading: boolean
-  connectingProvider: 'facebook' | 'instagram' | null
+  /** True while redirecting to Meta OAuth. */
+  oauthPending: boolean
   connectionError: string | null
-  handleConnectFacebook: () => Promise<void>
-  handleConnectInstagram: () => Promise<void>
+  handleConnectMeta: () => Promise<void>
   handleDisconnect: () => Promise<void>
   handleRequestSync: () => Promise<void>
 }
@@ -40,7 +40,7 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
   const { toast } = useToast()
 
-  const [connectingProvider, setConnectingProvider] = useState<'facebook' | 'instagram' | null>(null)
+  const [oauthPending, setOauthPending] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
 
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
@@ -75,56 +75,50 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
     })
   }, [toast])
 
-  const startOAuth = useCallback(
-    async (surface: 'facebook' | 'instagram') => {
-      if (typeof window === 'undefined') return
+  const handleConnectMeta = useCallback(async () => {
+    if (typeof window === 'undefined') return
 
-      if (isPreviewMode) {
-        showPreviewModeToast(`${surface === 'facebook' ? 'Facebook' : 'Instagram'} connection is disabled while sample social data is active.`)
-        return
+    if (isPreviewMode) {
+      showPreviewModeToast('Meta connection is disabled while sample social data is active.')
+      return
+    }
+
+    if (convexAuthLoading || !isAuthenticated || !user) {
+      toast({
+        variant: 'destructive',
+        title: 'Sign in required',
+        description: 'You must be signed in to connect Meta.',
+      })
+      router.push('/')
+      return
+    }
+
+    setOauthPending(true)
+    setConnectionError(null)
+
+    try {
+      const { url } = await startMetaOauth(
+        `${window.location.pathname}${window.location.search}`,
+        selectedClientId ?? null,
+        undefined,
+        'socials',
+      )
+      if (typeof url !== 'string' || url.length === 0) {
+        throw new Error('Meta OAuth did not return a URL.')
       }
-
-      if (convexAuthLoading || !isAuthenticated || !user) {
-        toast({
-          variant: 'destructive',
-          title: 'Sign in required',
-          description: 'You must be signed in to connect a social account.',
-        })
-        router.push('/')
-        return
-      }
-
-      setConnectingProvider(surface)
-      setConnectionError(null)
-
-      try {
-        const { url } = await startMetaOauth(
-          `${window.location.pathname}${window.location.search}`,
-          selectedClientId ?? null,
-          surface,
-          'socials',
-        )
-        if (typeof url !== 'string' || url.length === 0) {
-          throw new Error('Meta OAuth did not return a URL.')
-        }
-        window.location.href = url
-      } catch (error: unknown) {
-        logError(error, 'useSocialsConnections:startOAuth')
-        const message = asErrorMessage(error)
-        setConnectionError(message)
-        toast({
-          variant: 'destructive',
-          title: 'Connection failed',
-          description: message,
-        })
-        setConnectingProvider(null)
-      }
-    },
-    [convexAuthLoading, isAuthenticated, isPreviewMode, user, startMetaOauth, selectedClientId, toast, router, showPreviewModeToast],
-  )
-
-  const handleConnectFacebook = useCallback(() => startOAuth('facebook'), [startOAuth])
-  const handleConnectInstagram = useCallback(() => startOAuth('instagram'), [startOAuth])
+      window.location.href = url
+    } catch (error: unknown) {
+      logError(error, 'useSocialsConnections:handleConnectMeta')
+      const message = asErrorMessage(error)
+      setConnectionError(message)
+      toast({
+        variant: 'destructive',
+        title: 'Connection failed',
+        description: message,
+      })
+      setOauthPending(false)
+    }
+  }, [convexAuthLoading, isAuthenticated, isPreviewMode, user, startMetaOauth, selectedClientId, toast, router, showPreviewModeToast])
 
   const handleDisconnect = useCallback(async () => {
     if (isPreviewMode) {
@@ -164,10 +158,9 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
   return {
     status,
     statusLoading,
-    connectingProvider,
+    oauthPending,
     connectionError,
-    handleConnectFacebook,
-    handleConnectInstagram,
+    handleConnectMeta,
     handleDisconnect,
     handleRequestSync,
   }

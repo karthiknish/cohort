@@ -46,17 +46,16 @@ export default function SocialsPage() {
 
       {!isPreviewMode ? (
         <FadeIn>
-          <div id="social-connections-panel">
+          <div>
             <SocialsConnectionPanel
               panelId="social-connections-panel"
               selectedClientName={selectedClient?.name ?? null}
               connected={connected}
               accountName={connections.status?.accountName}
               lastSyncedAtMs={connections.status?.lastSyncedAtMs}
-              connectingProvider={connections.connectingProvider}
+              oauthPending={connections.oauthPending}
               connectionError={connections.connectionError}
-              onConnectFacebook={connections.handleConnectFacebook}
-              onConnectInstagram={connections.handleConnectInstagram}
+              onConnectMeta={connections.handleConnectMeta}
               onDisconnect={connections.handleDisconnect}
               onRequestSync={handleRequestSync}
             />

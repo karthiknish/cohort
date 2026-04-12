@@ -10,18 +10,8 @@ vi.mock('./hooks/use-socials-page-controller', () => ({
   useSocialsPageController: vi.fn(),
 }))
 
-vi.mock('./components/socials-header', () => ({
-  SocialsHeader: ({ selectedClientName }: { selectedClientName: string | null }) => <div>Header:{selectedClientName ?? 'none'}</div>,
-}))
-
-vi.mock('./components/socials-connection-panel', () => ({
-  SocialsConnectionPanel: () => <div>Connection Panel</div>,
-}))
-
-vi.mock('./components/social-surface-panel', () => ({
-  SocialSurfacePanel: ({ surface, connected }: { surface: string; connected: boolean }) => (
-    <div>{surface}:{connected ? 'connected' : 'disconnected'}</div>
-  ),
+vi.mock('@/features/dashboard/ads/components/date-range-picker', () => ({
+  DateRangePicker: () => <div data-testid="date-range-picker" />,
 }))
 
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -36,18 +26,43 @@ const baseControllerValue = {
   selectedClient: { name: 'Tech Corp' },
   connections: {
     status: { connected: true, accountName: 'Demo Meta', lastSyncedAtMs: 1 },
-    connectingProvider: null,
+    oauthPending: false,
     connectionError: null,
-    handleConnectFacebook: vi.fn(async () => undefined),
-    handleConnectInstagram: vi.fn(async () => undefined),
+    handleConnectMeta: vi.fn(async () => undefined),
     handleDisconnect: vi.fn(async () => undefined),
     handleRequestSync: vi.fn(async () => undefined),
     statusLoading: false,
   },
   metrics: {
     overviewLoading: false,
-    facebookOverview: null,
-    instagramOverview: null,
+    facebookOverview: {
+      surface: 'facebook',
+      impressions: 1000,
+      reach: 500,
+      engagedUsers: 50,
+      reactions: 10,
+      comments: 5,
+      shares: 2,
+      saves: 1,
+      followerCountLatest: 100,
+      followerDeltaTotal: 5,
+      rowCount: 7,
+    },
+    instagramOverview: {
+      surface: 'instagram',
+      impressions: 800,
+      reach: 400,
+      engagedUsers: 40,
+      reactions: 8,
+      comments: 4,
+      shares: 1,
+      saves: 0,
+      followerCountLatest: 90,
+      followerDeltaTotal: 3,
+      rowCount: 7,
+    },
+    dateRange: { start: new Date('2026-03-01T00:00:00.000Z'), end: new Date('2026-03-30T23:59:59.999Z') },
+    setDateRange: vi.fn(),
   },
   facebookKpis: [{ id: 'reach', label: 'Reach', value: '12K', detail: 'detail' }],
   instagramKpis: [{ id: 'reach', label: 'Reach', value: '15K', detail: 'detail' }],
@@ -66,8 +81,9 @@ describe('SocialsPage', () => {
 
     const markup = renderToStaticMarkup(<SocialsPage />)
 
-    expect(markup).not.toContain('Connection Panel')
-    expect(markup).toContain('facebook:connected')
+    expect(markup).not.toContain('Meta connection')
+    expect(markup).not.toContain('Connect with Meta')
+    expect(markup).toContain('Facebook organic performance')
     expect(markup).toContain('Facebook')
     expect(markup).toContain('Instagram')
   })
@@ -82,6 +98,6 @@ describe('SocialsPage', () => {
 
     const markup = renderToStaticMarkup(<SocialsPage />)
 
-    expect(markup).toContain('Connection Panel')
+    expect(markup).toContain('Meta connection')
   })
 })

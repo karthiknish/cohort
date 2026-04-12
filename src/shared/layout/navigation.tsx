@@ -37,6 +37,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/sh
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Badge } from '@/shared/ui/badge'
 import { ClientWorkspaceSelector } from '@/shared/components/client-workspace-selector'
+import { useDashboardRoleAccent } from '@/shared/hooks/use-dashboard-role-accent'
 import { NotificationsDropdown } from '@/shared/components/notifications-dropdown'
 import { CommandMenu } from '@/shared/layout/navigation/command-menu'
 import { HelpModal, useHelpModal } from '@/shared/layout/navigation/help-modal'
@@ -304,13 +305,17 @@ export function Sidebar() {
     })
   }, [])
 
+  const accent = useDashboardRoleAccent()
+
   return (
     <aside
       id="tour-sidebar"
       className={cn(
         'hidden min-h-0 h-full shrink-0 border-r bg-background/60 backdrop-blur-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-(--motion-duration-normal) ease-(--motion-ease-in-out) motion-reduce:transition-none lg:flex',
-        collapsed ? 'w-16 flex-col items-center p-3' : 'w-64 flex-col p-4'
+        collapsed ? 'w-16 flex-col items-center p-3' : 'w-64 flex-col p-4',
+        accent.sidebarClass,
       )}
+      data-dashboard-role={accent.key}
       style={DASHBOARD_SIDEBAR_TRANSITION_STYLE}
     >
       <button
@@ -338,6 +343,7 @@ export function Sidebar() {
 export function Header() {
   const { user, signOut } = useAuth()
   const { isPreviewMode } = usePreview()
+  const accent = useDashboardRoleAccent()
   const [open, setOpen] = useState(false)
   const { open: helpOpen, onOpenChange: onHelpOpenChange, showWelcome, setShowWelcome } = useHelpModal()
   const [problemReportOpen, setProblemReportOpen] = useState(false)
@@ -378,19 +384,11 @@ export function Header() {
     }
   }, [user?.role])
 
-  const roleBadgeVariant = useMemo(() => {
-    switch (user?.role) {
-      case 'admin': return 'default'
-      case 'team': return 'secondary'
-      case 'client': return 'outline'
-      default: return 'outline'
-    }
-  }, [user?.role])
-
   return (
     <>
       <header
-        className="sticky top-0 z-1000 border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-backdrop-filter:bg-background/60"
+        className="sticky top-0 z-1000 flex flex-col border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-backdrop-filter:bg-background/60"
+        data-dashboard-role={accent.key}
         style={DASHBOARD_HEADER_TRANSITION_STYLE}
       >
         <div className="flex h-14 items-center justify-between gap-2 px-3 sm:h-16 sm:gap-4 sm:px-6 lg:px-8">
@@ -403,8 +401,9 @@ export function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-70 p-0">
-                <SheetHeader className="border-b px-4 py-3">
+                <SheetHeader className="border-b px-4 py-3 text-left">
                   <SheetTitle className="text-base font-semibold">Workspace</SheetTitle>
+                  <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{accent.shellCaption}</p>
                 </SheetHeader>
                 <div className="p-4">
                   <NavigationList onNavigate={handleNavigate} />
@@ -492,15 +491,27 @@ export function Header() {
                     {displayedName}
                   </span>
                   {isPreviewMode ? (
-                    <Badge variant="secondary" className="hidden sm:ml-1.5 sm:inline-flex text-[10px] px-1.5 py-0">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'hidden sm:ml-1.5 sm:inline-flex text-[10px] px-1.5 py-0 uppercase tracking-wide',
+                        accent.accountBadgeClass,
+                      )}
+                    >
                       Preview
                     </Badge>
                   ) : null}
-                  {roleLabel && (
-                    <Badge variant={roleBadgeVariant as 'default' | 'secondary' | 'outline'} className="hidden sm:ml-1.5 sm:inline-flex text-[10px] px-1.5 py-0">
+                  {!isPreviewMode && roleLabel ? (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'hidden sm:ml-1.5 sm:inline-flex text-[10px] px-1.5 py-0 uppercase tracking-wide',
+                        accent.accountBadgeClass,
+                      )}
+                    >
                       {roleLabel}
                     </Badge>
-                  )}
+                  ) : null}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -509,15 +520,15 @@ export function Header() {
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold">{displayedName}</span>
                       {isPreviewMode ? (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 uppercase tracking-wide', accent.accountBadgeClass)}>
                           Preview
                         </Badge>
                       ) : null}
-                      {roleLabel && (
-                        <Badge variant={roleBadgeVariant as 'default' | 'secondary' | 'outline'} className="text-[10px] px-1.5 py-0">
+                      {!isPreviewMode && roleLabel ? (
+                        <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 uppercase tracking-wide', accent.accountBadgeClass)}>
                           {roleLabel}
                         </Badge>
-                      )}
+                      ) : null}
                     </div>
                     <span className="text-xs text-muted-foreground">{displayedEmail}</span>
                   </div>
@@ -548,6 +559,7 @@ export function Header() {
             </DropdownMenu>
           </div>
         </div>
+        <div className={cn(accent.headerStripClass)} aria-hidden />
       </header>
 
   <HelpModal open={helpOpen} onOpenChange={onHelpOpenChange} showWelcome={showWelcome} />

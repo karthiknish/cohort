@@ -720,12 +720,14 @@ export function AgentMessagesSection({
   isProcessing,
   mentionLabels,
   messages,
+  onRetryLastUserTurn,
   scrollAreaRef,
 }: {
   isConversationLoading: boolean
   isProcessing: boolean
   mentionLabels: string[]
   messages: AgentMessage[]
+  onRetryLastUserTurn?: () => void
   scrollAreaRef: RefObject<HTMLDivElement | null>
 }) {
   return (
@@ -740,7 +742,12 @@ export function AgentMessagesSection({
       ) : (
         <div className="space-y-3">
           {messages.map((message) => (
-            <AgentMessageCard key={message.id} message={message} mentionLabels={mentionLabels} />
+            <AgentMessageCard
+              key={message.id}
+              message={message}
+              mentionLabels={mentionLabels}
+              onRetryLastUserTurn={onRetryLastUserTurn}
+            />
           ))}
 
           {isProcessing ? (
@@ -852,6 +859,7 @@ export function AgentModePanelContent({
   mentionLabels,
   messages,
   onRetry,
+  onRetryLastUserTurn,
   scrollAreaRef,
   showEmptyState,
 }: {
@@ -863,6 +871,7 @@ export function AgentModePanelContent({
   mentionLabels: string[]
   messages: AgentMessage[]
   onRetry: () => void
+  onRetryLastUserTurn?: () => void
   scrollAreaRef: RefObject<HTMLDivElement | null>
   showEmptyState: boolean
 }) {
@@ -881,6 +890,7 @@ export function AgentModePanelContent({
         isProcessing={isProcessing}
         mentionLabels={mentionLabels}
         messages={messages}
+        onRetryLastUserTurn={onRetryLastUserTurn}
         scrollAreaRef={scrollAreaRef}
       />
 

@@ -54,7 +54,7 @@ describe('SocialSurfacePanel', () => {
     expect(markup).toContain('12.3K')
     expect(markup).toContain('Audience footprint')
     expect(markup).toContain('Interaction mix')
-    expect(markup).toContain('Insight signals')
+    expect(markup).toContain('Derived signals')
     expect(markup).toContain('Engagement rate')
   })
 

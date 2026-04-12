@@ -1,7 +1,8 @@
 'use client'
 
-import { ArrowRight, Facebook, Instagram, RefreshCw, Unplug } from 'lucide-react'
+import { Facebook, Instagram, LoaderCircle, RefreshCw, Shield, Unplug } from 'lucide-react'
 import { useCallback } from 'react'
+
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -14,10 +15,9 @@ type SocialsConnectionPanelProps = {
   connected: boolean
   accountName: string | null | undefined
   lastSyncedAtMs: number | null | undefined
-  connectingProvider: 'facebook' | 'instagram' | null
+  oauthPending: boolean
   connectionError: string | null
-  onConnectFacebook: () => Promise<void>
-  onConnectInstagram: () => Promise<void>
+  onConnectMeta: () => Promise<void>
   onDisconnect: () => Promise<void>
   onRequestSync: () => void
 }
@@ -36,22 +36,15 @@ export function SocialsConnectionPanel({
   connected,
   accountName,
   lastSyncedAtMs,
-  connectingProvider,
+  oauthPending,
   connectionError,
-  onConnectFacebook,
-  onConnectInstagram,
+  onConnectMeta,
   onDisconnect,
   onRequestSync,
 }: SocialsConnectionPanelProps) {
-  const isConnecting = connectingProvider !== null
-
-  const handleConnectFacebook = useCallback(() => {
-    void onConnectFacebook()
-  }, [onConnectFacebook])
-
-  const handleConnectInstagram = useCallback(() => {
-    void onConnectInstagram()
-  }, [onConnectInstagram])
+  const handleConnectMeta = useCallback(() => {
+    void onConnectMeta()
+  }, [onConnectMeta])
 
   const handleDisconnect = useCallback(() => {
     void onDisconnect()
@@ -59,126 +52,64 @@ export function SocialsConnectionPanel({
 
   return (
     <div id={panelId} className="space-y-4">
-      {/* ── Social Platform Login Cards ── */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Facebook Login */}
-        <Card className={cn('overflow-hidden', DASHBOARD_THEME.cards.base)}>
-          <CardContent className="flex flex-col gap-4 p-5">
-            <div className="flex items-center gap-3">
-              <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 bg-info/10 text-info border-info/20')}>
-                <Facebook className="h-5 w-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-foreground">Facebook</p>
-                  <Badge className={connected ? getBadgeClasses('success') : getBadgeClasses('secondary')}>
-                    {connected ? 'Connected' : 'Not connected'}
-                  </Badge>
-                </div>
-                <p className={DASHBOARD_THEME.stats.description}>
-                  Organic reach, engagement, and follower growth for Facebook Pages.
-                </p>
-              </div>
-            </div>
-            <Button
-              type="button"
-              onClick={handleConnectFacebook}
-              disabled={isConnecting}
-              className={cn(getButtonClasses('primary'), 'w-full')}
-            >
-              <Facebook className="mr-2 h-4 w-4" />
-              {connected ? 'Reconnect Facebook' : 'Connect Facebook'}
-              <ArrowRight className="ml-auto h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Instagram Login */}
-        <Card className={cn('overflow-hidden', DASHBOARD_THEME.cards.base)}>
-          <CardContent className="flex flex-col gap-4 p-5">
-            <div className="flex items-center gap-3">
-              <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 bg-accent/10 text-accent border-accent/20')}>
-                <Instagram className="h-5 w-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-foreground">Instagram</p>
-                  <Badge className={connected ? getBadgeClasses('success') : getBadgeClasses('secondary')}>
-                    {connected ? 'Connected' : 'Not connected'}
-                  </Badge>
-                </div>
-                <p className={DASHBOARD_THEME.stats.description}>
-                  Organic reach, engagement, and follower growth for Instagram business profiles.
-                </p>
-              </div>
-            </div>
-            <Button
-              type="button"
-              onClick={handleConnectInstagram}
-              disabled={isConnecting}
-              className={cn(getButtonClasses('primary'), 'w-full')}
-            >
-              <Instagram className="mr-2 h-4 w-4" />
-              {connected ? 'Reconnect Instagram' : 'Connect Instagram'}
-              <ArrowRight className="ml-auto h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ── Shared Meta Authorization ── */}
-      <Card className={cn('overflow-hidden', DASHBOARD_THEME.cards.base)}>
+      <Card className={cn('overflow-hidden border-muted/50 shadow-sm', DASHBOARD_THEME.cards.base)}>
         <CardHeader className={DASHBOARD_THEME.cards.header}>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-3">
-              <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10')}>
-                <Facebook className="h-5 w-5" />
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex gap-4">
+              <div className="flex shrink-0 gap-1 rounded-2xl border border-muted/40 bg-muted/20 p-2">
+                <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 bg-info/10 text-info border-info/20')}>
+                  <Facebook className="h-5 w-5" aria-hidden />
+                </div>
+                <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 bg-accent/10 text-accent border-accent/20')}>
+                  <Instagram className="h-5 w-5" aria-hidden />
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-base">Meta Authorization</CardTitle>
-                <CardDescription>
-                  One shared token powers both Facebook and Instagram organic data.
+              <div className="min-w-0 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardTitle className="text-lg">Meta connection</CardTitle>
+                  <Badge className={connected ? getBadgeClasses('success') : getBadgeClasses('secondary')}>
+                    {connected ? 'Connected' : 'Not connected'}
+                  </Badge>
+                </div>
+                <CardDescription className="text-pretty text-sm leading-relaxed">
+                  One Meta Business login covers <span className="font-medium text-foreground">Facebook Pages</span> and{' '}
+                  <span className="font-medium text-foreground">Instagram business</span> organic metrics for this workspace—no
+                  separate sign-ins.
                 </CardDescription>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className={connected ? getBadgeClasses('success') : getBadgeClasses('warning')}>
-                {connected ? 'Active' : 'Needs setup'}
-              </Badge>
-              <Badge className={getBadgeClasses('secondary')}>
-                {formatLastSync(lastSyncedAtMs)}
-              </Badge>
-            </div>
+            <Button
+              type="button"
+              onClick={handleConnectMeta}
+              disabled={oauthPending}
+              className={cn(getButtonClasses('primary'), 'w-full shrink-0 gap-2 shadow-md lg:w-auto lg:min-w-[200px]')}
+            >
+              {oauthPending ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <Shield className="h-4 w-4" aria-hidden />}
+              {connected ? 'Reconnect with Meta' : 'Connect with Meta'}
+            </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4 p-5">
+        <CardContent className="space-y-4 p-5 pt-0">
           <div className="flex flex-wrap items-center gap-2">
             {selectedClientName ? (
-              <Badge className={getBadgeClasses('primary')}>
-                Workspace: {selectedClientName}
-              </Badge>
+              <Badge className={getBadgeClasses('primary')}>Workspace: {selectedClientName}</Badge>
             ) : null}
-            {accountName ? (
-              <Badge className={getBadgeClasses('primary')}>
-                Authorized as: {accountName}
-              </Badge>
-            ) : null}
+            {accountName ? <Badge className={getBadgeClasses('primary')}>Authorized as: {accountName}</Badge> : null}
+            <Badge className={getBadgeClasses('secondary')}>{formatLastSync(lastSyncedAtMs)}</Badge>
           </div>
 
-          {connectionError ? (
-            <p className="text-sm text-destructive">{connectionError}</p>
-          ) : null}
+          {connectionError ? <p className="text-sm text-destructive">{connectionError}</p> : null}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 border-t border-muted/30 pt-4">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={onRequestSync}
-              disabled={!connected}
+              disabled={!connected || oauthPending}
               className={getButtonClasses('outline')}
             >
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 h-4 w-4" aria-hidden />
               Request sync
             </Button>
             <Button
@@ -186,10 +117,10 @@ export function SocialsConnectionPanel({
               variant="outline"
               size="sm"
               onClick={handleDisconnect}
-              disabled={!connected}
+              disabled={!connected || oauthPending}
               className={cn(getButtonClasses('outline'), 'text-destructive hover:text-destructive')}
             >
-              <Unplug className="mr-2 h-4 w-4" />
+              <Unplug className="mr-2 h-4 w-4" aria-hidden />
               Disconnect
             </Button>
           </div>

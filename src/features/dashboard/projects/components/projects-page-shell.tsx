@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { Briefcase, CircleX, FolderKanban, ListChecks, LoaderCircle, RefreshCw, TriangleAlert, Users } from 'lucide-react'
+import { Briefcase, CircleX, FolderKanban, ListChecks, LoaderCircle, Plus, RefreshCw, TriangleAlert, Users } from 'lucide-react'
 import Link from 'next/link'
 
 import { CreateProjectDialog } from '@/features/dashboard/projects/create-project-dialog'
@@ -71,6 +71,7 @@ function ProjectsHeaderSection() {
     handleRefreshProjects,
     loading,
     portfolioLabel,
+    projects,
     retryCount,
     setViewMode,
     viewMode,
@@ -81,16 +82,47 @@ function ProjectsHeaderSection() {
 
   return (
     <div className={DASHBOARD_THEME.layout.header}>
-      <div>
-        <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.projects?.title ?? 'Projects'}</h1>
-        <p className={DASHBOARD_THEME.layout.subtitle}>
-          Portfolio overview for {portfolioLabel}.
-          {retryCount > 0 ? (
-            <span className="ml-2 text-warning">
-              (Retrying… attempt {retryCount}/{RETRY_CONFIG.maxRetries})
-            </span>
-          ) : null}
-        </p>
+      <div className="max-w-3xl space-y-3">
+        <div className="flex flex-wrap items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/8 text-primary shadow-sm">
+            <Briefcase className="h-6 w-6" aria-hidden />
+          </div>
+          <div className="min-w-0 space-y-2">
+            <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground">
+              {PAGE_TITLES.projects?.title ?? 'Projects'}
+            </h1>
+            <p className="text-pretty text-sm leading-relaxed text-muted-foreground md:text-[15px]">
+              Portfolio for <span className="font-medium text-foreground">{portfolioLabel}</span>
+              {projects.length > 0 ? (
+                <span className="text-muted-foreground"> · {projects.length} project{projects.length === 1 ? '' : 's'} loaded</span>
+              ) : null}
+              {retryCount > 0 ? (
+                <span className="ml-1 text-warning">
+                  (Retrying… attempt {retryCount}/{RETRY_CONFIG.maxRetries})
+                </span>
+              ) : null}
+            </p>
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <KeyboardShortcutBadge combo="mod+k" className="origin-left scale-90" />
+                <span>Search backlog</span>
+              </span>
+              <span className="text-muted-foreground/40" aria-hidden>
+                ·
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <KeyboardShortcutBadge combo="mod+shift+n" className="origin-left scale-90" />
+                <span>New project</span>
+              </span>
+              <span className="text-muted-foreground/40" aria-hidden>
+                ·
+              </span>
+              <Link href="/dashboard/tasks" className="font-medium text-primary underline-offset-4 hover:underline">
+                Open tasks
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -201,7 +233,7 @@ function ProjectsSummarySection() {
             </div>
             <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/60">
               <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
+                className="h-full bg-linear-to-r from-info to-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-(--motion-duration-slow) ease-(--motion-ease-out) motion-reduce:transition-none"
                 style={completionStyle}
               />
             </div>
@@ -221,11 +253,11 @@ function ProjectsBacklogSection() {
     focusedProjectRecord,
     focusedProjectTasksHref,
     handleMilestoneCreated,
-    handleProjectCreated,
     handleRefreshProjects,
     handleUpdateStatus,
     hasActiveFilters,
     hasVisibleProjects,
+    debouncedSearchQuery,
     initialLoading,
     loadMilestones,
     loading,
@@ -265,15 +297,27 @@ function ProjectsBacklogSection() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <CardTitle className="text-lg">Project backlog</CardTitle>
-            <CardDescription className="flex items-center gap-1.5">
-              Search, filter, and review current initiatives.
-              <span className="hidden items-center gap-1 sm:flex">
-                ( <KeyboardShortcutBadge combo="mod+k" className="origin-left scale-75" /> to search )
-              </span>
+            <CardDescription>
+              Search, filter, and review initiatives. Counts update after you pause typing in search.
             </CardDescription>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <ProjectSearch value={searchInput} onChange={setSearchInput} />
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-start">
+            <div className="flex w-full min-w-0 flex-col gap-1 sm:w-72">
+              <ProjectSearch value={searchInput} onChange={setSearchInput} />
+              {projects.length > 0 ? (
+                <p className="text-[11px] text-muted-foreground tabular-nums" aria-live="polite">
+                  {searchInput.trim() !== debouncedSearchQuery.trim() ? (
+                    <span>Matching…</span>
+                  ) : (
+                    <span>
+                      Showing <span className="font-medium text-foreground">{sortedProjects.length}</span> of{' '}
+                      <span className="font-medium text-foreground">{projects.length}</span> in this workspace
+                      {hasActiveFilters && sortedProjects.length === 0 ? ' · try clearing filters' : ''}
+                    </span>
+                  )}
+                </p>
+              ) : null}
+            </div>
             <ProjectFilters
               statusFilter={statusFilter}
               sortField={sortField}
@@ -331,7 +375,6 @@ function ProjectsBacklogSection() {
             initialLoading={initialLoading}
             loading={loading}
             onClearAllFilters={clearAllFilters}
-            onCreateProject={handleProjectCreated}
             onDelete={openDeleteDialog}
             onEdit={openEditDialog}
             onRefresh={handleRefreshProjectsClick}
@@ -342,6 +385,7 @@ function ProjectsBacklogSection() {
             searchInput={searchInput}
             sortedProjects={sortedProjects}
             viewMode={viewMode}
+            onClearFocusAndFilters={clearAllFilters}
           />
         )}
       </CardContent>
@@ -356,7 +400,6 @@ type ProjectsListStateProps = {
   initialLoading: boolean
   loading: boolean
   onClearAllFilters: () => void
-  onCreateProject: (project: ProjectRecord) => void
   onDelete: (project: ProjectRecord) => void
   onEdit: (project: ProjectRecord) => void
   onRefresh: () => void
@@ -367,6 +410,7 @@ type ProjectsListStateProps = {
   searchInput: string
   sortedProjects: ProjectRecord[]
   viewMode: 'list' | 'grid' | 'board'
+  onClearFocusAndFilters: () => void
 }
 
 function ProjectsListState({
@@ -376,7 +420,6 @@ function ProjectsListState({
   initialLoading,
   loading,
   onClearAllFilters,
-  onCreateProject,
   onDelete,
   onEdit,
   onRefresh,
@@ -387,7 +430,12 @@ function ProjectsListState({
   searchInput,
   sortedProjects,
   viewMode,
+  onClearFocusAndFilters,
 }: ProjectsListStateProps) {
+  const openCreateProject = useCallback(() => {
+    document.getElementById('create-project-trigger')?.click()
+  }, [])
+
   if (initialLoading) {
     return (
       <div className="space-y-4">
@@ -413,12 +461,18 @@ function ProjectsListState({
 
   if (projects.length === 0 && !hasActiveFilters) {
     return (
-      <div className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center">
-        <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/40" />
-        <h3 className="mt-4 text-lg font-medium text-foreground">No projects yet</h3>
-        <p className="mt-1 text-sm text-muted-foreground">Create your first project to start tracking work.</p>
-        <div className="mt-4">
-          <CreateProjectDialog onProjectCreated={onCreateProject} />
+      <div className="rounded-xl border border-dashed border-primary/20 bg-linear-to-br from-primary/5 via-muted/5 to-background p-8 text-center shadow-sm">
+        <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/50" />
+        <h3 className="mt-4 text-lg font-semibold tracking-tight text-foreground">No projects yet</h3>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+          Create a project to group tasks, timelines, and collaboration. New projects pick up the client you have selected
+          in the header.
+        </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <Button type="button" className={cn(getButtonClasses('primary'), 'gap-2')} onClick={openCreateProject}>
+            <Plus className="h-4 w-4" aria-hidden />
+            New project
+          </Button>
         </div>
       </div>
     )
@@ -445,7 +499,24 @@ function ProjectsListState({
   }
 
   if (!hasVisibleProjects) {
-    return null
+    return (
+      <div className="rounded-xl border border-dashed border-muted/50 bg-muted/10 p-8 text-center">
+        <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/40" />
+        <h3 className="mt-4 text-lg font-semibold text-foreground">Nothing to show in this view</h3>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+          Filters, search, or a deep-linked project may be hiding results. Reset the view to see the full portfolio again.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={onClearFocusAndFilters}>
+            Reset search & filters
+          </Button>
+          <Button type="button" size="sm" onClick={openCreateProject}>
+            <Plus className="mr-2 h-4 w-4" aria-hidden />
+            New project
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   if (viewMode === 'list') {
