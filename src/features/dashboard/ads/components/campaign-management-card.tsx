@@ -377,11 +377,16 @@ export function CampaignManagementCard({
       .catch((error) => {
         logError(error, 'CampaignManagementCard:fetchGroups')
         console.error('Fetch groups error:', error)
+        toast({
+          title: 'Could not load campaign groups',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       })
       .finally(() => {
         setGroupsLoading(false)
       })
-  }, [isConnected, listCampaignGroups, providerId, selectedClientId, setupRequired, workspaceId])
+  }, [isConnected, listCampaignGroups, providerId, selectedClientId, setupRequired, toast, workspaceId])
 
   const handleRefresh = useCallback(() => {
     if (view === 'groups') {

@@ -7,7 +7,9 @@ import type { Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Check, Copy } from "lucide-react"
 
+import { asErrorMessage } from "@/lib/convex-errors"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/shared/ui/use-toast"
 import { Button } from "@/shared/ui/button"
 import { CodeSyntaxHighlighter } from "@/shared/ui/code-syntax-highlighter"
 import { LazyImage } from "@/shared/ui/lazy-image"
@@ -53,6 +55,7 @@ function normalizeLanguage(lang: string | null): string {
 
 // Copy to clipboard button component
 function CopyButton({ code }: { code: string }) {
+  const { toast } = useToast()
   const [copied, setCopied] = useState(false)
 
   const handleCopy = useCallback(async () => {
@@ -62,8 +65,13 @@ function CopyButton({ code }: { code: string }) {
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error("Failed to copy code:", err)
+      toast({
+        title: "Copy failed",
+        description: asErrorMessage(err),
+        variant: "destructive",
+      })
     }
-  }, [code])
+  }, [code, toast])
 
   return (
     <Button

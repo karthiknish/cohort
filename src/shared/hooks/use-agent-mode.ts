@@ -15,6 +15,7 @@ import {
 } from '@/lib/agent-attachments'
 import { agentApi } from '@/lib/convex-api'
 import { AgentValidationError, parseAgentError, ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
+import { notifyFailure, notifyError } from '@/lib/notifications'
 
 
 
@@ -300,6 +301,13 @@ export function useAgentMode(): UseAgentModeReturn {
       startTransition(() => {
         setPendingAttachments((prev) => [...prev, ...extracted])
       })
+    } catch (err) {
+      console.error('[useAgentMode] Attachment processing failed:', err)
+      notifyFailure({
+        title: 'Could not add attachments',
+        error: err,
+        fallbackMessage: 'Could not process attached files. Try a different file or smaller size.',
+      })
     } finally {
       setIsExtractingAttachments(false)
     }
@@ -355,6 +363,9 @@ export function useAgentMode(): UseAgentModeReturn {
     // Show user-friendly error message
     const displayMessage = ERROR_DISPLAY_MESSAGES[err.type] || err.message
     addMessage('agent', displayMessage, null, 'error', { action: 'response', success: false })
+    if (err.type !== 'rate-limit') {
+      notifyError({ message: displayMessage })
+    }
   }, [addMessage, startRateLimitCountdown])
 
 
@@ -592,6 +603,11 @@ export function useAgentMode(): UseAgentModeReturn {
       setHistory(result.conversations)
     } catch (err) {
       console.error('[useAgentMode] Failed to fetch history:', err)
+      notifyFailure({
+        title: 'Could not load chats',
+        error: err,
+        fallbackMessage: 'Failed to load conversation history.',
+      })
     } finally {
       setIsHistoryLoading(false)
     }
@@ -705,6 +721,11 @@ export function useAgentMode(): UseAgentModeReturn {
       setHistory((prev) => prev.map((c) => (c.id === targetConversationId ? { ...c, title: trimmed } : c)))
     } catch (err) {
       console.error('[useAgentMode] Failed to update title:', err)
+      notifyFailure({
+        title: 'Could not update chat title',
+        error: err,
+        fallbackMessage: 'Sorry — we could not update that chat title. Please try again.',
+      })
       addMessage('agent', 'Sorry — I couldn\'t update that chat title. Please try again.')
     }
   }, [addMessage, updateTitle, workspaceId])
@@ -735,6 +756,11 @@ export function useAgentMode(): UseAgentModeReturn {
       }
     } catch (err) {
       console.error('[useAgentMode] Failed to delete conversation:', err)
+      notifyFailure({
+        title: 'Could not delete chat',
+        error: err,
+        fallbackMessage: 'Sorry — we could not delete that chat. Please try again.',
+      })
       addMessage('agent', 'Sorry — I couldn\'t delete that chat. Please try again.')
     }
   }, [addMessage, conversationId, deleteConversationMutation, workspaceId])

@@ -2,6 +2,8 @@
 
 import { useCallback, useMemo, useState } from 'react'
 
+import { asErrorMessage } from '@/lib/convex-errors'
+import { useToast } from '@/shared/ui/use-toast'
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
 import type { UnifiedMessage } from './message-list'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
@@ -65,6 +67,7 @@ export function DMMessagePane({
   currentUserId,
   onShareToPlatform,
 }: DMMessagePaneProps) {
+  const { toast } = useToast()
   const [inputValue, setInputValue] = useState('')
   const header = useMemo<MessagePaneHeaderInfo | null>(() => {
     if (!conversation) {
@@ -94,9 +97,14 @@ export function DMMessagePane({
       await onSendMessage(trimmedContent)
     } catch (error) {
       setInputValue(trimmedContent)
+      toast({
+        title: 'Message not sent',
+        description: asErrorMessage(error),
+        variant: 'destructive',
+      })
       throw error
     }
-  }, [isSending, onSendMessage])
+  }, [isSending, onSendMessage, toast])
 
   const handleReaction = useCallback(async (messageId: string, emoji: string) => {
     await onToggleReaction(messageId, emoji)

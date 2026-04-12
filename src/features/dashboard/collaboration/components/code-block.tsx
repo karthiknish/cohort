@@ -10,7 +10,9 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { TrustedHtml, createTrustedHtml } from '@/shared/ui/trusted-html'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/shared/ui/use-toast'
 
 // Simple syntax highlighting (could be replaced with a library like Prism.js or Shiki)
 const LANGUAGES = [
@@ -55,6 +57,7 @@ export function CodeBlock({
   className,
   maxHeight = '400px',
 }: CodeBlockProps) {
+  const { toast } = useToast()
   const [copied, setCopied] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -65,8 +68,13 @@ export function CodeBlock({
       setTimeout(() => setCopied(false), 2000)
     } catch (error) {
       console.error('Failed to copy code:', error)
+      toast({
+        title: 'Copy failed',
+        description: asErrorMessage(error),
+        variant: 'destructive',
+      })
     }
-  }, [code])
+  }, [code, toast])
 
   const lines = code.split('\n')
   const shouldTruncate = lines.length > 10 && !isExpanded

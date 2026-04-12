@@ -10,6 +10,8 @@ import {
   DialogTrigger,
 } from '@/shared/ui/dialog'
 import { Badge } from '@/shared/ui/badge'
+import { useToast } from '@/shared/ui/use-toast'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { cn, formatRelativeTime } from '@/lib/utils'
 
 export type SearchResultType = 'tasks' | 'projects' | 'messages' | 'clients' | 'files' | 'proposals'
@@ -73,6 +75,7 @@ export function GlobalSearch({
   onResultClick,
   shortcut = 'Cmd+K',
 }: GlobalSearchProps) {
+  const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
@@ -140,11 +143,16 @@ export function GlobalSearch({
       .catch((error) => {
         console.error('Search failed:', error)
         setResults([])
+        toast({
+          title: 'Search failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       })
       .finally(() => {
         setIsSearching(false)
       })
-  }, [query, selectedType, searchFunctions, isSearching])
+  }, [query, selectedType, searchFunctions, isSearching, toast])
 
   // Debounced search
   useEffect(() => {

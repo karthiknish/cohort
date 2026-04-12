@@ -24,6 +24,8 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 
+import { asErrorMessage } from '@/lib/convex-errors'
+import { useToast } from '@/shared/ui/use-toast'
 import type { Channel } from '../types'
 
 type WorkspaceMemberOption = {
@@ -55,6 +57,7 @@ function ChannelMembersDialogForm({
   onSave: (payload: { memberIds: string[]; visibility: 'public' | 'private' }) => Promise<void> | void
   onDelete?: () => Promise<void> | void
 }) {
+  const { toast } = useToast()
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>(() =>
     Array.isArray(channel.memberIds) ? channel.memberIds : [],
   )
@@ -97,15 +100,21 @@ function ChannelMembersDialogForm({
       }),
     )
       .then(() => {
+        toast({ title: 'Channel updated', description: 'Access settings were saved.' })
         onOpenChange(false)
       })
       .catch((error) => {
         console.error('[ChannelMembersDialog] Failed to save channel access', error)
+        toast({
+          title: 'Could not save channel',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       })
       .finally(() => {
         setSaving(false)
       })
-  }, [onOpenChange, onSave, selectedMemberIds, visibility])
+  }, [onOpenChange, onSave, selectedMemberIds, toast, visibility])
 
   const memberToggleHandlers = useMemo(
     () =>
@@ -128,11 +137,16 @@ function ChannelMembersDialogForm({
       })
       .catch((error) => {
         console.error('[ChannelMembersDialog] Failed to delete channel', error)
+        toast({
+          title: 'Could not delete channel',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       })
       .finally(() => {
         setDeleting(false)
       })
-  }, [channel.isCustom, onDelete, onOpenChange])
+  }, [channel.isCustom, onDelete, onOpenChange, toast])
 
   return (
     <>

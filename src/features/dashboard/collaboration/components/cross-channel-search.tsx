@@ -14,6 +14,8 @@ import {
   DialogTrigger,
 } from '@/shared/ui/dialog'
 import { Input } from '@/shared/ui/input'
+import { useToast } from '@/shared/ui/use-toast'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { cn, formatRelativeTime } from '@/lib/utils'
 import type { CollaborationChannelType, CollaborationMessage } from '@/types/collaboration'
 
@@ -56,6 +58,7 @@ function useCrossChannelSearchController({
   onSearch,
   onResultClick,
 }: Pick<CrossChannelSearchProps, 'onSearch' | 'onResultClick'>) {
+  const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
@@ -91,11 +94,17 @@ function useCrossChannelSearchController({
       })
       .catch((error) => {
         console.error('Search failed:', error)
+        setResults([])
+        toast({
+          title: 'Search failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       })
       .finally(() => {
         setIsSearching(false)
       })
-  }, [hasAttachment, hasLink, isSearching, onSearch, query, selectedChannelType])
+  }, [hasAttachment, hasLink, isSearching, onSearch, query, selectedChannelType, toast])
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {

@@ -12,10 +12,13 @@ import { Button } from '@/shared/ui/button'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { Badge } from '@/shared/ui/badge'
+import { asErrorMessage } from '@/lib/convex-errors'
+import { useToast } from '@/shared/ui/use-toast'
 
 const SITE_HEADER_TRANSITION_STYLE = { viewTransitionName: 'site-header' } satisfies CSSProperties
 
 export function SiteHeader() {
+  const { toast } = useToast()
   const { user, loading, signOut } = useAuth()
   const { isPreviewMode } = usePreview()
   const pathname = usePathname()
@@ -31,11 +34,16 @@ export function SiteHeader() {
     void signOut()
       .catch((error) => {
         console.error('Sign out failed', error)
+        toast({
+          title: 'Sign out failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       })
       .finally(() => {
         setSigningOut(false)
       })
-  }, [signOut])
+  }, [signOut, toast])
 
   return (
     <header

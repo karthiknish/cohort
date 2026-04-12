@@ -5,7 +5,9 @@ import { ImagePlus, LoaderCircle, Trash2, Upload } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
 import { LazyImage } from '@/shared/ui/lazy-image'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/shared/ui/use-toast'
 
 interface ImageUploaderProps {
   value?: string | null
@@ -26,6 +28,7 @@ export function ImageUploader({
   maxSizeMB = 5,
   placeholder = 'Upload an image',
 }: ImageUploaderProps) {
+  const { toast } = useToast()
   const inputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -76,7 +79,13 @@ export function ImageUploader({
         })
         .catch((err) => {
           console.error('Image upload failed:', err)
+          const message = asErrorMessage(err)
           setError('Upload failed. Please try again.')
+          toast({
+            title: 'Upload failed',
+            description: message,
+            variant: 'destructive',
+          })
           URL.revokeObjectURL(objectUrl)
           setPreviewUrl(value ?? null)
         })
@@ -84,7 +93,7 @@ export function ImageUploader({
           setIsUploading(false)
         })
     },
-    [onUpload, onChange, validateFile, value]
+    [onChange, onUpload, toast, validateFile, value]
   )
 
   const handleFileChange = useCallback(

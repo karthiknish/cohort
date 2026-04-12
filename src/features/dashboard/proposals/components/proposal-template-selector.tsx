@@ -14,6 +14,7 @@ import type { ProposalTemplate } from '@/types/proposal-templates'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useMutation, useQuery } from 'convex/react'
 import { proposalTemplatesApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
 
 import {
   ProposalTemplateDropdownContent,
@@ -143,8 +144,8 @@ export function ProposalTemplateSelector({
       .catch((error) => {
         console.error('Failed to save template:', error)
         toast({
-          title: 'Error',
-          description: 'Failed to save template',
+          title: 'Could not save template',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })
@@ -176,8 +177,8 @@ export function ProposalTemplateSelector({
       .catch((error) => {
         console.error('Failed to delete template:', error)
         toast({
-          title: 'Error',
-          description: 'Failed to delete template',
+          title: 'Could not delete template',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })
