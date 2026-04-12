@@ -300,6 +300,11 @@ function ProposalsPageContent() {
             canStart={Boolean(selectedClientId)}
             isCreatingDraft={isCreatingDraft}
             onStartProposal={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
+            blockedHint={
+              selectedClientId
+                ? null
+                : 'Pick a client from the workspace switcher in the header. Proposals are always created for the active client.'
+            }
           />
         )}
 

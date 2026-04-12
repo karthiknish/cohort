@@ -18,7 +18,7 @@ export function ProposalDraftStatusStrip({
   draftId: string | null
 }) {
   return (
-    <div className="flex items-center justify-between px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+    <div className="flex items-center justify-between gap-3 px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 sm:text-[11px]">
       <div className="flex items-center gap-2">
         <div
           className={cn(
@@ -34,7 +34,9 @@ export function ProposalDraftStatusStrip({
         />
         <span>{autosaveLabel}</span>
       </div>
-      <span>Draft #{draftId?.slice(0, 8).toUpperCase() ?? 'NEW'}</span>
+      <span className="tabular-nums tracking-tight text-muted-foreground/80">
+        Draft #{draftId?.slice(0, 8).toUpperCase() ?? 'NEW'}
+      </span>
     </div>
   )
 }
@@ -91,7 +93,7 @@ export function ProposalDraftFooter({
   totalSteps: number
 }) {
   return (
-    <div className="mt-2 flex items-center justify-between border-t border-muted/20 pt-4">
+    <div className="mt-auto flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-muted/30 bg-background/95 pt-4 pb-1 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80">
       <Button
         variant="outline"
         onClick={onBack}

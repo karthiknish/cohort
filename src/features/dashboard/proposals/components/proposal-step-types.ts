@@ -2,6 +2,12 @@ import type { ProposalFormData } from '@/lib/proposals'
 
 export type ProposalStepId = 'company' | 'marketing' | 'goals' | 'scope' | 'timelines' | 'value'
 
+export interface ProposalStep {
+  id: ProposalStepId
+  title: string
+  description: string
+}
+
 export interface ProposalStepContentProps {
   stepId: ProposalStepId
   formState: ProposalFormData

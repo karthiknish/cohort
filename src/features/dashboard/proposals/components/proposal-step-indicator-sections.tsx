@@ -2,6 +2,47 @@
 
 import { useMemo } from 'react'
 
+import { cn } from '@/lib/utils'
+
+import type { ProposalStep } from './proposal-step-types'
+
+export function ProposalStepIndicatorRail({
+  steps,
+  currentStep,
+  submitted,
+}: {
+  steps: ProposalStep[]
+  currentStep: number
+  submitted: boolean
+}) {
+  return (
+    <ol className="flex flex-wrap items-center gap-2" aria-label="Proposal steps overview">
+      {steps.map((step, index) => {
+        const isComplete = submitted || index < currentStep
+        const isCurrent = !submitted && index === currentStep
+
+        return (
+          <li key={step.id} aria-current={isCurrent ? 'step' : undefined}>
+            <span
+              title={step.title}
+              className={cn(
+                'block h-2.5 w-2.5 rounded-full transition-[background-color,box-shadow,transform] duration-200 motion-reduce:transition-none',
+                isComplete && 'bg-success shadow-[0_0_0_1px_hsl(var(--success)/0.25)]',
+                isCurrent && 'scale-110 bg-primary shadow-[0_0_0_3px_hsl(var(--primary)/0.2)]',
+                !isComplete && !isCurrent && 'bg-muted-foreground/25',
+              )}
+            />
+            <span className="sr-only">
+              {index + 1}. {step.title}
+              {isComplete ? ' (completed)' : isCurrent ? ' (current)' : ''}
+            </span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
 export function ProposalStepIndicatorSummary({
   activeStepTitle,
   currentStep,
@@ -32,7 +73,7 @@ export function ProposalStepIndicatorProgressBar({ percentage }: { percentage: n
   return (
     <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
       <div
-        className="h-full bg-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-in-out)] motion-reduce:transition-none"
+        className="h-full bg-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-(--motion-duration-slow) ease-(--motion-ease-in-out) motion-reduce:transition-none"
         style={progressStyle}
       />
     </div>

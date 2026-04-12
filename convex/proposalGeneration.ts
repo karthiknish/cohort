@@ -115,10 +115,6 @@ export const generateFromProposal = zWorkspaceAction({
         throw Errors.integration.notConfigured('Gamma', 'Gamma API not configured')
       }
 
-      let instructions: string
-      let suggestions: string | null
-      let inputText: string
-
       await enforceGeminiActionRateLimit(ctx, {
         name: 'proposalGeneration',
         userId: ctx.legacyId,
@@ -128,9 +124,9 @@ export const generateFromProposal = zWorkspaceAction({
       })
 
       const formData = mergeProposalForm(proposal.formData ?? null)
-      instructions = await generateGammaInstructions(formData, null)
-      suggestions = await generateProposalSuggestions(formData, instructions)
-      inputText = buildGammaInputText(formData, instructions)
+      const instructions = await generateGammaInstructions(formData, null)
+      const suggestions = await generateProposalSuggestions(formData, instructions)
+      const inputText = buildGammaInputText(formData, instructions)
 
       const now = Date.now()
       const warnings: string[] = []

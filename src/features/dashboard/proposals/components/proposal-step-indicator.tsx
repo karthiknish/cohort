@@ -3,15 +3,12 @@
 import { memo } from 'react'
 import {
   ProposalStepIndicatorProgressBar,
+  ProposalStepIndicatorRail,
   ProposalStepIndicatorSummary,
 } from './proposal-step-indicator-sections'
-import type { ProposalStepId } from './proposal-step-types'
+import type { ProposalStep } from './proposal-step-types'
 
-export interface ProposalStep {
-  id: ProposalStepId
-  title: string
-  description: string
-}
+export type { ProposalStep } from './proposal-step-types'
 
 interface ProposalStepIndicatorProps {
   steps: ProposalStep[]
@@ -30,6 +27,7 @@ function ProposalStepIndicatorComponent({
 
   return (
     <div className="space-y-4">
+      <ProposalStepIndicatorRail currentStep={currentStep} steps={steps} submitted={submitted} />
       <ProposalStepIndicatorSummary
         activeStepTitle={activeStep?.title ?? 'Proposal step'}
         currentStep={currentStep}

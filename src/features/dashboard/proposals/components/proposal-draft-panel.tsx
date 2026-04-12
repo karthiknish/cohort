@@ -50,18 +50,20 @@ export function ProposalDraftPanel({
         : 'Draft ready to save'
 
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       <ProposalDraftStatusStrip autosaveLabel={autosaveLabel} autosaveStatus={autosaveStatus} draftId={draftId} />
 
-      <ProposalDraftContentShell
-        currentStep={currentStep}
-        requiredFieldLabels={requiredFieldLabels}
-        stepContent={stepContent}
-        stepDescription={stepDescription}
-        stepTitle={stepTitle}
-        totalSteps={totalSteps}
-        validationMessages={validationMessages}
-      />
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
+        <ProposalDraftContentShell
+          currentStep={currentStep}
+          requiredFieldLabels={requiredFieldLabels}
+          stepContent={stepContent}
+          stepDescription={stepDescription}
+          stepTitle={stepTitle}
+          totalSteps={totalSteps}
+          validationMessages={validationMessages}
+        />
+      </div>
 
       <ProposalDraftFooter
         currentStep={currentStep}
@@ -72,6 +74,6 @@ export function ProposalDraftPanel({
         onNext={onNext}
         totalSteps={totalSteps}
       />
-    </>
+    </div>
   )
 }

@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "import", "typescript", "react", "react-perf", "nextjs", "jsx-a11y"],
+  "plugins": ["eslint", "import", "typescript", "react", "react-perf", "nextjs", "jsx-a11y", "promise"],
   "jsPlugins": [
     {
       "name": "convex",
@@ -25,7 +25,8 @@
     "oxlint/**",
     "scripts/**",
     "run-admin-script.js",
-    "set-admin-direct.js"
+    "set-admin-direct.js",
+    "test-proposal-validation.js"
   ],
   "env": {
     "browser": true,
@@ -45,18 +46,49 @@
     ],
     "eslint/no-unused-vars": "off",
     "eslint/no-useless-escape": "off",
+    "eslint/eqeqeq": ["warn", "smart", { "null": "ignore" }],
+    "eslint/prefer-const": "warn",
+    "eslint/no-console": [
+      "warn",
+      {
+        "allow": ["warn", "error", "info", "debug", "trace", "log", "group", "groupEnd", "table", "time", "timeEnd", "count"]
+      }
+    ],
+    "eslint/no-debugger": "error",
+    "eslint/no-eval": "error",
+    "eslint/no-implied-eval": "error",
+    "eslint/no-throw-literal": "warn",
     "typescript/no-explicit-any": "error",
     "typescript/no-misused-promises": "warn",
     "typescript/no-unnecessary-condition": "warn",
     "typescript/consistent-type-imports": "warn",
     "typescript/no-require-imports": "warn",
+    "typescript/no-floating-promises": "warn",
+    "typescript/no-for-in-array": "error",
+    "typescript/no-misused-spread": "warn",
+    "typescript/no-base-to-string": "warn",
+    "typescript/prefer-as-const": "warn",
+    "typescript/no-non-null-asserted-optional-chain": "warn",
+    "typescript/await-thenable": "error",
     "react/exhaustive-deps": "warn",
     "react/rules-of-hooks": "error",
     "react/no-array-index-key": "warn",
+    "react/jsx-key": "error",
+    "react/jsx-no-duplicate-props": "error",
+    "react/jsx-no-target-blank": "warn",
+    "react/no-danger": "warn",
     "react-js/no-unstable-nested-components": "warn",
     "react-perf/jsx-no-new-function-as-prop": "warn",
     "react-perf/jsx-no-new-object-as-prop": "warn",
     "react-perf/jsx-no-jsx-as-prop": "warn",
+    "nextjs/no-html-link-for-pages": "warn",
+    "nextjs/no-img-element": "warn",
+    "jsx-a11y/alt-text": "warn",
+    "jsx-a11y/anchor-is-valid": "warn",
+    "jsx-a11y/click-events-have-key-events": "warn",
+    "jsx-a11y/no-static-element-interactions": "warn",
+    "promise/no-callback-in-promise": "warn",
+    "promise/valid-params": "warn",
     "cohort/no-direct-colors": "warn",
     "cohort/only-shadcn-components": "warn",
     "cohort/no-ad-hoc-rate-limits": "warn",
@@ -65,14 +97,43 @@
   },
   "settings": {
     "react": {
-      "version": "18.2.0"
+      "version": "19.0"
     }
   },
   "overrides": [
     {
       "files": ["**/convex/**/*.ts"],
       "rules": {
-        "convex/require-args-validator": ["error", { "ignoreUnusedArguments": true }]
+        "convex/require-args-validator": ["error", { "ignoreUnusedArguments": true }],
+        "eslint/no-console": "off",
+        "typescript/no-floating-promises": "off"
+      }
+    },
+    {
+      "files": [
+        "**/*.{test,spec}.{ts,tsx}",
+        "**/__tests__/**/*.{ts,tsx}",
+        "**/vitest.setup.*",
+        "**/test/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "eslint/no-console": "off",
+        "typescript/no-floating-promises": "off",
+        "typescript/no-explicit-any": "off",
+        "react/display-name": "off"
+      }
+    },
+    {
+      "files": ["src/shared/ui/trusted-html.tsx"],
+      "rules": {
+        "react/no-danger": "off"
+      }
+    },
+    {
+      "files": ["next.config.ts", "proxy.ts", "middleware.ts", "**/*.config.{ts,mts,cjs,mjs}"],
+      "rules": {
+        "eslint/no-console": "off",
+        "typescript/no-floating-promises": "off"
       }
     },
     {

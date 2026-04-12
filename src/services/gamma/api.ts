@@ -479,7 +479,13 @@ export class GammaService {
             }
         }
 
-        throw lastError
+        throw lastError instanceof Error
+            ? lastError
+            : new Error(
+                  lastError == null
+                      ? `Gamma API getGeneration failed after ${retries} attempts`
+                      : String(lastError),
+              )
     }
 
     // ==========================================================================

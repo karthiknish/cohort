@@ -1,5 +1,5 @@
 import { createDefaultProposalForm, type ProposalFormData } from '@/lib/proposals'
-import type { ProposalStep } from '../components/proposal-step-indicator'
+import type { ProposalStep } from '../components/proposal-step-types'
 import type { ProposalStepId } from '../components/proposal-step-types'
 
 export const proposalSteps: ProposalStep[] = [

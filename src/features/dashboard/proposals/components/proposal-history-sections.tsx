@@ -43,12 +43,12 @@ export function ProposalHistoryHeader({
 }) {
   return (
     <div className="flex items-center justify-between border-b border-muted/30 pb-2">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">{isLoading ? 'Refreshing proposals…' : `${proposalCount} total proposals`}</span>
+      <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+        <span className="text-sm font-medium text-foreground">
+          {isLoading ? 'Refreshing proposals…' : `${proposalCount} ${proposalCount === 1 ? 'proposal' : 'proposals'}`}
+        </span>
         {!isLoading && proposalCount > 0 ? (
-          <Badge variant="secondary" className="h-4 bg-info/5 px-1.5 text-[10px] font-bold uppercase tracking-wider text-info">
-            Active
-          </Badge>
+          <span className="text-xs text-muted-foreground">For the selected client workspace</span>
         ) : null}
       </div>
       <Button variant="ghost" size="sm" onClick={onRefresh} disabled={isLoading} className="h-8 px-2 text-muted-foreground hover:text-foreground">

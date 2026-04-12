@@ -264,8 +264,10 @@ export async function withRetry<T>(
       }
     }
   }
-  
-  throw lastError
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(lastError == null ? 'Operation failed after retries' : String(lastError))
 }
 
 /**

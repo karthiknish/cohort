@@ -181,7 +181,7 @@ export class IntegrationApiClient {
                     await sleepWithSignal(calculateBackoffDelay(attempt), signal)
                     continue
                 }
-                throw lastError
+                throw lastError ?? new Error(`${this.platform} ${operation} failed after network errors.`)
             } finally {
                 cleanup()
             }

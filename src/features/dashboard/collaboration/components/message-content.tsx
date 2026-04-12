@@ -22,8 +22,6 @@ interface MessageContentProps {
   highlightTerms?: string[]
 }
 
-const BASE_LINK_REL = "noreferrer noopener"
-
 // Language detection from class name (e.g., "language-javascript")
 function extractLanguage(className?: string): string | null {
   if (!className) return null
@@ -157,7 +155,12 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
         )
       }
       return (
-        <a href={href} target="_blank" rel={BASE_LINK_REL} className="break-words text-sm font-medium text-primary hover:underline">
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="break-words text-sm font-medium text-primary hover:underline"
+        >
           {children}
         </a>
       )
