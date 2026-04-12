@@ -31,6 +31,7 @@ import {
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -101,12 +102,12 @@ function ProblemReportRow({
 
   return (
     <TableRow key={report.id}>
-      <TableCell className="max-w-75">
+      <th scope="row" className={cn('max-w-75 p-4 text-left align-middle font-normal')}>
         <div className="font-medium">{report.title}</div>
         <div className="truncate text-xs text-muted-foreground" title={report.description}>
           {report.description}
         </div>
-      </TableCell>
+      </th>
       <TableCell>
         <div className="text-sm">{report.userName}</div>
         <div className="text-xs text-muted-foreground">{report.userEmail}</div>
@@ -143,7 +144,7 @@ function ProblemReportRow({
           disabled={deletingId === report.id}
           aria-label={`Delete report ${report.title}`}
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4" aria-hidden />
         </Button>
       </TableCell>
     </TableRow>
@@ -310,8 +311,13 @@ export default function AdminIssuesPage() {
         </CardHeader>
         <CardContent>
           {loading && resolvedReports.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <LoaderCircle className="mb-4 h-8 w-8 animate-spin" />
+            <div
+              className="flex flex-col items-center justify-center py-12 text-muted-foreground"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <LoaderCircle className="mb-4 h-8 w-8 animate-spin" aria-hidden />
               <p>Loading reports...</p>
             </div>
           ) : filteredReports.length === 0 ? (
@@ -322,14 +328,15 @@ export default function AdminIssuesPage() {
           ) : (
             <div className="rounded-md border">
               <Table>
+                <TableCaption className="sr-only">Problem reports from workspace users</TableCaption>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Issue</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Severity</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Reported</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead scope="col">Issue</TableHead>
+                    <TableHead scope="col">User</TableHead>
+                    <TableHead scope="col">Severity</TableHead>
+                    <TableHead scope="col">Status</TableHead>
+                    <TableHead scope="col">Reported</TableHead>
+                    <TableHead scope="col" className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

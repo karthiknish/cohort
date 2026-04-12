@@ -570,18 +570,19 @@ export default function AdminTeamPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-md border border-muted/40">
               <table className="min-w-full table-fixed text-left text-sm">
+                <caption className="sr-only">Team members, roles, and client allocation</caption>
                 <thead>
                   <tr className="border-b border-muted/40">
-                    <th className="w-64 py-2 pr-3 font-medium">Team member</th>
-                    <th className="w-32 py-2 pr-3 font-medium">Role</th>
-                    <th className="w-24 py-2 pr-3 text-center font-medium">Admin</th>
-                    <th className="w-32 py-2 pr-3 font-medium">Status</th>
-                    <th className="w-40 py-2 pr-3 font-medium">Joined</th>
-                    <th className="w-40 py-2 pr-3 font-medium">Client allocation</th>
-                    <th className="w-40 py-2 pr-3 font-medium">Last active</th>
-                    <th className="py-2 text-right font-medium">Actions</th>
+                    <th scope="col" className="w-64 py-2 pr-3 font-medium">Team member</th>
+                    <th scope="col" className="w-32 py-2 pr-3 font-medium">Role</th>
+                    <th scope="col" className="w-24 py-2 pr-3 text-center font-medium">Admin</th>
+                    <th scope="col" className="w-32 py-2 pr-3 font-medium">Status</th>
+                    <th scope="col" className="w-40 py-2 pr-3 font-medium">Joined</th>
+                    <th scope="col" className="w-40 py-2 pr-3 font-medium">Client allocation</th>
+                    <th scope="col" className="w-40 py-2 pr-3 font-medium">Last active</th>
+                    <th scope="col" className="py-2 text-right font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -605,13 +606,13 @@ export default function AdminTeamPage() {
 
                       return (
                         <tr key={record.id} className="border-b border-muted/30">
-                          <td className="py-3 pr-3">
+                          <th scope="row" className="py-3 pr-3 text-left font-normal">
                             <div className="font-medium text-foreground">{record.name}</div>
                             <div className="text-xs text-muted-foreground">{record.email || 'No email on file'}</div>
                             {record.agencyId && (
                               <div className="text-xs text-muted-foreground">Agency: {record.agencyId}</div>
                             )}
-                          </td>
+                          </th>
                           <td className="py-3 pr-3 align-middle">
                             <Select
                               value={record.role}

@@ -153,7 +153,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={100}>
       <nav className="flex flex-1 flex-col space-y-4">
-        <ScrollArea className="flex-1">
+        <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-4 px-1">
             {navigationGroups.map((group) => (
               <div key={group.id} className="space-y-1.5">
@@ -308,7 +308,7 @@ export function Sidebar() {
     <aside
       id="tour-sidebar"
       className={cn(
-        'hidden h-full border-r bg-background/60 backdrop-blur-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-(--motion-duration-normal) ease-(--motion-ease-in-out) motion-reduce:transition-none lg:flex',
+        'hidden min-h-0 h-full shrink-0 border-r bg-background/60 backdrop-blur-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-(--motion-duration-normal) ease-(--motion-ease-in-out) motion-reduce:transition-none lg:flex',
         collapsed ? 'w-16 flex-col items-center p-3' : 'w-64 flex-col p-4'
       )}
       style={DASHBOARD_SIDEBAR_TRANSITION_STYLE}
@@ -328,7 +328,7 @@ export function Sidebar() {
           <ChevronLeft className="h-4 w-4 transition-transform" />
         )}
       </button>
-      <div className={cn('flex-1', collapsed ? 'w-full' : '')}>
+      <div className={cn('min-h-0 flex-1', collapsed ? 'w-full' : '')}>
         <NavigationList collapsed={collapsed} />
       </div>
     </aside>
@@ -398,9 +398,8 @@ export function Header() {
           <div className="lg:hidden">
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="shrink-0" aria-label="Open navigation">
+                <Button variant="ghost" size="icon" className="shrink-0" aria-label="Open navigation menu">
                   <Menu className="h-5 w-5" />
-                  <span className="sr-only">Toggle navigation</span>
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-70 p-0">
@@ -414,7 +413,7 @@ export function Header() {
                     className="mt-6 w-full justify-start gap-2 text-sm font-medium"
                     onClick={handleSignOut}
                   >
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOut className="h-4 w-4 shrink-0" />
                     Sign Out
                   </Button>
                 </div>
@@ -450,7 +449,6 @@ export function Header() {
                     aria-label="Report a problem"
                   >
                     <AlertCircle className="h-4 w-4" />
-                    <span className="sr-only">Report a problem</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -467,10 +465,9 @@ export function Header() {
                     size="icon"
                     onClick={handleShowOnboarding}
                     className="hidden sm:inline-flex"
-                    aria-label="Show onboarding"
+                    aria-label="Show onboarding tour"
                   >
                     <Rocket className="h-4 w-4" />
-                    <span className="sr-only">Onboarding</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>

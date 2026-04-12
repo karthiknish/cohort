@@ -32,9 +32,14 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
 
   if (loading && clients.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
-        <LoaderCircle className="h-5 w-5 animate-spin" />
-        <p>Loading client workspaces…</p>
+      <div
+        className="flex h-full flex-col items-center justify-center gap-3 py-20 text-muted-foreground"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <LoaderCircle className="h-5 w-5 shrink-0 animate-spin" aria-hidden />
+        <p className="text-sm">Loading client workspaces…</p>
       </div>
     )
   }
@@ -47,8 +52,8 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
           <CardDescription>{error}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Button onClick={handleRetry} disabled={refreshing}>
-            {refreshing && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+          <Button onClick={handleRetry} disabled={refreshing} className="gap-2">
+            {refreshing ? <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
             Try again
           </Button>
           <Button asChild variant="outline" className="gap-2">

@@ -116,14 +116,14 @@ function UserRow({
 
   return (
     <tr className="border-b border-muted/20">
-      <td className="py-3 pr-3">
+      <th scope="row" className="py-3 pr-3 text-left font-normal">
         <div className="flex items-center gap-3">
           <div className="flex flex-col">
             <span className="font-medium">{record.name}</span>
             <span className="text-xs text-muted-foreground">{record.email}</span>
           </div>
         </div>
-      </td>
+      </th>
       <td className="py-3 pr-3">
         <Select
           value={record.role}
@@ -160,8 +160,8 @@ function UserRow({
       <td className="py-3 text-right">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreHorizontal className="h-4 w-4" />
+            <Button type="button" variant="ghost" size="sm" aria-label={`Actions for ${record.name}`}>
+              <MoreHorizontal className="h-4 w-4" aria-hidden />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -202,12 +202,12 @@ function InvitationRow({
 
   return (
     <tr className="border-b border-muted/20">
-      <td className="py-3 pr-3">
+      <th scope="row" className="py-3 pr-3 text-left font-normal">
         <div className="flex flex-col">
           <span className="font-medium">{invitation.name || invitation.email}</span>
           {invitation.name && <span className="text-xs text-muted-foreground">{invitation.email}</span>}
         </div>
-      </td>
+      </th>
       <td className="py-3 pr-3">
         <Badge variant="outline">{invitation.role}</Badge>
       </td>
@@ -894,16 +894,17 @@ export default function AdminUsersPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-md border border-muted/40">
               <table className="min-w-full table-fixed text-left text-sm">
+                <caption className="sr-only">Workspace users, roles, and approval status</caption>
                 <thead>
                   <tr className="border-b border-muted/40">
-                    <th className="w-72 py-2 pr-3 font-medium">User</th>
-                    <th className="w-32 py-2 pr-3 font-medium">Role</th>
-                    <th className="w-32 py-2 pr-3 text-center font-medium">Approved</th>
-                    <th className="w-32 py-2 pr-3 font-medium">Status</th>
-                    <th className="w-40 py-2 pr-3 font-medium">Last active</th>
-                    <th className="py-2 text-right font-medium">Actions</th>
+                    <th scope="col" className="w-72 py-2 pr-3 font-medium">User</th>
+                    <th scope="col" className="w-32 py-2 pr-3 font-medium">Role</th>
+                    <th scope="col" className="w-32 py-2 pr-3 text-center font-medium">Approved</th>
+                    <th scope="col" className="w-32 py-2 pr-3 font-medium">Status</th>
+                    <th scope="col" className="w-40 py-2 pr-3 font-medium">Last active</th>
+                    <th scope="col" className="py-2 text-right font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -982,17 +983,18 @@ export default function AdminUsersPage() {
               </TabsList>
             </Tabs>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-md border border-muted/40">
               <table className="min-w-full table-fixed text-left text-sm">
+                <caption className="sr-only">Invitation lifecycle by status</caption>
                 <thead>
                   <tr className="border-b border-muted/40">
-                    <th className="w-64 py-2 pr-3 font-medium">Invitee</th>
-                    <th className="w-28 py-2 pr-3 font-medium">Role</th>
-                    <th className="w-28 py-2 pr-3 font-medium">Status</th>
-                    <th className="w-36 py-2 pr-3 font-medium">Sent</th>
-                    <th className="w-36 py-2 pr-3 font-medium">Expires</th>
-                    <th className="w-44 py-2 pr-3 font-medium">Invited by</th>
-                    <th className="py-2 text-right font-medium">Actions</th>
+                    <th scope="col" className="w-64 py-2 pr-3 font-medium">Invitee</th>
+                    <th scope="col" className="w-28 py-2 pr-3 font-medium">Role</th>
+                    <th scope="col" className="w-28 py-2 pr-3 font-medium">Status</th>
+                    <th scope="col" className="w-36 py-2 pr-3 font-medium">Sent</th>
+                    <th scope="col" className="w-36 py-2 pr-3 font-medium">Expires</th>
+                    <th scope="col" className="w-44 py-2 pr-3 font-medium">Invited by</th>
+                    <th scope="col" className="py-2 text-right font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>

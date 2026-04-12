@@ -51,10 +51,10 @@ function CommandMenuRouteItem({
   }, [href, onNavigate])
 
   return (
-    <CommandItem onSelect={handleSelect}>
-      <Icon className="mr-2 h-4 w-4" />
-      <span>{label}</span>
-      <span className="ml-2 text-xs text-muted-foreground">{description}</span>
+    <CommandItem onSelect={handleSelect} className="gap-2">
+      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <span className="min-w-0 max-w-[45%] truncate text-xs text-muted-foreground">{description}</span>
     </CommandItem>
   )
 }
@@ -75,9 +75,9 @@ function CommandMenuActionItem({
   }, [onSelect])
 
   return (
-    <CommandItem onSelect={handleSelect}>
-      <Icon className="mr-2 h-4 w-4" />
-      <span>{label}</span>
+    <CommandItem onSelect={handleSelect} className="gap-2">
+      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+      <span className="min-w-0 flex-1">{label}</span>
       {children}
     </CommandItem>
   )
@@ -148,9 +148,11 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
         onClick={handleOpen}
         className="inline-flex sm:hidden items-center justify-center rounded-md border border-input bg-background p-2 text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
         aria-label="Open quick navigation"
+        aria-expanded={open}
+        aria-haspopup="dialog"
         type="button"
       >
-        <Search className="h-4 w-4" />
+        <Search className="h-4 w-4 shrink-0" aria-hidden />
       </button>
 
       {/* Desktop: full button with text */}
@@ -158,9 +160,12 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
         id="tour-command-menu"
         onClick={handleOpen}
         type="button"
+        aria-label="Search and quick navigation"
+        aria-expanded={open}
+        aria-haspopup="dialog"
         className="hidden sm:inline-flex w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
       >
-        <Search className="h-4 w-4 shrink-0" />
+        <Search className="h-4 w-4 shrink-0" aria-hidden />
         <span className="flex-1 text-left truncate">Quick navigation...</span>
         <KeyboardShortcutBadge combo="mod+k" />
       </button>

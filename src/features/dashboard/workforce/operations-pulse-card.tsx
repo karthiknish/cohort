@@ -29,12 +29,20 @@ function PulseMetric({
   return (
     <div className="rounded-2xl border border-muted/50 bg-background p-4">
       <div className="flex items-start justify-between gap-3">
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary" aria-hidden>
           <Icon className="h-4 w-4" />
         </span>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onOpen}>
-          <span className="text-sm font-medium text-primary">Open</span>
-          <span className="sr-only">{label}</span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={onOpen}
+          aria-label={`Open ${label} details`}
+        >
+          <span className="text-sm font-medium text-primary" aria-hidden>
+            Open
+          </span>
         </Button>
       </div>
       <p className="mt-4 text-sm font-medium text-foreground">{label}</p>
@@ -84,8 +92,8 @@ function OperationsPulseCardContent() {
           </CardDescription>
         </div>
         {!snapshot.hasAnyData && !isPreviewMode ? (
-          <Button onClick={handleSeed} disabled={isSeeding}>
-            {isSeeding ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+          <Button type="button" onClick={handleSeed} disabled={isSeeding} className="gap-2">
+            {isSeeding ? <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
             Seed operations data
           </Button>
         ) : null}

@@ -19,6 +19,8 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
 
   return (
     <div
+      role="region"
+      aria-label={isPreviewMode ? 'Preview mode' : 'Sample data banner'}
       className={cn(
         'relative overflow-hidden rounded-lg border transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
         isPreviewMode
@@ -43,9 +45,9 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
             )}
           >
             {isPreviewMode ? (
-              <Eye className="h-4 w-4" />
+              <Eye className="h-4 w-4" aria-hidden />
             ) : (
-              <Database className="h-4 w-4" />
+              <Database className="h-4 w-4" aria-hidden />
             )}
           </div>
           <div>
@@ -72,7 +74,7 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
                 : 'border-warning/30 bg-warning text-warning-foreground hover:bg-warning/90'
             )}
           >
-            <Eye className="h-3.5 w-3.5" />
+            <Eye className="h-3.5 w-3.5" aria-hidden />
             {isPreviewMode ? 'Exit Preview' : 'Preview with Data'}
           </Button>
         </div>

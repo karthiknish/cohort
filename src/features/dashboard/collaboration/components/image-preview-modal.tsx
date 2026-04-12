@@ -13,7 +13,6 @@ import {
 import { Button } from '@/shared/ui/button'
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogOverlay,
   DialogPortal,
@@ -38,6 +37,7 @@ interface ThumbnailButtonProps {
   index: number
   initialIndex: number
   normalizedIndex: number
+  totalImages: number
   setIndexOffset: React.Dispatch<React.SetStateAction<number>>
   setZoom: React.Dispatch<React.SetStateAction<number>>
   setPosition: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>
@@ -48,6 +48,7 @@ function ThumbnailButton({
   index,
   initialIndex,
   normalizedIndex,
+  totalImages,
   setIndexOffset,
   setZoom,
   setPosition,
@@ -65,6 +66,9 @@ function ThumbnailButton({
   return (
     <button
       key={`${image.url}-${image.name}`}
+      type="button"
+      aria-label={`Image ${index + 1} of ${totalImages}: ${image.name}`}
+      aria-current={index === normalizedIndex || undefined}
       className={cn(
         "h-14 w-14 overflow-hidden rounded-md border-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
         index === normalizedIndex
@@ -75,7 +79,7 @@ function ThumbnailButton({
     >
       <LazyImage
         src={image.url}
-        alt={image.name}
+        alt=""
         className="h-full w-full object-cover"
       />
     </button>
@@ -300,66 +304,62 @@ export function ImagePreviewModal({
         </div>
         <div className="flex items-center gap-1">
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
             onClick={handleZoomOutClick}
             disabled={zoom <= 1}
+            aria-label="Zoom out"
           >
-            <ZoomOut className="h-5 w-5" />
-            <span className="sr-only">Zoom out</span>
+            <ZoomOut className="h-5 w-5" aria-hidden />
           </Button>
-          <span className="min-w-[50px] text-center text-xs text-white/70">
+          <span className="min-w-[50px] text-center text-xs text-white/70" aria-live="polite">
             {Math.round(zoom * 100)}%
           </span>
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
             onClick={handleZoomInClick}
             disabled={zoom >= 4}
+            aria-label="Zoom in"
           >
-            <ZoomIn className="h-5 w-5" />
-            <span className="sr-only">Zoom in</span>
+            <ZoomIn className="h-5 w-5" aria-hidden />
           </Button>
           <div className="mx-2 h-6 w-px bg-white/20" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
-            asChild
-            onClick={handleStopPropagation}
-          >
+          <Button variant="ghost" size="icon" className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10" asChild>
             <a
               href={currentImage.url}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleStopPropagation}
+              aria-label={`Open ${currentImage.name} in new tab`}
             >
-              <ExternalLink className="h-5 w-5" />
-              <span className="sr-only">Open in new tab</span>
+              <ExternalLink className="h-5 w-5" aria-hidden />
             </a>
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
-            asChild
-            onClick={handleStopPropagation}
-          >
-            <a href={currentImage.url} download={currentImage.name}>
-              <Download className="h-5 w-5" />
-              <span className="sr-only">Download</span>
+          <Button variant="ghost" size="icon" className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10" asChild>
+            <a
+              href={currentImage.url}
+              download={currentImage.name}
+              onClick={handleStopPropagation}
+              aria-label={`Download ${currentImage.name}`}
+            >
+              <Download className="h-5 w-5" aria-hidden />
             </a>
           </Button>
           <div className="mx-2 h-6 w-px bg-white/20" />
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
             onClick={handleCloseClick}
+            aria-label="Close preview"
           >
-            <X className="h-5 w-5" />
-            <span className="sr-only">Close</span>
+            <X className="h-5 w-5" aria-hidden />
           </Button>
         </div>
       </div>
@@ -368,22 +368,24 @@ export function ImagePreviewModal({
       {hasMultipleImages && (
         <>
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             className="absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/40 text-white hover:bg-black/60"
             onClick={handlePreviousClick}
+            aria-label="Previous image"
           >
-            <ChevronLeft className="h-8 w-8" />
-            <span className="sr-only">Previous image</span>
+            <ChevronLeft className="h-8 w-8" aria-hidden />
           </Button>
           <Button
+            type="button"
             variant="ghost"
             size="icon"
             className="absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/40 text-white hover:bg-black/60"
             onClick={handleNextClick}
+            aria-label="Next image"
           >
-            <ChevronRight className="h-8 w-8" />
-            <span className="sr-only">Next image</span>
+            <ChevronRight className="h-8 w-8" aria-hidden />
           </Button>
         </>
       )}
@@ -424,6 +426,7 @@ export function ImagePreviewModal({
               index={index}
               initialIndex={initialIndex}
               normalizedIndex={normalizedIndex}
+              totalImages={images.length}
               setIndexOffset={setIndexOffset}
               setZoom={setZoom}
               setPosition={setPosition}
@@ -433,7 +436,7 @@ export function ImagePreviewModal({
       )}
 
       {/* Keyboard hints */}
-      <div className="absolute bottom-4 right-4 text-xs text-white/40">
+      <div className="absolute bottom-4 right-4 text-xs text-white/40" aria-hidden>
         <span>← → Navigate</span>
         <span className="mx-2">•</span>
         <span>+/- Zoom</span>

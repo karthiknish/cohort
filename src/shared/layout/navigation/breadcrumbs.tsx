@@ -65,8 +65,8 @@ export function NavigationBreadcrumbs() {
   }
 
   return (
-    <div className="flex items-center space-x-2 py-2">
-      <Breadcrumb className="hidden md:flex">
+    <div className="flex items-center gap-2 py-2">
+      <Breadcrumb aria-label="Breadcrumb" className="hidden md:flex">
         <BreadcrumbList>
           {items.map((item, index) => (
             <div key={`${item.label}-${item.href ?? 'current'}`} className="flex items-center">
@@ -105,7 +105,13 @@ export function NavigationBreadcrumbs() {
       <div className="md:hidden">
         <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 px-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              aria-label="Open breadcrumb trail"
+            >
               <div className="flex items-center gap-1">
                 {items[items.length - 2]?.icon && (() => {
                   const secondToLastItem = items[items.length - 2]

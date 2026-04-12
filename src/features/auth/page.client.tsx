@@ -50,7 +50,7 @@ function preventDefault(event: FormEvent<HTMLFormElement>) {
 
 function AuthPageFixture() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-6 py-12">
+    <div className="flex min-h-dvh flex-1 items-center justify-center px-6 py-12 sm:py-16">
       <div className="w-full max-w-120">
         <AuthCard
           activeTab="signin"
@@ -352,7 +352,7 @@ function HomeAuthPageContent() {
         loadingContent={loadingContent}
         fixture={fixtureContent}
       >
-        <div className="flex min-h-screen items-center justify-center bg-muted/30 px-6 py-12">
+        <div className="flex min-h-dvh flex-1 items-center justify-center px-6 py-12 sm:py-16">
           <div className="w-full max-w-120">
             <AuthCard
               activeTab={activeTab}

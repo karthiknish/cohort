@@ -67,9 +67,9 @@ function PasswordRequirement({ met, label }: { met: boolean; label: string }) {
   return (
     <div className="flex items-center gap-2 text-xs">
       {met ? (
-        <Check className="h-3 w-3 text-success" />
+        <Check className="h-3 w-3 shrink-0 text-success" aria-hidden />
       ) : (
-        <X className="h-3 w-3 text-muted-foreground" />
+        <X className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
       )}
       <span className={cn(met ? 'text-success' : 'text-muted-foreground')}>{label}</span>
     </div>
@@ -99,8 +99,8 @@ export function AuthCard({
   onGoogleSignIn,
 }: AuthCardProps) {
   return (
-    <FadeIn as="section" className="w-full lg:max-w-120">
-      <Card className="border-border/60 shadow-xl shadow-primary/5">
+    <FadeIn as="section" className="mx-auto w-full max-w-md lg:max-w-120">
+      <Card className="border-border/60 shadow-xl shadow-primary/5 motion-reduce:shadow-md">
         <CardHeader className="space-y-1 pb-6 text-center">
           <CardTitle className="text-2xl">Welcome to Cohorts</CardTitle>
           <CardDescription className="text-base">
@@ -125,7 +125,7 @@ export function AuthCard({
                 <FadeInItem as="div" className="space-y-2">
                   <Label htmlFor="signInEmail">Email address</Label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground" aria-hidden>
                       <Mail className="h-4 w-4" />
                     </span>
                     <Input
@@ -146,7 +146,7 @@ export function AuthCard({
                   </div>
                   {emailError && activeTab === 'signin' && (
                     <p className="flex items-center gap-1 text-xs text-destructive">
-                      <CircleAlert className="h-3 w-3" />
+                      <CircleAlert className="h-3 w-3 shrink-0" aria-hidden />
                       {emailError}
                     </p>
                   )}
@@ -160,7 +160,7 @@ export function AuthCard({
                     </Link>
                   </div>
                   <div className="relative">
-                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground" aria-hidden>
                       <Lock className="h-4 w-4" />
                     </span>
                     <Input
@@ -184,12 +184,12 @@ export function AuthCard({
                       disabled={isSubmitting}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
                     </Button>
                   </div>
                 </FadeInItem>
 
-                <FadeInItem as="div" className="flex items-center space-x-2">
+                <FadeInItem as="div" className="flex items-center gap-2">
                   <Checkbox
                     id="remember-me"
                     checked={rememberMe}
@@ -204,10 +204,10 @@ export function AuthCard({
                   </label>
                 </FadeInItem>
 
-                <Button className="w-full" size="lg" disabled={isSubmitting || isAuthLoading} type="submit">
+                <Button className="w-full gap-2" size="lg" disabled={isSubmitting || isAuthLoading} type="submit">
                   {isSubmitting ? (
                     <>
-                      <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                      <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
                       Signing in...
                     </>
                   ) : (
@@ -226,7 +226,7 @@ export function AuthCard({
                 <FadeInItem as="div" className="space-y-2">
                   <Label htmlFor="displayName">Full name</Label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground" aria-hidden>
                       <User className="h-4 w-4" />
                     </span>
                     <Input
@@ -245,7 +245,7 @@ export function AuthCard({
                 <FadeInItem as="div" className="space-y-2">
                   <Label htmlFor="signUpEmail">Email address</Label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground" aria-hidden>
                       <Mail className="h-4 w-4" />
                     </span>
                     <Input
@@ -266,7 +266,7 @@ export function AuthCard({
                   </div>
                   {emailError && activeTab === 'signup' && (
                     <p className="flex items-center gap-1 text-xs text-destructive">
-                      <CircleAlert className="h-3 w-3" />
+                      <CircleAlert className="h-3 w-3 shrink-0" aria-hidden />
                       {emailError}
                     </p>
                   )}
@@ -275,7 +275,7 @@ export function AuthCard({
                 <FadeInItem as="div" className="space-y-2">
                   <Label htmlFor="signUpPassword">Password</Label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground" aria-hidden>
                       <Lock className="h-4 w-4" />
                     </span>
                     <Input
@@ -299,7 +299,7 @@ export function AuthCard({
                       disabled={isSubmitting}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
                     </Button>
                   </div>
 
@@ -307,7 +307,7 @@ export function AuthCard({
                     <div className="space-y-2 pt-1">
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5">
-                          <Shield className="h-3 w-3 text-muted-foreground" />
+                          <Shield className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
                           <span className="text-muted-foreground">Password strength:</span>
                         </div>
                         <span
@@ -347,7 +347,7 @@ export function AuthCard({
                 <FadeInItem as="div" className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirm password</Label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground" aria-hidden>
                       <Lock className="h-4 w-4" />
                     </span>
                     <Input
@@ -380,9 +380,9 @@ export function AuthCard({
                       aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                     >
                       {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4" />
+                        <EyeOff className="h-4 w-4" aria-hidden />
                       ) : (
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4" aria-hidden />
                       )}
                     </Button>
                   </div>
@@ -395,12 +395,12 @@ export function AuthCard({
                     >
                       {passwordsMatch ? (
                         <>
-                          <Check className="h-3 w-3" />
+                          <Check className="h-3 w-3 shrink-0" aria-hidden />
                           Passwords match
                         </>
                       ) : (
                         <>
-                          <X className="h-3 w-3" />
+                          <X className="h-3 w-3 shrink-0" aria-hidden />
                           Passwords do not match
                         </>
                       )}
@@ -408,10 +408,10 @@ export function AuthCard({
                   )}
                 </FadeInItem>
 
-                <Button className="w-full" size="lg" disabled={isSubmitting || isAuthLoading} type="submit">
+                <Button className="w-full gap-2" size="lg" disabled={isSubmitting || isAuthLoading} type="submit">
                   {isSubmitting ? (
                     <>
-                      <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                      <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
                       Creating account...
                     </>
                   ) : (
@@ -437,12 +437,12 @@ export function AuthCard({
               variant="outline"
               disabled={isSubmitting || isAuthLoading}
               onClick={onGoogleSignIn}
-              className="w-full"
+              className="w-full gap-2"
             >
               {isSubmitting ? (
-                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
               ) : (
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                   <path
                     fill={PROVIDER_COLORS.google.blue}
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -466,7 +466,7 @@ export function AuthCard({
           </div>
 
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-            <Shield className="h-3 w-3" />
+            <Shield className="h-3 w-3 shrink-0" aria-hidden />
             <span>Secured with SSL encryption</span>
           </div>
 
