@@ -33,6 +33,8 @@ export type TaskListProps = {
   onLoadMore: () => void
   emptyStateMessage: string
   showEmptyStateFiltered: boolean
+  onEmptyClearFilters?: () => void
+  onEmptyCreateTask?: () => void
   selectedTaskIds?: Set<string>
   onToggleTaskSelection?: (taskId: string, checked: boolean) => void
   workspaceId?: string | null
@@ -58,6 +60,8 @@ export function TaskList({
   onLoadMore,
   emptyStateMessage,
   showEmptyStateFiltered,
+  onEmptyClearFilters,
+  onEmptyCreateTask,
   selectedTaskIds,
   onToggleTaskSelection,
   workspaceId = null,
@@ -81,7 +85,7 @@ export function TaskList({
   }, [])
 
   return (
-    <ScrollArea className="max-h-[520px]">
+    <ScrollArea className="max-h-[min(72vh,680px)]">
       <div
         className={
           viewMode === 'grid'
@@ -115,6 +119,8 @@ export function TaskList({
             emptyStateMessage={emptyStateMessage}
             showEmptyStateFiltered={showEmptyStateFiltered}
             viewMode={viewMode}
+            onClearFilters={onEmptyClearFilters}
+            onCreateTask={onEmptyCreateTask}
           />
         ) : null}
       </div>

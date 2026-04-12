@@ -7,7 +7,8 @@ import { CalendarPlus } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { getButtonClasses } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
+import { DASHBOARD_THEME, getButtonClasses } from '@/lib/dashboard-theme'
 
 import type { MeetingAttendeeSuggestion } from './meeting-attendees-field'
 import {
@@ -88,15 +89,19 @@ export function MeetingScheduleCardFrame({
   title,
 }: MeetingScheduleCardFrameProps) {
   return (
-    <Card className="border-muted/70 bg-background shadow-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarPlus className="h-4 w-4" />
-          {cardTitle}
-        </CardTitle>
-        <CardDescription>{cardDescription}</CardDescription>
+    <Card className={cn(DASHBOARD_THEME.cards.base)}>
+      <CardHeader className="space-y-3">
+        <div className="flex items-start gap-3">
+          <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 shrink-0 rounded-lg')}>
+            <CalendarPlus className="h-5 w-5" aria-hidden />
+          </div>
+          <div className="min-w-0 flex-1 space-y-1">
+            <CardTitle className="text-base leading-tight">{cardTitle}</CardTitle>
+            <CardDescription className="text-pretty">{cardDescription}</CardDescription>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="border-t border-muted/40 pt-4">
         {scheduleRequiresGoogleWorkspace && !googleWorkspaceConnected ? (
           <Alert className="mb-4">
             <AlertTitle>Google Workspace required</AlertTitle>

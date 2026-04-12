@@ -1,6 +1,7 @@
 'use client'
 
 import type { ComponentProps } from 'react'
+import { Info, ShieldAlert } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
@@ -70,30 +71,44 @@ export function MeetingsDefaultView({
     <div className={DASHBOARD_THEME.layout.container}>
       <MeetingsHeader {...meetingsHeaderProps} />
 
-      {showPreviewMode ? (
-        <Alert>
-          <AlertTitle>Preview mode</AlertTitle>
-          <AlertDescription>
-            Meetings use sample data in preview mode. You can browse upcoming calls and open the native room workspace, but scheduling and integration actions are disabled.
-          </AlertDescription>
-        </Alert>
-      ) : null}
+      <div className="space-y-3">
+        {showPreviewMode ? (
+          <Alert className="border-primary/25 bg-primary/5 text-foreground">
+            <Info className="text-primary" aria-hidden />
+            <AlertTitle>Preview mode</AlertTitle>
+            <AlertDescription>
+              Meetings use sample data in preview mode. You can browse upcoming calls and open the native room workspace, but scheduling and integration actions are disabled.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {showReadOnlyAccessAlert ? (
+          <Alert className="border-muted/60 bg-muted/40 text-foreground">
+            <ShieldAlert className="text-muted-foreground" aria-hidden />
+            <AlertTitle>Read-only access</AlertTitle>
+            <AlertDescription>
+              Client users can join and review meetings, but scheduling is restricted to admin and team members.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+      </div>
 
       <QuickMeetDialog {...quickMeetDialogProps} />
 
-      {showReadOnlyAccessAlert ? (
-        <Alert>
-          <AlertTitle>Read-only access</AlertTitle>
-          <AlertDescription>
-            Client users can join and review meetings, but scheduling is restricted to admin and team members.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      <GoogleWorkspaceCard {...googleWorkspaceCardProps} />
-      <MeetingCancelDialog {...meetingCancelDialogProps} />
-      {editingMeeting ? <RescheduleMeetingCard {...rescheduleMeetingCardProps} /> : <CreateMeetingCard {...createMeetingCardProps} />}
-      <UpcomingMeetingsCard {...upcomingMeetingsCardProps} />
+      <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
+        <aside className="min-w-0 space-y-6 lg:col-span-5 xl:col-span-4">
+          <GoogleWorkspaceCard {...googleWorkspaceCardProps} />
+        </aside>
+        <div className="min-w-0 space-y-6 lg:col-span-7 xl:col-span-8">
+          <MeetingCancelDialog {...meetingCancelDialogProps} />
+          {editingMeeting ? (
+            <RescheduleMeetingCard {...rescheduleMeetingCardProps} />
+          ) : (
+            <CreateMeetingCard {...createMeetingCardProps} />
+          )}
+          <UpcomingMeetingsCard {...upcomingMeetingsCardProps} />
+        </div>
+      </div>
     </div>
   )
 }

@@ -2,7 +2,10 @@
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 
+import { Target } from 'lucide-react'
+
 import { extractErrorCode, logError } from '@/lib/convex-errors'
+import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
 
 function isAuthError(error: unknown): boolean {
@@ -277,22 +280,33 @@ export default function AdsPage() {
     >
       <div className={DASHBOARD_THEME.layout.container}>
         <FadeIn>
-          <div className="space-y-2">
-            <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.ads?.title ?? 'Ads Hub'}</h1>
-            <p className={DASHBOARD_THEME.layout.subtitle}>
-              {PAGE_TITLES.ads?.description ?? 'Connect paid media accounts, trigger data syncs, and review cross-channel performance in one place.'}
-            </p>
-          </div>
+          <header className={cn(DASHBOARD_THEME.layout.header, 'border-b border-muted/40 pb-6')}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+              <div className={cn(DASHBOARD_THEME.icons.container, 'h-11 w-11 shrink-0 rounded-xl')}>
+                <Target className="h-6 w-6" aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.ads?.title ?? 'Ad Platforms'}</h1>
+                <p className={cn(DASHBOARD_THEME.layout.subtitle, 'max-w-2xl text-pretty')}>
+                  {PAGE_TITLES.ads?.description ??
+                    'Connect paid media accounts, trigger data syncs, and review cross-channel performance in one place.'}
+                </p>
+              </div>
+            </div>
+          </header>
         </FadeIn>
 
-        {showWorkflow && (
-          <FadeIn>
-            <WorkflowCard />
-          </FadeIn>
-        )}
-
         {!isPreviewMode && (
-          <>
+          <section
+            aria-label="Ad platform setup and connections"
+            className="space-y-6 rounded-xl border border-muted/50 bg-muted/10 p-4 sm:p-6 dark:bg-muted/5"
+          >
+            {showWorkflow ? (
+              <FadeIn>
+                <WorkflowCard />
+              </FadeIn>
+            ) : null}
+
             <FadeIn>
               <div id="ads-setup-alerts">
                 <SetupAlerts
@@ -345,64 +359,78 @@ export default function AdsPage() {
               onInitialize={handleInitializeGoogle}
             />
 
-            {/* Campaign Management Cards for each connected provider */}
-            {adPlatforms.filter((p) => connectedProviders[p.id]).length > 0 && (
+            {adPlatforms.filter((p) => connectedProviders[p.id]).length > 0 ? (
               <FadeIn>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <h2 className="text-lg font-semibold">Campaign Management</h2>
-                  <DateRangePicker value={dateRange} onChange={setDateRange} />
-                </div>
-                <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
-                  <div className="mt-4 grid gap-4">
-                    {adPlatforms
-                      .filter((p) => connectedProviders[p.id])
-                      .map((platform) => (
-                        <CampaignManagementCard
-                          key={platform.id}
-                          providerId={platform.id}
-                          providerName={platform.name}
-                          isConnected={Boolean(connectedProviders[platform.id])}
-                          dateRange={dateRange}
-                          onRefresh={handleManualRefresh}
-                          setupRequired={
-                            (platform.id === 'google' && googleNeedsAccountSelection) ||
-                            (platform.id === 'facebook' && metaNeedsAccountSelection) ||
-                            (platform.id === 'tiktok' && tiktokNeedsAccountSelection)
-                          }
-                          setupTitle={
-                            platform.id === 'google'
-                              ? 'Select a Google Ads account'
-                              : platform.id === 'facebook'
-                                ? 'Select a Meta ad account'
-                                : platform.id === 'tiktok'
-                                  ? 'Finish TikTok account setup'
-                                  : undefined
-                          }
-                          setupDescription={
-                            platform.id === 'google'
-                              ? 'Choose the Google Ads account you want to manage before loading campaign data.'
-                              : platform.id === 'facebook'
-                                ? 'Choose the Meta ad account you want to manage before loading campaign data.'
-                                : platform.id === 'tiktok'
-                                  ? 'Complete TikTok setup so the default ad account is assigned before loading campaign data.'
-                                  : undefined
-                          }
-                          setupActionLabel={platform.id === 'google' ? 'Select account' : 'Finish setup'}
-                          onSetupAction={
-                            platform.id === 'google'
-                              ? openGoogleCampaignSetup
-                              : platform.id === 'facebook' || platform.id === 'tiktok'
-                                ? scrollToSetupAlerts
-                                : undefined
-                          }
-                        />
-                      ))}
+                <div className="border-t border-muted/40 pt-6">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="space-y-1">
+                      <p className={DASHBOARD_THEME.stats.label}>Campaigns</p>
+                      <h2 className="text-lg font-semibold tracking-tight text-foreground">Campaign management</h2>
+                      <p className="text-sm text-muted-foreground">Per-provider lists and actions for the selected date range.</p>
+                    </div>
+                    <DateRangePicker value={dateRange} onChange={setDateRange} />
                   </div>
-                </AdsSuspenseReveal>
+                  <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
+                    <div className="mt-4 grid gap-4">
+                      {adPlatforms
+                        .filter((p) => connectedProviders[p.id])
+                        .map((platform) => (
+                          <CampaignManagementCard
+                            key={platform.id}
+                            providerId={platform.id}
+                            providerName={platform.name}
+                            isConnected={Boolean(connectedProviders[platform.id])}
+                            dateRange={dateRange}
+                            onRefresh={handleManualRefresh}
+                            setupRequired={
+                              (platform.id === 'google' && googleNeedsAccountSelection) ||
+                              (platform.id === 'facebook' && metaNeedsAccountSelection) ||
+                              (platform.id === 'tiktok' && tiktokNeedsAccountSelection)
+                            }
+                            setupTitle={
+                              platform.id === 'google'
+                                ? 'Select a Google Ads account'
+                                : platform.id === 'facebook'
+                                  ? 'Select a Meta ad account'
+                                  : platform.id === 'tiktok'
+                                    ? 'Finish TikTok account setup'
+                                    : undefined
+                            }
+                            setupDescription={
+                              platform.id === 'google'
+                                ? 'Choose the Google Ads account you want to manage before loading campaign data.'
+                                : platform.id === 'facebook'
+                                  ? 'Choose the Meta ad account you want to manage before loading campaign data.'
+                                  : platform.id === 'tiktok'
+                                    ? 'Complete TikTok setup so the default ad account is assigned before loading campaign data.'
+                                    : undefined
+                            }
+                            setupActionLabel={platform.id === 'google' ? 'Select account' : 'Finish setup'}
+                            onSetupAction={
+                              platform.id === 'google'
+                                ? openGoogleCampaignSetup
+                                : platform.id === 'facebook' || platform.id === 'tiktok'
+                                  ? scrollToSetupAlerts
+                                  : undefined
+                            }
+                          />
+                        ))}
+                    </div>
+                  </AdsSuspenseReveal>
+                </div>
               </FadeIn>
-            )}
-          </>
+            ) : null}
+          </section>
         )}
+
+        <section aria-label="Performance and analytics" className="space-y-6">
+          <div className="flex flex-col gap-1 border-b border-muted/40 pb-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className={DASHBOARD_THEME.stats.label}>Analytics</p>
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">Performance overview</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">Cross-channel metrics, insights, and exports.</p>
+            </div>
+          </div>
 
         <FadeIn>
           <CrossChannelOverviewCard
@@ -500,6 +528,7 @@ export default function AdsPage() {
             onLoadMore={handleLoadMoreMetrics}
           />
         </FadeIn>
+        </section>
       </div>
     </BoneyardSkeletonBoundary>
   )

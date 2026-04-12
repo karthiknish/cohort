@@ -56,7 +56,9 @@ export const systemTables = {
     updatedAt: v.number(),
   })
     .index('by_workspaceId_legacyId', ['workspaceId', 'legacyId'])
-    .index('by_workspaceId_userId_lastMessageAt', ['workspaceId', 'userId', 'lastMessageAt']),
+    .index('by_workspaceId_userId_lastMessageAt', ['workspaceId', 'userId', 'lastMessageAt'])
+    /** Platform-wide admin metrics and time-ordered scans. */
+    .index('by_createdAt', ['createdAt']),
 
   agentMessages: defineTable({
     workspaceId: v.string(),

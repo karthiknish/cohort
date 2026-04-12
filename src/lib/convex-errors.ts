@@ -67,3 +67,13 @@ export function extractErrorDetails(error: unknown): Record<string, unknown> | n
   }
   return null
 }
+
+/** Matches `ErrorCode.BASE.READ_LIMIT` from convex/errors.ts */
+export function isReadLimitAppError(error: unknown): boolean {
+  return extractErrorCode(error) === 'READ_LIMIT'
+}
+
+/** Matches `ErrorCode.BASE.CONFLICT` from convex/errors.ts */
+export function isConflictAppError(error: unknown): boolean {
+  return extractErrorCode(error) === 'CONFLICT'
+}

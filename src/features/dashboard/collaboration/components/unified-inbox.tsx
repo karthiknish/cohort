@@ -470,7 +470,7 @@ export function UnifiedInbox({
           onRetryMessages={onDmRetryMessages}
         />
       ) : (
-        <EmptyConversationPane channelCount={channelCount} dmCount={dmCount} />
+        <EmptyConversationPane channelCount={channelCount} dmCount={dmCount} onNewDM={onNewDM} />
       )}
 
       {selectedChannel && (

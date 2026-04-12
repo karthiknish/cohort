@@ -1,8 +1,8 @@
 'use client'
 
-import type { ChangeEvent } from 'react'
+import { useCallback, type ChangeEvent, type KeyboardEvent } from 'react'
 import Link from 'next/link'
-import { Download, LoaderCircle, MessageSquare, Search } from 'lucide-react'
+import { Download, LoaderCircle, MessageSquare, Search, X } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -82,6 +82,7 @@ export interface MessageSearchBarProps {
   resultCount: number
   isActive: boolean
   placeholder?: string
+  onClear?: () => void
 }
 
 export function MessageSearchBar({
@@ -90,7 +91,20 @@ export function MessageSearchBar({
   resultCount,
   isActive,
   placeholder = 'Search messages…',
+  onClear,
 }: MessageSearchBarProps) {
+  const showClear = Boolean(value.trim() && onClear)
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Escape' && value.trim().length > 0) {
+        event.preventDefault()
+        onClear?.()
+      }
+    },
+    [onClear, value],
+  )
+
   return (
     <div className="border-b border-muted/40 bg-muted/5 px-4 py-2">
       <div className="relative">
@@ -98,11 +112,30 @@ export function MessageSearchBar({
         <Input
           value={value}
           onChange={onChange}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="pl-9 pr-20"
+          className={cn('pl-9', showClear && isActive ? 'pr-32' : showClear ? 'pr-24' : isActive ? 'pr-20' : 'pr-3')}
+          aria-label={placeholder}
         />
+        {showClear ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-2 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            onClick={onClear}
+            aria-label="Clear message search"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        ) : null}
         {isActive && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+          <span
+            className={cn(
+              'pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs tabular-nums text-muted-foreground',
+              showClear ? 'right-11' : 'right-3',
+            )}
+          >
             {resultCount} {resultCount === 1 ? 'result' : 'results'}
           </span>
         )}

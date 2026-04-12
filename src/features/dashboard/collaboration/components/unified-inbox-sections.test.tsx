@@ -166,14 +166,14 @@ describe('unified inbox sections', () => {
           sourceFilter="all"
           totalUnread={2}
         />
-        <EmptyConversationPane channelCount={1} dmCount={1} />
+        <EmptyConversationPane channelCount={1} dmCount={1} onNewDM={vi.fn()} />
       </>,
     )
 
     expect(markup).toContain('Inbox')
     expect(markup).toContain('team-agency')
     expect(markup).toContain('Alex Johnson')
-    expect(markup).toContain('Select a conversation')
+    expect(markup).toContain('Pick a conversation')
   })
 
   it('renders channel and direct message panes through the shared message pane', () => {

@@ -1,6 +1,8 @@
 import { Clock3 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { cn } from '@/lib/utils'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
 import type { MeetingRecord } from '../types'
 import {
@@ -33,16 +35,22 @@ export function UpcomingMeetingsCard(props: UpcomingMeetingsCardProps) {
   } = props
 
   return (
-    <Card className="border-muted/70 bg-background shadow-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock3 className="h-4 w-4" />
-          Upcoming Meetings
-        </CardTitle>
-        <CardDescription>Meetings from the selected workspace/client context.</CardDescription>
+    <Card className={cn(DASHBOARD_THEME.cards.base)}>
+      <CardHeader className="space-y-3">
+        <div className="flex items-start gap-3">
+          <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 shrink-0 rounded-lg')}>
+            <Clock3 className="h-5 w-5" aria-hidden />
+          </div>
+          <div className="min-w-0 flex-1 space-y-1">
+            <CardTitle className="text-base leading-tight">Upcoming meetings</CardTitle>
+            <CardDescription className="text-pretty">
+              Scheduled rooms and calendar-backed calls for this workspace.
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 border-t border-muted/40 pt-4">
         {loading ? (
           <UpcomingMeetingsLoadingState />
         ) : meetings.length === 0 ? (

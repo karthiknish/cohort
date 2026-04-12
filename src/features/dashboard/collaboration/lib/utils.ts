@@ -202,6 +202,39 @@ function isSameDay(d1: Date, d2: Date): boolean {
   )
 }
 
+export type CollaborationShareChannelInput = {
+  id: string
+  type: 'team' | 'client' | 'project'
+  clientId?: string | null
+  projectId?: string | null
+}
+
+/**
+ * Builds a collaboration URL that opens this channel when shared (uses dashboard URL params).
+ */
+export function buildCollaborationChannelShareUrl(channel: CollaborationShareChannelInput): string {
+  if (typeof window === 'undefined') return ''
+
+  const url = new URL(window.location.href)
+  url.searchParams.set('channelId', channel.id)
+  url.searchParams.set('channelType', channel.type)
+
+  if (channel.type === 'client' && channel.clientId) {
+    url.searchParams.set('clientId', channel.clientId)
+  } else {
+    url.searchParams.delete('clientId')
+  }
+
+  if (channel.type === 'project' && channel.projectId) {
+    url.searchParams.set('projectId', channel.projectId)
+  }
+
+  url.searchParams.delete('messageId')
+  url.searchParams.delete('threadId')
+
+  return url.toString()
+}
+
 export function formatDateSeparator(date: Date): string {
   const today = new Date()
   if (isSameDay(date, today)) {

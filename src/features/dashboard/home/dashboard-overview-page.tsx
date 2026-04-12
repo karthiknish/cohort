@@ -34,9 +34,11 @@ import { Skeleton } from '@/shared/ui/skeleton'
 import type { MetricRecord } from '@/types/dashboard'
 import type { TaskRecord, TaskStatus } from '@/types/tasks'
 
+import { DashboardDailySnapshotCard } from './components/dashboard-daily-snapshot-card'
 import { DashboardPageHeader } from './components/dashboard-page-header'
 import { DashboardRoleBanner } from './components/dashboard-role-banner'
 import { DashboardSkeleton } from './components/dashboard-skeleton'
+import { DashboardWorkHub } from './components/dashboard-work-hub'
 import { StatsCards } from './components/stats-cards'
 import { useDashboardData, useDashboardStats } from './hooks'
 
@@ -279,6 +281,15 @@ export function DashboardOverviewPage() {
         />
 
         <DashboardRoleBanner userRole={userRole} userDisplayName={user?.name ?? null} />
+
+        <DashboardWorkHub userRole={userRole} />
+
+        <DashboardDailySnapshotCard
+          openTasks={clientStats.openTasks}
+          pendingProposals={clientStats.pendingProposals}
+          activeProjects={clientStats.activeProjects}
+          loading={clientStatsLoading}
+        />
 
         {dashboardErrors.length > 0 && (
           <Alert variant="destructive">

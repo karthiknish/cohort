@@ -47,14 +47,14 @@ export default function AdminError({
   }, [reset, unstable_retry])
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
-      <Card className="max-w-md border-muted/60">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-            <ShieldAlert className="h-8 w-8 text-destructive" />
+    <div className="flex min-h-dvh items-center justify-center bg-muted/20 p-4 sm:p-6">
+      <Card className="w-full max-w-md border-border/80 shadow-md">
+        <CardHeader className="space-y-3 text-center sm:text-left">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 sm:mx-0">
+            <ShieldAlert className="h-7 w-7 text-destructive" />
           </div>
-          <CardTitle className="text-xl">Admin panel error</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-xl font-semibold tracking-tight">Admin panel error</CardTitle>
+          <CardDescription className="text-pretty">
             {isDev
               ? 'The admin panel encountered an unexpected error. Check the console for details.'
               : 'We encountered an unexpected error while loading the admin panel. This has been logged.'}

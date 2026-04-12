@@ -36,7 +36,11 @@ export const listAnyClients = adminQuery({
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 25, 1), 100)
 
-    const items = await ctx.db.query('clients').order('desc').take(limit)
+    const items = await ctx.db
+      .query('clients')
+      .withIndex('by_createdAtMs', (q) => q)
+      .order('desc')
+      .take(limit)
 
     return items.map((row) => ({
       workspaceId: row.workspaceId,
@@ -54,7 +58,11 @@ export const countClientsByWorkspace = adminQuery({
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 200, 1), 2000)
 
-    const rows = await ctx.db.query('clients').take(limit)
+    const rows = await ctx.db
+      .query('clients')
+      .withIndex('by_createdAtMs', (q) => q)
+      .order('desc')
+      .take(limit)
 
     const counts = new Map<string, { total: number; active: number }>()
 

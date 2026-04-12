@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
@@ -49,6 +49,22 @@ import {
   getProblemReportStatusDisplay,
   type ProblemReport,
 } from '../lib/problem-reports'
+import { AdminPageShell } from '../components/admin-page-shell'
+
+function AdminIssuesToolbarActions({
+  loading,
+  onRefresh,
+}: {
+  loading: boolean
+  onRefresh: () => void
+}) {
+  return (
+    <Button type="button" onClick={onRefresh} variant="outline" size="sm" disabled={loading}>
+      <RefreshCw className={cn('mr-2 h-4 w-4', loading && 'animate-spin')} aria-hidden />
+      Refresh
+    </Button>
+  )
+}
 
 function renderSeverityBadge(severity: string) {
   const display = getProblemReportSeverityDisplay(severity)
@@ -271,20 +287,19 @@ export default function AdminIssuesPage() {
     statusFilter,
   })
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Reported Issues</h1>
-          <p className="text-muted-foreground">Manage and track user-submitted problem reports.</p>
-        </div>
-        <Button onClick={handleRefresh} variant="outline" size="sm" disabled={loading}>
-          <RefreshCw className={cn('mr-2 h-4 w-4', loading && 'animate-spin')} />
-          Refresh
-        </Button>
-      </div>
+  const issuesToolbarActions = useMemo(
+    () => <AdminIssuesToolbarActions loading={loading} onRefresh={handleRefresh} />,
+    [loading, handleRefresh],
+  )
 
-      <Card>
+  return (
+    <AdminPageShell
+      title="Reported issues"
+      description="Review, triage, and resolve user-submitted problem reports from across the product."
+      isPreviewMode={isPreviewMode}
+      actions={issuesToolbarActions}
+    >
+      <Card className="border-border/80 shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
             <div className="relative flex-1">
@@ -369,6 +384,6 @@ export default function AdminIssuesPage() {
         onConfirm={handleDelete}
         onCancel={handleCancelDelete}
       />
-    </div>
+    </AdminPageShell>
   )
 }

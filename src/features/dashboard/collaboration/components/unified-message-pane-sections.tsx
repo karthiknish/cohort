@@ -1,13 +1,15 @@
 'use client'
 
 import type { ChangeEvent, ClipboardEvent, DragEvent, ReactNode, RefObject } from 'react'
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Archive,
   ArchiveRestore,
   Bell,
   BellOff,
+  Check,
   Hash,
+  Link2,
   LoaderCircle,
   Mail,
   MoreVertical,
@@ -34,11 +36,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
+import { useToast } from '@/shared/ui/use-toast'
 import { cn } from '@/lib/utils'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 import type { ClientTeamMember } from '@/types/clients'
 
 import type { PendingAttachment } from '../hooks/types'
+import { CHANNEL_TYPE_COLORS } from '../utils'
 import { MessageAttachments } from './message-attachments'
 import { PendingAttachmentsList } from './message-composer'
 import { MessageContent } from './message-content'
@@ -372,6 +376,10 @@ export function UnifiedThreadReplyCard({
 }
 
 export function UnifiedConversationHeader({ header }: { header: MessagePaneHeaderInfo }) {
+  const { toast } = useToast()
+  const [linkCopied, setLinkCopied] = useState(false)
+  const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const handleArchiveToggle = useCallback(() => {
     header.onArchive?.(!header.isArchived)
   }, [header])
@@ -379,33 +387,118 @@ export function UnifiedConversationHeader({ header }: { header: MessagePaneHeade
     header.onMute?.(!header.isMuted)
   }, [header])
 
+  const handleCopyShareLink = useCallback(() => {
+    if (!header.buildShareableUrl) return
+
+    const url = header.buildShareableUrl()
+    void navigator.clipboard.writeText(url).then(
+      () => {
+        if (copyResetTimerRef.current) {
+          clearTimeout(copyResetTimerRef.current)
+        }
+        setLinkCopied(true)
+        toast({
+          title: 'Link copied',
+          description: header.type === 'channel' ? 'Recipients can open this channel from the link.' : 'Page link copied to clipboard.',
+        })
+        copyResetTimerRef.current = setTimeout(() => {
+          setLinkCopied(false)
+          copyResetTimerRef.current = null
+        }, 2000)
+      },
+      () => {
+        toast({
+          title: 'Could not copy',
+          description: 'Allow clipboard access or copy the URL from the address bar.',
+          variant: 'destructive',
+        })
+      },
+    )
+  }, [header, toast])
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimerRef.current) {
+        clearTimeout(copyResetTimerRef.current)
+      }
+    }
+  }, [])
+
+  const subtitleParts: string[] = []
+  if (header.type === 'channel' && header.participantCount !== undefined) {
+    subtitleParts.push(`${header.participantCount} member${header.participantCount === 1 ? '' : 's'}`)
+  }
+  if (header.type === 'channel' && header.messageCount !== undefined) {
+    subtitleParts.push(`${header.messageCount} message${header.messageCount === 1 ? '' : 's'}`)
+  }
+
   return (
-    <div className="shrink-0 border-b border-muted/40 p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Avatar>
+    <div className="shrink-0 border-b border-muted/40 bg-background/80 p-4 backdrop-blur-md supports-backdrop-filter:bg-background/70">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <Avatar className="mt-0.5 ring-1 ring-border/60">
             <AvatarFallback className={cn(header.type === 'channel' ? 'bg-muted' : 'bg-primary/10 text-primary')}>
               {header.type === 'channel' ? <Hash className="h-4 w-4" /> : getInitials(header.name)}
             </AvatarFallback>
           </Avatar>
-          <div>
-            <h3 className="font-medium text-foreground">{header.name}</h3>
-            {header.role ? (
-              <Badge variant="outline" className="mt-0.5 text-xs">
-                {header.role}
-              </Badge>
-            ) : null}
-            {header.participantCount !== undefined ? (
-              <span className="ml-2 text-xs text-muted-foreground">{header.participantCount} members</span>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="truncate text-base font-semibold tracking-tight text-foreground">
+                {header.type === 'channel'
+                  ? header.name.startsWith('#')
+                    ? header.name
+                    : `#${header.name}`
+                  : header.name}
+              </h3>
+              {header.type === 'channel' && header.channelKind ? (
+                <Badge
+                  variant="outline"
+                  className={cn('h-5 shrink-0 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide', CHANNEL_TYPE_COLORS[header.channelKind])}
+                >
+                  {header.channelKind}
+                </Badge>
+              ) : null}
+              {header.type === 'dm' && header.role ? (
+                <Badge variant="outline" className="h-5 shrink-0 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide">
+                  {header.role}
+                </Badge>
+              ) : null}
+            </div>
+            {subtitleParts.length > 0 ? (
+              <p className="text-xs text-muted-foreground">{subtitleParts.join(' · ')}</p>
+            ) : header.type === 'dm' ? (
+              <p className="text-xs text-muted-foreground">Direct message</p>
             ) : null}
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+          {header.buildShareableUrl ? (
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5"
+                    onClick={handleCopyShareLink}
+                    aria-label="Copy conversation link"
+                  >
+                    {linkCopied ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
+                    <span className="hidden sm:inline">{linkCopied ? 'Copied' : 'Copy link'}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p>Copy a link to this {header.type === 'channel' ? 'channel' : 'page'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
           {header.primaryActionLabel && header.onPrimaryAction ? (
             <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={header.onPrimaryAction} aria-label={header.primaryActionLabel}>
               <Plus className="h-3.5 w-3.5" />
-              {header.primaryActionLabel}
+              <span className="hidden sm:inline">{header.primaryActionLabel}</span>
             </Button>
           ) : null}
           {header.isArchived ? (
@@ -563,9 +656,9 @@ export function UnifiedComposerSection({
         className="hidden"
         onChange={onAttachmentInputChange}
       />
-      <div className="mt-2 flex items-center justify-between">
-        <span className="min-h-[1rem] text-xs italic text-muted-foreground transition-opacity duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none">
-          {typingIndicator || (isComposerFocused ? 'Press Enter to send. Shift+Enter adds a new line.' : '')}
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <span className="min-h-[1rem] text-[11px] leading-snug text-muted-foreground/90 transition-opacity duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none">
+          {typingIndicator ?? 'Enter to send · Shift+Enter for a new line'}
         </span>
         <div className="flex-1" />
         <Button

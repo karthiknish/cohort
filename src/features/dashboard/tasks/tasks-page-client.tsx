@@ -37,10 +37,11 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useNavigationContext } from '@/shared/contexts/navigation-context'
 import { usePreview } from '@/shared/contexts/preview-context'
-import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
+import { useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
 import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
 import { usersApi } from '@/lib/convex-api'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
 import { isFeatureEnabled } from '@/lib/features'
 import { exportToCsv } from '@/lib/utils'
 import type { TaskStatus } from '@/types/tasks'
@@ -303,6 +304,14 @@ function TasksPageContent({
     },
   })
 
+  useKeyboardShortcut({
+    combo: 'mod+n',
+    callback: () => {
+      form.handleCreateOpenChange(true)
+    },
+    enabled: !form.isCreateOpen,
+  })
+
   // Export handler
   const handleExport = useCallback(() => {
     if (filters.filteredTasks.length === 0) return
@@ -469,6 +478,30 @@ function TasksPageContent({
     ? 'No tasks are assigned to you yet. Switch to All Tasks to see team-owned work.'
     : 'Get started by creating your first task.'
 
+  const showFilteredEmpty = useMemo(
+    () =>
+      filters.selectedStatus !== 'all' ||
+      debouncedQuery.trim().length > 0 ||
+      (filters.activeTab === 'all-tasks' && filters.selectedAssignee !== 'all'),
+    [debouncedQuery, filters.activeTab, filters.selectedAssignee, filters.selectedStatus],
+  )
+
+  const handleClearListFilters = useCallback(() => {
+    filters.resetListFilters()
+    setRawSearchQuery('')
+  }, [filters])
+
+  const handleSummaryStatusClick = useCallback(
+    (status: TaskStatus) => {
+      if (filters.selectedStatus === status) {
+        filters.handleStatusChange('all')
+      } else {
+        filters.handleStatusChange(status)
+      }
+    },
+    [filters],
+  )
+
   return (
     <TooltipProvider>
       <BoneyardSkeletonBoundary
@@ -476,7 +509,7 @@ function TasksPageContent({
         loading={initialLoading}
         loadingContent={loadingContent}
       >
-      <div className={DASHBOARD_THEME.layout.container}>
+      <div className={cn(DASHBOARD_THEME.layout.container, 'sm:space-y-8')}>
         {/* Header */}
         <TasksHeader
           loading={loading}
@@ -505,6 +538,8 @@ function TasksPageContent({
         ) : (
           <TaskSummaryCards
             taskCounts={filters.taskCounts}
+            selectedStatus={filters.selectedStatus}
+            onStatusCardClick={handleSummaryStatusClick}
           />
         )}
 
@@ -530,18 +565,15 @@ function TasksPageContent({
             />
           </div>
 
-          <Card className={DASHBOARD_THEME.cards.base}>
-            <CardHeader className={DASHBOARD_THEME.cards.header}>
-              <CardTitle>
-                {filters.activeTab === 'my-tasks' ? 'My Assignments' : 'All Tasks'}
+          <Card className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden rounded-xl border-border/80 shadow-sm')}>
+            <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'space-y-1')}>
+              <CardTitle className="text-xl font-semibold tracking-tight">
+                {filters.activeTab === 'my-tasks' ? 'My assignments' : 'Task list'}
               </CardTitle>
-              <CardDescription className="flex items-center gap-1.5">
+              <CardDescription className="max-w-2xl text-pretty text-sm leading-relaxed">
                 {filters.activeTab === 'my-tasks'
-                  ? 'Tasks assigned specifically to you.'
-                  : 'Search, filter, and monitor active work across the agency.'}
-                <span className="hidden sm:flex items-center gap-1">
-                  ( <KeyboardShortcutBadge combo="mod+k" className="scale-75 origin-left" /> to search )
-                </span>
+                  ? 'Work assigned to you in this workspace. Use filters to narrow by status.'
+                  : 'Search, filter by assignee, and sort. Select rows for bulk updates in list or grid view.'}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -559,6 +591,8 @@ function TasksPageContent({
                 onSortFieldChange={filters.setSortField}
                 sortDirection={filters.sortDirection}
                 onSortDirectionToggle={filters.toggleSortDirection}
+                hasActiveFilters={filters.hasActiveFilters}
+                onClearFilters={handleClearListFilters}
               />
 
               {/* Project filter banner */}
@@ -603,7 +637,9 @@ function TasksPageContent({
                   hasMore={!!nextCursor}
                   onLoadMore={handleLoadMore}
                   emptyStateMessage={emptyStateMessage}
-                  showEmptyStateFiltered={filters.selectedStatus !== 'all' || !!debouncedQuery}
+                  showEmptyStateFiltered={showFilteredEmpty}
+                  onEmptyClearFilters={handleClearListFilters}
+                  onEmptyCreateTask={handleNewTaskClick}
                   workspaceId={user?.agencyId ?? null}
                   userId={user?.id ?? null}
                   userName={user?.name ?? null}
@@ -626,7 +662,9 @@ function TasksPageContent({
                   hasMore={!!nextCursor}
                   onLoadMore={handleLoadMore}
                   emptyStateMessage={emptyStateMessage}
-                  showEmptyStateFiltered={filters.selectedStatus !== 'all' || !!debouncedQuery}
+                  showEmptyStateFiltered={showFilteredEmpty}
+                  onEmptyClearFilters={handleClearListFilters}
+                  onEmptyCreateTask={handleNewTaskClick}
                   selectedTaskIds={selectedTaskIds}
                   onToggleTaskSelection={handleToggleTaskSelection}
                   workspaceId={user?.agencyId ?? null}

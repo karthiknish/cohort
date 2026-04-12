@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import { internalMutation } from './_generated/server'
-import { Errors, isAppError } from './errors'
+import { Errors, asErrorMessage, isAppError } from './errors'
 import { adminQuery } from './functions'
 
 const dailyActiveUserValidator = v.object({
@@ -75,7 +75,9 @@ function throwAdminUsageError(operation: string, error: unknown): never {
     throw error
   }
 
-  throw Errors.base.internal('Failed to load admin usage stats')
+  throw Errors.base.internal(
+    `Failed to load admin usage stats: ${asErrorMessage(error)}`,
+  )
 }
 
 async function computeLiveUsageStats(ctx: { db: AdminUsageStatsDb }): Promise<AdminUsageStats> {
@@ -105,17 +107,23 @@ async function computeLiveUsageStats(ctx: { db: AdminUsageStatsDb }): Promise<Ad
   const newUsersToday = recentUsers.filter((u) => (u.createdAtMs ?? 0) >= todayMs).length
   const newUsersWeek = recentUsers.length
 
-  const [projects, tasks, clients, conversations] = await Promise.all([
-    ctx.db.query('projects').collect(),
-    ctx.db.query('tasks').collect(),
-    ctx.db.query('clients').collect(),
-    ctx.db.query('agentConversations').collect(),
+  const [projectRows, taskRows, clientRows, conversations] = await Promise.all([
+    ctx.db.query('projects').withIndex('by_createdAtMs', (q) => q).collect(),
+    ctx.db.query('tasks').withIndex('by_createdAtMs', (q) => q).collect(),
+    ctx.db.query('clients').withIndex('by_createdAtMs', (q) => q).collect(),
+    ctx.db.query('agentConversations').withIndex('by_createdAt', (q) => q).collect(),
   ])
+
+  const projects = projectRows.filter((p) => p.deletedAtMs == null)
+  const tasks = taskRows.filter((t) => t.deletedAtMs == null)
+  const clients = clientRows.filter((c) => c.deletedAtMs == null)
 
   const totalProjects = projects.length
   const projectsThisWeek = projects.filter((p) => (p.createdAtMs ?? 0) >= weekAgoMs).length
   const totalTasks = tasks.length
-  const tasksCompletedThisWeek = tasks.filter((t) => t.status === 'completed' && (t.updatedAtMs ?? 0) >= weekAgoMs).length
+  const tasksCompletedThisWeek = tasks.filter(
+    (t) => t.status === 'completed' && (t.updatedAtMs ?? 0) >= weekAgoMs,
+  ).length
   const totalClients = clients.length
   const activeClientsWeek = clients.filter((c) => (c.updatedAtMs ?? 0) >= weekAgoMs).length
   const agentConversations = conversations.length

@@ -37,7 +37,8 @@ export const marketingTables = {
     updatedAt: v.number(),
   })
     .index('by_workspace_provider_client', ['workspaceId', 'providerId', 'clientId'])
-    .index('by_workspace_provider', ['workspaceId', 'providerId']),
+    .index('by_workspace_provider', ['workspaceId', 'providerId'])
+    .index('by_updatedAt', ['updatedAt']),
 
   analyticsIntegrations: defineTable({
     workspaceId: v.string(),
@@ -72,7 +73,9 @@ export const marketingTables = {
     updatedAt: v.number(),
   })
     .index('by_workspace_provider_client', ['workspaceId', 'providerId', 'clientId'])
-    .index('by_workspace_provider', ['workspaceId', 'providerId']),
+    .index('by_workspace_provider', ['workspaceId', 'providerId'])
+    .index('by_workspaceId', ['workspaceId'])
+    .index('by_updatedAt', ['updatedAt']),
 
   meetingIntegrations: defineTable({
     workspaceId: v.string(),

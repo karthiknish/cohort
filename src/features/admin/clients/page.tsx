@@ -23,6 +23,7 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { getPreviewAdminUsers } from '@/lib/preview-data'
 
+import { AdminPageShell } from '../components/admin-page-shell'
 import { UserSearchPicker } from '../components/user-search-picker'
 import {
   buildClientAllocationSummary,
@@ -428,30 +429,30 @@ export default function AdminClientsPage() {
   }
 
   return (
-    <div className="bg-muted/40">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-10">
-        {/* Header */}
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Client workspaces</h1>
-            <p className="text-muted-foreground">
-              Allocate real internal teammates to each client workspace and keep ownership clean.
-              {isPreviewMode ? ' Preview mode keeps client changes local to this session.' : ''}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button asChild variant="outline">
-              <Link href="/admin/team">Team</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/admin">Admin home</Link>
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={clientsLoading} className="inline-flex items-center gap-2">
-              <LoaderCircle className={`h-4 w-4 ${clientsLoading ? 'animate-spin' : ''}`} /> Refresh
-            </Button>
-          </div>
-        </div>
-
+    <>
+    <AdminPageShell
+      title="Client workspaces"
+      description={
+        <>
+          Allocate real internal teammates to each client workspace and keep ownership clean.
+          {isPreviewMode ? ' Preview mode keeps client changes local to this session.' : ''}
+        </>
+      }
+      isPreviewMode={isPreviewMode}
+      actions={
+        <>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/team">Team</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin">Admin home</Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={clientsLoading} className="inline-flex items-center gap-2">
+            <LoaderCircle className={`h-4 w-4 ${clientsLoading ? 'animate-spin' : ''}`} /> Refresh
+          </Button>
+        </>
+      }
+    >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -654,7 +655,7 @@ export default function AdminClientsPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+    </AdminPageShell>
 
       {/* Delete Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogChange}>
@@ -744,6 +745,6 @@ export default function AdminClientsPage() {
         </DialogContent>
       </Dialog>
 
-    </div>
+    </>
   )
 }

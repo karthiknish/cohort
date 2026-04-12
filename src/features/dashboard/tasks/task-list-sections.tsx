@@ -45,13 +45,13 @@ export function TaskListErrorState({
 }) {
   return (
     <div className={viewMode === 'grid' ? 'col-span-full' : ''}>
-      <div className="mx-4 my-4 rounded-md border border-destructive/40 bg-destructive/10 p-6 text-center">
-        <TriangleAlert className="mx-auto h-10 w-10 text-destructive/60" />
-        <p className="mt-2 text-sm font-medium text-destructive">{error}</p>
+      <div className="mx-4 my-6 rounded-xl border border-destructive/30 bg-destructive/5 p-8 text-center">
+        <TriangleAlert className="mx-auto h-10 w-10 text-destructive" aria-hidden />
+        <p className="mt-3 text-sm font-medium leading-relaxed text-destructive">{error}</p>
         <Button
           variant="outline"
           size="sm"
-          className="mt-4"
+          className="mt-5 border-destructive/25"
           onClick={onRefresh}
           disabled={loading}
         >
@@ -71,21 +71,39 @@ export function TaskListEmptyState({
   emptyStateMessage,
   showEmptyStateFiltered,
   viewMode,
+  onClearFilters,
+  onCreateTask,
 }: {
   emptyStateMessage: string
   showEmptyStateFiltered: boolean
   viewMode: 'grid' | 'list'
+  onClearFilters?: () => void
+  onCreateTask?: () => void
 }) {
   return (
     <div className={viewMode === 'grid' ? 'col-span-full' : ''}>
-      <div className="mx-4 my-4 rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center">
-        <ListTodo className="mx-auto h-12 w-12 text-muted-foreground/40" />
-        <h3 className="mt-4 text-lg font-medium text-foreground">No tasks found</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+      <div className="mx-4 my-6 rounded-xl border border-dashed border-border/70 bg-muted/20 px-6 py-10 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-background shadow-sm ring-1 ring-border/60">
+          <ListTodo className="h-7 w-7 text-muted-foreground" aria-hidden />
+        </div>
+        <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">No tasks found</h3>
+        <p className="mx-auto mt-2 max-w-md text-pretty text-sm leading-relaxed text-muted-foreground">
           {showEmptyStateFiltered
-            ? 'No tasks match the current filters. Try adjusting your search or filters.'
+            ? 'Nothing matches these filters. Clear them or try a different search.'
             : emptyStateMessage}
         </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          {showEmptyStateFiltered && onClearFilters ? (
+            <Button type="button" variant="default" size="sm" onClick={onClearFilters}>
+              Clear filters
+            </Button>
+          ) : null}
+          {!showEmptyStateFiltered && onCreateTask ? (
+            <Button type="button" size="sm" onClick={onCreateTask}>
+              Create task
+            </Button>
+          ) : null}
+        </div>
       </div>
     </div>
   )

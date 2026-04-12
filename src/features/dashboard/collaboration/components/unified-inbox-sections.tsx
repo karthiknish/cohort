@@ -1,9 +1,9 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { ReactNode } from 'react'
 
-import { AlertCircle, Hash, Inbox, MessageCircle, Plus, Search } from 'lucide-react'
+import { AlertCircle, Hash, Inbox, MessageCircle, Plus, Search, Sparkles } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
@@ -20,7 +20,7 @@ import type { CollaborationMessage } from '@/types/collaboration'
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
 import type { PendingAttachment, ReactionPendingState, SendMessageOptions, ThreadCursorsState, ThreadErrorsState, ThreadLoadingState, ThreadMessagesState } from '../hooks/types'
 import type { Channel } from '../types'
-import { CHANNEL_TYPE_COLORS, formatRelativeTime } from '../utils'
+import { buildCollaborationChannelShareUrl, CHANNEL_TYPE_COLORS, formatRelativeTime } from '../utils'
 import { collaborationToUnifiedMessage } from './message-list'
 import { MessagesErrorState } from './message-pane-parts'
 import { UnifiedMessagePane } from './unified-message-pane'
@@ -88,6 +88,8 @@ export function ConversationListPane({
   sourceFilter,
   totalUnread,
 }: ConversationListPaneProps) {
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
   const handleSearchChange = useCallback((event: { target: { value: string } }) => {
     onSearchQueryChange(event.target.value)
   }, [onSearchQueryChange])
@@ -103,14 +105,42 @@ export function ConversationListPane({
     [onSelectItem]
   )
 
+  useEffect(() => {
+    const onGlobalKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') {
+        return
+      }
+
+      const target = event.target as HTMLElement | null
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) {
+        return
+      }
+
+      event.preventDefault()
+      searchInputRef.current?.focus()
+      searchInputRef.current?.select()
+    }
+
+    window.addEventListener('keydown', onGlobalKeyDown)
+    return () => window.removeEventListener('keydown', onGlobalKeyDown)
+  }, [])
+
+  const showRecentLabel = sourceFilter === 'all' && !searchQuery.trim()
+
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden border-b border-muted/40 lg:w-80 lg:border-b-0 lg:border-r">
-      <div className="space-y-3 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Inbox className="h-5 w-5 text-primary" />
-            <h3 className="font-semibold">Inbox</h3>
-            {totalUnread > 0 ? <Badge variant="default" className="h-5 px-1.5 text-xs">{totalUnread}</Badge> : null}
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden border-b border-muted/40 bg-muted/15 lg:w-[min(100%,20rem)] lg:border-b-0 lg:border-r">
+      <div className="space-y-3 border-b border-muted/30 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+              <Inbox className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="truncate text-sm font-semibold tracking-tight">Inbox</h3>
+              <p className="text-[11px] text-muted-foreground">Channels & direct messages</p>
+            </div>
+            {totalUnread > 0 ? <Badge variant="default" className="h-5 shrink-0 px-1.5 text-xs">{totalUnread}</Badge> : null}
           </div>
           <Button variant="ghost" size="sm" onClick={onNewDM} title="New direct message" aria-label="Start a new direct message">
             <Plus className="h-4 w-4" />
@@ -119,19 +149,29 @@ export function ConversationListPane({
 
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={searchQuery} onChange={handleSearchChange} placeholder="Search conversations…" className="pl-9" />
+          <Input
+            ref={searchInputRef}
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="Search conversations…"
+            className="pl-9 pr-14"
+            aria-label="Search conversations"
+          />
+          <span className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 select-none rounded border border-muted/60 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline">
+            ⌘/Ctrl K
+          </span>
         </div>
 
         <Tabs value={sourceFilter} onValueChange={handleSourceFilterChange}>
-          <TabsList className="flex h-auto w-full flex-wrap bg-muted/50">
-            <TabsTrigger value="all" className="flex-1 text-xs">
+          <TabsList className="flex h-auto w-full flex-wrap gap-0.5 bg-muted/50 p-1">
+            <TabsTrigger value="all" className="flex-1 text-xs data-[state=active]:shadow-sm">
               All <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{channelCount + dmCount}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="channel" className="flex-1 text-xs">
+            <TabsTrigger value="channel" className="flex-1 text-xs data-[state=active]:shadow-sm">
               <Hash className="mr-0.5 h-3 w-3" />
               {channelCount}
             </TabsTrigger>
-            <TabsTrigger value="direct_message" className="flex-1 text-xs">
+            <TabsTrigger value="direct_message" className="flex-1 text-xs data-[state=active]:shadow-sm">
               <MessageCircle className="mr-0.5 h-3 w-3" />
               {dmCount}
             </TabsTrigger>
@@ -171,6 +211,11 @@ export function ConversationListPane({
           </div>
         ) : (
           <div className="space-y-1 p-2">
+            {showRecentLabel ? (
+              <div className="px-2 pb-1 pt-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/90">Recent</p>
+              </div>
+            ) : null}
             {filteredItems.map((item) => {
               const hasUnread = !item.isRead || item.unreadCount > 0
               const selected = isSelected(item)
@@ -181,10 +226,10 @@ export function ConversationListPane({
                   type="button"
                   onClick={createSelectItemHandler(item)}
                   className={cn(
-                    'flex w-full items-center gap-3 rounded-lg p-3 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
-                    'hover:bg-muted/50',
-                    selected && 'border border-primary/20 bg-primary/5',
-                    hasUnread && !selected && 'bg-muted/30',
+                    'flex w-full items-center gap-3 rounded-xl p-3 text-left transition-[color,background-color,border-color,fill,stroke,opacity,box-shadow,transform]',
+                    'hover:bg-muted/60',
+                    selected && 'border border-primary/25 bg-primary/8 shadow-sm ring-1 ring-primary/10',
+                    hasUnread && !selected && 'bg-muted/25',
                   )}
                 >
                   <Avatar className="h-10 w-10 shrink-0">
@@ -366,12 +411,17 @@ export function ChannelConversationPane({
     !searchingMessages &&
     !hasRequestedDeepLinkTarget(channelMessages, threadMessagesByRootId, deepLinkMessageId, deepLinkThreadId)
 
-  const channelHeader = useMemo(() => ({
-    name: selectedChannel.name,
-    type: 'channel' as const,
-    participantCount: channelParticipants.length,
-    messageCount: channelMessages.length,
-  }), [channelParticipants.length, channelMessages.length, selectedChannel.name])
+  const channelHeader = useMemo(
+    () => ({
+      name: selectedChannel.name,
+      type: 'channel' as const,
+      channelKind: selectedChannel.type,
+      participantCount: channelParticipants.length,
+      messageCount: channelMessages.length,
+      buildShareableUrl: () => buildCollaborationChannelShareUrl(selectedChannel),
+    }),
+    [channelParticipants.length, channelMessages.length, selectedChannel],
+  )
 
   const missingDeepLinkBanner = useMemo(() => {
     if (!showMissingDeepLinkNotice) return null
@@ -543,17 +593,21 @@ export function DirectMessageConversationPane({
   messagesError,
   onRetryMessages,
 }: DirectMessageConversationPaneProps) {
-  const dmHeader = useMemo(() => ({
-    name: selectedDM.otherParticipantName,
-    type: 'dm' as const,
-    role: selectedDM.otherParticipantRole,
-    isArchived: selectedDM.isArchived,
-    isMuted: selectedDM.isMuted,
-    onArchive: onArchiveConversation,
-    onMute: dmMuteConversation,
-    primaryActionLabel: 'New chat',
-    onPrimaryAction: onStartNewDM,
-  }), [dmMuteConversation, onArchiveConversation, onStartNewDM, selectedDM])
+  const dmHeader = useMemo(
+    () => ({
+      name: selectedDM.otherParticipantName,
+      type: 'dm' as const,
+      role: selectedDM.otherParticipantRole,
+      isArchived: selectedDM.isArchived,
+      isMuted: selectedDM.isMuted,
+      onArchive: onArchiveConversation,
+      onMute: dmMuteConversation,
+      primaryActionLabel: 'New chat',
+      onPrimaryAction: onStartNewDM,
+      buildShareableUrl: () => (typeof window !== 'undefined' ? window.location.href : ''),
+    }),
+    [dmMuteConversation, onArchiveConversation, onStartNewDM, selectedDM],
+  )
 
   const dmStatusBanner = useMemo(() => {
     if (!messagesError) {
@@ -600,23 +654,46 @@ export function DirectMessageConversationPane({
   )
 }
 
-export function EmptyConversationPane({ channelCount, dmCount }: { channelCount: number; dmCount: number }) {
+export function EmptyConversationPane({
+  channelCount,
+  dmCount,
+  onNewDM,
+}: {
+  channelCount: number
+  dmCount: number
+  onNewDM?: () => void
+}) {
   return (
-    <div className="flex flex-1 items-center justify-center">
-      <div className="p-8 text-center">
-        <Inbox className="mx-auto mb-4 h-16 w-16 text-muted-foreground/40" />
-        <h3 className="text-lg font-medium text-foreground">Select a conversation</h3>
-        <p className="mt-1 max-w-sm text-sm text-muted-foreground">Choose a conversation from the sidebar to view messages</p>
+    <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-muted/20 via-background to-background px-6 py-12">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
+      <div className="relative max-w-md text-center">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
+          <Sparkles className="h-8 w-8" />
+        </div>
+        <h3 className="text-xl font-semibold tracking-tight text-foreground">Pick a conversation</h3>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          Choose a channel or direct message in the inbox to read the thread, react, and reply in context.
+        </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <Badge variant="outline" className="gap-1.5">
+          <Badge variant="outline" className="gap-1.5 border-muted/60 bg-background/80">
             <Hash className="h-3 w-3" />
-            {channelCount} Channels
+            {channelCount} channel{channelCount === 1 ? '' : 's'}
           </Badge>
-          <Badge variant="outline" className="gap-1.5">
+          <Badge variant="outline" className="gap-1.5 border-muted/60 bg-background/80">
             <MessageCircle className="h-3 w-3" />
-            {dmCount} Direct Messages
+            {dmCount} DM{dmCount === 1 ? '' : 's'}
           </Badge>
         </div>
+        {onNewDM ? (
+          <Button type="button" className="mt-8 gap-2 shadow-sm" onClick={onNewDM}>
+            <Plus className="h-4 w-4" />
+            Start a direct message
+          </Button>
+        ) : null}
+        <p className="mt-4 text-[11px] text-muted-foreground/80">
+          Tip: <kbd className="rounded border border-muted/60 bg-muted/50 px-1 py-0.5 font-mono text-[10px]">⌘/Ctrl</kbd>{' '}
+          + <kbd className="rounded border border-muted/60 bg-muted/50 px-1 py-0.5 font-mono text-[10px]">K</kbd> focuses inbox search.
+        </p>
       </div>
     </div>
   )

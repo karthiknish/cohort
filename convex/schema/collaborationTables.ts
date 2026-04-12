@@ -167,7 +167,9 @@ export const collaborationTables = {
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_nameLower_legacyId', ['workspaceId', 'nameLower', 'legacyId'])
     .index('by_workspace_deletedAtMs', ['workspaceId', 'deletedAtMs'])
-    .index('by_workspace_createdAtMs_legacyId', ['workspaceId', 'createdAtMs', 'legacyId']),
+    .index('by_workspace_createdAtMs_legacyId', ['workspaceId', 'createdAtMs', 'legacyId'])
+    /** Platform-wide admin metrics. */
+    .index('by_createdAtMs', ['createdAtMs']),
 
   projects: defineTable({
     workspaceId: v.string(),
@@ -190,7 +192,9 @@ export const collaborationTables = {
     .index('by_workspace_updatedAtMs_legacyId', ['workspaceId', 'updatedAtMs', 'legacyId'])
     .index('by_workspace_status_updatedAtMs_legacyId', ['workspaceId', 'status', 'updatedAtMs', 'legacyId'])
     .index('by_workspace_clientId_updatedAtMs_legacyId', ['workspaceId', 'clientId', 'updatedAtMs', 'legacyId'])
-    .index('by_workspace_status_clientId_updatedAtMs_legacyId', ['workspaceId', 'status', 'clientId', 'updatedAtMs', 'legacyId']),
+    .index('by_workspace_status_clientId_updatedAtMs_legacyId', ['workspaceId', 'status', 'clientId', 'updatedAtMs', 'legacyId'])
+    /** Platform-wide admin metrics. */
+    .index('by_createdAtMs', ['createdAtMs']),
 
   projectMilestones: defineTable({
     workspaceId: v.string(),

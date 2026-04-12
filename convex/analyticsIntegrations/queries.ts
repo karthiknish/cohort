@@ -188,7 +188,11 @@ export const listAllWorkspacesWithIntegrations = internalQuery({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 1000, 1), 5000)
-    const integrations = await ctx.db.query('analyticsIntegrations').take(limit * 10)
+    const integrations = await ctx.db
+      .query('analyticsIntegrations')
+      .withIndex('by_updatedAt', (q) => q)
+      .order('desc')
+      .take(limit * 10)
     const workspaceIds = new Set<string>()
     for (const row of integrations) {
       workspaceIds.add(row.workspaceId)

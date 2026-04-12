@@ -126,9 +126,9 @@ describe('UnifiedInbox', () => {
   it('renders the empty conversation state when nothing is selected', () => {
     const markup = renderToStaticMarkup(<UnifiedInbox {...baseProps} />)
 
-    expect(markup).toContain('Select a conversation')
-    expect(markup).toContain('1 Channels')
-    expect(markup).toContain('1 Direct Messages')
+    expect(markup).toContain('Pick a conversation')
+    expect(markup).toContain('1 channel')
+    expect(markup).toContain('1 DM')
     expect(markup).toContain('min-h-0 flex-1')
   })
 })

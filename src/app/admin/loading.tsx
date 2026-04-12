@@ -12,20 +12,23 @@ export default function AdminLoading() {
   const activitySlots = ['activity-1', 'activity-2', 'activity-3', 'activity-4', 'activity-5']
 
   return (
-    <div className="space-y-6">
-      {/* Header skeleton */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-4 w-64" />
-        </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-24" />
-          <Skeleton className="h-9 w-24" />
+    <div className="mx-auto w-full max-w-7xl space-y-8">
+      {/* Header skeleton — matches AdminPageShell */}
+      <div className="space-y-4 border-b border-border/60 pb-8">
+        <Skeleton className="h-3 w-32" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-3">
+            <Skeleton className="h-10 w-56 max-w-full sm:h-11 sm:w-72" />
+            <Skeleton className="h-4 w-full max-w-xl" />
+            <Skeleton className="h-4 w-full max-w-lg" />
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-24" />
+          </div>
         </div>
       </div>
 
-      {/* Stats cards skeleton */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {statCardSlots.map((slot) => (
           <div key={slot} className="space-y-3 rounded-lg border p-4">

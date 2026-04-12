@@ -1,6 +1,9 @@
 'use client'
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowDown } from 'lucide-react'
+
+import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
 import type { CollaborationMessage, CollaborationMention } from '@/types/collaboration'
 import { useMessageListRenderContext } from './message-list-render-context'
@@ -171,6 +174,7 @@ export function MessageList({
   const hasAutoScrolledInitiallyRef = useRef(false)
   const [localReactionPending, setLocalReactionPending] = useState<string | null>(null)
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false)
 
   const sortedMessages = useMemo(() => 
     [...messages].sort((a, b) => a.createdAtMs - b.createdAtMs),
@@ -333,17 +337,26 @@ export function MessageList({
     }
   }, [focusMessageId, focusThreadId, sortedMessages])
 
+  const scrollToLatest = useCallback(() => {
+    const container = scrollRef.current
+    if (!container) return
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+    shouldStickToBottomRef.current = true
+    setShowJumpToLatest(false)
+  }, [])
+
   const handleScroll = useCallback(() => {
     const container = scrollRef.current
     if (!container) return
 
     const distanceFromBottom = container.scrollHeight - (container.scrollTop + container.clientHeight)
     shouldStickToBottomRef.current = distanceFromBottom < 80
+    setShowJumpToLatest(distanceFromBottom > 200 && sortedMessages.length > 0)
     
     if (container.scrollTop < 64) {
       requestLoadOlder()
     }
-  }, [requestLoadOlder])
+  }, [requestLoadOlder, sortedMessages.length])
 
   const handleReaction = useCallback(async (messageId: string, emoji: string) => {
     const key = `${messageId}-${emoji}`
@@ -356,43 +369,73 @@ export function MessageList({
   const isChannel = variant === 'channel'
 
   if (isLoading && messages.length === 0) {
-    return <MessageListLoadingState loadingSkeleton={loadingSkeleton} />
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <MessageListLoadingState loadingSkeleton={loadingSkeleton} />
+      </div>
+    )
   }
 
   if (messages.length === 0 && !isLoading) {
-    return <MessageListEmptyState emptyState={emptyState} />
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <MessageListEmptyState emptyState={emptyState} />
+      </div>
+    )
   }
 
   return (
-    <div
-      ref={scrollRef}
-      onScroll={handleScroll}
-      className="flex-1 overflow-y-auto min-h-0 relative"
-    >
-      <div className={cn('p-4', isChannel && 'space-y-4')}>
-        {hasMore && (
-          <MessageListLoadMoreButton disabled={isLoading} isLoading={isLoading} onLoadMore={requestLoadOlder} />
-        )}
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="min-h-0 flex-1 overflow-y-auto"
+      >
+        <div className={cn('p-4', isChannel && 'space-y-4')}>
+          {hasMore && (
+            <MessageListLoadMoreButton disabled={isLoading} isLoading={isLoading} onLoadMore={requestLoadOlder} />
+          )}
 
-        <div className={cn('space-y-6', isChannel && 'space-y-1')}>
-          {Array.from(groupedMessages.entries()).map(([date, msgs]) => (
-            <div key={date}>
-              <MessageDateSeparator date={date} />
-              
-              <div className={cn('space-y-3', isChannel && 'space-y-1')}>
-                {msgs.map((message) => {
-                  const isEditing = editingMessageId === message.id
-                  const isDeleting = deletingMessageId === message.id
-                  const isUpdating = updatingMessageId === message.id
-                  
-                  if (isChannel) {
-                    const content = (
-                      <ChannelMessageCard
+          <div className={cn('space-y-6', isChannel && 'space-y-1')}>
+            {Array.from(groupedMessages.entries()).map(([date, msgs]) => (
+              <div key={date}>
+                <MessageDateSeparator date={date} />
+                
+                <div className={cn('space-y-3', isChannel && 'space-y-1')}>
+                  {msgs.map((message) => {
+                    const isEditing = editingMessageId === message.id
+                    const isDeleting = deletingMessageId === message.id
+                    const isUpdating = updatingMessageId === message.id
+                    
+                    if (isChannel) {
+                      const content = (
+                        <ChannelMessageCard
+                          currentUserId={currentUserId}
+                          highlighted={message.id === highlightedMessageId}
+                          isDeleting={isDeleting}
+                          isEditing={isEditing}
+                          isUpdating={isUpdating}
+                          localReactionPending={localReactionPending}
+                          message={message}
+                          onReact={handleReaction}
+                          reactionPendingByMessage={reactionPendingByMessage}
+                          renderers={renderers}
+                          showAvatars={showAvatars}
+                        />
+                      )
+
+                      return (
+                        <Fragment key={message.id}>
+                          {effectiveRenderMessageWrapper ? effectiveRenderMessageWrapper(message, content) : content}
+                        </Fragment>
+                      )
+                    }
+
+                    const messageContent = (
+                      <DirectMessageCard
                         currentUserId={currentUserId}
-                        highlighted={message.id === highlightedMessageId}
                         isDeleting={isDeleting}
                         isEditing={isEditing}
-                        isUpdating={isUpdating}
                         localReactionPending={localReactionPending}
                         message={message}
                         onReact={handleReaction}
@@ -401,41 +444,36 @@ export function MessageList({
                         showAvatars={showAvatars}
                       />
                     )
-
+                    
                     return (
                       <Fragment key={message.id}>
-                        {effectiveRenderMessageWrapper ? effectiveRenderMessageWrapper(message, content) : content}
+                        {effectiveRenderMessageWrapper ? effectiveRenderMessageWrapper(message, messageContent) : messageContent}
                       </Fragment>
                     )
-                  }
-
-                  const messageContent = (
-                    <DirectMessageCard
-                      currentUserId={currentUserId}
-                      isDeleting={isDeleting}
-                      isEditing={isEditing}
-                      localReactionPending={localReactionPending}
-                      message={message}
-                      onReact={handleReaction}
-                      reactionPendingByMessage={reactionPendingByMessage}
-                      renderers={renderers}
-                      showAvatars={showAvatars}
-                    />
-                  )
-                  
-                  return (
-                    <Fragment key={message.id}>
-                      {effectiveRenderMessageWrapper ? effectiveRenderMessageWrapper(message, messageContent) : messageContent}
-                    </Fragment>
-                  )
-                })}
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          
+          <div ref={messagesEndRef} />
         </div>
-        
-        <div ref={messagesEndRef} />
       </div>
+
+      {showJumpToLatest ? (
+        <div className="pointer-events-none absolute bottom-4 right-4 z-10">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="pointer-events-auto gap-1.5 shadow-md ring-1 ring-border/60"
+            onClick={scrollToLatest}
+          >
+            <ArrowDown className="h-3.5 w-3.5" />
+            Latest
+          </Button>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -29,6 +29,8 @@ export type TaskKanbanProps = {
   onLoadMore: () => void
   emptyStateMessage: string
   showEmptyStateFiltered: boolean
+  onEmptyClearFilters?: () => void
+  onEmptyCreateTask?: () => void
   onClone?: (task: TaskRecord) => void
   onShare?: (task: TaskRecord) => void
   searchQuery?: string
@@ -65,6 +67,8 @@ export function TaskKanban({
   onLoadMore,
   emptyStateMessage,
   showEmptyStateFiltered,
+  onEmptyClearFilters,
+  onEmptyCreateTask,
   onClone,
   onShare,
   searchQuery = '',
@@ -191,16 +195,28 @@ export function TaskKanban({
 
   if (tasks.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border bg-muted/30 p-12 text-center">
+      <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-10 text-center sm:p-12">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-background shadow-sm ring-1 ring-border/60">
-          <ListTodo className="h-8 w-8 text-muted-foreground" />
+          <ListTodo className="h-8 w-8 text-muted-foreground" aria-hidden />
         </div>
-        <h3 className="mt-4 text-xl font-semibold text-foreground">No tasks here yet</h3>
-        <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+        <h3 className="mt-4 text-xl font-semibold tracking-tight text-foreground">No tasks on the board</h3>
+        <p className="mx-auto mt-2 max-w-sm text-pretty text-sm leading-relaxed text-muted-foreground">
           {showEmptyStateFiltered
-            ? 'No tasks match the current filters. Try adjusting your search or clearing filters.'
+            ? 'Nothing matches these filters. Clear them or switch to list view for bulk actions.'
             : emptyStateMessage}
         </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          {showEmptyStateFiltered && onEmptyClearFilters ? (
+            <Button type="button" size="sm" onClick={onEmptyClearFilters}>
+              Clear filters
+            </Button>
+          ) : null}
+          {!showEmptyStateFiltered && onEmptyCreateTask ? (
+            <Button type="button" size="sm" onClick={onEmptyCreateTask}>
+              Create task
+            </Button>
+          ) : null}
+        </div>
       </div>
     )
   }

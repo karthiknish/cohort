@@ -9,6 +9,8 @@ export const ErrorCode = {
     INTERNAL_ERROR: 'INTERNAL_ERROR',
     NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
     CONFLICT: 'CONFLICT',
+    /** Convex read/write limits or oversized scans — prefer indexed, bounded queries. */
+    READ_LIMIT: 'READ_LIMIT',
   },
   AUTH: {
     UNAUTHORIZED: 'UNAUTHORIZED',
@@ -78,6 +80,8 @@ export const Errors = {
       appError(ErrorCode.BASE.NOT_IMPLEMENTED, `${feature} is not implemented`),
     conflict: (message: string, details?: Record<string, Value>) =>
       appError(ErrorCode.BASE.CONFLICT, message, details),
+    readLimit: (message = 'Query exceeded read limits; narrow the request or add an index.', details?: Record<string, Value>) =>
+      appError(ErrorCode.BASE.READ_LIMIT, message, details),
   },
 
   auth: {
@@ -170,6 +174,27 @@ export function isAppError(error: unknown, code?: string): error is ConvexError<
 /**
  * Check if error is a rate limit error across supported platforms.
  */
+function isConvexWriteConflictError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  const msg = error.message
+  return (
+    msg.includes('changed while this mutation') ||
+    msg.includes('OptimisticConcurrencyControlFailure')
+  )
+}
+
+function isConvexReadLimitError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  const m = error.message.toLowerCase()
+  return (
+    m.includes('read limit') ||
+    m.includes('too many bytes') ||
+    m.includes('too many documents') ||
+    m.includes('bytes read') ||
+    m.includes('document read limit')
+  )
+}
+
 function isRateLimitError(error: unknown): boolean {
   if (error instanceof ConvexError) {
     const data = error.data as AppErrorData
@@ -273,6 +298,16 @@ export async function withErrorHandling<T>(
       throw Errors.rateLimit.tooManyRequests(
         'Ad platform rate limit reached. Please wait a moment and try again.'
       )
+    }
+
+    if (isConvexWriteConflictError(error)) {
+      console.warn(`[${context ?? 'writeConflict'}]`, error)
+      throw Errors.base.conflict('The data changed while saving. Please try again.')
+    }
+
+    if (isConvexReadLimitError(error)) {
+      console.warn(`[${context ?? 'readLimit'}]`, error)
+      throw Errors.base.readLimit()
     }
     
     console.error(`[${context ?? 'error'}]`, error)

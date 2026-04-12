@@ -40,6 +40,7 @@ import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { getPreviewAdminClients, getPreviewAdminUsers } from '@/lib/preview-data'
 import { cn } from '@/lib/utils'
 import { ADMIN_USER_ROLES, ADMIN_USER_STATUSES, type AdminUserRecord, type AdminUserRole, type AdminUserStatus } from '@/types/admin'
+import { AdminPageShell } from '../components/admin-page-shell'
 import { buildClientAllocationSummary } from '../lib/client-allocation'
 
 type UserStatus = AdminUserStatus
@@ -416,32 +417,39 @@ export default function AdminTeamPage() {
   }
 
   return (
-    <div className="bg-muted/40">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-6 px-4 py-10">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Team management</h1>
-            <p className="text-muted-foreground">
-              Manage internal staff, their roles, and how they are allocated across client workspaces.
-              {isPreviewMode ? ' Preview mode keeps staffing changes local to this session.' : ''}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button asChild variant="outline">
-              <Link href="/admin/clients">Client workspaces</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/admin">Back to admin home</Link>
-            </Button>
-            <Button type="button" variant="outline" onClick={handleRefresh} disabled={loading} className="inline-flex items-center gap-2">
-              <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} /> Refresh
-            </Button>
-            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <UserPlus className="h-4 w-4" /> Invite User
-                </Button>
-              </DialogTrigger>
+    <AdminPageShell
+      title="Team management"
+      description={
+        <>
+          Manage internal staff, their roles, and how they are allocated across client workspaces.
+          {isPreviewMode ? ' Preview mode keeps staffing changes local to this session.' : ''}
+        </>
+      }
+      isPreviewMode={isPreviewMode}
+      actions={
+        <>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/clients">Client workspaces</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin">Admin home</Link>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={loading}
+            className="inline-flex items-center gap-2"
+          >
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} /> Refresh
+          </Button>
+          <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-2">
+                <UserPlus className="h-4 w-4" /> Invite user
+              </Button>
+            </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Invite new user</DialogTitle>
@@ -480,9 +488,9 @@ export default function AdminTeamPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-          </div>
-        </div>
-
+        </>
+      }
+    >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card className="border-muted/60 bg-background">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -706,8 +714,7 @@ export default function AdminTeamPage() {
             ) : null}
           </CardContent>
         </Card>
-      </div>
-    </div>
+    </AdminPageShell>
   )
 }
 

@@ -21,6 +21,7 @@ import {
   FolderKanban,
   CheckSquare,
   Bot,
+  Lightbulb,
 } from 'lucide-react'
 
 import { useQuery, usePaginatedQuery } from 'convex/react'
@@ -40,6 +41,7 @@ import { Badge } from '@/shared/ui/badge'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { getPreviewAdminDashboardData } from '@/lib/preview-data'
 import { cn } from '@/lib/utils'
+import { AdminPageShell } from '../components/admin-page-shell'
 
 interface DashboardStats {
   totalUsers: number
@@ -297,11 +299,25 @@ export default function AdminPage() {
       badge: stats?.schedulerHealth === 'error' ? 'Issues' : stats?.schedulerHealth === 'warning' ? 'Warning' : 'Healthy',
       badgeVariant: stats?.schedulerHealth === 'error' ? 'destructive' : stats?.schedulerHealth === 'warning' ? 'secondary' : 'outline',
     },
+    {
+      title: 'Feature roadmap',
+      description: 'Prioritize platform work on the internal Kanban board.',
+      href: '/admin/features',
+      icon: Lightbulb,
+      cta: 'Open board',
+    },
+    {
+      title: 'Issue inbox',
+      description: 'Triage user-reported problems and track resolution.',
+      href: '/admin/issues',
+      icon: CircleAlert,
+      cta: 'Review reports',
+    },
   ]
 
   if (!user && !isPreviewMode) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4 py-16">
+      <div className="flex min-h-dvh items-center justify-center bg-background px-4 py-16">
         <Card className="max-w-md border-border">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -321,36 +337,32 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-            <p className="mt-1 text-muted-foreground">
-              Welcome back, {(user?.name ?? 'Avery Stone').split(' ')[0] ?? 'Admin'}. Here&apos;s your agency overview.
-              {isPreviewMode ? ' Preview mode is showing sample admin telemetry and local-only interactions.' : ''}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled
-                title="Convex is realtime; refresh not needed"
-              >
-                <RefreshCw className={cn('mr-2 h-4 w-4')} />
-                Refresh
-              </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard">
-                <ArrowUpRight className="mr-2 h-4 w-4" />
-                Dashboard
-              </Link>
-            </Button>
-          </div>
-        </div>
-
+    <AdminPageShell
+      title="Admin dashboard"
+      description={
+        <>
+          Welcome back, {(user?.name ?? 'Avery Stone').split(' ')[0] ?? 'Admin'}. Here is a snapshot of your workspace and platform activity.
+          {isPreviewMode
+            ? ' Preview mode is showing sample admin telemetry and local-only interactions.'
+            : ''}
+        </>
+      }
+      isPreviewMode={isPreviewMode}
+      actions={
+        <>
+          <Button variant="outline" size="sm" disabled title="Convex is realtime; refresh not needed">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/dashboard">
+              <ArrowUpRight className="mr-2 h-4 w-4" />
+              Workspace
+            </Link>
+          </Button>
+        </>
+      }
+    >
         {/* Stats Cards */}
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
@@ -613,8 +625,8 @@ export default function AdminPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Admin Sections - 2 columns */}
           <div className="lg:col-span-2 space-y-4">
-            <h2 className="text-lg font-semibold">Quick Access</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <h2 className="text-lg font-semibold">Quick access</h2>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {adminSections.map(({ title, description, href, icon: Icon, cta, badge, badgeVariant }) => (
                 <Card
                   key={href}
@@ -680,6 +692,18 @@ export default function AdminPage() {
                   <Link href="/admin/health">
                     <Activity className="mr-2 h-4 w-4" />
                     System health check
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm" className="justify-start">
+                  <Link href="/admin/features">
+                    <Lightbulb className="mr-2 h-4 w-4" />
+                    Feature roadmap
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm" className="justify-start">
+                  <Link href="/admin/issues">
+                    <CircleAlert className="mr-2 h-4 w-4" />
+                    Reported issues
                   </Link>
                 </Button>
                 <Button asChild variant="outline" size="sm" className="justify-start">
@@ -750,8 +774,7 @@ export default function AdminPage() {
 
           </div>
         </div>
-      </div>
-    </div>
+    </AdminPageShell>
   )
 }
 

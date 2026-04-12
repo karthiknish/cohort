@@ -139,6 +139,10 @@ export function UnifiedMessagePaneConversationLayout({
     [onMessageSearchChange]
   )
 
+  const handleClearMessageSearch = useCallback(() => {
+    onMessageSearchChange?.('')
+  }, [onMessageSearchChange])
+
   const handleAttachClick = useCallback(() => {
     fileInputRef.current?.click()
   }, [fileInputRef])
@@ -170,12 +174,14 @@ export function UnifiedMessagePaneConversationLayout({
           resultCount={messages.length}
           isActive={isMessageSearchActive}
           placeholder={header.type === 'dm' ? 'Search messages in this conversation…' : 'Search messages in this channel…'}
+          onClear={handleClearMessageSearch}
         />
       ) : null}
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <MessageListRenderProvider value={messageListRenderers}>
           <MessageList
+            key={`${header.type}-${header.name}`}
             messages={messages}
             currentUserId={currentUserId}
             currentUserRole={currentUserRole}

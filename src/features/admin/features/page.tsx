@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { Lightbulb, LoaderCircle, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
+import { Skeleton } from '@/shared/ui/skeleton'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { useToast } from '@/shared/ui/use-toast'
 import { useMutation, useQuery } from 'convex/react'
@@ -13,6 +14,7 @@ import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import { getPreviewAdminFeatures } from '@/lib/preview-data'
 import type { FeatureItem, FeatureStatus, FeaturePriority, FeatureReference } from '@/types/features'
+import { AdminPageShell } from '../components/admin-page-shell'
 import { FeatureKanbanBoard } from './components/feature-kanban-board'
 import { FeatureFormDialog } from './components/feature-form-dialog'
 import {
@@ -25,6 +27,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog'
+
+function AdminFeaturesToolbarActions({
+  refreshing,
+  onRefresh,
+}: {
+  refreshing: boolean
+  onRefresh: () => void
+}) {
+  return (
+    <Button type="button" variant="outline" size="sm" onClick={onRefresh} disabled={refreshing}>
+      <RefreshCw className={cn('mr-2 h-4 w-4', refreshing && 'animate-spin')} aria-hidden />
+      Refresh
+    </Button>
+  )
+}
 
 type FeatureRow = {
   id: string
@@ -293,45 +310,50 @@ export default function AdminFeaturesPage() {
     [createFeature, editingFeature, isPreviewMode, toast, updateFeature]
   )
 
+  const featuresToolbarActions = useMemo(
+    () => <AdminFeaturesToolbarActions refreshing={refreshing} onRefresh={handleRefresh} />,
+    [refreshing, handleRefresh],
+  )
+
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading features...</p>
+      <AdminPageShell title="Feature planning" description="Loading the platform backlog…">
+        <div className="grid gap-4 lg:grid-cols-4">
+          {['sk-a', 'sk-b', 'sk-c', 'sk-d'].map((key) => (
+            <div key={key} className="space-y-3 rounded-lg border border-border/60 bg-card/50 p-4">
+              <Skeleton className="h-4 w-24" />
+              <div className="space-y-2">
+                <Skeleton className="h-16 w-full rounded-md" />
+                <Skeleton className="h-16 w-full rounded-md" />
+                <Skeleton className="h-16 w-full rounded-md" />
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      </AdminPageShell>
     )
   }
 
   return (
-    <div className="mx-auto max-w-400 px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Lightbulb className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Feature Planning</h1>
-            <p className="text-sm text-muted-foreground">
-              Plan and track platform features with a visual Kanban board.
-              {isPreviewMode ? ' Preview mode uses a local sample backlog.' : ''}
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={refreshing}
-        >
-          <RefreshCw className={cn('mr-2 h-4 w-4', refreshing && 'animate-spin')} />
-          Refresh
-        </Button>
+    <>
+    <AdminPageShell
+      title="Feature planning"
+      description={
+        <>
+          Plan and track platform features on a visual Kanban board.
+          {isPreviewMode ? ' Preview mode uses a local sample backlog.' : ''}
+        </>
+      }
+      isPreviewMode={isPreviewMode}
+      actions={featuresToolbarActions}
+    >
+      <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <Lightbulb className="h-4 w-4" />
+        </span>
+        <span>Drag cards between columns or open a card to edit details.</span>
       </div>
 
-      {/* Kanban Board */}
       <FeatureKanbanBoard
         features={features}
         onAddFeature={handleAddFeature}
@@ -339,8 +361,8 @@ export default function AdminFeaturesPage() {
         onDeleteFeature={handleDeleteFeature}
         onMoveFeature={handleMoveFeature}
       />
+    </AdminPageShell>
 
-      {/* Feature Form Dialog */}
       <FeatureFormDialog
         open={formDialogOpen}
         onOpenChange={setFormDialogOpen}
@@ -349,7 +371,6 @@ export default function AdminFeaturesPage() {
         onSubmit={handleSubmitFeature}
       />
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -372,6 +393,6 @@ export default function AdminFeaturesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   )
 }

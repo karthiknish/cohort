@@ -62,6 +62,11 @@ export type UseTaskFiltersReturn = {
   completionRate: number
   assigneeOptions: string[]
 
+  /** True when list filters (not tab) narrow the result set. */
+  hasActiveFilters: boolean
+  /** Reset status, search, and assignee filters (not tab or view mode). */
+  resetListFilters: () => void
+
   // Handlers
   handleStatusChange: (value: string) => void
   handleAssigneeChange: (value: string) => void
@@ -98,6 +103,18 @@ export function useTaskFilters({
 
   const handleAssigneeChange = useCallback((value: string) => {
     setSelectedAssignee(value)
+  }, [])
+
+  const hasActiveFilters = useMemo(() => {
+    const hasSearch = searchQuery.trim().length > 0
+    const hasAssigneePick = activeTab === 'all-tasks' && selectedAssignee !== 'all'
+    return selectedStatus !== 'all' || hasSearch || hasAssigneePick
+  }, [activeTab, searchQuery, selectedAssignee, selectedStatus])
+
+  const resetListFilters = useCallback(() => {
+    setSelectedStatus('all')
+    setSearchQuery('')
+    setSelectedAssignee('all')
   }, [])
 
   // Filter tasks by client
@@ -272,6 +289,8 @@ export function useTaskFilters({
     taskCounts,
     completionRate,
     assigneeOptions,
+    hasActiveFilters,
+    resetListFilters,
     handleStatusChange,
     handleAssigneeChange,
   }
