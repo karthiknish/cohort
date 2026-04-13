@@ -16,6 +16,7 @@ import {
 import type { ComponentType, CSSProperties } from 'react'
 
 import { RetainerSlider } from '@/features/marketing/home/components/retainer-slider'
+import { PlatformBrandLogo, type PlatformBrandSlug } from '@/features/marketing/home/components/platform-brand-logos'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/shared/ui/badge'
 import { FadeIn } from '@/shared/ui/animate-in'
@@ -24,10 +25,10 @@ type IconType = ComponentType<LucideProps>
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 
-const PLATFORM_BARS = [
-  { label: 'Meta', pct: 52, value: '1.25M', dir: 1 },
-  { label: 'Google', pct: 31, value: '744K', dir: 1 },
-  { label: 'LinkedIn', pct: 17, value: '408K', dir: 1 },
+const PLATFORM_BARS: readonly { label: string; slug: PlatformBrandSlug; pct: number; value: string; dir: number }[] = [
+  { label: 'Meta', slug: 'meta', pct: 52, value: '1.25M', dir: 1 },
+  { label: 'Google Ads', slug: 'googleads', pct: 31, value: '744K', dir: 1 },
+  { label: 'LinkedIn', slug: 'linkedin', pct: 17, value: '408K', dir: 1 },
 ] as const
 
 const SEGMENT_BADGES = [
@@ -150,7 +151,10 @@ export function FeaturesBento() {
                       i < PLATFORM_BARS.length - 1 && 'border-r',
                     )}
                   >
-                    <span className="text-sm text-muted-foreground">{bar.label}</span>
+                    <div className="flex items-center gap-2">
+                      <PlatformBrandLogo brand={bar.slug} className="h-4 w-4" labeled={false} />
+                      <span className="text-sm text-muted-foreground">{bar.label}</span>
+                    </div>
                     <div className="text-2xl font-medium">{bar.pct}%</div>
                     <div className="flex min-h-25 flex-1 items-end">
                       <div

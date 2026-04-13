@@ -3,38 +3,45 @@
 import Link from 'next/link'
 import { Headphones, ShieldCheck, Sparkles, TimerReset } from 'lucide-react'
 
+import { HOME_HERO_BRAND_ORDER, PlatformLogoStrip } from '@/features/marketing/home/components/platform-brand-logos'
 import { FadeIn } from '@/shared/ui/animate-in'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { cn } from '@/lib/utils'
 
 const PROOF_POINTS = [
   {
     title: 'Guided onboarding',
     description: 'New modules ship with preview states first so teams can shape the workflow before persistence decisions get locked in.',
     icon: Sparkles,
+    wellClass: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
   },
   {
     title: 'Operational support',
     description: 'Help desk, updates, and knowledge base are now first-class surfaces instead of scattered process notes.',
     icon: Headphones,
+    wellClass: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
   },
   {
     title: 'Audit visibility',
     description: 'Time, scheduling, and request flows are framed around reviewability, not just task completion.',
     icon: ShieldCheck,
+    wellClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
   },
   {
     title: 'Fast rollout path',
     description: 'The new routes are intentionally scaffolded for a low-risk transition into live Convex-backed workflows.',
     icon: TimerReset,
+    wellClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
   },
 ] as const
 
 export function SupportProofSection() {
   return (
-    <section className="bg-muted/20 px-6 py-20 sm:py-24">
-      <div className="mx-auto max-w-6xl">
-        <FadeIn className="mb-10 max-w-3xl space-y-4">
+    <section className="relative overflow-hidden bg-muted/25 px-6 py-20 sm:py-28">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,hsl(var(--primary)/0.12),transparent)]" aria-hidden />
+      <div className="relative mx-auto max-w-6xl">
+        <FadeIn className="mb-8 max-w-3xl space-y-4">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary/50">Support and rollout</p>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             The expansion is designed to be supportable, reviewable, and easy to phase in
@@ -44,17 +51,31 @@ export function SupportProofSection() {
           </p>
         </FadeIn>
 
-        <div className="grid gap-5 lg:grid-cols-4">
+        <FadeIn className="mb-12">
+          <div className="rounded-2xl border border-border/60 bg-background/80 px-5 py-5 shadow-sm backdrop-blur-sm sm:px-8 sm:py-6">
+            <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:text-left">
+              Same platform depth you expect
+            </p>
+            <PlatformLogoStrip brands={HOME_HERO_BRAND_ORDER} variant="plain" className="justify-center sm:justify-start" />
+          </div>
+        </FadeIn>
+
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {PROOF_POINTS.map((point) => (
             <FadeIn key={point.title}>
-              <Card className="h-full border-border/60 bg-background">
-                <CardHeader className="space-y-4">
-                  <div className="w-fit rounded-2xl bg-primary/10 p-3 text-primary">
-                    <point.icon className="h-5 w-5" />
+              <Card
+                className={cn(
+                  'h-full border-border/60 bg-background/90 transition-all duration-200',
+                  'hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-lg hover:shadow-primary/6',
+                )}
+              >
+                <CardHeader className="space-y-4 pb-2">
+                  <div className={cn('w-fit rounded-2xl p-3', point.wellClass)}>
+                    <point.icon className="h-5 w-5" aria-hidden />
                   </div>
-                  <CardTitle className="text-xl">{point.title}</CardTitle>
+                  <CardTitle className="text-lg leading-snug sm:text-xl">{point.title}</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   <p className="text-sm leading-6 text-muted-foreground">{point.description}</p>
                 </CardContent>
               </Card>
@@ -62,14 +83,25 @@ export function SupportProofSection() {
           ))}
         </div>
 
-        <FadeIn className="mt-10 flex flex-col gap-4 rounded-[2rem] border border-border/60 bg-background p-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <p className="text-lg font-semibold text-foreground">Start with the operational layer, then wire the rest behind it.</p>
-            <p className="text-sm text-muted-foreground">Time, scheduling, and forms create the strongest foundation for everything that follows.</p>
+        <FadeIn className="mt-12">
+          <div className="flex flex-col gap-6 rounded-[2rem] border border-border/60 bg-gradient-to-br from-primary/[0.07] via-background to-muted/30 p-6 shadow-inner sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-8">
+            <div className="min-w-0 space-y-2">
+              <p className="text-lg font-semibold leading-snug text-foreground sm:text-xl">
+                Start with the operational layer, then wire the rest behind it.
+              </p>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Time, scheduling, and forms create the strongest foundation for everything that follows — including live ad accounts.
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center">
+              <Button asChild className="rounded-xl shadow-md">
+                <Link href="/dashboard/time">Open operations</Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-xl border-border/80 bg-background/80">
+                <Link href="/dashboard/ads">View Ads</Link>
+              </Button>
+            </div>
           </div>
-          <Button asChild className="rounded-xl">
-            <Link href="/dashboard/time">Open the new operations layer</Link>
-          </Button>
         </FadeIn>
       </div>
     </section>

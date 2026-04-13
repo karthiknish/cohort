@@ -1,22 +1,14 @@
 'use client'
 
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties } from 'react'
 import Image from 'next/image'
-import {
-  Bot,
-  Briefcase,
-  Building2,
-  CreditCard,
-  FileText,
-  Megaphone,
-  Sparkles,
-  Users,
-} from 'lucide-react'
+import { Bot, FileText, Sparkles, Users } from 'lucide-react'
 
 import { motionDurationSeconds, motionEasing, motionLoopSeconds } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { Badge } from '@/shared/ui/badge'
+import { PlatformBrandLogo, type PlatformBrandSlug } from '@/features/marketing/home/components/platform-brand-logos'
 import { FadeIn } from '@/shared/ui/animate-in'
 import { LazyMotion, domAnimation, m, useReducedMotion } from '@/shared/ui/motion'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip'
@@ -31,7 +23,7 @@ type IntegrationInsight = {
 type Integration = {
   id: string
   label: string
-  icon: ReactNode
+  brand: PlatformBrandSlug
   iconBg: string
   accentColor: string
   insights: IntegrationInsight[]
@@ -104,8 +96,8 @@ const INTEGRATIONS_LEFT: Integration[] = [
   {
     id: 'google',
     label: 'Google Ads',
-    icon: <Megaphone className="h-3.5 w-3.5 text-primary" aria-hidden="true" />,
-    iconBg: 'bg-primary/10',
+    brand: 'googleads',
+    iconBg: 'bg-white ring-1 ring-border/70',
     accentColor: 'text-primary',
     insights: [
       { stat: '4.2×', label: 'Avg. ROAS', trend: '+18% MoM', trendUp: true },
@@ -116,8 +108,8 @@ const INTEGRATIONS_LEFT: Integration[] = [
   {
     id: 'meta',
     label: 'Meta',
-    icon: <Building2 className="h-3.5 w-3.5 text-info" aria-hidden="true" />,
-    iconBg: 'bg-info/10',
+    brand: 'meta',
+    iconBg: 'bg-white ring-1 ring-border/70',
     accentColor: 'text-info',
     insights: [
       { stat: '$8.40', label: 'Avg. CPM', trend: '−12% vs last week', trendUp: true },
@@ -131,8 +123,8 @@ const INTEGRATIONS_RIGHT: Integration[] = [
   {
     id: 'linkedin',
     label: 'LinkedIn',
-    icon: <Briefcase className="h-3.5 w-3.5 text-accent" aria-hidden="true" />,
-    iconBg: 'bg-accent/15',
+    brand: 'linkedin',
+    iconBg: 'bg-white ring-1 ring-border/70',
     accentColor: 'text-accent',
     insights: [
       { stat: '$34', label: 'Cost per lead', trend: '−8% vs last month', trendUp: true },
@@ -143,8 +135,8 @@ const INTEGRATIONS_RIGHT: Integration[] = [
   {
     id: 'stripe',
     label: 'Stripe',
-    icon: <CreditCard className="h-3.5 w-3.5 text-success" aria-hidden="true" />,
-    iconBg: 'bg-success/10',
+    brand: 'stripe',
+    iconBg: 'bg-white ring-1 ring-border/70',
     accentColor: 'text-success',
     insights: [
       { stat: '$48.2K', label: 'MRR tracked', trend: '+9% MoM', trendUp: true },
@@ -277,7 +269,7 @@ function IntegrationChip({ chip }: { chip: Integration }) {
         <TooltipTrigger asChild>
           <div className="flex h-10 w-fit cursor-pointer items-center gap-2 rounded-lg border border-border/60 bg-background px-3 text-sm font-medium shadow-sm transition-shadow hover:shadow-md">
             <span className={cn('flex h-6 w-6 items-center justify-center rounded-md', chip.iconBg)}>
-              {chip.icon}
+              <PlatformBrandLogo brand={chip.brand} className="h-4 w-4" labeled={false} />
             </span>
             {chip.label}
           </div>
@@ -290,7 +282,7 @@ function IntegrationChip({ chip }: { chip: Integration }) {
           <div className="px-3 pt-3 pb-2">
             <div className="mb-2.5 flex items-center gap-2">
               <span className={cn('flex h-5 w-5 items-center justify-center rounded', chip.iconBg)}>
-                {chip.icon}
+                <PlatformBrandLogo brand={chip.brand} className="h-3.5 w-3.5" labeled={false} />
               </span>
               <span className="text-[11px] font-semibold text-foreground">{chip.label}</span>
               <span className="ml-auto rounded-full bg-success/10 px-1.5 py-0.5 text-[9px] font-semibold text-success">Live</span>

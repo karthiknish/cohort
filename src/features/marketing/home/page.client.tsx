@@ -6,6 +6,7 @@ import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 import { FeaturesBento } from "@/features/marketing/home/components/features-bento"
+import { HOME_HERO_BRAND_ORDER, PlatformLogoStrip } from "@/features/marketing/home/components/platform-brand-logos"
 import { FeaturesSection } from "@/features/marketing/home/components/features-section"
 import { HeroBackground } from "@/features/marketing/home/components/hero-background"
 import { HERO_HEADLINE, HERO_SUBHEAD } from "@/features/marketing/home/components/home-content"
@@ -70,6 +71,13 @@ function HomePageContent() {
             <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/60 sm:text-lg">
               {HERO_SUBHEAD}
             </p>
+
+            <div className="mx-auto mt-10 max-w-xl space-y-3 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+                Native connectors
+              </p>
+              <PlatformLogoStrip brands={HOME_HERO_BRAND_ORDER} variant="pill" />
+            </div>
 
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
