@@ -8,6 +8,7 @@ import {
   Bell,
   BellOff,
   Check,
+  CheckCheck,
   Hash,
   Link2,
   LoaderCircle,
@@ -416,6 +417,10 @@ export function UnifiedConversationHeader({ header }: { header: MessagePaneHeade
     )
   }, [header, toast])
 
+  const handleMarkChannelReadClick = useCallback(() => {
+    void header.onMarkChannelRead?.()
+  }, [header])
+
   useEffect(() => {
     return () => {
       if (copyResetTimerRef.current) {
@@ -491,6 +496,39 @@ export function UnifiedConversationHeader({ header }: { header: MessagePaneHeade
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
                   <p>Copy a link to this {header.type === 'channel' ? 'channel' : 'page'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
+          {header.type === 'channel' &&
+          header.onMarkChannelRead &&
+          typeof header.channelUnreadCount === 'number' &&
+          header.channelUnreadCount > 0 ? (
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5"
+                    disabled={header.markChannelReadPending}
+                    onClick={handleMarkChannelReadClick}
+                    aria-label="Mark channel as read"
+                  >
+                    {header.markChannelReadPending ? (
+                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <CheckCheck className="h-3.5 w-3.5" />
+                    )}
+                    <span className="hidden sm:inline">Mark read</span>
+                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] tabular-nums">
+                      {header.channelUnreadCount}
+                    </Badge>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p>Clear your unread count for this channel.</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

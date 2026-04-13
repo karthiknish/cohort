@@ -222,6 +222,9 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     markThreadAsRead: messages.markThreadAsRead,
     clearThreadReplies: messages.clearThreadReplies,
 
+    markChannelRead: messages.markChannelRead,
+    markChannelReadPending: messages.markChannelReadPending,
+
     reactionPendingByMessage: messages.reactionPendingByMessage,
   }
 }

@@ -86,6 +86,9 @@ export function useRealtimeActivity(limitCount = 20, preferPreviewData = false) 
           workspaceId: String(user.agencyId),
           ids,
           action: 'read',
+          ...(user.role === 'client' && selectedClient?.id
+            ? { clientId: String(selectedClient.id) }
+            : {}),
         })
         setError(null)
       } catch (error) {
@@ -93,7 +96,7 @@ export function useRealtimeActivity(limitCount = 20, preferPreviewData = false) 
         setError('Unable to update activity read status. Please try again.')
       }
     },
-    [ackMutation, user?.agencyId]
+    [ackMutation, selectedClient?.id, user?.agencyId, user?.role]
   )
 
   return {

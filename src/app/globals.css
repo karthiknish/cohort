@@ -2,9 +2,9 @@
 @import "tw-animate-css";
 
 :root {
-  --duration-exit: 150ms;
-  --duration-enter: 210ms;
-  --duration-move: 400ms;
+  --duration-exit: 120ms;
+  --duration-enter: 165ms;
+  --duration-move: 260ms;
   --card: #ffffff;
   --card-foreground: #0f172a;
   --popover: #ffffff;
@@ -57,7 +57,7 @@
   --motion-duration-normal: 220ms;
   --motion-duration-slow: 280ms;
   --motion-duration-xslow: 1000ms;
-  --motion-duration-page: 220ms;
+  --motion-duration-page: 180ms;
   --motion-duration-shimmer: 1400ms;
   --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --motion-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);

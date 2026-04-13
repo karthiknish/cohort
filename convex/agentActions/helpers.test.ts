@@ -111,6 +111,39 @@ describe('resolveDeterministicAgentIntent', () => {
     })
   })
 
+  it('executes workspace-scoped my-task list without active client', () => {
+    const intent = resolveDeterministicAgentIntent('list my tasks')
+
+    expect(intent).toEqual({
+      action: 'execute',
+      operation: 'summarizeMyTasks',
+      params: { mode: 'list' },
+      message: 'Listing your tasks now.',
+    })
+  })
+
+  it('executes mark-all-notifications-read phrasing', () => {
+    const intent = resolveDeterministicAgentIntent('mark all notifications read')
+
+    expect(intent).toEqual({
+      action: 'execute',
+      operation: 'markAllNotificationsRead',
+      params: {},
+      message: 'Marking your unread notifications as read now.',
+    })
+  })
+
+  it('executes list workspace clients phrasing', () => {
+    const intent = resolveDeterministicAgentIntent('list clients')
+
+    expect(intent).toEqual({
+      action: 'execute',
+      operation: 'listWorkspaceClients',
+      params: {},
+      message: 'Pulling the workspace client list now.',
+    })
+  })
+
   it('maps broader campaign status phrases to updateAdsCampaignStatus', () => {
     const intent = resolveDeterministicAgentIntent('Set Google campaign cmp_123 status to paused', {
       activeClientId: 'client_1',
@@ -277,6 +310,26 @@ describe('resolveWeakCommandClarification', () => {
 describe('extractCampaignQueryFromIntent', () => {
   it('extracts the campaign name fragment from ads requests', () => {
     expect(extractCampaignQueryFromIntent('give me ad metrics for the active leicester ad campaign in meta')).toBe('leicester')
+  })
+
+  it('routes For You, time off, and time tracking to navigate', () => {
+    expect(resolveDeterministicAgentIntent('open my for you feed')).toEqual({
+      action: 'navigate',
+      route: '/for-you',
+      message: 'Opening For You with your personalized highlights.',
+    })
+
+    expect(resolveDeterministicAgentIntent('i need to request pto')).toEqual({
+      action: 'navigate',
+      route: '/dashboard/time-off',
+      message: 'Opening Time off for requests and approvals.',
+    })
+
+    expect(resolveDeterministicAgentIntent('open my timesheet')).toEqual({
+      action: 'navigate',
+      route: '/dashboard/tasks?operations=time',
+      message: 'Opening Tasks with the time tracking view.',
+    })
   })
 })
 

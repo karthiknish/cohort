@@ -315,7 +315,7 @@ function AnalyticsBodySection() {
   }
 
   if (!gaConnected) {
-    return null
+    return <AnalyticsEmptyState />
   }
 
   return <AnalyticsPerformanceSection />

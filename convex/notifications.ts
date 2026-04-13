@@ -184,58 +184,95 @@ function mapNotification(row: unknown, userId: string): WorkspaceNotification {
   }
 }
 
+function isStrictlyOlderThanPivot(
+  row: { createdAtMs?: unknown; legacyId?: unknown },
+  pivot: { createdAtMs: number; legacyId: string },
+): boolean {
+  const ms = typeof row.createdAtMs === 'number' ? row.createdAtMs : null
+  const id = typeof row.legacyId === 'string' ? row.legacyId : ''
+  if (ms === null) return false
+  if (ms < pivot.createdAtMs) return true
+  if (ms > pivot.createdAtMs) return false
+  return id < pivot.legacyId
+}
+
 export const list = zWorkspaceQuery({
   args: {
     pageSize: z.number().optional(),
     afterCreatedAtMs: z.number().optional(),
     afterLegacyId: z.string().optional(),
+    scanCursor: z.string().nullable().optional(),
     role: z.union([z.literal('admin'), z.literal('team'), z.literal('client')]).optional(),
     clientId: z.string().optional(),
     unread: z.boolean().optional(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw Errors.auth.unauthorized()
-
-    const userId = identity.subject
+    const userId = ctx.user.legacyId as string
     const pageSize = Math.min(Math.max(args.pageSize ?? 25, 1), 100)
 
-    const base = ctx.db
-      .query('notifications')
-      .withIndex('by_workspaceId_createdAtMs', (q) => q.eq('workspaceId', args.workspaceId))
-      .order('desc')
+    const userPivot =
+      args.afterCreatedAtMs != null
+        ? { createdAtMs: args.afterCreatedAtMs, legacyId: args.afterLegacyId ?? '' }
+        : null
 
-    const rows = await base.take(500)
+    const base = () =>
+      ctx.db
+        .query('notifications')
+        .withIndex('by_workspaceId_createdAtMs', (q) => q.eq('workspaceId', args.workspaceId))
+        .order('desc')
 
-    const filtered = rows
-      .filter((row) => {
-        return matchesNotificationRecipient(row, {
-          userId,
-          role: args.role,
-          clientId: args.clientId,
-          unreadOnly: args.unread,
-          excludeActor: true,
-        })
+    const collected: Array<{
+      createdAtMs?: unknown
+      legacyId?: unknown
+      [key: string]: unknown
+    }> = []
+    let dbCursor: string | null = args.scanCursor ?? null
+
+    for (let round = 0; round < 100; round++) {
+      const { page, continueCursor, isDone } = await base().paginate({
+        numItems: 80,
+        cursor: dbCursor === null ? null : dbCursor,
       })
-      .filter((row) => {
-        if (!args.afterCreatedAtMs && !args.afterLegacyId) return true
-        const createdAtOk = typeof row.createdAtMs === 'number' ? row.createdAtMs < (args.afterCreatedAtMs ?? Number.POSITIVE_INFINITY) : true
-        if (createdAtOk) return true
-        if (args.afterCreatedAtMs != null && typeof row.createdAtMs === 'number' && row.createdAtMs === args.afterCreatedAtMs) {
-          return typeof row.legacyId === 'string' ? row.legacyId < (args.afterLegacyId ?? '') : false
+
+      if (page.length === 0) {
+        break
+      }
+
+      for (const row of page) {
+        if (
+          !matchesNotificationRecipient(row, {
+            userId,
+            role: args.role,
+            clientId: args.clientId,
+            unreadOnly: args.unread,
+            excludeActor: true,
+          })
+        ) {
+          continue
         }
-        return false
-      })
+        if (userPivot && !isStrictlyOlderThanPivot(row, userPivot)) {
+          continue
+        }
+        collected.push(row)
+      }
 
-    const page = filtered.slice(0, pageSize)
-    const next = filtered.length > pageSize ? filtered[pageSize] : null
+      dbCursor = continueCursor ?? null
+
+      if (collected.length > pageSize || isDone) {
+        break
+      }
+    }
+
+    const pageRows = collected.slice(0, pageSize)
+    const nextSource = collected.length > pageSize ? collected[pageSize] : null
 
     return {
-      notifications: page.map((row) => mapNotification(row, userId)),
-      nextCursor: next
+      notifications: pageRows.map((row) => mapNotification(row, userId)),
+      nextCursor: nextSource
         ? {
-            createdAtMs: next.createdAtMs,
-            legacyId: next.legacyId,
+            createdAtMs: typeof nextSource.createdAtMs === 'number' ? nextSource.createdAtMs : 0,
+            legacyId: typeof nextSource.legacyId === 'string' ? nextSource.legacyId : '',
+            scanCursor: dbCursor,
           }
         : null,
     }
@@ -306,28 +343,37 @@ export const getUnreadCount = zWorkspaceQuery({
     clientId: z.string().optional(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw Errors.auth.unauthorized()
-
-    const userId = identity.subject
-
-    const rows = await ctx.db
-      .query('notifications')
-      .withIndex('by_workspaceId_createdAtMs', (q) => q.eq('workspaceId', args.workspaceId))
-      .order('desc')
-      .take(500)
+    const userId = ctx.user.legacyId as string
 
     let count = 0
+    let dbCursor: string | null = null
+    const maxRounds = 250
 
-    for (const row of rows) {
-      if (!matchesNotificationRecipient(row, {
-        userId,
-        role: args.role,
-        clientId: args.clientId,
-        unreadOnly: true,
-        excludeActor: true,
-      })) continue
-      count += 1
+    for (let round = 0; round < maxRounds; round++) {
+      const { page, continueCursor, isDone } = await ctx.db
+        .query('notifications')
+        .withIndex('by_workspaceId_createdAtMs', (q) => q.eq('workspaceId', args.workspaceId))
+        .order('desc')
+        .paginate({ numItems: 100, cursor: dbCursor === null ? null : dbCursor })
+
+      for (const row of page) {
+        if (
+          matchesNotificationRecipient(row, {
+            userId,
+            role: args.role,
+            clientId: args.clientId,
+            unreadOnly: true,
+            excludeActor: true,
+          })
+        ) {
+          count += 1
+        }
+      }
+
+      dbCursor = continueCursor ?? null
+      if (isDone || !continueCursor) {
+        break
+      }
     }
 
     return { unreadCount: count }
@@ -338,22 +384,44 @@ export const ack = zWorkspaceMutation({
   args: {
     ids: z.array(z.string()),
     action: z.union([z.literal('read'), z.literal('dismiss')]),
+    clientId: z.string().optional(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw Errors.auth.unauthorized()
+    const userId = ctx.user.legacyId as string
+    const role = ctx.user.role
 
-    const userId = identity.subject
+    if (role === 'client' && !args.clientId) {
+      throw Errors.base.badRequest('clientId is required when acknowledging notifications as a client user.')
+    }
 
-    const notifications = await ctx.db
-      .query('notifications')
-      .withIndex('by_workspaceId_createdAtMs', (q) => q.eq('workspaceId', args.workspaceId))
-      .take(1000)
+    const roleArg = role === 'admin' || role === 'team' || role === 'client' ? role : undefined
 
-    const idSet = new Set(args.ids)
-    const updates = notifications.filter((row) => typeof row.legacyId === 'string' && idSet.has(row.legacyId))
+    const legacyIds = args.ids.filter((id): id is string => typeof id === 'string' && id.length > 0)
+    const rows = await Promise.all(
+      legacyIds.map((legacyId) =>
+        ctx.db
+          .query('notifications')
+          .withIndex('by_workspaceId_legacyId', (q) =>
+            q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId),
+          )
+          .unique(),
+      ),
+    )
 
-    for (const row of updates) {
+    for (const row of rows) {
+      if (!row) continue
+
+      if (
+        !matchesNotificationRecipient(row, {
+          userId,
+          role: roleArg,
+          clientId: args.clientId,
+          excludeActor: true,
+        })
+      ) {
+        continue
+      }
+
       const readBy = Array.isArray(row.readBy) ? row.readBy : []
       const acknowledgedBy = Array.isArray(row.acknowledgedBy) ? row.acknowledgedBy : []
 

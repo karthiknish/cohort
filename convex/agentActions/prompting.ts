@@ -25,6 +25,9 @@ When the user wants to CREATE or UPDATE data, use:
   Params: { clientReference?: string, clientId?: string, mode?: "list"|"summary" }
   Example: "list all the tasks in @abc client" → {"action": "execute", "operation": "summarizeClientTasks", "params": {"clientReference": "abc", "mode": "list"}, "message": "Listing the tasks for abc now."}
 
+- **summarizeMyTasks**: List or summarize tasks assigned to the current user (plus unassigned tasks) across the workspace (same scope as For You / listForUser)
+  Params: { mode?: "list"|"summary" }
+
 ### Project Operations
 - **createProject**: Create a project
   Params: { name: string, description?: string, status?: string, clientId?: string, clientName?: string, startDate?: string, endDate?: string, tags?: string[] }
@@ -44,6 +47,9 @@ When the user wants to CREATE or UPDATE data, use:
 
 - **addClientTeamMember**: Add a team member to an existing client
   Params: { clientId: string, name: string, role?: string }
+
+- **listWorkspaceClients**: Return a trimmed list of clients in the workspace (optionally filter by name)
+  Params: { query?: string }
 
 ### Messaging Operations
 - **sendDirectMessage**: Send a direct message to a workspace user
@@ -69,6 +75,10 @@ When the user wants to CREATE or UPDATE data, use:
 - **updateAdsCreativeStatus**: Enable or pause an ads creative
   Params: { providerId: "google"|"tiktok"|"linkedin"|"facebook", creativeId: string, status: "active"|"paused", adGroupId?: string, clientId?: string }
 
+### Notification Operations
+- **markAllNotificationsRead**: Mark every unread notification for the current user as read (paged fetch + batched ack)
+  Params: {}
+
 ### Reporting Operations
 - **summarizeAdsPerformance**: Return a compact ads snapshot with current performance and leading campaigns
   Params: { period?: "daily"|"weekly"|"monthly", startDate?: string, endDate?: string, focus?: "active", clientId?: string, providerId?: "google"|"tiktok"|"linkedin"|"facebook", providerIds?: string[] }
@@ -81,6 +91,16 @@ When the user wants to CREATE or UPDATE data, use:
   Examples:
   - "generate a weekly performance report" → {"action": "execute", "operation": "generatePerformanceReport", "params": {"period": "weekly"}, "message": "Generating your weekly performance report..."}
   - "generate a monthly Google + Meta report for this client" → include providerIds and activeClientId when available
+
+## Extra destinations (navigate only — no matching execute op)
+Use **navigate** with an exact \`route\` when the user only wants a screen opened (see "Available Dashboard Pages" in the system prompt). Frequent examples:
+- **For You** (personalized digest) → \`/for-you\`
+- **Time off / PTO** → \`/dashboard/time-off\`
+- **Time tracking / timesheet** → \`/dashboard/tasks?operations=time\`
+- **Proposal analytics** (funnel / win rate) → \`/dashboard/proposals/analytics\`
+- **Forms / intake** → \`/dashboard/forms\`
+- **Resource scheduling** → \`/dashboard/scheduling\`
+- **Team management** (workspace staff, invites) → \`/admin/team\`
 `
 }
 
@@ -162,8 +182,18 @@ If the request is vague, underspecified, or refers to "this/that/it" without eno
 - "open collaboration", "show project discussion", "open team chat" → navigate to Collaboration
 - "send a chat to @Deepak saying hi" / "dm Deepak saying can we review this" → EXECUTE sendDirectMessage
 - "list all the tasks in @abc client" / "give me client @abc summary for tasks" → EXECUTE summarizeClientTasks
+- "list my tasks" / "what are my tasks" / "task summary for me" → EXECUTE summarizeMyTasks
+- "mark all notifications read" / "clear notification badge" → EXECUTE markAllNotificationsRead
+- "list clients" / "show all clients" / "workspace clients" → EXECUTE listWorkspaceClients
 - "check my numbers" or "see performance" → navigate to Analytics
 - "show tasks", "my to-do list" → navigate to Tasks
+- "for you", "my digest", "personalized feed" → navigate to /for-you
+- "time off", "pto", "vacation request" → navigate to /dashboard/time-off
+- "timesheet", "log time", "billable hours" → navigate to /dashboard/tasks?operations=time
+- "proposal analytics", "proposal win rate" → navigate to /dashboard/proposals/analytics
+- "intake forms", "client forms" → navigate to /dashboard/forms
+- "resource scheduling", "capacity planning" → navigate to /dashboard/scheduling
+- "team management", "invite teammate", "workspace staff" (admin) → navigate to /admin/team
 - vague requests like "do that", "handle this", "check metrics", or "create task" without enough detail → CLARIFY first
 
 If activeProposalId/activeProjectId/activeClientId is present in context, prefer it when the user says "this proposal/project/client".

@@ -111,7 +111,66 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
     aliases: ['create proposal', 'proposal builder', 'pitch deck', 'new proposal', 'proposal list', 'quote builder'],
     actions: ['create proposal', 'build pitch deck', 'send quote', 'make estimate'],
   },
+
+  {
+    route: '/dashboard/proposals/analytics',
+    name: 'Proposal analytics',
+    description: 'Proposal funnel metrics, win rates, and submission trends',
+    keywords: ['proposal analytics', 'proposal metrics', 'proposal performance', 'win rate', 'proposal stats', 'proposal funnel'],
+    aliases: ['proposal insights', 'how proposals perform', 'proposal reporting'],
+    actions: ['review proposal outcomes', 'check win rate', 'see proposal trends'],
+  },
   
+  // For You (personalized workspace)
+  {
+    route: '/for-you',
+    name: 'For You',
+    description: 'Personalized recommendations, digest, and workspace highlights',
+    keywords: ['for you', 'personalized', 'digest', 'highlights', 'recommendations', 'my feed', 'whats new', 'what is new'],
+    aliases: ['for you page', 'personal feed', 'workspace digest', 'cohorts for you'],
+    actions: ['see what matters', 'check recommendations', 'open my digest'],
+  },
+
+  // Time off
+  {
+    route: '/dashboard/time-off',
+    name: 'Time off',
+    description: 'Request, review, and approve PTO and leave',
+    keywords: ['time off', 'pto', 'vacation', 'leave request', 'sick leave', 'out of office', 'ooo', 'holiday leave'],
+    aliases: ['request pto', 'time off requests', 'leave approvals', 'vacation days'],
+    actions: ['request leave', 'approve pto', 'check time off balance'],
+  },
+
+  // Time tracking (tasks operations tab)
+  {
+    route: '/dashboard/tasks?operations=time',
+    name: 'Time tracking',
+    description: 'Log and review time entries against tasks',
+    keywords: ['timesheet', 'time tracking', 'log time', 'track time', 'billable', 'hours logged', 'time entry', 'time entries'],
+    aliases: ['log my hours', 'submit timesheet', 'track billable time'],
+    actions: ['log hours', 'review time entries', 'export timesheet'],
+  },
+
+  // Forms (intake — redirects into Projects)
+  {
+    route: '/dashboard/forms',
+    name: 'Forms',
+    description: 'Client intake forms and structured submissions',
+    keywords: ['forms', 'intake', 'questionnaire', 'survey', 'form submissions', 'lead form'],
+    aliases: ['intake forms', 'client forms', 'submission forms'],
+    actions: ['open forms', 'review submissions', 'configure intake'],
+  },
+
+  // Scheduling (projects operations tab)
+  {
+    route: '/dashboard/scheduling',
+    name: 'Scheduling',
+    description: 'Resource scheduling and calendar blocks tied to projects',
+    keywords: ['scheduling', 'scheduler', 'availability', 'resource schedule', 'capacity planning', 'booking grid'],
+    aliases: ['team scheduling', 'project scheduling', 'schedule resources'],
+    actions: ['book resources', 'check availability', 'plan capacity'],
+  },
+
   // Collaboration
   {
     route: '/dashboard/collaboration',
@@ -160,6 +219,15 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
     keywords: ['admin', 'administration', 'manage', 'users', 'system', 'platform'],
     aliases: ['admin panel', 'admin dashboard', 'user management', 'system settings', 'admin area'],
     actions: ['manage users', 'system config', 'admin tools'],
+  },
+
+  {
+    route: '/admin/team',
+    name: 'Team management',
+    description: 'Invite workspace staff, roles, and internal client allocation',
+    keywords: ['team management', 'internal team', 'workspace team', 'invite teammate', 'staff roles', 'teammates', 'admin team'],
+    aliases: ['manage team', 'team directory', 'invite staff', 'workspace members admin'],
+    actions: ['invite user', 'change roles', 'review allocations'],
   },
 ]
 
@@ -288,10 +356,9 @@ export function getNavigationSuggestions(): Array<{ route: string; name: string;
  * Builds a formatted list of available routes for AI prompts
  */
 export function buildRoutesForPrompt(): string {
-  // Group by main sections, exclude query-param variants for cleaner prompt
-  const mainRoutes = ROUTE_MAPPINGS.filter(r => !r.route.includes('?'))
-  
-  return mainRoutes.map(r => {
+  const mainRoutes = ROUTE_MAPPINGS
+
+  return mainRoutes.map((r) => {
     const actions = r.actions ? ` (${r.actions.slice(0, 3).join(', ')})` : ''
     return `- **${r.name}** → \`${r.route}\`: ${r.description}${actions}`
   }).join('\n')

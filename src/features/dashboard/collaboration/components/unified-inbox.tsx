@@ -78,6 +78,9 @@ type UnifiedInboxChannelPaneProps = {
   deepLinkThreadId?: string | null
   messagesError: string | null
   onRetryMessages: () => void
+  channelUnreadCount: number
+  onMarkChannelRead: () => Promise<void>
+  markChannelReadPending: boolean
 }
 
 type UnifiedInboxDirectMessagePaneProps = {
@@ -188,6 +191,9 @@ export function UnifiedInbox({
     deepLinkThreadId,
     messagesError,
     onRetryMessages,
+    channelUnreadCount,
+    onMarkChannelRead,
+    markChannelReadPending,
   } = channelPane
   const {
     messages: dmMessages,
@@ -437,6 +443,9 @@ export function UnifiedInbox({
           threadUnreadCountsByRootId={threadUnreadCountsByRootId}
           typingIndicatorText={typingIndicatorText}
           uploading={uploading}
+          channelUnreadCount={channelUnreadCount}
+          onMarkChannelRead={onMarkChannelRead}
+          markChannelReadPending={markChannelReadPending}
         />
       ) : selectedDM ? (
         <DirectMessageConversationPane

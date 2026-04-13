@@ -131,4 +131,19 @@ describe('AnalyticsPageShell', () => {
     expect(markup).not.toContain('Connect Google')
     expect(markup).not.toContain('Sync data')
   })
+
+  it('shows empty-state body when Google Analytics not connected (non-preview)', () => {
+    mockContext = {
+      ...mockContext,
+      isPreviewMode: false,
+      gaConnected: false,
+      isGaSelectedWithoutData: false,
+      isSyncPending: false,
+    }
+    const markup = renderToStaticMarkup(<AnalyticsPageShell />)
+
+    expect(markup).toContain('No analytics data yet')
+    expect(markup).toContain('Link Google Analytics')
+    expect(markup).not.toContain('Analytics Summary Cards')
+  })
 })

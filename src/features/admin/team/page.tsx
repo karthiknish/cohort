@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import type { ChangeEvent } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import {
   CircleAlert,
@@ -16,6 +16,7 @@ import {
 import Link from 'next/link'
 
 import { api } from '/_generated/api'
+import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -51,6 +52,12 @@ type RoleFilter = 'all' | AdminUserRole
 
 const ROLE_OPTIONS = ADMIN_USER_ROLES.filter((role) => role !== 'client')
 const STATUS_OPTIONS: StatusFilter[] = ['all', ...ADMIN_USER_STATUSES]
+
+const EMAIL_LIKE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function looksLikeEmail(value: string): boolean {
+  return EMAIL_LIKE.test(value.trim())
+}
 
 type AdminUserRow = {
   legacyId: string
@@ -130,6 +137,14 @@ export default function AdminTeamPage() {
     setInviteOpen(false)
   }, [])
 
+  const handleInviteOpenChange = useCallback((open: boolean) => {
+    setInviteOpen(open)
+    if (!open) {
+      setInviteEmail('')
+      setInviteRole('team')
+    }
+  }, [])
+
   const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value)
   }, [])
@@ -163,11 +178,13 @@ export default function AdminTeamPage() {
       .then(() => loadMore(50))
       .catch((err: unknown) => {
         logError(err, 'AdminTeamPage:loadMore')
+        const message = asErrorMessage(err)
+        toast({ title: 'Could not load more', description: message, variant: 'destructive' })
       })
       .finally(() => {
         setLoadingMore(false)
       })
-  }, [isPreviewMode, loadMore, loadingMore])
+  }, [isPreviewMode, loadMore, loadingMore, toast])
 
   const users: AdminUserRecord[] = useMemo(() => {
     if (isPreviewMode) return previewUsers
@@ -220,6 +237,9 @@ export default function AdminTeamPage() {
       }))
     )
   }, [clientItems, internalUsers])
+
+  const hasActiveFilters =
+    searchTerm.trim() !== '' || statusFilter !== 'all' || roleFilter !== 'all'
 
   const filteredUsers = useMemo(() => {
     const search = searchTerm.trim().toLowerCase()
@@ -304,7 +324,7 @@ export default function AdminTeamPage() {
       )))
       toast({
         title: 'Preview mode',
-        description: `Member is now ${nextStatus.replace('_', ' ')} in the sample workspace.`,
+        description: `Member is now ${nextStatus.replace(/_/g, ' ')} in the sample workspace.`,
       })
       return
     }
@@ -320,7 +340,7 @@ export default function AdminTeamPage() {
         })
         toast({
           title: 'Status updated',
-          description: `Member is now ${nextStatus.replace('_', ' ')}.`,
+          description: `Member is now ${nextStatus.replace(/_/g, ' ')}.`,
         })
       })
       .catch((err: unknown) => {
@@ -334,15 +354,19 @@ export default function AdminTeamPage() {
       })
   }
 
+  const inviteEmailTrimmed = inviteEmail.trim()
+  const inviteEmailValid = looksLikeEmail(inviteEmailTrimmed)
+
   const handleInviteUser = useCallback(() => {
-    if (!inviteEmail) return
+    const email = inviteEmail.trim()
+    if (!email || !looksLikeEmail(email)) return
 
     if (isPreviewMode) {
       setPreviewUsers((current) => [
         {
           id: `preview-user-${Date.now()}`,
-          email: inviteEmail,
-          name: inviteEmail.split('@')[0] ?? 'Preview User',
+          email,
+          name: email.split('@')[0] ?? 'Preview User',
           role: inviteRole,
           status: 'invited',
           agencyId: 'preview-agency',
@@ -354,7 +378,7 @@ export default function AdminTeamPage() {
       ])
       toast({
         title: 'Preview mode',
-        description: `Invitation created for ${inviteEmail} in the sample workspace.`,
+        description: `Invitation created for ${email} in the sample workspace.`,
       })
       setInviteOpen(false)
       setInviteEmail('')
@@ -367,7 +391,7 @@ export default function AdminTeamPage() {
     setInviteSending(true)
 
     void createInvitation({
-      email: inviteEmail,
+      email,
       role: inviteRole,
       invitedBy: user.id,
       invitedByName: user?.name ?? null,
@@ -375,7 +399,7 @@ export default function AdminTeamPage() {
       .then(() => {
         toast({
           title: 'Invitation sent!',
-          description: `Invitation created for ${inviteEmail} as ${inviteRole}. Email delivery depends on server integration settings.`,
+          description: `Invitation created for ${email} as ${inviteRole}. Email delivery depends on server integration settings.`,
         })
         setInviteOpen(false)
         setInviteEmail('')
@@ -391,11 +415,34 @@ export default function AdminTeamPage() {
       })
   }, [createInvitation, inviteEmail, inviteRole, isPreviewMode, toast, user])
 
+  const handleInviteFormSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      handleInviteUser()
+    },
+    [handleInviteUser],
+  )
+
+  const handleDismissError = useCallback(() => {
+    setError(null)
+  }, [])
+
+  const handleOpenInviteDialog = useCallback(() => {
+    setInviteOpen(true)
+  }, [])
+
+  const handleClearFilters = useCallback(() => {
+    setStatusFilter('all')
+    setRoleFilter('all')
+    setSearchTerm('')
+  }, [])
+
   const handleRefresh = useCallback(() => {
     if (loading) return
     setStatusFilter('all')
     setRoleFilter('all')
     setSearchTerm('')
+    setError(null)
     setUsersOverride(null)
 
     if (isPreviewMode) {
@@ -444,7 +491,7 @@ export default function AdminTeamPage() {
           >
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} /> Refresh
           </Button>
-          <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+          <Dialog open={inviteOpen} onOpenChange={handleInviteOpenChange}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">
                 <UserPlus className="h-4 w-4" /> Invite user
@@ -457,35 +504,46 @@ export default function AdminTeamPage() {
                     Send an invitation email to add a new member to your organization.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="email">Email address</Label>
-                    <Input
-                      id="email"
-                      placeholder="colleague@company.com"
-                      value={inviteEmail}
-                      onChange={handleInviteEmailChange}
-                    />
+                <form onSubmit={handleInviteFormSubmit}>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="admin-team-invite-email">Email address</Label>
+                      <Input
+                        id="admin-team-invite-email"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        placeholder="colleague@company.com"
+                        value={inviteEmail}
+                        onChange={handleInviteEmailChange}
+                        aria-invalid={inviteEmailTrimmed.length > 0 && !inviteEmailValid}
+                      />
+                      {inviteEmailTrimmed.length > 0 && !inviteEmailValid ? (
+                        <p className="text-xs text-destructive">Enter a valid email address.</p>
+                      ) : null}
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="admin-team-invite-role">Role</Label>
+                      <Select value={inviteRole} onValueChange={handleInviteRoleChange}>
+                        <SelectTrigger id="admin-team-invite-role" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="team">Team Member</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="role">Role</Label>
-                    <Select value={inviteRole} onValueChange={handleInviteRoleChange}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="team">Team Member</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={handleCloseInviteDialog} disabled={inviteSending}>Cancel</Button>
-                  <Button onClick={handleInviteUser} disabled={!inviteEmail || inviteSending}>
-                    {inviteSending ? 'Sending…' : 'Send Invitation'}
-                  </Button>
-                </DialogFooter>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={handleCloseInviteDialog} disabled={inviteSending}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={!inviteEmailValid || inviteSending}>
+                      {inviteSending ? 'Sending…' : 'Send invitation'}
+                    </Button>
+                  </DialogFooter>
+                </form>
               </DialogContent>
             </Dialog>
         </>
@@ -498,7 +556,11 @@ export default function AdminTeamPage() {
               <UsersIcon className={cn('h-4 w-4 text-muted-foreground', loading && 'animate-spin')} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold">{summary.total}</div>
+              {loading ? (
+                <div className="h-8 w-14 animate-pulse rounded-md bg-muted" aria-hidden />
+              ) : (
+                <div className="text-2xl font-semibold">{summary.total}</div>
+              )}
               <p className="text-xs text-muted-foreground">In this workspace</p>
             </CardContent>
           </Card>
@@ -509,7 +571,11 @@ export default function AdminTeamPage() {
               <UserCheck className="h-4 w-4 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold">{summary.active}</div>
+              {loading ? (
+                <div className="h-8 w-14 animate-pulse rounded-md bg-muted" aria-hidden />
+              ) : (
+                <div className="text-2xl font-semibold">{summary.active}</div>
+              )}
               <p className="text-xs text-muted-foreground">Currently enabled</p>
             </CardContent>
           </Card>
@@ -520,7 +586,11 @@ export default function AdminTeamPage() {
               <ShieldCheck className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold">{summary.admins}</div>
+              {loading ? (
+                <div className="h-8 w-14 animate-pulse rounded-md bg-muted" aria-hidden />
+              ) : (
+                <div className="text-2xl font-semibold">{summary.admins}</div>
+              )}
               <p className="text-xs text-muted-foreground">Including yourself</p>
             </CardContent>
           </Card>
@@ -531,7 +601,11 @@ export default function AdminTeamPage() {
               <UsersIcon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold">{summary.allocated}</div>
+              {loading ? (
+                <div className="h-8 w-14 animate-pulse rounded-md bg-muted" aria-hidden />
+              ) : (
+                <div className="text-2xl font-semibold">{summary.allocated}</div>
+              )}
               <p className="text-xs text-muted-foreground">Internal users attached to at least one client</p>
             </CardContent>
           </Card>
@@ -541,7 +615,14 @@ export default function AdminTeamPage() {
           <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <CardTitle className="text-lg">Team directory</CardTitle>
-              <CardDescription>Search internal teammates, manage permissions, and review their current client allocation load.</CardDescription>
+              <CardDescription>
+                Search internal teammates, manage permissions, and review their current client allocation load.
+                {!loading && internalUsers.length > 0 ? (
+                  <span className="mt-1 block text-xs text-muted-foreground/90">
+                    Showing {filteredUsers.length} of {internalUsers.length}
+                  </span>
+                ) : null}
+              </CardDescription>
             </div>
             <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-center">
               <Input
@@ -549,6 +630,7 @@ export default function AdminTeamPage() {
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="lg:w-64"
+                aria-label="Search team by name or email"
               />
               <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                 <SelectTrigger className="lg:w-40">
@@ -577,7 +659,19 @@ export default function AdminTeamPage() {
               </Select>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {error ? (
+              <Alert variant="destructive">
+                <CircleAlert className="h-4 w-4" />
+                <AlertTitle>Last action failed</AlertTitle>
+                <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span>{error}</span>
+                  <Button type="button" size="sm" variant="outline" onClick={handleDismissError}>
+                    Dismiss
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
             <div className="overflow-x-auto rounded-md border border-muted/40">
               <table className="min-w-full table-fixed text-left text-sm">
                 <caption className="sr-only">Team members, roles, and client allocation</caption>
@@ -597,11 +691,28 @@ export default function AdminTeamPage() {
                   {filteredUsers.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
-                        {loading
-                          ? 'Loading team…'
-                          : error
-                          ? `Unable to load teammates: ${error}`
-                          : 'No teammates match the current filters.'}
+                        {loading ? (
+                          'Loading team…'
+                        ) : error && internalUsers.length === 0 ? (
+                          `Unable to load teammates: ${error}`
+                        ) : !loading && internalUsers.length === 0 ? (
+                          <span className="inline-flex flex-col items-center gap-3">
+                            <span>No internal teammates in this workspace yet.</span>
+                            <Button type="button" size="sm" variant="outline" onClick={handleOpenInviteDialog}>
+                              <UserPlus className="mr-2 h-4 w-4" />
+                              Invite teammate
+                            </Button>
+                          </span>
+                        ) : hasActiveFilters ? (
+                          <span className="inline-flex flex-col items-center gap-3">
+                            <span>No teammates match current search or filters.</span>
+                            <Button type="button" size="sm" variant="outline" onClick={handleClearFilters}>
+                              Clear filters
+                            </Button>
+                          </span>
+                        ) : (
+                          'No teammates match the current filters.'
+                        )}
                       </td>
                     </tr>
                   ) : (
@@ -649,7 +760,7 @@ export default function AdminTeamPage() {
                           </td>
                           <td className="py-3 pr-3 align-middle">
                             <Badge variant={statusToVariant(record.status)} className="capitalize">
-                              {record.status.replace('_', ' ')}
+                              {record.status.replace(/_/g, ' ')}
                             </Badge>
                           </td>
                           <td className="py-3 pr-3 align-middle text-xs text-muted-foreground">

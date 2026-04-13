@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, type ChangeEvent, type KeyboardEvent } from 'react'
+import { useCallback, type ChangeEvent, type KeyboardEvent, type RefObject } from 'react'
 import Link from 'next/link'
 import { Download, LoaderCircle, MessageSquare, Search, X } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
@@ -83,6 +83,7 @@ export interface MessageSearchBarProps {
   isActive: boolean
   placeholder?: string
   onClear?: () => void
+  inputRef?: RefObject<HTMLInputElement | null>
 }
 
 export function MessageSearchBar({
@@ -92,6 +93,7 @@ export function MessageSearchBar({
   isActive,
   placeholder = 'Search messages…',
   onClear,
+  inputRef,
 }: MessageSearchBarProps) {
   const showClear = Boolean(value.trim() && onClear)
 
@@ -110,13 +112,27 @@ export function MessageSearchBar({
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          ref={inputRef}
           value={value}
           onChange={onChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className={cn('pl-9', showClear && isActive ? 'pr-32' : showClear ? 'pr-24' : isActive ? 'pr-20' : 'pr-3')}
+          className={cn(
+            'pl-9',
+            showClear && isActive ? 'pr-32' : showClear ? 'pr-24' : isActive ? 'pr-20' : 'pr-12',
+          )}
           aria-label={placeholder}
         />
+        {!showClear ? (
+          <span
+            className={cn(
+              'pointer-events-none absolute top-1/2 hidden -translate-y-1/2 select-none rounded border border-muted/60 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline',
+              isActive ? 'right-11' : 'right-2',
+            )}
+          >
+            /
+          </span>
+        ) : null}
         {showClear ? (
           <Button
             type="button"

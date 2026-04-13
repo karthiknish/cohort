@@ -54,6 +54,7 @@ import type * as agentActions_operations_clients from "../agentActions/operation
 import type * as agentActions_operations_clients_index from "../agentActions/operations/clients/index.js";
 import type * as agentActions_operations_messaging from "../agentActions/operations/messaging.js";
 import type * as agentActions_operations_messaging_index from "../agentActions/operations/messaging/index.js";
+import type * as agentActions_operations_notifications_index from "../agentActions/operations/notifications/index.js";
 import type * as agentActions_operations_projects from "../agentActions/operations/projects.js";
 import type * as agentActions_operations_projects_index from "../agentActions/operations/projects/index.js";
 import type * as agentActions_operations_proposals from "../agentActions/operations/proposals.js";
@@ -186,6 +187,7 @@ declare const fullApi: ApiFromModules<{
   "agentActions/operations/clients/index": typeof agentActions_operations_clients_index;
   "agentActions/operations/messaging": typeof agentActions_operations_messaging;
   "agentActions/operations/messaging/index": typeof agentActions_operations_messaging_index;
+  "agentActions/operations/notifications/index": typeof agentActions_operations_notifications_index;
   "agentActions/operations/projects": typeof agentActions_operations_projects;
   "agentActions/operations/projects/index": typeof agentActions_operations_projects_index;
   "agentActions/operations/proposals": typeof agentActions_operations_proposals;

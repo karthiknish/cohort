@@ -163,6 +163,83 @@ export const taskOperationHandlers: Record<string, OperationHandler> = {
     }
   },
 
+  async summarizeMyTasks(ctx, input) {
+    const mode = asNonEmptyString(input.params.mode)?.toLowerCase() === 'summary' ? 'summary' : 'list'
+
+    const rawTasks = await ctx.runQuery(api.tasks.listForUser, {
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+    })
+
+    const tasks = extractClientTaskRecords(rawTasks)
+    const nowMs = Date.now()
+    const dueSoonCutoffMs = nowMs + 3 * 24 * 60 * 60 * 1000
+    const openTasks = tasks.filter((task) => !isCompletedTaskStatus(task.status))
+    const completedTasks = tasks.length - openTasks.length
+    const overdueTasks = openTasks.filter((task) => typeof task.dueDateMs === 'number' && task.dueDateMs < nowMs).length
+    const dueSoonTasks = openTasks.filter((task) => typeof task.dueDateMs === 'number' && task.dueDateMs >= nowMs && task.dueDateMs <= dueSoonCutoffMs).length
+    const highPriorityTasks = openTasks.filter((task) => {
+      const normalized = task.priority.toLowerCase()
+      return normalized === 'high' || normalized === 'urgent'
+    }).length
+
+    const statusBreakdown = Array.from(tasks.reduce<Map<string, number>>((acc, task) => {
+      const status = task.status.trim().toLowerCase() || 'unknown'
+      acc.set(status, (acc.get(status) ?? 0) + 1)
+      return acc
+    }, new Map()))
+      .map(([status, count]) => ({ status, count }))
+      .sort((left, right) => right.count - left.count)
+
+    const listedTasks = tasks.slice(0, 10).map((task) => ({
+      taskId: task.legacyId,
+      title: task.title,
+      status: formatTaskStatusLabel(task.status),
+      priority: formatTaskPriorityLabel(task.priority),
+      dueDate: formatTaskDate(task.dueDateMs),
+      assignedTo: task.assignedTo ?? [],
+    }))
+
+    if (tasks.length === 0) {
+      return {
+        success: true,
+        data: {
+          scope: 'workspace_user',
+          totalTasks: 0,
+          openTasks: 0,
+          completedTasks: 0,
+          overdueTasks: 0,
+          dueSoonTasks: 0,
+          highPriorityTasks: 0,
+          statusBreakdown: [],
+          tasks: [],
+        },
+        userMessage: 'No tasks assigned to you (or unassigned) in this workspace right now.',
+        route: '/dashboard/tasks',
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        scope: 'workspace_user',
+        mode,
+        totalTasks: tasks.length,
+        openTasks: openTasks.length,
+        completedTasks,
+        overdueTasks,
+        dueSoonTasks,
+        highPriorityTasks,
+        statusBreakdown,
+        tasks: listedTasks,
+      },
+      userMessage: mode === 'summary'
+        ? `Your workspace task summary: ${openTasks.length} open, ${completedTasks} completed, ${overdueTasks} overdue.`
+        : `You have ${tasks.length} relevant task${tasks.length === 1 ? '' : 's'} (assigned to you or unassigned).`,
+      route: '/dashboard/tasks',
+    }
+  },
+
   async createTask(ctx, input) {
     const title = asNonEmptyString(input.params.title)
 

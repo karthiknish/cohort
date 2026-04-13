@@ -429,8 +429,33 @@ export function getPreviewAgentModeResponse(input: string, context: PreviewAgent
         }
     }
 
+    if (normalized.includes('open for you') || normalized.includes('my feed') || normalized.includes('personalized digest')) {
+        return {
+            action: 'navigate',
+            route: '/for-you',
+            message: 'Opening For You.',
+        }
+    }
+
+    if (normalized.includes('time off') || normalized.includes('pto')) {
+        return {
+            action: 'navigate',
+            route: '/dashboard/time-off',
+            message: 'Opening Time off.',
+        }
+    }
+
+    if (normalized.includes('proposal analytics') || normalized.includes('proposal win rate')) {
+        return {
+            action: 'navigate',
+            route: '/dashboard/proposals/analytics',
+            message: 'Opening Proposal analytics.',
+        }
+    }
+
     return {
         action: 'response',
-        message: 'Sample agent mode is active. Try “Schedule a meeting”, “Create project Website Refresh”, “Update this project status to active”, “How are my Meta ads doing this week?”, “Generate weekly report”, or “Show my Tasks”.',
+        message:
+            'Sample agent mode is active. Try “Schedule a meeting”, “Create project Website Refresh”, “Update this project status to active”, “How are my Meta ads doing this week?”, “Generate weekly report”, “Show my Tasks”, “Open For You”, “Time off”, or “Proposal analytics”.',
     }
 }

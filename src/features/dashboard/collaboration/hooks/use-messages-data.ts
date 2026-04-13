@@ -66,6 +66,7 @@ export function useMessagesData({
   const [channelListRetryNonce, setChannelListRetryNonce] = useState(0)
   const [messageInput, setMessageInputState] = useState('')
   const [sending, setSending] = useState(false)
+  const [markChannelReadPending, setMarkChannelReadPending] = useState(false)
   const [messageSearchQuery, setMessageSearchQuery] = useState('')
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
@@ -368,34 +369,14 @@ export function useMessagesData({
     [handleToggleReactionBase]
   )
 
-  const handleMarkSelectedChannelAsRead = useCallback(async () => {
-    if (!currentUserId || !selectedChannel || (!isPreviewMode && !workspaceId)) {
-      return
-    }
+  const handleMarkSelectedChannelAsRead = useCallback(
+    async (options?: { force?: boolean }): Promise<boolean> => {
+      const force = Boolean(options?.force)
+      if (!currentUserId || !selectedChannel || (!isPreviewMode && !workspaceId)) {
+        return false
+      }
 
-    const latestUnread = [...channelMessages]
-      .reverse()
-      .find((message) => {
-        if (message.isDeleted) return false
-        if (message.senderId === currentUserId) return false
-
-        const readBy = Array.isArray(message.readBy) ? message.readBy : []
-        return !readBy.includes(currentUserId)
-      })
-
-    if (!latestUnread) {
-      return
-    }
-
-    const alreadyMarked = lastMarkedMessageByChannelRef.current[selectedChannel.id]
-    if (alreadyMarked === latestUnread.id) {
-      return
-    }
-
-    const createdAtMs = latestUnread.createdAt ? Date.parse(latestUnread.createdAt) : NaN
-
-    try {
-      if (isPreviewMode) {
+      const markPreviewLoadedMessagesRead = () => {
         mutateChannelMessages(selectedChannel.id, (messages) =>
           messages.map((message) => {
             if (message.isDeleted || message.senderId === currentUserId) {
@@ -411,27 +392,106 @@ export function useMessagesData({
               ...message,
               readBy: [...readBy, currentUserId],
             }
-          })
+          }),
         )
-        lastMarkedMessageByChannelRef.current[selectedChannel.id] = latestUnread.id
-        return
       }
 
-      await markChannelAsRead({
-        workspaceId: String(workspaceId),
-        channelId: selectedChannel.isCustom ? selectedChannel.id : null,
-        channelType: selectedChannel.type,
-        clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
-        projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
-        userId: String(currentUserId),
-        beforeMs: Number.isFinite(createdAtMs) ? createdAtMs : undefined,
-      })
+      const latestUnread = [...channelMessages]
+        .reverse()
+        .find((message) => {
+          if (message.isDeleted) return false
+          if (message.senderId === currentUserId) return false
 
-      lastMarkedMessageByChannelRef.current[selectedChannel.id] = latestUnread.id
+          const readBy = Array.isArray(message.readBy) ? message.readBy : []
+          return !readBy.includes(currentUserId)
+        })
+
+      if (!latestUnread) {
+        if (!force) {
+          return false
+        }
+
+        try {
+          if (isPreviewMode) {
+            markPreviewLoadedMessagesRead()
+            lastMarkedMessageByChannelRef.current[selectedChannel.id] = '__all__'
+            return true
+          }
+
+          await markChannelAsRead({
+            workspaceId: String(workspaceId),
+            channelId: selectedChannel.isCustom ? selectedChannel.id : null,
+            channelType: selectedChannel.type,
+            clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
+            projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
+            userId: String(currentUserId),
+          })
+          lastMarkedMessageByChannelRef.current[selectedChannel.id] = '__all__'
+          return true
+        } catch (error) {
+          logError(error, 'useCollaborationData:handleMarkSelectedChannelAsRead')
+          if (force) {
+            throw error
+          }
+          return false
+        }
+      }
+
+      const alreadyMarked = lastMarkedMessageByChannelRef.current[selectedChannel.id]
+      if (!force && alreadyMarked === latestUnread.id) {
+        return false
+      }
+
+      const createdAtMs = latestUnread.createdAt ? Date.parse(latestUnread.createdAt) : NaN
+
+      try {
+        if (isPreviewMode) {
+          markPreviewLoadedMessagesRead()
+          lastMarkedMessageByChannelRef.current[selectedChannel.id] = latestUnread.id
+          return true
+        }
+
+        await markChannelAsRead({
+          workspaceId: String(workspaceId),
+          channelId: selectedChannel.isCustom ? selectedChannel.id : null,
+          channelType: selectedChannel.type,
+          clientId: selectedChannel.type === 'client' ? (selectedChannel.clientId ?? null) : null,
+          projectId: selectedChannel.type === 'project' ? (selectedChannel.projectId ?? null) : null,
+          userId: String(currentUserId),
+          beforeMs: Number.isFinite(createdAtMs) ? createdAtMs : undefined,
+        })
+
+        lastMarkedMessageByChannelRef.current[selectedChannel.id] = latestUnread.id
+        return true
+      } catch (error) {
+        logError(error, 'useCollaborationData:handleMarkSelectedChannelAsRead')
+        if (force) {
+          throw error
+        }
+        return false
+      }
+    },
+    [channelMessages, currentUserId, isPreviewMode, markChannelAsRead, mutateChannelMessages, selectedChannel, workspaceId],
+  )
+
+  const markChannelRead = useCallback(async () => {
+    setMarkChannelReadPending(true)
+    try {
+      const didMark = await handleMarkSelectedChannelAsRead({ force: true })
+      if (didMark) {
+        toast({ title: 'Marked as read', description: 'Channel read state updated for you.' })
+      }
     } catch (error) {
-      logError(error, 'useCollaborationData:handleMarkSelectedChannelAsRead')
+      logError(error, 'useMessagesData:markChannelRead')
+      toast({
+        title: 'Could not mark read',
+        description: asErrorMessage(error),
+        variant: 'destructive',
+      })
+    } finally {
+      setMarkChannelReadPending(false)
     }
-  }, [channelMessages, currentUserId, isPreviewMode, markChannelAsRead, mutateChannelMessages, selectedChannel, workspaceId])
+  }, [handleMarkSelectedChannelAsRead, toast])
 
   const handleMarkThreadAsRead = useCallback(
     async (threadRootId: string, beforeMs?: number) => {
@@ -933,5 +993,7 @@ export function useMessagesData({
     clearThreadReplies,
     reactionPendingByMessage: reactionUpdatingByMessage,
     channelUnreadCounts,
+    markChannelRead,
+    markChannelReadPending,
   }
 }

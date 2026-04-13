@@ -85,6 +85,10 @@ const NavItemLink = forwardRef<
     prefetchRoute(item.href)
   }, [onMouseEnter, prefetchRoute, item.href])
 
+  const handlePointerDown = useCallback(() => {
+    prefetchRoute(item.href)
+  }, [prefetchRoute, item.href])
+
   const handleClick = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
     onClick?.(event)
 
@@ -97,8 +101,10 @@ const NavItemLink = forwardRef<
     <Link
       ref={ref}
       href={item.href}
+      prefetch
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
+      onPointerDown={handlePointerDown}
       className={linkClasses}
       aria-label={collapsed ? item.name : undefined}
       title={collapsed ? item.name : undefined}

@@ -97,6 +97,7 @@ function NotificationMenuItem({
 type NotificationsCursor = {
   createdAtMs: number
   legacyId: string
+  scanCursor?: string | null
 }
 
 type AckAction = 'read' | 'dismiss'
@@ -173,7 +174,12 @@ export function NotificationsDropdown() {
 
       setAckInFlight(true)
 
-      return ackNotifications({ workspaceId, ids, action })
+      return ackNotifications({
+        workspaceId,
+        ids,
+        action,
+        ...(user?.role === 'client' && selectedClientId ? { clientId: selectedClientId } : {}),
+      })
         .then(() => notificationsInfiniteQuery.refetch())
         .then(() => {
           if (!options.silent) {
@@ -188,7 +194,7 @@ export function NotificationsDropdown() {
           setAckInFlight(false)
         })
     },
-    [ackNotifications, notificationsInfiniteQuery, toast, workspaceId]
+    [ackNotifications, notificationsInfiniteQuery, selectedClientId, toast, user?.role, workspaceId]
   )
 
   const handleOpenChange = useCallback(

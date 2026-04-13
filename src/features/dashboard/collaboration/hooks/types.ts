@@ -127,6 +127,10 @@ export interface UseCollaborationDataReturn {
   markThreadAsRead: (threadRootId: string, beforeMs?: number) => Promise<void>
   clearThreadReplies: (threadRootId?: string) => void
 
+  /** Explicit “mark channel read” (sidebar badge); stronger than auto-read debounce. */
+  markChannelRead: () => Promise<void>
+  markChannelReadPending: boolean
+
   // Reactions
   reactionPendingByMessage: ReactionPendingState
 

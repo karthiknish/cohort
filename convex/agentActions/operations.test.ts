@@ -134,6 +134,116 @@ describe('safeExecuteOperation', () => {
     })
   })
 
+  it('summarizes workspace tasks for the current user via listForUser', async () => {
+    const nowMs = Date.now()
+    const runQuery = vi.fn().mockResolvedValueOnce([
+      {
+        legacyId: 'task_u1',
+        title: 'Follow up brief',
+        status: 'todo',
+        priority: 'medium',
+        assignedTo: ['user_1'],
+        client: 'Acme',
+        clientId: 'c1',
+        projectId: null,
+        projectName: null,
+        dueDateMs: null,
+        attachments: [],
+        createdAtMs: nowMs,
+        updatedAtMs: nowMs,
+        deletedAtMs: null,
+      },
+    ])
+
+    const result = await safeExecuteOperation(
+      { runQuery, runMutation: vi.fn() } as never,
+      {
+        workspaceId: 'ws_1',
+        userId: 'user_1',
+        conversationId: 'agent_conv_1',
+        operation: 'summarizeMyTasks',
+        params: { mode: 'summary' },
+        rawMessage: 'summarize my tasks',
+      },
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.route).toBe('/dashboard/tasks')
+    expect(runQuery).toHaveBeenCalledWith(expect.anything(), {
+      workspaceId: 'ws_1',
+      userId: 'user_1',
+    })
+    expect(result.data).toMatchObject({
+      scope: 'workspace_user',
+      openTasks: 1,
+      totalTasks: 1,
+    })
+  })
+
+  it('marks all unread notifications read in batches', async () => {
+    const runQuery = vi
+      .fn()
+      .mockResolvedValueOnce({
+        notifications: [{ id: 'n1' }, { id: 'n2' }],
+        nextCursor: null,
+      })
+
+    const runMutation = vi.fn().mockResolvedValue({ ok: true })
+
+    const result = await safeExecuteOperation(
+      { runQuery, runMutation } as never,
+      {
+        workspaceId: 'ws_1',
+        userId: 'user_1',
+        conversationId: 'agent_conv_1',
+        operation: 'markAllNotificationsRead',
+        params: {},
+        rawMessage: 'mark all notifications read',
+      },
+    )
+
+    expect(result).toMatchObject({
+      success: true,
+      route: '/dashboard/notifications',
+      userMessage: 'Marked 2 notifications as read.',
+      data: { marked: 2 },
+    })
+    expect(runMutation).toHaveBeenCalledWith(expect.anything(), {
+      workspaceId: 'ws_1',
+      ids: ['n1', 'n2'],
+      action: 'read',
+    })
+  })
+
+  it('lists workspace clients with optional name filter', async () => {
+    const runQuery = vi.fn().mockResolvedValueOnce({
+      items: [
+        { legacyId: 'c_a', name: 'Alpha Co', workspaceId: 'ws_1' },
+        { legacyId: 'c_b', name: 'Beta LLC', workspaceId: 'ws_1' },
+      ],
+      nextCursor: null,
+    })
+
+    const result = await safeExecuteOperation(
+      { runQuery, runMutation: vi.fn() } as never,
+      {
+        workspaceId: 'ws_1',
+        userId: 'user_1',
+        conversationId: 'agent_conv_1',
+        operation: 'listWorkspaceClients',
+        params: { query: 'alpha' },
+        rawMessage: 'list clients named alpha',
+      },
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.route).toBe('/dashboard/clients')
+    expect(result.data).toEqual({
+      total: 1,
+      clients: [{ clientId: 'c_a', name: 'Alpha Co' }],
+    })
+  })
+
   it('uses the matched client workspace when the visible client belongs to another workspace', async () => {
     const runQuery = vi
       .fn()

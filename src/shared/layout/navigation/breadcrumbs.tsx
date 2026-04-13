@@ -73,7 +73,7 @@ export function NavigationBreadcrumbs() {
               <BreadcrumbItem>
                 {item.href && !item.isCurrent ? (
                   <BreadcrumbLink asChild>
-                    <Link href={item.href} className="flex items-center gap-1 text-sm">
+                    <Link prefetch href={item.href} className="flex items-center gap-1 text-sm">
                       {item.icon && (() => {
                         const Icon = item.icon
                         return <Icon className="h-4 w-4" />
@@ -138,7 +138,7 @@ export function NavigationBreadcrumbs() {
             {items.map((item) => (
               <DropdownMenuItem key={`${item.label}-${item.href ?? 'current'}`} asChild>
                 {item.href && !item.isCurrent ? (
-                  <Link href={item.href} className="flex items-center gap-2">
+                  <Link prefetch href={item.href} className="flex items-center gap-2">
                     {item.icon && (() => {
                       const Icon = item.icon
                       return <Icon className="h-4 w-4" />

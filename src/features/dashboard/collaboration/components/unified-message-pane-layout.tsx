@@ -1,6 +1,6 @@
 'use client'
 
-import { createElement, useCallback } from 'react'
+import { createElement, useCallback, useEffect, useRef } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, ReactNode, RefObject } from 'react'
 import { Send } from 'lucide-react'
 
@@ -143,6 +143,36 @@ export function UnifiedMessagePaneConversationLayout({
     onMessageSearchChange?.('')
   }, [onMessageSearchChange])
 
+  const messageSearchInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!canSearchMessages || !onMessageSearchChange) {
+      return
+    }
+
+    const onGlobalKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== '/' && event.code !== 'Slash') {
+        return
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return
+      }
+
+      const target = event.target as HTMLElement | null
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) {
+        return
+      }
+
+      event.preventDefault()
+      messageSearchInputRef.current?.focus()
+      messageSearchInputRef.current?.select()
+    }
+
+    window.addEventListener('keydown', onGlobalKeyDown)
+    return () => window.removeEventListener('keydown', onGlobalKeyDown)
+  }, [canSearchMessages, onMessageSearchChange])
+
   const handleAttachClick = useCallback(() => {
     fileInputRef.current?.click()
   }, [fileInputRef])
@@ -169,6 +199,7 @@ export function UnifiedMessagePaneConversationLayout({
 
       {canSearchMessages && onMessageSearchChange ? (
         <MessageSearchBar
+          inputRef={messageSearchInputRef}
           value={messageSearchQuery}
           onChange={handleMessageSearchChange}
           resultCount={messages.length}

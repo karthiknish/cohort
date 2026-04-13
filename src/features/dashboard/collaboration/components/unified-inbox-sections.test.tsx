@@ -41,6 +41,8 @@ import {
   type UnifiedItem,
 } from './unified-inbox-sections'
 
+const noopMarkChannelRead = vi.fn(async () => {})
+
 const channel: Channel = {
   id: 'team-agency',
   name: 'team-agency',
@@ -231,6 +233,9 @@ describe('unified inbox sections', () => {
           uploading={false}
           messagesError={null}
           onRetryMessages={vi.fn()}
+          channelUnreadCount={0}
+          onMarkChannelRead={noopMarkChannelRead}
+          markChannelReadPending={false}
         />
         <DirectMessageConversationPane
           currentUserId="user-1"
@@ -321,6 +326,9 @@ describe('unified inbox sections', () => {
         uploading={false}
         messagesError={null}
         onRetryMessages={vi.fn()}
+        channelUnreadCount={0}
+        onMarkChannelRead={noopMarkChannelRead}
+        markChannelReadPending={false}
       />,
     )
 

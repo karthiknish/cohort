@@ -23,6 +23,7 @@ import { useConvex, useMutation } from 'convex/react'
 type NotificationsCursor = {
   createdAtMs: number
   legacyId: string
+  scanCursor?: string | null
 }
 
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -184,6 +185,7 @@ function NotificationsPageContent() {
         unread: activeFilter === 'unread' ? true : undefined,
         afterCreatedAtMs: pageParam?.createdAtMs,
         afterLegacyId: pageParam?.legacyId,
+        scanCursor: pageParam?.scanCursor ?? undefined,
       })
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
@@ -262,7 +264,12 @@ function NotificationsPageContent() {
 
       setAckInFlight(true)
 
-      return ackNotifications({ workspaceId, ids, action })
+      return ackNotifications({
+        workspaceId,
+        ids,
+        action,
+        ...(user?.role === 'client' && selectedClientId ? { clientId: selectedClientId } : {}),
+      })
         .then(() => notificationsInfiniteQuery.refetch())
         .then(() => {
           toast({
@@ -279,7 +286,7 @@ function NotificationsPageContent() {
           setAckInFlight(false)
         })
     },
-    [ackNotifications, basePreviewNotifications, isPreviewMode, notificationsInfiniteQuery, previewSourceKey, toast, workspaceId]
+    [ackNotifications, basePreviewNotifications, isPreviewMode, notificationsInfiniteQuery, previewSourceKey, selectedClientId, toast, user?.role, workspaceId]
   )
 
   const handleRefresh = useCallback(() => {

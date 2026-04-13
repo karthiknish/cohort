@@ -90,6 +90,9 @@ const baseProps = {
     deepLinkThreadId: null,
     messagesError: null,
     onRetryMessages: () => {},
+    channelUnreadCount: 0,
+    onMarkChannelRead: async () => {},
+    markChannelReadPending: false,
   },
   directMessagePane: {
     selectedDM: null,

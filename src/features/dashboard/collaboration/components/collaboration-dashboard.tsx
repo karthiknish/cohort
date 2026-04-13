@@ -92,6 +92,10 @@ function createUnifiedInboxChannelPaneProps(
     deepLinkThreadId: requestedThreadId,
     messagesError: collab.messagesError,
     onRetryMessages: collab.retryMessagesError,
+    channelUnreadCount:
+      collab.selectedChannel != null ? (collab.channelUnreadCounts[collab.selectedChannel.id] ?? 0) : 0,
+    onMarkChannelRead: collab.markChannelRead,
+    markChannelReadPending: collab.markChannelReadPending,
   }
 }
 

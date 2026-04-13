@@ -323,6 +323,9 @@ export type ChannelConversationPaneProps = {
   uploading: boolean
   messagesError: string | null
   onRetryMessages: () => void
+  channelUnreadCount: number
+  onMarkChannelRead: () => Promise<void>
+  markChannelReadPending: boolean
 }
 
 function hasRequestedDeepLinkTarget(
@@ -404,6 +407,9 @@ export function ChannelConversationPane({
   uploading,
   messagesError,
   onRetryMessages,
+  channelUnreadCount,
+  onMarkChannelRead,
+  markChannelReadPending,
 }: ChannelConversationPaneProps) {
   const showMissingDeepLinkNotice =
     (Boolean(deepLinkMessageId?.trim()) || Boolean(deepLinkThreadId?.trim())) &&
@@ -419,8 +425,18 @@ export function ChannelConversationPane({
       participantCount: channelParticipants.length,
       messageCount: channelMessages.length,
       buildShareableUrl: () => buildCollaborationChannelShareUrl(selectedChannel),
+      channelUnreadCount,
+      onMarkChannelRead,
+      markChannelReadPending,
     }),
-    [channelParticipants.length, channelMessages.length, selectedChannel],
+    [
+      channelParticipants.length,
+      channelMessages.length,
+      selectedChannel,
+      channelUnreadCount,
+      onMarkChannelRead,
+      markChannelReadPending,
+    ],
   )
 
   const missingDeepLinkBanner = useMemo(() => {
