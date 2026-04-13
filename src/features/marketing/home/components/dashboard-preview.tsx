@@ -11,8 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
-import { ViewTransition } from 'react'
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, ViewTransition, type MouseEvent } from 'react'
 
 import { cn } from '@/lib/utils'
 

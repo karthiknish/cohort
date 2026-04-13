@@ -5,8 +5,10 @@
  * All financial types encode currency comparability so UI can make safe display decisions.
  */
 
+import type { CurrencySource, FinancialComparability, MoneyValue } from './money'
+
 export type { CanonicalAdsProviderId } from './provider'
-export type { MoneyValue, FinancialComparability, CurrencySource } from './money'
+export type { CurrencySource, FinancialComparability, MoneyValue }
 
 // =============================================================================
 // SURFACE / PLACEMENT
@@ -22,8 +24,6 @@ export type SurfaceId = string
 // =============================================================================
 // METRIC
 // =============================================================================
-
-import type { CurrencySource } from './money'
 
 /**
  * A fully-resolved ad metric row with canonical provider, account, currency, and surface identity.
@@ -60,8 +60,6 @@ export type DeliveryTotals = {
   clicks: number
   conversions: number
 }
-
-import type { FinancialComparability } from './money'
 
 /**
  * Currency-aware financial totals.

@@ -1,10 +1,9 @@
 'use client'
 
-import { useMemo } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowLeft, Download, LoaderCircle, Presentation, Target, Layers, BarChart3, Rocket, Users, Lightbulb, Wallet, Calendar, Sparkles, Clock } from 'lucide-react'
-import { ViewTransition } from 'react'
+import { useMemo, ViewTransition } from 'react'
 
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'

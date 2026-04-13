@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useQuery } from 'convex/react'
-import { useConvexAuth } from 'convex/react'
+import { useConvexAuth, useQuery } from 'convex/react'
 import { ArrowUpRight, CheckSquare, Clock } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'

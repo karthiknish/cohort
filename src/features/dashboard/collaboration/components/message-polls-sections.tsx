@@ -188,7 +188,7 @@ export function PollCardFooterActions({
 }
 
 export function CreatePollDialogTrigger({ trigger }: { trigger?: ReactNode }) {
-  if (trigger) return <>{trigger}</>
+  if (trigger) return trigger
 
   return (
     <DialogTrigger asChild>

@@ -4,8 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Badge } from '@/shared/ui/badge'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { TrendingUp, TrendingDown, Minus, ArrowRight } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 
 export interface ComparisonMetric {
   label: string

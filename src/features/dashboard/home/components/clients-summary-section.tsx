@@ -2,8 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useMemo } from 'react'
-import { useQuery } from 'convex/react'
-import { useConvexAuth } from 'convex/react'
+import { useConvexAuth, useQuery } from 'convex/react'
 import {
   ArrowUpRight,
   Briefcase,

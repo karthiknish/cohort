@@ -50,7 +50,7 @@ vi.mock('@/shared/ui/state-wrapper', () => ({
   }) => {
     if (isLoading) return <div>Loading table</div>
     if (isEmpty) return <div>{emptyTitle}</div>
-    return <>{children}</>
+    return children
   },
 }))
 

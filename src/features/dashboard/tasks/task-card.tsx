@@ -1,7 +1,6 @@
 'use client'
 
-import { memo } from 'react'
-import { ViewTransition } from 'react'
+import { memo, ViewTransition } from 'react'
 
 import type { TaskRecord, TaskStatus } from '@/types/tasks'
 import { cn } from '@/lib/utils'

@@ -224,8 +224,7 @@ function ClientAiSummaryCardBody({
   }, [generateSummary, manualRefreshToken, summarySnapshot, waitingForData])
 
   return (
-    <>
-      {waitingForData && !state.summary ? (
+      waitingForData && !state.summary ? (
         <div className="space-y-3">
           <Skeleton className="h-5 w-2/3" />
           <Skeleton className="h-4 w-full" />
@@ -276,8 +275,7 @@ function ClientAiSummaryCardBody({
         <div className="rounded-lg border border-dashed border-muted/60 bg-muted/10 p-4 text-sm text-muted-foreground">
           Summary will appear once the dashboard snapshot is ready.
         </div>
-      )}
-    </>
+      )
   )
 }
 

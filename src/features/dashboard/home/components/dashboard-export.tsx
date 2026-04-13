@@ -420,7 +420,7 @@ export function ScheduledExportDialog({
   const handleSchedule = useCallback(() => {
     const recipients: string[] = []
     setIsScheduling(true)
-    Promise.resolve()
+    void Promise.resolve()
       .then(() => {
         onSchedule?.({ format, frequency, recipients })
         toast({

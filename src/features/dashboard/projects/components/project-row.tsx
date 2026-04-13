@@ -1,8 +1,7 @@
 'use client'
 
-import { memo, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { ViewTransition } from 'react'
+import { memo, useCallback, useMemo, ViewTransition } from 'react'
 import {
   Calendar,
   ListChecks,

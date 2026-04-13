@@ -1,9 +1,8 @@
 'use client'
 
-import { Fragment, type ReactNode, useCallback } from 'react'
+import { type ReactNode, useCallback, ViewTransition } from 'react'
 import { Clock, Download, ExternalLink, FileText, Layout, LoaderCircle, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import Link from 'next/link'
-import { ViewTransition } from 'react'
 
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
@@ -22,7 +21,7 @@ function MaybeViewTransition({
   share: string
 }) {
   if (typeof ViewTransition !== 'function') {
-    return <Fragment>{children}</Fragment>
+    return children
   }
 
   return (

@@ -1,8 +1,7 @@
 'use client'
 
-import { memo, useCallback } from 'react'
 import Link from 'next/link'
-import { ViewTransition } from 'react'
+import { memo, useCallback, ViewTransition } from 'react'
 import {
   Calendar,
   FolderKanban,

@@ -7,9 +7,11 @@ import { coerceNumber } from './client'
 import { tiktokAdsClient } from '@/services/integrations/shared/base-client'
 import { TikTokApiError } from './errors'
 import type {
-  TikTokCampaign,
   TikTokAdMetric,
   TikTokApiErrorResponse,
+  TikTokAudienceTargeting,
+  TikTokCampaign,
+  TikTokCreative,
   TikTokReportResponse,
 } from './types'
 
@@ -313,8 +315,6 @@ export async function fetchTikTokAdMetrics(options: {
 // FETCH CREATIVES
 // =============================================================================
 
-import type { TikTokCreative } from './types'
-
 export async function fetchTikTokCreatives(options: {
   accessToken: string
   advertiserId: string
@@ -420,8 +420,6 @@ export async function fetchTikTokCreatives(options: {
 // =============================================================================
 // FETCH AUDIENCE TARGETING
 // =============================================================================
-
-import type { TikTokAudienceTargeting } from './types'
 
 export async function fetchTikTokAudienceTargeting(options: {
   accessToken: string

@@ -23,7 +23,28 @@
     "lineWidth": 100
   },
   "linter": {
-    "enabled": false
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "complexity": {
+        "noBannedTypes": "warn",
+        "noUselessFragments": "warn"
+      },
+      "correctness": {
+        "noUnusedImports": "warn",
+        "noUnusedVariables": "warn"
+      },
+      "suspicious": {
+        "noDoubleEquals": "warn",
+        "noExplicitAny": "warn",
+        "noDebugger": "error",
+        "noVar": "warn"
+      },
+      "style": {
+        "useConst": "warn",
+        "useImportType": "warn"
+      }
+    }
   },
   "javascript": {
     "formatter": {

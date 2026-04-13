@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Calendar, Clock4, User } from 'lucide-react'
 
 import type { TaskRecord } from '@/types/tasks'

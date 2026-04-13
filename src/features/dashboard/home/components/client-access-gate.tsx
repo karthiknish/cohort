@@ -27,7 +27,7 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
 
   // In preview mode, bypass all access gates and show children directly
   if (isPreviewMode) {
-    return <>{children}</>
+    return children
   }
 
   if (loading && clients.length === 0) {
@@ -105,5 +105,5 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
     )
   }
 
-  return <>{children}</>
+  return children
 }

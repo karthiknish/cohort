@@ -1,9 +1,8 @@
 'use client'
 
-import React, { memo } from 'react'
 import Link from 'next/link'
 import { FileText, ArrowRight, Clock } from 'lucide-react'
-import { ViewTransition } from 'react'
+import React, { memo, ViewTransition } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'

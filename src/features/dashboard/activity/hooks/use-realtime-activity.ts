@@ -1,13 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useQuery, useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
-import { api } from '@/lib/convex-api'
-import { notificationsApi } from '@/lib/convex-api'
+import { api, notificationsApi } from '@/lib/convex-api'
 
 import { getPreviewActivity } from '@/lib/preview-data'
 import type { Activity } from '@/types/activity'

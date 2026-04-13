@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { usePreview } from '@/shared/contexts/preview-context'

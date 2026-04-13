@@ -1,8 +1,7 @@
 import { getPreviewClients } from './clients'
 import { getPreviewCollaborationParticipants } from './collaboration'
 import { getPreviewAdsMetrics, getPreviewCampaigns } from './ads'
-import { getPreviewProjects, getPreviewTasks } from './projects'
-import { getPreviewProposals } from './projects'
+import { getPreviewProjects, getPreviewProposals, getPreviewTasks } from './projects'
 import { withPreviewModeSearchParam } from './utils'
 import { getPreviewMeetingWorkspaceMembers } from '@/features/dashboard/meetings/lib/preview-data'
 

@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useConvex, useMutation, useQuery } from 'convex/react'
-import { useRef } from 'react'
 
 import { usePreview } from '@/shared/contexts/preview-context'
 import { api, directMessagesApi } from '@/lib/convex-api'

@@ -1,8 +1,7 @@
 'use client'
 
-import { useCallback } from 'react'
 import { Search, Plus, MessageCircle, Archive, BellOff } from 'lucide-react'
-import { useState, useMemo, type ChangeEvent } from 'react'
+import { useCallback, useMemo, useState, type ChangeEvent } from 'react'
 
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'

@@ -90,7 +90,7 @@ export function LoadingContent({
       </>
     )
   }
-  return <>{children}</>
+  return children
 }
 
 // Progress bar for longer operations

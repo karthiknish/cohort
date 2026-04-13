@@ -1,11 +1,9 @@
 'use client'
 
-import type { ColumnDef } from '@tanstack/react-table'
-import type { CellContext, HeaderContext } from '@tanstack/react-table'
+import type { CellContext, ColumnDef, HeaderContext } from '@tanstack/react-table'
 import { useAction } from 'convex/react'
 import { useRouter } from 'next/navigation'
-import { ViewTransition } from 'react'
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ViewTransition } from 'react'
 
 import { Badge } from '@/shared/ui/badge'
 import { DataTableColumnHeader } from '@/shared/ui/data-table'
@@ -386,7 +384,7 @@ export function CampaignManagementCard({
       .finally(() => {
         setGroupsLoading(false)
       })
-  }, [isConnected, listCampaignGroups, providerId, selectedClientId, setupRequired, toast, workspaceId])
+  }, [isConnected, listCampaignGroups, providerId, selectedClientId, setupRequired, workspaceId])
 
   const handleRefresh = useCallback(() => {
     if (view === 'groups') {

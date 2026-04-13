@@ -31,8 +31,7 @@ import {
 } from '@/shared/ui/dropdown-menu'
 import { Badge } from '@/shared/ui/badge'
 import { cn } from '@/lib/utils'
-import { ACTIVITY_LABELS, type StatusFilter } from '../types'
-import type { ActivityType, SortOption, DateRangeOption } from '../types'
+import { ACTIVITY_LABELS, type ActivityType, type DateRangeOption, type SortOption, type StatusFilter } from '../types'
 
 interface ActivityFiltersProps {
   searchQuery: string

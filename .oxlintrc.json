@@ -58,6 +58,12 @@
     "eslint/no-eval": "error",
     "eslint/no-implied-eval": "error",
     "eslint/no-throw-literal": "warn",
+    "eslint/prefer-promise-reject-errors": "warn",
+    "eslint/no-unsafe-negation": "warn",
+    "eslint/no-unsafe-finally": "error",
+    "import/no-duplicates": "warn",
+    "import/no-self-import": "error",
+    "import/no-anonymous-default-export": "warn",
     "typescript/no-explicit-any": "error",
     "typescript/no-misused-promises": "warn",
     "typescript/no-unnecessary-condition": "warn",
@@ -70,6 +76,12 @@
     "typescript/prefer-as-const": "warn",
     "typescript/no-non-null-asserted-optional-chain": "warn",
     "typescript/await-thenable": "error",
+    "typescript/no-redundant-type-constituents": "warn",
+    "typescript/require-array-sort-compare": "warn",
+    "typescript/no-this-alias": "warn",
+    "typescript/use-unknown-in-catch-callback-variable": "warn",
+    "typescript/no-unnecessary-parameter-property-assignment": "warn",
+    "typescript/no-unsafe-declaration-merging": "error",
     "react/exhaustive-deps": "warn",
     "react/rules-of-hooks": "error",
     "react/no-array-index-key": "warn",
@@ -77,18 +89,28 @@
     "react/jsx-no-duplicate-props": "error",
     "react/jsx-no-target-blank": "warn",
     "react/no-danger": "warn",
+    "react/jsx-no-useless-fragment": "warn",
+    "react/jsx-no-constructed-context-values": "warn",
+    "react/no-children-prop": "warn",
+    "react/forward-ref-uses-ref": "warn",
     "react-js/no-unstable-nested-components": "warn",
     "react-perf/jsx-no-new-function-as-prop": "warn",
     "react-perf/jsx-no-new-object-as-prop": "warn",
     "react-perf/jsx-no-jsx-as-prop": "warn",
     "nextjs/no-html-link-for-pages": "warn",
     "nextjs/no-img-element": "warn",
+    "nextjs/no-sync-scripts": "warn",
+    "nextjs/no-async-client-component": "error",
     "jsx-a11y/alt-text": "warn",
     "jsx-a11y/anchor-is-valid": "warn",
     "jsx-a11y/click-events-have-key-events": "warn",
     "jsx-a11y/no-static-element-interactions": "warn",
+    "jsx-a11y/heading-has-content": "warn",
+    "jsx-a11y/img-redundant-alt": "warn",
+    "jsx-a11y/anchor-ambiguous-text": "warn",
     "promise/no-callback-in-promise": "warn",
     "promise/valid-params": "warn",
+    "promise/catch-or-return": "warn",
     "cohort/no-direct-colors": "warn",
     "cohort/only-shadcn-components": "warn",
     "cohort/no-ad-hoc-rate-limits": "warn",
@@ -160,6 +182,16 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "files": [
+        "**/*provider*.tsx",
+        "**/protected-route.tsx",
+        "**/theme-provider.tsx"
+      ],
+      "rules": {
+        "react/jsx-no-useless-fragment": "off"
       }
     }
   ]

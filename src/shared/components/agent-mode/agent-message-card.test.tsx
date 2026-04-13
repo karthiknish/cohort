@@ -14,7 +14,7 @@ vi.mock('next/link', () => ({
 
 vi.mock('@/shared/ui/motion', () => ({
   domAnimation: {},
-  LazyMotion: ({ children }: { children: ReactNode }) => <>{children}</>,
+  LazyMotion: ({ children }: { children: ReactNode }) => children,
   m: {
     div: ({ children, ...rest }: { children: ReactNode }) => <div {...rest}>{children}</div>,
   },
