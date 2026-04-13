@@ -270,6 +270,8 @@ export default function CreativeDetailPageClient({
       clientId: selectedClientId ?? null,
       campaignId: params.campaignId,
       includeMedia: params.providerId === 'facebook',
+      maxMetaCreativePages: params.providerId === 'facebook' ? 40 : undefined,
+      maxGoogleAdsSearchPages: params.providerId === 'google' ? 15 : undefined,
     })
       .then((creatives) => {
         const normalizedCreatives = Array.isArray(creatives) ? (creatives as Creative[]) : []

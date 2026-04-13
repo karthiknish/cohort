@@ -107,3 +107,33 @@ export function isSignedMetaThumbnail(url?: string): boolean {
     return false
   }
 }
+
+/** Parse `pageId` from Marketing API `object_story_id` (`{pageId}_{postId}`). */
+export function metaPageIdFromObjectStoryId(objectStoryId?: string): string | undefined {
+  if (!objectStoryId || typeof objectStoryId !== 'string') return undefined
+  const trimmed = objectStoryId.trim()
+  const idx = trimmed.indexOf('_')
+  if (idx <= 0 || idx >= trimmed.length - 1) return undefined
+  return trimmed.slice(0, idx)
+}
+
+/** Public permalink for a boosted Facebook page post. */
+export function facebookPostPermalinkFromObjectStoryId(objectStoryId?: string): string | undefined {
+  if (!objectStoryId || typeof objectStoryId !== 'string') return undefined
+  const trimmed = objectStoryId.trim()
+  const pageId = metaPageIdFromObjectStoryId(trimmed)
+  if (!pageId) return undefined
+  const postId = trimmed.slice(trimmed.indexOf('_') + 1)
+  if (!postId) return undefined
+  return `https://www.facebook.com/${pageId}/posts/${postId}`
+}
+
+/** Prefer Instagram permalink; else derive Facebook post URL from `object_story_id`. */
+export function resolveMetaSocialPermalink(options: {
+  instagramPermalinkUrl?: string
+  objectStoryId?: string
+}): string | undefined {
+  const ig = options.instagramPermalinkUrl?.trim()
+  if (ig) return ig
+  return facebookPostPermalinkFromObjectStoryId(options.objectStoryId)
+}

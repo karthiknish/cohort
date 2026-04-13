@@ -179,6 +179,18 @@ export type MetaAdCreative = {
   }
   call_to_action_type?: string
   object_type?: string
+  /** Boosted / existing page post: `{pageId}_{postId}` */
+  object_story_id?: string
+  effective_object_story_id?: string
+  branded_content_sponsor_page_id?: string
+  facebook_branded_content?: {
+    sponsor_page_id?: string
+    shared_to_sponsor_status?: string
+  }
+  instagram_branded_content?: {
+    sponsor_id?: string
+    sponsor_asset_id?: string
+  }
   destination_spec?: {
     url?: string
     fallback_url?: string
@@ -195,6 +207,25 @@ export type MetaAdCreative = {
       name?: string
       caption?: string
       description?: string
+      child_attachments?: Array<{
+        link?: string
+        message?: string
+        picture?: string
+        image_hash?: string
+        name?: string
+        caption?: string
+        description?: string
+        video_id?: string
+        call_to_action?: {
+          type?: string
+          name?: string
+          value?: {
+            link?: string
+            application?: string
+            leadgen_form_id?: string
+          }
+        }
+      }>
       call_to_action?: {
         type?: string
         name?: string
@@ -402,6 +433,12 @@ export type MetaCreative = {
   instagramPermalinkUrl?: string
   sourceInstagramMediaId?: string
   effectiveInstagramMediaId?: string
+  /** Boost post / promoted object story */
+  objectStoryId?: string
+  effectiveObjectStoryId?: string
+  brandedContentSponsorPageId?: string
+  facebookBrandedSponsorPageId?: string
+  instagramBrandedSponsorId?: string
   objectType?: string
   pageId?: string
   instagramActorId?: string

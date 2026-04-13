@@ -98,6 +98,7 @@ type NotificationsCursor = {
   createdAtMs: number
   legacyId: string
   scanCursor?: string | null
+  overflowLegacyIds?: string[]
 }
 
 type AckAction = 'read' | 'dismiss'
@@ -146,6 +147,8 @@ export function NotificationsDropdown() {
         clientId: user?.role === 'client' ? selectedClientId ?? undefined : undefined,
         afterCreatedAtMs: pageParam?.createdAtMs,
         afterLegacyId: pageParam?.legacyId,
+        scanCursor: pageParam?.scanCursor ?? undefined,
+        overflowLegacyIds: pageParam?.overflowLegacyIds,
       })) as { notifications: WorkspaceNotification[]; nextCursor: NotificationsCursor | null }
 
       return data

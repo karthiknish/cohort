@@ -202,6 +202,8 @@ export const list = zWorkspaceQuery({
     afterCreatedAtMs: z.number().optional(),
     afterLegacyId: z.string().optional(),
     scanCursor: z.string().nullable().optional(),
+    /** Spillover matches from prior page when one Convex page held more than one UI page of matches */
+    overflowLegacyIds: z.array(z.string()).max(100).optional(),
     role: z.union([z.literal('admin'), z.literal('team'), z.literal('client')]).optional(),
     clientId: z.string().optional(),
     unread: z.boolean().optional(),
@@ -226,6 +228,33 @@ export const list = zWorkspaceQuery({
       legacyId?: unknown
       [key: string]: unknown
     }> = []
+
+    if (Array.isArray(args.overflowLegacyIds) && args.overflowLegacyIds.length > 0) {
+      for (const legacyId of args.overflowLegacyIds) {
+        if (typeof legacyId !== 'string' || legacyId.length === 0) continue
+        const row = await ctx.db
+          .query('notifications')
+          .withIndex('by_workspaceId_legacyId', (q) =>
+            q.eq('workspaceId', args.workspaceId).eq('legacyId', legacyId),
+          )
+          .unique()
+        if (!row) continue
+        if (
+          !matchesNotificationRecipient(row, {
+            userId,
+            role: args.role,
+            clientId: args.clientId,
+            unreadOnly: args.unread,
+            excludeActor: true,
+          })
+        ) {
+          continue
+        }
+        if (userPivot && !isStrictlyOlderThanPivot(row, userPivot)) continue
+        collected.push(row)
+      }
+    }
+
     let dbCursor: string | null = args.scanCursor ?? null
 
     for (let round = 0; round < 100; round++) {
@@ -263,6 +292,14 @@ export const list = zWorkspaceQuery({
       }
     }
 
+    const overflowIds =
+      collected.length > pageSize + 1
+        ? collected
+            .slice(pageSize + 1)
+            .map((r) => (typeof r.legacyId === 'string' ? r.legacyId : ''))
+            .filter((id) => id.length > 0)
+        : undefined
+
     const pageRows = collected.slice(0, pageSize)
     const nextSource = collected.length > pageSize ? collected[pageSize] : null
 
@@ -273,6 +310,7 @@ export const list = zWorkspaceQuery({
             createdAtMs: typeof nextSource.createdAtMs === 'number' ? nextSource.createdAtMs : 0,
             legacyId: typeof nextSource.legacyId === 'string' ? nextSource.legacyId : '',
             scanCursor: dbCursor,
+            ...(overflowIds && overflowIds.length > 0 ? { overflowLegacyIds: overflowIds } : {}),
           }
         : null,
     }

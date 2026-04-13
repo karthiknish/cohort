@@ -461,7 +461,9 @@ export default function AdminClientsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-semibold">{clients.length}</div>
-              <p className="text-xs text-muted-foreground">{nextCursor ? 'First page loaded' : 'All clients loaded'}</p>
+              <p className="text-xs text-muted-foreground">
+                {nextCursor ? 'More workspaces available — use Load more.' : 'All matching pages loaded.'}
+              </p>
             </CardContent>
           </Card>
 

@@ -25,13 +25,17 @@ type Props = {
   providerId: string
   providerName: string
   isConnected: boolean
+  /** Meta `listCreatives` Graph page cap (1–100). */
+  maxMetaCreativePages?: number
+  /** Google `listCreatives` search page cap (1–50). */
+  maxGoogleAdsSearchPages?: number
 }
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-export function CreativesCard({ providerId, providerName, isConnected }: Props) {
+export function CreativesCard({ providerId, providerName, isConnected, maxMetaCreativePages, maxGoogleAdsSearchPages }: Props) {
   const { user } = useAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const listCreatives = useAction(adsCreativesApi.listCreatives)
@@ -66,6 +70,12 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
         workspaceId,
         providerId,
         clientId: null,
+        ...(providerId === 'facebook'
+          ? { maxMetaCreativePages: maxMetaCreativePages ?? 40 }
+          : {}),
+        ...(providerId === 'google'
+          ? { maxGoogleAdsSearchPages: maxGoogleAdsSearchPages ?? 12 }
+          : {}),
       })
 
       .then((creativesList) => {
@@ -83,7 +93,7 @@ export function CreativesCard({ providerId, providerName, isConnected }: Props) 
       .finally(() => {
         setLoading(false)
       })
-  }, [isConnected, listCreatives, providerId, workspaceId])
+  }, [isConnected, listCreatives, maxGoogleAdsSearchPages, maxMetaCreativePages, providerId, workspaceId])
 
   const handleToggleSelected = useCallback((creativeId: string) => {
     setSelectedIds((current) => {

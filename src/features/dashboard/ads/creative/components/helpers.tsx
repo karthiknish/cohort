@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Image as ImageIcon, Video, FileText } from 'lucide-react'
+import { Image as ImageIcon, Video, FileText, GalleryHorizontal, Layers, Link2, ShoppingBag } from 'lucide-react'
 
 export function unwrapApiData(payload: unknown): unknown {
   const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : null
@@ -16,6 +16,11 @@ export function getStatusVariant(status: string): 'default' | 'secondary' | 'out
 
 export function getTypeIcon(type: string): ReactNode {
   const t = type.toLowerCase()
+  if (t.includes('lead')) return <span className="text-[10px] font-bold tracking-tight">LG</span>
+  if (t.includes('carousel')) return <GalleryHorizontal className="h-5 w-5" />
+  if (t.includes('dynamic_product')) return <ShoppingBag className="h-5 w-5" />
+  if (t.includes('dynamic_creative')) return <Layers className="h-5 w-5" />
+  if (t.includes('boosted') || t.includes('page_post')) return <Link2 className="h-5 w-5" />
   if (t.includes('video')) return <Video className="h-5 w-5" />
   if (t.includes('image') || t.includes('display')) return <ImageIcon className="h-5 w-5" />
   return <FileText className="h-5 w-5" />

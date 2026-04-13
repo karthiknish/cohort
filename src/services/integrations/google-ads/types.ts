@@ -4,7 +4,7 @@
 
 import type { NormalizedMetric } from '@/types/integrations'
 
-export const GOOGLE_API_VERSION = 'v22'
+export const GOOGLE_API_VERSION = 'v23'
 export const GOOGLE_API_BASE = `https://googleads.googleapis.com/${GOOGLE_API_VERSION}`
 
 // =============================================================================
@@ -201,6 +201,22 @@ export type GoogleAdsResult = {
     id?: string
     name?: string
   }
+  assetGroup?: {
+    id?: string
+    name?: string
+    status?: string
+    finalUrls?: string[]
+  }
+  asset?: {
+    resourceName?: string
+    resource_name?: string
+    youtubeVideoAsset?: {
+      youtubeVideoId?: string
+    }
+    youtube_video_asset?: {
+      youtube_video_id?: string
+    }
+  }
   adGroupAd?: {
     ad?: {
       id?: string
@@ -327,7 +343,25 @@ export type GoogleCreative = {
   campaignId: string
   adGroupName?: string
   campaignName?: string
-  type: 'RESPONSIVE_SEARCH_AD' | 'RESPONSIVE_DISPLAY_AD' | 'IMAGE_AD' | 'VIDEO_AD' | 'APP_AD' | 'CALL_ONLY_AD' | 'HOTEL_AD' | 'PERFORMANCE_MAX_AD' | 'SMART_DISPLAY_AD' | 'DISPLAY_AD' | 'SEARCH_AD' | 'DEMAND_GEN_MULTI_ASSET_AD' | 'DEMAND_GEN_VIDEO_RESPONSIVE_AD' | 'OTHER'
+  type:
+    | 'RESPONSIVE_SEARCH_AD'
+    | 'RESPONSIVE_DISPLAY_AD'
+    | 'IMAGE_AD'
+    | 'VIDEO_AD'
+    | 'VIDEO_RESPONSIVE_AD'
+    | 'APP_AD'
+    | 'CALL_ONLY_AD'
+    | 'HOTEL_AD'
+    | 'PERFORMANCE_MAX_AD'
+    | 'SMART_DISPLAY_AD'
+    | 'DISPLAY_AD'
+    | 'SEARCH_AD'
+    | 'DEMAND_GEN_MULTI_ASSET_AD'
+    | 'DEMAND_GEN_VIDEO_RESPONSIVE_AD'
+    | 'DEMAND_GEN_CAROUSEL_AD'
+    | 'DEMAND_GEN_PRODUCT_AD'
+    | 'SHOPPING_PRODUCT_AD'
+    | 'OTHER'
   status: 'ENABLED' | 'PAUSED' | 'REMOVED'
   headlines: string[]
   descriptions: string[]

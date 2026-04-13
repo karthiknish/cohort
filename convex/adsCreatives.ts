@@ -84,6 +84,11 @@ export type NormalizedCreative = {
   isLeadGen?: boolean
   leadgenFormId?: string
   instagramPermalinkUrl?: string
+  objectStoryId?: string
+  effectiveObjectStoryId?: string
+  brandedContentSponsorPageId?: string
+  facebookBrandedSponsorPageId?: string
+  instagramBrandedSponsorId?: string
 }
 
 type CreateCreativeResult = {
@@ -111,6 +116,7 @@ function normalizeGoogleCreatives(creatives: GoogleCreative[]): NormalizedCreati
     headlines: c.headlines,
     descriptions: c.descriptions,
     imageUrl: c.imageUrl,
+    videoId: c.videoId,
     videoUrl: c.videoId ? `https://www.youtube.com/watch?v=${c.videoId}` : undefined,
     landingPageUrl: c.finalUrls?.[0],
     callToAction: c.callToAction,
@@ -201,6 +207,11 @@ function normalizeMetaCreatives(creatives: MetaCreative[]): NormalizedCreative[]
     isLeadGen: c.isLeadGen,
     leadgenFormId: c.leadgenFormId,
     instagramPermalinkUrl: c.instagramPermalinkUrl,
+    objectStoryId: c.objectStoryId,
+    effectiveObjectStoryId: c.effectiveObjectStoryId,
+    brandedContentSponsorPageId: c.brandedContentSponsorPageId,
+    facebookBrandedSponsorPageId: c.facebookBrandedSponsorPageId,
+    instagramBrandedSponsorId: c.instagramBrandedSponsorId,
   }))
 }
 
@@ -213,6 +224,10 @@ export const listCreatives = action({
     adGroupId: v.optional(v.string()),
     status: v.optional(v.string()),
     includeMedia: v.optional(v.boolean()),
+    /** Meta only: max Graph pages (100 ads each), clamped 1–100. Default 25. */
+    maxMetaCreativePages: v.optional(v.number()),
+    /** Google only: max `googleAds:search` pages (pageSize 1000 each), clamped 1–50. Default 10. */
+    maxGoogleAdsSearchPages: v.optional(v.number()),
   },
   handler: async (ctx, args) => withErrorHandling(async () => {
     const identity = await ctx.auth.getUserIdentity()
@@ -251,6 +266,9 @@ export const listCreatives = action({
         throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
       }
 
+      const maxGooglePagesRaw = args.maxGoogleAdsSearchPages ?? 10
+      const maxGooglePages = Math.min(50, Math.max(1, Math.floor(Number.isFinite(maxGooglePagesRaw) ? maxGooglePagesRaw : 10)))
+
       const googleCreatives = await fetchGoogleCreatives({
         accessToken: integration.accessToken,
         developerToken,
@@ -258,6 +276,7 @@ export const listCreatives = action({
         campaignId: args.campaignId,
         adGroupId: args.adGroupId,
         loginCustomerId,
+        maxSearchPages: maxGooglePages,
       })
 
       return normalizeGoogleCreatives(googleCreatives)
@@ -316,12 +335,16 @@ export const listCreatives = action({
       throw Errors.integration.notConfigured('Meta', 'Meta ad account ID not configured. Finish setup to select an ad account.')
     }
 
+    const maxPagesRaw = args.maxMetaCreativePages ?? 25
+    const maxPages = Math.min(100, Math.max(1, Math.floor(Number.isFinite(maxPagesRaw) ? maxPagesRaw : 25)))
+
     const metaCreatives = await fetchMetaCreatives({
       accessToken: integration.accessToken,
       adAccountId,
       campaignId: args.campaignId,
       adSetId: args.adGroupId,
       includeVideoMedia: args.includeMedia ?? true, // Default to true for better UX
+      maxPages,
     })
 
     return normalizeMetaCreatives(metaCreatives)

@@ -32,6 +32,8 @@ export {
   
   // Creatives
   fetchMetaCreatives,
+  extractMetaCreativeContent,
+  inferMetaDisplayAdType,
   
   // Targeting
   fetchMetaAudienceTargeting,

@@ -48,6 +48,9 @@ export {
 export {
   optimizeMetaImageUrl,
   isMetaCdnUrl,
+  metaPageIdFromObjectStoryId,
+  facebookPostPermalinkFromObjectStoryId,
+  resolveMetaSocialPermalink,
 } from './utils'
 
 // Metrics
@@ -67,6 +70,8 @@ export {
   updateMetaAdStatus,
   fetchMetaAdMetrics,
   fetchMetaCreatives,
+  extractMetaCreativeContent,
+  inferMetaDisplayAdType,
   fetchMetaAudienceTargeting,
   createMetaAudience,
 } from './campaigns'

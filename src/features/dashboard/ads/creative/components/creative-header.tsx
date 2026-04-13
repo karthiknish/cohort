@@ -12,6 +12,7 @@ import {
   MoreHorizontal,
   Sparkles,
   Share,
+  ExternalLink,
   TrendingUp,
   Trash2,
   ChevronRight
@@ -30,6 +31,7 @@ import {
 import type { Creative } from './types'
 import { getTypeIcon } from './helpers'
 import { cn } from '@/lib/utils'
+import { resolveMetaSocialPermalink } from '@/services/integrations/meta-ads'
 
 function getStatusVariant(status: string): string {
   const s = status.toLowerCase()
@@ -64,6 +66,14 @@ export function CreativeHeader(props: {
     onRefreshPerformance,
   } = props
 
+  const socialPermalink =
+    creative.providerId === 'facebook'
+      ? resolveMetaSocialPermalink({
+          instagramPermalinkUrl: creative.instagramPermalinkUrl,
+          objectStoryId: creative.objectStoryId,
+        })
+      : undefined
+
   return (
     <LazyMotion features={domAnimation}>
       <m.div
@@ -96,6 +106,18 @@ export function CreativeHeader(props: {
             <span className="p-1 rounded-lg bg-muted-foreground/5 border border-muted-foreground/10">
               {getTypeIcon(creative.type)}
             </span>
+            {socialPermalink ? (
+              <a
+                href={socialPermalink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-muted-foreground/15 text-muted-foreground hover:border-primary/30 hover:text-primary"
+                title="Open post on Instagram or Facebook"
+                aria-label="Open social permalink"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            ) : null}
           </h1>
         </div>
         </div>

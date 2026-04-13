@@ -7,9 +7,10 @@ import {
   appendMetaAuthParams,
   META_API_BASE,
 } from '../client'
-import { optimizeMetaImageUrl, isSignedMetaThumbnail } from '../utils'
+import { optimizeMetaImageUrl, isSignedMetaThumbnail, metaPageIdFromObjectStoryId } from '../utils'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
 import type { MetaCreative, MetaAdsListResponse, MetaAdData, MetaAdCreative } from '../types'
+import { extractLeadGenFormId } from './objectives/leads'
 
 function collectUniqueStrings(values: Array<string | null | undefined>): string[] {
   const seen = new Set<string>()
@@ -47,6 +48,7 @@ function formatMetaCallToAction(callToAction?: {
 export function extractMetaCreativeContent(creative?: MetaAdCreative) {
   const storySpec = creative?.object_story_spec
   const assetFeedSpec = creative?.asset_feed_spec
+  const childAttachments = storySpec?.link_data?.child_attachments ?? []
 
   const primaryTexts = collectUniqueStrings([
     creative?.body,
@@ -55,6 +57,7 @@ export function extractMetaCreativeContent(creative?: MetaAdCreative) {
     storySpec?.photo_data?.message,
     storySpec?.text_data?.message,
     storySpec?.template_data?.message,
+    ...childAttachments.flatMap((c) => [c.message]),
     ...collectAssetText(assetFeedSpec?.bodies),
   ])
 
@@ -63,12 +66,14 @@ export function extractMetaCreativeContent(creative?: MetaAdCreative) {
     storySpec?.link_data?.name,
     storySpec?.video_data?.title,
     storySpec?.template_data?.name,
+    ...childAttachments.flatMap((c) => [c.name]),
     ...collectAssetText(assetFeedSpec?.titles),
   ])
 
   const supportingDescriptions = collectUniqueStrings([
     storySpec?.link_data?.description,
     storySpec?.template_data?.description,
+    ...childAttachments.flatMap((c) => [c.description]),
     ...collectAssetText(assetFeedSpec?.descriptions),
   ])
 
@@ -79,6 +84,10 @@ export function extractMetaCreativeContent(creative?: MetaAdCreative) {
     storySpec?.link_data?.call_to_action?.value?.link,
     storySpec?.video_data?.call_to_action?.value?.link,
     storySpec?.template_data?.call_to_action?.value?.link,
+    ...childAttachments.flatMap((c) => [
+      c.link,
+      c.call_to_action?.value?.link,
+    ]),
     assetFeedSpec?.link_urls?.[0]?.website_url,
     creative?.destination_spec?.url,
     creative?.destination_spec?.fallback_url,
@@ -87,7 +96,8 @@ export function extractMetaCreativeContent(creative?: MetaAdCreative) {
   const callToAction = formatMetaCallToAction(
     storySpec?.link_data?.call_to_action
       ?? storySpec?.video_data?.call_to_action
-      ?? storySpec?.template_data?.call_to_action,
+      ?? storySpec?.template_data?.call_to_action
+      ?? childAttachments[0]?.call_to_action,
     creative?.call_to_action_type
   )
 
@@ -99,6 +109,71 @@ export function extractMetaCreativeContent(creative?: MetaAdCreative) {
     landingPageUrl,
     callToAction,
   }
+}
+
+/** UI / storage label from Meta creative shape (not same as API `object_type`). */
+export function inferMetaDisplayAdType(options: {
+  leadgenFormId?: string
+  objectType?: string
+  storySpec?: MetaAdCreative['object_story_spec']
+  assetFeedSpec?: MetaAdCreative['asset_feed_spec']
+  objectStoryId?: string
+  effectiveObjectStoryId?: string
+}): string {
+  const { leadgenFormId, objectType, storySpec, assetFeedSpec, objectStoryId, effectiveObjectStoryId } = options
+  if (leadgenFormId) return 'lead_generation'
+
+  const hasPostReference = Boolean(
+    (typeof objectStoryId === 'string' && objectStoryId.trim().length > 0)
+    || (typeof effectiveObjectStoryId === 'string' && effectiveObjectStoryId.trim().length > 0)
+  )
+  const hasMeaningfulStorySpec = Boolean(
+    storySpec?.link_data
+    || storySpec?.video_data
+    || storySpec?.template_data
+    || storySpec?.photo_data
+    || storySpec?.text_data
+  )
+  if (hasPostReference && !hasMeaningfulStorySpec) {
+    return 'boosted_post'
+  }
+
+  const attachments = storySpec?.link_data?.child_attachments ?? []
+  const childCount = attachments.length
+  const childHasVideo = attachments.some((a) => a?.video_id)
+
+  if (childCount >= 2) return 'carousel'
+
+  const hasStoryVideo =
+    Boolean(storySpec?.video_data?.video_id)
+    || objectType === 'VIDEO'
+    || (childCount === 1 && childHasVideo)
+
+  if (hasStoryVideo) return 'video'
+
+  const afVideoCount = assetFeedSpec?.videos?.filter((v) => v?.video_id)?.length ?? 0
+  if (afVideoCount > 0 && !storySpec?.template_data) return 'video'
+
+  const template = storySpec?.template_data
+  const hasTemplate = Boolean(template && (template.message || template.name || template.link))
+  if (hasTemplate) return 'dynamic_product'
+
+  const bodies = assetFeedSpec?.bodies?.length ?? 0
+  const titles = assetFeedSpec?.titles?.length ?? 0
+  const images = assetFeedSpec?.images?.length ?? 0
+  const videos = assetFeedSpec?.videos?.length ?? 0
+  const isMultiAssetFeed =
+    bodies > 1
+    || titles > 1
+    || images > 1
+    || videos > 1
+    || (bodies >= 1 && titles >= 1 && bodies + titles + images + videos > 2)
+
+  if (isMultiAssetFeed) return 'dynamic_creative'
+
+  if (objectType === 'PHOTO') return 'image'
+
+  return 'sponsored_content'
 }
 
 // =============================================================================
@@ -114,6 +189,8 @@ export async function fetchMetaCreatives(options: {
   maxRetries?: number
   includeVideoMedia?: boolean
   videoLookupLimit?: number
+  /** Max Graph API pages (100 ads each) when paging `after` cursor. */
+  maxPages?: number
 }): Promise<MetaCreative[]> {
   const {
     accessToken,
@@ -124,6 +201,7 @@ export async function fetchMetaCreatives(options: {
     maxRetries = 3,
     includeVideoMedia = false,
     videoLookupLimit = 20,
+    maxPages = 25,
   } = options
 
   logger.info('[Meta Ads] Fetching creatives', { 
@@ -132,28 +210,24 @@ export async function fetchMetaCreatives(options: {
     adSetId, 
     statusFilter,
     includeVideoMedia,
-    maxRetries 
+    maxRetries,
+    maxPages,
   })
 
   // Ensure adAccountId has act_ prefix if it's just a number
   const formattedAccountId = adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`
 
-  const params = new URLSearchParams({
-    fields: [
-      'id',
-      'name',
-      'status',
-      'effective_status',
-      'adset_id',
-      'campaign_id',
-      'creative',
-      // Include leadgen_form_id at ad level for lead gen detection
-      'leadgen_form_id',
-      // Include asset_feed_spec for lead gen and dynamic creative ads
-      'adcreatives{id,name,body,title,link_url,thumbnail_url,image_url,full_picture,images,image_hash,url_tags,platform_customizations,source_instagram_media_id,instagram_permalink_url,effective_instagram_media_id,portrait_customizations,call_to_action_type,object_type,destination_spec,asset_feed_spec,object_story_spec{page_id,instagram_actor_id,link_data{link,message,picture,image_hash,call_to_action{type,value},name,caption,description},video_data{video_id,message,title,call_to_action{type,value}},photo_data{message},text_data{message},template_data{link,message,name,caption,description,call_to_action{type,value}}}}',
-    ].join(','),
-    limit: '100',
-  })
+  const adFields = [
+    'id',
+    'name',
+    'status',
+    'effective_status',
+    'adset_id',
+    'campaign_id',
+    'creative',
+    'leadgen_form_id',
+    'adcreatives{id,name,body,title,link_url,thumbnail_url,image_url,full_picture,images,image_hash,url_tags,platform_customizations,source_instagram_media_id,instagram_permalink_url,effective_instagram_media_id,portrait_customizations,call_to_action_type,object_type,destination_spec,asset_feed_spec,object_story_id,effective_object_story_id,branded_content_sponsor_page_id,facebook_branded_content{sponsor_page_id,shared_to_sponsor_status},instagram_branded_content{sponsor_id,sponsor_asset_id},object_story_spec{page_id,instagram_actor_id,link_data{link,message,picture,image_hash,call_to_action{type,value},name,caption,description,child_attachments{link,message,picture,image_hash,name,caption,description,video_id,call_to_action{type,value}}},video_data{video_id,message,title,call_to_action{type,value}},photo_data{message},text_data{message},template_data{link,message,name,caption,description,call_to_action{type,value}}}}',
+  ].join(',')
 
   const filtering: Array<{ field: string; operator: string; value: string | string[] }> = []
 
@@ -181,27 +255,68 @@ export async function fetchMetaCreatives(options: {
     })
   }
 
-  if (filtering.length > 0) {
-    params.set('filtering', JSON.stringify(filtering))
+  const ads: MetaAdData[] = []
+  let after: string | undefined
+  let pendingNextUrl: string | undefined
+
+  for (let page = 0; page < maxPages; page += 1) {
+    let url: string
+
+    if (pendingNextUrl) {
+      url = pendingNextUrl
+      pendingNextUrl = undefined
+    } else {
+      const params = new URLSearchParams({
+        fields: adFields,
+        limit: '100',
+      })
+
+      if (after) {
+        params.set('after', after)
+      }
+
+      if (filtering.length > 0) {
+        params.set('filtering', JSON.stringify(filtering))
+      }
+
+      await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+
+      url = `${META_API_BASE}/${formattedAccountId}/ads?${params.toString()}`
+    }
+
+    const { payload } = await metaAdsClient.executeRequest<MetaAdsListResponse>({
+      url,
+      operation: `fetchCreatives:page${page}`,
+      maxRetries,
+    })
+
+    const chunk = Array.isArray(payload?.data) ? (payload.data as MetaAdData[]) : []
+    ads.push(...chunk)
+
+    if (chunk.length === 0) {
+      break
+    }
+
+    const nextAfter = payload?.paging?.cursors?.after
+    const resolvedAfter = typeof nextAfter === 'string' && nextAfter.length > 0 ? nextAfter : undefined
+    const rawNext =
+      typeof payload?.paging?.next === 'string' && payload.paging.next.trim().length > 0
+        ? payload.paging.next.trim()
+        : undefined
+
+    if (resolvedAfter) {
+      after = resolvedAfter
+      continue
+    }
+
+    after = undefined
+    if (rawNext) {
+      pendingNextUrl = rawNext
+      continue
+    }
+
+    break
   }
-
-  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
-
-  const url = `${META_API_BASE}/${formattedAccountId}/ads?${params.toString()}`
-
-  // Debug: log the request URL (sanitized)
-  const sanitizedUrl = url.replace(/access_token=[^&]+/, 'access_token=***')
-  console.log('[Meta Ads] fetchCreatives request:', sanitizedUrl)
-
-  const { payload } = await metaAdsClient.executeRequest<MetaAdsListResponse>({
-    url,
-    operation: 'fetchCreatives',
-    maxRetries,
-  })
-
-  console.log('[Meta Ads] fetchCreatives response keys:', payload ? Object.keys(payload) : 'null')
-
-  const ads: MetaAdData[] = Array.isArray(payload?.data) ? (payload.data as MetaAdData[]) : []
 
   // Collect unique Page and Instagram Actor IDs
   const accountIds = Array.from(
@@ -209,7 +324,18 @@ export async function fetchMetaCreatives(options: {
       ads.flatMap((ad) => {
         const creative = ad.adcreatives?.data?.[0]
         const spec = creative?.object_story_spec
-        return [spec?.page_id, spec?.instagram_actor_id].filter((id): id is string => typeof id === 'string' && id.length > 0)
+        const pageFromBoost =
+          metaPageIdFromObjectStoryId(creative?.object_story_id)
+          || metaPageIdFromObjectStoryId(creative?.effective_object_story_id)
+        const sponsorPageId =
+          creative?.branded_content_sponsor_page_id
+          || creative?.facebook_branded_content?.sponsor_page_id
+        return [
+          spec?.page_id,
+          spec?.instagram_actor_id,
+          pageFromBoost,
+          sponsorPageId,
+        ].filter((id): id is string => typeof id === 'string' && id.length > 0)
       })
     )
   )
@@ -252,14 +378,11 @@ export async function fetchMetaCreatives(options: {
       const accountId = storySpec?.instagram_actor_id || storySpec?.page_id
       const account = accountId ? accountDetails[accountId] : undefined
 
-      // Check if this is a lead generation ad (look for form ID in story spec)
-      const storySpecCtaValue = storySpec?.link_data?.call_to_action?.value || storySpec?.video_data?.call_to_action?.value
-      const creativeLeadgenFormId = (creative as (MetaAdCreative & { leadgen_form_id?: string }) | undefined)?.leadgen_form_id
-      const leadgenFormId = storySpecCtaValue?.leadgen_form_id || ad.leadgen_form_id || creativeLeadgenFormId
-      const isLeadGenAd = !!leadgenFormId
+      const leadgenFormId = extractLeadGenFormId(ad, creative)
+      const isLeadGenFlag = !!leadgenFormId
 
       // For lead gen ads without traditional creatives, provide minimal info
-      if (!creative && isLeadGenAd) {
+      if (!creative && isLeadGenFlag) {
         return {
           adId: ad.id ?? '',
           adSetId: ad.adset_id ?? '',
@@ -285,8 +408,9 @@ export async function fetchMetaCreatives(options: {
       // asset_feed_spec contains image/video references for ads using dynamic creative or lead gen
       const assetFeedSpec = creative?.asset_feed_spec
       const content = extractMetaCreativeContent(creative)
-      // Get image from asset feed - used by lead gen and dynamic creative ads
       const assetFeedImageUrl = assetFeedSpec?.images?.[0]?.url
+      const assetFeedVideoThumbnail = assetFeedSpec?.videos?.[0]?.thumbnail_url
+      const firstCarouselPicture = storySpec?.link_data?.child_attachments?.[0]?.picture
       const serializedAssetFeedSpec = assetFeedSpec ? JSON.stringify(assetFeedSpec) : undefined
 
       // Determine if this is an Instagram-focused creative (has Instagram actor or platform customization)
@@ -295,13 +419,14 @@ export async function fetchMetaCreatives(options: {
       // Prefer high-quality image sources in this order:
       // 1. full_picture - Highest quality image from Meta (per API docs, this is the best quality)
       // 2. images.data[0].url - Native image URL from Meta's images array
-      // 3. asset_feed_spec images - For lead gen and dynamic creative ads
+      // 3. asset_feed_spec images / video thumbnails - DCO and video-first feeds
       // 4. platform_customizations.instagram.image_url - Instagram-specific high quality image
       // 5. platform_customizations.facebook.image_url - Facebook-specific high quality image
-      // 6. object_story_spec.link_data.picture - Original uploaded image URL
-      // 7. image_url - Standard quality image
-      // 8. thumbnail_url (unsigned) - Preview image if not signed
-      // 9. thumbnail_url (signed) - LAST RESORT: signed thumbnails often fail or are blurry
+      // 6. first carousel card picture
+      // 7. object_story_spec.link_data.picture - Original uploaded image URL
+      // 8. image_url - Standard quality image
+      // 9. thumbnail_url (unsigned) - Preview image if not signed
+      // 10. thumbnail_url (signed) - LAST RESORT: signed thumbnails often fail or are blurry
       const creativeFullPicture = creative?.full_picture
       const nativeImageUrl = creative?.images?.data?.[0]?.url
       const instagramCustomImageUrl = creative?.platform_customizations?.instagram?.image_url
@@ -318,8 +443,10 @@ export async function fetchMetaCreatives(options: {
       const rawImageUrl = creativeFullPicture
         || nativeImageUrl
         || assetFeedImageUrl
+        || assetFeedVideoThumbnail
         || (isInstagramCreative ? instagramCustomImageUrl : null)
         || facebookCustomImageUrl
+        || firstCarouselPicture
         || storySpecPicture
         || creativeImageUrl
         || (!isThumbnailSigned ? creativeThumbnailUrl : null)
@@ -330,13 +457,27 @@ export async function fetchMetaCreatives(options: {
       // Extract call to action with both type and name (name is the button text)
       const callToAction = content.callToAction
 
-      // Determine ad type from object_type, creative structure, or lead gen
       const objectType = creative?.object_type
-      let adType = 'sponsored_content'
-      if (isLeadGenAd) adType = 'lead_generation'
-      else if (objectType === 'VIDEO') adType = 'video'
-      else if (storySpec?.video_data?.video_id) adType = 'video'
-      else if (objectType === 'PHOTO') adType = 'image'
+      const firstChildVideoId = storySpec?.link_data?.child_attachments?.find((c) => c?.video_id)?.video_id
+      const assetFeedVideoId = assetFeedSpec?.videos?.[0]?.video_id
+      const videoId =
+        storySpec?.video_data?.video_id
+        || firstChildVideoId
+        || assetFeedVideoId
+
+      const adType = inferMetaDisplayAdType({
+        leadgenFormId,
+        objectType,
+        storySpec,
+        assetFeedSpec,
+        objectStoryId: creative?.object_story_id,
+        effectiveObjectStoryId: creative?.effective_object_story_id,
+      })
+
+      const resolvedPageId =
+        storySpec?.page_id
+        || metaPageIdFromObjectStoryId(creative?.object_story_id)
+        || metaPageIdFromObjectStoryId(creative?.effective_object_story_id)
 
       return {
         adId: ad.id ?? '',
@@ -352,12 +493,13 @@ export async function fetchMetaCreatives(options: {
         imageHash:
           creative?.image_hash
           || storySpec?.link_data?.image_hash
+          || storySpec?.link_data?.child_attachments?.[0]?.image_hash
           || creative?.images?.data?.[0]?.hash
           || creative?.platform_customizations?.instagram?.image_hash
           || creative?.platform_customizations?.facebook?.image_hash,
-        callToAction: isLeadGenAd ? 'Sign Up' : callToAction,
+        callToAction: isLeadGenFlag ? 'Sign Up' : callToAction,
         landingPageUrl: content.landingPageUrl,
-        videoId: storySpec?.video_data?.video_id,
+        videoId,
         message: content.primaryText,
         descriptions: content.primaryTexts,
         pageName: account?.name,
@@ -365,14 +507,19 @@ export async function fetchMetaCreatives(options: {
         instagramPermalinkUrl: creative?.instagram_permalink_url,
         sourceInstagramMediaId: creative?.source_instagram_media_id,
         effectiveInstagramMediaId: creative?.effective_instagram_media_id,
+        objectStoryId: creative?.object_story_id,
+        effectiveObjectStoryId: creative?.effective_object_story_id,
+        brandedContentSponsorPageId: creative?.branded_content_sponsor_page_id,
+        facebookBrandedSponsorPageId: creative?.facebook_branded_content?.sponsor_page_id,
+        instagramBrandedSponsorId: creative?.instagram_branded_content?.sponsor_id,
         objectType,
-        pageId: storySpec?.page_id,
+        pageId: resolvedPageId,
         instagramActorId: storySpec?.instagram_actor_id,
         assetFeedSpec: serializedAssetFeedSpec,
         destinationSpec: creative?.destination_spec,
         headlines: content.headlines,
         // Lead gen specific fields
-        isLeadGen: isLeadGenAd,
+        isLeadGen: isLeadGenFlag,
         leadgenFormId,
       }
     })

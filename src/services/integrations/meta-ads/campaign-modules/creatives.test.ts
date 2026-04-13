@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { extractMetaCreativeContent } from './creatives'
+import { extractMetaCreativeContent, inferMetaDisplayAdType } from './creatives'
 
 describe('extractMetaCreativeContent', () => {
   it('prefers Meta asset feed bodies and titles for dynamic creatives', () => {
@@ -54,5 +54,60 @@ describe('extractMetaCreativeContent', () => {
     expect(result.headlines).toEqual(['Video headline'])
     expect(result.landingPageUrl).toBe('https://example.com/signup')
     expect(result.callToAction).toBe('Sign Up (SIGN_UP)')
+  })
+
+  it('merges carousel child_attachments into copy and landing URLs', () => {
+    const result = extractMetaCreativeContent({
+      object_story_spec: {
+        link_data: {
+          message: 'Root message',
+          child_attachments: [
+            { message: 'Card A', name: 'Title A', link: 'https://example.com/a' },
+            { message: 'Card B', link: 'https://example.com/b' },
+          ],
+        },
+      },
+    })
+
+    expect(result.primaryTexts).toEqual(['Root message', 'Card A', 'Card B'])
+    expect(result.headlines).toEqual(['Title A'])
+    expect(result.landingPageUrl).toBe('https://example.com/a')
+  })
+})
+
+describe('inferMetaDisplayAdType', () => {
+  it('returns carousel when two or more child attachments', () => {
+    expect(
+      inferMetaDisplayAdType({
+        storySpec: {
+          link_data: {
+            child_attachments: [{ link: 'https://a.com' }, { link: 'https://b.com' }],
+          },
+        },
+      })
+    ).toBe('carousel')
+  })
+
+  it('returns lead_generation when form id present', () => {
+    expect(inferMetaDisplayAdType({ leadgenFormId: '123' })).toBe('lead_generation')
+  })
+
+  it('returns boosted_post when object_story_id set and no inline story spec', () => {
+    expect(
+      inferMetaDisplayAdType({
+        objectStoryId: '1234567890_9876543210',
+        storySpec: {},
+      })
+    ).toBe('boosted_post')
+  })
+
+  it('returns dynamic_product when template_data has copy', () => {
+    expect(
+      inferMetaDisplayAdType({
+        storySpec: {
+          template_data: { message: 'Shop the collection', link: 'https://shop.example' },
+        },
+      })
+    ).toBe('dynamic_product')
   })
 })

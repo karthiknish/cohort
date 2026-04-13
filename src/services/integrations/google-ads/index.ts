@@ -30,6 +30,9 @@ export {
   fetchGoogleAdGroupMetrics,
   fetchGoogleAdMetrics,
   fetchGoogleCreatives,
+  buildGoogleCreativesGaql,
+  buildGooglePmaxAssetGroupsGaql,
+  buildGoogleYoutubeVideoAssetsGaql,
   fetchGoogleAudienceTargeting,
   createGoogleAudience,
 } from './campaigns'

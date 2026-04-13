@@ -17,7 +17,9 @@ import {
   List,
   ChevronRight,
   Smartphone,
-  MapPin
+  MapPin,
+  Link2,
+  ExternalLink,
 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -45,6 +47,7 @@ import { toast } from '@/shared/ui/use-toast'
 import { Switch } from '@/shared/ui/switch'
 import { normalizeCurrencyCode } from '@/constants/currencies'
 import { cn, formatCurrency } from '@/lib/utils'
+import { resolveMetaSocialPermalink } from '@/services/integrations/meta-ads'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsAdMetricsApi, adsCreativesApi } from '@/lib/convex-api'
@@ -71,6 +74,8 @@ export type CampaignAd = {
   callToAction?: string
   pageName?: string
   pageProfileImageUrl?: string
+  instagramPermalinkUrl?: string
+  objectStoryId?: string
   objectType?: string
   pageId?: string
   instagramActorId?: string
@@ -128,6 +133,10 @@ type AdMetricRow = {
 
 function getCreativeTypeIcon(type: string, className?: string) {
   const lowerType = type.toLowerCase()
+  if (lowerType.includes('boosted') || lowerType.includes('page_post')) return <Link2 className={className || "h-4 w-4"} />
+  if (lowerType.includes('video_responsive')) return <Video className={className || "h-4 w-4"} />
+  if (lowerType.includes('shopping')) return <Layers className={className || "h-4 w-4"} />
+  if (lowerType.includes('carousel') || lowerType.includes('product_ad')) return <Layers className={className || "h-4 w-4"} />
   if (lowerType.includes('video')) return <Video className={className || "h-4 w-4"} />
   if (lowerType.includes('image') || lowerType.includes('photo') || lowerType.includes('sponsored_status_update')) return <ImageIcon className={className || "h-4 w-4"} />
   if (lowerType.includes('text') || lowerType.includes('search')) return <FileText className={className || "h-4 w-4"} />
@@ -513,6 +522,13 @@ function AdListRow({
   const handleClick = useCallback(() => onCreativeClick(ad), [onCreativeClick, ad])
   const handleStopPropagation = useCallback((event: React.MouseEvent) => event.stopPropagation(), [])
   const handleToggleStatus = useCallback((nextStatus: string) => onToggleStatus(ad, nextStatus), [onToggleStatus, ad])
+  const permalink =
+    providerId === 'facebook'
+      ? resolveMetaSocialPermalink({
+          instagramPermalinkUrl: ad.instagramPermalinkUrl,
+          objectStoryId: ad.objectStoryId,
+        })
+      : undefined
 
   return (
     <TableRow
@@ -579,6 +595,22 @@ function AdListRow({
           {ad.headlines?.[0] || ad.descriptions?.[0] || '-'}
         </p>
       </TableCell>
+      <TableCell onClick={handleStopPropagation}>
+        {permalink ? (
+          <a
+            href={permalink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex text-primary hover:opacity-90"
+            title="Open Instagram or Facebook post"
+            aria-label="Open social permalink"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
       <TableCell>
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
       </TableCell>
@@ -613,6 +645,7 @@ function CampaignAdsList({
             <TableHead className="text-right">Clicks</TableHead>
             <TableHead className="text-right">Conv.</TableHead>
             <TableHead className="hidden lg:table-cell">Primary Text/Headline</TableHead>
+            <TableHead className="w-10 text-center">Permalink</TableHead>
             <TableHead className="w-10"></TableHead>
           </TableRow>
         </TableHeader>
@@ -674,6 +707,8 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
       providerId: providerId as SupportedProviderId,
       clientId: clientId ?? null,
       campaignId,
+      maxMetaCreativePages: providerId === 'facebook' ? 50 : undefined,
+      maxGoogleAdsSearchPages: providerId === 'google' ? 20 : undefined,
     })
       .then((creatives) => {
         const mapped = creatives as CampaignAd[]

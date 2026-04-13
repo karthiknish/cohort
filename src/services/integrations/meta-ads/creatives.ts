@@ -27,7 +27,10 @@ export interface CreateAdCreativeOptions {
   videoId?: string
   pageId?: string
   instagramActorId?: string
-  assetFeedSpec?: string
+  /** JSON string or parsed array of carousel `child_attachments` objects (Marketing API). */
+  assetFeedSpec?: string | unknown[]
+  /** Prefer explicit cards over `assetFeedSpec` when both provided. */
+  carouselChildAttachments?: unknown[]
   // v24.0 Website destination optimization - allows Meta to determine best landing page
   destinationSpec?: {
     url?: string
@@ -108,7 +111,8 @@ export interface RecreateMetaAdCreativeOptions {
   videoId?: string
   pageId?: string
   instagramActorId?: string
-  assetFeedSpec?: string
+  assetFeedSpec?: string | unknown[]
+  carouselChildAttachments?: unknown[]
   destinationSpec?: CreateAdCreativeOptions['destinationSpec']
   maxRetries?: number
 }
@@ -147,6 +151,30 @@ export function normalizeMetaObjectTypeForCreate(objectType?: string): CreateAdC
     default:
       return 'IMAGE'
   }
+}
+
+function parseCarouselChildAttachmentsOption(options: {
+  carouselChildAttachments?: unknown[]
+  assetFeedSpec?: string | unknown[]
+}): unknown[] | undefined {
+  if (Array.isArray(options.carouselChildAttachments) && options.carouselChildAttachments.length > 0) {
+    return options.carouselChildAttachments
+  }
+  const raw = options.assetFeedSpec
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw
+  }
+  if (typeof raw === 'string' && raw.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(raw) as unknown
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+      }
+    } catch {
+      return undefined
+    }
+  }
+  return undefined
 }
 
 export function mergeMetaDestinationSpec(
@@ -262,6 +290,7 @@ export async function createMetaAdCreative(options: CreateAdCreativeOptions): Pr
     pageId,
     instagramActorId,
     assetFeedSpec,
+    carouselChildAttachments,
     destinationSpec,
     maxRetries,
   } = options
@@ -270,6 +299,8 @@ export async function createMetaAdCreative(options: CreateAdCreativeOptions): Pr
 
   // Build the object_story_spec for the creative
   const objectStorySpec: Record<string, unknown> = {}
+
+  const carouselChildren = parseCarouselChildAttachmentsOption({ carouselChildAttachments, assetFeedSpec })
 
   if (objectType === 'IMAGE' || objectType === 'VIDEO') {
     objectStorySpec.page_id = pageId
@@ -295,15 +326,24 @@ export async function createMetaAdCreative(options: CreateAdCreativeOptions): Pr
       }
     }
   } else if (objectType === 'CAROUSEL_IMAGE' || objectType === 'CAROUSEL_VIDEO') {
-    objectStorySpec.link_data = {
-      call_to_action: callToActionType ? { type: callToActionType } : undefined,
-      link: linkUrl,
+    objectStorySpec.page_id = pageId
+    if (instagramActorId) {
+      objectStorySpec.instagram_actor_id = instagramActorId
     }
-  } else if (objectType === 'DYNAMIC_CAROUSEL' && assetFeedSpec) {
     objectStorySpec.link_data = {
       call_to_action: callToActionType ? { type: callToActionType } : undefined,
       link: linkUrl,
-      child_attachments: assetFeedSpec,
+      ...(carouselChildren && carouselChildren.length > 0 ? { child_attachments: carouselChildren } : {}),
+    }
+  } else if (objectType === 'DYNAMIC_CAROUSEL') {
+    objectStorySpec.page_id = pageId
+    if (instagramActorId) {
+      objectStorySpec.instagram_actor_id = instagramActorId
+    }
+    objectStorySpec.link_data = {
+      call_to_action: callToActionType ? { type: callToActionType } : undefined,
+      link: linkUrl,
+      ...(carouselChildren && carouselChildren.length > 0 ? { child_attachments: carouselChildren } : {}),
     }
   }
 
@@ -607,6 +647,7 @@ export async function recreateMetaAdCreativeForEdit(options: RecreateMetaAdCreat
     pageId,
     instagramActorId,
     assetFeedSpec,
+    carouselChildAttachments,
     destinationSpec,
     maxRetries,
   } = options
@@ -651,8 +692,9 @@ export async function recreateMetaAdCreativeForEdit(options: RecreateMetaAdCreat
     imageHash,
     videoId,
     pageId: resolvedActors.pageId,
-    instagramActorId: resolvedActors.instagramActorId,
+    instagramActorId: resolvedActors.    instagramActorId,
     assetFeedSpec,
+    carouselChildAttachments,
     destinationSpec: mergeMetaDestinationSpec(destinationSpec, linkUrl),
     maxRetries,
   })

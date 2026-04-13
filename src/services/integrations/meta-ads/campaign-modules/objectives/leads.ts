@@ -70,19 +70,57 @@ export interface LeadGenCreativeRequirements {
   }
 }
 
-// Helper to check if an ad is a lead gen ad
-export function isLeadGenAd(creative?: { object_story_spec?: { link_data?: { call_to_action?: { value?: { leadgen_form_id?: string } } } } } | null): boolean {
-  if (!creative) return false
-  const storySpec = creative.object_story_spec
-  const ctaValue = storySpec?.link_data?.call_to_action?.value
-  return !!ctaValue?.leadgen_form_id
+type LeadGenStorySpec = {
+  object_story_spec?: {
+    link_data?: {
+      call_to_action?: {
+        value?: { leadgen_form_id?: string }
+      }
+      child_attachments?: Array<{
+        call_to_action?: {
+          value?: { leadgen_form_id?: string }
+        }
+      }>
+    }
+    video_data?: {
+      call_to_action?: {
+        value?: { leadgen_form_id?: string }
+      }
+    }
+    template_data?: {
+      call_to_action?: {
+        value?: { leadgen_form_id?: string }
+      }
+    }
+  }
 }
 
-// Helper to extract lead gen form ID
+// Helper to extract lead gen form ID (ad level, creative root, link / video / template CTA)
 export function extractLeadGenFormId(
   ad?: { leadgen_form_id?: string } | null,
-  creative?: { object_story_spec?: { link_data?: { call_to_action?: { value?: { leadgen_form_id?: string } } } } } | null
+  creative?: (LeadGenStorySpec & { leadgen_form_id?: string }) | null
 ): string | undefined {
-  return ad?.leadgen_form_id 
-    || creative?.object_story_spec?.link_data?.call_to_action?.value?.leadgen_form_id
+  if (ad?.leadgen_form_id) return ad.leadgen_form_id
+  if (creative && typeof creative.leadgen_form_id === 'string' && creative.leadgen_form_id.length > 0) {
+    return creative.leadgen_form_id
+  }
+  const spec = creative?.object_story_spec
+  const fromChild = spec?.link_data?.child_attachments
+    ?.map((row) => row?.call_to_action?.value?.leadgen_form_id)
+    .find((id): id is string => typeof id === 'string' && id.length > 0)
+
+  return (
+    spec?.link_data?.call_to_action?.value?.leadgen_form_id
+    || fromChild
+    || spec?.video_data?.call_to_action?.value?.leadgen_form_id
+    || spec?.template_data?.call_to_action?.value?.leadgen_form_id
+  )
+}
+
+// Helper to check if an ad is a lead gen ad
+export function isLeadGenAd(
+  creative?: LeadGenStorySpec | null,
+  ad?: { leadgen_form_id?: string } | null
+): boolean {
+  return !!extractLeadGenFormId(ad ?? undefined, creative ?? undefined)
 }

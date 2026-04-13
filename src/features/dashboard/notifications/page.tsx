@@ -24,6 +24,7 @@ type NotificationsCursor = {
   createdAtMs: number
   legacyId: string
   scanCursor?: string | null
+  overflowLegacyIds?: string[]
 }
 
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -186,6 +187,7 @@ function NotificationsPageContent() {
         afterCreatedAtMs: pageParam?.createdAtMs,
         afterLegacyId: pageParam?.legacyId,
         scanCursor: pageParam?.scanCursor ?? undefined,
+        overflowLegacyIds: pageParam?.overflowLegacyIds,
       })
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,

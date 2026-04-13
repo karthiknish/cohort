@@ -42,6 +42,8 @@ export {
 // Creative operations
 export {
   fetchMetaCreatives,
+  extractMetaCreativeContent,
+  inferMetaDisplayAdType,
 } from './creatives'
 
 // Targeting operations

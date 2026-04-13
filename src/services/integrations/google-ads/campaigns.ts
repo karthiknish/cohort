@@ -23,7 +23,12 @@ export { fetchGoogleAdGroupMetrics } from './ad-group-metrics'
 export { fetchGoogleAdMetrics } from './ad-metrics'
 
 // Creatives
-export { fetchGoogleCreatives } from './creatives'
+export {
+  fetchGoogleCreatives,
+  buildGoogleCreativesGaql,
+  buildGooglePmaxAssetGroupsGaql,
+  buildGoogleYoutubeVideoAssetsGaql,
+} from './creatives'
 
 // Audience targeting
 export {

@@ -100,9 +100,33 @@ export const CAMPAIGN_OBJECTIVE_CONFIGS = {
   APP_INSTALLS: APP_PROMOTION_OBJECTIVE_CONFIG,
 } as const
 
+/** API / ODAX labels not on `CAMPAIGN_OBJECTIVE_CONFIGS` → nearest supported module. */
+const EXTENDED_OBJECTIVE_TO_CONFIG_KEY: Partial<Record<string, keyof typeof CAMPAIGN_OBJECTIVE_CONFIGS>> = {
+  STORE_TRAFFIC: 'OUTCOME_TRAFFIC',
+  MESSAGES: 'OUTCOME_ENGAGEMENT',
+  VIDEO_VIEWS: 'OUTCOME_ENGAGEMENT',
+  REACH: 'OUTCOME_AWARENESS',
+  PRODUCT_CATALOG_SALES: 'OUTCOME_SALES',
+  OUTCOME_PAGE_LIKES: 'OUTCOME_ENGAGEMENT',
+  PAGE_LIKES: 'OUTCOME_ENGAGEMENT',
+  PAGE_ENGAGEMENT: 'OUTCOME_ENGAGEMENT',
+  EVENT_RESPONSES: 'OUTCOME_ENGAGEMENT',
+  OFFER_CLAIMS: 'OUTCOME_SALES',
+  SALES: 'OUTCOME_SALES',
+  LEADS: 'OUTCOME_LEADS',
+  TRAFFIC: 'OUTCOME_TRAFFIC',
+  ENGAGEMENT: 'OUTCOME_ENGAGEMENT',
+  AWARENESS: 'OUTCOME_AWARENESS',
+  APP_PROMOTION: 'OUTCOME_APP_PROMOTION',
+}
+
 // Helper to get objective config by objective value
 export function getObjectiveConfig(objective: string) {
-  return CAMPAIGN_OBJECTIVE_CONFIGS[objective as keyof typeof CAMPAIGN_OBJECTIVE_CONFIGS] || null
+  const direct = CAMPAIGN_OBJECTIVE_CONFIGS[objective as keyof typeof CAMPAIGN_OBJECTIVE_CONFIGS]
+  if (direct) return direct
+  const mappedKey = EXTENDED_OBJECTIVE_TO_CONFIG_KEY[objective]
+  if (mappedKey) return CAMPAIGN_OBJECTIVE_CONFIGS[mappedKey]
+  return null
 }
 
 // All available objectives for dropdowns

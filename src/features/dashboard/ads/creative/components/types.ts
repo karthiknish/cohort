@@ -18,6 +18,12 @@ export type Creative = {
   landingPageUrl?: string
   callToAction?: string
   thumbnailUrl?: string
+  instagramPermalinkUrl?: string
+  objectStoryId?: string
+  effectiveObjectStoryId?: string
+  brandedContentSponsorPageId?: string
+  facebookBrandedSponsorPageId?: string
+  instagramBrandedSponsorId?: string
   pageName?: string
   pageProfileImageUrl?: string
   objectType?: string

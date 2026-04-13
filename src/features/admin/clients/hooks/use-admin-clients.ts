@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation } from '@tanstack/react-query'
 import { api } from '@convex/_generated/api'
 import { useConvex, useQuery as useConvexQuery } from 'convex/react'
 
@@ -102,45 +102,51 @@ export function useAdminClients(): UseAdminClientsReturn {
     const workspaceLoading = !isPreviewMode && user != null && workspaceContext === undefined
     const [previewClients, setPreviewClients] = useState<ClientRecord[]>(() => getPreviewClients())
 
-    const clientsQuery = useQuery({
-        queryKey: ['adminClients', workspaceId],
-        queryFn: async () => {
-            if (!workspaceId) return { items: [], nextCursor: null }
-            return await convex.query(clientsApi.list as never, {
+    type ClientsCursor = { fieldValue: string; legacyId: string }
+
+    const clientsInfiniteQuery = useInfiniteQuery({
+        queryKey: ['adminClients', workspaceId, includeAllWorkspaces],
+        enabled: !isPreviewMode && Boolean(workspaceId),
+        initialPageParam: null as ClientsCursor | null,
+        queryFn: async ({ pageParam }) => {
+            if (!workspaceId) {
+                return { items: [], nextCursor: null as ClientsCursor | null }
+            }
+            return (await convex.query(clientsApi.list as never, {
                 workspaceId,
                 limit: 100,
-                cursor: null,
+                cursor: pageParam,
                 includeAllWorkspaces,
-            } as never)
+            } as never)) as { items: ClientRow[]; nextCursor: ClientsCursor | null }
         },
-        enabled: !isPreviewMode && Boolean(workspaceId),
+        getNextPageParam: (lastPage) => lastPage.nextCursor ?? null,
     })
 
     const createClientMutation = useMutation({
         mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.create as never, args as never),
         onSuccess: () => {
-            clientsQuery.refetch()
+            void clientsInfiniteQuery.refetch()
         },
     })
 
     const softDeleteClientMutation = useMutation({
         mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.softDelete as never, args as never),
         onSuccess: () => {
-            clientsQuery.refetch()
+            void clientsInfiniteQuery.refetch()
         },
     })
 
     const addTeamMemberMutation = useMutation({
         mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.addTeamMember as never, args as never),
         onSuccess: () => {
-            clientsQuery.refetch()
+            void clientsInfiniteQuery.refetch()
         },
     })
 
     const removeTeamMemberMutation = useMutation({
         mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.removeTeamMember as never, args as never),
         onSuccess: () => {
-            clientsQuery.refetch()
+            void clientsInfiniteQuery.refetch()
         },
     })
 
@@ -165,10 +171,8 @@ export function useAdminClients(): UseAdminClientsReturn {
 
     // Transform Convex data to ClientRecord format
     const liveClients = useMemo<ClientRecord[]>(() => {
-        const data = clientsQuery.data
-        if (!data || typeof data !== 'object') return []
-
-        const rows = (Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : []) as ClientRow[]
+        const pages = clientsInfiniteQuery.data?.pages ?? []
+        const rows = pages.flatMap((page) => (Array.isArray(page.items) ? page.items : [])) as ClientRow[]
 
         const list: ClientRecord[] = rows.map((row) => ({
             id: row.legacyId ?? '',
@@ -181,7 +185,7 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         list.sort((a, b) => a.name.localeCompare(b.name))
         return list
-    }, [clientsQuery.data])
+    }, [clientsInfiniteQuery.data?.pages])
 
     const clients = isPreviewMode ? previewClients : liveClients
 
@@ -195,10 +199,14 @@ export function useAdminClients(): UseAdminClientsReturn {
         setPreviewClients((current) => (typeof updater === 'function' ? updater(current) : updater))
     }, [isPreviewMode])
 
-    const clientsLoading = isPreviewMode ? false : workspaceLoading || clientsQuery.isLoading
-    const clientsError = isPreviewMode ? null : clientsQuery.error ? asErrorMessage(clientsQuery.error) : null
-    const loadingMore = false
-    const nextCursor = null
+    const clientsLoading = isPreviewMode ? false : workspaceLoading || clientsInfiniteQuery.isLoading
+    const clientsError = isPreviewMode
+        ? null
+        : clientsInfiniteQuery.error
+          ? asErrorMessage(clientsInfiniteQuery.error)
+          : null
+    const loadingMore = !isPreviewMode && clientsInfiniteQuery.isFetchingNextPage
+    const nextCursor = !isPreviewMode && clientsInfiniteQuery.hasNextPage ? 'more' : null
 
     const existingTeamMembers = useMemo(
         () => clients.reduce((total, client) => total + client.teamMembers.length, 0),
@@ -212,17 +220,26 @@ export function useAdminClients(): UseAdminClientsReturn {
             return
         }
 
-        await clientsQuery.refetch()
-    }, [clientsQuery, isPreviewMode, toast])
+        void clientsInfiniteQuery.refetch()
+    }, [clientsInfiniteQuery, isPreviewMode, toast])
 
     const handleLoadMore = useCallback(async () => {
         if (isPreviewMode) {
             return
         }
 
-        // No infinite scroll with single query
-        await clientsQuery.refetch()
-    }, [clientsQuery, isPreviewMode])
+        if (!clientsInfiniteQuery.hasNextPage || clientsInfiniteQuery.isFetchingNextPage) {
+            return
+        }
+
+        try {
+            await clientsInfiniteQuery.fetchNextPage()
+        } catch (err: unknown) {
+            logError(err, 'useAdminClients:handleLoadMore')
+            const message = asErrorMessage(err)
+            toast({ title: 'Could not load more', description: message, variant: 'destructive' })
+        }
+    }, [clientsInfiniteQuery, isPreviewMode, toast])
 
     // Delete dialog handlers
     const handleDeleteDialogChange = useCallback((open: boolean) => {
