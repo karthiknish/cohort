@@ -121,12 +121,13 @@ function firstVideoAssetResourceFromRow(row: GoogleAdsResult): string | undefine
   } | undefined)?.ad
   const vra = ad?.videoResponsiveAd ?? ad?.video_responsive_ad
   const dgv = ad?.demandGenVideoResponsiveAd ?? ad?.demand_gen_video_responsive_ad
-  const app = ad?.appAd ?? ad?.app_ad
+  const appCamel = ad?.appAd
+  const appSnake = ad?.app_ad
   const fromVra = vra?.videos?.map((v) => v.asset?.trim()).find(Boolean)
   const fromDg = dgv?.videos?.map((v) => v.asset?.trim()).find(Boolean)
   const fromApp =
-    app?.youtubeVideos?.map((v) => v.asset?.trim()).find(Boolean)
-    ?? app?.youtube_videos?.map((v) => v.asset?.trim()).find(Boolean)
+    appCamel?.youtubeVideos?.map((v) => v.asset?.trim()).find(Boolean)
+    ?? appSnake?.youtube_videos?.map((v) => v.asset?.trim()).find(Boolean)
   return fromVra ?? fromDg ?? fromApp
 }
 
