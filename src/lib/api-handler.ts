@@ -48,19 +48,26 @@ type BestEffortIdempotencyCleanupOptions =
       path: string
     }
 
+function getConvexIdempotencySecret(): string | null {
+  const s = process.env.COHORTS_API_IDEMPOTENCY_SECRET
+  return typeof s === 'string' && s.length > 0 ? s : null
+}
+
 async function runBestEffortIdempotencyCleanup(options: BestEffortIdempotencyCleanupOptions): Promise<void> {
   const convex = getConvexIdempotencyClient()
-  if (!convex) {
+  const serverSecret = getConvexIdempotencySecret()
+  if (!convex || !serverSecret) {
     return
   }
 
   try {
     if (options.operation === 'release') {
-      await convex.mutation(api.apiIdempotency.release, { key: options.key })
+      await convex.mutation(api.apiIdempotency.release, { serverSecret, key: options.key })
       return
     }
 
     await convex.mutation(api.apiIdempotency.complete, {
+      serverSecret,
       key: options.key,
       response: options.response,
       httpStatus: options.httpStatus,
@@ -352,9 +359,11 @@ export function createApiHandler<
 
         if (effectiveKey) {
           const convex = getConvexIdempotencyClient()
-          if (convex) {
+          const serverSecret = getConvexIdempotencySecret()
+          if (convex && serverSecret) {
             try {
               const result = await convex.mutation(api.apiIdempotency.checkAndClaim, {
+                serverSecret,
                 key: effectiveKey,
                 requestId,
                 method: req.method,
@@ -362,8 +371,12 @@ export function createApiHandler<
               })
 
               if (result.type === 'completed') {
-                return NextResponse.json(result.response, { 
-                  status: result.httpStatus || 200,
+                const statusCode =
+                  typeof result.httpStatus === 'number' && Number.isFinite(result.httpStatus)
+                    ? result.httpStatus
+                    : 200
+                return NextResponse.json(result.response, {
+                  status: statusCode,
                   headers: { 
                     'X-Idempotency-Hit': 'true', 
                     'X-Idempotency-Key': effectiveKey,
@@ -393,6 +406,8 @@ export function createApiHandler<
               // If Convex is unavailable, log and continue without idempotency
               logger.warn('Idempotency check failed, proceeding without', { error: err })
             }
+          } else if (convex && !serverSecret) {
+            logger.warn('COHORTS_API_IDEMPOTENCY_SECRET unset; idempotency disabled for this request')
           }
         }
       }

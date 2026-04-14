@@ -1,4 +1,4 @@
-import { api } from '/_generated/api'
+import { api, internal } from '/_generated/api'
 import type { ActionCtx } from '../../_generated/server'
 
 import type { AgentRequestContextType } from '../types'
@@ -211,7 +211,7 @@ async function resolveClientIdFromParams(
 
   const resolveClientById = async (legacyId: string): Promise<ClientResolution> => {
     try {
-      const client = await ctx.runQuery(api.clients.getByLegacyIdServer, {
+      const client = await ctx.runQuery(internal.clients.getByLegacyIdServer, {
         workspaceId,
         legacyId,
       }) as { legacyId?: unknown; name?: unknown } | null

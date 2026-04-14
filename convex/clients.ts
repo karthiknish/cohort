@@ -1,4 +1,4 @@
-import { query } from './_generated/server'
+import { internalQuery, query } from './_generated/server'
 import { v } from 'convex/values'
 import {
   zWorkspaceMutation,
@@ -42,9 +42,9 @@ function slugify(value: string): string {
 }
 
 /**
- * Get client by legacyId (no auth - server-side use).
+ * Get client by legacyId — **internal only** (agent/actions). Not callable from public clients.
  */
-export const getByLegacyIdServer = query({
+export const getByLegacyIdServer = internalQuery({
   args: { workspaceId: v.string(), legacyId: v.string() },
   handler: async (ctx, args) => {
     const row = await ctx.db

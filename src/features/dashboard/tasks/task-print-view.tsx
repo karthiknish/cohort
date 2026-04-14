@@ -5,6 +5,7 @@ import { Printer } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import type { TaskRecord, TaskStatus } from '@/types/tasks'
 import { formatStatusLabel, formatDate, formatPriorityLabel } from './task-types'
+import { escapeHtml } from '@/lib/escape-html'
 import { cn } from '@/lib/utils'
 import './tasks-print.css'
 
@@ -174,28 +175,38 @@ export function PrintTasksButton({ tasks, title }: { tasks: TaskRecord[], title?
     document.body.appendChild(printContainer)
 
     // Render the print view to the container
+    const safeTitle = escapeHtml(title || 'Tasks')
+    const safePrintedOn = escapeHtml(new Date().toLocaleDateString())
     const printContent = `
       <div class="tasks-print-header">
-        <h1 class="tasks-print-title">${title || 'Tasks'}</h1>
-        <p class="tasks-print-meta">Printed on ${new Date().toLocaleDateString()}</p>
+        <h1 class="tasks-print-title">${safeTitle}</h1>
+        <p class="tasks-print-meta">Printed on ${safePrintedOn}</p>
       </div>
       <div class="tasks-print-list">
-        ${tasks.map(task => `
+        ${tasks.map(task => {
+          const statusClass = String(task.status).replace(/[^a-z0-9-]/gi, '')
+          const safeTaskTitle = escapeHtml(task.title)
+          const safeStatusLabel = escapeHtml(formatStatusLabel(task.status))
+          const safeDateLine = escapeHtml(task.dueDate ? formatDate(task.dueDate) : 'No due date')
+          const assignees = (task.assignedTo ?? []).map((n) => escapeHtml(n)).join(', ')
+          const safeAssignees = assignees.length > 0 ? assignees : 'Unassigned'
+          return `
           <div class="task-print-card">
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-1">
-                  <h3 class="font-semibold text-sm">${task.title}</h3>
-                  <span class="task-print-status ${task.status}">${formatStatusLabel(task.status)}</span>
+                  <h3 class="font-semibold text-sm">${safeTaskTitle}</h3>
+                  <span class="task-print-status ${statusClass}">${safeStatusLabel}</span>
                 </div>
                 <p class="text-xs text-muted-foreground">
-                  📅 ${task.dueDate ? formatDate(task.dueDate) : 'No due date'} •
-                  👤 ${(task.assignedTo ?? []).join(', ') || 'Unassigned'}
+                  📅 ${safeDateLine} •
+                  👤 ${safeAssignees}
                 </p>
               </div>
             </div>
           </div>
-        `).join('')}
+        `
+        }).join('')}
       </div>
     `
 

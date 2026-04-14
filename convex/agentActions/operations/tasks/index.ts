@@ -1,5 +1,5 @@
 import { buildProjectTasksRoute } from '../../../../src/lib/project-routes'
-import { api } from '/_generated/api'
+import { api, internal } from '/_generated/api'
 import {
   asNonEmptyString,
   asRecord,
@@ -43,7 +43,7 @@ export const taskOperationHandlers: Record<string, OperationHandler> = {
     let matchedClient: { legacyId: string; name: string; workspaceId: string } | null = null
 
     try {
-      const exactClient = await ctx.runQuery(api.clients.getByLegacyIdServer, {
+      const exactClient = await ctx.runQuery(internal.clients.getByLegacyIdServer, {
         workspaceId: input.workspaceId,
         legacyId: lookupQuery,
       }) as { legacyId?: unknown; name?: unknown } | null

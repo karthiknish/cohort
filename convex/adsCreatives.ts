@@ -1,5 +1,5 @@
 import { action } from './_generated/server'
-import { api } from '/_generated/api'
+import { api, internal } from '/_generated/api'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from './errors'
 import { optimizeMetaImageUrl } from '../src/services/integrations/meta-ads'
@@ -562,7 +562,7 @@ export const createCreative = action({
     let idempotencyClaimed = false
 
     if (idempotencyKey) {
-      const claimResult = await ctx.runMutation(api.apiIdempotency.checkAndClaim, {
+      const claimResult = await ctx.runMutation(internal.apiIdempotency.checkAndClaimInternal, {
         key: idempotencyKey,
         requestId: `adsCreatives_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
         method: 'ACTION',
@@ -600,7 +600,7 @@ export const createCreative = action({
       if (!idempotencyKey || !idempotencyClaimed) return
 
       try {
-        await ctx.runMutation(api.apiIdempotency.complete, {
+        await ctx.runMutation(internal.apiIdempotency.completeInternal, {
           key: idempotencyKey,
           response,
           httpStatus: 200,
@@ -608,7 +608,7 @@ export const createCreative = action({
       } catch (commitError) {
         console.warn('[adsCreatives:createCreative] Failed to persist idempotency completion', commitError)
         try {
-          await ctx.runMutation(api.apiIdempotency.release, { key: idempotencyKey })
+          await ctx.runMutation(internal.apiIdempotency.releaseInternal, { key: idempotencyKey })
         } catch (releaseAfterCommitError) {
           console.warn('[adsCreatives:createCreative] Failed to release idempotency key after commit failure', releaseAfterCommitError)
         }
@@ -738,7 +738,7 @@ export const createCreative = action({
 
       if (idempotencyKey && idempotencyClaimed) {
         try {
-          await ctx.runMutation(api.apiIdempotency.release, { key: idempotencyKey })
+          await ctx.runMutation(internal.apiIdempotency.releaseInternal, { key: idempotencyKey })
         } catch (releaseError) {
           console.warn('[adsCreatives:createCreative] Failed to release idempotency key', releaseError)
         }
