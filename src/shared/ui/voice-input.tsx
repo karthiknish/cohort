@@ -83,6 +83,11 @@ export function VoiceInputButton({
             isListening && 'animate-pulse'
           )}
           title={isListening ? `Stop listening (${timeRemaining}s)` : 'Start voice input'}
+          aria-label={
+            isListening
+              ? `Stop voice input${timeRemaining !== null ? `, ${timeRemaining} seconds left` : ''}`
+              : 'Start voice input'
+          }
         >
           <Mic className={cn('h-3.5 w-3.5', isListening && 'text-white')} />
         </Button>
@@ -128,6 +133,11 @@ export function VoiceInputButton({
           isListening && 'animate-pulse ring-2 ring-destructive/50'
         )}
         title={isListening ? `Stop listening (${timeRemaining}s)` : 'Start voice input'}
+        aria-label={
+          isListening
+            ? `Stop voice input${timeRemaining !== null ? `, ${timeRemaining} seconds left` : ''}`
+            : 'Start voice input'
+        }
       >
         {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
       </Button>

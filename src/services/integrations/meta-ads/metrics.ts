@@ -124,6 +124,69 @@ export async function fetchMetaAdAccounts(options: {
 // FETCH META ADS METRICS
 // =============================================================================
 
+/** Map Meta Insights API rows to normalized metrics (shared by sync GET + async report run). */
+export function metaInsightRowsToNormalizedMetrics(adAccountId: string, rows: MetaInsightsRow[]): NormalizedMetric[] {
+  const metrics: NormalizedMetric[] = []
+
+  rows.forEach((row) => {
+    const spend = coerceNumber(row?.spend)
+    const impressions = coerceNumber(row?.impressions)
+    const clicks = coerceNumber(row?.clicks)
+
+    const actions = Array.isArray(row?.actions) ? row.actions : []
+    const conversions = actions.reduce((acc: number, action) => {
+      if (action?.action_type === 'offsite_conversion' || action?.action_type === 'purchase') {
+        return acc + coerceNumber(action?.value)
+      }
+      return acc
+    }, 0)
+
+    const actionValues = Array.isArray(row?.action_values) ? row.action_values : []
+    const revenue = actionValues.reduce((acc: number, action) => {
+      if (action?.action_type === 'offsite_conversion.purchase' || action?.action_type === 'omni_purchase') {
+        return acc + coerceNumber(action?.value)
+      }
+      return acc
+    }, 0)
+
+    const campaignId = typeof row?.campaign_id === 'string' && row.campaign_id.length > 0 ? row.campaign_id : undefined
+    const campaignName = typeof row?.campaign_name === 'string' && row.campaign_name.length > 0 ? row.campaign_name : undefined
+    const publisherPlatform =
+      typeof row?.publisher_platform === 'string' && row.publisher_platform.length > 0
+        ? row.publisher_platform.toLowerCase()
+        : undefined
+
+    const currency =
+      typeof row?.account_currency === 'string' && row.account_currency.trim().length > 0
+        ? row.account_currency.trim().toUpperCase()
+        : undefined
+
+    metrics.push({
+      providerId: 'facebook',
+      accountId: adAccountId,
+      currency,
+      publisherPlatform,
+      date: row?.date_start ?? row?.date_stop ?? formatDate(new Date(), 'yyyy-MM-dd'),
+      spend,
+      impressions,
+      clicks,
+      conversions,
+      revenue,
+      campaignId,
+      campaignName,
+      rawPayload: row,
+    })
+  })
+
+  return metrics
+}
+
+function readEnvFlag(value: string | undefined): boolean {
+  if (!value) return false
+  const v = value.trim().toLowerCase()
+  return v === '1' || v === 'true' || v === 'yes'
+}
+
 async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<NormalizedMetric[]> {
   const { 
     accessToken, 
@@ -138,6 +201,24 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
 
   if (!accessToken) throw new Error('Missing Meta access token')
   if (!adAccountId) throw new Error('Missing Meta ad account ID on integration')
+
+  if (readEnvFlag(process.env.META_ADS_USE_ASYNC_INSIGHTS)) {
+    const { runMetaAccountInsightsReportToCompletion } = await import('./async-insights')
+    const maxWaitRaw = process.env.META_ADS_ASYNC_INSIGHTS_MAX_WAIT_MS
+    const pollRaw = process.env.META_ADS_ASYNC_INSIGHTS_POLL_MS
+    const maxWaitParsed = maxWaitRaw ? Number(maxWaitRaw) : Number.NaN
+    const pollParsed = pollRaw ? Number(pollRaw) : Number.NaN
+    const rows = await runMetaAccountInsightsReportToCompletion({
+      accessToken,
+      adAccountId,
+      timeframeDays,
+      maxPages,
+      maxRetries,
+      maxWaitMs: Number.isFinite(maxWaitParsed) ? maxWaitParsed : undefined,
+      pollIntervalMs: Number.isFinite(pollParsed) ? pollParsed : undefined,
+    })
+    return metaInsightRowsToNormalizedMetrics(adAccountId, rows)
+  }
 
   const timeRange = buildTimeRange(timeframeDays)
   let paging: MetaPagingState | undefined
@@ -192,56 +273,7 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
     })
 
     const rows: MetaInsightsRow[] = Array.isArray(payload?.data) ? payload.data : []
-
-    rows.forEach((row) => {
-      const spend = coerceNumber(row?.spend)
-      const impressions = coerceNumber(row?.impressions)
-      const clicks = coerceNumber(row?.clicks)
-
-      const actions = Array.isArray(row?.actions) ? row.actions : []
-      const conversions = actions.reduce((acc: number, action) => {
-        if (action?.action_type === 'offsite_conversion' || action?.action_type === 'purchase') {
-          return acc + coerceNumber(action?.value)
-        }
-        return acc
-      }, 0)
-
-      const actionValues = Array.isArray(row?.action_values) ? row.action_values : []
-      const revenue = actionValues.reduce((acc: number, action) => {
-        if (action?.action_type === 'offsite_conversion.purchase' || action?.action_type === 'omni_purchase') {
-          return acc + coerceNumber(action?.value)
-        }
-        return acc
-      }, 0)
-
-      const campaignId = typeof row?.campaign_id === 'string' && row.campaign_id.length > 0 ? row.campaign_id : undefined
-      const campaignName = typeof row?.campaign_name === 'string' && row.campaign_name.length > 0 ? row.campaign_name : undefined
-      const publisherPlatform =
-        typeof row?.publisher_platform === 'string' && row.publisher_platform.length > 0
-          ? row.publisher_platform.toLowerCase()
-          : undefined
-
-      const currency =
-        typeof row?.account_currency === 'string' && row.account_currency.trim().length > 0
-          ? row.account_currency.trim().toUpperCase()
-          : undefined
-
-      metrics.push({
-        providerId: 'facebook',
-        accountId: adAccountId,
-        currency,
-        publisherPlatform,
-        date: row?.date_start ?? row?.date_stop ?? formatDate(new Date(), 'yyyy-MM-dd'),
-        spend,
-        impressions,
-        clicks,
-        conversions,
-        revenue,
-        campaignId,
-        campaignName,
-        rawPayload: row,
-      })
-    })
+    metrics.push(...metaInsightRowsToNormalizedMetrics(adAccountId, rows))
 
     const nextCursor = payload?.paging?.cursors?.after ?? null
     const nextLink = payload?.paging?.next ?? null

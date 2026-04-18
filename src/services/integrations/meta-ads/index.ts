@@ -1,6 +1,11 @@
 // =============================================================================
 // META ADS SERVICE - Re-exports all modules
 // =============================================================================
+//
+// Marketing API is broader than this package. Coverage vs official docs:
+// docs/integrations/meta-marketing-api-coverage.md
+// Hub: https://developers.facebook.com/docs/marketing-api/
+//
 
 // Types
 export type {
@@ -58,6 +63,7 @@ export {
   fetchMetaAdAccounts,
   fetchMetaAdsMetrics,
   checkMetaIntegrationHealth,
+  metaInsightRowsToNormalizedMetrics,
 } from './metrics'
 
 // Campaigns
@@ -108,3 +114,13 @@ export {
   generateMetaAdsInsights,
 } from './insights'
 export type { MetaAdsRawMetrics } from './insights'
+
+// Async insights (Ad Report Run) — optional heavy / long-window path
+export {
+  startMetaAccountInsightsReport,
+  getMetaAsyncInsightsReportStatus,
+  fetchMetaAsyncInsightsReportRows,
+  waitForMetaAsyncInsightsReport,
+  runMetaAccountInsightsReportToCompletion,
+} from './async-insights'
+export type { MetaAsyncInsightsJobStatus } from './async-insights'

@@ -46,6 +46,9 @@ export function AgentMode() {
 
   const handleClose = useCallback(() => {
     setOpen(false)
+    requestAnimationFrame(() => {
+      document.getElementById('agent-mode-launcher')?.focus()
+    })
   }, [setOpen])
 
   return (

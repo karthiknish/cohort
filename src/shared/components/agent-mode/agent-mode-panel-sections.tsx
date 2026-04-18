@@ -36,6 +36,8 @@ import { VoiceInputButton } from '@/shared/ui/voice-input'
 import type { AgentConversationSummary, AgentMessage, ConnectionStatus } from '@/shared/hooks/use-agent-mode'
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import type { AgentAttachmentContext } from '@/lib/agent-attachments'
+import type { AgentError } from '@/lib/agent-errors'
+import { ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
 import { cn } from '@/lib/utils'
 
 import { AgentMessageCard } from './agent-message-card'
@@ -153,6 +155,8 @@ function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
 
   return (
     <m.div
+      role="status"
+      aria-live="polite"
       initial={MOTION_FADE_SLIDE_UP}
       animate={MOTION_VISIBLE}
       exit={MOTION_FADE_SLIDE_UP_EXIT}
@@ -180,6 +184,8 @@ function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
 export function RateLimitBanner({ countdown, onDismiss }: { countdown: number; onDismiss?: () => void }) {
   return (
     <m.div
+      role="status"
+      aria-live="assertive"
       initial={MOTION_FADE_SLIDE_UP}
       animate={MOTION_VISIBLE}
       exit={MOTION_FADE_SLIDE_UP_EXIT}
@@ -190,11 +196,44 @@ export function RateLimitBanner({ countdown, onDismiss }: { countdown: number; o
         <span>Too many requests. Please wait <strong>{countdown}s</strong>...</span>
       </div>
       {onDismiss ? (
-        <Button variant="ghost" size="sm" onClick={onDismiss} className="h-7 px-2 text-warning hover:text-warning/80">
+        <Button variant="ghost" size="sm" onClick={onDismiss} className="h-7 px-2 text-warning hover:text-warning/80" aria-label="Dismiss rate limit notice">
           Dismiss
         </Button>
       ) : null}
     </m.div>
+  )
+}
+
+export function AgentErrorBanner({
+  error,
+  lastFailedMessage,
+  onDismiss,
+}: {
+  error: AgentError
+  lastFailedMessage: string | null
+  onDismiss: () => void
+}) {
+  if (lastFailedMessage) return null
+
+  const text = error.type === 'validation' ? error.message : (ERROR_DISPLAY_MESSAGES[error.type] ?? error.message)
+
+  return (
+    <div
+      role="alert"
+      aria-live="assertive"
+      className="flex items-center justify-between gap-3 border-b border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm text-destructive"
+    >
+      <span className="min-w-0 flex-1">{text}</span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-8 shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10"
+        onClick={onDismiss}
+      >
+        Dismiss
+      </Button>
+    </div>
   )
 }
 
@@ -379,6 +418,7 @@ export function AgentComposerSection({
           onClick={onOpenFilePicker}
           disabled={disabled}
           className="h-10 w-10 shrink-0 rounded-full"
+          aria-label="Attach context files"
           title="Attach context files"
         >
           {isExtractingAttachments ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
@@ -389,6 +429,7 @@ export function AgentComposerSection({
           onClick={onSubmit}
           disabled={!inputValue.trim() || disabled}
           className="h-10 w-10 shrink-0 rounded-full"
+          aria-label="Send message"
           title="Send message"
         >
           <Send className="h-4 w-4" />
@@ -432,7 +473,9 @@ export function AgentModeHeader({
     <div className="flex items-center justify-between border-b px-4 py-3">
       <div className="flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-primary" />
-        <span className="text-sm font-semibold">Agent Mode</span>
+        <span id="agent-mode-dialog-title" className="text-sm font-semibold">
+          Agent Mode
+        </span>
       </div>
       <div className="flex items-center gap-2">
         {conversationId || messagesCount > 0 ? (
@@ -751,9 +794,16 @@ export function AgentMessagesSection({
           ))}
 
           {isProcessing ? (
-            <m.div initial={MOTION_FADE_IN} animate={MOTION_FADE_IN_VISIBLE} className="flex justify-start">
+            <m.div
+              initial={MOTION_FADE_IN}
+              animate={MOTION_FADE_IN_VISIBLE}
+              className="flex justify-start"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2.5 text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                 <span className="text-foreground">Thinking...</span>
               </div>
             </m.div>
@@ -774,13 +824,23 @@ export function FailedMessageBanner({
   if (!lastFailedMessage) return null
 
   return (
-    <div className="flex items-center justify-between gap-3 border-t bg-destructive/10 px-4 py-2.5">
+    <div
+      role="alert"
+      aria-live="assertive"
+      className="flex items-center justify-between gap-3 border-t bg-destructive/10 px-4 py-2.5"
+    >
       <div className="flex items-center gap-2 text-sm text-destructive">
-        <WifiOff className="h-4 w-4 shrink-0" />
+        <WifiOff className="h-4 w-4 shrink-0" aria-hidden />
         <span>Message failed to send</span>
       </div>
-      <Button variant="outline" size="sm" onClick={onRetry} className="h-8 gap-2 border-destructive/20 text-destructive hover:bg-destructive/10">
-        <RefreshCw className="h-3.5 w-3.5" />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onRetry}
+        className="h-8 gap-2 border-destructive/20 text-destructive hover:bg-destructive/10"
+        aria-label="Retry sending failed message"
+      >
+        <RefreshCw className="h-3.5 w-3.5" aria-hidden />
         Retry
       </Button>
     </div>
@@ -793,6 +853,8 @@ export function AgentModePanelShell({
   fileInputRef,
   headerProps,
   historyPanelProps,
+  agentError,
+  lastFailedMessage,
   onClearError,
   onDragLeave,
   onDragOver,
@@ -805,6 +867,8 @@ export function AgentModePanelShell({
   fileInputRef: RefObject<HTMLInputElement | null>
   headerProps: ComponentProps<typeof AgentModeHeader>
   historyPanelProps: ComponentProps<typeof AgentHistoryPanel>
+  agentError?: AgentError | null
+  lastFailedMessage?: string | null
   onClearError?: () => void
   onDragLeave: (event: React.DragEvent<HTMLDivElement>) => void
   onDragOver: (event: React.DragEvent<HTMLDivElement>) => void
@@ -814,6 +878,9 @@ export function AgentModePanelShell({
 }) {
   return (
     <m.div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="agent-mode-dialog-title"
       initial={MOTION_FADE_STILL}
       animate={MOTION_FADE_STILL_VISIBLE}
       exit={MOTION_FADE_STILL_EXIT}
@@ -836,6 +903,14 @@ export function AgentModePanelShell({
       />
 
       <AgentModeHeader {...headerProps} />
+
+      {agentError && onClearError ? (
+        <AgentErrorBanner
+          error={agentError}
+          lastFailedMessage={lastFailedMessage ?? null}
+          onDismiss={onClearError}
+        />
+      ) : null}
 
       <AnimatePresence>
         {typeof rateLimitCountdown === 'number' && rateLimitCountdown > 0 ? (

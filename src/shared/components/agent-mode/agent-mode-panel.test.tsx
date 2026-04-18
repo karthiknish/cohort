@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
+import { AgentValidationError } from '@/lib/agent-errors'
 import type { AgentConversationSummary, AgentMessage } from '@/shared/hooks/use-agent-mode'
 
 import { AgentModePanel } from './agent-mode-panel'
@@ -91,5 +92,17 @@ describe('AgentModePanel', () => {
 
     expect(markup).toContain('Message failed to send')
     expect(markup).toContain('Retry')
+  })
+
+  it('renders dismissible error banner when error has no lastFailedMessage', () => {
+    const err = new AgentValidationError('Message too long (max 500 characters)')
+    const markup = renderPanel({
+      error: err,
+      lastFailedMessage: null,
+      onClearError: () => {},
+    })
+
+    expect(markup).toContain('Message too long (max 500 characters)')
+    expect(markup).toContain('Dismiss')
   })
 })

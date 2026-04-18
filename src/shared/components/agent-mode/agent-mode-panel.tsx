@@ -82,6 +82,7 @@ export function AgentModePanel({
   onRetryLastUserTurn,
   connectionStatus = 'connected',
   rateLimitCountdown,
+  error = null,
 }: AgentModePanelProps) {
   const [inputValue, setInputValue] = useState('')
   const [showMentions, setShowMentions] = useState(false)
@@ -195,9 +196,18 @@ export function AgentModePanel({
       handleSubmit()
     }
     if (e.key === 'Escape') {
+      e.preventDefault()
+      if (showHistory && editingConversationId) {
+        setEditingConversationId(null)
+        return
+      }
+      if (showHistory) {
+        setShowHistory(false)
+        return
+      }
       onClose()
     }
-  }, [handleSubmit, onClose, showMentions])
+  }, [editingConversationId, handleSubmit, onClose, showHistory, showMentions])
 
   const handleSuggestionClick = useCallback((suggestion: string) => {
     onSendMessage(suggestion)
@@ -278,6 +288,32 @@ export function AgentModePanel({
   const handleStopEditingConversation = useCallback(() => {
     setEditingConversationId(null)
   }, [])
+
+  // Escape: close history / stop title edit first; leave @-mention dropdown to its own listener (bubble)
+  useEffect(() => {
+    if (!isOpen) return
+    const onDocumentKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (showMentions) return
+      if (showHistory && editingConversationId) {
+        e.preventDefault()
+        e.stopPropagation()
+        setEditingConversationId(null)
+        return
+      }
+      if (showHistory) {
+        e.preventDefault()
+        e.stopPropagation()
+        setShowHistory(false)
+        return
+      }
+      e.preventDefault()
+      e.stopPropagation()
+      onClose()
+    }
+    document.addEventListener('keydown', onDocumentKeyDown, true)
+    return () => document.removeEventListener('keydown', onDocumentKeyDown, true)
+  }, [editingConversationId, isOpen, onClose, showHistory, showMentions])
 
   const showEmptyState = messages.length === 0 && !isConversationLoading
 
@@ -405,6 +441,8 @@ export function AgentModePanel({
             fileInputRef={fileInputRef}
             headerProps={headerProps}
             historyPanelProps={historyPanelProps}
+            agentError={error}
+            lastFailedMessage={lastFailedMessage ?? null}
             onClearError={onClearError}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}

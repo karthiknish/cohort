@@ -3,9 +3,12 @@
 import { useConvexAuth, useQuery } from 'convex/react'
 import {
   ArrowUpRight,
+  Calendar,
   LayoutDashboard,
+  ListTodo,
   RefreshCw,
   Zap,
+  type LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useCallback, useMemo } from 'react'
@@ -15,7 +18,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { FadeIn, FadeInStagger } from '@/shared/ui/animate-in'
+import { FadeIn } from '@/shared/ui/animate-in'
+import { Separator } from '@/shared/ui/separator'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -36,13 +40,6 @@ import { ClientsSummarySection } from '@/features/dashboard/home/components/clie
 import { MyTasksSection } from '@/features/dashboard/home/components/my-tasks-section'
 import { ForYouPageSkeleton } from './components/for-you-page-skeleton'
 
-const toneBorder: Record<HubTone, string> = {
-  neutral: 'border-border/80 hover:border-border',
-  success: 'border-primary/20 hover:border-primary/40',
-  warning: 'border-accent/20 hover:border-accent/40',
-  critical: 'border-destructive/20 hover:border-destructive/40',
-}
-
 type BadgeVariant = 'secondary' | 'success' | 'warning' | 'destructive' | 'info' | 'default'
 
 const toneToVariant: Record<HubTone, BadgeVariant> = {
@@ -50,6 +47,13 @@ const toneToVariant: Record<HubTone, BadgeVariant> = {
   success: 'success',
   warning: 'warning',
   critical: 'destructive',
+}
+
+const toneAccent: Record<HubTone, string> = {
+  neutral: 'border-l-muted-foreground/45',
+  success: 'border-l-primary',
+  warning: 'border-l-warning',
+  critical: 'border-l-destructive',
 }
 
 function isProjectStatus(value: unknown): value is ProjectStatus {
@@ -93,6 +97,7 @@ function PinnedSectionCard({
   actionLabel,
   items,
   emptyMessage,
+  icon: Icon,
 }: {
   title: string
   description: string
@@ -100,42 +105,76 @@ function PinnedSectionCard({
   actionLabel: string
   items: SpotlightItem[]
   emptyMessage: string
+  icon: LucideIcon
 }) {
   return (
-    <Card className={DASHBOARD_THEME.cards.base}>
-      <CardHeader className={DASHBOARD_THEME.cards.header}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle className="text-base text-balance">{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+    <Card className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden transition-shadow hover:shadow-md')}>
+      <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'space-y-0 pb-5')}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-1 gap-3.5">
+            <div
+              className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary shadow-sm"
+              aria-hidden
+            >
+              <Icon className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-base font-semibold leading-snug text-balance">{title}</CardTitle>
+              <CardDescription className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {description}
+              </CardDescription>
+            </div>
           </div>
-          <Button asChild variant="outline" size="sm" className={cn('w-fit bg-background shadow-sm', getButtonClasses('outline'))}>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className={cn('w-full shrink-0 bg-background shadow-sm sm:w-fit', getButtonClasses('outline'))}
+          >
             <Link href={href}>{actionLabel}</Link>
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {items.length > 0 ? items.map((item) => (
-          <Link
-            key={item.id}
-            href={item.href}
-            className={cn('group block rounded-xl border bg-background/80 p-4 transition-colors', toneBorder[item.tone])}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <Badge variant={toneToVariant[item.tone]} className="rounded-full text-[11px]">
-                  {item.badge}
-                </Badge>
-                <p className="mt-2 text-sm font-semibold text-foreground">{item.title}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
-                <p className="mt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{item.meta}</p>
-              </div>
-              <ArrowUpRight aria-hidden="true" className="mt-0.5 h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-            </div>
-          </Link>
-        )) : (
-          <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-            {emptyMessage}
+      <CardContent className="px-4 pb-5 pt-0 sm:px-5 sm:pb-5">
+        {items.length > 0 ? (
+          <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/5">
+            <ul className="divide-y divide-border/60" role="list">
+              {items.map((item) => (
+                <li key={item.id}>
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      'group flex items-start gap-3 border-l-[3px] px-3.5 py-3.5 outline-none transition-[background-color,transform] sm:px-4 sm:py-4',
+                      'hover:bg-muted/40 focus-visible:bg-muted/40',
+                      'focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2',
+                      toneAccent[item.tone],
+                      'active:scale-[0.995]',
+                    )}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={toneToVariant[item.tone]} className="rounded-full text-[11px] font-medium">
+                          {item.badge}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 text-sm font-semibold leading-snug text-foreground">{item.title}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.detail}</p>
+                      <p className="mt-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/90">
+                        {item.meta}
+                      </p>
+                    </div>
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="mt-1 h-4 w-4 shrink-0 text-muted-foreground/70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground"
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border/60 bg-muted/15 px-4 py-12 text-center sm:px-8">
+            <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">{emptyMessage}</p>
           </div>
         )}
       </CardContent>
@@ -289,7 +328,7 @@ export default function ForYouPage() {
       loading={isInitialLoading}
       loadingContent={loadingContent}
     >
-    <div className={cn(DASHBOARD_THEME.layout.container, 'w-full')}>
+    <main id="for-you-page" aria-labelledby="for-you-heading" className={cn(DASHBOARD_THEME.layout.container, 'w-full')}>
       {dashboardErrors.length > 0 ? (
         <Alert variant="destructive" className="mb-6">
           <AlertTitle>Workspace data is partially unavailable</AlertTitle>
@@ -312,27 +351,31 @@ export default function ForYouPage() {
               {resolvedClients.length > 0 ? `${resolvedClients.length} client${resolvedClients.length === 1 ? '' : 's'}` : 'Workspace-wide'}
             </Badge>
           </div>
-          <h1 className={cn(DASHBOARD_THEME.layout.title, 'mt-3 text-balance')}>{activityHub.heroTitle}</h1>
-          <p className={cn(DASHBOARD_THEME.layout.subtitle, 'mt-1')}>
+          <h1 id="for-you-heading" className={cn(DASHBOARD_THEME.layout.title, 'mt-3 text-balance sm:text-4xl')}>
+            {activityHub.heroTitle}
+          </h1>
+          <p className={cn(DASHBOARD_THEME.layout.subtitle, 'mt-2 max-w-[65ch] text-base leading-relaxed')}>
             {activityHub.heroSummary}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end md:w-auto">
           {unreadCount > 0 && (
-            <Badge variant="default" className="text-xs">{unreadCount} unread</Badge>
+            <Badge variant="default" className="w-fit text-xs">
+              {unreadCount} unread
+            </Badge>
           )}
           <Button
             variant="outline"
             size="sm"
             onClick={handleRetry}
             disabled={loading}
-            title="Refresh (Cmd+R)"
-            className={getButtonClasses('outline')}
+            title="Reload activity and summary"
+            className={cn('w-full sm:w-auto', getButtonClasses('outline'))}
           >
             <RefreshCw className={cn('mr-2 h-4 w-4', loading && DASHBOARD_THEME.animations.spin)} />
             Refresh
           </Button>
-          <Button asChild variant="default" size="sm" className={getButtonClasses('primary')}>
+          <Button asChild variant="default" size="sm" className={cn('w-full sm:w-auto', getButtonClasses('primary'))}>
             <Link href="/dashboard">
               <LayoutDashboard aria-hidden="true" className="mr-2 h-4 w-4" />
               Go to Dashboard
@@ -341,35 +384,64 @@ export default function ForYouPage() {
         </div>
       </div>
 
-      <FadeInStagger as="div" className={DASHBOARD_THEME.layout.container} delay={0.05} stagger={0.07}>
-        <FadeIn as="div">
-          <div className="grid gap-6 xl:grid-cols-2">
+      <FadeIn as="div" className="space-y-10" delay={0.06}>
+        <section aria-labelledby="for-you-priorities-heading" className="space-y-5">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">Focus</p>
+            <h2
+              id="for-you-priorities-heading"
+              className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
+            >
+              What needs you first
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Next meetings plus urgent or high-priority tasks, surfaced before the rest of the page.
+            </p>
+          </div>
+          <div className="grid gap-5 lg:gap-6 xl:grid-cols-2">
             <PinnedSectionCard
+              icon={Calendar}
               title="Upcoming meetings"
-              description="Pinned to the top so the next live and scheduled conversations are always first."
+              description="Live and scheduled conversations, ordered so the next touchpoint is obvious."
               href="/dashboard/meetings"
               actionLabel="Open meetings"
               items={activityHub.pinnedMeetingItems}
               emptyMessage="No live or upcoming meetings yet for this workspace."
             />
             <PinnedSectionCard
+              icon={ListTodo}
               title="High-priority tasks"
-              description="Urgent and high-priority tasks stay pinned near the top for fast follow-through."
+              description="Urgent and high-priority work stays visible so nothing time-sensitive slips."
               href="/dashboard/tasks"
               actionLabel="Open tasks"
               items={activityHub.pinnedTaskItems}
               emptyMessage="No urgent or high-priority tasks are active right now."
             />
           </div>
-        </FadeIn>
-      </FadeInStagger>
+        </section>
 
-      {/* Client summaries — always visible (admin/team only) */}
-      <ClientsSummarySection />
+        <Separator className="bg-border/80" />
 
-      {/* My tasks — always visible, independent of client selection */}
-      <MyTasksSection />
-    </div>
+        <section aria-labelledby="for-you-workspace-heading" className="space-y-5">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">Workspace</p>
+            <h2
+              id="for-you-workspace-heading"
+              className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
+            >
+              Clients and your tasks
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Scan every account, then open work assigned to you across all clients.
+            </p>
+          </div>
+          <div className="space-y-5">
+            <ClientsSummarySection />
+            <MyTasksSection />
+          </div>
+        </section>
+      </FadeIn>
+    </main>
     </BoneyardSkeletonBoundary>
   )
 }

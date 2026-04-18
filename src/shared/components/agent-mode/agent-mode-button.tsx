@@ -24,6 +24,7 @@ export function AgentModeButton({ onClick, isOpen, className }: AgentModeButtonP
           <Button
             onClick={onClick}
             size="icon"
+            id="agent-mode-launcher"
             className={cn(
               'fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
               'bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70',
