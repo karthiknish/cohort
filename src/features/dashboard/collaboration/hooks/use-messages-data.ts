@@ -521,9 +521,14 @@ export function useMessagesData({
         })
       } catch (error) {
         logError(error, 'useCollaborationData:handleMarkThreadAsRead')
+        toast({
+          title: 'Could not mark thread read',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       }
     },
-    [currentUserId, isPreviewMode, markThreadAsReadMutation, selectedChannel, workspaceId],
+    [currentUserId, isPreviewMode, markThreadAsReadMutation, selectedChannel, toast, workspaceId],
   )
 
   useEffect(() => {
@@ -569,6 +574,13 @@ export function useMessagesData({
           })
 
           if (!response.ok) {
+            const detail =
+              typeof response.status === 'number' ? `Server returned ${response.status}.` : 'Request failed.'
+            toast({
+              title: 'Email collaboration copy failed',
+              description: detail,
+              variant: 'destructive',
+            })
             return
           }
 
@@ -579,16 +591,31 @@ export function useMessagesData({
               sharedTo: ['email'],
             })
           } catch (error) {
-            console.error('Failed to update message sharedTo:', error)
+            logError(error, 'useCollaborationData:sendToExternalPlatforms:updateSharedTo')
+            toast({
+              title: 'Could not tag message as emailed',
+              description: asErrorMessage(error),
+              variant: 'destructive',
+            })
           }
         } catch (error) {
-          console.error('Failed to send to Email:', error)
+          logError(error, 'useCollaborationData:sendToExternalPlatforms:email')
+          toast({
+            title: 'Email collaboration copy failed',
+            description: asErrorMessage(error),
+            variant: 'destructive',
+          })
         }
       } catch (error) {
-        console.error('Error sending to external platforms:', error)
+        logError(error, 'useCollaborationData:sendToExternalPlatforms')
+        toast({
+          title: 'Collaboration email unavailable',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       }
     },
-    [convex, updateSharedTo]
+    [convex, toast, updateSharedTo]
   )
 
   const isSendDisabled = useMemo(() => {

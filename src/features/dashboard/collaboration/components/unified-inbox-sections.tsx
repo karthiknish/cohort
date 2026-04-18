@@ -490,15 +490,15 @@ export function ChannelConversationPane({
   }, [onSendMessage])
 
   const handleToggleReaction = useCallback(async (messageId: string, emoji: string) => {
-    onToggleReaction(selectedChannel.id, messageId, emoji)
+    await onToggleReaction(selectedChannel.id, messageId, emoji)
   }, [onToggleReaction, selectedChannel.id])
 
   const handleDeleteMessage = useCallback(async (messageId: string) => {
-    onDeleteMessage(selectedChannel.id, messageId)
+    await onDeleteMessage(selectedChannel.id, messageId)
   }, [onDeleteMessage, selectedChannel.id])
 
   const handleEditMessage = useCallback(async (messageId: string, newContent: string) => {
-    onEditMessage(selectedChannel.id, messageId, newContent)
+    await onEditMessage(selectedChannel.id, messageId, newContent)
   }, [onEditMessage, selectedChannel.id])
 
   return (

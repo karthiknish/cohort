@@ -15,6 +15,8 @@ export type TasksHeaderProps = {
   onNewTaskClick: () => void
   scopeLabel?: string | null
   scopeHelper?: string | null
+  /** When set, New task is disabled and this explains why (e.g. no client selected). */
+  newTaskDisabledReason?: string | null
 }
 
 export function TasksHeader({
@@ -24,6 +26,7 @@ export function TasksHeader({
   onNewTaskClick,
   scopeLabel,
   scopeHelper,
+  newTaskDisabledReason = null,
 }: TasksHeaderProps) {
   return (
     <div className="flex flex-col gap-6 border-b border-border/40 pb-6 sm:flex-row sm:items-end sm:justify-between">
@@ -65,14 +68,26 @@ export function TasksHeader({
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button type="button" size="sm" onClick={onNewTaskClick} className="inline-flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={onNewTaskClick}
+              disabled={Boolean(newTaskDisabledReason)}
+              className="inline-flex gap-2"
+            >
               <Plus className="h-4 w-4" aria-hidden />
               New task
             </Button>
           </TooltipTrigger>
-          <TooltipContent className="flex items-center gap-2">
-            <span>Create a task</span>
-            <KeyboardShortcutBadge combo="mod+n" className="scale-90" />
+          <TooltipContent className="max-w-xs text-balance">
+            {newTaskDisabledReason ? (
+              <span>{newTaskDisabledReason}</span>
+            ) : (
+              <span className="flex flex-wrap items-center gap-2">
+                <span>Create a task</span>
+                <KeyboardShortcutBadge combo="mod+n" className="scale-90" />
+              </span>
+            )}
           </TooltipContent>
         </Tooltip>
         <p className={cn('hidden text-xs text-muted-foreground lg:flex lg:items-center lg:gap-1.5')}>

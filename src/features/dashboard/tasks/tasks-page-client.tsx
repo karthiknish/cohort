@@ -164,6 +164,14 @@ function TasksPageContent({
 
   const taskFormClient = selectedClient ?? routeClientContext
   const taskFormClientId = selectedClientId ?? routeClientContext?.id ?? undefined
+  const newTaskDisabledReason = useMemo(() => {
+    if (authLoading) return null
+    if (!user?.id) return 'Sign in to create tasks.'
+    if (!taskFormClientId) {
+      return 'Select a client from the workspace switcher, or open Tasks from a client record, before creating a task.'
+    }
+    return null
+  }, [authLoading, taskFormClientId, user?.id])
   const actionParam = normalizedAction
   const searchParamsString = normalizedSearchParamsString
 
@@ -306,9 +314,10 @@ function TasksPageContent({
   useKeyboardShortcut({
     combo: 'mod+n',
     callback: () => {
+      if (newTaskDisabledReason) return
       form.handleCreateOpenChange(true)
     },
-    enabled: !form.isCreateOpen,
+    enabled: !form.isCreateOpen && !newTaskDisabledReason,
   })
 
   // Export handler
@@ -425,9 +434,9 @@ function TasksPageContent({
       if (!hasSelection) return
       const ids = Array.from(selectedTaskIds)
       setBulkState({ active: true, label: 'Updating status', progress: 0 })
-      await handleBulkUpdate(ids, { status })
+      const ok = await handleBulkUpdate(ids, { status })
       setBulkState({ active: false, label: '', progress: 0 })
-      setRawSelectedTaskIds(new Set())
+      if (ok) setRawSelectedTaskIds(new Set())
     },
     [handleBulkUpdate, hasSelection, selectedTaskIds],
   )
@@ -438,9 +447,9 @@ function TasksPageContent({
       const normalized = assignees.map((name) => name.trim()).filter((name) => name.length > 0)
       const ids = Array.from(selectedTaskIds)
       setBulkState({ active: true, label: 'Updating assignees', progress: 0 })
-      await handleBulkUpdate(ids, { assignedTo: normalized })
+      const ok = await handleBulkUpdate(ids, { assignedTo: normalized })
       setBulkState({ active: false, label: '', progress: 0 })
-      setRawSelectedTaskIds(new Set())
+      if (ok) setRawSelectedTaskIds(new Set())
     },
     [handleBulkUpdate, hasSelection, selectedTaskIds],
   )
@@ -451,9 +460,9 @@ function TasksPageContent({
       const normalized = date && !Number.isNaN(Date.parse(date)) ? date : null
       const ids = Array.from(selectedTaskIds)
       setBulkState({ active: true, label: 'Updating due dates', progress: 0 })
-      await handleBulkUpdate(ids, { dueDate: normalized ?? undefined })
+      const ok = await handleBulkUpdate(ids, { dueDate: normalized ?? undefined })
       setBulkState({ active: false, label: '', progress: 0 })
-      setRawSelectedTaskIds(new Set())
+      if (ok) setRawSelectedTaskIds(new Set())
     },
     [handleBulkUpdate, hasSelection, selectedTaskIds],
   )
@@ -462,9 +471,9 @@ function TasksPageContent({
     if (!hasSelection) return
     const ids = Array.from(selectedTaskIds)
     setBulkState({ active: true, label: 'Deleting tasks', progress: 0 })
-    await handleBulkDelete(ids)
+    const ok = await handleBulkDelete(ids)
     setBulkState({ active: false, label: '', progress: 0 })
-    setRawSelectedTaskIds(new Set())
+    if (ok) setRawSelectedTaskIds(new Set())
   }, [handleBulkDelete, hasSelection, selectedTaskIds])
 
 
@@ -517,6 +526,7 @@ function TasksPageContent({
           onNewTaskClick={handleNewTaskClick}
           scopeLabel={scopeLabel}
           scopeHelper={scopeHelper}
+          newTaskDisabledReason={newTaskDisabledReason}
         />
 
         {/* Summary Cards */}

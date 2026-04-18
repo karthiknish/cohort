@@ -1,4 +1,4 @@
-import type { TaskRecord } from '@/types/tasks'
+import { TASK_STATUSES, type TaskRecord, type TaskStatus } from '@/types/tasks'
 import type { SummaryStat } from '@/types/dashboard'
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000
@@ -24,12 +24,19 @@ export const ROLE_PRIORITY: Record<'admin' | 'team' | 'client' | 'default', stri
   default: ['total-revenue', 'net-margin', 'roas', 'ad-spend', 'ctr', 'open-tasks', 'conversions', 'due-soon'],
 }
 
+function isActiveTask(task: TaskRecord): boolean {
+  if (!task || task.deletedAt) return false
+  const status = task.status
+  if (status === 'completed' || status === 'archived') return false
+  return (TASK_STATUSES as readonly string[]).includes(status)
+}
+
 export function summarizeTasks(tasks: TaskRecord[]): TaskSummary {
   if (!Array.isArray(tasks) || tasks.length === 0) {
     return DEFAULT_TASK_SUMMARY
   }
 
-  const openTasks = tasks.filter((task) => task && task.status !== 'completed')
+  const openTasks = tasks.filter(isActiveTask)
   if (openTasks.length === 0) {
     return DEFAULT_TASK_SUMMARY
   }

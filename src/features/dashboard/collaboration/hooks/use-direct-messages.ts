@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useConvex, useMutation, useQuery } from 'convex/react'
 
 import { usePreview } from '@/shared/contexts/preview-context'
+import { useToast } from '@/shared/ui/use-toast'
 import { api, directMessagesApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { getPreviewDirectAutoReply, getPreviewDirectConversations, getPreviewDirectMessages } from '@/lib/preview-data'
@@ -75,6 +76,7 @@ export function useDirectMessages({
   currentUserRole,
 }: UseDirectMessagesOptions): UseDirectMessagesReturn {
   const { isPreviewMode } = usePreview()
+  const { toast } = useToast()
   const convex = useConvex()
   const [selectedConversation, setSelectedConversation] = useState<DirectConversation | null>(null)
   const [isSending, setIsSending] = useState(false)
@@ -465,17 +467,27 @@ export function useDirectMessages({
       }
 
       if (!workspaceId) throw new Error('No workspace selected')
-      
-      const result = await getOrCreateConversationMutation({
-        workspaceId: String(workspaceId),
-        otherUserId,
-        otherUserName,
-        otherUserRole,
-      })
 
-      return { legacyId: result.legacyId, isNew: result.isNew }
+      try {
+        const result = await getOrCreateConversationMutation({
+          workspaceId: String(workspaceId),
+          otherUserId,
+          otherUserName,
+          otherUserRole,
+        })
+
+        return { legacyId: result.legacyId, isNew: result.isNew }
+      } catch (error: unknown) {
+        logError(error, 'useDirectMessages:getOrCreateConversation')
+        toast({
+          title: 'Unable to start conversation',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+        throw error
+      }
     },
-    [getOrCreateConversationMutation, isPreviewMode, previewConversations, workspaceId]
+    [getOrCreateConversationMutation, isPreviewMode, previewConversations, toast, workspaceId]
   )
 
   const startNewDM = useCallback(
@@ -614,6 +626,9 @@ export function useDirectMessages({
           content,
           attachments: attachments ?? null,
         })
+      } catch (error: unknown) {
+        logError(error, 'useDirectMessages:sendMessage')
+        throw error
       } finally {
         setIsSending(false)
       }
@@ -635,11 +650,20 @@ export function useDirectMessages({
       return
     }
 
-    await markAsReadMutation({
-      workspaceId: String(workspaceId),
-      conversationLegacyId: selectedConversation.legacyId,
-    })
-  }, [isPreviewMode, markAsReadMutation, selectedConversation, workspaceId])
+    try {
+      await markAsReadMutation({
+        workspaceId: String(workspaceId),
+        conversationLegacyId: selectedConversation.legacyId,
+      })
+    } catch (error: unknown) {
+      logError(error, 'useDirectMessages:markAsRead')
+      toast({
+        title: 'Unable to mark read',
+        description: asErrorMessage(error),
+        variant: 'destructive',
+      })
+    }
+  }, [isPreviewMode, markAsReadMutation, selectedConversation, toast, workspaceId])
 
   const editMessage = useCallback(
     async (messageLegacyId: string, newContent: string) => {
@@ -677,13 +701,22 @@ export function useDirectMessages({
 
       if (!workspaceId) return
 
-      await editMessageMutation({
-        workspaceId: String(workspaceId),
-        messageLegacyId,
-        newContent,
-      })
+      try {
+        await editMessageMutation({
+          workspaceId: String(workspaceId),
+          messageLegacyId,
+          newContent,
+        })
+      } catch (error: unknown) {
+        logError(error, 'useDirectMessages:editMessage')
+        toast({
+          title: 'Edit failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      }
     },
-    [editMessageMutation, isPreviewMode, workspaceId]
+    [editMessageMutation, isPreviewMode, toast, workspaceId]
   )
 
   const deleteMessage = useCallback(
@@ -723,12 +756,21 @@ export function useDirectMessages({
 
       if (!workspaceId) return
 
-      await deleteMessageMutation({
-        workspaceId: String(workspaceId),
-        messageLegacyId,
-      })
+      try {
+        await deleteMessageMutation({
+          workspaceId: String(workspaceId),
+          messageLegacyId,
+        })
+      } catch (error: unknown) {
+        logError(error, 'useDirectMessages:deleteMessage')
+        toast({
+          title: 'Delete failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      }
     },
-    [currentUserId, deleteMessageMutation, isPreviewMode, workspaceId]
+    [currentUserId, deleteMessageMutation, isPreviewMode, toast, workspaceId]
   )
 
   const toggleReaction = useCallback(
@@ -796,13 +838,22 @@ export function useDirectMessages({
 
       if (!workspaceId) return
 
-      await toggleReactionMutation({
-        workspaceId: String(workspaceId),
-        messageLegacyId,
-        emoji,
-      })
+      try {
+        await toggleReactionMutation({
+          workspaceId: String(workspaceId),
+          messageLegacyId,
+          emoji,
+        })
+      } catch (error: unknown) {
+        logError(error, 'useDirectMessages:toggleReaction')
+        toast({
+          title: 'Reaction failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      }
     },
-    [currentUserId, isPreviewMode, toggleReactionMutation, workspaceId]
+    [currentUserId, isPreviewMode, toast, toggleReactionMutation, workspaceId]
   )
 
   const archiveConversation = useCallback(
@@ -820,17 +871,26 @@ export function useDirectMessages({
         return
       }
 
-      await setArchiveStatusMutation({
-        workspaceId: String(workspaceId),
-        conversationLegacyId: selectedConversation.legacyId,
-        archived,
-      })
-      
-      setSelectedConversation((prev) =>
-        prev ? { ...prev, isArchived: archived } : null
-      )
+      try {
+        await setArchiveStatusMutation({
+          workspaceId: String(workspaceId),
+          conversationLegacyId: selectedConversation.legacyId,
+          archived,
+        })
+
+        setSelectedConversation((prev) =>
+          prev ? { ...prev, isArchived: archived } : null
+        )
+      } catch (error: unknown) {
+        logError(error, 'useDirectMessages:archiveConversation')
+        toast({
+          title: 'Archive update failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      }
     },
-    [isPreviewMode, selectedConversation, setArchiveStatusMutation, workspaceId]
+    [isPreviewMode, selectedConversation, setArchiveStatusMutation, toast, workspaceId]
   )
 
   const muteConversation = useCallback(
@@ -848,17 +908,26 @@ export function useDirectMessages({
         return
       }
 
-      await setMuteStatusMutation({
-        workspaceId: String(workspaceId),
-        conversationLegacyId: selectedConversation.legacyId,
-        muted,
-      })
-      
-      setSelectedConversation((prev) =>
-        prev ? { ...prev, isMuted: muted } : null
-      )
+      try {
+        await setMuteStatusMutation({
+          workspaceId: String(workspaceId),
+          conversationLegacyId: selectedConversation.legacyId,
+          muted,
+        })
+
+        setSelectedConversation((prev) =>
+          prev ? { ...prev, isMuted: muted } : null
+        )
+      } catch (error: unknown) {
+        logError(error, 'useDirectMessages:muteConversation')
+        toast({
+          title: 'Mute update failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
+      }
     },
-    [isPreviewMode, selectedConversation, setMuteStatusMutation, workspaceId]
+    [isPreviewMode, selectedConversation, setMuteStatusMutation, toast, workspaceId]
   )
 
   useEffect(() => {

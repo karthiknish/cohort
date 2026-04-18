@@ -156,6 +156,7 @@ export function useMessageActions({
       } catch (error) {
         logError(error, 'useMessageActions:handleToggleReaction')
         toast({ title: 'Reaction failed', description: asErrorMessage(error), variant: 'destructive' })
+        throw error
       } finally {
         setReactionUpdatingByMessage((prev) => {
           const next = { ...prev }
@@ -261,6 +262,7 @@ export function useMessageActions({
       } catch (error) {
         logError(error, 'useMessageActions:handleEditMessage')
         toast({ title: 'Collaboration error', description: asErrorMessage(error), variant: 'destructive' })
+        throw error
       } finally {
         setMessageUpdatingId((current) => (current === messageId ? null : current))
       }
@@ -342,6 +344,7 @@ export function useMessageActions({
       } catch (error) {
         logError(error, 'useMessageActions:handleDeleteMessage')
         toast({ title: 'Collaboration error', description: asErrorMessage(error), variant: 'destructive' })
+        throw error
       } finally {
         setMessageDeletingId((current) => (current === messageId ? null : current))
       }

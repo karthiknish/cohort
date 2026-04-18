@@ -32,7 +32,9 @@ import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { KeyboardShortcutBadge, useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { onboardingApi } from '@/lib/convex-api'
+import { useToast } from '@/shared/ui/use-toast'
 import { useOnboardingTour } from '@/shared/hooks/use-onboarding-tour'
 
 function HelpStepActionLink({
@@ -386,6 +388,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
 export function useHelpModal() {
   const [open, setOpen] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
+  const { toast } = useToast()
   const { user } = useAuth()
   const userId = user?.id
   const userCreatedAt = user?.createdAt
@@ -493,8 +496,13 @@ export function useHelpModal() {
       onboardingTourCompletedAtMs,
       welcomeSeen: true,
       welcomeSeenAtMs: Date.now(),
-    }).catch((error) => {
+    }).catch((error: unknown) => {
       console.warn('Failed to persist onboarding completion', error)
+      toast({
+        title: 'Could not save welcome state',
+        description: asErrorMessage(error),
+        variant: 'destructive',
+      })
     })
   }
 

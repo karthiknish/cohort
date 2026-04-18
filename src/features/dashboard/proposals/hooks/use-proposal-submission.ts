@@ -262,9 +262,14 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
 
             // Trigger server-side AI + deck generation.
             if (workspaceId) {
-                generateProposalDeck({ workspaceId, legacyId: activeDraftId }).catch((error) => {
+                generateProposalDeck({ workspaceId, legacyId: activeDraftId }).catch((error: unknown) => {
                     logError(error, 'useProposalSubmission:submitProposal:generate')
                     console.error('[ProposalWizard] generation failed', error)
+                    toast({
+                        title: 'Deck generation failed to start',
+                        description: asErrorMessage(error),
+                        variant: 'destructive',
+                    })
                 })
             }
 

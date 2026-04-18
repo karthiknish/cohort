@@ -195,8 +195,10 @@ export function useTaskForm({
         payload.attachments = uploadedAttachments
       }
 
-      await onCreateTask(payload)
-      handleCreateOpenChange(false)
+      const created = await onCreateTask(payload)
+      if (created) {
+        handleCreateOpenChange(false)
+      }
     } catch (err) {
       setCreateError(asErrorMessage(err))
     } finally {
@@ -260,10 +262,12 @@ export function useTaskForm({
     }
 
     try {
-      await onUpdateTask(editingTask.id, payload)
-      handleEditClose()
+      const updated = await onUpdateTask(editingTask.id, payload)
+      if (updated) {
+        handleEditClose()
+      }
     } catch (err) {
-      setUpdateError(err instanceof Error ? err.message : 'Unexpected error updating task')
+      setUpdateError(asErrorMessage(err))
     } finally {
       setUpdating(false)
     }

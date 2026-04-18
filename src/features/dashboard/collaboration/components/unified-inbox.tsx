@@ -57,9 +57,9 @@ type UnifiedInboxChannelPaneProps = {
   typingParticipants: TypingParticipant[]
   onComposerFocus: () => void
   onComposerBlur: () => void
-  onEditMessage: (channelId: string, messageId: string, content: string) => void
-  onDeleteMessage: (channelId: string, messageId: string) => void
-  onToggleReaction: (channelId: string, messageId: string, emoji: string) => void
+  onEditMessage: (channelId: string, messageId: string, content: string) => Promise<void>
+  onDeleteMessage: (channelId: string, messageId: string) => Promise<void>
+  onToggleReaction: (channelId: string, messageId: string, emoji: string) => Promise<void>
   messageUpdatingId: string | null
   messageDeletingId: string | null
   currentUserRole: string | null

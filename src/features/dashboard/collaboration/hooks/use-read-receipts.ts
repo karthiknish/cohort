@@ -77,9 +77,14 @@ export function useReadReceipts({
       } catch (error) {
         logError(error, 'useReadReceipts:handleMarkAsRead')
         markedAsReadRef.current.delete(messageId)
+        toast({
+          title: 'Read receipt update failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       }
     },
-    [workspaceId, userId, messages, markAsRead, enabled]
+    [workspaceId, userId, messages, markAsRead, enabled, toast]
   )
 
   // Mark multiple messages as read
@@ -107,9 +112,14 @@ export function useReadReceipts({
       } catch (error) {
         logError(error, 'useReadReceipts:handleMarkMultipleAsRead')
         messagesToMark.forEach((id) => markedAsReadRef.current.delete(id))
+        toast({
+          title: 'Read receipt update failed',
+          description: asErrorMessage(error),
+          variant: 'destructive',
+        })
       }
     },
-    [workspaceId, userId, messages, markMultipleAsRead, enabled]
+    [workspaceId, userId, messages, markMultipleAsRead, enabled, toast]
   )
 
   // Mark all messages in channel as read

@@ -32,7 +32,8 @@ import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
 import type { MetricRecord } from '@/types/dashboard'
-import type { TaskRecord, TaskStatus } from '@/types/tasks'
+import { TASK_STATUSES, type TaskRecord, type TaskStatus } from '@/types/tasks'
+import { PROJECT_STATUSES, type ProjectStatus } from '@/types/projects'
 
 import { DashboardDailySnapshotCard } from './components/dashboard-daily-snapshot-card'
 import { DashboardPageHeader } from './components/dashboard-page-header'
@@ -50,6 +51,15 @@ type AnalyticsStatusRow = {
 
 type ProjectRow = {
   status?: unknown
+}
+
+function isProjectStatus(value: unknown): value is ProjectStatus {
+  return typeof value === 'string' && (PROJECT_STATUSES as readonly string[]).includes(value)
+}
+
+function normalizeTaskStatus(value: string | undefined): TaskStatus | null {
+  if (typeof value !== 'string') return null
+  return (TASK_STATUSES as readonly string[]).includes(value) ? (value as TaskStatus) : null
 }
 
 type SnapshotMetric = {
@@ -156,7 +166,8 @@ export function DashboardOverviewPage() {
 
   const taskCounts = useMemo(() => buildTaskCounts(rawTasks), [rawTasks])
   const taskCompletionRate = useMemo(() => {
-    const trackedTotal = taskCounts.todo + taskCounts['in-progress'] + taskCounts.review + taskCounts.completed
+    const pipeline: TaskStatus[] = ['todo', 'in-progress', 'review', 'completed']
+    const trackedTotal = pipeline.reduce((sum, key) => sum + taskCounts[key], 0)
     if (trackedTotal === 0) {
       return 0
     }
@@ -172,20 +183,18 @@ export function DashboardOverviewPage() {
 
   const clientStats = useMemo(() => {
     const totalProjects = projects.length
-    const activeProjects = projects.filter((project) => {
-      const status = typeof project?.status === 'string' ? project.status : null
-      return status === 'active' || status === 'in_progress'
+    const activeProjects = projects.filter((project) => isProjectStatus(project.status) && project.status === 'active').length
+    const planningProjects = projects.filter((project) => isProjectStatus(project.status) && project.status === 'planning').length
+    const onHoldProjects = projects.filter((project) => isProjectStatus(project.status) && project.status === 'on_hold').length
+    const openTasks = rawTasks.filter((task) => {
+      if (task.deletedAt) return false
+      const s = normalizeTaskStatus(task.status)
+      return s === 'todo' || s === 'in-progress' || s === 'review'
     }).length
-    const planningProjects = projects.filter((project) => {
-      const status = typeof project?.status === 'string' ? project.status : null
-      return status === 'planning'
+    const completedTasks = rawTasks.filter((task) => {
+      if (task.deletedAt) return false
+      return normalizeTaskStatus(task.status) === 'completed'
     }).length
-    const onHoldProjects = projects.filter((project) => {
-      const status = typeof project?.status === 'string' ? project.status : null
-      return status === 'on_hold'
-    }).length
-    const openTasks = rawTasks.filter((task) => task.status === 'todo' || task.status === 'in-progress').length
-    const completedTasks = rawTasks.filter((task) => task.status === 'completed').length
     const pendingProposals = proposals.filter((proposal) => (
       proposal.status === 'draft' ||
       proposal.status === 'in_progress' ||
@@ -367,8 +376,12 @@ function SectionHeading({ title, description, href, hrefLabel, badgeLabel }: Sec
 
 function buildTaskCounts(tasks: TaskRecord[]): Record<TaskStatus, number> {
   return tasks.reduce((counts, task) => {
-    if (task.status in counts) {
-      counts[task.status] += 1
+    if (task.deletedAt) {
+      return counts
+    }
+    const status = normalizeTaskStatus(task.status)
+    if (status) {
+      counts[status] += 1
     }
     return counts
   }, { ...EMPTY_TASK_COUNTS })

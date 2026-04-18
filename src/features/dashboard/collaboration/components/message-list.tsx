@@ -362,8 +362,11 @@ export function MessageList({
     const key = `${messageId}-${emoji}`
     if (localReactionPending) return
     setLocalReactionPending(key)
-    await onToggleReaction(messageId, emoji).catch(() => undefined)
-    setLocalReactionPending(null)
+    try {
+      await onToggleReaction(messageId, emoji)
+    } finally {
+      setLocalReactionPending(null)
+    }
   }, [localReactionPending, onToggleReaction])
 
   const isChannel = variant === 'channel'

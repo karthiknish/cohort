@@ -151,8 +151,11 @@ export function useUnifiedMessagePaneController({
   const handleDelete = useCallback(async (messageId: string) => {
     if (!onDeleteMessage) return
     setDeletingMessageId(messageId)
-    await onDeleteMessage(messageId).catch(() => undefined)
-    setDeletingMessageId(null)
+    try {
+      await onDeleteMessage(messageId)
+    } finally {
+      setDeletingMessageId(null)
+    }
   }, [onDeleteMessage])
 
   const handleRequestDelete = useCallback((messageId: string) => {
@@ -166,8 +169,12 @@ export function useUnifiedMessagePaneController({
 
   const handleConfirmDelete = useCallback(async () => {
     if (!confirmingDeleteMessageId) return
-    await handleDelete(confirmingDeleteMessageId)
-    setConfirmingDeleteMessageId(null)
+    try {
+      await handleDelete(confirmingDeleteMessageId)
+      setConfirmingDeleteMessageId(null)
+    } catch {
+      // Error toast comes from message actions; leave dialog open for retry.
+    }
   }, [confirmingDeleteMessageId, handleDelete])
 
   const handleStartEdit = useCallback((message: UnifiedMessage) => {
@@ -195,10 +202,14 @@ export function useUnifiedMessagePaneController({
       })
       return
     }
-    await onEditMessage(editingMessageId, trimmedValue)
-    setEditingMessageId(null)
-    setEditingValue('')
-    setEditingPreview('')
+    try {
+      await onEditMessage(editingMessageId, trimmedValue)
+      setEditingMessageId(null)
+      setEditingValue('')
+      setEditingPreview('')
+    } catch {
+      // Error toast comes from message actions; keep editor open.
+    }
   }, [editingMessageId, editingValue, onEditMessage, toast])
 
   const handleShare = useCallback(async (message: UnifiedMessage, platform: 'email') => {

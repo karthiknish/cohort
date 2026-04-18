@@ -1,12 +1,17 @@
+'use client'
+
 import { useCallback, useMemo } from 'react'
 import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { useMutation } from 'convex/react'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { onboardingApi } from '@/lib/convex-api'
+import { asErrorMessage } from '@/lib/convex-errors'
+import { useToast } from '@/shared/ui/use-toast'
 
 export function useOnboardingTour() {
     const { user } = useAuth()
+    const { toast } = useToast()
     const upsertOnboarding = useMutation(onboardingApi.upsert)
 
     const tourSteps = useMemo(() => [
@@ -97,14 +102,19 @@ export function useOnboardingTour() {
                         onboardingTourCompleted: true,
                         onboardingTourCompletedAtMs: Date.now(),
                     })
-                } catch (error) {
+                } catch (error: unknown) {
                     console.error('Failed to save onboarding tour state:', error)
+                    toast({
+                        title: 'Could not save tour progress',
+                        description: asErrorMessage(error),
+                        variant: 'destructive',
+                    })
                 }
             }
         })
 
         driverObj.drive()
-    }, [tourSteps, upsertOnboarding, user?.id])
+    }, [toast, tourSteps, upsertOnboarding, user?.id])
 
     return { startTour }
 }

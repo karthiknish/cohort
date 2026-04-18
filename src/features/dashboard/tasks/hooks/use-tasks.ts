@@ -384,10 +384,14 @@ export function useTasks({
           )
         )
         toast({ title: 'Preview mode', description: 'Task updated locally (not saved).' })
-        return null
+        return { id: taskId } as TaskRecord
       }
 
-      if (!workspaceId) return null
+      if (!workspaceId) {
+        const message = 'Workspace not available.'
+        toast({ title: 'Update failed', description: message, variant: 'destructive' })
+        throw new Error(message)
+      }
 
       try {
         await patchTask({
@@ -402,8 +406,9 @@ export function useTasks({
             dueDateMs: msFromIsoDateString(payload.dueDate),
           },
         })
-  
+
         toast({ title: 'Task updated', description: 'Changes saved.' })
+        return { id: taskId } as TaskRecord
       } catch (err) {
         logError(err, 'useTasks:handleUpdateTask')
         toast({
@@ -411,8 +416,8 @@ export function useTasks({
           description: asErrorMessage(err),
           variant: 'destructive',
         })
+        throw err
       }
-      return null
     },
     [isPreviewMode, patchTask, toast, workspaceId]
   )
