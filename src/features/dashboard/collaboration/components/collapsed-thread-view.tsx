@@ -118,7 +118,7 @@ function ThreadCard({
   return (
     <div
       className={cn(
-        'border rounded-lg overflow-hidden transition-colors',
+        'cv-scroll-item border rounded-lg overflow-hidden transition-colors',
         'hover:bg-muted/50',
         unreadCount > 0 && 'border-primary/50 bg-primary/5'
       )}
@@ -133,20 +133,23 @@ function ThreadCard({
             size="icon"
             className="h-6 w-6 flex-shrink-0 mt-0.5"
             onClick={handleToggleExpandClick}
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? 'Collapse thread' : 'Expand thread'}
           >
             {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-4 w-4" aria-hidden />
             ) : (
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" aria-hidden />
             )}
           </Button>
 
           <button
             type="button"
-            className="flex min-w-0 flex-1 items-start gap-3 text-left"
+            className="flex min-w-0 flex-1 items-start gap-3 rounded-md text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
             onClick={handleThreadClick}
             onKeyDown={handleCardKeyDown}
             aria-expanded={isExpanded}
+            aria-label={`Open thread: ${rootMessage.content.slice(0, 80)}${rootMessage.content.length > 80 ? '…' : ''}`}
           >
             <div className="flex-shrink-0">
               <MessageSquare className="h-5 w-5 text-muted-foreground" />

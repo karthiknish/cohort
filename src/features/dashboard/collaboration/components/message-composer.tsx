@@ -123,8 +123,9 @@ export function ReplyIndicator({ message, onCancel }: ReplyIndicatorProps) {
         size="icon"
         className="h-5 w-5 rounded-full hover:bg-muted/50"
         onClick={onCancel}
+        aria-label="Cancel reply"
       >
-        <X className="h-3 w-3" />
+        <X className="h-3 w-3" aria-hidden />
       </Button>
     </div>
   )

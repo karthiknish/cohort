@@ -9,7 +9,7 @@ import { ScrollArea } from '@/shared/ui/scroll-area'
 import { ClientAccessGate } from '@/features/dashboard/home/components/client-access-gate'
 import { DashboardMainRoleFrame } from '@/features/dashboard/home/components/dashboard-main-role-frame'
 import { PreviewDataBanner } from '@/features/dashboard/home/components/preview-data-banner'
-import { AgentMode } from '@/shared/components/agent-mode'
+import { AgentModeDynamic } from '@/shared/components/agent-mode/agent-mode-dynamic'
 import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
 import { isScreenRecordingAuthBypassEnabled, PREVIEW_ROUTE_REQUEST_HEADER } from '@/lib/preview-data'
 
@@ -43,7 +43,7 @@ export default async function DashboardLayout({
                 </ScrollArea>
               </div>
             </div>
-            <AgentMode />
+            <AgentModeDynamic />
           </div>
         </NavigationProvider>
       </WorkspaceProviders>

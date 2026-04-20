@@ -38,8 +38,8 @@ import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Badge } from '@/shared/ui/badge'
 import { ClientWorkspaceSelector } from '@/shared/components/client-workspace-selector'
 import { useDashboardRoleAccent } from '@/shared/hooks/use-dashboard-role-accent'
-import { NotificationsDropdown } from '@/shared/components/notifications-dropdown'
-import { CommandMenu } from '@/shared/layout/navigation/command-menu'
+import { NotificationsDropdownDynamic } from '@/shared/components/notifications-dropdown-dynamic'
+import { CommandMenuDynamic } from '@/shared/layout/navigation/command-menu-dynamic'
 import { HelpModal, useHelpModal } from '@/shared/layout/navigation/help-modal'
 import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
 import { ProblemReportModal } from '@/shared/layout/navigation/problem-report-modal'
@@ -433,14 +433,14 @@ export function Header() {
 
           {/* Search / Command menu (takes remaining space on desktop) */}
           <div className="hidden sm:flex flex-1 sm:max-w-md">
-            <CommandMenu onOpenHelp={handleOpenHelp} />
+            <CommandMenuDynamic onOpenHelp={handleOpenHelp} />
           </div>
 
           {/* Right side actions (pinned to the right) */}
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             {/* Mobile search button - only visible on small screens */}
             <div className="sm:hidden">
-              <CommandMenu onOpenHelp={handleOpenHelp} />
+              <CommandMenuDynamic onOpenHelp={handleOpenHelp} />
             </div>
 
             <TooltipProvider>
@@ -485,7 +485,7 @@ export function Header() {
             </TooltipProvider>
 
 
-            <NotificationsDropdown />
+            <NotificationsDropdownDynamic />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

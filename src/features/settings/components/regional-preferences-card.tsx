@@ -67,6 +67,7 @@ export function RegionalPreferencesCard() {
             </p>
           </div>
           <CurrencySelect
+            id="currency-select"
             value={isPreviewMode ? previewCurrency : preferences.currency}
             onValueChange={handleCurrencyChange}
             disabled={(!isPreviewMode && preferencesLoading) || savingCurrency}

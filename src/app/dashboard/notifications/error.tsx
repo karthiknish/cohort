@@ -78,8 +78,14 @@ export default function NotificationsError({
               <RefreshCw className="h-4 w-4" />
               Try again
             </Button>
-            <Button variant="outline" size="icon" onClick={copyErrorDetails} title="Copy error details">
-              <Copy className="h-4 w-4" />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={copyErrorDetails}
+              title="Copy error details"
+              aria-label="Copy error details to clipboard"
+            >
+              <Copy className="h-4 w-4" aria-hidden />
             </Button>
           </div>
         </CardContent>

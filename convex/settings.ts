@@ -104,24 +104,24 @@ export const getMyNotificationPreferences = zAuthenticatedQuery({
 
 export const updateMyNotificationPreferences = zAuthenticatedMutation({
   args: {
-    // Email
+    // Email — omit field to leave stored value unchanged (never default to “all on”).
     emailAdAlerts: z.boolean().optional(),
     emailPerformanceDigest: z.boolean().optional(),
     emailTaskActivity: z.boolean().optional(),
-    emailCollaboration: z.boolean(),
+    emailCollaboration: z.boolean().optional(),
     // Phone
     phoneNumber: z.string().nullable().optional(),
   },
   returns: notificationPreferencesZ.extend({ phoneNumber: z.string().nullable() }),
   handler: async (ctx, args) => {
     const row = ctx.user
+    const current = row.notificationPreferences ?? defaultNotificationPreferences
 
     const next = {
-      // Email
-      emailAdAlerts: args.emailAdAlerts ?? true,
-      emailPerformanceDigest: args.emailPerformanceDigest ?? true,
-      emailTaskActivity: args.emailTaskActivity ?? true,
-      emailCollaboration: args.emailCollaboration,
+      emailAdAlerts: args.emailAdAlerts ?? current.emailAdAlerts,
+      emailPerformanceDigest: args.emailPerformanceDigest ?? current.emailPerformanceDigest,
+      emailTaskActivity: args.emailTaskActivity ?? current.emailTaskActivity,
+      emailCollaboration: args.emailCollaboration ?? current.emailCollaboration,
     }
 
     await ctx.db.patch(row._id, {

@@ -113,8 +113,9 @@ export function FeatureTips({ tips, storageKey, className }: FeatureTipsProps) {
                   className="h-6 w-6"
                   onClick={handlePrev}
                   disabled={isFirst}
+                  aria-label="Previous tip"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4" aria-hidden />
                 </Button>
                 <Button
                   variant="ghost"
@@ -122,8 +123,9 @@ export function FeatureTips({ tips, storageKey, className }: FeatureTipsProps) {
                   className="h-6 w-6"
                   onClick={handleNext}
                   disabled={isLast}
+                  aria-label="Next tip"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-4 w-4" aria-hidden />
                 </Button>
               </>
             )}
@@ -132,8 +134,9 @@ export function FeatureTips({ tips, storageKey, className }: FeatureTipsProps) {
               size="icon"
               className="h-6 w-6 text-muted-foreground"
               onClick={handleDismiss}
+              aria-label="Dismiss tips"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden />
             </Button>
           </div>
         </div>

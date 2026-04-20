@@ -597,7 +597,7 @@ function NotificationRow({
   return (
     <div
       className={cn(
-        'group flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50',
+        'cv-scroll-item group flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50',
         !notification.read && 'border-primary/30 bg-primary/5'
       )}
     >
@@ -645,8 +645,9 @@ function NotificationRow({
             className="h-8 w-8"
             onClick={handleOpen}
             title="Open"
+            aria-label="Open linked destination"
           >
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4" aria-hidden />
           </Button>
         ) : null}
         {!notification.read ? (
@@ -657,8 +658,9 @@ function NotificationRow({
             onClick={handleRead}
             disabled={ackInFlight}
             title="Mark as read"
+            aria-label="Mark notification as read"
           >
-            <Check className="h-4 w-4" />
+            <Check className="h-4 w-4" aria-hidden />
           </Button>
         ) : null}
         <Button
@@ -668,8 +670,9 @@ function NotificationRow({
           onClick={handleRemove}
           disabled={ackInFlight}
           title="Dismiss"
+          aria-label="Dismiss notification"
         >
-          <Trash2 className="h-4 w-4" />
+          <Trash2 className="h-4 w-4" aria-hidden />
         </Button>
       </div>
     </div>

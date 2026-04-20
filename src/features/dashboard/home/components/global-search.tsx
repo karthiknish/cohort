@@ -246,8 +246,9 @@ export function GlobalSearch({
               variant="ghost"
               size="icon"
               onClick={handleClearQuery}
+              aria-label="Clear search"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4" aria-hidden />
             </Button>
           )}
         </div>

@@ -115,7 +115,7 @@ export function ActivityItem({
   )
 
   return (
-    <div className={cn('relative group', !activity.isRead && 'bg-muted/30')}>
+    <div className={cn('cv-scroll-item-activity relative group', !activity.isRead && 'bg-muted/30')}>
       {/* Selection checkbox with larger touch target */}
       <div className="absolute left-[-32px] sm:left-[-34px] top-3 sm:top-4">
         <label htmlFor={mobileCheckboxId} className="sm:hidden block p-2 -m-2 cursor-pointer">

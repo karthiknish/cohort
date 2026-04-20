@@ -155,9 +155,9 @@ export function MarkdownPreview({
             size="icon"
             className="h-7 w-7"
             onClick={handleToggleFullscreen}
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
           >
-            <span className="sr-only">Toggle fullscreen</span>
-            {isFullscreen ? '↙' : '↗'}
+            <span aria-hidden>{isFullscreen ? '↙' : '↗'}</span>
           </Button>
         </div>
       </div>

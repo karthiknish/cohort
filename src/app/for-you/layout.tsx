@@ -1,6 +1,6 @@
 import { ProtectedRoute } from '@/shared/components/protected-route'
 import { PreviewDataBanner } from '@/features/dashboard/home/components/preview-data-banner'
-import { AgentMode } from '@/shared/components/agent-mode'
+import { AgentModeDynamic } from '@/shared/components/agent-mode/agent-mode-dynamic'
 import { NavigationProvider } from '@/shared/contexts/navigation-context'
 import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
 import { isScreenRecordingAuthBypassEnabled } from '@/lib/preview-data'
@@ -18,7 +18,7 @@ export default function ForYouLayout({
             <PreviewDataBanner />
             {children}
           </div>
-          <AgentMode />
+          <AgentModeDynamic />
         </NavigationProvider>
       </WorkspaceProviders>
     </ProtectedRoute>

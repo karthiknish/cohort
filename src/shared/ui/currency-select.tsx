@@ -25,6 +25,8 @@ interface CurrencySelectProps {
   className?: string
   showPopular?: boolean
   compact?: boolean
+  /** Passed to the trigger for label / `htmlFor` pairing (a11y). */
+  id?: string
 }
 
 export function CurrencySelect({
@@ -35,6 +37,7 @@ export function CurrencySelect({
   className,
   showPopular = true,
   compact = false,
+  id,
 }: CurrencySelectProps) {
   const normalizedValue = (value?.toUpperCase() || 'USD') as CurrencyCode
   const currencyInfo = SUPPORTED_CURRENCIES[normalizedValue] ?? SUPPORTED_CURRENCIES.USD
@@ -53,7 +56,7 @@ export function CurrencySelect({
       onValueChange={handleValueChange}
       disabled={disabled}
     >
-      <SelectTrigger className={cn(compact ? 'w-[100px]' : 'w-[140px]', className)}>
+      <SelectTrigger id={id} className={cn(compact ? 'w-[100px]' : 'w-[140px]', className)}>
         <SelectValue placeholder={placeholder}>
           <span className="flex items-center gap-1.5">
             <span className="font-medium">{currencyInfo.symbol}</span>

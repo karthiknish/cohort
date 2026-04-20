@@ -125,8 +125,9 @@ export function ActivityComments({
                 className="h-8 w-8 shrink-0"
                 onClick={handleSubmit}
                 disabled={!newComment.trim()}
+                aria-label="Send comment"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-4 w-4" aria-hidden />
               </Button>
               {newComment && (
                 <Button
@@ -135,8 +136,9 @@ export function ActivityComments({
                   size="icon"
                   className="h-8 w-8 shrink-0"
                   onClick={handleClearComment}
+                  aria-label="Clear comment"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4" aria-hidden />
                 </Button>
               )}
             </div>

@@ -80,7 +80,6 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null)
   const [deleteAccountLoading, setDeleteAccountLoading] = useState(false)
-
   useEffect(() => {
     if (open) return
 
@@ -93,6 +92,14 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
     return () => {
       cancelAnimationFrame(frame)
     }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const frame = requestAnimationFrame(() => {
+      document.getElementById('delete-account-confirm')?.focus()
+    })
+    return () => cancelAnimationFrame(frame)
   }, [open])
 
   const handleAccountDeletion = useCallback(() => {
@@ -159,11 +166,25 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
 
         <div className="space-y-3">
           <Input
+            id="delete-account-confirm"
             value={deleteConfirm}
             onChange={handleDeleteConfirmChange}
             placeholder="Type DELETE to confirm"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-invalid={deleteAccountError ? true : undefined}
+            aria-describedby={deleteAccountError ? 'delete-account-error' : 'delete-account-hint'}
           />
-          {deleteAccountError ? <p className="text-sm text-destructive">{deleteAccountError}</p> : null}
+          {deleteAccountError ? (
+            <p id="delete-account-error" className="text-sm text-destructive" role="alert">
+              {deleteAccountError}
+            </p>
+          ) : (
+            <p id="delete-account-hint" className="sr-only">
+              Confirmation must match the word DELETE in any letter case.
+            </p>
+          )}
         </div>
 
         <DialogFooter>

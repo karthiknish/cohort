@@ -390,11 +390,27 @@ function DashboardWidgetRow({
   return (
     <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-2 group">
       <div className="flex flex-col gap-0.5">
-        <Button type="button" variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={handleMoveUp} disabled={index === 0}>
-          <ChevronUp className="h-3 w-3" />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-5 w-5 p-0"
+          onClick={handleMoveUp}
+          disabled={index === 0}
+          aria-label={`Move ${widget.title} up`}
+        >
+          <ChevronUp className="h-3 w-3" aria-hidden />
         </Button>
-        <Button type="button" variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={handleMoveDown} disabled={index === total - 1}>
-          <ChevronDown className="h-3 w-3" />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-5 w-5 p-0"
+          onClick={handleMoveDown}
+          disabled={index === total - 1}
+          aria-label={`Move ${widget.title} down`}
+        >
+          <ChevronDown className="h-3 w-3" aria-hidden />
         </Button>
       </div>
 
@@ -408,8 +424,16 @@ function DashboardWidgetRow({
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={handleCollapse}>
-                  {widget.collapsed ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={handleCollapse}
+                  aria-expanded={!widget.collapsed}
+                  aria-label={widget.collapsed ? `Expand ${widget.title}` : `Collapse ${widget.title}`}
+                >
+                  {widget.collapsed ? <Eye className="h-3.5 w-3.5" aria-hidden /> : <EyeOff className="h-3.5 w-3.5" aria-hidden />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{widget.collapsed ? 'Expand widget' : 'Collapse widget'}</TooltipContent>
@@ -420,8 +444,15 @@ function DashboardWidgetRow({
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={handleHide}>
-                <X className="h-3.5 w-3.5" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={handleHide}
+                aria-label={`Hide ${widget.title}`}
+              >
+                <X className="h-3.5 w-3.5" aria-hidden />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Hide widget</TooltipContent>
@@ -452,8 +483,15 @@ function HiddenDashboardWidgetRow({
       <TooltipProvider delayDuration={200}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={handleShow}>
-              <Eye className="h-3.5 w-3.5" />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleShow}
+              aria-label={`Show ${widget.title}`}
+            >
+              <Eye className="h-3.5 w-3.5" aria-hidden />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Show widget</TooltipContent>

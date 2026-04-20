@@ -17,7 +17,7 @@ import {
 
 import { ProtectedRoute } from '@/shared/components/protected-route'
 import { NavigationProvider } from '@/shared/contexts/navigation-context'
-import { AgentMode } from '@/shared/components/agent-mode'
+import { AgentModeDynamic } from '@/shared/components/agent-mode/agent-mode-dynamic'
 import { cn } from '@/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
@@ -170,7 +170,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               </div>
               <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">{children}</div>
             </main>
-            <AgentMode />
+            <AgentModeDynamic />
           </div>
         </NavigationProvider>
       </WorkspaceProviders>

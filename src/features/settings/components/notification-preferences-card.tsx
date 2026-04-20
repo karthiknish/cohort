@@ -30,21 +30,35 @@ export function NotificationPreferencesCard({
   savingPreferences,
   onPreferenceToggle,
 }: NotificationPreferencesCardProps) {
-  const handleAdAlertsChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    onPreferenceToggle('emailAdAlerts', event.target.checked)
-  }, [onPreferenceToggle])
+  const handleAdAlertsChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onPreferenceToggle('emailAdAlerts', event.target.checked)
+    },
+    [onPreferenceToggle]
+  )
 
-  const handlePerformanceDigestChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    onPreferenceToggle('emailPerformanceDigest', event.target.checked)
-  }, [onPreferenceToggle])
+  const handlePerformanceDigestChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onPreferenceToggle('emailPerformanceDigest', event.target.checked)
+    },
+    [onPreferenceToggle]
+  )
 
-  const handleTaskActivityChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    onPreferenceToggle('emailTaskActivity', event.target.checked)
-  }, [onPreferenceToggle])
+  const handleTaskActivityChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onPreferenceToggle('emailTaskActivity', event.target.checked)
+    },
+    [onPreferenceToggle]
+  )
 
-  const handleCollaborationChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    onPreferenceToggle('emailCollaboration', event.target.checked)
-  }, [onPreferenceToggle])
+  const handleCollaborationChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onPreferenceToggle('emailCollaboration', event.target.checked)
+    },
+    [onPreferenceToggle]
+  )
+
+  const disabled = notificationsLoading || savingPreferences
 
   return (
     <Card>
@@ -54,66 +68,103 @@ export function NotificationPreferencesCard({
       </CardHeader>
       <CardContent className="space-y-6">
         {notificationsLoading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <LoaderCircle className="h-4 w-4 animate-spin" />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
+            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
             Loading notification preferences...
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Email Notifications</h4>
+            {savingPreferences ? (
+              <div
+                className="flex items-center gap-2 text-sm text-muted-foreground"
+                role="status"
+                aria-live="polite"
+              >
+                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                Saving preferences…
+              </div>
+            ) : null}
 
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Ad Performance Alerts</p>
-                  <p className="text-sm text-muted-foreground">Automated alerts for ROAS drops, high spend, and efficiency issues.</p>
-                </div>
+            <div className="space-y-4">
+              <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Email Notifications
+              </h4>
+
+              <div className="flex gap-3 sm:gap-4">
                 <Checkbox
+                  id="notif-email-ad-alerts"
                   checked={emailAdAlertsEnabled}
                   onChange={handleAdAlertsChange}
-                  disabled={notificationsLoading || savingPreferences}
+                  disabled={disabled}
+                  className="mt-0.5 shrink-0"
+                  aria-describedby="notif-email-ad-alerts-desc"
                 />
+                <label htmlFor="notif-email-ad-alerts" className="min-w-0 flex-1 cursor-pointer space-y-1">
+                  <span className="block text-sm font-medium text-foreground">Ad Performance Alerts</span>
+                  <span id="notif-email-ad-alerts-desc" className="block text-sm text-muted-foreground">
+                    Automated alerts for ROAS drops, high spend, and efficiency issues.
+                  </span>
+                </label>
               </div>
 
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Weekly Performance Digest</p>
-                  <p className="text-sm text-muted-foreground">Summary reports of your workspace performance across all platforms.</p>
-                </div>
+              <div className="flex gap-3 sm:gap-4">
                 <Checkbox
+                  id="notif-email-performance-digest"
                   checked={emailPerformanceDigestEnabled}
                   onChange={handlePerformanceDigestChange}
-                  disabled={notificationsLoading || savingPreferences}
+                  disabled={disabled}
+                  className="mt-0.5 shrink-0"
+                  aria-describedby="notif-email-performance-digest-desc"
                 />
+                <label htmlFor="notif-email-performance-digest" className="min-w-0 flex-1 cursor-pointer space-y-1">
+                  <span className="block text-sm font-medium text-foreground">Weekly Performance Digest</span>
+                  <span id="notif-email-performance-digest-desc" className="block text-sm text-muted-foreground">
+                    Summary reports of your workspace performance across all platforms.
+                  </span>
+                </label>
               </div>
 
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Tasks & Activity</p>
-                  <p className="text-sm text-muted-foreground">Emails for task updates, comments, and mentions.</p>
-                </div>
+              <div className="flex gap-3 sm:gap-4">
                 <Checkbox
+                  id="notif-email-task-activity"
                   checked={emailTaskActivityEnabled}
                   onChange={handleTaskActivityChange}
-                  disabled={notificationsLoading || savingPreferences}
+                  disabled={disabled}
+                  className="mt-0.5 shrink-0"
+                  aria-describedby="notif-email-task-activity-desc"
                 />
+                <label htmlFor="notif-email-task-activity" className="min-w-0 flex-1 cursor-pointer space-y-1">
+                  <span className="block text-sm font-medium text-foreground">Tasks & Activity</span>
+                  <span id="notif-email-task-activity-desc" className="block text-sm text-muted-foreground">
+                    Emails for task updates, comments, and mentions.
+                  </span>
+                </label>
               </div>
 
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Collaboration Messages</p>
-                  <p className="text-sm text-muted-foreground">Receive email notifications for new collaboration chat messages.</p>
-                </div>
+              <div className="flex gap-3 sm:gap-4">
                 <Checkbox
+                  id="notif-email-collaboration"
                   checked={emailCollaborationEnabled}
                   onChange={handleCollaborationChange}
-                  disabled={notificationsLoading || savingPreferences}
+                  disabled={disabled}
+                  className="mt-0.5 shrink-0"
+                  aria-describedby="notif-email-collaboration-desc"
                 />
+                <label htmlFor="notif-email-collaboration" className="min-w-0 flex-1 cursor-pointer space-y-1">
+                  <span className="block text-sm font-medium text-foreground">Collaboration Messages</span>
+                  <span id="notif-email-collaboration-desc" className="block text-sm text-muted-foreground">
+                    Receive email notifications for new collaboration chat messages.
+                  </span>
+                </label>
               </div>
             </div>
           </div>
         )}
-        {notificationError ? <p className="text-sm text-destructive">{notificationError}</p> : null}
+        {notificationError ? (
+          <p className="text-sm text-destructive" role="alert">
+            {notificationError}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   )

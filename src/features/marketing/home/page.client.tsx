@@ -95,7 +95,10 @@ function HomePageContent() {
             </div>
           </div>
 
-          <div className="mt-16">
+          <div className="mt-16 space-y-4">
+            <p className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">
+              Interactive preview · sample data
+            </p>
             <MinifiedSoftwarePreview />
           </div>
         </div>

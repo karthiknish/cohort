@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { User, Shield } from 'lucide-react'
+import { Suspense, startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { LoaderCircle, Shield, User } from 'lucide-react'
 import { useMutation, useQuery } from 'convex/react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -20,7 +21,18 @@ import {
   type NotificationPreferencesResponse,
 } from './components'
 
-export default function SettingsPage() {
+function SettingsPageFallback() {
+  return (
+    <div className="container mx-auto max-w-6xl py-10" role="status" aria-live="polite">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+        Loading settings…
+      </div>
+    </div>
+  )
+}
+
+function SettingsPageInner() {
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
   const profile = useQuery(settingsApi.getMyProfile)
@@ -57,6 +69,28 @@ export default function SettingsPage() {
   const [emailCollaborationEnabled, setEmailCollaborationEnabled] = useState(false)
   const [savingPreferences, setSavingPreferences] = useState(false)
   const [profilePhone, setProfilePhone] = useState('')
+
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const tabFromUrl = searchParams.get('tab') === 'account' ? 'account' : 'profile'
+  const [activeTab, setActiveTab] = useState<'profile' | 'account'>(tabFromUrl)
+
+  useEffect(() => {
+    const next = searchParams.get('tab') === 'account' ? 'account' : 'profile'
+    setActiveTab(next)
+  }, [searchParams])
+
+  const handleSettingsTabChange = useCallback(
+    (value: string) => {
+      const next = value === 'account' ? 'account' : 'profile'
+      startTransition(() => {
+        setActiveTab(next)
+        router.replace(`${pathname}?tab=${next}`, { scroll: false })
+      })
+    },
+    [pathname, router]
+  )
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -298,22 +332,24 @@ export default function SettingsPage() {
   )
 
   return (
-    <div className="container mx-auto max-w-6xl py-10">
+    <main id="settings-page" className="container mx-auto max-w-6xl py-10">
       <div className="mb-8 space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <h1 id="settings-heading" className="text-3xl font-bold tracking-tight">
+          Settings
+        </h1>
         <p className="text-muted-foreground">
           Manage your profile and account preferences.
           {isPreviewMode ? ' Preview mode uses sample account data and local-only actions.' : ''}
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={handleSettingsTabChange} className="space-y-6">
+        <TabsList aria-label="Settings sections">
           <TabsTrigger value="profile" className="gap-2">
-            <User className="h-4 w-4" /> Profile
+            <User className="h-4 w-4" aria-hidden /> Profile
           </TabsTrigger>
           <TabsTrigger value="account" className="gap-2">
-            <Shield className="h-4 w-4" /> Account
+            <Shield className="h-4 w-4" aria-hidden /> Account
           </TabsTrigger>
         </TabsList>
 
@@ -340,6 +376,14 @@ export default function SettingsPage() {
           <DeleteAccountCard />
         </TabsContent>
       </Tabs>
-    </div>
+    </main>
+  )
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<SettingsPageFallback />}>
+      <SettingsPageInner />
+    </Suspense>
   )
 }

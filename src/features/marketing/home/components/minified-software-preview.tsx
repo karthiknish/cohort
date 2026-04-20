@@ -16,7 +16,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react'
-import { startTransition, useCallback, useMemo, useState, type MouseEvent } from 'react'
+import { startTransition, useCallback, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 
 import { cn } from '@/lib/utils'
 
@@ -304,11 +304,12 @@ function OverviewPanel({
               aria-pressed={isActive}
               onClick={onMetricClick}
               className={cn(
-                'rounded-xl border px-3 py-2.5 text-left transition-colors',
+                'rounded-xl border px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                 isActive
                   ? cn('border-transparent bg-muted/90', TONE_BADGE[m.tone])
                   : 'border-border/40 bg-muted/20 hover:bg-muted/40',
               )}
+              aria-label={`${m.label}, ${m.value}, ${m.delta}`}
             >
               <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground/60 uppercase">{m.label}</p>
               <div className="mt-1.5 flex items-end justify-between gap-2">
@@ -541,6 +542,7 @@ function isTabId(v: string | undefined): v is TabId {
 /* ------------------------------------------------------------------ */
 
 const INITIAL_TAB = TABS[0]!
+const TAB_ORDER = TABS.map((t) => t.id)
 
 export function MinifiedSoftwarePreview() {
   const [activeTabId, setActiveTabId] = useState<TabId>(INITIAL_TAB.id)
@@ -548,14 +550,60 @@ export function MinifiedSoftwarePreview() {
 
   const tab = useMemo(() => TABS.find((t) => t.id === activeTabId) ?? INITIAL_TAB, [activeTabId])
 
+  const focusTabButton = useCallback((id: TabId) => {
+    requestAnimationFrame(() => {
+      document.getElementById(`preview-tab-d-${id}`)?.focus()
+        ?? document.getElementById(`preview-tab-m-${id}`)?.focus()
+    })
+  }, [])
+
+  const selectTab = useCallback(
+    (id: TabId) => {
+      if (id === activeTabId) return
+      startTransition(() => setActiveTabId(id))
+      focusTabButton(id)
+    },
+    [activeTabId, focusTabButton],
+  )
+
   const handleTabClick = useCallback(
     (e: MouseEvent<HTMLButtonElement>) => {
       const id = e.currentTarget.dataset.tabId
       if (isTabId(id) && id !== activeTabId) {
-        startTransition(() => setActiveTabId(id))
+        selectTab(id)
       }
     },
-    [activeTabId],
+    [activeTabId, selectTab],
+  )
+
+  const handleTabKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLButtonElement>) => {
+      const id = e.currentTarget.dataset.tabId
+      if (!isTabId(id)) return
+
+      const vertical = e.key === 'ArrowDown' || e.key === 'ArrowUp'
+      const horizontal = e.key === 'ArrowRight' || e.key === 'ArrowLeft'
+      if (!vertical && !horizontal) {
+        if (e.key === 'Home') {
+          e.preventDefault()
+          selectTab(TAB_ORDER[0]!)
+        }
+        if (e.key === 'End') {
+          e.preventDefault()
+          selectTab(TAB_ORDER[TAB_ORDER.length - 1]!)
+        }
+        return
+      }
+
+      e.preventDefault()
+      const idx = TAB_ORDER.indexOf(id)
+      if (idx === -1) return
+      const delta = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1
+      const nextIdx = Math.min(Math.max(idx + delta, 0), TAB_ORDER.length - 1)
+      const nextId = TAB_ORDER[nextIdx]
+      if (nextId && nextId !== id) selectTab(nextId)
+    },
+    [selectTab],
   )
 
   const handleMetricClick = useCallback(
@@ -569,7 +617,7 @@ export function MinifiedSoftwarePreview() {
   )
 
   return (
-    <div className="relative mx-auto w-full max-w-5xl">
+    <section className="relative mx-auto w-full max-w-5xl" aria-label="Interactive product preview (sample data)">
       {/* Ambient glow */}
       <div aria-hidden="true" className="absolute inset-x-16 -top-8 h-32 rounded-full bg-accent/15 blur-3xl" />
       <div aria-hidden="true" className="absolute -right-8 top-16 h-40 w-40 rounded-full bg-info/10 blur-3xl" />
@@ -579,12 +627,12 @@ export function MinifiedSoftwarePreview() {
         {/* ── Title bar ── */}
         <div className="flex items-center justify-between border-b border-border/40 bg-muted/60 px-4 py-2.5">
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-[7px]">
+            <div className="flex items-center gap-[7px]" aria-hidden="true">
               {WINDOW_STATUS_DOTS.map((dot) => (
                 <span key={dot.id} className={cn('block h-[11px] w-[11px] rounded-full', dot.className)} />
               ))}
             </div>
-            <div className="flex items-center gap-2 rounded-md border border-border/50 bg-background/80 px-3 py-1">
+            <div className="flex items-center gap-2 rounded-md border border-border/50 bg-background/80 px-3 py-1" aria-hidden="true">
               <Search className="h-3 w-3 text-muted-foreground/50" />
               <span className="text-[11px] font-medium tracking-wide text-muted-foreground/70">app.cohorts.ai/dashboard</span>
             </div>
@@ -601,41 +649,58 @@ export function MinifiedSoftwarePreview() {
         <div className="grid grid-cols-1 sm:grid-cols-[52px_1fr] lg:grid-cols-[52px_1fr_260px]">
           {/* ── Sidebar ── */}
           <div className="hidden border-r border-border/30 bg-muted/30 py-3 sm:block">
-            <div className="flex flex-col items-center gap-1">
+            <div
+              className="flex flex-col items-center gap-1"
+              role="tablist"
+              aria-label="Preview sections, sidebar"
+            >
               {TABS.map((t) => (
                 <button
                   key={t.id}
                   type="button"
+                  id={`preview-tab-d-${t.id}`}
                   data-tab-id={t.id}
-                  aria-pressed={t.id === activeTabId}
+                  role="tab"
+                  aria-selected={t.id === activeTabId}
+                  aria-controls="preview-panel-main"
+                  tabIndex={t.id === activeTabId ? 0 : -1}
                   onClick={handleTabClick}
+                  onKeyDown={handleTabKeyDown}
                   title={t.label}
+                  aria-label={`${t.label} preview`}
                   className={cn(
-                    'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+                    'flex h-9 w-9 items-center justify-center rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                     t.id === activeTabId
-                      ? 'bg-primary/12 text-primary'
-                      : 'text-muted-foreground/50 hover:text-muted-foreground',
+                      ? 'bg-primary/12 text-primary shadow-sm'
+                      : 'text-muted-foreground/55 hover:bg-muted/50 hover:text-muted-foreground',
                   )}
                 >
-                  <t.Icon className="h-4 w-4" />
+                  <t.Icon className="h-4 w-4" aria-hidden />
                 </button>
               ))}
-              <div className="my-1 h-px w-5 bg-border/40" />
-              {SIDEBAR_EXTRA.map((item) => (
-                <div key={item.id} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground/25">
-                  <item.Icon className="h-4 w-4" />
-                </div>
-              ))}
+              <div className="my-1 h-px w-5 bg-border/40" aria-hidden />
+              <div aria-hidden="true">
+                {SIDEBAR_EXTRA.map((item) => (
+                  <div key={item.id} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground/25">
+                    <item.Icon className="h-4 w-4" />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* ── Main content ── */}
-          <div className="min-h-[380px] p-4 sm:p-5">
+          <div
+            className="min-h-[380px] p-4 sm:p-5"
+            role="tabpanel"
+            id="preview-panel-main"
+            aria-label={`${tab.label} workspace preview (sample)`}
+          >
             {/* Header */}
-            <div className="mb-4 flex items-center justify-between">
-              <div>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <p className="text-[10px] font-semibold tracking-[0.2em] text-muted-foreground/60 uppercase">{tab.eyebrow}</p>
-                <h3 className="mt-1 text-base font-semibold text-foreground sm:text-lg">{tab.label}</h3>
+                <h3 className="mt-1 truncate text-base font-semibold text-foreground sm:text-lg">{tab.label}</h3>
               </div>
               <div className="flex items-center gap-1.5 rounded-full border border-border/50 bg-muted/40 px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
                 <span className="h-1.5 w-1.5 rounded-full bg-accent" />
@@ -644,21 +709,32 @@ export function MinifiedSoftwarePreview() {
             </div>
 
             {/* Mobile tab switcher */}
-            <div className="mb-4 flex gap-1 overflow-x-auto sm:hidden">
+            <div
+              className="mb-4 flex snap-x snap-mandatory gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
+              role="tablist"
+              aria-label="Preview sections, mobile"
+            >
               {TABS.map((t) => (
                 <button
                   key={t.id}
                   type="button"
+                  id={`preview-tab-m-${t.id}`}
                   data-tab-id={t.id}
+                  role="tab"
+                  aria-selected={t.id === activeTabId}
+                  aria-controls="preview-panel-main"
+                  tabIndex={t.id === activeTabId ? 0 : -1}
                   onClick={handleTabClick}
+                  onKeyDown={handleTabKeyDown}
+                  aria-label={`${t.label} preview`}
                   className={cn(
-                    'flex shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold tracking-wide uppercase transition-colors',
+                    'flex snap-start shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold tracking-wide uppercase outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                     t.id === activeTabId
                       ? 'border-primary/30 bg-primary/8 text-primary'
-                      : 'border-border/40 text-muted-foreground/50',
+                      : 'border-border/40 text-muted-foreground/60 hover:border-border/60 hover:bg-muted/30',
                   )}
                 >
-                  <t.Icon className="h-3 w-3" />
+                  <t.Icon className="h-3 w-3 shrink-0" aria-hidden />
                   {t.label}
                 </button>
               ))}
@@ -704,7 +780,7 @@ export function MinifiedSoftwarePreview() {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   )
 }
 

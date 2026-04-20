@@ -155,6 +155,7 @@ export async function recordSchedulerEvent(input: SchedulerEventInput): Promise<
     : []
 
   const payload = {
+    authSecret: process.env.SCHEDULER_EVENTS_SECRET,
     source: input.source,
     operation: input.operation ?? null,
     processedJobs: input.processedJobs,

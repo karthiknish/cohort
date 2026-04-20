@@ -135,11 +135,13 @@ export function ProgressIndicators({
                 size="icon"
                 className="h-7 w-7"
                 onClick={handleToggleExpanded}
+                aria-expanded={isExpanded}
+                aria-label={isExpanded ? 'Collapse progress panel' : 'Expand progress panel'}
               >
                 {isExpanded ? (
-                  <Minimize2 className="h-4 w-4" />
+                  <Minimize2 className="h-4 w-4" aria-hidden />
                 ) : (
-                  <Maximize2 className="h-4 w-4" />
+                  <Maximize2 className="h-4 w-4" aria-hidden />
                 )}
               </Button>
               {onDismissAll && activeOperations.length > 1 && (
@@ -230,8 +232,9 @@ function OperationItem({
               className="h-7 w-7"
               onClick={operation.onPause}
               title="Pause"
+              aria-label={`Pause ${operation.name}`}
             >
-              <Pause className="h-3.5 w-3.5" />
+              <Pause className="h-3.5 w-3.5" aria-hidden />
             </Button>
           )}
           {operation.status === 'paused' && operation.onResume && (
@@ -241,8 +244,9 @@ function OperationItem({
               className="h-7 w-7"
               onClick={operation.onResume}
               title="Resume"
+              aria-label={`Resume ${operation.name}`}
             >
-              <Play className="h-3.5 w-3.5" />
+              <Play className="h-3.5 w-3.5" aria-hidden />
             </Button>
           )}
           {operation.status === 'failed' && operation.onRetry && (
@@ -252,8 +256,9 @@ function OperationItem({
               className="h-7 w-7"
               onClick={operation.onRetry}
               title="Retry"
+              aria-label={`Retry ${operation.name}`}
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
             </Button>
           )}
           {operation.onCancel && ['running', 'pending', 'paused'].includes(operation.status) && (
@@ -263,8 +268,9 @@ function OperationItem({
               className="h-7 w-7"
               onClick={operation.onCancel}
               title="Cancel"
+              aria-label={`Cancel ${operation.name}`}
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" aria-hidden />
             </Button>
           )}
           <Button
@@ -272,11 +278,13 @@ function OperationItem({
             size="icon"
             className="h-7 w-7"
             onClick={onToggleCollapse}
+            aria-expanded={!isCollapsed}
+            aria-label={isCollapsed ? `Expand details for ${operation.name}` : `Collapse details for ${operation.name}`}
           >
             {isCollapsed ? (
-              <Maximize2 className="h-3.5 w-3.5" />
+              <Maximize2 className="h-3.5 w-3.5" aria-hidden />
             ) : (
-              <Minimize2 className="h-3.5 w-3.5" />
+              <Minimize2 className="h-3.5 w-3.5" aria-hidden />
             )}
           </Button>
         </div>
@@ -380,8 +388,9 @@ function CompletedOperationItem({ operation, onDismiss }: CompletedOperationItem
         size="icon"
         className="h-7 w-7 shrink-0"
         onClick={onDismiss}
+        aria-label={`Dismiss ${operation.name}`}
       >
-        <X className="h-3.5 w-3.5" />
+        <X className="h-3.5 w-3.5" aria-hidden />
       </Button>
     </div>
   )

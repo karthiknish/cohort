@@ -95,8 +95,9 @@ export function DMSidebar({
             className="h-8 w-8"
             onClick={onNewDM}
             title="New message"
+            aria-label="Start new direct message"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4" aria-hidden />
           </Button>
         </div>
         <div className="relative">

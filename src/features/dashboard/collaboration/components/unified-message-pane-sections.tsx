@@ -202,14 +202,15 @@ export function UnifiedMessageActionBar({
 
       {onShare ? (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
               className="h-6 w-6 transition-transform hover:scale-105"
               disabled={isBusy}
+              aria-label={`Share message from ${message.senderName ?? 'sender'}`}
             >
-              <Share2 className="h-3 w-3" />
+              <Share2 className="h-3 w-3" aria-hidden />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>

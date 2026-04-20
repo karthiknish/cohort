@@ -62,7 +62,7 @@ function NotificationMenuItem({
   return (
     <DropdownMenuItem
       className={cn(
-        'flex items-start gap-3 px-4 py-3 focus:bg-muted/60',
+        'cv-scroll-item flex min-h-0 items-start gap-3 px-4 py-3 focus:bg-muted/60',
         !notification.read && 'bg-muted/40'
       )}
       onSelect={handleSelect}

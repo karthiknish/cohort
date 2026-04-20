@@ -322,6 +322,23 @@ export function ProfileCard({
     void handleAvatarRemove()
   }, [handleAvatarRemove])
 
+  if (!isPreviewMode && profile === undefined) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile Information</CardTitle>
+          <CardDescription>Update the contact details that appear in proposals and client-facing emails.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
+            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+            Loading profile…
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card>
       <CardHeader>

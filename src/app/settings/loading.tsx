@@ -5,7 +5,7 @@ import { Skeleton } from '@/shared/ui/skeleton'
  * Shows immediately while the settings page content is loading.
  */
 export default function SettingsLoading() {
-  const tabSlots = ['tab-1', 'tab-2', 'tab-3', 'tab-4']
+  const tabSlots = ['tab-profile', 'tab-account']
   const profileFieldSlots = ['profile-1', 'profile-2', 'profile-3', 'profile-4']
   const toggleSlots = ['toggle-1', 'toggle-2', 'toggle-3', 'toggle-4', 'toggle-5']
   const preferenceSlots = ['pref-1', 'pref-2', 'pref-3']

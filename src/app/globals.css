@@ -457,6 +457,26 @@ h6 {
     display: none;
   }
 
+  /*
+   * Long scroll lists: defer layout/paint for off-screen siblings (content-visibility).
+   * contain-intrinsic-size gives a fallback height until the row is painted (reduces scrollbar jump).
+   * Avoid on variable-height regions where scroll-to-target must be exact (e.g. chat message stream).
+   */
+  .cv-scroll-item {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 5rem;
+  }
+
+  .cv-scroll-item-compact {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 3.75rem;
+  }
+
+  .cv-scroll-item-activity {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 9rem;
+  }
+
   /* Interactive card hover effect */
   .card-interactive {
     transition:

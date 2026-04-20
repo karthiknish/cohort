@@ -226,7 +226,7 @@ export function ConversationListPane({
                   type="button"
                   onClick={createSelectItemHandler(item)}
                   className={cn(
-                    'flex w-full items-center gap-3 rounded-xl p-3 text-left transition-[color,background-color,border-color,fill,stroke,opacity,box-shadow,transform]',
+                    'cv-scroll-item-compact flex w-full items-center gap-3 rounded-xl p-3 text-left transition-[color,background-color,border-color,fill,stroke,opacity,box-shadow,transform]',
                     'hover:bg-muted/60',
                     selected && 'border border-primary/25 bg-primary/8 shadow-sm ring-1 ring-primary/10',
                     hasUnread && !selected && 'bg-muted/25',

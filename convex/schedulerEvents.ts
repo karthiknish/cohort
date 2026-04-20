@@ -1,5 +1,6 @@
 import { mutation } from './_generated/server'
 import { v } from 'convex/values'
+import { Errors } from './errors'
 import { adminQuery } from './functions'
 
 const providerFailureThresholdValidator = v.object({
@@ -28,10 +29,13 @@ const schedulerEventValidator = v.object({
 
 /**
  * Insert a new scheduler event.
- * Called from server-side scheduler monitor - no auth required.
+ * Called from trusted server routes (cron/worker) via ConvexHttpClient.
+ * When env `SCHEDULER_EVENTS_SECRET` is set, `authSecret` must match (set same value in Convex + app server).
  */
 export const insert = mutation({
   args: {
+    /** Must match Convex env SCHEDULER_EVENTS_SECRET when that variable is set. */
+    authSecret: v.optional(v.string()),
     source: v.string(),
     operation: v.union(v.string(), v.null()),
     processedJobs: v.union(v.number(), v.null()),
@@ -57,7 +61,11 @@ export const insert = mutation({
     id: v.id('schedulerEvents'),
   }),
   handler: async (ctx, args) => {
-    // No auth required - called from server-side scheduler code
+    const expected = process.env.SCHEDULER_EVENTS_SECRET
+    if (typeof expected === 'string' && expected.length > 0 && args.authSecret !== expected) {
+      throw Errors.auth.unauthorized('Invalid scheduler event credentials')
+    }
+
     const id = await ctx.db.insert('schedulerEvents', {
       createdAtMs: Date.now(),
       source: args.source,

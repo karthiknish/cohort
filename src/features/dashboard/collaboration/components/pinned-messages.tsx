@@ -172,11 +172,10 @@ function PinnedMessageItem({ message, workspaceId, onClick }: PinnedMessageItemP
                   aria-label="Unpin message"
                 >
                   {isUnpinning ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
                   ) : (
-                    <PinOff className="h-4 w-4" />
+                    <PinOff className="h-4 w-4" aria-hidden />
                   )}
-                  <span className="sr-only">Unpin message</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">Unpin message</TooltipContent>
@@ -291,15 +290,15 @@ export function PinMessageButton({
             className={cn('h-7 w-7', isPinned && 'text-primary', className)}
             onClick={handleTogglePin}
             disabled={isLoading}
+            aria-label={isPinned ? 'Unpin message' : 'Pin message'}
           >
             {isLoading ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" />
+              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
             ) : isPinned ? (
-              <Pin className="h-4 w-4 fill-primary" />
+              <Pin className="h-4 w-4 fill-primary" aria-hidden />
             ) : (
-              <Pin className="h-4 w-4" />
+              <Pin className="h-4 w-4" aria-hidden />
             )}
-            <span className="sr-only">{isPinned ? 'Unpin message' : 'Pin message'}</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">
