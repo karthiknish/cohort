@@ -9,6 +9,10 @@ import { Button } from '@/shared/ui/button'
 import EmojiPicker, { Theme, type EmojiClickData } from '@/shared/ui/emoji-picker'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Separator } from '@/shared/ui/separator'
+import {
+  chromaticTransitionClass,
+  listRowEnterAnimationClass,
+} from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 import type { UnifiedMessage } from './message-list'
@@ -155,7 +159,8 @@ function MessageReactionRow({
             data-emoji={reaction.emoji}
             disabled={disabled}
             className={cn(
-              'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+              'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs',
+              chromaticTransitionClass,
               reaction.userIds.includes(currentUserId ?? '') ? 'border border-primary/20 bg-primary/10' : 'bg-muted hover:bg-muted/80',
             )}
           >
@@ -238,7 +243,9 @@ export function ChannelMessageCard({
       data-message-id={message.id}
       data-thread-root-id={message.threadRootId ?? message.id}
       className={cn(
-        'group relative flex items-start gap-3 px-6 py-2.5 animate-in fade-in-0 slide-in-from-bottom-1 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-200 ease-[var(--motion-ease-standard)] motion-reduce:animate-none motion-reduce:transition-none',
+        'group relative flex items-start gap-3 px-6 py-2.5',
+        listRowEnterAnimationClass,
+        chromaticTransitionClass,
         !message.deleted && 'hover:bg-muted/5',
         highlighted && 'rounded-lg bg-primary/10 ring-1 ring-primary/30',
       )}
@@ -332,7 +339,7 @@ export function DirectMessageCard({
     <div
       data-message-id={message.id}
       data-thread-root-id={message.threadRootId ?? message.id}
-      className={cn('group relative flex gap-2 animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none', isOwn && 'justify-end')}
+      className={cn('group relative flex gap-2', listRowEnterAnimationClass, isOwn && 'justify-end')}
     >
       {showAvatars && !isOwn ? (
         <Avatar className="h-8 w-8 shrink-0">
@@ -343,7 +350,8 @@ export function DirectMessageCard({
       <div className={cn('flex max-w-[70%] flex-col', isOwn && 'items-end')}>
         <div
           className={cn(
-            'rounded-lg px-3 py-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+            'rounded-lg px-3 py-2',
+            chromaticTransitionClass,
             message.deleted
               ? 'border border-dashed border-muted/60 bg-background/70 text-muted-foreground'
               : isOwn

@@ -392,7 +392,7 @@ function AdGridItem({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-lg border bg-card text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/50 hover:shadow-md"
+      className="group relative overflow-hidden rounded-lg border bg-card text-left motion-chromatic hover:border-primary/50 hover:shadow-md"
     >
       <button
         type="button"
@@ -766,7 +766,6 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
       })
       .catch((error) => {
         logError(error, 'CampaignAdsSection:fetchMetrics')
-        console.error('[CampaignAdsSection] metrics error:', error)
       })
       .finally(() => {
         setMetricsLoading(false)

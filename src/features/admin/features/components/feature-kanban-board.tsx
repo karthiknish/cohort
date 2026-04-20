@@ -4,6 +4,7 @@ import { useCallback, useState, type DragEvent } from 'react'
 import { Plus } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
+import { chromaticTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import type { FeatureItem, FeatureStatus } from '@/types/features'
 import { FEATURE_STATUSES, FEATURE_STATUS_LABELS, FEATURE_STATUS_COLORS } from '@/types/features'
@@ -158,7 +159,8 @@ function FeatureKanbanColumn({
       onDragLeave={handleDragLeave}
       onDrop={handleColumnDrop}
       className={cn(
-        'flex flex-col rounded-xl border bg-muted/30 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] min-h-[500px]',
+        'flex flex-col rounded-xl border bg-muted/30 min-h-[500px]',
+        chromaticTransitionClass,
         isDropTarget && !isDraggedFromThis && 'border-primary bg-primary/5 ring-2 ring-primary/20'
       )}
     >

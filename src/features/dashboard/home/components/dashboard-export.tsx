@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Checkbox } from '@/shared/ui/checkbox'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/shared/ui/use-toast'
 import type { ChartDataPoint } from './interactive-chart'
@@ -186,10 +187,10 @@ export function DashboardExport({
           setOpen(false)
         })
         .catch((error) => {
-          console.error('Export failed:', error)
+          logError(error, 'DashboardExport:handleExport')
           toast({
             title: 'Export failed',
-            description: 'An error occurred while exporting your data.',
+            description: asErrorMessage(error),
             variant: 'destructive',
           })
         })
@@ -347,10 +348,10 @@ export function QuickExportButton({
         onComplete?.()
       })
       .catch((error) => {
-        console.error('Export failed:', error)
+        logError(error, 'QuickExportButton:handleExport')
         toast({
           title: 'Export failed',
-          description: 'An error occurred while exporting your data.',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })
@@ -430,9 +431,10 @@ export function ScheduledExportDialog({
         setOpen(false)
       })
       .catch((error) => {
-        console.error('Failed to schedule export:', error)
+        logError(error, 'ScheduledExportDialog:handleSchedule')
         toast({
           title: 'Failed to schedule',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })

@@ -10,6 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
+import { chromaticTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/shared/ui/use-toast'
 
@@ -303,7 +304,8 @@ export function DraggableWidget({
   return (
     <div
       className={cn(
-        'relative group rounded-lg border bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+        'relative group rounded-lg border bg-background',
+        chromaticTransitionClass,
         isEditing && 'ring-2 ring-primary/20',
         widget.collapsed && 'overflow-hidden'
       )}

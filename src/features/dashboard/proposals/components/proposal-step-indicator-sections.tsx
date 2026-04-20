@@ -73,7 +73,7 @@ export function ProposalStepIndicatorProgressBar({ percentage }: { percentage: n
   return (
     <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
       <div
-        className="h-full bg-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-(--motion-duration-slow) ease-(--motion-ease-in-out) motion-reduce:transition-none"
+        className="h-full bg-primary motion-chromatic-slow-inout"
         style={progressStyle}
       />
     </div>

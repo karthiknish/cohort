@@ -15,7 +15,7 @@ import {
 } from '@/shared/ui/dialog'
 import { Input } from '@/shared/ui/input'
 import { useToast } from '@/shared/ui/use-toast'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn, formatRelativeTime } from '@/lib/utils'
 import type { CollaborationChannelType, CollaborationMessage } from '@/types/collaboration'
 
@@ -93,7 +93,7 @@ function useCrossChannelSearchController({
         setResults(searchResults)
       })
       .catch((error) => {
-        console.error('Search failed:', error)
+        logError(error, 'CrossChannelSearch:handleSearch')
         setResults([])
         toast({
           title: 'Search failed',

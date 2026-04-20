@@ -76,7 +76,7 @@ export function PerformanceSummaryCard({
             size="sm"
             onClick={onRefresh}
             disabled={metricsLoading}
-            className="h-10 px-4 inline-flex items-center gap-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-md"
+            className="h-10 px-4 inline-flex items-center gap-2 motion-chromatic hover:shadow-md"
           >
             <RefreshCw className={cn('h-4 w-4', metricsLoading && 'animate-spin')} />
             Refresh
@@ -86,7 +86,7 @@ export function PerformanceSummaryCard({
             variant="outline"
             size="sm"
             onClick={onExport}
-            className="h-10 px-4 inline-flex items-center gap-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-md"
+            className="h-10 px-4 inline-flex items-center gap-2 motion-chromatic hover:shadow-md"
           >
             <Download className="h-4 w-4" />
             Export CSV
@@ -145,7 +145,7 @@ export function PerformanceSummaryCard({
                 >
                   <Card
                     className={cn(
-                      'rounded-xl border border-muted/60 bg-card transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+                      'rounded-xl border border-muted/60 bg-card motion-chromatic-lg',
                       'hover:border-muted hover:shadow-md'
                     )}
                   >

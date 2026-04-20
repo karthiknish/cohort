@@ -35,7 +35,7 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
   }))
 
   return (
-    <Card className="overflow-hidden border-muted/30 bg-card shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
+    <Card className="overflow-hidden border-muted/30 bg-card shadow-sm motion-chromatic hover:shadow-md">
       <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-primary" />
@@ -48,7 +48,7 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
       <CardContent className="p-6">
         <div className="grid gap-6 md:grid-cols-3">
           {groups.map(({ stage, items }) => (
-            <div key={stage.id} className="flex flex-col gap-4 rounded-2xl border border-muted/20 bg-muted/5 p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/[0.07]">
+            <div key={stage.id} className="flex flex-col gap-4 rounded-2xl border border-muted/20 bg-muted/5 p-4 motion-chromatic hover:bg-muted/[0.07]">
               <div className="flex items-center justify-between pb-1">
                 <div className="flex items-center gap-2.5">
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{stage.label}</span>
@@ -70,7 +70,7 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
                       key={client.id}
                       href={`/dashboard/clients?clientId=${client.id}`}
                       className={cn(
-                        'group block rounded-xl border border-muted/30 bg-card p-4 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/40 hover:shadow-md active:scale-[0.99]',
+                        'group block rounded-xl border border-muted/30 bg-card p-4 shadow-sm motion-chromatic hover:border-primary/40 hover:shadow-md active:scale-[0.99]',
                         client.id === selectedClientId && 'border-primary/50 bg-primary/[0.02] shadow-md ring-1 ring-primary/20'
                       )}
                     >

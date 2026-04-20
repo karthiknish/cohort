@@ -48,7 +48,7 @@ function ReactionButton({
           size="sm"
           variant={isActive ? 'secondary' : 'outline'}
           className={cn(
-            'h-7 rounded-full px-2.5 text-xs transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:scale-105',
+            'h-7 rounded-full px-2.5 text-xs motion-chromatic hover:scale-105',
             isActive && 'border-primary/30 bg-primary/10 hover:bg-primary/20'
           )}
           disabled={disabled}

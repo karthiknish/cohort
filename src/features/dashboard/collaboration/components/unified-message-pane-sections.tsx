@@ -38,6 +38,7 @@ import {
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
 import { useToast } from '@/shared/ui/use-toast'
+import { chromaticTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 import type { ClientTeamMember } from '@/types/clients'
@@ -281,7 +282,8 @@ export function UnifiedThreadReplyCard({
     <div
       key={reply.id}
       className={cn(
-        'group relative rounded-md border border-muted/40 bg-muted/15 px-3 py-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+        'group relative rounded-md border border-muted/40 bg-muted/15 px-3 py-2',
+        chromaticTransitionClass,
         !message.deleted && 'hover:border-primary/20 hover:bg-muted/25',
       )}
     >
@@ -668,7 +670,8 @@ export function UnifiedComposerSection({
       />
       <div
         className={cn(
-          'w-full rounded-lg border border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20',
+          'w-full rounded-lg border border-muted/40 bg-background shadow-sm focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20',
+          chromaticTransitionClass,
           (isComposerFocused || hasPendingAttachments) && 'border-primary/30 shadow-md shadow-primary/5',
         )}
       >
@@ -704,7 +707,7 @@ export function UnifiedComposerSection({
           onClick={handleSend}
           disabled={(!messageInput.trim() && !hasPendingAttachments) || isSending || uploadingAttachments}
           size="sm"
-          className="transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none"
+          className={cn(chromaticTransitionClass, 'hover:-translate-y-0.5 active:translate-y-0')}
         >
           {isSending || uploadingAttachments ? (
             <LoaderCircle className="h-4 w-4 animate-spin" />

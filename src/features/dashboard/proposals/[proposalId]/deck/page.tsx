@@ -201,7 +201,7 @@ export default function ProposalDeckPage() {
                     
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {slideGuidance.map((slide, index) => (
-                        <Card key={slide.id} className="relative overflow-hidden border-muted/40 bg-muted/5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/10 hover:border-primary/20 group">
+                        <Card key={slide.id} className="relative overflow-hidden border-muted/40 bg-muted/5 motion-chromatic hover:bg-muted/10 hover:border-primary/20 group">
                           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-100 transition-opacity">
                             <span className="text-4xl font-black text-primary/10">0{slide.id}</span>
                           </div>

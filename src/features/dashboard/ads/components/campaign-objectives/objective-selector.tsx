@@ -74,7 +74,7 @@ function ObjectiveOptionCard({
       disabled={disabled}
       onClick={handleClick}
       className={cn(
-        'relative flex flex-col items-start rounded-lg border-2 p-4 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+        'relative flex flex-col items-start rounded-lg border-2 p-4 text-left motion-chromatic',
         'hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2',
         isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card hover:border-primary/50',
         disabled && 'cursor-not-allowed opacity-50'
@@ -134,7 +134,7 @@ function CompactObjectiveOptionButton({
       disabled={disabled}
       onClick={handleClick}
       className={cn(
-        'inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+        'inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium motion-chromatic',
         isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted',
         disabled && 'cursor-not-allowed opacity-50'
       )}

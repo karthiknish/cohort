@@ -233,7 +233,7 @@ function LeadFormOptionButton({
       type="button"
       onClick={handleClick}
       disabled={disabled}
-      className={`flex items-center justify-between rounded-lg border p-3 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
+      className={`flex items-center justify-between rounded-lg border p-3 text-left motion-chromatic ${
         isSelected ? 'border-info/20 bg-info/10' : 'border-border hover:border-info/50'
       }`}
     >

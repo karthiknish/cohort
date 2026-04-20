@@ -2,6 +2,7 @@
 
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 
+import { logError } from '@/lib/convex-errors'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 
 interface WorkforceWidgetErrorBoundaryProps {
@@ -27,7 +28,10 @@ export class WorkforceWidgetErrorBoundary extends Component<
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[WorkforceWidgetErrorBoundary]', error, errorInfo)
+    logError(error, 'WorkforceWidgetErrorBoundary')
+    if (errorInfo?.componentStack) {
+      console.error('[WorkforceWidgetErrorBoundary] componentStack', errorInfo.componentStack)
+    }
   }
 
   override render() {

@@ -184,7 +184,7 @@ function OptimizationGoalButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-start gap-3 rounded-lg border p-3 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
+      className={`flex items-start gap-3 rounded-lg border p-3 text-left motion-chromatic ${
         active ? 'border-info/20 bg-info/10' : 'border-border hover:border-info/50'
       }`}
     >

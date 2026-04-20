@@ -177,7 +177,7 @@ export function LongPressMessage({
     <div
       className={cn(
         isPressed && 'bg-muted/50 scale-[0.98]',
-        'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+        'motion-chromatic',
         className
       )}
       onTouchStart={handleTouchStart}

@@ -90,7 +90,6 @@ export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
       return results
     } catch (error) {
       logError(error, 'useAttachments:uploadAttachments')
-      console.warn('[collaboration] failed to upload attachments', error)
       toast({
         title: 'Upload failed',
         description: asErrorMessage(error),

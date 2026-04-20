@@ -148,7 +148,7 @@ export function NewDMDialog({
                   type="button"
                   onClick={userClickHandlers[user.id]}
                   disabled={isCreating}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/50 disabled:opacity-50"
+                  className="w-full flex items-center gap-3 p-3 rounded-lg text-left motion-chromatic hover:bg-muted/50 disabled:opacity-50"
                 >
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-primary/10 text-primary text-sm">

@@ -70,7 +70,7 @@ function ThumbnailButton({
       aria-label={`Image ${index + 1} of ${totalImages}: ${image.name}`}
       aria-current={index === normalizedIndex || undefined}
       className={cn(
-        "h-14 w-14 overflow-hidden rounded-md border-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
+        "h-14 w-14 overflow-hidden rounded-md border-2 motion-chromatic",
         index === normalizedIndex
           ? "border-white opacity-100"
           : "border-transparent opacity-50 hover:opacity-80"

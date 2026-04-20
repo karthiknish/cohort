@@ -271,7 +271,7 @@ function SelectedTagBadge({
 
   return (
     <Badge
-      className={cn('gap-1 pr-1 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:pr-2', getTagColor(tag))}
+      className={cn('gap-1 pr-1 motion-chromatic hover:pr-2', getTagColor(tag))}
     >
       <Hash className="h-2.5 w-2.5" />
       {tag}

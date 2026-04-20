@@ -63,7 +63,7 @@ export function AlgorithmicInsightsSection({
                   />
                   <circle
                     className={cn(
-                      "transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none",
+                      "motion-chromatic-xslow",
                       efficiencyScore > 80 ? "stroke-success" :
                       efficiencyScore > 60 ? "stroke-warning" :
                       "stroke-destructive"
@@ -133,7 +133,7 @@ export function AlgorithmicInsightsSection({
           ) : (
             <div className="space-y-6">
                 {insights.map((insight) => (
-                  <div key={`${insight.type}-${insight.title}`} className="group relative flex gap-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]">
+                  <div key={`${insight.type}-${insight.title}`} className="group relative flex gap-4 motion-chromatic">
                   <div className={cn(
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
                     insight.level === 'success' ? "bg-success/10 text-success" :

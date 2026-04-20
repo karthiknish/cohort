@@ -55,7 +55,7 @@ export function ProposalPageActions(props: {
       <Button
         onClick={onStartProposal}
         disabled={!selectedClientId || isCreatingDraft}
-        className={cn(getButtonClasses('primary'), 'shrink-0 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md')}
+        className={cn(getButtonClasses('primary'), 'shrink-0 shadow-sm motion-chromatic hover:shadow-md')}
       >
         <Plus className="mr-2 h-4 w-4" />
         New Proposal

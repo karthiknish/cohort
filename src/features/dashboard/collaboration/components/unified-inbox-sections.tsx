@@ -13,6 +13,7 @@ import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
+import { chromaticTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationMessage } from '@/types/collaboration'
@@ -226,7 +227,8 @@ export function ConversationListPane({
                   type="button"
                   onClick={createSelectItemHandler(item)}
                   className={cn(
-                    'cv-scroll-item-compact flex w-full items-center gap-3 rounded-xl p-3 text-left transition-[color,background-color,border-color,fill,stroke,opacity,box-shadow,transform]',
+                    'cv-scroll-item-compact flex w-full items-center gap-3 rounded-xl p-3 text-left',
+                    chromaticTransitionClass,
                     'hover:bg-muted/60',
                     selected && 'border border-primary/25 bg-primary/8 shadow-sm ring-1 ring-primary/10',
                     hasUnread && !selected && 'bg-muted/25',

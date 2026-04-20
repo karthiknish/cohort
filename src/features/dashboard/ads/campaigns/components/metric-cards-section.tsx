@@ -83,7 +83,7 @@ function MetricCard({
   description?: string
 }) {
   const content = (
-    <Card className="group overflow-hidden border-muted/40 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
+    <Card className="group overflow-hidden border-muted/40 shadow-sm motion-chromatic hover:shadow-md">
       <CardContent className="p-4">
         {loading ? (
           <div className="space-y-2">

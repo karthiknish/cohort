@@ -374,7 +374,6 @@ export function CampaignManagementCard({
       })
       .catch((error) => {
         logError(error, 'CampaignManagementCard:fetchGroups')
-        console.error('Fetch groups error:', error)
         toast({
           title: 'Could not load campaign groups',
           description: asErrorMessage(error),

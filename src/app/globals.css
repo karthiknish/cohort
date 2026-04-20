@@ -53,6 +53,7 @@
   --warning-text: var(--warning-foreground);
   --info-bg: var(--info);
   --info-text: var(--info-foreground);
+  /* Motion tokens — components use `@/lib/motion` class strings; chromatic rules live in `@layer utilities` (`.motion-chromatic*`) */
   --motion-duration-fast: 160ms;
   --motion-duration-normal: 220ms;
   --motion-duration-slow: 280ms;
@@ -305,6 +306,62 @@ h6 {
 }
 
 @layer utilities {
+  /* Chromatic transitions — `src/lib/animation-system.ts` exports matching class name strings */
+  :where(
+    .motion-chromatic,
+    .motion-chromatic-lg,
+    .motion-chromatic-layout,
+    .motion-chromatic-slow,
+    .motion-chromatic-xslow,
+    .motion-chromatic-slow-inout
+  ) {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke,
+      opacity, box-shadow, transform, filter, backdrop-filter;
+  }
+
+  .motion-chromatic {
+    transition-duration: var(--motion-duration-fast);
+    transition-timing-function: var(--motion-ease-standard);
+  }
+
+  .motion-chromatic-lg {
+    transition-duration: var(--motion-duration-normal);
+    transition-timing-function: var(--motion-ease-standard);
+  }
+
+  .motion-chromatic-layout {
+    transition-duration: var(--motion-duration-normal);
+    transition-timing-function: var(--motion-ease-in-out);
+  }
+
+  .motion-chromatic-slow {
+    transition-duration: var(--motion-duration-slow);
+    transition-timing-function: var(--motion-ease-out);
+  }
+
+  .motion-chromatic-xslow {
+    transition-duration: var(--motion-duration-xslow);
+    transition-timing-function: var(--motion-ease-out);
+  }
+
+  .motion-chromatic-slow-inout {
+    transition-duration: var(--motion-duration-slow);
+    transition-timing-function: var(--motion-ease-in-out);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(
+      .motion-chromatic,
+      .motion-chromatic-lg,
+      .motion-chromatic-layout,
+      .motion-chromatic-slow,
+      .motion-chromatic-xslow,
+      .motion-chromatic-slow-inout
+    ) {
+      transition: none !important;
+    }
+  }
+
   @keyframes skeleton-shimmer {
     0% {
       transform: translateX(-100%);

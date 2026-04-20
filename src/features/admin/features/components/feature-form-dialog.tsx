@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { ImageUploader } from '@/shared/ui/image-uploader'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useToast } from '@/shared/ui/use-toast'
 import { filesApi } from '@/lib/convex-api'
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -253,10 +254,10 @@ export function FeatureFormDialog({
         }
       })
       .catch((error) => {
-        console.error('AI generation failed:', error)
+        logError(error, 'FeatureFormDialog:generateFeatureAi')
         toast({
           title: 'Generation failed',
-          description: 'Unable to generate content. Please try again.',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })
@@ -355,10 +356,10 @@ export function FeatureFormDialog({
           onOpenChange(false)
         })
         .catch((error) => {
-          console.error('Failed to save feature:', error)
+          logError(error, 'FeatureFormDialog:handleSubmit')
           toast({
             title: 'Save failed',
-            description: 'Unable to save the feature. Please try again.',
+            description: asErrorMessage(error),
             variant: 'destructive',
           })
         })

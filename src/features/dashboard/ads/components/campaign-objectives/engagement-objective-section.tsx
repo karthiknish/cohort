@@ -109,7 +109,7 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
                   onClick={handlePostSelect}
                   data-post-id={post.id}
                   disabled={disabled}
-                  className={`w-full p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
+                  className={`w-full p-3 rounded-lg border text-left motion-chromatic ${
                     formData.postId === post.id
                       ? 'border-primary/20 bg-primary/10'
                       : 'border-border hover:border-primary/50'
@@ -153,7 +153,7 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
                   onClick={handleEventSelect}
                   data-event-id={event.id}
                   disabled={disabled}
-                  className={`w-full p-3 rounded-lg border text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] ${
+                  className={`w-full p-3 rounded-lg border text-left motion-chromatic ${
                     formData.eventId === event.id
                       ? 'border-primary/20 bg-primary/10'
                       : 'border-border hover:border-primary/50'

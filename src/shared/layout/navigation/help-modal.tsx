@@ -32,7 +32,7 @@ import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { KeyboardShortcutBadge, useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { onboardingApi } from '@/lib/convex-api'
 import { useToast } from '@/shared/ui/use-toast'
 import { useOnboardingTour } from '@/shared/hooks/use-onboarding-tour'
@@ -439,7 +439,7 @@ export function useHelpModal() {
         })
           .then(() => true)
           .catch((error) => {
-            console.warn('Failed to persist onboarding state', error)
+            logError(error, 'useHelpModal:persistWelcomeSeen')
             return false
           })
       }
@@ -497,7 +497,7 @@ export function useHelpModal() {
       welcomeSeen: true,
       welcomeSeenAtMs: Date.now(),
     }).catch((error: unknown) => {
-      console.warn('Failed to persist onboarding completion', error)
+      logError(error, 'useHelpModal:markWelcomeSeen')
       toast({
         title: 'Could not save welcome state',
         description: asErrorMessage(error),

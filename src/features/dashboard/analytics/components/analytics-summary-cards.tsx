@@ -29,7 +29,7 @@ export function AnalyticsSummaryCards({
 }: AnalyticsSummaryCardsProps) {
     return (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
+            <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/80" />
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <div className="flex items-center gap-2">
@@ -58,7 +58,7 @@ export function AnalyticsSummaryCards({
                 </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
+            <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-success/80" />
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <div className="flex items-center gap-2">
@@ -87,7 +87,7 @@ export function AnalyticsSummaryCards({
                 </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
+            <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-info/80" />
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <div className="flex items-center gap-2">
@@ -116,7 +116,7 @@ export function AnalyticsSummaryCards({
                 </CardContent>
             </Card>
 
-            <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
+            <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-warning/80" />
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <div className="flex items-center gap-2">

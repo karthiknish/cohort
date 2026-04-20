@@ -137,7 +137,7 @@ function EfficiencyScoreMini({ score }: { score: number }) {
         />
         <circle
           className={cn(
-            'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
+            'motion-chromatic-xslow',
             score > 70 ? 'stroke-success' : score > 40 ? 'stroke-warning' : 'stroke-destructive'
           )}
           strokeWidth="3"

@@ -32,7 +32,7 @@ function PreviewTile({ image, previewIndex, onPreview, className, aspectClassNam
       type="button"
       onClick={handlePreview}
       data-preview-index={previewIndex}
-      className={cn('group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 text-left transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-muted', className)}
+      className={cn('group relative overflow-hidden rounded-lg border border-muted/60 bg-muted/10 text-left motion-chromatic hover:border-muted', className)}
       aria-label={`Preview image ${image.name}`}
     >
       <div className={cn('relative overflow-hidden', aspectClassName)}>

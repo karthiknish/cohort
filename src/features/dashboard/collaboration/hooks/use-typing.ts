@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef } from 'react'
 
 import { usePreview } from '@/shared/contexts/preview-context'
 import { collaborationApi } from '@/lib/convex-api'
+import { logError } from '@/lib/convex-errors'
 import type { Channel } from '../types'
 import { TYPING_TIMEOUT_MS, TYPING_UPDATE_INTERVAL_MS } from './constants'
 
@@ -88,7 +89,7 @@ export function useTyping({ workspaceId, selectedChannel, resolveSenderDetails }
       try {
         await setTyping(request)
       } catch (error) {
-        console.warn('[collaboration] failed to update typing status', error)
+        logError(error, 'useTyping:sendTypingUpdate')
       }
     },
     [isPreviewMode, resolveSenderDetails, selectedChannel, setTyping, workspaceId]

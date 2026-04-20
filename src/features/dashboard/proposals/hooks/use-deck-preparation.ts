@@ -111,7 +111,7 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
             </style><body><div class="container"><div class="spinner" aria-hidden="true"></div><h1 style="font-size: 20px; margin-bottom: 12px;">Preparing your deck...</h1><p style="font-size: 14px; line-height: 1.5; opacity: 0.85;">We're generating your presentation and saving a copy to your workspace. Keep this tab open &mdash; the download launches automatically once it's ready.</p></div></body>`)
                         popup.document.close()
                     } catch (popupError) {
-                        console.warn('[ProposalDownload] Unable to render popup content', popupError)
+                        logError(popupError, 'useDeckPreparation:popupDocument')
                     }
                 }
             }
@@ -121,7 +121,9 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
             // Track deck generation start for analytics
             const deckStartTime = Date.now()
             if (workspaceId) {
-                trackDeckGenerationStarted(workspaceId, proposal.id, proposal.clientId, proposal.clientName).catch(console.error)
+                trackDeckGenerationStarted(workspaceId, proposal.id, proposal.clientId, proposal.clientName).catch((e: unknown) =>
+                    logError(e, 'useDeckPreparation:trackDeckGenerationStarted'),
+                )
             }
 
             const token = await getIdToken()
@@ -144,7 +146,9 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
                     const result = row
                     const deckDuration = Date.now() - deckStartTime
                     if (workspaceId) {
-                        trackDeckGenerationCompleted(workspaceId, proposal.id, deckDuration, proposal.clientId, proposal.clientName).catch(console.error)
+                        trackDeckGenerationCompleted(workspaceId, proposal.id, deckDuration, proposal.clientId, proposal.clientName).catch((e: unknown) =>
+                            logError(e, 'useDeckPreparation:trackDeckGenerationCompleted'),
+                        )
                     }
 
                     setDeckProgressStage('launching')
@@ -187,12 +191,13 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
         } catch (error: unknown) {
             logError(error, 'useDeckPreparation:handleDownloadDeck')
             setDeckProgressStage('error')
-            console.error('[ProposalDownload] Deck preparation failed for proposal:', proposal.id, error)
             const message = asErrorMessage(error)
 
             // Track deck generation failure
             if (workspaceId) {
-                trackDeckGenerationFailed(workspaceId, proposal.id, message, proposal.clientId, proposal.clientName).catch(console.error)
+                trackDeckGenerationFailed(workspaceId, proposal.id, message, proposal.clientId, proposal.clientName).catch((e: unknown) =>
+                    logError(e, 'useDeckPreparation:trackDeckGenerationFailed'),
+                )
             }
 
             toast({ title: 'Unable to prepare deck', description: message, variant: 'destructive' })

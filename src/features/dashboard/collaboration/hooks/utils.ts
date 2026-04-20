@@ -14,6 +14,7 @@ import {
   ALLOWED_ATTACHMENT_MIME_TYPES,
 } from './constants'
 import type { PendingAttachment, AttachmentValidationResult } from './types'
+import { logError } from '@/lib/convex-errors'
 import { validateFile } from '@/lib/utils'
 import { toISO, parseDate } from '@/lib/dates'
 
@@ -43,7 +44,7 @@ export function readSessionTokenCookie(): string | null {
     const decoded = decodeURIComponent(value)
     return decoded.length > 0 ? decoded : null
   } catch (error) {
-    console.warn('Failed to decode session token cookie', error)
+    logError(error, 'collaboration/utils:readSessionTokenCookie')
     return null
   }
 }

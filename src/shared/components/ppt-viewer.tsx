@@ -410,7 +410,7 @@ function PptViewerThumbnailButton({
       aria-label={buttonProps['aria-label']}
       aria-current={index === currentSlide ? 'true' : undefined}
       className={cn(
-        'flex-shrink-0 rounded border-2 overflow-hidden transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+        'flex-shrink-0 rounded border-2 overflow-hidden motion-chromatic',
         index === currentSlide
           ? 'border-primary ring-2 ring-primary/20'
           : 'border-transparent hover:border-muted-foreground/30'

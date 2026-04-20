@@ -78,7 +78,7 @@ export function ProposalHistoryEmptyState({
       <p className="mb-6 max-w-[280px] text-sm text-muted-foreground">
         Ready to win your next client? Start by generating a tailored AI proposal strategy.
       </p>
-      <Button onClick={onCreateNew} disabled={!canCreate || isCreating || isGenerating} className="shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
+      <Button onClick={onCreateNew} disabled={!canCreate || isCreating || isGenerating} className="shadow-sm motion-chromatic hover:shadow-md">
         {isCreating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
         Create first proposal
       </Button>
@@ -131,7 +131,7 @@ export function ProposalHistoryRow({
   return (
     <div
       className={cn(
-        'group relative rounded-xl border bg-card p-5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:border-info/20 hover:shadow-sm',
+        'group relative rounded-xl border bg-card p-5 motion-chromatic hover:border-info/20 hover:shadow-sm',
         isActiveDraft && 'border-info bg-info/[0.01] shadow-[0_0_0_1px_hsl(var(--info)/0.05)]',
       )}
     >

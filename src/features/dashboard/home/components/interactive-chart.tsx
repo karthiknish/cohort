@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from '@/shared/ui/recharts-dynamic'
 import { Card, CardContent } from '@/shared/ui/card'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/shared/ui/use-toast'
 import { CHART_COLORS, GRAYS } from '@/lib/colors'
@@ -193,10 +194,10 @@ export function InteractiveChart({
           }
         }
       } catch (error) {
-        console.error('Export failed:', error)
+        logError(error, 'InteractiveChart:handleExport')
         toast({
           title: 'Export failed',
-          description: 'An error occurred while exporting your data.',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       }

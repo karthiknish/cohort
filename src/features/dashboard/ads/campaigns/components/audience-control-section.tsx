@@ -6,6 +6,7 @@ import { RefreshCw, Target, Users, Plus } from 'lucide-react'
 import { useAction } from 'convex/react'
 
 import { adsTargetingApi } from '@/lib/convex-api'
+import { logError } from '@/lib/convex-errors'
 import { useAuth } from '@/shared/contexts/auth-context'
 
 import { Badge } from '@/shared/ui/badge'
@@ -141,8 +142,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
 
         // Suppress toasts for non-actionable errors
         if (message.includes('Unknown Meta API error') || message.includes('INTERNAL_ERROR')) {
-          // Silent failure - don't show toast for unknown errors
-          console.warn('Meta API error (suppressed):', message)
+          logError(new Error(message), 'AudienceControl:fetchTargeting:suppressedMeta')
         } else {
           toast({
             title: 'Error',

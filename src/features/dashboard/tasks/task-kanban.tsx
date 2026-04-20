@@ -479,7 +479,7 @@ function KanbanTaskItem({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       className={cn(
-        'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none active:scale-[0.98]',
+        'motion-chromatic active:scale-[0.98]',
         !bulkActive && !pending && 'cursor-grab active:cursor-grabbing',
         (bulkActive || pending) && 'cursor-default'
       )}
@@ -489,7 +489,7 @@ function KanbanTaskItem({
           type="button"
           onClick={handleExpand}
           className={cn(
-            'flex w-full flex-col gap-3 rounded-[1.35rem] border border-border/60 bg-gradient-to-b from-background via-background to-muted/20 p-4 text-left shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
+            'flex w-full flex-col gap-3 rounded-[1.35rem] border border-border/60 bg-gradient-to-b from-background via-background to-muted/20 p-4 text-left shadow-sm motion-chromatic hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
             pending && 'pointer-events-none opacity-75'
           )}
           aria-label={`Expand task ${task.title}`}

@@ -11,7 +11,7 @@ import {
 } from '@/shared/ui/dialog'
 import { Badge } from '@/shared/ui/badge'
 import { useToast } from '@/shared/ui/use-toast'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn, formatRelativeTime } from '@/lib/utils'
 
 export type SearchResultType = 'tasks' | 'projects' | 'messages' | 'clients' | 'files' | 'proposals'
@@ -141,7 +141,7 @@ export function GlobalSearch({
         setResults(sorted)
       })
       .catch((error) => {
-        console.error('Search failed:', error)
+        logError(error, 'GlobalSearch:performSearch')
         setResults([])
         toast({
           title: 'Search failed',

@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Textarea } from '@/shared/ui/textarea'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useToast } from '@/shared/ui/use-toast'
 
 import type { ChangeEvent } from 'react'
@@ -177,10 +178,10 @@ export function CreateChannelDialog({
         setIsCreating(false)
       })
       .catch((error) => {
-        console.error('Failed to create collaboration channel', error)
+        logError(error, 'CreateChannelDialog:handleCreate')
         toast({
           title: 'Channel creation failed',
-          description: 'The channel could not be created. Try again.',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
         setIsCreating(false)

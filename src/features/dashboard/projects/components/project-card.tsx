@@ -83,7 +83,7 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
   return (
     <ViewTransition>
       <div className={cn(
-        "group relative flex flex-col justify-between rounded-xl border border-muted/40 bg-background p-5 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/40 hover:shadow-md dark:hover:bg-muted/10",
+        "group relative flex flex-col justify-between rounded-xl border border-muted/40 bg-background p-5 shadow-sm motion-chromatic hover:border-primary/40 hover:shadow-md dark:hover:bg-muted/10",
         isPendingUpdate && "opacity-75 pointer-events-none"
       )}>
       {/* Status accent bar */}
@@ -125,7 +125,7 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
                   variant="outline"
                   className={cn(
                     STATUS_CLASSES[project.status],
-                    "h-6 border px-2 py-0 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:opacity-90 gap-1.5"
+                    "h-6 border px-2 py-0 cursor-pointer motion-chromatic hover:opacity-90 gap-1.5"
                   )}
                 >
                   {isPendingUpdate ? (
@@ -224,13 +224,13 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
       </div>
 
       <div className="mt-5 flex items-center gap-2.5 pt-4 border-t border-muted/30">
-        <Button asChild size="sm" variant="ghost" className="flex-1 h-9 text-xs font-bold uppercase tracking-wider hover:bg-primary/5 hover:text-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]">
+        <Button asChild size="sm" variant="ghost" className="flex-1 h-9 text-xs font-bold uppercase tracking-wider hover:bg-primary/5 hover:text-primary motion-chromatic">
           <Link href={tasksHref} prefetch>
             Tasks
           </Link>
         </Button>
         <Separator orientation="vertical" className="h-4 opacity-50" />
-        <Button asChild size="sm" variant="ghost" className="flex-1 h-9 text-xs font-bold uppercase tracking-wider hover:bg-primary/5 hover:text-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]">
+        <Button asChild size="sm" variant="ghost" className="flex-1 h-9 text-xs font-bold uppercase tracking-wider hover:bg-primary/5 hover:text-primary motion-chromatic">
           <Link href={collaborationHref} prefetch>
             Discussion
           </Link>

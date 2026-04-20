@@ -202,14 +202,14 @@ export function CollaborationMessageItem({
   )
 
   const containerClass = cn(
-    'relative group flex items-start gap-3 px-6 py-2.5 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+    'relative group flex items-start gap-3 px-6 py-2.5 motion-chromatic',
     isSearchResult && 'bg-primary/5 ring-1 ring-primary/20',
     !showAvatar && !isReply && 'py-1',
     isReply && 'ml-14 mt-2',
   )
 
   const bubbleClass = cn(
-    'relative min-w-0 flex-1 flex flex-col space-y-1.5 rounded-2xl p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+    'relative min-w-0 flex-1 flex flex-col space-y-1.5 rounded-2xl p-4 motion-chromatic',
     isReply ? 'border border-muted/30 bg-muted/10' : 'border border-transparent bg-muted/5 group-hover:border-muted/20 group-hover:bg-muted/10',
     (isSearchResult || isReply) && 'shadow-sm',
   )

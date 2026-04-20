@@ -92,7 +92,7 @@ export function ProposalSubmittedHero({
           </p>
           <div className="flex flex-wrap justify-center gap-4 pt-4 md:justify-start">
             {deckDownloadUrl && presentationHref ? (
-              <Button size="lg" className="h-14 rounded-2xl bg-primary px-8 text-base font-bold shadow-xl shadow-primary/25 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:scale-105 hover:bg-primary/90 active:scale-95" asChild>
+              <Button size="lg" className="h-14 rounded-2xl bg-primary px-8 text-base font-bold shadow-xl shadow-primary/25 motion-chromatic hover:scale-105 hover:bg-primary/90 active:scale-95" asChild>
                 <Link href={presentationHref} transitionTypes={['nav-forward']}>
                   <Presentation className="mr-3 h-6 w-6" />
                   View Presentation
@@ -100,7 +100,7 @@ export function ProposalSubmittedHero({
               </Button>
             ) : null}
             {canResumeSubmission ? (
-              <Button size="lg" variant="outline" className="h-14 rounded-2xl border-muted/60 px-8 text-base font-bold backdrop-blur-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/10" onClick={onResumeSubmission} disabled={isSubmitting}>
+              <Button size="lg" variant="outline" className="h-14 rounded-2xl border-muted/60 px-8 text-base font-bold backdrop-blur-sm motion-chromatic hover:bg-muted/10" onClick={onResumeSubmission} disabled={isSubmitting}>
                 <Pencil className="mr-3 h-5 w-5" />
                 Edit Responses
               </Button>
@@ -201,7 +201,7 @@ function ProposalDeckReadyState({
   return (
     <div className="flex h-full flex-col gap-6">
       <div className="grid gap-6 sm:grid-cols-2">
-        <div className="group relative aspect-[16/10] overflow-hidden rounded-2xl bg-muted/40 ring-1 ring-muted transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-xl hover:shadow-primary/5 hover:ring-primary/40">
+        <div className="group relative aspect-[16/10] overflow-hidden rounded-2xl bg-muted/40 ring-1 ring-muted motion-chromatic hover:shadow-xl hover:shadow-primary/5 hover:ring-primary/40">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(var(--primary),0.05)_0%,transparent_70%)]" />
           <div className="absolute inset-4 space-y-3">
             <div className="h-2 w-1/3 rounded-full bg-primary/20" />
@@ -224,7 +224,7 @@ function ProposalDeckReadyState({
           <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Export & Share</p>
           <div className="space-y-3">
             {presentationDeck.storageUrl || presentationDeck.pptxUrl ? (
-              <Button variant="outline" className="group h-14 w-full justify-start rounded-2xl border-muted/60 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/30 hover:bg-primary/[0.03]" asChild>
+              <Button variant="outline" className="group h-14 w-full justify-start rounded-2xl border-muted/60 motion-chromatic hover:border-primary/30 hover:bg-primary/[0.03]" asChild>
                 <a href={presentationDeck.storageUrl || presentationDeck.pptxUrl || '#'} target="_blank" rel="noreferrer">
                   <div className="mr-4 rounded-xl bg-muted p-2 transition-colors group-hover:bg-primary/10">
                     <Download className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
@@ -238,7 +238,7 @@ function ProposalDeckReadyState({
             ) : null}
 
             {viewerHref ? (
-              <Button variant="outline" className="group h-14 w-full justify-start rounded-2xl border-muted/60 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/30 hover:bg-primary/[0.03]" asChild>
+              <Button variant="outline" className="group h-14 w-full justify-start rounded-2xl border-muted/60 motion-chromatic hover:border-primary/30 hover:bg-primary/[0.03]" asChild>
                 <Link href={viewerHref}>
                   <div className="mr-4 rounded-xl bg-muted p-2 transition-colors group-hover:bg-primary/10">
                     <ExternalLink className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
@@ -251,7 +251,7 @@ function ProposalDeckReadyState({
               </Button>
             ) : null}
 
-            <Button variant="ghost" className="h-10 w-full justify-center rounded-xl text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-primary/5 hover:text-primary" onClick={onCopyShareLink}>
+            <Button variant="ghost" className="h-10 w-full justify-center rounded-xl text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground motion-chromatic hover:bg-primary/5 hover:text-primary" onClick={onCopyShareLink}>
               <Copy className="mr-2 h-3.5 w-3.5" />
               Copy Share Link
             </Button>

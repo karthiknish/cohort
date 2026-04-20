@@ -13,7 +13,7 @@ export interface SummaryCardProps {
 
 export function SummaryCard({ label, value, icon: Icon, description }: SummaryCardProps) {
   return (
-    <Card className="overflow-hidden border-muted/50 bg-background shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md dark:hover:bg-muted/5">
+    <Card className="overflow-hidden border-muted/50 bg-background shadow-sm motion-chromatic hover:shadow-md dark:hover:bg-muted/5">
       <CardContent className="flex items-center gap-5 p-5">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary shadow-sm dark:bg-primary/10">
           <Icon className="h-6 w-6" />

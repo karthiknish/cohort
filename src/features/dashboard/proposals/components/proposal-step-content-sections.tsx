@@ -51,7 +51,7 @@ const engagementOptions = ['One-off project', 'Ongoing monthly support'] as cons
 
 const animatedStepClassName = 'space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500'
 const interactiveCardClassName =
-  'transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none hover:shadow-sm active:scale-[0.98]'
+  'motion-chromatic hover:shadow-sm active:scale-[0.98]'
 
 function InlineValidationMessage({ message }: { message: string }) {
   return (
@@ -67,7 +67,7 @@ function SelectionIndicator({ selected }: { selected: boolean }) {
     <span
       aria-hidden="true"
       className={cn(
-        'flex h-5 w-5 items-center justify-center rounded-md border transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+        'flex h-5 w-5 items-center justify-center rounded-md border motion-chromatic',
         selected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/30 bg-background/80',
       )}
     >
@@ -132,7 +132,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
             value={formState.company.name}
             onChange={onChangeCompanyName}
             className={cn(
-              'h-10 border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+              'h-10 border-muted/60 bg-background/50 focus:bg-background motion-chromatic',
               validationErrors['company.name'] && 'border-destructive/50 ring-destructive/20',
             )}
           />
@@ -150,7 +150,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
             placeholder="https://acme.com"
             value={formState.company.website}
             onChange={onChangeCompanyWebsite}
-            className="h-10 border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
+            className="h-10 border-muted/60 bg-background/50 focus:bg-background motion-chromatic"
           />
         </div>
       </div>
@@ -168,7 +168,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
             value={formState.company.industry}
             onChange={onChangeCompanyIndustry}
             className={cn(
-              'h-10 border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+              'h-10 border-muted/60 bg-background/50 focus:bg-background motion-chromatic',
               validationErrors['company.industry'] && 'border-destructive/50 ring-destructive/20',
             )}
           />
@@ -185,7 +185,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
             placeholder="e.g. 25 employees"
             value={formState.company.size}
             onChange={onChangeCompanySize}
-            className="h-10 border-muted/60 bg-background/50 focus:bg-background transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
+            className="h-10 border-muted/60 bg-background/50 focus:bg-background motion-chromatic"
           />
         </div>
       </div>
@@ -201,7 +201,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
           placeholder="List primary offices or regions served"
           value={formState.company.locations}
           onChange={onChangeCompanyLocations}
-          className="min-h-[100px] resize-none border-muted/60 bg-background/50 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
+          className="min-h-[100px] resize-none border-muted/60 bg-background/50 motion-chromatic focus:bg-background"
         />
       </div>
     </div>
@@ -253,7 +253,7 @@ function SocialHandleInput({
     [onChangeSocialHandle, handle],
   )
   return (
-    <div className="group space-y-2 rounded-xl border border-muted/50 bg-background/40 p-3 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-background/80">
+    <div className="group space-y-2 rounded-xl border border-muted/50 bg-background/40 p-3 motion-chromatic hover:bg-background/80">
       <div className="mb-1 flex items-center gap-2">
         {socialHandleIcon(handle)}
         <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">{handle}</Label>
@@ -263,7 +263,7 @@ function SocialHandleInput({
         placeholder="@company"
         value={value}
         onChange={handleChange}
-        className="h-8 border-muted/40 bg-transparent text-xs transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
+        className="h-8 border-muted/40 bg-transparent text-xs motion-chromatic focus:bg-background"
       />
     </div>
   )
@@ -390,7 +390,7 @@ function ChallengeButton({
       type="button"
       onClick={handleClick}
       className={cn(
-        'rounded-full border px-4 py-2 text-xs font-semibold transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+        'rounded-full border px-4 py-2 text-xs font-semibold motion-chromatic',
         isSelected
           ? 'scale-[1.02] border-primary bg-primary text-primary-foreground shadow-md'
           : 'border-muted bg-background text-muted-foreground hover:border-muted-foreground/30 hover:bg-muted/5',
@@ -445,7 +445,7 @@ export function ProposalGoalsStepSection({ formState, validationErrors, onUpdate
           placeholder="e.g. Marketing Managers at B2B SaaS companies with 50-200 employees"
           value={formState.goals.audience}
           onChange={onChangeAudience}
-          className="min-h-[100px] resize-none border-muted/60 bg-background/50 shadow-inner transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
+          className="min-h-[100px] resize-none border-muted/60 bg-background/50 shadow-inner motion-chromatic focus:bg-background"
         />
       </div>
 
@@ -470,7 +470,7 @@ export function ProposalGoalsStepSection({ formState, validationErrors, onUpdate
             placeholder="Other specific challenge…"
             value={formState.goals.customChallenge}
             onChange={onChangeCustomChallenge}
-            className="h-10 border-muted/60 bg-background/50 text-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
+            className="h-10 border-muted/60 bg-background/50 text-sm motion-chromatic focus:bg-background"
           />
         </div>
       </div>
@@ -546,7 +546,7 @@ export function ProposalScopeStepSection({ formState, validationErrors, onUpdate
           placeholder="e.g. CRO Audit, Landing Page Design, etc."
           value={formState.scope.otherService}
           onChange={onChangeOtherService}
-          className="min-h-[100px] resize-none border-muted/60 bg-background/50 shadow-inner transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
+          className="min-h-[100px] resize-none border-muted/60 bg-background/50 shadow-inner motion-chromatic focus:bg-background"
         />
       </div>
     </div>
@@ -614,7 +614,7 @@ export function ProposalTimelinesStepSection({ formState, onUpdateField }: Propo
           placeholder="e.g. Q1 Product Launch, Black Friday Sales, etc."
           value={formState.timelines.upcomingEvents}
           onChange={onChangeUpcomingEvents}
-          className="min-h-[100px] resize-none border-muted/60 bg-background/50 shadow-inner transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] focus:bg-background"
+          className="min-h-[100px] resize-none border-muted/60 bg-background/50 shadow-inner motion-chromatic focus:bg-background"
         />
       </div>
     </div>
@@ -639,7 +639,7 @@ function ProposalValueButton({
       type="button"
       onClick={handleClick}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-2xl border p-6 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+        'flex flex-col items-center justify-center gap-2 rounded-2xl border p-6 motion-chromatic-lg',
         isSelected
           ? 'scale-[1.05] border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-lg'
           : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/5',
@@ -699,7 +699,7 @@ function PresentationThemeButton({
       type="button"
       onClick={handleClick}
       className={cn(
-        'group relative flex flex-col gap-2 rounded-xl border p-4 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+        'group relative flex flex-col gap-2 rounded-xl border p-4 motion-chromatic-lg',
         isSelected
           ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-md'
           : 'border-muted/60 bg-background hover:border-muted-foreground/30 hover:shadow-sm',

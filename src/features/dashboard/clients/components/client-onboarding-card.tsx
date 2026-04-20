@@ -26,7 +26,7 @@ export function ClientOnboardingChecklist({ items }: { items: ClientChecklistIte
   const progress = total === 0 ? 0 : Math.round((completed / total) * 100)
 
   return (
-    <Card className="overflow-hidden border-muted/40 bg-card shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
+    <Card className="overflow-hidden border-muted/40 bg-card shadow-sm motion-chromatic hover:shadow-md">
       <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-primary" />
@@ -56,7 +56,7 @@ export function ClientOnboardingChecklist({ items }: { items: ClientChecklistIte
               <div
                 key={item.id}
                 className={cn(
-                  "group flex items-start gap-3 rounded-xl border border-muted/30 p-3 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]",
+                  "group flex items-start gap-3 rounded-xl border border-muted/30 p-3 motion-chromatic",
                   item.done ? "bg-primary/[0.03] border-primary/20" : "bg-muted/5"
                 )}
               >

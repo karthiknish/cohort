@@ -22,7 +22,7 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
       role="region"
       aria-label={isPreviewMode ? 'Preview mode' : 'Sample data banner'}
       className={cn(
-        'relative overflow-hidden rounded-lg border transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+        'relative overflow-hidden rounded-lg border motion-chromatic-lg',
         isPreviewMode
           ? 'border-warning/30 bg-warning/8'
           : 'border-warning/20 bg-warning/6',
@@ -68,7 +68,7 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
             variant={isPreviewMode ? 'outline' : 'default'}
             onClick={togglePreviewMode}
             className={cn(
-              'gap-2 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+              'gap-2 motion-chromatic',
               isPreviewMode
                 ? 'border-warning/30 text-warning hover:bg-warning/10 hover:text-warning'
                 : 'border-warning/30 bg-warning text-warning-foreground hover:bg-warning/90'

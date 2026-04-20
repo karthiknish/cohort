@@ -622,7 +622,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       const displayProvider = formatProviderName(providerId)
       const errorMessage = message || 'An unknown error occurred during authentication.'
 
-      console.error(`[useAdsConnections] Detected OAuth error for ${providerId}:`, errorMessage)
+      logError(new Error(errorMessage), `useAdsConnections:oauthError:${providerId}`)
 
       notifyFailure({ title: `${displayProvider} connection failed`, message: errorMessage })
 

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import type { DirectConversation } from '../hooks/use-direct-messages'
 
 type CollaborationChannelLike = {
@@ -319,10 +320,10 @@ export function useCollaborationDashboardActions({
           description: `Access for #${selectedCustomChannel.name} has been updated.`,
         })
       } catch (error) {
-        console.error('Failed to update channel members', error)
+        logError(error, 'useCollaborationDashboardActions:handleSaveChannelMembers')
         toast({
           title: 'Update failed',
-          description: 'Could not update the channel membership.',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
         throw error
@@ -349,10 +350,10 @@ export function useCollaborationDashboardActions({
         description: `#${selectedCustomChannel.name} has been removed from collaboration.`,
       })
     } catch (error) {
-      console.error('Failed to delete channel', error)
+      logError(error, 'useCollaborationDashboardActions:handleDeleteChannel')
       toast({
         title: 'Delete failed',
-        description: 'Could not delete the channel.',
+        description: asErrorMessage(error),
         variant: 'destructive',
       })
       throw error

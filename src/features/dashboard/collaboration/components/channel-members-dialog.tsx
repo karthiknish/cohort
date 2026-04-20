@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useToast } from '@/shared/ui/use-toast'
 import type { Channel } from '../types'
 
@@ -104,7 +104,7 @@ function ChannelMembersDialogForm({
         onOpenChange(false)
       })
       .catch((error) => {
-        console.error('[ChannelMembersDialog] Failed to save channel access', error)
+        logError(error, 'ChannelMembersDialog:handleSave')
         toast({
           title: 'Could not save channel',
           description: asErrorMessage(error),
@@ -136,7 +136,7 @@ function ChannelMembersDialogForm({
         onOpenChange(false)
       })
       .catch((error) => {
-        console.error('[ChannelMembersDialog] Failed to delete channel', error)
+        logError(error, 'ChannelMembersDialog:handleDelete')
         toast({
           title: 'Could not delete channel',
           description: asErrorMessage(error),

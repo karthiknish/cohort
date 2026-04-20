@@ -168,10 +168,9 @@ export default function AdminFeaturesPage() {
       })
       .catch((error) => {
         logError(error, 'AdminFeaturesPage:confirmDelete')
-        console.error('Failed to delete feature:', error)
         toast({
           title: 'Delete failed',
-          description: 'Unable to delete the feature. Please try again.',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })
@@ -207,11 +206,10 @@ export default function AdminFeaturesPage() {
         })
         .catch((error) => {
           logError(error, 'AdminFeaturesPage:handleMoveFeature')
-          console.error('Failed to move feature:', error)
           // Convex is source of truth; UI will settle automatically.
           toast({
             title: 'Move failed',
-            description: 'Unable to update the feature status.',
+            description: asErrorMessage(error),
             variant: 'destructive',
           })
         })
@@ -299,7 +297,6 @@ export default function AdminFeaturesPage() {
         })
         .catch((error) => {
           logError(error, 'AdminFeaturesPage:handleSubmitFeature')
-          console.error('Failed to save feature:', error)
           toast({
             title: 'Save failed',
             description: asErrorMessage(error),

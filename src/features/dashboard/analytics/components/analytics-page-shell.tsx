@@ -109,7 +109,7 @@ function GoogleAnalyticsConnectionSection() {
   }, [handleSyncGoogleAnalytics])
 
   return (
-    <Card className="overflow-hidden border border-border/60 bg-card shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
+    <Card className="overflow-hidden border border-border/60 bg-card shadow-sm motion-chromatic hover:shadow-md">
       <CardHeader className="flex flex-col gap-4 border-b border-border/60 bg-card py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <GoogleAnalyticsIcon />
@@ -440,7 +440,7 @@ function AnalyticsPerformanceSection() {
               type="button"
               onClick={handleLoadMoreMetrics}
               disabled={metricsLoadingMore}
-              className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
+              className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm motion-chromatic hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
             >
               {metricsLoadingMore ? (
                 <>

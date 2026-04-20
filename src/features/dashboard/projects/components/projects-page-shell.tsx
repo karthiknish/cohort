@@ -233,7 +233,7 @@ function ProjectsSummarySection() {
             </div>
             <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/60">
               <div
-                className="h-full bg-linear-to-r from-info to-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-(--motion-duration-slow) ease-(--motion-ease-out) motion-reduce:transition-none"
+                className="h-full bg-linear-to-r from-info to-primary motion-chromatic-slow"
                 style={completionStyle}
               />
             </div>

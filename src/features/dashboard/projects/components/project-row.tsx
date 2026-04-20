@@ -79,7 +79,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
   return (
     <ViewTransition>
       <div className={cn(
-        "group relative rounded-xl border border-muted/30 bg-background p-5 shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/30 sm:p-6",
+        "group relative rounded-xl border border-muted/30 bg-background p-5 shadow-sm motion-chromatic hover:bg-muted/30 sm:p-6",
         isPendingUpdate && "opacity-75 pointer-events-none"
       )}>
       {/* Status accent bar */}
@@ -105,7 +105,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
                     variant="outline"
                     className={cn(
                       STATUS_CLASSES[project.status],
-                      "h-6 border px-2 py-0 cursor-pointer transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:opacity-90 gap-1.5"
+                      "h-6 border px-2 py-0 cursor-pointer motion-chromatic hover:opacity-90 gap-1.5"
                     )}
                   >
                     {isPendingUpdate ? (
@@ -199,7 +199,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
             <Button
               size="sm"
               variant="outline"
-              className="h-8 px-3 text-xs font-semibold gap-2 border-muted hover:bg-muted/50 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
+              className="h-8 px-3 text-xs font-semibold gap-2 border-muted hover:bg-muted/50 motion-chromatic"
               onClick={handleEdit}
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -207,7 +207,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 px-3 text-xs font-semibold gap-2 bg-primary/5 text-primary border-primary/20 hover:bg-primary/10 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]">
+                <Button variant="outline" size="sm" className="h-8 px-3 text-xs font-semibold gap-2 bg-primary/5 text-primary border-primary/20 hover:bg-primary/10 motion-chromatic">
                   <span>View Project</span>
                   <MoreHorizontal className="h-3.5 w-3.5" />
                 </Button>

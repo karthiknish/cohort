@@ -9,6 +9,7 @@ import { AuthCard } from '@/features/auth/components/auth-card'
 import { AuthPageSkeleton } from '@/features/auth/components/auth-page-skeleton'
 import { bootstrapAndSyncSession, calculatePasswordStrength } from '@/features/auth/auth-utils'
 import { authClient } from '@/lib/auth-client'
+import { logError } from '@/lib/convex-errors'
 import { getSafeRedirectPath } from '@/lib/utils'
 import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
@@ -183,7 +184,7 @@ function HomeAuthPageContent() {
       nextUrl.searchParams.set('tab', nextTab)
       window.history.replaceState(null, '', `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`)
     } catch (error) {
-      console.warn('[AuthPage] failed to persist tab selection', error)
+      logError(error, 'AuthPage:persistTab')
     }
   }, [])
 

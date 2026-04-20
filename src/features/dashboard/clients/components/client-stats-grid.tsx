@@ -27,8 +27,8 @@ export function ClientStatsGrid({
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {/* Projects Stats */}
-      <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/10">
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] group-hover:bg-primary" />
+      <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm motion-chromatic hover:bg-muted/10">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 motion-chromatic group-hover:bg-primary" />
         <CardHeader className="pb-2">
           <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Projects</CardTitle>
         </CardHeader>
@@ -50,8 +50,8 @@ export function ClientStatsGrid({
       </Card>
 
       {/* Tasks Stats */}
-      <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/10">
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] group-hover:bg-primary" />
+      <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm motion-chromatic hover:bg-muted/10">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 motion-chromatic group-hover:bg-primary" />
         <CardHeader className="pb-2">
           <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tasks</CardTitle>
         </CardHeader>
@@ -73,8 +73,8 @@ export function ClientStatsGrid({
       </Card>
 
       {/* Team Stats */}
-      <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/10">
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] group-hover:bg-primary" />
+      <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm motion-chromatic hover:bg-muted/10">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 motion-chromatic group-hover:bg-primary" />
         <CardHeader className="pb-2">
           <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Team</CardTitle>
         </CardHeader>
@@ -90,8 +90,8 @@ export function ClientStatsGrid({
       </Card>
 
       {/* Proposals Stats */}
-      <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-muted/10">
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] group-hover:bg-primary" />
+      <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm motion-chromatic hover:bg-muted/10">
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 motion-chromatic group-hover:bg-primary" />
         <CardHeader className="pb-2">
           <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Proposals</CardTitle>
         </CardHeader>

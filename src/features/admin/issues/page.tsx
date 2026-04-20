@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useMutation, useQuery } from 'convex/react'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { api } from '/_generated/api'
 import {
   Card,
@@ -212,10 +213,10 @@ export default function AdminIssuesPage() {
         toast({ title: 'Status updated', description: `Report marked as ${newStatus}` })
       })
       .catch((error) => {
-        console.error('Error updating status:', error)
+        logError(error, 'AdminIssuesPage:updateStatus')
         toast({
           title: 'Error',
-          description: 'Failed to update report status',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })
@@ -242,10 +243,10 @@ export default function AdminIssuesPage() {
         setDeleteTarget(null)
       })
       .catch((error) => {
-        console.error('Error deleting report:', error)
+        logError(error, 'AdminIssuesPage:deleteReport')
         toast({
           title: 'Error',
-          description: 'Failed to delete report',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })

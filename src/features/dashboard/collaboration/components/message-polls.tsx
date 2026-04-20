@@ -5,7 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from '@/shared/ui/dialog'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/shared/ui/use-toast'
 import {
@@ -98,7 +98,7 @@ export function PollCard({
         setShowResults(true)
       })
       .catch((error) => {
-        console.error('Failed to vote:', error)
+        logError(error, 'PollCard:handleVote')
         toast({
           title: 'Failed to record vote',
           description: asErrorMessage(error),
@@ -135,7 +135,7 @@ export function PollCard({
         description: 'The poll has been closed and results are final.',
       })
     } catch (error) {
-      console.error('Failed to end poll:', error)
+      logError(error, 'PollCard:handleEndPoll')
       toast({
         title: 'Failed to end poll',
         description: asErrorMessage(error),
@@ -296,7 +296,7 @@ export function CreatePollDialog({
         setOpen(false)
       })
       .catch((error) => {
-        console.error('Failed to create poll:', error)
+        logError(error, 'CreatePollDialog:handleCreate')
         toast({
           title: 'Failed to create poll',
           description: asErrorMessage(error),

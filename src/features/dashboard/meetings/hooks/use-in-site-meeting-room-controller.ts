@@ -3,6 +3,7 @@
 import { useCreateLayoutContext } from '@/shared/ui/livekit'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { logError } from '@/lib/convex-errors'
 import { useToast } from '@/shared/ui/use-toast'
 
 import type {
@@ -740,7 +741,7 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
         })
         .catch((error) => {
           const message = error instanceof Error ? error.message : 'Room automation sync failed'
-          console.error('[meetings/livekit] Auto-sync failed', error)
+          logError(error, 'useInSiteMeetingRoomController:autoSyncTranscript')
 
           if (mode === 'save-transcript-and-generate-notes') {
             setNotesReason('generation_failed')

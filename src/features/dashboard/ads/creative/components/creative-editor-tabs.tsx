@@ -703,7 +703,7 @@ export function CreativeEditorTabs(props: {
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {algorithmicInsights.map((insight) => (
-                    <div key={`${insight.title}-${insight.message}-${insight.suggestion}`} className="group relative p-5 rounded-2xl bg-gradient-to-br from-background to-muted/20 border border-muted shadow-sm hover:border-primary/20 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]">
+                    <div key={`${insight.title}-${insight.message}-${insight.suggestion}`} className="group relative p-5 rounded-2xl bg-gradient-to-br from-background to-muted/20 border border-muted shadow-sm hover:border-primary/20 motion-chromatic">
                       <div className="flex items-center justify-between gap-4 mb-2">
                         <p className="font-bold text-sm tracking-tight">{insight.title}</p>
                         {typeof insight.score === 'number' ? (

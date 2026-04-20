@@ -112,7 +112,6 @@ export function useAnalyticsData(
       hasFetchedInsightsRef.current = true
     } catch (error) {
       logError(error, 'useAnalyticsData:fetchInsights')
-      console.error('[useAnalyticsData] Failed to generate insights:', error)
       setInsightsError(error instanceof Error ? error : new Error(asErrorMessage(error)))
     } finally {
       setInsightsLoading(false)

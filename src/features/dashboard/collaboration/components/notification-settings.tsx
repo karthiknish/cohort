@@ -24,6 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/shared/ui/dialog'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { useToast } from '@/shared/ui/use-toast'
 
 export type NotificationPreference = {
@@ -93,10 +94,10 @@ export function NotificationSettings({
         setOpen(false)
       })
       .catch((error) => {
-        console.error('Failed to save notification settings:', error)
+        logError(error, 'NotificationSettings:handleSave')
         toast({
           title: 'Failed to save settings',
-          description: 'An error occurred while saving your preferences.',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })

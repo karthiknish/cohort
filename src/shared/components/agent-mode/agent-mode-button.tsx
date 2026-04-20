@@ -8,6 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
+import { chromaticTransitionNormalClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 interface AgentModeButtonProps {
@@ -26,7 +27,8 @@ export function AgentModeButton({ onClick, isOpen, className }: AgentModeButtonP
             size="icon"
             id="agent-mode-launcher"
             className={cn(
-              'fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+              'fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg',
+              chromaticTransitionNormalClass,
               'bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70',
               'hover:scale-105 hover:shadow-xl',
               isOpen && 'rotate-45 bg-destructive hover:bg-destructive/90',

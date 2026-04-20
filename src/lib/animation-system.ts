@@ -1,3 +1,8 @@
+/**
+ * Central motion system: numeric tokens mirror `:root` in `src/app/globals.css`
+ * (`--motion-duration-*`, `--motion-ease-*`). Use composed classes below in components
+ * instead of one-off `transition-[...]` strings.
+ */
 export const motionDurationMs = {
   fast: 160,
   normal: 220,
@@ -55,6 +60,32 @@ export const interactiveTransitionClass = [
   motionDurationClasses.fast,
   motionEasingClasses.standard,
   'motion-reduce:transition-none',
+].join(' ')
+
+/** Full chrome transition — see `.motion-chromatic` in `globals.css`. */
+export const chromaticTransitionClass = 'motion-chromatic'
+
+/** Normal duration + standard ease (emphasis cards, icon chrome). */
+export const chromaticTransitionLgClass = 'motion-chromatic-lg'
+
+/** Normal duration + in-out (sidebar width, FAB). */
+export const chromaticTransitionNormalClass = 'motion-chromatic-layout'
+
+/** Slow + ease-out (progress ticks, deck chrome). */
+export const chromaticTransitionSlowClass = 'motion-chromatic-slow'
+
+/** Extra-slow + ease-out (wide progress fills). */
+export const chromaticTransitionXSlowClass = 'motion-chromatic-xslow'
+
+/** Slow + in-out (step progress bar). */
+export const chromaticTransitionSlowInOutClass = 'motion-chromatic-slow-inout'
+
+/** List / message row entrance (tailwind `animate-in`). */
+export const listRowEnterAnimationClass = [
+  'animate-in fade-in-0 slide-in-from-bottom-1',
+  motionDurationClasses.fast,
+  'ease-[var(--motion-ease-standard)]',
+  'motion-reduce:animate-none',
 ].join(' ')
 
 export const pressableScaleClass = 'active:scale-[0.98] motion-reduce:active:scale-100'

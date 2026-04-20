@@ -630,7 +630,7 @@ export default function AdminPage() {
               {adminSections.map(({ title, description, href, icon: Icon, cta, badge, badgeVariant }) => (
                 <Card
                   key={href}
-                  className="group relative overflow-hidden border-border bg-card transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/20 hover:shadow-md"
+                  className="group relative overflow-hidden border-border bg-card motion-chromatic hover:border-primary/20 hover:shadow-md"
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
@@ -800,7 +800,7 @@ function DailyActiveUsersBar({
     <div className="flex flex-1 flex-col items-center gap-1">
       <div
         className={cn(
-          'w-full rounded-t-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]',
+          'w-full rounded-t-sm motion-chromatic',
           isLatest ? 'bg-primary' : 'bg-primary/40'
         )}
         style={barStyle}
@@ -839,7 +839,7 @@ function FeatureUsageRow({
       </div>
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
+          className="h-full rounded-full bg-primary motion-chromatic"
           style={barStyle}
         />
       </div>

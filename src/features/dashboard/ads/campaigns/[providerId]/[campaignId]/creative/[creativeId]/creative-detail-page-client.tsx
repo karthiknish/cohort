@@ -417,10 +417,10 @@ export default function CreativeDetailPageClient({
         setTimeout(() => setCopiedField(null), 2000)
       })
       .catch((err) => {
-        console.error('Failed to copy text: ', err)
+        logError(err, 'CreativeDetailPage:copyField')
         toast({
           title: "Copy failed",
-          description: "Please try selecting and copying manually.",
+          description: asErrorMessage(err),
           variant: "destructive",
         })
       })

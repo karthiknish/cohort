@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { CSSProperties } from 'react'
 import { useState, useMemo, useEffect, useCallback, useRef, forwardRef } from 'react'
+import { chromaticTransitionClass, chromaticTransitionNormalClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { getPreviewSettingsProfile } from '@/lib/preview-data'
 import { DASHBOARD_NAVIGATION_GROUPS } from '@/lib/workforce-routes'
@@ -317,7 +318,8 @@ export function Sidebar() {
     <aside
       id="tour-sidebar"
       className={cn(
-        'hidden min-h-0 h-full shrink-0 border-r bg-background/60 backdrop-blur-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-(--motion-duration-normal) ease-(--motion-ease-in-out) motion-reduce:transition-none lg:flex',
+        'hidden min-h-0 h-full shrink-0 border-r bg-background/60 backdrop-blur-sm lg:flex',
+        chromaticTransitionNormalClass,
         collapsed ? 'w-16 flex-col items-center p-3' : 'w-64 flex-col p-4',
         accent.sidebarClass,
       )}
@@ -328,7 +330,8 @@ export function Sidebar() {
         type="button"
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         className={cn(
-          'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-(--motion-duration-fast) ease-(--motion-ease-standard) motion-reduce:transition-none hover:border-primary/40 hover:text-primary hover:bg-muted/50',
+          'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-muted/50',
+          chromaticTransitionClass,
           collapsed && 'mt-2'
         )}
         onClick={toggleCollapsed}

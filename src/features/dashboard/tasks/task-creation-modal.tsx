@@ -16,6 +16,7 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useToast } from '@/shared/ui/use-toast'
 import type { TaskPriority, TaskRecord } from '@/types/tasks'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { emitDashboardRefresh } from '@/lib/refresh-bus'
 import { useConvex, useMutation } from 'convex/react'
 import { filesApi, tasksApi } from '@/lib/convex-api'
@@ -200,8 +201,8 @@ export function TaskCreationModal({
         setPendingAttachments([])
       })
       .catch((err) => {
-        console.error('Failed to create task:', err)
-        const message = err instanceof Error ? err.message : 'Unexpected error creating task'
+        logError(err, 'TaskCreationModal:submit')
+        const message = asErrorMessage(err)
         setError(message)
         toast({
           title: 'Failed to create task',

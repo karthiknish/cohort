@@ -1,3 +1,5 @@
+import { logError } from '@/lib/convex-errors'
+
 export function readSessionTokenCookie(): string | null {
     if (typeof document === 'undefined') {
         return null
@@ -21,7 +23,7 @@ export function readSessionTokenCookie(): string | null {
         const decoded = decodeURIComponent(value)
         return decoded.length > 0 ? decoded : null
     } catch (error) {
-        console.warn('Failed to decode session token cookie', error)
+        logError(error, 'session-utils:readSessionTokenCookie')
         return null
     }
 }

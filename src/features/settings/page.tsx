@@ -8,6 +8,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { useToast } from '@/shared/ui/use-toast'
+import { logError, asErrorMessage } from '@/lib/convex-errors'
 import { settingsApi } from '@/lib/convex-api'
 import { getPreviewSettingsNotificationPreferences, getPreviewSettingsProfile } from '@/lib/preview-data'
 
@@ -245,8 +246,8 @@ function SettingsPageInner() {
           return preferences
         })
         .catch((saveError) => {
-          const message = 'Unable to update notification preferences. Please try again.'
-          console.error('[settings/notifications] update failed', saveError)
+          logError(saveError, 'SettingsPage:saveNotificationPreferences')
+          const message = asErrorMessage(saveError)
           if (isMountedRef.current) {
             setNotificationError(message)
           }

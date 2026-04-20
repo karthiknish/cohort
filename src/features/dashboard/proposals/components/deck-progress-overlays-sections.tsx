@@ -74,7 +74,7 @@ export function ProposalGenerationOverlayContent({
         <div className="mt-4 w-full space-y-3">
           <div className="h-2 w-full overflow-hidden rounded-full border border-muted/20 bg-muted/30">
             <div
-              className="relative h-full bg-primary transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-xslow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
+              className="relative h-full bg-primary motion-chromatic-xslow"
               style={progressStyle}
             >
               <div className="absolute inset-0 animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
@@ -91,7 +91,7 @@ export function ProposalGenerationOverlayContent({
             <div
               key={label}
               className={cn(
-                'h-1 rounded-full transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
+                'h-1 rounded-full motion-chromatic-slow',
                 index <= stageIndex ? 'bg-primary' : 'bg-muted/40',
                 index === stageIndex && !isComplete && 'animate-pulse',
               )}

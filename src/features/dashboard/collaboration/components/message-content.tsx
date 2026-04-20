@@ -7,7 +7,7 @@ import type { Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Check, Copy } from "lucide-react"
 
-import { asErrorMessage } from "@/lib/convex-errors"
+import { asErrorMessage, logError } from "@/lib/convex-errors"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/shared/ui/use-toast"
 import { Button } from "@/shared/ui/button"
@@ -64,7 +64,7 @@ function CopyButton({ code }: { code: string }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      console.error("Failed to copy code:", err)
+      logError(err, "MessageContent:CopyButton")
       toast({
         title: "Copy failed",
         description: asErrorMessage(err),

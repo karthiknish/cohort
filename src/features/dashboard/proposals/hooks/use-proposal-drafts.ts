@@ -440,7 +440,6 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                     return
                 }
                 logError(err, 'useProposalDrafts:bootstrapDraft')
-                console.error('[ProposalWizard] bootstrap failed', err)
                 toastRef.current({ title: 'Unable to start proposal wizard', description: asErrorMessage(err), variant: 'destructive' })
             } finally {
                 if (!cancelled) {

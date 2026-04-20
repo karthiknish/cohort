@@ -73,7 +73,7 @@ function DependencyLink({ task, type, taskId, onRemove, readonly }: {
           type="button"
           data-task-id={taskId}
           onClick={handleRemove}
-          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter]"
+          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive motion-chromatic"
         >
           <Unlink className="h-3 w-3" />
         </button>

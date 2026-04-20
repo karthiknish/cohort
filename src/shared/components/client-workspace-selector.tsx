@@ -261,7 +261,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
           <SelectTrigger
             id="tour-workspace-selector"
             className={cn(
-              'h-11 w-full border-input bg-background/50 backdrop-blur-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none',
+              'h-11 w-full border-input bg-background/50 backdrop-blur-sm motion-chromatic',
               'hover:bg-background hover:border-primary/30 hover:shadow-sm',
               'focus:ring-2 focus:ring-primary/20 focus:border-primary/40',
               'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-background/50',
@@ -312,7 +312,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
             size="icon"
             variant="outline"
             onClick={handleOpenSheet}
-            className="h-11 w-11 rounded-xl border-input bg-background/50 backdrop-blur-sm hover:bg-background hover:border-primary/30 hover:shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none shrink-0"
+            className="h-11 w-11 rounded-xl border-input bg-background/50 backdrop-blur-sm hover:bg-background hover:border-primary/30 hover:shadow-sm motion-chromatic shrink-0"
           >
             <Plus className="h-4 w-4" />
             <span className="sr-only">Manage clients</span>

@@ -14,6 +14,7 @@ import { useToast } from '@/shared/ui/use-toast'
 import { settingsApi, filesApi } from '@/lib/convex-api'
 import { getPreviewSettingsProfile } from '@/lib/preview-data'
 import { getAvatarInitials } from './utils'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { validateFile } from '@/lib/utils'
 
 function isPhoneValid(phone: string): boolean {
@@ -178,9 +179,10 @@ export function ProfileCard({
         toast({ title: 'Profile photo removed', description: 'We removed your avatar.' })
       })
       .catch((removeError) => {
-        console.error('[settings/profile] avatar remove failed', removeError)
-        setAvatarError('Failed to remove profile photo. Try again.')
-        toast({ title: 'Remove failed', description: 'Unable to remove your photo right now.', variant: 'destructive' })
+        logError(removeError, 'ProfileCard:removeAvatar')
+        const msg = asErrorMessage(removeError)
+        setAvatarError(msg)
+        toast({ title: 'Remove failed', description: msg, variant: 'destructive' })
       })
       .finally(() => {
         setAvatarUploading(false)
@@ -282,10 +284,11 @@ export function ProfileCard({
           toast({ title: 'Photo uploaded', description: 'Your profile photo has been updated.' })
         })
         .catch((uploadError) => {
-          console.error('[settings/profile] avatar upload failed', uploadError)
-          setAvatarError('Failed to upload image. Try again.')
+          logError(uploadError, 'ProfileCard:uploadAvatar')
+          const msg = asErrorMessage(uploadError)
+          setAvatarError(msg)
           setAvatarPreviewOverride(previousUrl ?? null)
-          toast({ title: 'Upload failed', description: 'Unable to update your profile photo right now.', variant: 'destructive' })
+          toast({ title: 'Upload failed', description: msg, variant: 'destructive' })
         })
         .finally(() => {
           setAvatarUploading(false)

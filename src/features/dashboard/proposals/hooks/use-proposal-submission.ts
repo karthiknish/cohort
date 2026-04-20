@@ -246,7 +246,6 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 })
                 setAutosaveStatus('saved')
             } catch (updateError: unknown) {
-                console.error('[ProposalWizard] submit sync failed', updateError)
                 setAutosaveStatus('error')
                 logError(updateError, 'useProposalSubmission:submitProposal:saveDraft')
                 toast({
@@ -264,7 +263,6 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             if (workspaceId) {
                 generateProposalDeck({ workspaceId, legacyId: activeDraftId }).catch((error: unknown) => {
                     logError(error, 'useProposalSubmission:submitProposal:generate')
-                    console.error('[ProposalWizard] generation failed', error)
                     toast({
                         title: 'Deck generation failed to start',
                         description: asErrorMessage(error),
@@ -276,7 +274,9 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             // Track AI generation start for analytics
             const aiStartTime = Date.now()
             if (workspaceId) {
-                trackAiGenerationStarted(workspaceId, activeDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+                trackAiGenerationStarted(workspaceId, activeDraftId, selectedClientId, selectedClient?.name).catch((e: unknown) =>
+                    logError(e, 'useProposalSubmission:trackAiGenerationStarted'),
+                )
             }
 
             // AI generation happens server-side (Convex + integrations).
@@ -311,15 +311,23 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             if (isReady || isFailed) {
                 if (workspaceId) {
                     if (isReady) {
-                        trackAiGenerationCompleted(workspaceId, activeDraftId, aiDuration, selectedClientId, selectedClient?.name).catch(console.error)
-                        trackProposalSubmitted(workspaceId, activeDraftId, selectedClientId, selectedClient?.name).catch(console.error)
+                        trackAiGenerationCompleted(workspaceId, activeDraftId, aiDuration, selectedClientId, selectedClient?.name).catch((e: unknown) =>
+                            logError(e, 'useProposalSubmission:trackAiGenerationCompleted'),
+                        )
+                        trackProposalSubmitted(workspaceId, activeDraftId, selectedClientId, selectedClient?.name).catch((e: unknown) =>
+                            logError(e, 'useProposalSubmission:trackProposalSubmitted'),
+                        )
                     } else {
-                        trackAiGenerationFailed(workspaceId, activeDraftId, 'Generation failed', selectedClientId, selectedClient?.name).catch(console.error)
+                        trackAiGenerationFailed(workspaceId, activeDraftId, 'Generation failed', selectedClientId, selectedClient?.name).catch((e: unknown) =>
+                            logError(e, 'useProposalSubmission:trackAiGenerationFailed'),
+                        )
                     }
                 }
             } else {
                 if (workspaceId) {
-                    trackAiGenerationFailed(workspaceId, activeDraftId, 'AI generation incomplete', selectedClientId, selectedClient?.name).catch(console.error)
+                    trackAiGenerationFailed(workspaceId, activeDraftId, 'AI generation incomplete', selectedClientId, selectedClient?.name).catch((e: unknown) =>
+                        logError(e, 'useProposalSubmission:trackAiGenerationIncomplete'),
+                    )
                 }
             }
 
@@ -350,7 +358,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                             break
                         }
                     } catch (pollError) {
-                        console.warn('[ProposalWizard] Polling for deck failed:', pollError)
+                        logError(pollError, 'useProposalSubmission:pollDeckUrl')
                         // Continue polling even if one request fails
                     }
                 }
@@ -427,13 +435,14 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             await refreshProposals()
         } catch (err: unknown) {
             logError(err, 'useProposalSubmission:submitProposal')
-            console.error('[ProposalWizard] submit failed', err)
             const message = asErrorMessage(err)
 
             // Track AI generation failure
             if (draftId) {
                 if (workspaceId) {
-                    trackAiGenerationFailed(workspaceId, draftId, message, selectedClientId, selectedClient?.name).catch(console.error)
+                    trackAiGenerationFailed(workspaceId, draftId, message, selectedClientId, selectedClient?.name).catch((e: unknown) =>
+                        logError(e, 'useProposalSubmission:trackAiGenerationFailedOnSubmit'),
+                    )
                 }
             }
 
@@ -497,7 +506,6 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             toast({ title: 'Editing restored', description: 'Your previous responses have been reloaded.' })
         } catch (error: unknown) {
             logError(error, 'useProposalSubmission:handleContinueEditingFromSnapshot')
-            console.error('[ProposalWizard] resume snapshot failed', error)
             const message = asErrorMessage(error)
             toast({ title: 'Unable to resume editing', description: message, variant: 'destructive' })
         }
@@ -629,7 +637,6 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             })
         } catch (error: unknown) {
             logError(error, 'useProposalSubmission:handleRecheckDeck')
-            console.error('[ProposalWizard] recheck deck failed', error)
             const message = asErrorMessage(error)
             toast({ title: 'Unable to check status', description: message, variant: 'destructive' })
         } finally {

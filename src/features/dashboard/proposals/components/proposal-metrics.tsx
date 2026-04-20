@@ -5,6 +5,7 @@ import {
   ProposalMetricsGrid,
   ProposalMetricsLoadingGrid,
 } from './proposal-metrics-sections'
+import { logError } from '@/lib/convex-errors'
 import type { ProposalDraft } from '@/types/proposals'
 import type { ProposalMetricStat } from './proposal-metrics-sections'
 
@@ -123,7 +124,7 @@ export function ProposalMetrics({ proposals, isLoading = false }: ProposalMetric
         },
       ]
     } catch (error) {
-      console.error('[ProposalMetrics] Error calculating stats:', error)
+      logError(error, 'ProposalMetrics:stats')
       return getDefaultStats()
     }
   }, [proposals])

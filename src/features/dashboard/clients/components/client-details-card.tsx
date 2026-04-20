@@ -29,7 +29,7 @@ export function ClientDetailsCard({
   createdAt,
 }: ClientDetailsCardProps) {
   return (
-    <Card className="overflow-hidden border-muted/40 bg-card shadow-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:shadow-md">
+    <Card className="overflow-hidden border-muted/40 bg-card shadow-sm motion-chromatic hover:shadow-md">
       <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-primary" />

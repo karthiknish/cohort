@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { TrustedHtml, createTrustedHtml } from '@/shared/ui/trusted-html'
-import { asErrorMessage } from '@/lib/convex-errors'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/shared/ui/use-toast'
 
@@ -67,7 +67,7 @@ export function CodeBlock({
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (error) {
-      console.error('Failed to copy code:', error)
+      logError(error, 'CodeBlock:handleCopy')
       toast({
         title: 'Copy failed',
         description: asErrorMessage(error),

@@ -77,7 +77,7 @@ function ProposalAnalyticsChartBar({
 
   return (
     <div className="flex flex-1 flex-col justify-end" title={`${point.date}: ${totalGenerations} generations, ${totalFailures} failures`}>
-      <div className="relative w-full rounded-t bg-primary/20 transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:bg-primary/30" style={barStyle}>
+      <div className="relative w-full rounded-t bg-primary/20 motion-chromatic hover:bg-primary/30" style={barStyle}>
         {failureHeight > 0 ? <div className="absolute inset-x-0 bottom-0 rounded-t bg-destructive/50" style={failureStyle} /> : null}
       </div>
     </div>

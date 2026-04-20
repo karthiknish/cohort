@@ -22,7 +22,7 @@ export function ProposalDraftStatusStrip({
       <div className="flex items-center gap-2">
         <div
           className={cn(
-            'h-1.5 w-1.5 rounded-full transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
+            'h-1.5 w-1.5 rounded-full motion-chromatic-slow',
             autosaveStatus === 'saving'
               ? 'animate-pulse bg-primary'
               : autosaveStatus === 'error'
@@ -59,7 +59,7 @@ export function ProposalDraftContentShell({
   validationMessages: string[]
 }) {
   return (
-    <div className="relative min-h-[300px] rounded-xl border border-muted/40 bg-muted/5 p-4 shadow-inner backdrop-blur-sm transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none sm:p-6">
+    <div className="relative min-h-[300px] rounded-xl border border-muted/40 bg-muted/5 p-4 shadow-inner backdrop-blur-sm motion-chromatic-lg sm:p-6">
       <div className="space-y-5">
         <ProposalStepFeedback
           currentStep={currentStep}
@@ -98,7 +98,7 @@ export function ProposalDraftFooter({
         variant="outline"
         onClick={onBack}
         disabled={isFirstStep}
-        className="h-10 px-6 font-medium transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] hover:border-primary/20 hover:bg-primary/5 hover:text-primary"
+        className="h-10 px-6 font-medium motion-chromatic hover:border-primary/20 hover:bg-primary/5 hover:text-primary"
       >
         <ChevronLeft className="mr-2 h-4 w-4" /> Previous
       </Button>
@@ -111,7 +111,7 @@ export function ProposalDraftFooter({
           onClick={onNext}
           disabled={isSubmitting}
           className={cn(
-            'h-10 px-8 font-semibold shadow-lg transition-[color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter] active:scale-[0.98]',
+            'h-10 px-8 font-semibold shadow-lg motion-chromatic active:scale-[0.98]',
             isLastStep && 'bg-success shadow-success/20 hover:bg-success/90',
           )}
         >

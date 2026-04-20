@@ -7,6 +7,7 @@ import { Dialog } from '@/shared/ui/dialog'
 import { DropdownMenu } from '@/shared/ui/dropdown-menu'
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { proposalVersionsApi } from '@/lib/convex-api'
 import type { ProposalFormData } from '@/lib/proposals'
 import { isPreviewModeEnabled } from '@/lib/preview-data'
@@ -136,10 +137,10 @@ export function ProposalVersionHistory({
         })
       })
       .catch((error) => {
-        console.error('Failed to save version:', error)
+        logError(error, 'ProposalVersionHistory:saveVersion')
         toast({
           title: 'Failed to save version',
-          description: error instanceof Error ? error.message : 'An error occurred',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })
@@ -202,10 +203,10 @@ export function ProposalVersionHistory({
         setRestoreConfirmVersion(null)
       })
       .catch((error) => {
-        console.error('Failed to restore version:', error)
+        logError(error, 'ProposalVersionHistory:restoreVersion')
         toast({
           title: 'Failed to restore version',
-          description: error instanceof Error ? error.message : 'An error occurred',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })
