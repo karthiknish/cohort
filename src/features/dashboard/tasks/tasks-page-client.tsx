@@ -21,7 +21,6 @@ import {
   useTaskForm,
   useTasks,
 } from '@/features/dashboard/tasks'
-import { TaskOperationsPanel } from '@/features/dashboard/workforce/task-operations-panel'
 import {
   Card,
   CardContent,
@@ -551,8 +550,6 @@ function TasksPageContent({
             onStatusCardClick={handleSummaryStatusClick}
           />
         )}
-
-        <TaskOperationsPanel />
 
         {/* Main Content */}
         <Tabs
