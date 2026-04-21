@@ -2,13 +2,7 @@ export type WorkforceRouteId =
   | 'time'
   | 'scheduling'
   | 'forms'
-  | 'updates'
-  | 'directory'
-  | 'knowledge-base'
-  | 'help-desk'
-  | 'training'
   | 'time-off'
-  | 'recognition'
 
 export type WorkforceVisibility = 'admin' | 'team' | 'client'
 

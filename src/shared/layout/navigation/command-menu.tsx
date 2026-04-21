@@ -89,7 +89,7 @@ interface CommandMenuProps {
 
 const navigationItems = [
   { name: 'Dashboard', href: '/dashboard', icon: Home, description: 'Overview and stats' },
-  { name: 'Clients', href: '/dashboard/clients', icon: Users, description: 'Manage client workspaces' },
+  { name: 'Clients', href: '/admin/clients', icon: Users, description: 'Manage client workspaces' },
   { name: 'Activity', href: '/dashboard/activity', icon: Activity, description: 'Recent activity feed' },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, description: 'Performance insights' },
   { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad platform integrations' },

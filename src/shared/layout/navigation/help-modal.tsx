@@ -111,9 +111,9 @@ const navigationGuide = [
   },
   {
     name: 'Clients',
-    href: '/dashboard/clients',
+    href: '/admin/clients',
     icon: Users,
-    description: 'Manage your client workspaces, add new clients, and configure workspace settings.',
+    description: 'Manage your client workspaces, add new clients, and configure workspace settings from the admin area.',
     tips: ['Click a client to see detailed information', 'Use the search to quickly find clients'],
   },
   {
@@ -178,7 +178,7 @@ const gettingStartedSteps = [
   {
     title: 'Select or create a client workspace',
     description: 'Use the dropdown in the header to switch between client workspaces or create a new one.',
-    action: { label: 'Go to Clients', href: '/dashboard/clients' },
+    action: { label: 'Go to Clients', href: '/admin/clients' },
   },
   {
     title: 'Connect your ad platforms',

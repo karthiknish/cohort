@@ -81,13 +81,7 @@ export const PAGE_ICONS = {
   time: 'Clock3',
   scheduling: 'CalendarDays',
   forms: 'NotebookTabs',
-  updates: 'Megaphone',
-  directory: 'IdCard',
-  'knowledge-base': 'BookOpen',
-  'help-desk': 'LifeBuoy',
-  training: 'GraduationCap',
   'time-off': 'CalendarDays',
-  recognition: 'Award',
   settings: 'Settings',
 } as const
 
@@ -148,33 +142,9 @@ export const PAGE_TITLES: Record<string, { title: string; description: string }>
     title: 'Forms and checklists',
     description: 'Operational templates, submissions, and completion quality.',
   },
-  updates: {
-    title: 'Team updates',
-    description: 'Broadcast announcements with scheduling and read tracking.',
-  },
-  directory: {
-    title: 'People directory',
-    description: 'Roles, teams, and contact context across the workspace.',
-  },
-  'knowledge-base': {
-    title: 'Knowledge base',
-    description: 'SOPs, playbooks, and internal operating notes.',
-  },
-  'help-desk': {
-    title: 'Internal help desk',
-    description: 'Structured request intake and routing for internal support.',
-  },
-  training: {
-    title: 'Training and onboarding',
-    description: 'Assigned learning paths and progress visibility.',
-  },
   'time-off': {
     title: 'Time off',
     description: 'Leave balances, approvals, and availability planning.',
-  },
-  recognition: {
-    title: 'Recognition',
-    description: 'Celebrate the work that keeps delivery standards high.',
   },
 } as const
 

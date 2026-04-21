@@ -39,7 +39,6 @@ import { DashboardDailySnapshotCard } from './components/dashboard-daily-snapsho
 import { DashboardPageHeader } from './components/dashboard-page-header'
 import { DashboardRoleBanner } from './components/dashboard-role-banner'
 import { DashboardSkeleton } from './components/dashboard-skeleton'
-import { DashboardWorkHub } from './components/dashboard-work-hub'
 import { StatsCards } from './components/stats-cards'
 import { useDashboardData, useDashboardStats } from './hooks'
 
@@ -290,8 +289,6 @@ export function DashboardOverviewPage() {
         />
 
         <DashboardRoleBanner userRole={userRole} userDisplayName={user?.name ?? null} />
-
-        <DashboardWorkHub userRole={userRole} />
 
         <DashboardDailySnapshotCard
           openTasks={clientStats.openTasks}

@@ -59,18 +59,11 @@ export function DashboardRoleBanner({ userRole, userDisplayName }: DashboardRole
                 between workspaces—navigation and metrics follow that context.
               </p>
             </div>
-            <div className="flex shrink-0 flex-wrap gap-2">
-              <Link href="/dashboard/tasks">
-                <Button variant="outline" size="sm" className="border-info/30 text-info hover:bg-info/10">
-                  Tasks <ArrowUpRight className="ml-1 h-3 w-3" />
-                </Button>
-              </Link>
-              <Link href="/dashboard/clients">
-                <Button variant="outline" size="sm" className="border-info/30 text-info hover:bg-info/10">
-                  Clients <ArrowUpRight className="ml-1 h-3 w-3" />
-                </Button>
-              </Link>
-            </div>
+            <Link href="/dashboard/tasks" className="shrink-0">
+              <Button variant="outline" size="sm" className="border-info/30 text-info hover:bg-info/10">
+                Tasks <ArrowUpRight className="ml-1 h-3 w-3" />
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </FadeIn>

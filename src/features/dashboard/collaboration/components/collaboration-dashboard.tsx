@@ -18,7 +18,6 @@ import { isFeatureEnabled } from '@/lib/features'
 import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
 import { CreateChannelDialog } from './create-channel-dialog'
 import { ChannelMembersDialog } from './channel-members-dialog'
-import { CollaborationOperationsDialogs } from './collaboration-operations-dialogs'
 
 type CollaborationDashboardContext = ReturnType<typeof useCollaborationDashboardContext>
 
@@ -188,7 +187,6 @@ function CollaborationHeaderSection() {
       </div>
       {currentUserRole !== 'client' ? (
         <div className="flex items-center gap-3">
-          <CollaborationOperationsDialogs />
           {isAdmin ? (
             <CreateChannelDialog
               workspaceId={workspaceId}

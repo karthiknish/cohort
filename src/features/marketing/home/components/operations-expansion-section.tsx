@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowUpRight, Check, Clock3, GraduationCap, Megaphone } from 'lucide-react'
+import { ArrowUpRight, CalendarDays, Check, Clock3, MessageSquare } from 'lucide-react'
 
 import { PlatformLogoStrip } from '@/features/marketing/home/components/platform-brand-logos'
 import { FadeIn } from '@/shared/ui/animate-in'
@@ -20,16 +20,16 @@ const PILLARS = [
   },
   {
     title: 'Communication layer',
-    description: 'Give updates, directories, knowledge, and request routing a home outside of chat threads.',
-    icon: Megaphone,
-    href: '/dashboard/collaboration?panel=updates',
+    description: 'Team chat and collaboration live next to delivery work.',
+    icon: MessageSquare,
+    href: '/dashboard/collaboration',
     badge: 'P1',
   },
   {
     title: 'People ops layer',
-    description: 'Model training, leave, and recognition without pretending the product has pivoted away from agencies.',
-    icon: GraduationCap,
-    href: '/dashboard/collaboration?panel=training',
+    description: 'Time off and availability alongside the rest of the workspace.',
+    icon: CalendarDays,
+    href: '/dashboard/time-off',
     badge: 'P2',
   },
 ] as const
@@ -42,8 +42,8 @@ const WHAT_CHANGED = [
 
 const ROLLOUT_STEPS = [
   { step: '1', title: 'Time, scheduling, and forms', detail: 'Operational spine first' },
-  { step: '2', title: 'Updates, directory, knowledge, help desk', detail: 'Communication surfaces' },
-  { step: '3', title: 'Training, leave, and recognition', detail: 'People workflows last' },
+  { step: '2', title: 'Collaboration and messaging', detail: 'Team coordination' },
+  { step: '3', title: 'Time off', detail: 'People workflows' },
 ] as const
 
 export function OperationsExpansionSection() {

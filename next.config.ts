@@ -2,6 +2,15 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   // reactCompiler: true, // Temporarily disabled - causes build issues with _global-error
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.convex.cloud',
+        pathname: '/api/storage/**',
+      },
+    ],
+  },
   logging: {
     browserToTerminal: true,
   },

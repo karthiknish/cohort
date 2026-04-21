@@ -167,13 +167,6 @@ export function DashboardWorkHub({ userRole }: DashboardWorkHubProps) {
     icon: r.icon,
   }))
 
-  const communications = WORKFORCE_ROUTES.filter((r) => r.section === 'communications').map((r) => ({
-    href: r.href,
-    title: r.name,
-    description: r.description,
-    icon: r.icon,
-  }))
-
   const people = WORKFORCE_ROUTES.filter((r) => r.section === 'people').map((r) => ({
     href: r.href,
     title: r.name,
@@ -209,12 +202,7 @@ export function DashboardWorkHub({ userRole }: DashboardWorkHubProps) {
               description="Time, shifts, and repeatable field quality."
               tiles={operations}
             />
-            <HubCluster
-              label="Communications & knowledge"
-              description="Updates, directory, KB, and internal help."
-              tiles={communications}
-            />
-            <HubCluster label="People programs" description="Training, leave, and recognition loops." tiles={people} />
+            <HubCluster label="People" description="Leave and availability." tiles={people} />
           </>
         ) : null}
 

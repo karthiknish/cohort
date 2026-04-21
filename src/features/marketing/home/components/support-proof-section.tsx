@@ -18,7 +18,7 @@ const PROOF_POINTS = [
   },
   {
     title: 'Operational support',
-    description: 'Help desk, updates, and knowledge base are now first-class surfaces instead of scattered process notes.',
+    description: 'Operations modules sit beside chat and delivery so teams keep context in one workspace.',
     icon: Headphones,
     wellClass: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
   },

@@ -252,7 +252,7 @@ export function ClientsSummarySection() {
             </CardDescription>
           </div>
           <Button asChild variant="ghost" size="sm" className="w-fit">
-            <Link href="/dashboard/clients">Manage clients</Link>
+            <Link href="/admin/clients">Manage clients</Link>
           </Button>
         </div>
       </CardHeader>
@@ -266,7 +266,7 @@ export function ClientsSummarySection() {
         ) : resolvedSummaries.length === 0 ? (
           <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
             No clients yet —{' '}
-            <Link href="/dashboard/clients" className="font-medium text-primary hover:underline">
+            <Link href="/admin/clients" className="font-medium text-primary hover:underline">
               add your first client
             </Link>{' '}
             to get started.

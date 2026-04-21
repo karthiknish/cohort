@@ -8,7 +8,7 @@ import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
-import { apiFetch } from '@/lib/api-client'
+import { ApiClientError, apiFetch } from '@/lib/api-client'
 import { analyticsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { getPreviewAnalyticsMetrics } from '@/lib/preview-data'
@@ -36,7 +36,8 @@ type GoogleAnalyticsStatusRow = {
   lastSyncRequestedAtMs: number | null
 }
 
-const GOOGLE_ANALYTICS_OAUTH_TIMEOUT_MS = 15_000
+/** OAuth start can wait on auth + cold API; keep above default fetch assumptions. */
+const GOOGLE_ANALYTICS_OAUTH_TIMEOUT_MS = 60_000
 const PREVIEW_GA_ACCOUNT_LABEL = 'Preview Google Analytics'
 const PREVIEW_GA_PROPERTY_ID = 'preview-google-analytics-property'
 
@@ -373,8 +374,17 @@ export function useAnalyticsPageController() {
 
       window.location.href = payload.url
     } catch (error) {
-      logError(error, 'AnalyticsPage:handleConnectGoogleAnalytics')
-      notifyFailure({ title: 'Unable to connect Google Analytics', error })
+      const isTimeout = error instanceof ApiClientError && error.code === 'REQUEST_TIMEOUT'
+      if (!isTimeout) {
+        logError(error, 'AnalyticsPage:handleConnectGoogleAnalytics')
+      }
+      notifyFailure({
+        title: 'Unable to connect Google Analytics',
+        error,
+        message: isTimeout
+          ? 'Request timed out while starting Google connection. Check your network and try again.'
+          : undefined,
+      })
       setGaLoading(false)
     }
   }, [isPreviewMode, selectedClientId, toast])
@@ -410,8 +420,17 @@ export function useAnalyticsPageController() {
       })
       .then(() => mutateMetrics())
       .catch((error: unknown) => {
-        logError(error, 'AnalyticsPage:handleSyncGoogleAnalytics')
-        notifyFailure({ title: 'Sync failed', error })
+        const isTimeout = error instanceof ApiClientError && error.code === 'REQUEST_TIMEOUT'
+        if (!isTimeout) {
+          logError(error, 'AnalyticsPage:handleSyncGoogleAnalytics')
+        }
+        notifyFailure({
+          title: 'Sync failed',
+          error,
+          message: isTimeout
+            ? 'Google Analytics sync timed out. Try a shorter date range or retry.'
+            : undefined,
+        })
       })
   }, [
     gaConnected,

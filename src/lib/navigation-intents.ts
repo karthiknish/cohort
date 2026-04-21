@@ -34,9 +34,9 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
   
   // Clients
   {
-    route: '/dashboard/clients',
+    route: '/admin/clients',
     name: 'Clients',
-    description: 'Manage client workspaces, contacts, and account settings',
+    description: 'Manage client workspaces, contacts, and account settings from the admin area',
     keywords: ['clients', 'client', 'workspaces', 'workspace', 'accounts', 'account', 'customers', 'customer'],
     aliases: ['client list', 'manage clients', 'client management', 'customer list', 'client directory'],
     actions: ['add client', 'create client', 'view clients', 'manage accounts'],

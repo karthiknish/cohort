@@ -15,6 +15,9 @@ type SyncGoogleAnalyticsResponse = {
   error?: string
 }
 
+/** GA import can be slow; still cap client wait so UI never spins forever. */
+export const GOOGLE_ANALYTICS_SYNC_CLIENT_TIMEOUT_MS = 180_000
+
 export async function syncGoogleAnalytics(params: SyncGoogleAnalyticsParams): Promise<SyncGoogleAnalyticsResponse> {
   const searchParams = new URLSearchParams({ days: String(params.periodDays) })
   if (params.clientId) {
@@ -27,6 +30,7 @@ export async function syncGoogleAnalytics(params: SyncGoogleAnalyticsParams): Pr
     method: 'POST',
     credentials: 'same-origin',
     body: JSON.stringify({}),
+    timeoutMs: GOOGLE_ANALYTICS_SYNC_CLIENT_TIMEOUT_MS,
   })
 }
 

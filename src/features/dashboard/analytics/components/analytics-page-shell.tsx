@@ -306,12 +306,12 @@ function AnalyticsErrorAlert() {
 function AnalyticsBodySection() {
   const { gaConnected, isGaSelectedWithoutData, isSyncPending } = useAnalyticsPageContext()
 
-  if (isGaSelectedWithoutData) {
-    return <AnalyticsEmptyState />
-  }
-
   if (isSyncPending) {
     return <AnalyticsSyncingState />
+  }
+
+  if (isGaSelectedWithoutData) {
+    return <AnalyticsEmptyState />
   }
 
   if (!gaConnected) {
