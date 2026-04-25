@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback } from 'react'
-import { Clock3, FileText, CalendarDays, LoaderCircle, PauseCircle, PlayCircle, Plus } from 'lucide-react'
+import { Clock3, FileText, CalendarDays, LoaderCircle, Palmtree, PauseCircle, PlayCircle, Plus } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
 import {
@@ -15,7 +16,7 @@ import {
 import { WorkforceStatusBadge } from './workforce-page-shell'
 import { useWorkforceOverview } from './use-workforce-overview'
 
-export type WorkforceDetailFocus = 'time' | 'scheduling' | 'forms'
+export type WorkforceDetailFocus = 'time' | 'scheduling' | 'forms' | 'time-off'
 
 interface WorkforceDetailDialogProps {
   focus: WorkforceDetailFocus
@@ -50,6 +51,11 @@ export function WorkforceDetailDialog({ focus, open, onOpenChange }: WorkforceDe
       icon: FileText,
       title: 'Forms and checklists',
       description: 'Manage checklist readiness without navigating to a dedicated module page.',
+    },
+    'time-off': {
+      icon: Palmtree,
+      title: 'Time off',
+      description: 'Leave balances, requests, and approvals for this workspace.',
     },
   }[focus]
   const handleClockIn = useCallback(() => {
@@ -184,6 +190,21 @@ export function WorkforceDetailDialog({ focus, open, onOpenChange }: WorkforceDe
             >
               {isCreatingTemplate ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               Create checklist template
+            </Button>
+          </div>
+        ) : null}
+
+        {focus === 'time-off' ? (
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <MetricBox label="Pending approvals" value={snapshot.timeOffSummary.pendingApprovals} />
+              <MetricBox label="Balance rows" value={snapshot.timeOffSummary.balanceRows} />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Open the full time off page to request leave, review the queue, and see balances.
+            </p>
+            <Button asChild>
+              <Link href="/dashboard/time-off">Open time off</Link>
             </Button>
           </div>
         ) : null}

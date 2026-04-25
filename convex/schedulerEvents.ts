@@ -99,16 +99,32 @@ export const list = adminQuery({
   }),
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 25, 1), 100)
+    const BOUND = 5000
+    const severity = args.severity
+    const source = args.source
 
-    const all = await ctx.db.query('schedulerEvents').withIndex('by_createdAtMs', (q) => q).collect()
+    const all = await (
+      severity
+        ? ctx.db
+            .query('schedulerEvents')
+            .withIndex('by_severity_createdAtMs', (iq) => iq.eq('severity', severity))
+        : source
+          ? ctx.db
+              .query('schedulerEvents')
+              .withIndex('by_source_createdAtMs', (iq) => iq.eq('source', source))
+          : ctx.db.query('schedulerEvents').withIndex('by_createdAtMs', (iq) => iq)
+    )
+      .order('desc')
+      .take(BOUND)
 
     const filtered = all.filter((row) => {
-      if (args.severity && row.severity !== args.severity) return false
-      if (args.source && row.source !== args.source) return false
+      if (severity && source) {
+        return row.severity === severity && row.source === source
+      }
+      if (severity && row.severity !== severity) return false
+      if (source && row.source !== source) return false
       return true
     })
-
-    filtered.sort((a, b) => b.createdAtMs - a.createdAtMs)
 
     const cursorPos = typeof args.cursor === 'string' ? Number(args.cursor) : 0
     const start = Number.isFinite(cursorPos) && cursorPos > 0 ? cursorPos : 0

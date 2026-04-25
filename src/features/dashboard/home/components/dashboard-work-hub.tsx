@@ -152,22 +152,12 @@ type DashboardWorkHubProps = {
   userRole: string | null
 }
 
-/**
- * Connecteam-style hub: grouped shortcuts so desk and HQ roles reach time, comms, and delivery
- * without hunting the sidebar ([Connecteam](https://connecteam.com/) “all tools in one place” pattern).
- */
+/** Hybrid hub: team operations first, then shared delivery and agency tools. */
 export function DashboardWorkHub({ userRole }: DashboardWorkHubProps) {
   const role = (userRole ?? 'client') as WorkforceVisibility
   const isClient = role === 'client'
 
-  const operations = WORKFORCE_ROUTES.filter((r) => r.section === 'operations').map((r) => ({
-    href: r.href,
-    title: r.name,
-    description: r.description,
-    icon: r.icon,
-  }))
-
-  const people = WORKFORCE_ROUTES.filter((r) => r.section === 'people').map((r) => ({
+  const teamOpsTiles = WORKFORCE_ROUTES.map((r) => ({
     href: r.href,
     title: r.name,
     description: r.description,
@@ -190,20 +180,17 @@ export function DashboardWorkHub({ userRole }: DashboardWorkHubProps) {
           </Badge>
         </div>
         <CardDescription className="max-w-3xl text-pretty">
-          Jump straight into operations, conversations, and delivery—similar to how leading employee-ops suites surface
-          scheduling, forms, and comms on the home screen, adapted for this workspace.
+          Team operations, shared delivery, and agency growth tools in one place—aligned with how modern ops suites surface
+          time, scheduling, and forms on the home screen.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8 pt-6">
         {!isClient ? (
-          <>
-            <HubCluster
-              label="Operations"
-              description="Time, shifts, and repeatable field quality."
-              tiles={operations}
-            />
-            <HubCluster label="People" description="Leave and availability." tiles={people} />
-          </>
+          <HubCluster
+            label="Team operations"
+            description="Time, scheduling, forms, and time off."
+            tiles={teamOpsTiles}
+          />
         ) : null}
 
         <HubCluster
@@ -214,8 +201,8 @@ export function DashboardWorkHub({ userRole }: DashboardWorkHubProps) {
 
         {!isClient && growthTiles.length > 0 ? (
           <HubCluster
-            label="Performance & growth"
-            description="Measurement and revenue-facing workflows."
+            label="Agency tools"
+            description="Analytics, ads, proposals, and measurement."
             tiles={growthTiles}
           />
         ) : null}

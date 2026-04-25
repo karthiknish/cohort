@@ -8,6 +8,8 @@ export type WorkforceVisibility = 'admin' | 'team' | 'client'
 
 export type TimeSessionStatus = 'clocked-in' | 'on-break' | 'clocked-out' | 'needs-review'
 
+export type TimeSessionManagerReview = 'none' | 'pending' | 'approved' | 'rejected'
+
 export interface TimeSession {
   id: string
   personName: string
@@ -21,6 +23,9 @@ export interface TimeSession {
   geofenceStatus?: 'inside' | 'outside' | 'manual'
   breakDueInMinutes?: number
   flaggedReason?: string
+  managerReview?: TimeSessionManagerReview
+  approvedByName?: string | null
+  managerNote?: string | null
 }
 
 export interface CoverageAlert {
@@ -42,6 +47,10 @@ export interface Shift {
   requiredStaff?: number
   filledStaff?: number
   canClaim?: boolean
+  locationLabel?: string
+  notes?: string
+  conflictWithTimeOff?: string
+  conflictWithAvailability?: string
 }
 
 export interface ShiftSwapRequest {

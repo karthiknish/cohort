@@ -70,19 +70,19 @@ export function WorkforcePageShell({
       <Card className="border-primary/20 bg-card shadow-xl shadow-primary/10">
         <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
           <div className="max-w-2xl space-y-2">
-            <Badge className="border-primary/20 bg-primary/10 text-primary hover:bg-primary/10">Roadmap scaffold</Badge>
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">Operational layer added without changing the agency core</h2>
+            <Badge className="border-primary/20 bg-primary/10 text-primary hover:bg-primary/10">Team operations</Badge>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">Team work and agency tools in one workspace</h2>
             <p className="text-sm leading-6 text-muted-foreground">
-              This module ships on preview fixtures first so the team can refine IA, navigation, and workflow shape before wiring persistent data.
+              Run schedules, time, and checklists here; use Agency tools for analytics, paid media, and client-facing deliverables.
             </p>
           </div>
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2 font-medium text-foreground">
               <Construction className="h-4 w-4" />
-              Next step
+              Tip
             </div>
             <p className="mt-2 max-w-xs text-muted-foreground">
-              Replace preview fixtures with Convex queries once the route shape and user flow are stable.
+              Data is scoped to your agency workspace. Link clients or projects on records when that field exists.
             </p>
           </div>
         </CardContent>

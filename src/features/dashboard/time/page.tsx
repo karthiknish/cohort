@@ -36,8 +36,10 @@ export default function TimePage() {
   )
   const seedTimeModule = useMutation(workforceApi.seedTimeModule)
   const clockAction = useMutation(workforceApi.clockAction)
+  const submitTimeSessionReview = useMutation(workforceApi.submitTimeSessionReview)
   const [pendingAction, setPendingAction] = useState<'clockIn' | 'startBreak' | 'clockOut' | null>(null)
   const [isSeeding, setIsSeeding] = useState(false)
+  const [pendingReviewId, setPendingReviewId] = useState<string | null>(null)
 
   const summary = isPreviewMode ? getPreviewTimeSummary() : timeDashboard?.summary
   const sessions = isPreviewMode ? getPreviewTimeSessions() : (timeDashboard?.sessions ?? [])
@@ -51,6 +53,10 @@ export default function TimePage() {
   const clockInBlockedReason = isClockInBlocked
     ? 'Clock-in is temporarily locked until critical time approvals are resolved.'
     : undefined
+  const canReviewTime =
+    !isPreviewMode &&
+    (user?.role === 'admin' || user?.role === 'team') &&
+    Boolean(workspaceId)
 
   const handleSeed = useCallback(async () => {
     if (!workspaceId) {
@@ -111,13 +117,32 @@ export default function TimePage() {
     void handleClockAction('clockOut')
   }, [handleClockAction])
 
+  const handleTimeReview = useCallback(
+    async (sessionId: string, decision: 'approve' | 'reject' | 'flag') => {
+      if (!workspaceId) return
+      setPendingReviewId(sessionId)
+      try {
+        await submitTimeSessionReview({ workspaceId, sessionLegacyId: sessionId, decision })
+        toast({
+          title: decision === 'approve' ? 'Session approved' : decision === 'reject' ? 'Session rejected' : 'Session flagged',
+        })
+      } catch (error) {
+        logError(error, 'time-page:review')
+        toast({ title: 'Review failed', description: asErrorMessage(error), variant: 'destructive' })
+      } finally {
+        setPendingReviewId(null)
+      }
+    },
+    [submitTimeSessionReview, toast, workspaceId],
+  )
+
   return (
     <WorkforcePageShell
       routeId={route.id}
       title={route.title}
       description={route.description}
       icon={route.icon}
-      badgeLabel="P0 module"
+      badgeLabel="Live"
       stats={[
         { label: 'Clocked in now', value: summary?.clockedInNow ?? '0', description: 'Live sessions across active delivery pods', icon: Users, variant: 'success' },
         { label: 'Hours this week', value: summary?.hoursThisWeek ?? '0.0', description: isPreviewMode ? 'Preview total for internal ops reporting' : 'Realtime total for the current workspace week', icon: Clock3 },
@@ -163,7 +188,12 @@ export default function TimePage() {
             <ClockSessionMap sessions={sessions} />
           </div>
           <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-            <TimesheetTable sessions={sessions} />
+            <TimesheetTable
+              sessions={sessions}
+              canReview={canReviewTime}
+              pendingSessionId={pendingReviewId}
+              onReview={canReviewTime ? handleTimeReview : undefined}
+            />
             <ClockHistoryPanel alerts={alerts} />
           </div>
         </>

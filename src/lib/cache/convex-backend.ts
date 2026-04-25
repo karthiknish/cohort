@@ -38,7 +38,7 @@ export class ConvexCacheBackend implements CacheBackend {
 
     try {
       const keyHash = hashKey(key)
-      const result = await this.client.query(internal.serverCache.get as unknown as QueryReference, { keyHash })
+      const result = await this.client.mutation(internal.serverCache.get as unknown as MutationReference, { keyHash })
       return result?.value ?? null
     } catch {
       return null

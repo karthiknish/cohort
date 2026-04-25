@@ -38,10 +38,12 @@ function getCoverageWidthClass(pct: number) {
 export function ScheduleBoard({
   shifts,
   onClaimShift,
+  onRequestSwap,
   claimingShiftId,
 }: {
   shifts: Shift[]
   onClaimShift?: (shiftId: string) => void
+  onRequestSwap?: (shiftId: string) => void
   claimingShiftId?: string | null
 }) {
   const openShiftCount = useMemo(() => shifts.filter((shift) => shift.status === 'open').length, [shifts])
@@ -53,6 +55,15 @@ export function ScheduleBoard({
       }
     },
     [onClaimShift],
+  )
+  const handleSwapClick = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      const shiftId = event.currentTarget.dataset.shiftId
+      if (shiftId && onRequestSwap) {
+        onRequestSwap(shiftId)
+      }
+    },
+    [onRequestSwap],
   )
 
   if (shifts.length === 0) {
@@ -98,6 +109,17 @@ export function ScheduleBoard({
               <p><span className="text-muted-foreground">Owner:</span> {shift.assignee}</p>
               <p><span className="text-muted-foreground">Team:</span> {shift.team}</p>
               <p><span className="text-muted-foreground">Coverage:</span> {shift.coverageLabel}</p>
+              {shift.locationLabel ? (
+                <p>
+                  <span className="text-muted-foreground">Location:</span> {shift.locationLabel}
+                </p>
+              ) : null}
+              {shift.conflictWithTimeOff ? (
+                <p className="text-xs text-amber-700 dark:text-amber-400">Time off: {shift.conflictWithTimeOff}</p>
+              ) : null}
+              {shift.conflictWithAvailability ? (
+                <p className="text-xs text-amber-700 dark:text-amber-400">Availability: {shift.conflictWithAvailability}</p>
+              ) : null}
             </div>
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -117,6 +139,19 @@ export function ScheduleBoard({
                   disabled={Boolean(claimingShiftId)}
                 >
                   {claimingShiftId === shift.id ? 'Claiming...' : 'Claim shift'}
+                </Button>
+              </div>
+            ) : null}
+            {shift.status !== 'open' && onRequestSwap ? (
+              <div className="mt-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  data-shift-id={shift.id}
+                  onClick={handleSwapClick}
+                >
+                  Request handoff
                 </Button>
               </div>
             ) : null}

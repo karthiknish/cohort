@@ -4,6 +4,32 @@ import { v } from 'convex/values'
 import { resolveMetricCurrency, assessComparability } from '@/domain/ads/money'
 import { normalizeAdsProviderId, normalizeAdsAccountId, buildAccountKey, normalizeSurfaceId } from '@/domain/ads/provider'
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+function toIsoDateString(d: Date) {
+  return d.toISOString().slice(0, 10)
+}
+
+/**
+ * Binds by_workspace_date reads: when start/end missing, use last 365d ending today.
+ * (Avoids full-table adMetrics collection per workspace.)
+ */
+function adMetricsDateRangeForQuery(args: { startDate?: string; endDate?: string }): { start: string; end: string } {
+  const end = args.endDate && ISO_DATE.test(args.endDate) ? args.endDate : toIsoDateString(new Date())
+  let start = args.startDate && ISO_DATE.test(args.startDate) ? args.startDate : null
+  if (!start) {
+    const endMid = new Date(end + 'T12:00:00.000Z')
+    const s = new Date(endMid)
+    s.setUTCDate(s.getUTCDate() - 365)
+    start = toIsoDateString(s)
+  }
+  if (start > end) {
+    return { start: end, end: start }
+  }
+  return { start, end: end }
+}
+
+const AD_METRICS_RANGE_MAX_ROWS = 10_000
+
 const creativeValidator = v.object({
   spend: v.optional(v.number()),
   impressions: v.optional(v.number()),
@@ -97,11 +123,14 @@ export const listMetrics = workspaceQuery({
   returns: v.array(metricValidator),
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit ?? 500, 1), 2000)
+    const { start, end } = adMetricsDateRangeForQuery({ startDate: args.startDate, endDate: args.endDate })
 
     const all = await ctx.db
       .query('adMetrics')
-      .withIndex('by_workspace_date', (q) => q.eq('workspaceId', args.workspaceId))
-      .collect()
+      .withIndex('by_workspace_date', (q) =>
+        q.eq('workspaceId', args.workspaceId).gte('date', start).lte('date', end),
+      )
+      .take(AD_METRICS_RANGE_MAX_ROWS)
 
     const providerSet = args.providerIds ? new Set(args.providerIds) : null
     const clientId = typeof args.clientId === 'string' ? args.clientId : null
@@ -172,14 +201,20 @@ export const listRecentForAlerts = query({
   handler: async (ctx, args) => {
     // No auth required - called from server-side alert processor
     const limit = Math.min(Math.max(args.limit ?? 30, 1), 100)
+    const endStr = toIsoDateString(new Date())
+    const startAnchor = new Date()
+    startAnchor.setUTCDate(startAnchor.getUTCDate() - 120)
+    const startStr = toIsoDateString(startAnchor)
 
-    const all = await ctx.db
+    const recent = await ctx.db
       .query('adMetrics')
-      .withIndex('by_workspace_date', (q) => q.eq('workspaceId', args.workspaceId))
-      .collect()
+      .withIndex('by_workspace_date', (q) =>
+        q.eq('workspaceId', args.workspaceId).gte('date', startStr).lte('date', endStr),
+      )
+      .order('desc')
+      .take(2000)
 
-    // Filter by clientId
-    const filtered = all.filter((row) => row.clientId === args.clientId)
+    const filtered = recent.filter((row) => row.clientId === args.clientId)
 
     // Sort by date descending (newest first) for limiting
     filtered.sort((a, b) => {
@@ -226,11 +261,14 @@ export const listMetricsWithSummary = workspaceQuery({
     const shouldAggregate = args.aggregate === true
     const pageSize = Math.min(Math.max(args.limit ?? 100, 1), 500)
     const fetchLimit = shouldAggregate ? 3000 : pageSize
+    const { start, end } = adMetricsDateRangeForQuery({ startDate: args.startDate, endDate: args.endDate })
 
     const all = await ctx.db
       .query('adMetrics')
-      .withIndex('by_workspace_date', (q) => q.eq('workspaceId', args.workspaceId))
-      .collect()
+      .withIndex('by_workspace_date', (q) =>
+        q.eq('workspaceId', args.workspaceId).gte('date', start).lte('date', end),
+      )
+      .take(AD_METRICS_RANGE_MAX_ROWS)
     const integrations = await ctx.db
       .query('adIntegrations')
       .withIndex('by_workspace_provider', (q) => q.eq('workspaceId', args.workspaceId))
@@ -447,11 +485,14 @@ export const listMetricsWithSummaryV2 = workspaceQuery({
     const shouldAggregate = args.aggregate === true
     const pageSize = Math.min(Math.max(args.limit ?? 100, 1), 500)
     const fetchLimit = shouldAggregate ? 3000 : pageSize
+    const { start, end } = adMetricsDateRangeForQuery({ startDate: args.startDate, endDate: args.endDate })
 
     const all = await ctx.db
       .query('adMetrics')
-      .withIndex('by_workspace_date', (q) => q.eq('workspaceId', args.workspaceId))
-      .collect()
+      .withIndex('by_workspace_date', (q) =>
+        q.eq('workspaceId', args.workspaceId).gte('date', start).lte('date', end),
+      )
+      .take(AD_METRICS_RANGE_MAX_ROWS)
 
     // Build currency lookup from integrations for rows that were written before
     // the currency stamping was introduced (backfill / legacy rows).

@@ -26,6 +26,18 @@ export const opsTables = {
     durationMinutes: v.number(),
     locationLabel: v.string(),
     flaggedReason: v.union(v.string(), v.null()),
+    managerReview: v.optional(
+      v.union(
+        v.literal('none'),
+        v.literal('pending'),
+        v.literal('approved'),
+        v.literal('rejected'),
+      ),
+    ),
+    approvedAtMs: v.optional(v.union(v.number(), v.null())),
+    approvedById: v.optional(v.union(v.string(), v.null())),
+    approvedByName: v.optional(v.union(v.string(), v.null())),
+    managerNote: v.optional(v.union(v.string(), v.null())),
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
   })
@@ -50,12 +62,35 @@ export const opsTables = {
       v.literal('open'),
       v.literal('swap-requested'),
     ),
+    locationLabel: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    requiredRole: v.optional(v.string()),
+    startsAtMs: v.optional(v.number()),
+    endsAtMs: v.optional(v.number()),
+    acceptedByAssignee: v.optional(v.boolean()),
+    conflictWithTimeOff: v.optional(v.string()),
+    conflictWithAvailability: v.optional(v.string()),
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
   })
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_dayStartMs_legacyId', ['workspaceId', 'dayStartMs', 'legacyId'])
     .index('by_workspace_status_dayStartMs_legacyId', ['workspaceId', 'status', 'dayStartMs', 'legacyId']),
+
+  workforceAvailability: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    personId: v.string(),
+    startMs: v.number(),
+    endMs: v.number(),
+    kind: v.union(v.literal('unavailable'), v.literal('preferred')),
+    label: v.string(),
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_person_startMs', ['workspaceId', 'personId', 'startMs', 'legacyId'])
+    .index('by_workspace_startMs_legacyId', ['workspaceId', 'startMs', 'legacyId']),
 
   workforceShiftSwaps: defineTable({
     workspaceId: v.string(),
@@ -119,12 +154,52 @@ export const opsTables = {
     ),
     scoreCompleted: v.number(),
     scoreTotal: v.number(),
+    answers: v.optional(
+      v.array(
+        v.object({
+          fieldId: v.string(),
+          value: v.string(),
+        }),
+      ),
+    ),
     createdAtMs: v.number(),
     updatedAtMs: v.number(),
   })
     .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
     .index('by_workspace_submittedAtMs_legacyId', ['workspaceId', 'submittedAtMs', 'legacyId'])
     .index('by_workspace_status_submittedAtMs_legacyId', ['workspaceId', 'status', 'submittedAtMs', 'legacyId']),
+
+  workforceTimeOffBalances: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    label: v.string(),
+    usedLabel: v.string(),
+    remainingLabel: v.string(),
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_updatedAtMs_legacyId', ['workspaceId', 'updatedAtMs', 'legacyId']),
+
+  workforceTimeOffRequests: defineTable({
+    workspaceId: v.string(),
+    legacyId: v.string(),
+    personId: v.string(),
+    personName: v.string(),
+    type: v.string(),
+    windowLabel: v.string(),
+    status: v.union(
+      v.literal('pending'),
+      v.literal('approved'),
+      v.literal('declined'),
+    ),
+    approverName: v.string(),
+    createdAtMs: v.number(),
+    updatedAtMs: v.number(),
+  })
+    .index('by_workspace_legacyId', ['workspaceId', 'legacyId'])
+    .index('by_workspace_updatedAtMs_legacyId', ['workspaceId', 'updatedAtMs', 'legacyId'])
+    .index('by_workspace_status_updatedAtMs_legacyId', ['workspaceId', 'status', 'updatedAtMs', 'legacyId']),
 
   proposals: defineTable({
     workspaceId: v.string(),

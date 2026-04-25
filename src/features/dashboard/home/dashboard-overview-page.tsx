@@ -18,6 +18,7 @@ import { useMemo } from 'react'
 import { AnalyticsSummaryCards } from '@/features/dashboard/analytics/components/analytics-summary-cards'
 import { ProposalMetrics } from '@/features/dashboard/proposals/components/proposal-metrics'
 import { TaskSummaryCards } from '@/features/dashboard/tasks/task-summary-cards'
+import { DashboardWorkHub } from '@/features/dashboard/home/components/dashboard-work-hub'
 import { OperationsPulseCard } from '@/features/dashboard/workforce/operations-pulse-card'
 import { analyticsIntegrationsApi, projectsApi } from '@/lib/convex-api'
 import { getPreviewProjects } from '@/lib/preview-data'
@@ -262,6 +263,7 @@ export function DashboardOverviewPage() {
     label: selectedClient ? 'Selected client' : 'Workspace overview',
     variant: 'secondary' as const,
   }), [selectedClient])
+  const isInternalTeamRole = userRole === 'admin' || userRole === 'team'
   const isInitialLoading =
     !isPreviewMode &&
     metrics.length === 0 &&
@@ -283,7 +285,7 @@ export function DashboardOverviewPage() {
       <div className="space-y-8 pb-10">
         <DashboardPageHeader
           title="Dashboard"
-          description={`One overview for ${selectedClientLabel}, pulling the top-line stats from your core dashboard sections.`}
+          description={`Team operations and ${selectedClientLabel} work in one place—tasks, projects, and agency tools at a glance.`}
           icon={LayoutDashboard}
           badge={headerBadge}
         />
@@ -296,6 +298,25 @@ export function DashboardOverviewPage() {
           activeProjects={clientStats.activeProjects}
           loading={clientStatsLoading}
         />
+
+        {isInternalTeamRole ? (
+          <>
+            <section className="space-y-4">
+              <SectionHeading
+                title="Team operations"
+                description="Shortcuts to time, scheduling, forms, and time off. Agency tools stay in the sidebar."
+              />
+              <DashboardWorkHub userRole={userRole} />
+            </section>
+            <section className="space-y-4">
+              <SectionHeading
+                title="Operations pulse"
+                description="Live attendance, coverage, checklist health, and time off at a glance."
+              />
+              <OperationsPulseCard />
+            </section>
+          </>
+        ) : null}
 
         {dashboardErrors.length > 0 && (
           <Alert variant="destructive">
@@ -322,17 +343,13 @@ export function DashboardOverviewPage() {
         <section className="space-y-4">
           <SectionHeading
             title="Top summary"
-            description="Primary KPI cards distilled from analytics, ads, and task flow."
+            description={
+              isInternalTeamRole
+                ? 'Agency and delivery KPIs—after team ops shortcuts above.'
+                : 'Primary KPI cards from analytics, ads, and your task flow.'
+            }
           />
           <StatsCards stats={orderedStats} loading={statsLoading} primaryCount={4} />
-        </section>
-
-        <section className="space-y-4">
-          <SectionHeading
-            title="Operations pulse"
-            description="Attendance, coverage, and checklist readiness folded into the main workspace overview."
-          />
-          <OperationsPulseCard />
         </section>
       </div>
     </BoneyardSkeletonBoundary>

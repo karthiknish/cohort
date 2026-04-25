@@ -3,7 +3,15 @@ import type { Id } from '/_generated/dataModel'
 import { v } from 'convex/values'
 import { z } from 'zod/v4'
 import { Errors, withErrorHandling } from '../errors'
-import { authenticatedMutation, authenticatedQuery, workspaceMutation, zWorkspaceQuery, zWorkspaceMutation, zWorkspaceQueryActive } from '../functions'
+import {
+  authenticatedMutation,
+  authenticatedQuery,
+  requireWorkspaceAccess,
+  workspaceMutation,
+  zWorkspaceQuery,
+  zWorkspaceMutation,
+  zWorkspaceQueryActive,
+} from '../functions'
 
 export function nowMs() {
   return Date.now()
@@ -133,6 +141,7 @@ export {
   withErrorHandling,
   authenticatedMutation,
   authenticatedQuery,
+  requireWorkspaceAccess,
   workspaceMutation,
   zWorkspaceQuery,
   zWorkspaceMutation,

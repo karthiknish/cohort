@@ -18,9 +18,9 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { useToast } from '@/shared/ui/use-toast'
 
+import { ChecklistSubmissionRunner } from './checklist-submission-runner'
 import { ChecklistTemplateLibrary } from './checklist-template-library'
 import { FormBuilder } from './form-builder'
-import { FormEntryDetail } from './form-entry-detail'
 import { SubmissionTable } from './submission-table'
 
 export default function FormsPage() {
@@ -35,8 +35,13 @@ export default function FormsPage() {
   )
   const seedFormsModule = useMutation(workforceApi.seedFormsModule)
   const createChecklistTemplate = useMutation(workforceApi.createChecklistTemplate)
+  const submitChecklist = useMutation(workforceApi.submitChecklist)
+  const reviewFormSubmission = useMutation(workforceApi.reviewFormSubmission)
   const [isSeeding, setIsSeeding] = useState(false)
   const [isCreatingTemplate, setIsCreatingTemplate] = useState(false)
+  const [submitChecklistPending, setSubmitChecklistPending] = useState(false)
+  const [pendingSubmissionReview, setPendingSubmissionReview] = useState<string | null>(null)
+  const canReview = !isPreviewMode && (user?.role === 'admin' || user?.role === 'team') && Boolean(workspaceId)
 
   const templates = isPreviewMode ? getPreviewChecklistTemplates() : (formsDashboard?.templates ?? [])
   const fields = isPreviewMode ? getPreviewFormFields() : (formsDashboard?.fields ?? [])
@@ -100,13 +105,53 @@ export default function FormsPage() {
     void handleCreateTemplate()
   }, [handleCreateTemplate])
 
+  const firstTemplate = templates[0]
+  const firstTemplateId = firstTemplate?.id ?? ''
+
+  const handleSubmitChecklist = useCallback(
+    async (answers: { fieldId: string; value: string }[]) => {
+      if (!workspaceId || !firstTemplateId) {
+        toast({ title: 'Template required', description: 'Create or seed a template first.', variant: 'destructive' })
+        return
+      }
+      setSubmitChecklistPending(true)
+      try {
+        await submitChecklist({ workspaceId, templateLegacyId: firstTemplateId, answers })
+        toast({ title: 'Checklist submitted' })
+      } catch (error) {
+        logError(error, 'forms-page:submit')
+        toast({ title: 'Submit failed', description: asErrorMessage(error), variant: 'destructive' })
+      } finally {
+        setSubmitChecklistPending(false)
+      }
+    },
+    [firstTemplateId, submitChecklist, toast, workspaceId],
+  )
+
+  const runSubmissionReview = useCallback(
+    async (submissionId: string, status: 'ready' | 'needs-follow-up') => {
+      if (!workspaceId) return
+      setPendingSubmissionReview(submissionId)
+      try {
+        await reviewFormSubmission({ workspaceId, submissionLegacyId: submissionId, status })
+        toast({ title: status === 'ready' ? 'Marked ready' : 'Flagged for follow-up' })
+      } catch (error) {
+        logError(error, 'forms-page:review')
+        toast({ title: 'Update failed', description: asErrorMessage(error), variant: 'destructive' })
+      } finally {
+        setPendingSubmissionReview(null)
+      }
+    },
+    [reviewFormSubmission, toast, workspaceId],
+  )
+
   return (
     <WorkforcePageShell
       routeId={route.id}
       title={route.title}
       description={route.description}
       icon={route.icon}
-      badgeLabel="P0 module"
+      badgeLabel="Live"
       stats={[
         { label: 'Active templates', value: summary?.activeTemplates ?? '0', description: 'Workflows standardized into reusable forms', icon: ListChecks },
         { label: 'Submission quality', value: summary?.submissionQuality ?? '0%', description: isPreviewMode ? 'Preview completion benchmark across active templates' : 'Live completion benchmark across current submissions', icon: FileCheck2, variant: 'success' },
@@ -144,9 +189,23 @@ export default function FormsPage() {
           <ChecklistTemplateLibrary templates={templates} />
           <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <FormBuilder fields={fields} pending={isCreatingTemplate} onCreateTemplate={handleCreateTemplateClick} />
-            <FormEntryDetail />
+            <ChecklistSubmissionRunner
+              templateLegacyId={firstTemplateId}
+              templateTitle={firstTemplate?.title ?? 'Checklist'}
+              fields={fields}
+              isPreviewMode={isPreviewMode}
+              onSubmit={handleSubmitChecklist}
+              pending={submitChecklistPending}
+              disabled={!workspaceId}
+            />
           </div>
-          <SubmissionTable submissions={submissions} />
+          <SubmissionTable
+            submissions={submissions}
+            canReview={canReview}
+            pendingId={pendingSubmissionReview}
+            onMarkReady={canReview ? (id) => void runSubmissionReview(id, 'ready') : undefined}
+            onNeedsFollowUp={canReview ? (id) => void runSubmissionReview(id, 'needs-follow-up') : undefined}
+          />
         </>
       ) : null}
     </WorkforcePageShell>

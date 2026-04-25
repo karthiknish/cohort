@@ -1,8 +1,10 @@
 import { z } from 'zod/v4'
 
+import { Errors } from './errors'
 import {
   type AuthenticatedQueryCtx,
   zAuthenticatedMutation,
+  zWorkspaceMutation,
   zWorkspaceQuery,
 } from './functions'
 
@@ -24,6 +26,9 @@ const timeSessionZ = z.object({
   durationLabel: z.string(),
   locationLabel: z.string(),
   flaggedReason: z.string().optional(),
+  managerReview: z.enum(['none', 'pending', 'approved', 'rejected']),
+  approvedByName: z.string().nullable().optional(),
+  managerNote: z.string().nullable().optional(),
 })
 
 const coverageAlertZ = z.object({
@@ -42,6 +47,11 @@ const shiftZ = z.object({
   timeLabel: z.string(),
   coverageLabel: z.string(),
   status: z.enum(['scheduled', 'open', 'swap-requested']),
+  locationLabel: z.string().optional(),
+  notes: z.string().optional(),
+  conflictWithTimeOff: z.string().optional(),
+  conflictWithAvailability: z.string().optional(),
+  canClaim: z.boolean().optional(),
 })
 
 const shiftSwapZ = z.object({
@@ -69,6 +79,22 @@ const submissionZ = z.object({
   submittedAt: z.string(),
   status: z.enum(['ready', 'needs-follow-up', 'in-review']),
   scoreLabel: z.string(),
+})
+
+const timeOffBalanceZ = z.object({
+  id: z.string(),
+  label: z.string(),
+  used: z.string(),
+  remaining: z.string(),
+})
+
+const timeOffRequestZ = z.object({
+  id: z.string(),
+  personName: z.string(),
+  type: z.string(),
+  windowLabel: z.string(),
+  status: z.enum(['pending', 'approved', 'declined']),
+  approver: z.string(),
 })
 
 function generateLegacyId(prefix: string, now: number) {
@@ -134,6 +160,7 @@ function parseHoursFromTimeLabel(timeLabel: string) {
 }
 
 function mapTimeSession(row: Awaited<ReturnType<typeof listTimeRows>>[number]) {
+  const review = row.managerReview ?? 'none'
   return {
     id: row.legacyId,
     personName: row.personName,
@@ -144,7 +171,17 @@ function mapTimeSession(row: Awaited<ReturnType<typeof listTimeRows>>[number]) {
     endedAt: row.endedAtMs ? formatTime(row.endedAtMs) : null,
     durationLabel: formatDuration(row.durationMinutes),
     locationLabel: row.locationLabel,
+    managerReview: review,
+    approvedByName: row.approvedByName ?? null,
+    managerNote: row.managerNote ?? null,
     ...(row.flaggedReason ? { flaggedReason: row.flaggedReason } : {}),
+  }
+}
+
+function assertTeamOrAdmin(ctx: { user: { role: string | null } }) {
+  const role = ctx.user.role
+  if (role !== 'admin' && role !== 'team') {
+    throw Errors.auth.forbidden('Only workspace team members can perform this review action.')
   }
 }
 
@@ -168,7 +205,10 @@ export const getTimeDashboard = zWorkspaceQuery({
       .filter((row) => row.startedAtMs >= weekStart)
       .reduce((sum, row) => sum + row.durationMinutes, 0)
 
-    const pendingApprovals = rows.filter((row) => row.status === 'needs-review').length
+    const pendingApprovals = rows.filter((row) => {
+      const review = row.managerReview ?? 'none'
+      return row.status === 'needs-review' || review === 'pending'
+    }).length
     const flaggedSessions = rows.filter((row) => row.flaggedReason !== null).length
     const clockedInNow = rows.filter((row) => row.status === 'clocked-in' || row.status === 'on-break').length
 
@@ -259,6 +299,7 @@ export const seedTimeModule = zAuthenticatedMutation({
         durationMinutes: row.durationMinutes,
         locationLabel: row.locationLabel,
         flaggedReason: row.flaggedReason,
+        managerReview: row.status === 'needs-review' ? 'pending' : 'none',
         createdAtMs: ctx.now,
         updatedAtMs: ctx.now,
       })
@@ -303,6 +344,7 @@ export const clockAction = zAuthenticatedMutation({
         durationMinutes: 0,
         locationLabel: args.locationLabel ?? 'Workspace default',
         flaggedReason: null,
+        managerReview: 'none',
         createdAtMs: ctx.now,
         updatedAtMs: ctx.now,
       })
@@ -311,7 +353,7 @@ export const clockAction = zAuthenticatedMutation({
     }
 
     if (!latest) {
-      throw new Error('No active session found for this user.')
+      throw Errors.resource.notFound('Time session (active)', ctx.legacyId)
     }
 
     const durationMinutes = Math.max(0, Math.round((ctx.now - latest.startedAtMs) / 60_000))
@@ -324,6 +366,60 @@ export const clockAction = zAuthenticatedMutation({
     })
 
     return { legacyId: latest.legacyId, status: nextStatus }
+  },
+})
+
+export const submitTimeSessionReview = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    sessionLegacyId: z.string(),
+    decision: z.enum(['approve', 'reject', 'flag']),
+    note: z.string().optional(),
+  },
+  returns: z.object({ ok: z.literal(true) }),
+  handler: async (ctx, args) => {
+    assertTeamOrAdmin(ctx)
+    const row = await ctx.db
+      .query('workforceTimeSessions')
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.sessionLegacyId))
+      .unique()
+
+    if (!row) {
+      throw Errors.resource.notFound('Time session', args.sessionLegacyId)
+    }
+
+    const reviewer = ctx.user.name ?? ctx.user.email ?? 'Manager'
+    const note = args.note?.trim() ?? null
+
+    if (args.decision === 'approve') {
+      await ctx.db.patch(row._id, {
+        managerReview: 'approved',
+        approvedAtMs: ctx.now,
+        approvedById: ctx.legacyId,
+        approvedByName: reviewer,
+        managerNote: note ?? row.managerNote,
+        status: row.status === 'needs-review' ? 'clocked-out' : row.status,
+        updatedAtMs: ctx.now,
+      })
+    } else if (args.decision === 'reject') {
+      await ctx.db.patch(row._id, {
+        managerReview: 'rejected',
+        approvedAtMs: ctx.now,
+        approvedById: ctx.legacyId,
+        approvedByName: reviewer,
+        managerNote: note,
+        updatedAtMs: ctx.now,
+      })
+    } else {
+      await ctx.db.patch(row._id, {
+        managerReview: 'pending',
+        flaggedReason: note ?? 'Flagged by manager',
+        status: 'needs-review',
+        updatedAtMs: ctx.now,
+      })
+    }
+
+    return { ok: true as const }
   },
 })
 
@@ -350,17 +446,62 @@ export const getSchedulingDashboard = zWorkspaceQuery({
       .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
       .order('desc')
       .take(20)
+    const availabilityRows = await ctx.db
+      .query('workforceAvailability')
+      .withIndex('by_workspace_startMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+      .take(200)
 
-    const shifts = shiftsRows.map((row) => ({
-      id: row.legacyId,
-      title: row.title,
-      assignee: row.assigneeName,
-      team: row.team,
-      dayLabel: row.dayLabel,
-      timeLabel: row.timeLabel,
-      coverageLabel: row.coverageLabel,
-      status: row.status,
+    const avWindows = availabilityRows.map((row) => ({
+      personId: row.personId,
+      startMs: row.startMs,
+      endMs: row.endMs,
+      kind: row.kind,
+      label: row.label,
     }))
+
+    const shifts = shiftsRows.map((row) => {
+      const conflictAv =
+        row.assigneeId && avWindows.some(
+          (w) =>
+            w.kind === 'unavailable' &&
+            w.personId === row.assigneeId &&
+            row.dayStartMs >= w.startMs &&
+            row.dayStartMs < w.endMs,
+        )
+          ? avWindows.find(
+              (w) =>
+                w.kind === 'unavailable' &&
+                w.personId === row.assigneeId &&
+                row.dayStartMs >= w.startMs &&
+                row.dayStartMs < w.endMs,
+            )?.label ?? 'Unavailable'
+          : null
+
+      const avNote = conflictAv
+        ? `Conflicts with marked unavailable: ${conflictAv}`
+        : (row.conflictWithAvailability ?? undefined)
+      const mergedTimeOff = row.conflictWithTimeOff ?? undefined
+
+      return {
+        id: row.legacyId,
+        title: row.title,
+        assignee: row.assigneeName,
+        team: row.team,
+        dayLabel: row.dayLabel,
+        timeLabel: row.timeLabel,
+        coverageLabel: row.coverageLabel,
+        status: row.status,
+        locationLabel: row.locationLabel,
+        notes: row.notes,
+        conflictWithTimeOff: mergedTimeOff,
+        conflictWithAvailability: avNote ?? row.conflictWithAvailability,
+        canClaim: row.status === 'open',
+      }
+    })
+
+    const availabilityConflictCount = shifts.filter((s) => s.conflictWithAvailability).length
+    const timeOffShiftConflicts = shifts.filter((s) => s.conflictWithTimeOff).length
+
     const swaps = swapRows.map((row) => ({
       id: row.legacyId,
       shiftTitle: row.shiftTitle,
@@ -392,11 +533,11 @@ export const getSchedulingDashboard = zWorkspaceQuery({
             message: 'No open shifts are waiting on assignment.',
             severity: 'info' as const,
           },
-      swapRows.length > 0
+      swapRows.filter((r) => r.status === 'pending').length > 0
         ? {
             id: 'alert-swaps',
             title: 'Shift swaps need review',
-            message: `${swapRows.length} swap request${swapRows.length === 1 ? '' : 's'} are waiting on an owner decision.`,
+            message: `${swapRows.filter((r) => r.status === 'pending').length} swap request(s) are waiting on a decision.`,
             severity: 'warning' as const,
           }
         : {
@@ -405,13 +546,26 @@ export const getSchedulingDashboard = zWorkspaceQuery({
             message: 'No open shift-swap requests at the moment.',
             severity: 'info' as const,
           },
+      availabilityConflictCount + timeOffShiftConflicts > 0
+        ? {
+            id: 'alert-availability-pto',
+            title: 'Schedule conflicts detected',
+            message: `${availabilityConflictCount + timeOffShiftConflicts} shift(s) touch unavailable time or approved leave.`,
+            severity: 'warning' as const,
+          }
+        : {
+            id: 'alert-no-pto',
+            title: 'No PTO or availability hard conflicts on published shifts',
+            message: 'Review individual rows for coverage and swaps.',
+            severity: 'info' as const,
+          },
     ]
 
     return {
       summary: {
         shiftsThisWeek: String(shiftsRows.length),
         openCoverageGaps: String(openCoverageGaps),
-        swapRequests: String(swapRows.length),
+        swapRequests: String(swapRows.filter((r) => r.status === 'pending').length),
         averageBlockHours: avgBlockHours,
       },
       alerts,
@@ -463,21 +617,39 @@ export const seedSchedulingModule = zAuthenticatedMutation({
       updatedAtMs: ctx.now,
     })
 
-    return { inserted: shifts.length + 1 }
+    // Demo: Sofia unavailable during "Morning traffic" window (same day as first shift)
+    await ctx.db.insert('workforceAvailability', {
+      workspaceId: args.workspaceId,
+      legacyId: 'avail_seed_1',
+      personId: 'member-sofia',
+      startMs: ctx.now - 2 * 60 * 60_000,
+      endMs: ctx.now + 12 * 60 * 60_000,
+      kind: 'unavailable',
+      label: 'Conference · offline',
+      createdAtMs: ctx.now,
+      updatedAtMs: ctx.now,
+    })
+
+    return { inserted: shifts.length + 2 }
   },
 })
 
-export const createCoverageShift = zAuthenticatedMutation({
+export const createCoverageShift = zWorkspaceMutation({
   args: {
     workspaceId: z.string(),
     title: z.string().optional(),
     team: z.string().optional(),
+    locationLabel: z.string().optional(),
+    notes: z.string().optional(),
+    timeLabel: z.string().optional(),
   },
   returns: z.object({ legacyId: z.string() }),
   handler: async (ctx, args) => {
     const legacyId = generateLegacyId('shift', ctx.now)
     const offset = 1 + Math.floor(Math.random() * 4)
     const dayLabel = getCurrentDayLabel(offset)
+    const dayStartMs = ctx.now + offset * 86_400_000
+    const timeLabel = args.timeLabel ?? '13:00 - 17:00'
 
     await ctx.db.insert('workforceShifts', {
       workspaceId: args.workspaceId,
@@ -486,16 +658,118 @@ export const createCoverageShift = zAuthenticatedMutation({
       assigneeId: null,
       assigneeName: 'Open shift',
       team: args.team ?? 'Operations',
-      dayStartMs: ctx.now + offset * 86_400_000,
+      dayStartMs,
       dayLabel,
-      timeLabel: '13:00 - 17:00',
+      timeLabel,
       coverageLabel: 'Created from the dashboard',
       status: 'open',
+      locationLabel: args.locationLabel,
+      notes: args.notes,
+      startsAtMs: dayStartMs,
+      endsAtMs: dayStartMs + 4 * 60 * 60_000,
       createdAtMs: ctx.now,
       updatedAtMs: ctx.now,
     })
 
     return { legacyId }
+  },
+})
+
+export const setMyAvailability = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    startMs: z.number(),
+    endMs: z.number(),
+    kind: z.enum(['unavailable', 'preferred']),
+    label: z.string(),
+  },
+  returns: z.object({ legacyId: z.string() }),
+  handler: async (ctx, args) => {
+    if (args.endMs <= args.startMs) {
+      throw Errors.validation.invalidState('endMs must be after startMs')
+    }
+    const legacyId = generateLegacyId('avail', ctx.now)
+    await ctx.db.insert('workforceAvailability', {
+      workspaceId: args.workspaceId,
+      legacyId,
+      personId: ctx.legacyId,
+      startMs: args.startMs,
+      endMs: args.endMs,
+      kind: args.kind,
+      label: args.label,
+      createdAtMs: ctx.now,
+      updatedAtMs: ctx.now,
+    })
+    return { legacyId }
+  },
+})
+
+export const createShiftSwapRequest = zWorkspaceMutation({
+  args: { workspaceId: z.string(), shiftLegacyId: z.string(), requestedTo: z.string() },
+  returns: z.object({ legacyId: z.string() }),
+  handler: async (ctx, args) => {
+    const shift = await ctx.db
+      .query('workforceShifts')
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.shiftLegacyId))
+      .unique()
+    if (!shift) {
+      throw Errors.resource.notFound('Shift', args.shiftLegacyId)
+    }
+    if (shift.status === 'open') {
+      throw Errors.validation.invalidState('Open shifts are claimed, not swapped. Use claim for open blocks.')
+    }
+    const requester = ctx.user.name ?? ctx.user.email ?? 'Team member'
+    const legacyId = generateLegacyId('swap', ctx.now)
+    await ctx.db.insert('workforceShiftSwaps', {
+      workspaceId: args.workspaceId,
+      legacyId,
+      shiftLegacyId: shift.legacyId,
+      shiftTitle: shift.title,
+      requestedBy: requester,
+      requestedTo: args.requestedTo,
+      windowLabel: `${shift.dayLabel} · ${shift.timeLabel}`,
+      status: 'pending',
+      createdAtMs: ctx.now,
+      updatedAtMs: ctx.now,
+    })
+    await ctx.db.patch(shift._id, { status: 'swap-requested', updatedAtMs: ctx.now })
+    return { legacyId }
+  },
+})
+
+export const reviewShiftSwapRequest = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    swapLegacyId: z.string(),
+    decision: z.enum(['approved', 'blocked']),
+  },
+  returns: z.object({ ok: z.literal(true) }),
+  handler: async (ctx, args) => {
+    assertTeamOrAdmin(ctx)
+    const row = await ctx.db
+      .query('workforceShiftSwaps')
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.swapLegacyId))
+      .unique()
+    if (!row) {
+      throw Errors.resource.notFound('Shift swap', args.swapLegacyId)
+    }
+    if (row.status !== 'pending') {
+      throw Errors.validation.invalidState('This swap is no longer pending review.')
+    }
+    await ctx.db.patch(row._id, {
+      status: args.decision,
+      updatedAtMs: ctx.now,
+    })
+    if (args.decision === 'blocked' && row.shiftLegacyId) {
+      const s = await ctx.db
+        .query('workforceShifts')
+        .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', row.shiftLegacyId))
+        .unique()
+      if (s?.status === 'swap-requested') {
+        await ctx.db.patch(s._id, { status: 'scheduled', updatedAtMs: ctx.now })
+      }
+    }
+    return { ok: true as const }
   },
 })
 
@@ -639,5 +913,316 @@ export const createChecklistTemplate = zAuthenticatedMutation({
     })
 
     return { legacyId }
+  },
+})
+
+const answerFieldZ = z.object({
+  fieldId: z.string(),
+  value: z.string(),
+})
+
+export const submitChecklist = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    templateLegacyId: z.string(),
+    answers: z.array(answerFieldZ),
+  },
+  returns: z.object({ legacyId: z.string() }),
+  handler: async (ctx, args) => {
+    const template = await ctx.db
+      .query('workforceFormTemplates')
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.templateLegacyId))
+      .unique()
+    if (!template) {
+      throw Errors.resource.notFound('Checklist template', args.templateLegacyId)
+    }
+
+    for (const field of template.fields) {
+      if (field.required) {
+        const hit = args.answers.find((a) => a.fieldId === field.id)
+        if (!hit || !hit.value.trim()) {
+          throw Errors.validation.invalidInput(`Required field: ${field.label}`, { fieldId: field.id })
+        }
+      }
+    }
+
+    let completed = 0
+    for (const field of template.fields) {
+      const hit = args.answers.find((a) => a.fieldId === field.id)
+      if (hit?.value?.trim()) {
+        completed += 1
+      }
+    }
+    const total = template.fields.length
+    const status: 'ready' | 'in-review' | 'needs-follow-up' =
+      completed === total && total > 0 ? 'ready' : completed > 0 ? 'in-review' : 'needs-follow-up'
+
+    const legacyId = generateLegacyId('sub', ctx.now)
+    const submittedBy = ctx.user.name ?? ctx.user.email ?? 'Team member'
+
+    await ctx.db.insert('workforceFormSubmissions', {
+      workspaceId: args.workspaceId,
+      legacyId,
+      templateLegacyId: template.legacyId,
+      templateTitle: template.title,
+      submittedBy,
+      submittedAtMs: ctx.now,
+      status,
+      scoreCompleted: completed,
+      scoreTotal: total,
+      answers: args.answers,
+      createdAtMs: ctx.now,
+      updatedAtMs: ctx.now,
+    })
+
+    return { legacyId }
+  },
+})
+
+export const reviewFormSubmission = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    submissionLegacyId: z.string(),
+    status: z.enum(['ready', 'needs-follow-up', 'in-review']),
+  },
+  returns: z.object({ ok: z.literal(true) }),
+  handler: async (ctx, args) => {
+    assertTeamOrAdmin(ctx)
+    const row = await ctx.db
+      .query('workforceFormSubmissions')
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.submissionLegacyId))
+      .unique()
+    if (!row) {
+      throw Errors.resource.notFound('Form submission', args.submissionLegacyId)
+    }
+    await ctx.db.patch(row._id, {
+      status: args.status,
+      updatedAtMs: ctx.now,
+    })
+    return { ok: true as const }
+  },
+})
+
+export const claimOpenShift = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    shiftLegacyId: z.string(),
+  },
+  returns: z.object({ ok: z.literal(true) }),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query('workforceShifts')
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.shiftLegacyId))
+      .unique()
+
+    if (!row) {
+      throw Errors.resource.notFound('Shift', args.shiftLegacyId)
+    }
+    if (row.status !== 'open') {
+      throw Errors.validation.invalidState('Only open shifts can be claimed.')
+    }
+
+    const name = ctx.user.name ?? ctx.user.email ?? 'Team member'
+    await ctx.db.patch(row._id, {
+      status: 'scheduled',
+      assigneeId: ctx.legacyId,
+      assigneeName: name,
+      updatedAtMs: ctx.now,
+    })
+
+    return { ok: true as const }
+  },
+})
+
+export const getTimeOffDashboard = zWorkspaceQuery({
+  args: { workspaceId: z.string() },
+  returns: z.object({
+    summary: z.object({
+      balanceRows: z.string(),
+      pendingApprovals: z.string(),
+    }),
+    balances: z.array(timeOffBalanceZ),
+    requests: z.array(timeOffRequestZ),
+  }),
+  handler: async (ctx, args) => {
+    const balanceRows = await ctx.db
+      .query('workforceTimeOffBalances')
+      .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+      .order('desc')
+      .take(20)
+
+    const requestRows = await ctx.db
+      .query('workforceTimeOffRequests')
+      .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+      .order('desc')
+      .take(50)
+
+    const balances = balanceRows.map((row) => ({
+      id: row.legacyId,
+      label: row.label,
+      used: row.usedLabel,
+      remaining: row.remainingLabel,
+    }))
+
+    const requests = requestRows.map((row) => ({
+      id: row.legacyId,
+      personName: row.personName,
+      type: row.type,
+      windowLabel: row.windowLabel,
+      status: row.status,
+      approver: row.approverName,
+    }))
+
+    const pendingApprovals = requestRows.filter((r) => r.status === 'pending').length
+
+    return {
+      summary: {
+        balanceRows: String(balanceRows.length),
+        pendingApprovals: String(pendingApprovals),
+      },
+      balances,
+      requests,
+    }
+  },
+})
+
+export const seedTimeOffModule = zWorkspaceMutation({
+  args: { workspaceId: z.string() },
+  returns: z.object({ inserted: z.number() }),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query('workforceTimeOffBalances')
+      .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+      .take(1)
+
+    if (existing.length > 0) {
+      return { inserted: 0 }
+    }
+
+    const balances = [
+      { legacyId: 'to_balance_1', label: 'Annual leave', usedLabel: '7 days used', remainingLabel: '11 days left' },
+      { legacyId: 'to_balance_2', label: 'Flex days', usedLabel: '1 day used', remainingLabel: '3 days left' },
+      { legacyId: 'to_balance_3', label: 'Sick leave', usedLabel: '2 days used', remainingLabel: '6 days left' },
+    ]
+
+    for (const row of balances) {
+      await ctx.db.insert('workforceTimeOffBalances', {
+        workspaceId: args.workspaceId,
+        ...row,
+        createdAtMs: ctx.now,
+        updatedAtMs: ctx.now,
+      })
+    }
+
+    const requests = [
+      {
+        legacyId: 'to_req_1',
+        personId: 'member_1',
+        personName: 'Sofia Reyes',
+        type: 'Annual leave',
+        windowLabel: 'May 5 - May 9',
+        status: 'pending' as const,
+        approverName: 'Workspace admin',
+      },
+      {
+        legacyId: 'to_req_2',
+        personId: 'member_2',
+        personName: 'Maya Adler',
+        type: 'Flex day',
+        windowLabel: 'Apr 12',
+        status: 'approved' as const,
+        approverName: 'Workspace admin',
+      },
+    ]
+
+    for (const row of requests) {
+      await ctx.db.insert('workforceTimeOffRequests', {
+        workspaceId: args.workspaceId,
+        ...row,
+        createdAtMs: ctx.now,
+        updatedAtMs: ctx.now,
+      })
+    }
+
+    return { inserted: balances.length + requests.length }
+  },
+})
+
+export const createTimeOffRequest = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    type: z.string(),
+    windowLabel: z.string(),
+  },
+  returns: z.object({ legacyId: z.string() }),
+  handler: async (ctx, args) => {
+    const legacyId = generateLegacyId('toreq', ctx.now)
+    const personName = ctx.user.name ?? ctx.user.email ?? 'Team member'
+
+    await ctx.db.insert('workforceTimeOffRequests', {
+      workspaceId: args.workspaceId,
+      legacyId,
+      personId: ctx.legacyId,
+      personName,
+      type: args.type,
+      windowLabel: args.windowLabel,
+      status: 'pending',
+      approverName: 'Pending assignment',
+      createdAtMs: ctx.now,
+      updatedAtMs: ctx.now,
+    })
+
+    return { legacyId }
+  },
+})
+
+export const reviewTimeOffRequest = zWorkspaceMutation({
+  args: {
+    workspaceId: z.string(),
+    requestLegacyId: z.string(),
+    decision: z.enum(['approved', 'declined']),
+  },
+  returns: z.object({ ok: z.literal(true) }),
+  handler: async (ctx, args) => {
+    if (ctx.user.role !== 'admin' && ctx.user.role !== 'team') {
+      throw Errors.auth.forbidden('Only team members can review time-off requests.')
+    }
+
+    const row = await ctx.db
+      .query('workforceTimeOffRequests')
+      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.requestLegacyId))
+      .unique()
+
+    if (!row) {
+      throw Errors.resource.notFound('Time-off request', args.requestLegacyId)
+    }
+    if (row.status !== 'pending') {
+      throw Errors.validation.invalidState('Request is no longer pending.')
+    }
+
+    const reviewer = ctx.user.name ?? ctx.user.email ?? 'Manager'
+    await ctx.db.patch(row._id, {
+      status: args.decision,
+      approverName: reviewer,
+      updatedAtMs: ctx.now,
+    })
+
+    if (args.decision === 'approved') {
+      const shifts = await ctx.db
+        .query('workforceShifts')
+        .withIndex('by_workspace_dayStartMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+        .take(80)
+      const message = `Approved ${row.type} (${row.windowLabel}) — reassign if needed.`
+      for (const s of shifts) {
+        if (s.assigneeId === row.personId) {
+          await ctx.db.patch(s._id, {
+            conflictWithTimeOff: message,
+            updatedAtMs: ctx.now,
+          })
+        }
+      }
+    }
+
+    return { ok: true as const }
   },
 })

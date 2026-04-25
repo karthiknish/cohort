@@ -18,7 +18,7 @@ export function DashboardMainRoleFrame({ children }: DashboardMainRoleFrameProps
 
   return (
     <div
-      className={cn('space-y-6 px-6 py-6', accent.mainFrameClass)}
+      className={cn('mx-auto min-h-full w-full max-w-[1600px] space-y-6 px-4 py-5 sm:px-6 sm:py-6 lg:px-8', accent.mainFrameClass)}
       data-dashboard-role={accent.key}
     >
       {children}

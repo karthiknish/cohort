@@ -15,8 +15,8 @@ export function FormBuilder({ fields, pending, onCreateTemplate }: FormBuilderPr
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Form builder scaffold</CardTitle>
-        <CardDescription>Template fields now load from Convex and can be cloned into a new operational checklist.</CardDescription>
+        <CardTitle className="text-lg">Template fields</CardTitle>
+        <CardDescription>Field definitions for the first template. Create another template to clone the same field set.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {fields.length === 0 ? (

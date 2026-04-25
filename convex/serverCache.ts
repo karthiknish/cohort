@@ -21,9 +21,10 @@ function throwServerCacheError(operation: string, error: unknown, context?: Reco
 /**
  * Get a cache entry by its key hash.
  * Returns null if not found or expired.
+ * Deletes expired row so dead rows do not pile up. (Internal mutation: queries cannot write.)
  * Server-side only - no auth required.
  */
-export const get = internalQuery({
+export const get = internalMutation({
   args: {
     keyHash: v.string(),
   },
@@ -40,6 +41,7 @@ export const get = internalQuery({
 
       if (!entry) return null
       if (entry.expiresAtMs <= nowMs()) {
+        await ctx.db.delete(entry._id)
         return null
       }
 

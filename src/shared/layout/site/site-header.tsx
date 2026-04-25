@@ -23,6 +23,10 @@ export function SiteHeader() {
   const { isPreviewMode } = usePreview()
   const pathname = usePathname()
   const [signingOut, setSigningOut] = useState(false)
+  const isAppShellRoute = pathname.startsWith('/dashboard')
+    || pathname.startsWith('/admin')
+    || pathname.startsWith('/settings')
+    || pathname.startsWith('/auth')
   const showAccountActions = pathname === '/for-you' && (Boolean(user) || isPreviewMode)
   const previewProfile = getPreviewSettingsProfile()
   const displayedName = isPreviewMode ? previewProfile.name : (user?.name ?? user?.email ?? null)
@@ -44,6 +48,10 @@ export function SiteHeader() {
         setSigningOut(false)
       })
   }, [signOut, toast])
+
+  if (isAppShellRoute) {
+    return null
+  }
 
   return (
     <header

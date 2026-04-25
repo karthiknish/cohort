@@ -1,12 +1,24 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import type { CSSProperties } from 'react'
+import { usePathname } from 'next/navigation'
 import { Separator } from '@/shared/ui/separator'
 
 const SITE_FOOTER_TRANSITION_STYLE = { viewTransitionName: 'site-footer' } satisfies CSSProperties
 
 export function SiteFooter() {
   const currentYear = new Date().getFullYear()
+  const pathname = usePathname()
+  const isAppShellRoute = pathname.startsWith('/dashboard')
+    || pathname.startsWith('/admin')
+    || pathname.startsWith('/settings')
+    || pathname.startsWith('/auth')
+
+  if (isAppShellRoute) {
+    return null
+  }
 
   return (
     <footer className="border-t border-muted/50 bg-background/95" style={SITE_FOOTER_TRANSITION_STYLE}>

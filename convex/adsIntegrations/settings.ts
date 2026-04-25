@@ -4,6 +4,7 @@ import {
   mutation,
   normalizeClientId,
   nowMs,
+  requireWorkspaceAccess,
   v,
 } from './shared'
 
@@ -29,10 +30,7 @@ export const persistIntegrationTokens = mutation({
     refreshTokenExpiresAtMs: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      throw Errors.auth.unauthorized()
-    }
+    await requireWorkspaceAccess(ctx, args.workspaceId)
 
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
@@ -100,10 +98,7 @@ export const updateAutomationSettings = mutation({
     scheduledTimeframeDays: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      throw Errors.auth.unauthorized()
-    }
+    await requireWorkspaceAccess(ctx, args.workspaceId)
 
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
@@ -143,10 +138,7 @@ export const requestManualSync = mutation({
     linkedAtMs: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) {
-      throw Errors.auth.unauthorized()
-    }
+    await requireWorkspaceAccess(ctx, args.workspaceId)
 
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)

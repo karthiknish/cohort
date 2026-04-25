@@ -11,6 +11,7 @@ export {
   normalizeGoogleAnalyticsPropertyId,
   nowMs,
   query,
+  requireWorkspaceAccess,
   v,
   withErrorHandling,
   z,

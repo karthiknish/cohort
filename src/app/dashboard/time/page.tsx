@@ -1,5 +1,1 @@
-import { redirect } from 'next/navigation'
-
-export default function DashboardTimeRedirectPage() {
-  redirect('/dashboard/tasks?operations=time')
-}
+export { default } from '@/features/dashboard/time/page'

@@ -8,6 +8,7 @@ import {
   mutation,
   normalizeClientId,
   nowMs,
+  requireWorkspaceAccess,
   v,
 } from './shared'
 
@@ -71,8 +72,7 @@ export const persistGoogleAnalyticsTokens = mutation({
     refreshTokenExpiresAtMs: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Unauthorized')
+    await requireWorkspaceAccess(ctx, args.workspaceId)
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
     const { current, legacy } = await findRows(ctx, args.workspaceId, clientId)
@@ -144,7 +144,11 @@ export const updateGoogleAnalyticsStatus = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    if (!identity) assertCronKey(ctx, { cronKey: args.cronKey ?? null })
+    if (identity) {
+      await requireWorkspaceAccess(ctx, args.workspaceId)
+    } else {
+      assertCronKey(ctx, { cronKey: args.cronKey ?? null })
+    }
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
     const { current, legacy } = await findRows(ctx, args.workspaceId, clientId)
@@ -169,8 +173,7 @@ export const markGoogleAnalyticsSyncRequested = mutation({
     status: v.optional(v.union(v.literal('pending'), v.literal('never'), v.literal('error'), v.literal('success'))),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Unauthorized')
+    await requireWorkspaceAccess(ctx, args.workspaceId)
     const timestamp = nowMs()
     const clientId = normalizeClientId(args.clientId ?? null)
     const { current, legacy } = await findRows(ctx, args.workspaceId, clientId)
@@ -193,8 +196,7 @@ export const deleteGoogleAnalyticsIntegration = mutation({
     clientId: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Unauthorized')
+    await requireWorkspaceAccess(ctx, args.workspaceId)
     const clientId = normalizeClientId(args.clientId ?? null)
     const { current, legacy } = await findRows(ctx, args.workspaceId, clientId)
     if (current) await ctx.db.delete(current._id)
@@ -209,8 +211,7 @@ export const deleteGoogleAnalyticsSyncJobs = mutation({
     clientId: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Unauthorized')
+    await requireWorkspaceAccess(ctx, args.workspaceId)
     const clientId = normalizeClientId(args.clientId ?? null)
     for (const status of ['queued', 'running', 'error'] as const) {
       const jobs = await ctx.db.query('adSyncJobs').withIndex('by_workspace_provider_client_status', (q) =>
@@ -228,8 +229,7 @@ export const deleteGoogleAnalyticsMetrics = mutation({
     clientId: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error('Unauthorized')
+    await requireWorkspaceAccess(ctx, args.workspaceId)
     const clientId = normalizeClientId(args.clientId ?? null)
     const rows = await ctx.db.query('adMetrics').withIndex('by_workspace_provider_date', (q) =>
       q.eq('workspaceId', args.workspaceId).eq('providerId', 'google-analytics')

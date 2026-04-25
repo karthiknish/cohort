@@ -26,10 +26,10 @@ const PREVIEW_TIME_SUMMARY = {
 }
 
 const PREVIEW_TIME_SESSIONS: TimeSession[] = [
-  { id: 'ts-1', personName: 'Maya Adler', role: 'Account lead', project: 'Novatech retention', status: 'clocked-in', startedAt: '08:12', endedAt: null, durationLabel: '4h 18m', locationLabel: 'Hybrid · Bengaluru', geofenceStatus: 'inside', breakDueInMinutes: 27 },
-  { id: 'ts-2', personName: 'Sofia Reyes', role: 'Performance strategist', project: 'BlueOrbit launch sprint', status: 'on-break', startedAt: '07:56', endedAt: null, durationLabel: '3h 42m', locationLabel: 'Remote · Madrid', geofenceStatus: 'manual' },
-  { id: 'ts-3', personName: 'James Liu', role: 'Creative ops', project: 'Meridian review pack', status: 'needs-review', startedAt: '06:40', endedAt: '10:14', durationLabel: '3h 34m', locationLabel: 'Client site · Singapore', geofenceStatus: 'outside', flaggedReason: 'Manual location override' },
-  { id: 'ts-4', personName: 'Kiran Patel', role: 'Project manager', project: 'Northstar migration', status: 'clocked-out', startedAt: '05:48', endedAt: '13:11', durationLabel: '7h 23m', locationLabel: 'HQ · Bengaluru', geofenceStatus: 'inside' },
+  { id: 'ts-1', personName: 'Maya Adler', role: 'Account lead', project: 'Novatech retention', status: 'clocked-in', startedAt: '08:12', endedAt: null, durationLabel: '4h 18m', locationLabel: 'Hybrid · Bengaluru', geofenceStatus: 'inside', breakDueInMinutes: 27, managerReview: 'none' },
+  { id: 'ts-2', personName: 'Sofia Reyes', role: 'Performance strategist', project: 'BlueOrbit launch sprint', status: 'on-break', startedAt: '07:56', endedAt: null, durationLabel: '3h 42m', locationLabel: 'Remote · Madrid', geofenceStatus: 'manual', managerReview: 'none' },
+  { id: 'ts-3', personName: 'James Liu', role: 'Creative ops', project: 'Meridian review pack', status: 'needs-review', startedAt: '06:40', endedAt: '10:14', durationLabel: '3h 34m', locationLabel: 'Client site · Singapore', geofenceStatus: 'outside', flaggedReason: 'Manual location override', managerReview: 'pending' },
+  { id: 'ts-4', personName: 'Kiran Patel', role: 'Project manager', project: 'Northstar migration', status: 'clocked-out', startedAt: '05:48', endedAt: '13:11', durationLabel: '7h 23m', locationLabel: 'HQ · Bengaluru', geofenceStatus: 'inside', managerReview: 'approved', approvedByName: 'Team lead' },
 ]
 
 const PREVIEW_COVERAGE_ALERTS: CoverageAlert[] = [
@@ -39,7 +39,21 @@ const PREVIEW_COVERAGE_ALERTS: CoverageAlert[] = [
 ]
 
 const PREVIEW_SHIFTS: Shift[] = [
-  { id: 'sh-1', title: 'Morning traffic monitoring', assignee: 'Sofia Reyes', team: 'Paid media', dayLabel: 'Mon', timeLabel: '08:00 - 12:00', coverageLabel: 'Primary owner assigned', status: 'scheduled', requiredStaff: 2, filledStaff: 2, canClaim: false },
+  {
+    id: 'sh-1',
+    title: 'Morning traffic monitoring',
+    assignee: 'Sofia Reyes',
+    team: 'Paid media',
+    dayLabel: 'Mon',
+    timeLabel: '08:00 - 12:00',
+    coverageLabel: 'Primary owner assigned',
+    status: 'scheduled',
+    requiredStaff: 2,
+    filledStaff: 2,
+    canClaim: false,
+    locationLabel: 'Remote',
+    conflictWithAvailability: 'Conflicts with marked unavailable: Conference · offline',
+  },
   { id: 'sh-2', title: 'Client escalation desk', assignee: 'Open shift', team: 'Client success', dayLabel: 'Tue', timeLabel: '14:00 - 18:00', coverageLabel: 'Needs backup', status: 'open', requiredStaff: 2, filledStaff: 1, canClaim: true },
   { id: 'sh-3', title: 'Creative QA handoff', assignee: 'James Liu', team: 'Creative ops', dayLabel: 'Thu', timeLabel: '16:00 - 20:00', coverageLabel: 'Swap requested', status: 'swap-requested', requiredStaff: 2, filledStaff: 1, canClaim: false },
   { id: 'sh-4', title: 'Weekly launch room', assignee: 'Maya Adler', team: 'Delivery', dayLabel: 'Fri', timeLabel: '10:00 - 15:00', coverageLabel: 'Ready to publish', status: 'scheduled', requiredStaff: 3, filledStaff: 3, canClaim: false },

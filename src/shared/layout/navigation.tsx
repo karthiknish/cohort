@@ -67,6 +67,7 @@ const NavItemLink = forwardRef<
     onNavigate?: () => void
     prefetchRoute: (href: string) => void
     collapsed: boolean
+    isActive?: boolean
   } & Omit<React.ComponentPropsWithoutRef<typeof Link>, 'href' | 'className' | 'children'>
 >(function NavItemLink(
   {
@@ -75,6 +76,7 @@ const NavItemLink = forwardRef<
     onNavigate,
     prefetchRoute,
     collapsed,
+    isActive = false,
     onClick,
     onMouseEnter,
     ...linkProps
@@ -108,6 +110,7 @@ const NavItemLink = forwardRef<
       onPointerDown={handlePointerDown}
       className={linkClasses}
       aria-label={collapsed ? item.name : undefined}
+      aria-current={isActive ? 'page' : undefined}
       title={collapsed ? item.name : undefined}
       {...linkProps}
     >
@@ -192,6 +195,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                       onNavigate={onNavigate}
                       prefetchRoute={prefetchRoute}
                       collapsed={collapsed}
+                      isActive={isActive}
                     />
                   )
 

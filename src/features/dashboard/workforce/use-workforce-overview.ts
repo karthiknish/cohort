@@ -11,6 +11,7 @@ import {
   getPreviewChecklistTemplates,
   getPreviewShiftSwaps,
   getPreviewShifts,
+  getPreviewTimeOffRequests,
   getPreviewTimeSessions,
   getPreviewTimeSummary,
 } from '@/lib/preview-data'
@@ -36,10 +37,15 @@ export function useWorkforceOverview() {
     workforceApi.getFormsDashboard,
     !isPreviewMode && workspaceId ? { workspaceId } : 'skip',
   )
+  const timeOffDashboard = useQuery(
+    workforceApi.getTimeOffDashboard,
+    !isPreviewMode && workspaceId ? { workspaceId } : 'skip',
+  )
 
   const seedTimeModule = useMutation(workforceApi.seedTimeModule)
   const seedSchedulingModule = useMutation(workforceApi.seedSchedulingModule)
   const seedFormsModule = useMutation(workforceApi.seedFormsModule)
+  const seedTimeOffModule = useMutation(workforceApi.seedTimeOffModule)
   const clockAction = useMutation(workforceApi.clockAction)
   const createCoverageShift = useMutation(workforceApi.createCoverageShift)
   const createChecklistTemplate = useMutation(workforceApi.createChecklistTemplate)
@@ -55,6 +61,7 @@ export function useWorkforceOverview() {
   const previewTemplates = getPreviewChecklistTemplates()
   const previewSubmissions = getPreviewChecklistSubmissions()
   const previewSwaps = getPreviewShiftSwaps()
+  const previewTimeOffRequests = getPreviewTimeOffRequests()
 
   const snapshot = useMemo(() => {
     if (isPreviewMode) {
@@ -73,6 +80,10 @@ export function useWorkforceOverview() {
           submissionQuality: '91%',
           followUpsNeeded: String(previewSubmissions.filter((submission) => submission.status === 'needs-follow-up').length),
           automationReady: '4',
+        },
+        timeOffSummary: {
+          pendingApprovals: String(previewTimeOffRequests.filter((r) => r.status === 'pending').length),
+          balanceRows: '3',
         },
         schedulingAlerts: previewCoverageAlerts,
         schedulingShifts: previewShifts,
@@ -101,6 +112,10 @@ export function useWorkforceOverview() {
         followUpsNeeded: '0',
         automationReady: '0',
       },
+      timeOffSummary: timeOffDashboard?.summary ?? {
+        pendingApprovals: '0',
+        balanceRows: '0',
+      },
       schedulingAlerts: schedulingDashboard?.alerts ?? [],
       schedulingShifts: schedulingDashboard?.shifts ?? [],
       schedulingSwaps: schedulingDashboard?.swaps ?? [],
@@ -108,7 +123,9 @@ export function useWorkforceOverview() {
       hasAnyData: Boolean(
         (timeDashboard?.sessions.length ?? 0) > 0 ||
         (schedulingDashboard?.shifts.length ?? 0) > 0 ||
-        (formsDashboard?.templates.length ?? 0) > 0,
+        (formsDashboard?.templates.length ?? 0) > 0 ||
+        (timeOffDashboard?.requests.length ?? 0) > 0 ||
+        (timeOffDashboard?.balances.length ?? 0) > 0,
       ),
     }
   }, [
@@ -120,6 +137,7 @@ export function useWorkforceOverview() {
     previewSubmissions,
     previewSwaps,
     previewTemplates,
+    previewTimeOffRequests,
     previewTimeSessions,
     schedulingDashboard?.alerts,
     schedulingDashboard?.shifts,
@@ -128,12 +146,16 @@ export function useWorkforceOverview() {
     timeDashboard?.activeSession,
     timeDashboard?.sessions.length,
     timeDashboard?.summary,
+    timeOffDashboard?.balances.length,
+    timeOffDashboard?.requests,
+    timeOffDashboard?.summary,
   ])
 
   const isLoading = !isPreviewMode && workspaceId !== null && (
     timeDashboard === undefined ||
     schedulingDashboard === undefined ||
-    formsDashboard === undefined
+    formsDashboard === undefined ||
+    timeOffDashboard === undefined
   )
 
   const seedAllModules = async () => {
@@ -144,17 +166,19 @@ export function useWorkforceOverview() {
 
     setIsSeeding(true)
     try {
-      const [timeResult, schedulingResult, formsResult] = await Promise.all([
+      const [timeResult, schedulingResult, formsResult, timeOffResult] = await Promise.all([
         seedTimeModule({ workspaceId }),
         seedSchedulingModule({ workspaceId }),
         seedFormsModule({ workspaceId }),
+        seedTimeOffModule({ workspaceId }),
       ])
 
-      const inserted = timeResult.inserted + schedulingResult.inserted + formsResult.inserted
+      const inserted =
+        timeResult.inserted + schedulingResult.inserted + formsResult.inserted + timeOffResult.inserted
       toast({
         title: inserted > 0 ? 'Operations data seeded' : 'Operations data already exists',
         description: inserted > 0
-          ? 'Time, scheduling, and checklist starter records were saved to Convex.'
+          ? 'Time, scheduling, forms, and time off starter records were saved to Convex.'
           : 'This workspace already has operations data.',
       })
     } catch (error) {

@@ -34,7 +34,7 @@ describe('DashboardRoleBanner', () => {
 
     const markup = renderToStaticMarkup(<DashboardRoleBanner userRole="admin" userDisplayName="Alex Morgan" />)
 
-    expect(markup).toContain('Admin Dashboard')
-    expect(markup).toContain('Admin Panel')
+    expect(markup).toContain('Administrator view')
+    expect(markup).toContain('Admin panel')
   })
 })

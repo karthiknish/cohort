@@ -192,6 +192,34 @@ async function getAuthenticatedContext(ctx: QueryCtx | MutationCtx) {
 }
 
 /**
+ * Ensures the caller is allowed to act on the given workspace (admin, or `agencyId` / legacy workspace match).
+ * Use in raw `mutation` handlers that take `workspaceId` but are not using `zWorkspaceMutation`.
+ */
+export async function requireWorkspaceAccess(ctx: QueryCtx | MutationCtx, workspaceId: string) {
+  const auth = await getAuthenticatedContext(ctx)
+  if (auth.user.role !== 'admin' && auth.agencyId !== workspaceId) {
+    throw Errors.auth.workspaceAccessDenied()
+  }
+  return auth
+}
+
+type MutationHandler<Ctx, Args, Out> = (ctx: Ctx, args: Args) => Promise<Out>
+
+/**
+ * Replays a completed idempotency result without re-running the mutation body; pairs with `checkIdempotency` + `onSuccess` commit.
+ */
+function withIdempotencyReplay<Ctx extends { cachedResponse?: IdempotencyResponse }, Args, Out>(
+  handler: MutationHandler<Ctx, Args, Out>,
+): MutationHandler<Ctx, Args, Out> {
+  return async (ctx, args) => {
+    if (ctx.cachedResponse !== undefined) {
+      return ctx.cachedResponse as Out
+    }
+    return handler(ctx, args)
+  }
+}
+
+/**
  * Shared helper to check and update idempotency status.
  */
 async function checkIdempotency(
@@ -371,7 +399,7 @@ export const workspaceQuery = customQuery(query, {
   },
 })
 
-export const authenticatedMutation = customMutation(mutation, {
+const _authenticatedMutationBase = customMutation(mutation, {
   args: { idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
@@ -379,13 +407,20 @@ export const authenticatedMutation = customMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: unknown) => {
-        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
-        return { ok: true, data: result }
-      },
+      onSuccess: commitIdempotency
+        ? async ({ result }: { result: unknown }) => {
+            await commitIdempotency(result as IdempotencyResponse)
+          }
+        : undefined,
     }
   },
 })
+
+export const authenticatedMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any }) =>
+  _authenticatedMutationBase({
+    ...opts,
+    handler: withIdempotencyReplay(opts.handler),
+  })) as unknown as typeof _authenticatedMutationBase
 
 export const workspaceQueryActive = customQuery(query, {
   args: { workspaceId: v.string() },
@@ -443,7 +478,7 @@ export const adminPaginatedQuery = customQuery(query, {
   },
 })
 
-export const adminMutation = customMutation(mutation, {
+const _adminMutationBase = customMutation(mutation, {
   args: { idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
@@ -454,13 +489,20 @@ export const adminMutation = customMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: unknown) => {
-        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
-        return { ok: true, data: result }
-      },
+      onSuccess: commitIdempotency
+        ? async ({ result }: { result: unknown }) => {
+            await commitIdempotency(result as IdempotencyResponse)
+          }
+        : undefined,
     }
   },
 })
+
+export const adminMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any }) =>
+  _adminMutationBase({
+    ...opts,
+    handler: withIdempotencyReplay(opts.handler),
+  })) as unknown as typeof _adminMutationBase
 
 export const adminAction = customAction(action, {
   args: {},
@@ -479,7 +521,7 @@ export const adminAction = customAction(action, {
   },
 })
 
-export const workspaceMutation = customMutation(mutation, {
+const _workspaceMutationBase = customMutation(mutation, {
   args: { workspaceId: v.string(), idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
@@ -490,13 +532,20 @@ export const workspaceMutation = customMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: unknown) => {
-        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
-        return { ok: true, data: result }
-      },
+      onSuccess: commitIdempotency
+        ? async ({ result }: { result: unknown }) => {
+            await commitIdempotency(result as IdempotencyResponse)
+          }
+        : undefined,
     }
   },
 })
+
+export const workspaceMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any }) =>
+  _workspaceMutationBase({
+    ...opts,
+    handler: withIdempotencyReplay(opts.handler),
+  })) as unknown as typeof _workspaceMutationBase
 
 /**
  * Zod Wrappers (Flat implementation to avoid type conflicts)
@@ -531,7 +580,7 @@ export const zWorkspaceQueryActive = zCustomQuery(query, {
   },
 })
 
-export const zAuthenticatedMutation = zCustomMutation(mutation, {
+const _zAuthenticatedMutationBase = zCustomMutation(mutation, {
   args: { idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
@@ -539,15 +588,22 @@ export const zAuthenticatedMutation = zCustomMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: unknown) => {
-        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
-        return { ok: true, data: result }
-      },
+      onSuccess: commitIdempotency
+        ? async ({ result }: { result: unknown }) => {
+            await commitIdempotency(result as IdempotencyResponse)
+          }
+        : undefined,
     }
   },
 })
 
-export const zWorkspaceMutation = zCustomMutation(mutation, {
+export const zAuthenticatedMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any }) =>
+  _zAuthenticatedMutationBase({
+    ...opts,
+    handler: withIdempotencyReplay(opts.handler),
+  })) as unknown as typeof _zAuthenticatedMutationBase
+
+const _zWorkspaceMutationBase = zCustomMutation(mutation, {
   args: { workspaceId: v.string(), idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
@@ -558,13 +614,20 @@ export const zWorkspaceMutation = zCustomMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: unknown) => {
-        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
-        return { ok: true, data: result }
-      },
+      onSuccess: commitIdempotency
+        ? async ({ result }: { result: unknown }) => {
+            await commitIdempotency(result as IdempotencyResponse)
+          }
+        : undefined,
     }
   },
 })
+
+export const zWorkspaceMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any }) =>
+  _zWorkspaceMutationBase({
+    ...opts,
+    handler: withIdempotencyReplay(opts.handler),
+  })) as unknown as typeof _zWorkspaceMutationBase
 
 export const zAuthenticatedAction = zCustomAction(action, {
   args: {},
@@ -630,7 +693,7 @@ export const zAdminQuery = zCustomQuery(query, {
   },
 })
 
-export const zAdminMutation = zCustomMutation(mutation, {
+const _zAdminMutationBase = zCustomMutation(mutation, {
   args: { idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args) => {
     const auth = await getAuthenticatedContext(ctx)
@@ -641,13 +704,20 @@ export const zAdminMutation = zCustomMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: unknown) => {
-        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
-        return { ok: true, data: result }
-      },
+      onSuccess: commitIdempotency
+        ? async ({ result }: { result: unknown }) => {
+            await commitIdempotency(result as IdempotencyResponse)
+          }
+        : undefined,
     }
   },
 })
+
+export const zAdminMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any }) =>
+  _zAdminMutationBase({
+    ...opts,
+    handler: withIdempotencyReplay(opts.handler),
+  })) as unknown as typeof _zAdminMutationBase
 
 export const zAdminAction = zCustomAction(action, {
   args: {},
@@ -714,12 +784,11 @@ type RateLimitedConfig = {
   rateLimit?: RateLimitPreset
 }
 
-export const rateLimitedAuthenticatedMutation = customMutation(mutation, {
+const _rateLimitedAuthenticatedMutationBase = customMutation(mutation, {
   args: { idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args, config: RateLimitedConfig) => {
     const auth = await getAuthenticatedContext(ctx)
 
-    // Check rate limit if configured
     if (config.rateLimit) {
       await checkRateLimit(ctx, auth.legacyId, config.rateLimit)
     }
@@ -728,15 +797,22 @@ export const rateLimitedAuthenticatedMutation = customMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: unknown) => {
-        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
-        return { ok: true, data: result }
-      },
+      onSuccess: commitIdempotency
+        ? async ({ result }: { result: unknown }) => {
+            await commitIdempotency(result as IdempotencyResponse)
+          }
+        : undefined,
     }
   },
 })
 
-export const rateLimitedWorkspaceMutation = customMutation(mutation, {
+export const rateLimitedAuthenticatedMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any; rateLimit?: RateLimitPreset }) =>
+  _rateLimitedAuthenticatedMutationBase({
+    ...opts,
+    handler: withIdempotencyReplay(opts.handler),
+  })) as unknown as typeof _rateLimitedAuthenticatedMutationBase
+
+const _rateLimitedWorkspaceMutationBase = customMutation(mutation, {
   args: { workspaceId: v.string(), idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args, config: RateLimitedConfig) => {
     const auth = await getAuthenticatedContext(ctx)
@@ -744,7 +820,6 @@ export const rateLimitedWorkspaceMutation = customMutation(mutation, {
       throw Errors.auth.workspaceAccessDenied()
     }
 
-    // Check rate limit if configured
     if (config.rateLimit) {
       await checkRateLimit(ctx, `${auth.legacyId}:${args.workspaceId}`, config.rateLimit)
     }
@@ -753,15 +828,22 @@ export const rateLimitedWorkspaceMutation = customMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: unknown) => {
-        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
-        return { ok: true, data: result }
-      },
+      onSuccess: commitIdempotency
+        ? async ({ result }: { result: unknown }) => {
+            await commitIdempotency(result as IdempotencyResponse)
+          }
+        : undefined,
     }
   },
 })
 
-export const rateLimitedAdminMutation = customMutation(mutation, {
+export const rateLimitedWorkspaceMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any; rateLimit?: RateLimitPreset }) =>
+  _rateLimitedWorkspaceMutationBase({
+    ...opts,
+    handler: withIdempotencyReplay(opts.handler),
+  })) as unknown as typeof _rateLimitedWorkspaceMutationBase
+
+const _rateLimitedAdminMutationBase = customMutation(mutation, {
   args: { idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args, config: RateLimitedConfig) => {
     const auth = await getAuthenticatedContext(ctx)
@@ -769,7 +851,6 @@ export const rateLimitedAdminMutation = customMutation(mutation, {
       throw Errors.auth.adminRequired()
     }
 
-    // Check rate limit if configured
     if (config.rateLimit) {
       await checkRateLimit(ctx, auth.legacyId, config.rateLimit)
     }
@@ -778,18 +859,25 @@ export const rateLimitedAdminMutation = customMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: unknown) => {
-        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
-        return { ok: true, data: result }
-      },
+      onSuccess: commitIdempotency
+        ? async ({ result }: { result: unknown }) => {
+            await commitIdempotency(result as IdempotencyResponse)
+          }
+        : undefined,
     }
   },
 })
 
+export const rateLimitedAdminMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any; rateLimit?: RateLimitPreset }) =>
+  _rateLimitedAdminMutationBase({
+    ...opts,
+    handler: withIdempotencyReplay(opts.handler),
+  })) as unknown as typeof _rateLimitedAdminMutationBase
+
 /**
  * Zod-based rate-limited mutation wrappers.
  */
-export const zRateLimitedAuthenticatedMutation = zCustomMutation(mutation, {
+const _zRateLimitedAuthenticatedMutationBase = zCustomMutation(mutation, {
   args: { idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args, config: RateLimitedConfig) => {
     const auth = await getAuthenticatedContext(ctx)
@@ -802,15 +890,22 @@ export const zRateLimitedAuthenticatedMutation = zCustomMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: unknown) => {
-        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
-        return { ok: true, data: result }
-      },
+      onSuccess: commitIdempotency
+        ? async ({ result }: { result: unknown }) => {
+            await commitIdempotency(result as IdempotencyResponse)
+          }
+        : undefined,
     }
   },
 })
 
-export const zRateLimitedWorkspaceMutation = zCustomMutation(mutation, {
+export const zRateLimitedAuthenticatedMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any; rateLimit?: RateLimitPreset }) =>
+  _zRateLimitedAuthenticatedMutationBase({
+    ...opts,
+    handler: withIdempotencyReplay(opts.handler),
+  })) as unknown as typeof _zRateLimitedAuthenticatedMutationBase
+
+const _zRateLimitedWorkspaceMutationBase = zCustomMutation(mutation, {
   args: { workspaceId: v.string(), idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args, config: RateLimitedConfig) => {
     const auth = await getAuthenticatedContext(ctx)
@@ -826,10 +921,17 @@ export const zRateLimitedWorkspaceMutation = zCustomMutation(mutation, {
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
-      returnValue: async (result: unknown) => {
-        if (commitIdempotency) await commitIdempotency(result as IdempotencyResponse)
-        return { ok: true, data: result }
-      },
+      onSuccess: commitIdempotency
+        ? async ({ result }: { result: unknown }) => {
+            await commitIdempotency(result as IdempotencyResponse)
+          }
+        : undefined,
     }
   },
 })
+
+export const zRateLimitedWorkspaceMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any; rateLimit?: RateLimitPreset }) =>
+  _zRateLimitedWorkspaceMutationBase({
+    ...opts,
+    handler: withIdempotencyReplay(opts.handler),
+  })) as unknown as typeof _zRateLimitedWorkspaceMutationBase

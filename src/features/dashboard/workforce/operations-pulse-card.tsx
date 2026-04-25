@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
-import { CalendarDays, Clock3, FileText, LoaderCircle } from 'lucide-react'
+import { CalendarDays, Clock3, FileText, LoaderCircle, Palmtree } from 'lucide-react'
 
 import { useUrlDrivenDialog } from '@/shared/hooks/use-url-driven-dialog'
 import { Button } from '@/shared/ui/button'
@@ -62,7 +62,7 @@ function OperationsPulseCardContent() {
   } = useWorkforceOverview()
   const { activeValue: dialogFocus, isOpen, openValue, onOpenChange } = useUrlDrivenDialog<WorkforceDetailFocus>({
     paramName: 'operations',
-    allowedValues: ['time', 'scheduling', 'forms'],
+    allowedValues: ['time', 'scheduling', 'forms', 'time-off'],
   })
   const handleSeed = useCallback(() => {
     void seedAllModules()
@@ -75,6 +75,9 @@ function OperationsPulseCardContent() {
   }, [openValue])
   const handleOpenForms = useCallback(() => {
     openValue('forms')
+  }, [openValue])
+  const handleOpenTimeOff = useCallback(() => {
+    openValue('time-off')
   }, [openValue])
 
   return (
@@ -107,7 +110,7 @@ function OperationsPulseCardContent() {
             aria-busy="true"
             aria-label="Loading operations summary"
           >
-            {['pulse-1', 'pulse-2', 'pulse-3'].map((key) => (
+            {['pulse-1', 'pulse-2', 'pulse-3', 'pulse-4'].map((key) => (
               <div key={key} className="space-y-3 rounded-2xl border border-muted/50 bg-muted/10 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <Skeleton className="h-10 w-10 rounded-2xl" />
@@ -120,7 +123,7 @@ function OperationsPulseCardContent() {
             ))}
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <PulseMetric
               icon={Clock3}
               label="Attendance"
@@ -141,6 +144,13 @@ function OperationsPulseCardContent() {
               value={snapshot.formsSummary.activeTemplates}
               helper={`${snapshot.formsSummary.followUpsNeeded} follow-ups still blocked`}
               onOpen={handleOpenForms}
+            />
+            <PulseMetric
+              icon={Palmtree}
+              label="Time off"
+              value={snapshot.timeOffSummary.pendingApprovals}
+              helper={`${snapshot.timeOffSummary.balanceRows} leave buckets tracked`}
+              onOpen={handleOpenTimeOff}
             />
           </div>
         )}

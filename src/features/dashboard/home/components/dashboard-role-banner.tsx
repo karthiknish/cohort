@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowUpRight, Briefcase, Shield, Trophy } from 'lucide-react'
+import { ArrowUpRight, Clock3, Shield, Trophy } from 'lucide-react'
 
 import { FadeIn } from '@/shared/ui/animate-in'
 import { Button } from '@/shared/ui/button'
@@ -50,18 +50,18 @@ export function DashboardRoleBanner({ userRole, userDisplayName }: DashboardRole
         <Card className="border-info/25 bg-info/5">
           <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-info/15">
-              <Briefcase className="h-5 w-5 text-info" />
+              <Clock3 className="h-5 w-5 text-info" />
             </div>
             <div className="min-w-0 flex-1 space-y-1">
-              <p className="font-medium text-foreground">Agency team view</p>
+              <p className="font-medium text-foreground">Team operations</p>
               <p className="text-sm text-muted-foreground">
-                Delivery tools, shared clients, and internal collaboration. Use the client switcher in the header to move
-                between workspaces—navigation and metrics follow that context.
+                Time, schedule, and checklists for your workspace. Open Time & attendance to start or continue your day.
+                Agency analytics and client deliverables live under Agency tools in the sidebar.
               </p>
             </div>
-            <Link href="/dashboard/tasks" className="shrink-0">
+            <Link href="/dashboard/time" className="shrink-0">
               <Button variant="outline" size="sm" className="border-info/30 text-info hover:bg-info/10">
-                Tasks <ArrowUpRight className="ml-1 h-3 w-3" />
+                Time <ArrowUpRight className="ml-1 h-3 w-3" />
               </Button>
             </Link>
           </CardContent>
