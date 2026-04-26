@@ -27,7 +27,8 @@ export function SiteHeader() {
     || pathname.startsWith('/admin')
     || pathname.startsWith('/settings')
     || pathname.startsWith('/auth')
-  const showAccountActions = pathname === '/for-you' && (Boolean(user) || isPreviewMode)
+  const showAccountActions =
+    (pathname === '/for-you' || pathname === '/dashboard/for-you') && (Boolean(user) || isPreviewMode)
   const previewProfile = getPreviewSettingsProfile()
   const displayedName = isPreviewMode ? previewProfile.name : (user?.name ?? user?.email ?? null)
   const displayedEmail = isPreviewMode ? previewProfile.email : (user?.email ?? null)

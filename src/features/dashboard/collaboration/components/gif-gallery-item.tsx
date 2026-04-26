@@ -136,11 +136,12 @@ export function GifGalleryItem({
             variant="ghost"
             className="h-8 w-8 text-white hover:bg-white/20"
             onClick={handlePlayPause}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
-              <Pause className="h-4 w-4" />
+              <Pause className="h-4 w-4" aria-hidden />
             ) : (
-              <Play className="h-4 w-4 ml-0.5" />
+              <Play className="h-4 w-4 ml-0.5" aria-hidden />
             )}
           </Button>
 
@@ -153,11 +154,12 @@ export function GifGalleryItem({
               variant="ghost"
               className="h-8 w-8 text-white hover:bg-white/20"
               onClick={handleMuteToggle}
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
             >
               {isMuted ? (
-                <VolumeX className="h-4 w-4" />
+                <VolumeX className="h-4 w-4" aria-hidden />
               ) : (
-                <Volume2 className="h-4 w-4" />
+                <Volume2 className="h-4 w-4" aria-hidden />
               )}
             </Button>
 
@@ -168,8 +170,9 @@ export function GifGalleryItem({
               variant="ghost"
               className="h-8 w-8 text-white hover:bg-white/20"
               onClick={handleDownload}
+              aria-label="Download"
             >
-              <Download className="h-4 w-4" />
+              <Download className="h-4 w-4" aria-hidden />
             </Button>
 
             {/* Preview button */}
@@ -180,8 +183,9 @@ export function GifGalleryItem({
                 variant="ghost"
                 className="h-8 w-8 text-white hover:bg-white/20"
                 onClick={handlePreview}
+                aria-label="Open preview"
               >
-                <Maximize2 className="h-4 w-4" />
+                <Maximize2 className="h-4 w-4" aria-hidden />
               </Button>
             )}
           </div>
@@ -203,9 +207,10 @@ export function GifGalleryItem({
           type="button"
           onClick={handlePlayPause}
           className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
+          aria-label="Play video"
         >
           <div className="h-12 w-12 rounded-full bg-white/90 flex items-center justify-center">
-            <Play className="h-5 w-5 text-black ml-0.5" />
+            <Play className="h-5 w-5 text-black ml-0.5" aria-hidden />
           </div>
         </button>
       )}

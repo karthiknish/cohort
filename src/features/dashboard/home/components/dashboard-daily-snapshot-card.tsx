@@ -42,7 +42,7 @@ export function DashboardDailySnapshotCard({
           </CardDescription>
         </div>
         <Button asChild variant="outline" size="sm" className="shrink-0 gap-1.5">
-          <Link href="/for-you">
+          <Link href="/dashboard/for-you">
             Open For You
             <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
           </Link>

@@ -99,38 +99,48 @@ export function useGeocodeResolve(name: string, options?: { enabled?: boolean })
   })
 }
 
+export type GeocodeBatchResult = {
+  coordinates: Record<string, GeocodeCoordinates>
+  /** Location names that could not be resolved (API error or no match). */
+  failedNames: string[]
+}
+
 /**
- * Hook for resolving multiple location names to coordinates in batch
- * Returns a map of location names to their coordinates
+ * Hook for resolving multiple location names to coordinates in batch.
+ * Returns coordinates plus `failedNames` for locations that could not be resolved.
  */
 export function useGeocodeResolveBatch(names: string[], options?: { enabled?: boolean }) {
   const { enabled = true } = options ?? {}
 
   return useQuery({
     queryKey: ['geocode', 'resolve-batch', names.sort().join(',')],
-    queryFn: async (): Promise<Record<string, GeocodeCoordinates>> => {
-      const results: Record<string, GeocodeCoordinates> = {}
-      
+    queryFn: async (): Promise<GeocodeBatchResult> => {
+      const coordinates: Record<string, GeocodeCoordinates> = {}
+      const failedNames: string[] = []
+
       // Process sequentially to avoid rate limiting
       for (const name of names) {
         if (!name) continue
-        
+
         try {
           const coords = await resolveCoordinates(name)
           if (coords) {
-            results[name.toLowerCase().trim()] = coords
+            coordinates[name.toLowerCase().trim()] = coords
+          } else {
+            failedNames.push(name)
           }
         } catch (e) {
           console.error(`Failed to geocode location: ${name}`, e)
+          failedNames.push(name)
         }
-        
+
         // Small delay between requests to respect rate limits
         if (names.indexOf(name) < names.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 100))
+          await new Promise((resolve) => setTimeout(resolve, 100))
         }
       }
-      
-      return results
+
+      return { coordinates, failedNames }
     },
     enabled: enabled && names.length > 0,
     staleTime: 60 * 60 * 1000, // 1 hour

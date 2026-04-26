@@ -307,7 +307,7 @@ export function buildActivityHubModel({
     priorityItems.push({
       id: 'priority-unread', title: 'Unread workspace updates',
       detail: `${unreadActivities.length} unread update${unreadActivities.length === 1 ? '' : 's'} across tasks, projects, and collaboration.`,
-      href: '/dashboard/activity', badge: 'Activity', tone: unreadActivities.length > 5 ? 'warning' : 'neutral',
+      href: '/dashboard/for-you', badge: 'For you', tone: unreadActivities.length > 5 ? 'warning' : 'neutral',
     })
   }
   if (proposalCounts.ready > 0) {

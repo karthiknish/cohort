@@ -58,10 +58,6 @@ export function PlatformComparisonSummaryCard({ metrics, isLoading }: Props) {
 
   const totalSpend = useMemo(() => summaries.reduce((acc, s) => acc + s.spend, 0), [summaries])
 
-  // Render whenever we have data (or we're loading). This makes it useful for clients too,
-  // even if they only have one connected platform.
-  if (!isLoading && summaries.length === 0) return null
-
   return (
     <Card className="shadow-sm">
       <CardHeader>
@@ -84,6 +80,14 @@ export function PlatformComparisonSummaryCard({ metrics, isLoading }: Props) {
             <Skeleton className="h-6 w-full" />
             <Skeleton className="h-6 w-full" />
           </div>
+        ) : summaries.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No ad metrics for this period yet. Connect an ad account in{' '}
+            <Link href="/dashboard/ads" className="font-medium text-primary underline-offset-4 hover:underline">
+              Ads
+            </Link>{' '}
+            or check back after the next sync.
+          </p>
         ) : (
           <div className="overflow-hidden rounded-lg border">
             <div className="grid grid-cols-12 gap-2 border-b bg-muted/30 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -117,7 +121,7 @@ export function PlatformComparisonSummaryCard({ metrics, isLoading }: Props) {
           </div>
         )}
 
-        {!isLoading && summaries.length < 2 && (
+        {!isLoading && summaries.length > 0 && summaries.length < 2 && (
           <p className="mt-3 text-xs text-muted-foreground">Connect multiple platforms to see a comparison.</p>
         )}
       </CardContent>

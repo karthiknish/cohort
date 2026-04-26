@@ -50,7 +50,7 @@ const CORE_DELIVERY_TILES: HubTile[] = [
     icon: Video,
   },
   {
-    href: '/for-you',
+    href: '/dashboard/for-you',
     title: 'For You',
     description: 'Personalized priorities and activity.',
     icon: Home,

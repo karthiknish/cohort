@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronRight, Minus, TrendingDown, TrendingUp } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, type KeyboardEvent } from "react";
 
 import { interactiveTransitionClass } from "@/lib/animation-system";
 import { cn } from "@/lib/utils";
@@ -65,16 +65,37 @@ function InteractiveMetricCard({
 		setHoveredKey(null);
 	}, [setHoveredKey]);
 
+	const cardLabel = metric.drillDownKey
+		? `Drill into ${metric.label}`
+		: metric.onClick
+			? `View details: ${metric.label}`
+			: undefined;
+
+	const handleKeyDown = useCallback(
+		(event: KeyboardEvent<HTMLDivElement>) => {
+			if (!isClickable) return;
+			if (event.key === "Enter" || event.key === " ") {
+				event.preventDefault();
+				handleClick();
+			}
+		},
+		[handleClick, isClickable],
+	);
+
 	return (
 		<Card
+			role={isClickable ? "button" : undefined}
+			tabIndex={isClickable ? 0 : undefined}
+			aria-label={isClickable ? cardLabel : undefined}
 			className={cn(
 				"group",
 				interactiveTransitionClass,
 				isClickable &&
-					"cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
+					"cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] motion-reduce:hover:scale-100 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
 				isHovered && "ring-2 ring-primary/20",
 			)}
-			onClick={handleClick}
+			onClick={isClickable ? handleClick : undefined}
+			onKeyDown={isClickable ? handleKeyDown : undefined}
 			onMouseEnter={handleMouseEnter}
 			onMouseLeave={handleMouseLeave}
 		>

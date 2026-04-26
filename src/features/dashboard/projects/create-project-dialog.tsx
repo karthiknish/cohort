@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useReducer, useState } from 'react'
+import { useCallback, useReducer, useRef, useState } from 'react'
 import { useMutation } from 'convex/react'
 import { LoaderCircle, Plus } from 'lucide-react'
 import { format } from 'date-fns'
@@ -123,6 +123,8 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
 
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [nameError, setNameError] = useState<string | null>(null)
+  const nameInputRef = useRef<HTMLInputElement | null>(null)
 
   const [formState, dispatch] = useReducer(
     projectFormReducer,
@@ -138,6 +140,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
     setOpen(value)
     if (value) {
       // Reset form when opening
+      setNameError(null)
       resetForm()
     }
   }, [resetForm])
@@ -169,7 +172,8 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
     }
 
     if (!formState.name.trim()) {
-      toast({ title: 'Name required', description: 'Give your project a name to get started.', variant: 'destructive' })
+      setNameError('Give your project a name to get started.')
+      nameInputRef.current?.focus()
       return
     }
 
@@ -245,6 +249,7 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
 
   const handleNameChange = useCallback(
     (value: string) => {
+      setNameError(null)
       dispatch({ type: 'setName', value })
     },
     [dispatch]
@@ -319,6 +324,8 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
             loading={loading}
             clients={clients}
             state={formState}
+            nameError={nameError}
+            nameInputRef={nameInputRef}
             onNameChange={handleNameChange}
             onDescriptionChange={handleDescriptionChange}
             onStatusChange={handleStatusChange}

@@ -69,7 +69,7 @@ export default function GlobalError({
         <title>Something went wrong</title>
       </head>
       <body style={BODY_STYLE}>
-        <div style={CONTAINER_STYLE}>
+        <div style={CONTAINER_STYLE} role="alert" aria-live="assertive" aria-atomic="true">
           <h1 style={TITLE_STYLE}>Something went wrong</h1>
           <p style={MESSAGE_STYLE}>A critical error occurred. We have been notified and are looking into it.</p>
           <button type="button" onClick={handleReset} style={ACTION_BUTTON_STYLE}>

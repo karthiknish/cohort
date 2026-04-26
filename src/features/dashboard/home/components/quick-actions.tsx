@@ -103,7 +103,7 @@ const createActions: CreateAction[] = [
   },
   {
     label: 'New Task',
-    href: '/dashboard/tasks?new=true',
+    href: '/dashboard/tasks?action=create',
     icon: CheckSquare,
     description: 'Add task',
   },

@@ -315,7 +315,7 @@ describe('extractCampaignQueryFromIntent', () => {
   it('routes For You, time off, and time tracking to navigate', () => {
     expect(resolveDeterministicAgentIntent('open my for you feed')).toEqual({
       action: 'navigate',
-      route: '/for-you',
+      route: '/dashboard/for-you',
       message: 'Opening For You with your personalized highlights.',
     })
 

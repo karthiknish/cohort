@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type ComponentType } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   BarChart3,
@@ -31,6 +31,7 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '@/shared/ui/command'
+import { useAuth } from '@/shared/contexts/auth-context'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
 
 function CommandMenuRouteItem({
@@ -87,29 +88,75 @@ interface CommandMenuProps {
   onOpenHelp?: () => void
 }
 
-const navigationItems = [
+const navigationItemDefs: Array<{
+  name: string
+  href: string
+  icon: ComponentType<{ className?: string }>
+  description: string
+  /** When set, only these roles see the item (default: all roles) */
+  roles?: readonly ('admin' | 'team' | 'client')[]
+}> = [
   { name: 'Dashboard', href: '/dashboard', icon: Home, description: 'Overview and stats' },
-  { name: 'Clients', href: '/admin/clients', icon: Users, description: 'Manage client workspaces' },
-  { name: 'Activity', href: '/dashboard/activity', icon: Activity, description: 'Recent activity feed' },
+  {
+    name: 'Clients',
+    href: '/admin/clients',
+    icon: Users,
+    description: 'Manage client workspaces',
+    roles: ['admin'] as const,
+  },
+  { name: 'For You', href: '/dashboard/for-you', icon: Activity, description: 'Personalized activity feed' },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, description: 'Performance insights' },
-  { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad platform integrations' },
-  { name: 'Socials', href: '/dashboard/socials', icon: Share2, description: 'Meta social insights & AI suggestions' },
+  { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad platform integrations', roles: ['admin', 'team'] as const },
+  { name: 'Socials', href: '/dashboard/socials', icon: Share2, description: 'Meta social insights & AI suggestions', roles: ['admin', 'team'] as const },
   { name: 'Meetings', href: '/dashboard/meetings', icon: Video, description: 'Schedule and run meetings' },
   { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare, description: 'Task management' },
-  { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Create proposals' },
+  { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Create proposals', roles: ['admin', 'team'] as const },
   { name: 'Collaboration', href: '/dashboard/collaboration', icon: MessageSquare, description: 'Team chat' },
   { name: 'Projects', href: '/dashboard/projects', icon: Briefcase, description: 'Project management' },
 ]
 
-const quickActions = [
-  { name: 'Create proposal', action: '/dashboard/proposals', icon: Plus, description: 'Generate new proposal' },
-  { name: 'Add task', action: '/dashboard/tasks?new=true', icon: Plus, description: 'Create a new task' },
+const quickActions: Array<{
+  name: string
+  action: string
+  icon: ComponentType<{ className?: string }>
+  description: string
+  roles?: readonly ('admin' | 'team' | 'client')[]
+}> = [
+  {
+    name: 'Create proposal',
+    action: '/dashboard/proposals',
+    icon: Plus,
+    description: 'Generate new proposal',
+    roles: ['admin', 'team'] as const,
+  },
+  { name: 'Add task', action: '/dashboard/tasks?action=create', icon: Plus, description: 'Create a new task' },
   { name: 'Open projects', action: '/dashboard/projects', icon: Plus, description: 'Jump to active projects' },
 ]
+
+/** Exposed for tests: command palette entries filtered the same as the rendered menu. */
+export function getNavigationItemsForUserRole(userRole: string | null) {
+  const role = (userRole ?? 'client') as 'admin' | 'team' | 'client'
+  return navigationItemDefs.filter((item) => {
+    if (!item.roles) return true
+    return item.roles.includes(role)
+  })
+}
+
+export function getQuickActionsForUserRole(userRole: string | null) {
+  const role = (userRole ?? 'client') as 'admin' | 'team' | 'client'
+  return quickActions.filter((item) => {
+    if (!item.roles) return true
+    return item.roles.includes(role)
+  })
+}
 
 export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
   const [open, setOpen] = useState(false)
   const router = useRouter()
+  const { user } = useAuth()
+
+  const navigationItems = getNavigationItemsForUserRole(user?.role ?? null)
+  const quickActionItems = getQuickActionsForUserRole(user?.role ?? null)
 
   useKeyboardShortcut({
     combo: 'mod+k',
@@ -139,7 +186,8 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
 
   const handleKeyboardShortcutsSelect = useCallback(() => {
     setOpen(false)
-  }, [])
+    onOpenHelp?.()
+  }, [onOpenHelp])
 
   return (
     <>
@@ -176,7 +224,7 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
           <CommandEmpty>No results found.</CommandEmpty>
 
           <CommandGroup heading="Quick Actions">
-            {quickActions.map((item) => {
+            {quickActionItems.map((item) => {
               const Icon = item.icon
               return (
                 <CommandMenuRouteItem

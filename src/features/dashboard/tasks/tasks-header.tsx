@@ -74,6 +74,7 @@ export function TasksHeader({
               onClick={onNewTaskClick}
               disabled={Boolean(newTaskDisabledReason)}
               className="inline-flex gap-2"
+              aria-describedby={newTaskDisabledReason ? 'tasks-new-task-disabled' : undefined}
             >
               <Plus className="h-4 w-4" aria-hidden />
               New task
@@ -95,6 +96,15 @@ export function TasksHeader({
           <span>search</span>
         </p>
       </div>
+      {newTaskDisabledReason ? (
+        <p
+          id="tasks-new-task-disabled"
+          className="text-balance text-xs text-amber-800 dark:text-amber-200"
+          role="status"
+        >
+          {newTaskDisabledReason}
+        </p>
+      ) : null}
     </div>
   )
 }

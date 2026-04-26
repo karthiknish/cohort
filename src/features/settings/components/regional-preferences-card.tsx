@@ -3,17 +3,20 @@
 import { useCallback, useState } from 'react'
 import { LoaderCircle, Globe } from 'lucide-react'
 
+import { asErrorMessage } from '@/lib/convex-errors'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Label } from '@/shared/ui/label'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { useToast } from '@/shared/ui/use-toast'
 import { usePreferences } from '@/shared/contexts/preferences-context'
+import { Button } from '@/shared/ui/button'
 import { CurrencySelect } from '@/shared/ui/currency-select'
 import type { CurrencyCode } from '@/constants/currencies'
 import { getPreviewSettingsRegionalPreferences } from '@/lib/preview-data'
 
 export function RegionalPreferencesCard() {
-  const { preferences, loading: preferencesLoading, updateCurrency } = usePreferences()
+  const { preferences, loading: preferencesLoading, error: preferencesError, clearError, updateCurrency } =
+    usePreferences()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
   const [savingCurrency, setSavingCurrency] = useState(false)
@@ -37,10 +40,10 @@ export function RegionalPreferencesCard() {
           description: `Your default currency has been changed to ${value}.`,
         })
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         toast({
-          title: 'Error',
-          description: 'Failed to update currency preference.',
+          title: 'Could not update currency',
+          description: asErrorMessage(err),
           variant: 'destructive',
         })
       })
@@ -59,6 +62,19 @@ export function RegionalPreferencesCard() {
         <CardDescription>Set your preferred currency for displaying financial data across the dashboard.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {preferencesError ? (
+          <div
+            role="alert"
+            className="flex flex-col gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <span>{preferencesError}</span>
+              <Button type="button" variant="ghost" size="sm" className="shrink-0 text-destructive" onClick={clearError}>
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <Label htmlFor="currency-select">Default currency</Label>

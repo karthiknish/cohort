@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { RefreshCw, Target, Users, Plus } from 'lucide-react'
+import { AlertTriangle, RefreshCw, Target, Users, Plus } from 'lucide-react'
 
 import { useAction } from 'convex/react'
 
@@ -9,6 +9,7 @@ import { adsTargetingApi } from '@/lib/convex-api'
 import { logError } from '@/lib/convex-errors'
 import { useAuth } from '@/shared/contexts/auth-context'
 
+import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -89,9 +90,11 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   }, [targeting])
 
   // Use TanStack Query for batch geocoding unknown locations
-  const { data: resolvedCoordinates = {} } = useGeocodeResolveBatch(unknownLocationNames, {
+  const { data: geocodeBatch } = useGeocodeResolveBatch(unknownLocationNames, {
     enabled: unknownLocationNames.length > 0 && hasLoaded,
   })
+  const resolvedCoordinates = geocodeBatch?.coordinates ?? {}
+  const geocodeFailedNames = geocodeBatch?.failedNames ?? []
 
   const fetchTargeting = useCallback(async () => {
     if (!canLoad) {
@@ -383,14 +386,25 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
               className="h-9 w-9"
               onClick={fetchTargeting}
               disabled={loading}
+              aria-label="Refresh audience targeting"
             >
-              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} aria-hidden />
             </Button>
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {geocodeFailedNames.length > 0 ? (
+          <Alert variant="default" className="border-amber-500/40 bg-amber-500/10">
+            <AlertTriangle className="h-4 w-4 text-amber-800 dark:text-amber-200" />
+            <AlertTitle>Some locations could not be placed on the map</AlertTitle>
+            <AlertDescription>
+              The map may be incomplete for: {geocodeFailedNames.join(', ')}. Check spelling or try a broader place
+              name.
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <LocationTargetingSection
             targeting={targeting}

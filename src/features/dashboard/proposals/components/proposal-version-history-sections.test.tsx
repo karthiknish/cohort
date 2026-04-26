@@ -3,6 +3,16 @@ import { renderToStaticMarkup } from 'react-dom/server'
 
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('@/shared/ui/alert-dialog', () => ({
+  AlertDialog: ({ children }: { children: ReactNode }) => <div data-testid="alert-dialog">{children}</div>,
+  AlertDialogCancel: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  AlertDialogContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  AlertDialogDescription: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  AlertDialogFooter: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  AlertDialogHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  AlertDialogTitle: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}))
+
 vi.mock('@/shared/ui/dialog', () => ({
   DialogContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DialogDescription: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -71,17 +81,18 @@ describe('proposal version history sections', () => {
       <>
         <ProposalVersionPreviewDialog currentFormData={previewCurrentFormData} previewVersion={version as never} setPreviewVersion={vi.fn()} />
         <ProposalVersionRestoreDialog
+          open
+          onOpenChange={vi.fn()}
           handleRestoreVersion={vi.fn()}
           restoreConfirmVersion={version as never}
           restoring={false}
-          setRestoreConfirmVersion={vi.fn()}
         />
       </>,
     )
 
     expect(markup).toContain('Version 3')
-    expect(markup).toContain('Restore version?')
-    expect(markup).toContain('Restore')
+    expect(markup).toContain('Replace form with this version?')
+    expect(markup).toContain('Yes, restore this version')
     expect(markup).toContain('Close')
   })
 })

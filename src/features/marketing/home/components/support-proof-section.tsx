@@ -65,7 +65,7 @@ export function SupportProofSection() {
             <FadeIn key={point.title}>
               <Card
                 className={cn(
-                  'h-full border-border/60 bg-background/90 transition-all duration-200',
+                  'h-full border-border/60 bg-background/90 transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
                   'hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-lg hover:shadow-primary/6',
                 )}
               >

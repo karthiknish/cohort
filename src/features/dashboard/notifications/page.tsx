@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import {
   BellOff,
@@ -18,6 +18,7 @@ import {
 import { useRouter } from 'next/navigation'
 
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { useConvex, useMutation } from 'convex/react'
 
 type NotificationsCursor = {
@@ -50,6 +51,7 @@ import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
 import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 
 const PAGE_SIZE = 25
+const VIRTUAL_NOTIFICATIONS_THRESHOLD = 24
 const FILTER_VALUES = ['all', 'unread', 'mentions', 'system'] as const
 const NOTIFICATIONS_PAGE_FALLBACK = (
   <RevealTransitionFallback>
@@ -384,6 +386,22 @@ function NotificationsPageContent() {
     return formatDistanceToNow(date, { addSuffix: true })
   }, [])
 
+  const notificationScrollRef = useRef<HTMLDivElement | null>(null)
+  const shouldVirtualizeNotifications = notifications.length > VIRTUAL_NOTIFICATIONS_THRESHOLD
+  const notificationVirtualizer = useVirtualizer({
+    count: shouldVirtualizeNotifications ? notifications.length : 0,
+    getScrollElement: () => notificationScrollRef.current,
+    estimateSize: () => 128,
+    overscan: 6,
+  })
+
+  useEffect(() => {
+    if (!shouldVirtualizeNotifications) {
+      return
+    }
+    notificationVirtualizer.measure()
+  }, [notificationVirtualizer, shouldVirtualizeNotifications, notifications.length])
+
   return (
     <div className={DASHBOARD_THEME.layout.container}>
       <div className="flex items-center justify-between">
@@ -518,23 +536,62 @@ function NotificationsPageContent() {
                   </div>
                 </div>
               ) : notifications.length > 0 ? (
-                <ScrollArea className="h-[calc(100vh-24rem)]">
-                  <div className="space-y-2">
-                    {notifications.map((notification) => (
-                      <NotificationRow
-                        key={notification.id}
-                        ackInFlight={ackInFlight}
-                        getNotificationCategory={getNotificationCategory}
-                        getNotificationIcon={getNotificationIcon}
-                        handleDismiss={handleDismiss}
-                        handleMarkAsRead={handleMarkAsRead}
-                        handleOpenNotification={handleOpenNotification}
-                        notification={notification}
-                        renderTimestamp={renderTimestamp}
-                      />
-                    ))}
+                shouldVirtualizeNotifications ? (
+                  <div
+                    ref={notificationScrollRef}
+                    className="h-[calc(100vh-24rem)] overflow-y-auto"
+                  >
+                    <div
+                      className="relative w-full"
+                      style={{ height: notificationVirtualizer.getTotalSize() }}
+                    >
+                      {notificationVirtualizer.getVirtualItems().map((vi) => {
+                        const notification = notifications[vi.index]
+                        if (!notification) {
+                          return null
+                        }
+                        return (
+                          <div
+                            key={notification.id}
+                            data-index={vi.index}
+                            ref={notificationVirtualizer.measureElement}
+                            className="absolute left-0 top-0 w-full pb-2"
+                            style={{ transform: `translateY(${vi.start}px)` }}
+                          >
+                            <NotificationRow
+                              ackInFlight={ackInFlight}
+                              getNotificationCategory={getNotificationCategory}
+                              getNotificationIcon={getNotificationIcon}
+                              handleDismiss={handleDismiss}
+                              handleMarkAsRead={handleMarkAsRead}
+                              handleOpenNotification={handleOpenNotification}
+                              notification={notification}
+                              renderTimestamp={renderTimestamp}
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                </ScrollArea>
+                ) : (
+                  <ScrollArea className="h-[calc(100vh-24rem)]">
+                    <div className="space-y-2">
+                      {notifications.map((notification) => (
+                        <NotificationRow
+                          key={notification.id}
+                          ackInFlight={ackInFlight}
+                          getNotificationCategory={getNotificationCategory}
+                          getNotificationIcon={getNotificationIcon}
+                          handleDismiss={handleDismiss}
+                          handleMarkAsRead={handleMarkAsRead}
+                          handleOpenNotification={handleOpenNotification}
+                          notification={notification}
+                          renderTimestamp={renderTimestamp}
+                        />
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )
               ) : null}
 
               {!loading && notifications.length > 0 && nextCursor && (

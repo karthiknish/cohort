@@ -22,7 +22,7 @@ const onboardingSteps = [
   {
     title: 'Create your first task',
     description: 'Capture your first deliverable and assign ownership so execution starts immediately.',
-    href: '/dashboard/tasks?new=true',
+    href: '/dashboard/tasks?action=create',
     actionLabel: 'Go to Tasks',
   },
 ] as const

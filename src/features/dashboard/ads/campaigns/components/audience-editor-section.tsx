@@ -92,8 +92,9 @@ export function AudienceEditorSection({
                   size="icon"
                   className="h-7 w-7"
                   onClick={handleEditInterests}
+                  aria-label="Edit interests"
                 >
-                  <Edit2 className="h-3.5 w-3.5" />
+                  <Edit2 className="h-3.5 w-3.5" aria-hidden />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Edit interests</TooltipContent>

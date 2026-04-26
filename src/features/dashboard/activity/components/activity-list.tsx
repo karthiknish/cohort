@@ -1,16 +1,18 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { format, isToday, isYesterday } from 'date-fns'
 import { Calendar, Search, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { Badge } from '@/shared/ui/badge'
-import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { ActivityItem } from './activity-item'
 import type { EnhancedActivity, SortOption, DateRangeOption, ActivityType, StatusFilter } from '../types'
+
+const VIRTUAL_ACTIVITY_ROW_THRESHOLD = 48
 
 interface ActivityListProps {
   activities: EnhancedActivity[]
@@ -172,6 +174,42 @@ export function ActivityList({
     window.dispatchEvent(new CustomEvent('clear-activity-filters'))
   }, [])
 
+  const activityFlatRows = useMemo(() => {
+    const rows: Array<
+      | { type: 'header'; key: string; dateLabel: string; count: number }
+      | { type: 'item'; key: string; activity: EnhancedActivity }
+    > = []
+    for (const dateGroup of groupKeys) {
+      const dateGroupActivities = groupedActivities[dateGroup] ?? []
+      rows.push({
+        type: 'header',
+        key: `h-${dateGroup}`,
+        dateLabel: dateGroup,
+        count: dateGroupActivities.length,
+      })
+      for (const activity of dateGroupActivities) {
+        rows.push({ type: 'item', key: activity.id, activity })
+      }
+    }
+    return rows
+  }, [groupKeys, groupedActivities])
+
+  const shouldVirtualizeActivity = activityFlatRows.length > VIRTUAL_ACTIVITY_ROW_THRESHOLD
+  const activityScrollRef = useRef<HTMLDivElement | null>(null)
+  const activityVirtualizer = useVirtualizer({
+    count: shouldVirtualizeActivity ? activityFlatRows.length : 0,
+    getScrollElement: () => activityScrollRef.current,
+    estimateSize: () => 120,
+    overscan: 5,
+  })
+
+  useEffect(() => {
+    if (!shouldVirtualizeActivity) {
+      return
+    }
+    activityVirtualizer.measure()
+  }, [activityFlatRows, activityVirtualizer, shouldVirtualizeActivity, sortedActivities.length])
+
   return (
     <div className={cn('space-y-4', className)}>
       {/* Select all checkbox header */}
@@ -195,7 +233,10 @@ export function ActivityList({
       )}
 
       {/* Activity list */}
-      <ScrollArea className="h-[500px] sm:h-[600px]">
+      <div
+        ref={shouldVirtualizeActivity ? activityScrollRef : undefined}
+        className="h-[500px] sm:h-[600px] overflow-y-auto"
+      >
         <div className="p-4 sm:p-6">
           {loading && sortedActivities.length === 0 ? (
             <div className="space-y-8">
@@ -246,6 +287,63 @@ export function ActivityList({
                   Clear all filters
                 </Button>
               )}
+            </div>
+          ) : shouldVirtualizeActivity ? (
+            <div
+              className="relative w-full"
+              style={{ height: activityVirtualizer.getTotalSize() }}
+            >
+              {activityVirtualizer.getVirtualItems().map((vi) => {
+                const row = activityFlatRows[vi.index]
+                if (!row) {
+                  return null
+                }
+                if (row.type === 'header') {
+                  return (
+                    <div
+                      key={row.key}
+                      data-index={vi.index}
+                      ref={activityVirtualizer.measureElement}
+                      className="absolute left-0 top-0 w-full border-b bg-background/95 py-2 pr-2 backdrop-blur"
+                      style={{ transform: `translateY(${vi.start}px)` }}
+                    >
+                      <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        {row.dateLabel}
+                        <Badge variant="secondary" className="ml-1 rounded-full">
+                          {row.count}
+                        </Badge>
+                      </h3>
+                    </div>
+                  )
+                }
+                return (
+                  <div
+                    key={row.key}
+                    data-index={vi.index}
+                    ref={activityVirtualizer.measureElement}
+                    className="absolute left-0 top-0 w-full ml-2 border-l-2 border-muted pl-4 sm:pl-6"
+                    style={{ transform: `translateY(${vi.start}px)` }}
+                  >
+                    <div className="cv-scroll-item-activity pt-2 sm:pt-3">
+                      <ActivityItem
+                        activity={row.activity}
+                        isSelected={selectedActivities.has(row.activity.id)}
+                        showReactions={showReactions}
+                        comments={comments[row.activity.id] || []}
+                        onSelectionChange={onSelectionChange}
+                        onTogglePin={onTogglePin}
+                        onMarkAsRead={onMarkAsRead}
+                        onAddReaction={onAddReaction}
+                        onAddComment={onAddComment}
+                        onShowReactionsChange={setShowReactions}
+                        onViewDetails={onViewDetails}
+                        currentUserName={currentUserName}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           ) : (
             <div className="space-y-8">
@@ -308,7 +406,7 @@ export function ActivityList({
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   )
 }

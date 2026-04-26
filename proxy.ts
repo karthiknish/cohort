@@ -124,7 +124,7 @@ export async function proxy(request: NextRequest) {
 
   if (screenRecordingAuthBypassEnabled && pathname === '/dashboard') {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/for-you'
+    redirectUrl.pathname = '/dashboard/for-you'
     return NextResponse.redirect(redirectUrl)
   }
 
@@ -146,7 +146,7 @@ export async function proxy(request: NextRequest) {
   if (pathname === '/') {
     if (hasSession) {
       const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/for-you'
+      redirectUrl.pathname = '/dashboard/for-you'
       return NextResponse.redirect(redirectUrl)
     }
     // No valid session - allow access to home/login page
@@ -170,7 +170,7 @@ export async function proxy(request: NextRequest) {
   // tree renders so dev profilers do not mount the redirect-only page.
   if (pathname === '/dashboard') {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/for-you'
+    redirectUrl.pathname = '/dashboard/for-you'
     return NextResponse.redirect(redirectUrl)
   }
 

@@ -42,16 +42,6 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
     actions: ['add client', 'create client', 'view clients', 'manage accounts'],
   },
   
-  // Activity
-  {
-    route: '/dashboard/activity',
-    name: 'Activity',
-    description: 'Recent activity feed with team updates, changes, and events',
-    keywords: ['activity', 'activities', 'recent', 'feed', 'updates', 'log', 'history', 'timeline', 'events'],
-    aliases: ['activity feed', 'recent activity', 'activity log', 'event history', 'what happened'],
-    actions: ['check activity', 'see updates', 'view history'],
-  },
-  
   // Analytics
   {
     route: '/dashboard/analytics',
@@ -121,14 +111,49 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
     actions: ['review proposal outcomes', 'check win rate', 'see proposal trends'],
   },
   
-  // For You (personalized workspace)
+  // For You (activity feed and personalized highlights; canonical route)
   {
-    route: '/for-you',
+    route: '/dashboard/for-you',
     name: 'For You',
-    description: 'Personalized recommendations, digest, and workspace highlights',
-    keywords: ['for you', 'personalized', 'digest', 'highlights', 'recommendations', 'my feed', 'whats new', 'what is new'],
-    aliases: ['for you page', 'personal feed', 'workspace digest', 'cohorts for you'],
-    actions: ['see what matters', 'check recommendations', 'open my digest'],
+    description: 'Activity feed, personalized recommendations, digest, and workspace highlights',
+    keywords: [
+      'for you',
+      'personalized',
+      'digest',
+      'highlights',
+      'recommendations',
+      'my feed',
+      'whats new',
+      'what is new',
+      'activity',
+      'activities',
+      'recent',
+      'feed',
+      'updates',
+      'log',
+      'history',
+      'timeline',
+      'events',
+    ],
+    aliases: [
+      'for you page',
+      'personal feed',
+      'workspace digest',
+      'cohorts for you',
+      'activity feed',
+      'recent activity',
+      'activity log',
+      'event history',
+      'what happened',
+    ],
+    actions: [
+      'see what matters',
+      'check recommendations',
+      'open my digest',
+      'check activity',
+      'see updates',
+      'view history',
+    ],
   },
 
   // Time off

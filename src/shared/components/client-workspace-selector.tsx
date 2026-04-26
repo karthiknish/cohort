@@ -86,8 +86,9 @@ function WorkspaceRow({
         className="h-8 w-8 rounded-full text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
         onClick={handleRemove}
         disabled={disabled}
+        aria-label={`Remove ${client.name} workspace`}
       >
-        <Trash className="h-4 w-4" />
+        <Trash className="h-4 w-4" aria-hidden />
       </Button>
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, type ChangeEvent, type KeyboardEvent } from 'react'
+import { useCallback, type ChangeEvent, type KeyboardEvent, type RefObject } from 'react'
 import { format } from 'date-fns'
 import { Calendar as CalendarIcon, Plus, Tag, X } from 'lucide-react'
 
@@ -31,6 +31,8 @@ type CreateProjectFormFieldsProps = {
   loading: boolean
   clients: Array<{ id: string; name: string }>
   state: ProjectFormState
+  nameError?: string | null
+  nameInputRef?: RefObject<HTMLInputElement | null>
   onNameChange: (value: string) => void
   onDescriptionChange: (value: string) => void
   onStatusChange: (value: ProjectStatus) => void
@@ -78,28 +80,34 @@ function ProjectTagChip({
 
 function ProjectDateField({
   disabled,
+  fieldId,
   label,
   onSelect,
   selected,
   disabledDate,
 }: {
   disabled: boolean
+  fieldId: string
   label: string
   onSelect: (value: Date | undefined) => void
   selected: Date | undefined
   disabledDate: (date: Date) => boolean
 }) {
+  const triggerId = `${fieldId}-trigger`
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label htmlFor={triggerId}>{label}</Label>
       <Popover>
         <PopoverTrigger asChild>
           <Button
+            id={triggerId}
+            type="button"
             variant="outline"
             className={cn('w-full justify-start text-left font-normal', !selected && 'text-muted-foreground')}
             disabled={disabled}
+            aria-label={`${label} — open calendar`}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
+            <CalendarIcon className="mr-2 h-4 w-4" aria-hidden />
             {selected ? format(selected, 'PPP') : <span>Pick a date</span>}
           </Button>
         </PopoverTrigger>
@@ -121,6 +129,8 @@ export function CreateProjectFormFields({
   loading,
   clients,
   state,
+  nameError = null,
+  nameInputRef,
   onNameChange,
   onDescriptionChange,
   onStatusChange,
@@ -167,12 +177,20 @@ export function CreateProjectFormFields({
           Project name <span className="text-destructive">*</span>
         </Label>
         <Input
+          ref={nameInputRef}
           id="project-name"
           placeholder="e.g., Q1 Marketing Campaign"
           value={state.name}
           onChange={handleNameChange}
           disabled={loading}
+          aria-invalid={Boolean(nameError)}
+          aria-describedby={nameError ? 'project-name-error' : undefined}
         />
+        {nameError ? (
+          <p id="project-name-error" className="text-xs text-destructive" role="status">
+            {nameError}
+          </p>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -225,6 +243,7 @@ export function CreateProjectFormFields({
       <div className="grid grid-cols-2 gap-4">
         <ProjectDateField
           disabled={loading}
+          fieldId="project-start-date"
           label="Start date"
           onSelect={onStartDateChange}
           selected={state.startDate}
@@ -233,6 +252,7 @@ export function CreateProjectFormFields({
 
         <ProjectDateField
           disabled={loading}
+          fieldId="project-end-date"
           label="End date"
           onSelect={onEndDateChange}
           selected={state.endDate}

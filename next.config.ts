@@ -47,7 +47,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/dashboard/activity',
-        destination: '/for-you',
+        destination: '/dashboard/for-you',
         permanent: false,
       },
     ]

@@ -637,7 +637,7 @@ function resolveDeterministicNavigationIntent(message: string, context?: AgentRe
   const normalized = normalizeIntentText(message)
 
   if (includesAnyPhrase(normalized, ['for you', 'my feed', 'personalized digest', 'workspace digest', 'recommendations for me'])) {
-    return { route: '/for-you', message: 'Opening For You with your personalized highlights.' }
+    return { route: '/dashboard/for-you', message: 'Opening For You with your personalized highlights.' }
   }
 
   if (

@@ -1,6 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
 import {
-  Activity,
   BarChart3,
   BriefcaseBusiness,
   Bell,
@@ -93,7 +92,7 @@ export const DASHBOARD_NAVIGATION_GROUPS: NavigationGroup[] = [
     id: 'core',
     label: 'Workspace',
     items: [
-      { name: 'For You', href: '/for-you', icon: Home, description: 'Your day and priorities' },
+      { name: 'For You', href: '/dashboard/for-you', icon: Home, description: 'Your day and priorities' },
       { name: 'Projects', href: '/dashboard/projects', icon: BriefcaseBusiness, description: 'Client delivery and milestones' },
       { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare, description: 'Assignments and work tracking' },
       { name: 'Collaboration', href: '/dashboard/collaboration', icon: MessageSquare, description: 'Chat and shared context' },
@@ -120,7 +119,6 @@ export const DASHBOARD_NAVIGATION_GROUPS: NavigationGroup[] = [
       { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad integrations and pacing', roles: ['admin', 'team'] },
       { name: 'Socials', href: '/dashboard/socials', icon: Share2, description: 'Social and content sync', roles: ['admin', 'team'] },
       { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Proposals and decks for clients', roles: ['admin', 'team'] },
-      { name: 'Activity', href: '/dashboard/activity', icon: Activity, description: 'Recent actions and audit trail' },
     ],
   },
 ]

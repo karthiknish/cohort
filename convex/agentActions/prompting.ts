@@ -94,7 +94,7 @@ When the user wants to CREATE or UPDATE data, use:
 
 ## Extra destinations (navigate only — no matching execute op)
 Use **navigate** with an exact \`route\` when the user only wants a screen opened (see "Available Dashboard Pages" in the system prompt). Frequent examples:
-- **For You** (personalized digest) → \`/for-you\`
+- **For You** (personalized digest) → \`/dashboard/for-you\`
 - **Time off / PTO** → \`/dashboard/time-off\`
 - **Time tracking / timesheet** → \`/dashboard/tasks?operations=time\`
 - **Proposal analytics** (funnel / win rate) → \`/dashboard/proposals/analytics\`
@@ -187,7 +187,7 @@ If the request is vague, underspecified, or refers to "this/that/it" without eno
 - "list clients" / "show all clients" / "workspace clients" → EXECUTE listWorkspaceClients
 - "check my numbers" or "see performance" → navigate to Analytics
 - "show tasks", "my to-do list" → navigate to Tasks
-- "for you", "my digest", "personalized feed" → navigate to /for-you
+- "for you", "my digest", "personalized feed" → navigate to /dashboard/for-you
 - "time off", "pto", "vacation request" → navigate to /dashboard/time-off
 - "timesheet", "log time", "billable hours" → navigate to /dashboard/tasks?operations=time
 - "proposal analytics", "proposal win rate" → navigate to /dashboard/proposals/analytics

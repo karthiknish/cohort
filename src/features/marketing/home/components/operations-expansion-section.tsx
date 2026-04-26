@@ -102,7 +102,7 @@ export function OperationsExpansionSection() {
                     key={pillar.title}
                     href={pillar.href}
                     className={cn(
-                      'group relative rounded-2xl border border-border/50 bg-muted/25 p-4 transition-all duration-200',
+                      'group relative rounded-2xl border border-border/50 bg-muted/25 p-4 transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
                       'hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted/40 hover:shadow-md',
                     )}
                   >
@@ -115,7 +115,7 @@ export function OperationsExpansionSection() {
                     <p className="mt-4 font-medium text-foreground">{pillar.title}</p>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">{pillar.description}</p>
                     <ArrowUpRight
-                      className="absolute right-3 top-3 h-4 w-4 text-primary/60 opacity-0 transition-all group-hover:opacity-100"
+                      className="absolute right-3 top-3 h-4 w-4 text-primary/60 opacity-0 transition-all motion-reduce:transition-none group-hover:opacity-100"
                       aria-hidden
                     />
                   </Link>

@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { FadeIn } from '@/shared/ui/animate-in'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
@@ -23,7 +24,13 @@ export default function SocialsPage() {
     setDateRange,
   } = useSocialsPageController()
 
-  const [activeSurface, setActiveSurface] = useState<'facebook' | 'instagram'>('facebook')
+  const surfaceTab = usePersistedTab({
+    defaultValue: 'facebook',
+    allowedValues: useMemo(() => ['facebook', 'instagram'] as const, []),
+    param: 'surface',
+    storageNamespace: 'dashboard:socials',
+    syncToUrl: true,
+  })
 
   const connected = connections.status?.connected ?? false
 
@@ -31,9 +38,14 @@ export default function SocialsPage() {
     void connections.handleRequestSync()
   }, [connections])
 
-  const handleSurfaceChange = useCallback((value: string) => {
-    setActiveSurface(value as 'facebook' | 'instagram')
-  }, [])
+  const handleSurfaceChange = useCallback(
+    (value: string) => {
+      if (value === 'facebook' || value === 'instagram') {
+        surfaceTab.setValue(value)
+      }
+    },
+    [surfaceTab],
+  )
 
   return (
     <div className={DASHBOARD_THEME.layout.container}>
@@ -64,7 +76,7 @@ export default function SocialsPage() {
 
       <FadeIn>
         <Tabs
-          value={activeSurface}
+          value={surfaceTab.value}
           onValueChange={handleSurfaceChange}
           className="space-y-6"
         >

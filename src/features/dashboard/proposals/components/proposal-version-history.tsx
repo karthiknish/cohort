@@ -249,14 +249,13 @@ export function ProposalVersionHistory({
         <ProposalVersionPreviewDialog currentFormData={currentFormData} previewVersion={previewVersion} setPreviewVersion={setPreviewVersion} />
       </Dialog>
 
-      <Dialog open={Boolean(restoreConfirmVersion)} onOpenChange={handleRestoreOpenChange}>
-        <ProposalVersionRestoreDialog
-          handleRestoreVersion={handleRestoreVersion}
-          restoreConfirmVersion={restoreConfirmVersion}
-          restoring={restoring}
-          setRestoreConfirmVersion={setRestoreConfirmVersion}
-        />
-      </Dialog>
+      <ProposalVersionRestoreDialog
+        open={Boolean(restoreConfirmVersion)}
+        onOpenChange={handleRestoreOpenChange}
+        handleRestoreVersion={handleRestoreVersion}
+        restoreConfirmVersion={restoreConfirmVersion}
+        restoring={restoring}
+      />
     </>
   )
 }

@@ -1,5 +1,5 @@
 import { ShellRouteTransition } from '@/shared/ui/page-transition'
 
-export default function ForYouTemplate({ children }: { children: React.ReactNode }) {
+export default function DashboardForYouTemplate({ children }: { children: React.ReactNode }) {
   return <ShellRouteTransition>{children}</ShellRouteTransition>
 }

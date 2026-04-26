@@ -177,8 +177,9 @@ export function ImageUploader({
               className="h-8 w-8 bg-background/90 hover:bg-background"
               onClick={handleClick}
               disabled={disabled || isUploading}
+              aria-label="Replace image"
             >
-              <ImagePlus className="h-4 w-4" />
+              <ImagePlus className="h-4 w-4" aria-hidden />
             </Button>
             <Button
               type="button"
@@ -187,8 +188,9 @@ export function ImageUploader({
               className="h-8 w-8"
               onClick={handleRemove}
               disabled={disabled || isUploading}
+              aria-label="Remove image"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" aria-hidden />
             </Button>
           </div>
         </div>

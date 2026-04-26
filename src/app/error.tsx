@@ -7,7 +7,10 @@ import { AlertTriangle, Home, RefreshCw } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 
-export default function ForYouError({
+/**
+ * Root segment error boundary (marketing and other top-level routes under `app/`).
+ */
+export default function RootAppError({
   error,
   unstable_retry,
   reset,
@@ -17,7 +20,7 @@ export default function ForYouError({
   reset?: () => void
 }) {
   useEffect(() => {
-    console.error('[ForYouErrorBoundary]', error)
+    console.error('[RootAppError]', error)
   }, [error])
 
   const handleRetry = useCallback(() => {
@@ -25,26 +28,32 @@ export default function ForYouError({
       unstable_retry()
       return
     }
-
     if (typeof reset === 'function') {
       reset()
     }
   }, [reset, unstable_retry])
 
+  const isDevelopment = process.env.NODE_ENV === 'development'
+
   return (
     <div className="flex min-h-[60vh] items-center justify-center bg-muted/20 p-4">
-      <Card className="max-w-lg border-muted/60">
+      <Card className="max-w-lg border-muted/60" role="alert" aria-live="assertive" aria-atomic="true">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="h-8 w-8 text-destructive" />
+            <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden />
           </div>
-          <CardTitle className="text-xl">For You failed to load</CardTitle>
+          <CardTitle className="text-xl">Something went wrong</CardTitle>
           <CardDescription>
-            We could not render this workspace summary right now. Try again to reload the page segment.
+            This page could not be displayed. You can try again or return home.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Button className="w-full" onClick={handleRetry}>
+          {isDevelopment ? (
+            <p className="wrap-break-word rounded-md border border-destructive/30 bg-destructive/5 p-2 text-left text-xs font-mono text-destructive">
+              {error.message}
+            </p>
+          ) : null}
+          <Button className="w-full" onClick={handleRetry} type="button">
             <RefreshCw className="mr-2 h-4 w-4" />
             Try again
           </Button>
@@ -55,9 +64,7 @@ export default function ForYouError({
             </Link>
           </Button>
           {error.digest ? (
-            <p className="pt-2 text-center text-xs text-muted-foreground">
-              Error ID: {error.digest}
-            </p>
+            <p className="pt-2 text-center text-xs text-muted-foreground">Error ID: {error.digest}</p>
           ) : null}
         </CardContent>
       </Card>

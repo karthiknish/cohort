@@ -100,6 +100,9 @@ function getInitialTab(): 'signin' | 'signup' {
 function resolveDashboardDestination(): string {
   if (typeof window !== 'undefined') {
     const lastTab = window.localStorage.getItem('cohorts_last_tab')
+    if (lastTab === '/for-you') {
+      return '/dashboard/for-you'
+    }
     if (lastTab?.startsWith('/dashboard')) {
       return lastTab
     }

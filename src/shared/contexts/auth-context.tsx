@@ -251,6 +251,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         currentUserRef.current = null
         lastAppliedUserKeyRef.current = null
         setBetterAuthUserId(null)
+        setAuthError(
+          createAuthError(
+            'SERVER_ERROR',
+            error instanceof Error ? error.message : 'Sign out did not complete on the server.',
+            undefined,
+            true
+          )
+        )
+        throw error
       })
       .finally(() => {
         setLoading(false)

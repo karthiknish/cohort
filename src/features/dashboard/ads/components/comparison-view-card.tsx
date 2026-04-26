@@ -28,7 +28,8 @@ export function ComparisonViewCard({
         defaultValue: 'period',
         allowedValues: useMemo(() => ['period', 'platform'] as const, []),
         storageNamespace: 'dashboard:ads:comparison',
-        syncToUrl: false,
+        param: 'compareTab',
+        syncToUrl: true,
     })
 
     return loading

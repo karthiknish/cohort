@@ -325,10 +325,18 @@ function generateBreadcrumbItems(
       break
     }
 
+    case 'for-you':
+      items.push({
+        label: 'For You',
+        href: '/dashboard/for-you',
+        icon: Activity,
+      })
+      break
+
     case 'activity':
       items.push({
-        label: 'Activity',
-        href: '/dashboard/activity',
+        label: 'For You',
+        href: '/dashboard/for-you',
         icon: Activity,
       })
       break

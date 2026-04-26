@@ -3,8 +3,10 @@
 import { useRouter } from 'next/navigation'
 import { useCallback } from 'react'
 
+import { asErrorMessage } from '@/lib/convex-errors'
 import { Toast, ToastAction, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from '@/shared/ui/toast'
 import { useToast } from '@/shared/ui/use-toast'
+import { toast as showSonnerToast } from '@/shared/ui/sonner'
 
 type LegacyToast = ReturnType<typeof useToast>['toasts'][number]
 
@@ -72,8 +74,8 @@ function LegacyToastItem({ dismiss, toast }: { dismiss: (toastId?: string) => vo
         dismiss(id)
       }
     } catch (error) {
-      // If navigation fails, keep toast
       console.error('[toast] navigation failed', error)
+      showSonnerToast.error('Could not open link', { description: asErrorMessage(error) })
     }
   }, [dismiss, href, id, onNavigate, router])
 
@@ -84,8 +86,8 @@ function LegacyToastItem({ dismiss, toast }: { dismiss: (toastId?: string) => vo
       await onMarkRead()
       dismiss(id)
     } catch (error) {
-      // Keep toast open if marking as read fails
       console.error('[toast] mark as read failed', error)
+      showSonnerToast.error('Could not mark as read', { description: asErrorMessage(error) })
     }
   }, [dismiss, id, onMarkRead])
 

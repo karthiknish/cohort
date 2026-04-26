@@ -234,11 +234,13 @@ export function GlobalSearch({
         <div className="flex items-center gap-2 p-4 border-b">
           <Search className="h-5 w-5 text-muted-foreground" />
           <Input
+            id="global-search-dialog-query"
             value={query}
             onChange={handleQueryChange}
             placeholder="Search across all items…"
             className="flex-1"
             onKeyDown={handleSearchInputKeyDown}
+            aria-label="Search across workspace"
           />
           {query && (
             <Button
@@ -489,14 +491,16 @@ export function QuickSearchInput({
         value={value}
         onChange={handleChange}
         className="pl-9"
+        aria-label={placeholder}
       />
       {value && (
         <button
           type="button"
           onClick={handleClear}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          aria-label="Clear search"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" aria-hidden />
         </button>
       )}
     </form>

@@ -7,6 +7,7 @@ import { NavigationBreadcrumbs } from '@/shared/layout/navigation/breadcrumbs'
 
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { ClientAccessGate } from '@/features/dashboard/home/components/client-access-gate'
+import { DashboardAgencyRoutesGate } from '@/features/dashboard/home/components/dashboard-agency-routes-gate'
 import { DashboardMainRoleFrame } from '@/features/dashboard/home/components/dashboard-main-role-frame'
 import { PreviewDataBanner } from '@/features/dashboard/home/components/preview-data-banner'
 import { AgentModeDynamic } from '@/shared/components/agent-mode/agent-mode-dynamic'
@@ -36,7 +37,7 @@ export default async function DashboardLayout({
                       <NavigationBreadcrumbs />
                       <PreviewDataBanner />
                       <ClientAccessGate>
-                        {children}
+                        <DashboardAgencyRoutesGate>{children}</DashboardAgencyRoutesGate>
                       </ClientAccessGate>
                     </DashboardMainRoleFrame>
                   </main>

@@ -304,8 +304,9 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
               className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 disabled:opacity-30"
               onClick={handlePreviousSlide}
               disabled={currentSlide === 0}
+              aria-label="Previous slide"
             >
-              <ChevronLeft className="h-6 w-6" />
+              <ChevronLeft className="h-6 w-6" aria-hidden />
             </Button>
             <Button
               variant="ghost"
@@ -313,8 +314,9 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
               className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 disabled:opacity-30"
               onClick={handleNextSlide}
               disabled={currentSlide === slides.length - 1}
+              aria-label="Next slide"
             >
-              <ChevronRight className="h-6 w-6" />
+              <ChevronRight className="h-6 w-6" aria-hidden />
             </Button>
           </>
         )}
@@ -325,8 +327,9 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
           size="icon"
           className="absolute right-2 top-2 bg-black/50 text-white hover:bg-black/70"
           onClick={handleToggleFullscreen}
+          aria-label={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
         >
-          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          {isFullscreen ? <Minimize2 className="h-4 w-4" aria-hidden /> : <Maximize2 className="h-4 w-4" aria-hidden />}
         </Button>
 
         {/* Slide counter */}

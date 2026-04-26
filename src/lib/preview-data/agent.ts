@@ -432,7 +432,7 @@ export function getPreviewAgentModeResponse(input: string, context: PreviewAgent
     if (normalized.includes('open for you') || normalized.includes('my feed') || normalized.includes('personalized digest')) {
         return {
             action: 'navigate',
-            route: '/for-you',
+            route: '/dashboard/for-you',
             message: 'Opening For You.',
         }
     }

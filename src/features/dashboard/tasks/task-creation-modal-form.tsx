@@ -100,6 +100,7 @@ export function TaskCreationModalFormFields({
           value={title}
           onChange={handleTitleChange}
           required
+          disabled={isLoading}
         />
       </div>
 
@@ -111,14 +112,15 @@ export function TaskCreationModalFormFields({
           value={description}
           onChange={handleDescriptionChange}
           rows={3}
+          disabled={isLoading}
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="priority">Priority</Label>
-          <Select value={priority} onValueChange={handlePriorityChange}>
-            <SelectTrigger id="priority">
+          <Select value={priority} onValueChange={handlePriorityChange} disabled={isLoading}>
+            <SelectTrigger id="priority" disabled={isLoading}>
               <SelectValue placeholder="Select priority" />
             </SelectTrigger>
             <SelectContent>
@@ -136,8 +138,11 @@ export function TaskCreationModalFormFields({
             <PopoverTrigger asChild>
               <Button
                 id="dueDate"
+                type="button"
                 variant="outline"
                 className={cn('w-full justify-start text-left font-normal', !dueDate && 'text-muted-foreground')}
+                disabled={isLoading}
+                aria-label="Due date, open calendar"
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {dueDate ? format(parseISO(dueDate), 'PPP') : <span>Pick a date</span>}
@@ -208,10 +213,14 @@ export function TaskCreationModalFormFields({
         )}
       </div>
 
-      {error ? <div className="text-sm text-destructive">{error}</div> : null}
+      {error ? (
+        <div className="text-sm text-destructive" role="alert">
+          {error}
+        </div>
+      ) : null}
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
           Cancel
         </Button>
         <Button type="submit" disabled={isLoading || !title.trim()}>

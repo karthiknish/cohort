@@ -8,6 +8,7 @@ import {
   DialogContent,
 } from '@/shared/ui/dialog'
 import type { LocationMarker } from '@/shared/ui/location-map'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { toast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
@@ -176,10 +177,10 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
         onOpenChange(false)
         resetForm()
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         toast({
-          title: 'Error',
-          description: 'Failed to create audience.',
+          title: 'Could not create audience',
+          description: asErrorMessage(err),
           variant: 'destructive',
         })
       })

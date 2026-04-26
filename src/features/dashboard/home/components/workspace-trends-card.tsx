@@ -37,6 +37,28 @@ export function WorkspaceTrendsCard({ summaries, periodDays, mixedCurrencies }: 
     }
   }, [summaries])
 
+  if (summaries.length === 0) {
+    return (
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="space-y-1">
+            <CardTitle className="text-base flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-primary" />
+              Trending across workspaces
+            </CardTitle>
+            <CardDescription>Leaders across your selected workspaces (last {periodDays} days).</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            No cross-workspace data yet. Select client workspaces with connected analytics, or add spend/revenue in the
+            selected period to see leaders here.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   if (!insights) return null
 
   return (

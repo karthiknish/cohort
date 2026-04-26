@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
+import { asErrorMessage } from '@/lib/convex-errors'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { DEFAULT_CURRENCY, type CurrencyCode } from '@/constants/currencies'
 import { settingsApi } from '@/lib/convex-api'
@@ -17,6 +18,7 @@ interface PreferencesContextValue {
   preferences: UserPreferences
   loading: boolean
   error: string | null
+  clearError: () => void
   updateCurrency: (currency: CurrencyCode) => Promise<void>
   updatePreferences: (updates: Partial<Omit<UserPreferences, 'updatedAt'>>) => Promise<void>
   refreshPreferences: () => Promise<void>
@@ -112,7 +114,7 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
       } catch (err) {
         console.error('Failed to update preferences:', err)
         setOptimisticPreferences(null)
-        setError(err instanceof Error ? err.message : 'Failed to update preferences')
+        setError(asErrorMessage(err))
         throw err
       }
     },
@@ -130,16 +132,21 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
     await fetchPreferences()
   }, [fetchPreferences])
 
+  const clearError = useCallback(() => {
+    setError(null)
+  }, [])
+
   const contextValue = useMemo(
     () => ({
       preferences,
       loading,
       error,
+      clearError,
       updateCurrency,
       updatePreferences,
       refreshPreferences,
     }),
-    [error, loading, preferences, refreshPreferences, updateCurrency, updatePreferences],
+    [clearError, error, loading, preferences, refreshPreferences, updateCurrency, updatePreferences],
   )
 
   return (

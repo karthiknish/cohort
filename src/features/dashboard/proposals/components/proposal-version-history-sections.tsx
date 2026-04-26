@@ -6,6 +6,15 @@ import { ChevronDown, CircleAlert, Clock, Eye, History, LoaderCircle, RotateCcw,
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/ui/alert-dialog'
+import {
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -229,37 +238,48 @@ export function ProposalVersionPreviewDialog({
 }
 
 export function ProposalVersionRestoreDialog({
+  open,
+  onOpenChange,
   handleRestoreVersion,
   restoreConfirmVersion,
   restoring,
-  setRestoreConfirmVersion,
 }: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
   handleRestoreVersion: () => void
   restoreConfirmVersion: ProposalVersion | null
   restoring: boolean
-  setRestoreConfirmVersion: (version: ProposalVersion | null) => void
 }) {
-  const handleCancel = useCallback(() => {
-    setRestoreConfirmVersion(null)
-  }, [setRestoreConfirmVersion])
-
   return (
-    <DialogContent className="max-w-md">
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <CircleAlert className="h-4 w-4 text-destructive" /> Restore version?
-        </DialogTitle>
-        <DialogDescription>
-          This will replace the current proposal form with version {restoreConfirmVersion?.versionNumber}. Your current state will be saved as a new version.
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter>
-        <Button variant="outline" onClick={handleCancel} disabled={restoring}>Cancel</Button>
-        <Button onClick={handleRestoreVersion} disabled={restoring}>
-          {restoring ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
-          Restore
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="max-w-md border-destructive/25">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+            <CircleAlert className="h-4 w-4 shrink-0" aria-hidden />
+            Replace form with this version?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-left text-foreground/90">
+            This permanently replaces the current proposal form with version {restoreConfirmVersion?.versionNumber}. Your
+            current editor state is saved as a new backup version before the restore runs. This action cannot be undone
+            from here.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="gap-2 sm:gap-2">
+          <AlertDialogCancel type="button" disabled={restoring} className="mt-0">
+            Cancel
+          </AlertDialogCancel>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleRestoreVersion}
+            disabled={restoring}
+            className="gap-2"
+          >
+            {restoring ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden /> : <RotateCcw className="h-4 w-4" aria-hidden />}
+            Yes, restore this version
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

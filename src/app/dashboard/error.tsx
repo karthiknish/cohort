@@ -38,7 +38,12 @@ export default function DashboardError({ error, unstable_retry, reset }: Dashboa
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center bg-muted/30 p-6">
-      <div className="w-full max-w-xl rounded-2xl border border-border/60 bg-background p-6 shadow-sm">
+      <div
+        className="w-full max-w-xl rounded-2xl border border-border/60 bg-background p-6 shadow-sm"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
+      >
         <div className="space-y-2 text-center">
           <h2 className="text-xl font-semibold text-foreground">Dashboard failed to load</h2>
           <p className="text-sm text-muted-foreground">
@@ -73,10 +78,10 @@ export default function DashboardError({ error, unstable_retry, reset }: Dashboa
             Try again
           </button>
           <Link
-            href="/"
+            href="/dashboard"
             className="inline-flex w-full items-center justify-center rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
-            Go to home
+            Go to workspace home
           </Link>
         </div>
       </div>

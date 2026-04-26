@@ -44,6 +44,7 @@ import { CommandMenuDynamic } from '@/shared/layout/navigation/command-menu-dyna
 import { HelpModal, useHelpModal } from '@/shared/layout/navigation/help-modal'
 import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
 import { ProblemReportModal } from '@/shared/layout/navigation/problem-report-modal'
+import { toast } from '@/shared/ui/sonner'
 import {
   Tooltip,
   TooltipContent,
@@ -376,7 +377,10 @@ export function Header() {
   const handleNavigate = useCallback(() => setOpen(false), [])
   const handleSignOut = useCallback(() => {
     setOpen(false)
-    signOut()
+    void signOut().catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Sign out failed. You were signed out locally; try again or clear cookies if issues persist.'
+      toast.error('Sign out incomplete', { description: message })
+    })
   }, [signOut])
   const handleShowOnboarding = useCallback(() => {
     setShowWelcome(true)

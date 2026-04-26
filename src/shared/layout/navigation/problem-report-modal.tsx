@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react'
 import { useMutation } from 'convex/react'
 import { AlertCircle, LoaderCircle, MessageSquare } from 'lucide-react'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useToast } from '@/shared/ui/use-toast'
@@ -94,8 +95,8 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
       .catch((error) => {
         console.error('Error submitting problem report:', error)
         toast({
-          title: 'Error',
-          description: 'Failed to submit the report. Please try again.',
+          title: 'Could not submit report',
+          description: asErrorMessage(error),
           variant: 'destructive',
         })
       })
@@ -109,7 +110,7 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-primary" />
+            <AlertCircle className="h-5 w-5 text-primary" aria-hidden />
             Report a Problem
           </DialogTitle>
           <DialogDescription>

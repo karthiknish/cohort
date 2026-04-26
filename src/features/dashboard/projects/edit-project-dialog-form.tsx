@@ -51,6 +51,7 @@ type EditProjectFormFieldsProps = {
 
 function ProjectDateField({
   disabled,
+  fieldId,
   label,
   onSelect,
   selected,
@@ -58,18 +59,23 @@ function ProjectDateField({
   disabledDate,
 }: {
   disabled: boolean
+  fieldId: string
   label: string
   onSelect: (value: Date | undefined) => void
   selected: Date | undefined
   validationError?: string
   disabledDate: (date: Date) => boolean
 }) {
+  const triggerId = `${fieldId}-trigger`
+  const errorId = `${fieldId}-error`
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label htmlFor={triggerId}>{label}</Label>
       <Popover>
         <PopoverTrigger asChild>
           <Button
+            id={triggerId}
+            type="button"
             variant="outline"
             className={cn(
               'w-full justify-start text-left font-normal',
@@ -77,8 +83,11 @@ function ProjectDateField({
               validationError && 'border-destructive text-destructive'
             )}
             disabled={disabled}
+            aria-invalid={Boolean(validationError)}
+            aria-describedby={validationError ? errorId : undefined}
+            aria-label={`${label} — open calendar`}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
+            <CalendarIcon className="mr-2 h-4 w-4" aria-hidden />
             {selected ? format(selected, 'PPP') : <span>Pick a date</span>}
           </Button>
         </PopoverTrigger>
@@ -92,7 +101,11 @@ function ProjectDateField({
           />
         </PopoverContent>
       </Popover>
-      {validationError ? <p className="text-xs text-destructive">{validationError}</p> : null}
+      {validationError ? (
+        <p id={errorId} className="text-xs text-destructive" role="status">
+          {validationError}
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -239,9 +252,12 @@ export function EditProjectFormFields({
           disabled={loading}
           rows={3}
           aria-invalid={!!validationErrors.description}
+          aria-describedby={validationErrors.description ? 'edit-project-description-error' : undefined}
         />
         {validationErrors.description ? (
-          <p className="text-xs text-destructive">{validationErrors.description}</p>
+          <p id="edit-project-description-error" className="text-xs text-destructive" role="status">
+            {validationErrors.description}
+          </p>
         ) : null}
       </div>
 
@@ -291,6 +307,7 @@ export function EditProjectFormFields({
       <div className="grid grid-cols-2 gap-4">
         <ProjectDateField
           disabled={loading}
+          fieldId="edit-project-start-date"
           label="Start date"
           onSelect={handleStartDateSelect}
           selected={startDate}
@@ -299,6 +316,7 @@ export function EditProjectFormFields({
 
         <ProjectDateField
           disabled={loading}
+          fieldId="edit-project-end-date"
           label="End date"
           onSelect={handleEndDateSelect}
           selected={endDate}

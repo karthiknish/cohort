@@ -2,6 +2,7 @@
 'use no memo'
 
 import * as React from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   type Header,
   type ColumnDef,
@@ -98,6 +99,17 @@ function DataTableBodyRow<TData>({
     onRowClick?.(row.original)
   }, [onRowClick, row.original])
 
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLTableRowElement>) => {
+      if (!onRowClick) return
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        handleClick()
+      }
+    },
+    [handleClick, onRowClick]
+  )
+
   const resolvedClassName =
     typeof rowClassName === 'function' ? rowClassName(row.original) : rowClassName
 
@@ -105,7 +117,14 @@ function DataTableBodyRow<TData>({
     <TableRow
       data-state={row.getIsSelected() && 'selected'}
       onClick={onRowClick ? handleClick : undefined}
-      className={cn(onRowClick && 'cursor-pointer', resolvedClassName)}
+      onKeyDown={onRowClick ? handleKeyDown : undefined}
+      tabIndex={onRowClick ? 0 : undefined}
+      aria-label={onRowClick ? 'View row details' : undefined}
+      className={cn(
+        onRowClick &&
+          'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        resolvedClassName
+      )}
       style={style}
     >
       {row.getVisibleCells().map((cell) => (
@@ -146,6 +165,14 @@ export interface DataTableProps<TData, TValue> {
   enableVirtualization?: boolean
   rowHeight?: number
   overscan?: number
+  /** When set with client-side pagination, `page` and `page size` are reflected in the URL. */
+  syncPaginationToUrl?: boolean
+  /** 1-based page number query param (default: `p`). Omitted when page 1. */
+  urlPageParam?: string
+  /** Page size query param (default: `perPage`). Omitted when it matches the `pageSize` prop. */
+  urlPageSizeParam?: string
+  /** When parsing `perPage` from the URL, only these values are accepted. */
+  urlPageSizeOptions?: number[]
 }
 
 export function DataTable<TData, TValue>({
@@ -179,9 +206,16 @@ export function DataTable<TData, TValue>({
   enableVirtualization = false,
   rowHeight = 48,
   overscan = 6,
+  syncPaginationToUrl = false,
+  urlPageParam = 'p',
+  urlPageSizeParam = 'perPage',
+  urlPageSizeOptions = [10, 20, 30, 40, 50],
 }: DataTableProps<TData, TValue>) {
   'use no memo'
 
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting)
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(initialColumnFilters)
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(initialColumnVisibility)
@@ -190,6 +224,90 @@ export function DataTable<TData, TValue>({
     pageIndex: 0,
     pageSize,
   })
+
+  const isValidUrlPageSize = React.useCallback(
+    (n: number) => urlPageSizeOptions.includes(n),
+    [urlPageSizeOptions]
+  )
+
+  const replacePaginationInUrl = React.useCallback(
+    (next: PaginationState) => {
+      if (!syncPaginationToUrl || !showPagination || manualPagination) {
+        return
+      }
+
+      const params = new URLSearchParams(searchParams.toString())
+      const oneBased = next.pageIndex + 1
+      if (oneBased > 1) {
+        params.set(urlPageParam, String(oneBased))
+      } else {
+        params.delete(urlPageParam)
+      }
+
+      if (next.pageSize !== pageSize && isValidUrlPageSize(next.pageSize)) {
+        params.set(urlPageSizeParam, String(next.pageSize))
+      } else {
+        params.delete(urlPageSizeParam)
+      }
+
+      const queryString = params.toString()
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
+    },
+    [
+      isValidUrlPageSize,
+      manualPagination,
+      pageSize,
+      pathname,
+      router,
+      searchParams,
+      showPagination,
+      syncPaginationToUrl,
+      urlPageParam,
+      urlPageSizeParam,
+    ]
+  )
+
+  React.useEffect(() => {
+    if (!syncPaginationToUrl || !showPagination || manualPagination) {
+      return
+    }
+
+    const pageRaw = searchParams.get(urlPageParam)
+    const sizeRaw = searchParams.get(urlPageSizeParam)
+
+    let nextIndex = 0
+    if (pageRaw) {
+      const parsed = Number.parseInt(pageRaw, 10)
+      if (Number.isFinite(parsed) && parsed >= 1) {
+        nextIndex = parsed - 1
+      }
+    }
+
+    let nextSize = pageSize
+    if (sizeRaw) {
+      const parsed = Number.parseInt(sizeRaw, 10)
+      if (Number.isFinite(parsed) && isValidUrlPageSize(parsed)) {
+        nextSize = parsed
+      }
+    }
+
+    if (nextIndex === pagination.pageIndex && nextSize === pagination.pageSize) {
+      return
+    }
+
+    setPagination({ pageIndex: nextIndex, pageSize: nextSize })
+  }, [
+    isValidUrlPageSize,
+    manualPagination,
+    pageSize,
+    pagination.pageIndex,
+    pagination.pageSize,
+    searchParams,
+    showPagination,
+    syncPaginationToUrl,
+    urlPageParam,
+    urlPageSizeParam,
+  ])
 
   // Controlled/uncontrolled search value
   const [internalSearchValue, setInternalSearchValue] = React.useState('')
@@ -241,9 +359,14 @@ export function DataTable<TData, TValue>({
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     onPaginationChange: (updater) => {
-      const newPagination = typeof updater === 'function' ? updater(pagination) : updater
-      setPagination(newPagination)
-      onPaginationChange?.(newPagination)
+      setPagination((old) => {
+        const newPagination = typeof updater === 'function' ? updater(old) : updater
+        onPaginationChange?.(newPagination)
+        if (syncPaginationToUrl && showPagination && !manualPagination) {
+          replacePaginationInUrl(newPagination)
+        }
+        return newPagination
+      })
     },
     state: {
       sorting,

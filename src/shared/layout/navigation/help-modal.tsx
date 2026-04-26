@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useConvexAuth } from 'convex/react'
 import Link from 'next/link'
 import {
@@ -167,6 +167,36 @@ const navigationGuide = [
   },
 ]
 
+function helpNavigationForRole(role: string | null): typeof navigationGuide {
+  const r = (role ?? 'client') as 'admin' | 'team' | 'client'
+  return navigationGuide.filter((item) => {
+    if (item.href === '/admin/clients') return r === 'admin'
+    if (item.href === '/dashboard/ads' || item.href === '/dashboard/proposals') {
+      return r === 'admin' || r === 'team'
+    }
+    return true
+  })
+}
+
+function gettingStartedStepsForRole(role: string | null) {
+  const r = (role ?? 'client') as 'admin' | 'team' | 'client'
+  let steps = [...gettingStartedSteps]
+  if (r !== 'admin') {
+    steps[0] = {
+      ...steps[0]!,
+      title: 'Select your client workspace',
+      description: 'Use the workspace switcher in the header to focus on a client, or start from the dashboard home.',
+      action: { label: 'Open dashboard', href: '/dashboard' },
+    }
+  }
+  if (r === 'client') {
+    return steps.filter(
+      (s) => !s.action.href.startsWith('/dashboard/ads') && !s.action.href.startsWith('/dashboard/proposals')
+    )
+  }
+  return steps
+}
+
 const getKeyboardShortcuts = () => [
   { combo: 'mod+k', description: 'Open quick navigation' },
   { combo: '?', description: 'Show help & shortcuts' },
@@ -188,7 +218,7 @@ const gettingStartedSteps = [
   {
     title: 'Create your first task',
     description: 'Capture an immediate priority and assign ownership so your team can execute quickly.',
-    action: { label: 'Open Tasks', href: '/dashboard/tasks?new=true' },
+    action: { label: 'Open Tasks', href: '/dashboard/tasks?action=create' },
   },
   {
     title: 'Create a proposal',
@@ -198,8 +228,11 @@ const gettingStartedSteps = [
 ]
 
 export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModalProps) {
+  const { user } = useAuth()
   const defaultTab = showWelcome ? 'welcome' : 'navigation'
   const { startTour } = useOnboardingTour()
+  const navigationForUser = useMemo(() => helpNavigationForRole(user?.role ?? null), [user?.role])
+  const gettingStartedForUser = useMemo(() => gettingStartedStepsForRole(user?.role ?? null), [user?.role])
 
   const keyboardShortcuts = getKeyboardShortcuts()
   const handleLaunchTour = useCallback(() => {
@@ -276,7 +309,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                 </div>
 
                 <div className="space-y-3">
-                  {gettingStartedSteps.map((step, index) => (
+                  {gettingStartedForUser.map((step, index) => (
                     <div
                       key={step.title}
                       className="group flex items-start gap-4 rounded-lg border border-muted/60 p-4 transition hover:border-primary/40 hover:bg-muted/30"
@@ -296,7 +329,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
             )}
 
             <TabsContent value="navigation" className="mt-4 space-y-3">
-              {navigationGuide.map((item) => {
+              {navigationForUser.map((item) => {
                 const Icon = item.icon
                 return (
                   <HelpNavigationLink

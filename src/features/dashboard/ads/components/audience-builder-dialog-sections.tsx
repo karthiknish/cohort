@@ -161,9 +161,16 @@ function InterestBadge({
   }, [interest, onAddInterest])
 
   return (
-    <Badge variant="outline" className="cursor-pointer rounded-lg transition-colors hover:border-primary hover:bg-primary/10" onClick={handleClick}>
-      <Plus className="mr-1 h-3 w-3" />
-      {interest}
+    <Badge variant="outline" asChild>
+      <button
+        type="button"
+        onClick={handleClick}
+        className="cursor-pointer rounded-lg transition-colors hover:border-primary hover:bg-primary/10"
+        aria-label={`Add interest: ${interest}`}
+      >
+        <Plus className="mr-1 h-3 w-3" aria-hidden />
+        {interest}
+      </button>
     </Badge>
   )
 }

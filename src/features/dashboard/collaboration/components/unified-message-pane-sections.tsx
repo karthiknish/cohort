@@ -340,8 +340,9 @@ export function UnifiedThreadReplyCard({
                     className="h-6 w-6 transition-transform hover:scale-105"
                     disabled={isDeleting || isUpdating}
                     onClick={handleEditReply}
+                    aria-label="Edit reply"
                   >
-                    <span className="sr-only">Edit reply</span>
+                    <Pencil className="h-3.5 w-3.5" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -361,8 +362,9 @@ export function UnifiedThreadReplyCard({
                     className="h-6 w-6 text-destructive transition-transform hover:scale-105 hover:text-destructive"
                     disabled={isDeleting || isUpdating}
                     onClick={handleDeleteReply}
+                    aria-label="Delete reply"
                   >
-                    <span className="sr-only">Delete reply</span>
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>

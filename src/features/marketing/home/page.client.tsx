@@ -29,6 +29,9 @@ const HOME_PAGE_FALLBACK = (
 function resolveDashboardDestination(): string {
   if (typeof window !== 'undefined') {
     const lastTab = window.localStorage.getItem('cohorts_last_tab')
+    if (lastTab === '/for-you') {
+      return '/dashboard/for-you'
+    }
     if (lastTab?.startsWith('/dashboard')) {
       return lastTab
     }
@@ -82,7 +85,7 @@ function HomePageContent() {
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/auth?tab=signup"
-                className="rounded-full bg-accent px-8 py-3 text-sm font-semibold text-accent-foreground shadow-lg transition-all duration-200 hover:scale-[1.02] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
+                className="rounded-full bg-accent px-8 py-3 text-sm font-semibold text-accent-foreground shadow-lg transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100 hover:scale-[1.02] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
               >
                 Get started free
               </Link>
@@ -140,7 +143,7 @@ function HomePageContent() {
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/auth?tab=signup"
-                className="rounded-full bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all duration-200 hover:scale-[1.02] hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="rounded-full bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100 hover:scale-[1.02] hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
                 Create account
               </Link>

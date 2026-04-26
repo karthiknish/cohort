@@ -1,8 +1,6 @@
-import type { Metadata } from 'next'
+import { permanentRedirect } from 'next/navigation'
 
-export const metadata: Metadata = {
-  title: 'For You',
-  description: 'Personalized workspace recommendations and updates.',
+/** Legacy URL; For You now lives under the dashboard shell. */
+export default function ForYouLegacyRedirect() {
+  permanentRedirect('/dashboard/for-you')
 }
-
-export { default } from '@/features/marketing/for-you/page'
