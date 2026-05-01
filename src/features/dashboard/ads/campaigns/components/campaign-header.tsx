@@ -1,8 +1,7 @@
 'use client'
 
-import Link from 'next/link'
 import { ViewTransition } from 'react'
-import { ArrowLeft, Chrome, Facebook, Linkedin, Music4 } from 'lucide-react'
+import { Chrome, Facebook, Linkedin, Music4 } from 'lucide-react'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -11,6 +10,7 @@ import { DateRangePicker, type DateRange } from '@/features/dashboard/ads/compon
 import { cn } from '@/lib/utils'
 import { formatDate, DATE_FORMATS } from '@/lib/dates'
 import { formatProviderName, getProviderColor } from '@/lib/themes'
+import { BackLink } from '@/shared/components/back-link'
 
 interface Campaign {
   id: string
@@ -81,12 +81,7 @@ export function CampaignHeader({
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
       <div className="space-y-4">
-        <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground hover:text-foreground">
-          <Link href="/dashboard/ads" transitionTypes={['nav-back']}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Ads
-          </Link>
-        </Button>
+        <BackLink label="Back to ads" href="/dashboard/ads" transitionTypes={['nav-back']} />
 
         <div>
           {loading ? (

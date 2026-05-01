@@ -18,6 +18,7 @@ import { refreshProposalDraft } from '@/services/proposals'
 import type { ProposalPresentationDeck } from '@/types/proposals'
 import { createInitialProposalFormState, stepErrorPaths } from '../utils/form-steps'
 import type { SubmissionSnapshot } from './use-proposal-drafts'
+import type { FormStateUpdateOptions } from './use-proposal-wizard'
 
 type ProposalDeckState = {
     status: string
@@ -89,7 +90,7 @@ export interface UseProposalSubmissionOptions {
     ensureDraftId: () => Promise<string | null>
     refreshProposals: () => Promise<unknown>
     setDraftId: (id: string | null) => void
-    setFormState: (state: ProposalFormData | ((prev: ProposalFormData) => ProposalFormData)) => void
+    setFormState: (state: ProposalFormData | ((prev: ProposalFormData) => ProposalFormData), options?: FormStateUpdateOptions) => void
     setCurrentStep: (step: number) => void
     setAutosaveStatus: (status: 'idle' | 'saving' | 'saved' | 'error') => void
     clearErrors: (paths: string | string[]) => void
@@ -208,7 +209,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 setPresentationDeck(previewSimulation.presentationDeck)
                 setAiSuggestions(previewSimulation.aiSuggestions)
                 setIsPresentationReady(true)
-                setFormState(createInitialProposalFormState())
+                setFormState(createInitialProposalFormState(), { resetHistory: true })
                 setCurrentStep(0)
                 setDraftId(null)
                 setAutosaveStatus('idle')
@@ -388,7 +389,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             }
 
             if (isReady) {
-                setFormState(createInitialProposalFormState())
+                setFormState(createInitialProposalFormState(), { resetHistory: true })
                 setCurrentStep(0)
                 setDraftId(null)
                 setAutosaveStatus('idle')
@@ -473,7 +474,7 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         const restoredForm = structuredClone(lastSubmissionSnapshot.form) as ProposalFormData
         const restoredStep = Math.min(lastSubmissionSnapshot.step, steps.length - 1)
 
-        setFormState(restoredForm)
+        setFormState(restoredForm, { resetHistory: true })
         setCurrentStep(restoredStep)
         setSubmitted(false)
         setPresentationDeck(null)

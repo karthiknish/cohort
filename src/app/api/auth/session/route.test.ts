@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const cookiesMock = vi.hoisted(() => vi.fn())
+const cookiesMock = vi.fn()
 
 vi.mock('next/headers', () => ({
   cookies: cookiesMock,
@@ -8,6 +8,11 @@ vi.mock('next/headers', () => ({
 
 vi.mock('@/lib/api-handler', () => ({
   createApiHandler: (_options: unknown, handler: unknown) => handler,
+}))
+
+vi.mock('@/lib/auth-server', () => ({
+  convexSiteUrl: 'https://example.convex.site',
+  SESSION_EXPIRES_COOKIE: 'cohorts_session_expires',
 }))
 
 import { DELETE, GET, POST } from './route'
@@ -93,6 +98,12 @@ describe('/api/auth/session route', () => {
     })
     expect(body.csrfToken).toMatch(/^[a-f0-9]{64}$/)
     expect(response.cookies.get('cohorts_csrf')?.value).toBe(body.csrfToken)
+
+    const setCookieHeaders = getSetCookieHeaders(response)
+    expect(setCookieHeaders).toEqual(expect.arrayContaining([
+      expect.stringContaining('cohorts_csrf='),
+      expect.stringContaining('SameSite=Strict'),
+    ]))
   })
 
   it('rejects POST session sync when the csrf header does not match the cookie', async () => {
@@ -146,6 +157,14 @@ describe('/api/auth/session route', () => {
     const nextCsrfToken = response.cookies.get('cohorts_csrf')?.value
     expect(nextCsrfToken).toMatch(/^[a-f0-9]{64}$/)
     expect(nextCsrfToken).not.toBe('match-token')
+
+    const setCookieHeaders = getSetCookieHeaders(response)
+    expect(setCookieHeaders).toEqual(expect.arrayContaining([
+      expect.stringContaining('cohorts_role=team;'),
+      expect.stringContaining('SameSite=Strict'),
+      expect.stringContaining('HttpOnly'),
+      expect.stringContaining('cohorts_session_expires='),
+    ]))
   })
 
   it('rejects DELETE session clear when the csrf header is missing or invalid', async () => {

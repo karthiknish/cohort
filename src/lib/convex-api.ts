@@ -1,11 +1,9 @@
 // Client-safe import for Convex generated API.
 // Keep this indirection so app code can import via `@/lib/convex-api`.
-//
-// Note: app call sites still rely on permissive function ref typing.
 import { api as generatedApi } from '/_generated/api'
 
 export const api = generatedApi
-const looseApi = api as ReturnType<typeof JSON.parse>
+const looseApi = api
 
 export const settingsApi = {
   getMyProfile: looseApi.settings.getMyProfile,

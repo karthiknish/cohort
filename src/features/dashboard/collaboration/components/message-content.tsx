@@ -13,6 +13,7 @@ import { useToast } from "@/shared/ui/use-toast"
 import { Button } from "@/shared/ui/button"
 import { CodeSyntaxHighlighter } from "@/shared/ui/code-syntax-highlighter"
 import { LazyImage } from "@/shared/ui/lazy-image"
+import { LiveRegion } from "@/shared/ui/live-region"
 import type { CollaborationMention } from "@/types/collaboration"
 
 import { MENTION_PROTOCOL } from "../utils/mentions"
@@ -74,20 +75,23 @@ function CopyButton({ code }: { code: string }) {
   }, [code, toast])
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="absolute right-2 top-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background"
-      onClick={handleCopy}
-      title={copied ? "Copied!" : "Copy code"}
-      aria-label={copied ? "Code copied" : "Copy code block to clipboard"}
-    >
-      {copied ? (
-        <Check className="h-3.5 w-3.5 text-success" aria-hidden />
-      ) : (
-        <Copy className="h-3.5 w-3.5" aria-hidden />
-      )}
-    </Button>
+    <>
+      <LiveRegion message={copied ? 'Code block copied to clipboard.' : ''} />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute right-2 top-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background"
+        onClick={handleCopy}
+        title={copied ? "Copied!" : "Copy code"}
+        aria-label={copied ? "Code copied" : "Copy code block to clipboard"}
+      >
+        {copied ? (
+          <Check className="h-3.5 w-3.5 text-success" aria-hidden />
+        ) : (
+          <Copy className="h-3.5 w-3.5" aria-hidden />
+        )}
+      </Button>
+    </>
   )
 }
 

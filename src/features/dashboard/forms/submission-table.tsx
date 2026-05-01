@@ -1,6 +1,9 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+
 import type { ChecklistSubmission } from '@/types/workforce'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { LiveRegion } from '@/shared/ui/live-region'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table'
 import { LoaderCircle } from 'lucide-react'
 import { WorkforceStatusBadge } from '@/features/dashboard/workforce/workforce-page-shell'
@@ -21,14 +24,64 @@ export function SubmissionTable({
   pendingId = null,
 }: SubmissionTableProps) {
   const colSpan = canReview ? 5 : 4
+  const [announcement, setAnnouncement] = useState('')
+  const previousPendingIdRef = useRef<string | null>(pendingId)
+  const pendingActionRef = useRef<{
+    id: string
+    action: 'ready' | 'follow-up'
+    title: string
+  } | null>(null)
+
+  useEffect(() => {
+    const previousPendingId = previousPendingIdRef.current
+    const pendingAction = pendingActionRef.current
+
+    if (pendingAction && previousPendingId === pendingAction.id && pendingId === null) {
+      setAnnouncement(
+        pendingAction.action === 'ready'
+          ? `${pendingAction.title} marked ready.`
+          : `${pendingAction.title} moved to follow up.`
+      )
+      pendingActionRef.current = null
+    }
+
+    previousPendingIdRef.current = pendingId
+  }, [pendingId])
+
+  const handleNeedsFollowUp = useCallback(
+    (submission: ChecklistSubmission) => {
+      pendingActionRef.current = {
+        id: submission.id,
+        action: 'follow-up',
+        title: submission.templateTitle,
+      }
+      setAnnouncement(`Moving ${submission.templateTitle} to follow up.`)
+      onNeedsFollowUp?.(submission.id)
+    },
+    [onNeedsFollowUp]
+  )
+
+  const handleMarkReady = useCallback(
+    (submission: ChecklistSubmission) => {
+      pendingActionRef.current = {
+        id: submission.id,
+        action: 'ready',
+        title: submission.templateTitle,
+      }
+      setAnnouncement(`Marking ${submission.templateTitle} ready.`)
+      onMarkReady?.(submission.id)
+    },
+    [onMarkReady]
+  )
 
   return (
     <Card>
+      <LiveRegion message={announcement} />
       <CardHeader>
         <CardTitle className="text-lg">Recent submissions</CardTitle>
         <p className="text-sm text-muted-foreground">Quality and status for each run; reviewers can nudge the queue here.</p>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="p-0" aria-busy={pendingId !== null}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -73,7 +126,7 @@ export function SubmissionTable({
                         variant="outline"
                         className="h-7 text-xs"
                         disabled={pendingId === submission.id}
-                        onClick={() => onNeedsFollowUp(submission.id)}
+                        onClick={() => handleNeedsFollowUp(submission)}
                       >
                         {pendingId === submission.id ? <LoaderCircle className="h-3 w-3 animate-spin" /> : 'Follow up'}
                       </Button>
@@ -82,7 +135,7 @@ export function SubmissionTable({
                         size="sm"
                         className="h-7 text-xs"
                         disabled={pendingId === submission.id}
-                        onClick={() => onMarkReady(submission.id)}
+                        onClick={() => handleMarkReady(submission)}
                       >
                         {pendingId === submission.id ? <LoaderCircle className="h-3 w-3 animate-spin" /> : 'Mark ready'}
                       </Button>

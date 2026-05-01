@@ -3,12 +3,17 @@
 import { useConvexAuth } from 'convex/react'
 import { LoaderCircle } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { useCallback, useEffect, useRef } from 'react'
 
 import { Button } from '@/shared/ui/button'
 import { useAuth } from '@/shared/contexts/auth-context'
-import { SESSION_EXPIRES_COOKIE } from '@/lib/auth-server'
+import { toast } from '@/shared/ui/sonner'
+
+const SESSION_DURATION_MS = 2 * 60 * 60 * 1000
+const SESSION_WARNING_WINDOW_MS = SESSION_DURATION_MS / 10
+const SESSION_WARNING_TOAST_ID = 'session-expiry-warning'
+const SESSION_EXPIRED_TOAST_ID = 'session-expired'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -16,14 +21,68 @@ interface ProtectedRouteProps {
   allowPreviewAccess?: boolean
 }
 
-function hasValidSessionCookie(): boolean {
-  if (typeof document === 'undefined') return false
-  const match = document.cookie.match(new RegExp(`(?:^|; )${SESSION_EXPIRES_COOKIE}=([^;]*)`))
-  if (!match) return false
-  const encodedValue = match[1]
-  if (!encodedValue) return false
-  const expiresAt = Number.parseInt(decodeURIComponent(encodedValue), 10)
-  return Number.isFinite(expiresAt) && expiresAt > Date.now()
+type SessionMetadata = {
+  hasSession: boolean
+  expiresAt: number | null
+  csrfToken: string | null
+}
+
+async function fetchSessionMetadata(): Promise<SessionMetadata | null> {
+  try {
+    const response = await fetch('/api/auth/session', {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        'Cache-Control': 'no-store',
+      },
+    })
+
+    if (!response.ok) {
+      return null
+    }
+
+    const payload = await response.json() as {
+      hasSession?: unknown
+      expiresAt?: unknown
+      csrfToken?: unknown
+    }
+
+    return {
+      hasSession: payload.hasSession === true,
+      expiresAt: typeof payload.expiresAt === 'number' && Number.isFinite(payload.expiresAt)
+        ? payload.expiresAt
+        : null,
+      csrfToken: typeof payload.csrfToken === 'string' && payload.csrfToken.length > 0
+        ? payload.csrfToken
+        : null,
+    }
+  } catch {
+    return null
+  }
+}
+
+async function refreshSession(): Promise<SessionMetadata | null> {
+  const metadata = await fetchSessionMetadata()
+  if (!metadata?.csrfToken) {
+    return null
+  }
+
+  const response = await fetch('/api/auth/session', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-csrf-token': metadata.csrfToken,
+    },
+    body: '{}',
+  })
+
+  if (!response.ok) {
+    return null
+  }
+
+  return await fetchSessionMetadata()
 }
 
 function hasRequiredRole(userRole: string, requiredRole?: string): boolean {
@@ -119,24 +178,34 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
   const { user, loading, signOut } = useAuth()
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
   const router = useRouter()
-  const [isAwaitingAuthRestore, setIsAwaitingAuthRestore] = useState(() => hasValidSessionCookie())
+  const pathname = usePathname()
   const hasPreviewAccess = allowPreviewAccess
+  const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const expiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Clear awaiting state once auth loading completes or session cookie is gone.
-  useEffect(() => {
-    if (!isAwaitingAuthRestore) return
-
-    const shouldClear = !loading || !hasValidSessionCookie()
-    if (!shouldClear) return
-
-    const frameId = requestAnimationFrame(() => {
-      setIsAwaitingAuthRestore(false)
-    })
-
-    return () => {
-      cancelAnimationFrame(frameId)
+  const clearSessionTimers = useCallback(() => {
+    if (warningTimerRef.current) {
+      clearTimeout(warningTimerRef.current)
+      warningTimerRef.current = null
     }
-  }, [isAwaitingAuthRestore, loading])
+    if (expiryTimerRef.current) {
+      clearTimeout(expiryTimerRef.current)
+      expiryTimerRef.current = null
+    }
+  }, [])
+
+  const redirectToAuth = useCallback(() => {
+    const redirectParam = pathname ? `?redirect=${encodeURIComponent(pathname)}` : ''
+    router.replace(`/auth${redirectParam}`)
+  }, [pathname, router])
+
+  useEffect(() => {
+    return () => {
+      clearSessionTimers()
+      toast.dismiss(SESSION_WARNING_TOAST_ID)
+      toast.dismiss(SESSION_EXPIRED_TOAST_ID)
+    }
+  }, [clearSessionTimers])
 
   // Handle blocked user with retry mechanism
   const handleBlockedSignOut = useCallback(() => {
@@ -146,11 +215,127 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
       })
   }, [signOut, router])
 
+  const handleSessionExpired = useCallback(() => {
+    clearSessionTimers()
+    toast.dismiss(SESSION_WARNING_TOAST_ID)
+    toast.error('Session expired', {
+      id: SESSION_EXPIRED_TOAST_ID,
+      description: 'Please sign in again to continue where you left off.',
+      duration: 6000,
+    })
+
+    void signOut().finally(() => {
+      redirectToAuth()
+    })
+  }, [clearSessionTimers, redirectToAuth, signOut])
+
+  const scheduleSessionPrompts = useCallback((metadata: SessionMetadata | null) => {
+    clearSessionTimers()
+
+    if (!metadata?.hasSession || !metadata.expiresAt) {
+      return
+    }
+
+    const remainingMs = metadata.expiresAt - Date.now()
+    if (remainingMs <= 0) {
+      handleSessionExpired()
+      return
+    }
+
+    const showWarning = () => {
+      toast.warning('Session ending soon', {
+        id: SESSION_WARNING_TOAST_ID,
+        description: 'Stay signed in to keep working without interruption.',
+        duration: 0,
+        action: {
+          label: 'Stay signed in',
+          onClick: () => {
+            void refreshSession()
+              .then((nextMetadata) => {
+                if (!nextMetadata?.hasSession || !nextMetadata.expiresAt) {
+                  throw new Error('Session refresh failed')
+                }
+
+                toast.success('Session extended', {
+                  id: SESSION_WARNING_TOAST_ID,
+                  description: 'Your workspace session is active again.',
+                  duration: 4000,
+                })
+                scheduleSessionPrompts(nextMetadata)
+              })
+              .catch(() => {
+                toast.error('Could not extend session', {
+                  id: SESSION_WARNING_TOAST_ID,
+                  description: 'Please save your work and sign in again before the session expires.',
+                  duration: 6000,
+                })
+              })
+          },
+        },
+      })
+    }
+
+    if (remainingMs <= SESSION_WARNING_WINDOW_MS) {
+      showWarning()
+    } else {
+      warningTimerRef.current = setTimeout(showWarning, remainingMs - SESSION_WARNING_WINDOW_MS)
+    }
+
+    expiryTimerRef.current = setTimeout(() => {
+      handleSessionExpired()
+    }, remainingMs)
+  }, [clearSessionTimers, handleSessionExpired])
+
+  useEffect(() => {
+    if (hasPreviewAccess || loading || convexAuthLoading || !user || !isAuthenticated || user.status !== 'active') {
+      clearSessionTimers()
+      toast.dismiss(SESSION_WARNING_TOAST_ID)
+      return
+    }
+
+    let cancelled = false
+
+    const syncSessionExpiry = async () => {
+      const metadata = await fetchSessionMetadata()
+      if (cancelled) return
+      scheduleSessionPrompts(metadata)
+    }
+
+    void syncSessionExpiry()
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void syncSessionExpiry()
+      }
+    }
+
+    const handleFocus = () => {
+      void syncSessionExpiry()
+    }
+
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      cancelled = true
+      clearSessionTimers()
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [clearSessionTimers, convexAuthLoading, hasPreviewAccess, isAuthenticated, loading, scheduleSessionPrompts, user])
+
+  useEffect(() => {
+    if (!hasPreviewAccess && user && user.status !== 'active' && pathname !== '/pending-approval') {
+      const nextUrl = `/pending-approval?status=${encodeURIComponent(user.status)}`
+      router.replace(nextUrl)
+    }
+  }, [hasPreviewAccess, pathname, router, user])
+
   if (hasPreviewAccess) {
     return <>{children}</>
   }
 
-  if (loading || convexAuthLoading || isAwaitingAuthRestore) {
+  if (loading || convexAuthLoading) {
     return (
       <AccessOverlay
         title="Loading your workspace"
@@ -174,14 +359,11 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
 
   // Handle non-active user status
   if (user.status !== 'active') {
-    const { title, message } = getStatusCopy(user.status || '')
     return (
       <AccessOverlay
-        title={title}
-        message={message}
-        actionLabel="Sign out and try again"
-        actionVariant="outline"
-        actionOnClick={handleBlockedSignOut}
+        title="Checking account access"
+        message="Taking you to your account status page so you can review the next steps."
+        showSpinner
       />
     )
   }

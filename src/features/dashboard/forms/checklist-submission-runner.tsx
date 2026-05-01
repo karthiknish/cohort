@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { LoaderCircle, Send } from 'lucide-react'
 
 import type { FormFieldDefinition } from '@/types/workforce'
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/sha
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
+import { LiveRegion } from '@/shared/ui/live-region'
 
 type AnswerMap = Record<string, string>
 
@@ -31,6 +32,8 @@ export function ChecklistSubmissionRunner({
 }) {
   const [values, setValues] = useState<AnswerMap>({})
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [submissionAnnouncement, setSubmissionAnnouncement] = useState('')
+  const previousPendingRef = useRef(pending)
 
   const handleChange = useCallback((fieldId: string, value: string) => {
     setValues((prev) => ({ ...prev, [fieldId]: value }))
@@ -60,6 +63,18 @@ export function ChecklistSubmissionRunner({
     setValues({})
   }, [fields, isPreviewMode, onSubmit, values])
 
+  useEffect(() => {
+    const previousPending = previousPendingRef.current
+
+    if (pending && !previousPending) {
+      setSubmissionAnnouncement(`Submitting ${templateTitle}.`)
+    } else if (!pending && previousPending) {
+      setSubmissionAnnouncement(`${templateTitle} submission finished.`)
+    }
+
+    previousPendingRef.current = pending
+  }, [pending, templateTitle])
+
   if (!templateLegacyId || fields.length === 0) {
     return (
       <Card>
@@ -76,11 +91,12 @@ export function ChecklistSubmissionRunner({
 
   return (
     <Card>
+      <LiveRegion message={submissionAnnouncement} />
       <CardHeader>
         <CardTitle className="text-lg">Run: {templateTitle}</CardTitle>
         <CardDescription>Fill required fields. Values save as a workspace submission in Convex.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4" aria-busy={pending}>
         {fields.map((field) => (
           <div key={field.id} className="space-y-1">
             <Label htmlFor={`f-${field.id}`}>

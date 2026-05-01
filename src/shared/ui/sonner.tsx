@@ -23,15 +23,24 @@ const TOASTER_STYLE = {
   '--border-radius': 'var(--radius)',
 } as CSSProperties & { '--border-radius': string }
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const DEFAULT_TOAST_OPTIONS: NonNullable<ToasterProps['toastOptions']> = {
+  closeButtonAriaLabel: 'Dismiss notification',
+}
+
+const Toaster = ({ toastOptions, ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      containerAriaLabel="Notifications"
       icons={TOASTER_ICONS}
       style={TOASTER_STYLE}
+      toastOptions={{
+        ...DEFAULT_TOAST_OPTIONS,
+        ...toastOptions,
+      }}
       {...props}
     />
   )

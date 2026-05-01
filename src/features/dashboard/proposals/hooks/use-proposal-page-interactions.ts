@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { isPreviewModeEnabled, withPreviewModeSearchParamIfEnabled } from '@/lib/preview-data'
 import type { ProposalFormData } from '@/lib/proposals'
 import type { ProposalDraft } from '@/types/proposals'
+import type { FormStateUpdateOptions } from './use-proposal-wizard'
 
 type ToastFn = (options: { title: string; description: string }) => void
 
@@ -12,7 +13,7 @@ export function useProposalPageInteractions(props: {
   toast: ToastFn
   routerPush: (href: string) => void
   setIsWizardOpen: (open: boolean) => void
-  setFormState: (formData: ProposalFormData) => void
+  setFormState: (formData: ProposalFormData, options?: FormStateUpdateOptions) => void
   setCurrentStep: (step: number) => void
   handleCreateNewProposal: () => Promise<void>
   handleResumeProposal: (proposal: ProposalDraft, forceEdit?: boolean) => void
@@ -37,7 +38,7 @@ export function useProposalPageInteractions(props: {
   }, [])
 
   const handleSelectTemplate = useCallback((templateFormData: ProposalFormData) => {
-    setFormState(templateFormData)
+    setFormState(templateFormData, { resetHistory: true })
     setCurrentStep(0)
     toast({
       title: 'Template applied',
@@ -46,7 +47,7 @@ export function useProposalPageInteractions(props: {
   }, [setCurrentStep, setFormState, toast])
 
   const handleVersionRestored = useCallback((restoredFormData: ProposalFormData) => {
-    setFormState(restoredFormData)
+    setFormState(restoredFormData, { resetHistory: true })
     setCurrentStep(0)
     toast({
       title: 'Version restored',

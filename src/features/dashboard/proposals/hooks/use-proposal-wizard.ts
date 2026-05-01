@@ -14,6 +14,11 @@ export interface UseProposalWizardOptions {
     onSubmit?: () => Promise<void>
 }
 
+export interface FormStateUpdateOptions {
+    recordHistory?: boolean
+    resetHistory?: boolean
+}
+
 export interface UseProposalWizardReturn {
     // State
     currentStep: number
@@ -29,15 +34,30 @@ export interface UseProposalWizardReturn {
 
     // Actions
     setCurrentStep: (step: number) => void
-    setFormState: (state: ProposalFormData | ((prev: ProposalFormData) => ProposalFormData)) => void
+    setFormState: (state: ProposalFormData | ((prev: ProposalFormData) => ProposalFormData), options?: FormStateUpdateOptions) => void
     setValidationErrors: (errors: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>)) => void
     updateField: (path: string[], value: string) => void
     toggleArrayValue: (path: string[], value: string) => void
     handleSocialHandleChange: (handle: string, value: string) => void
     clearErrors: (paths: string | string[]) => void
+    clearHistory: () => void
+    undo: () => void
+    redo: () => void
+    canUndo: boolean
+    canRedo: boolean
     handleNext: () => void
     handleBack: () => void
     resetWizard: () => void
+}
+
+const HISTORY_LIMIT = 50
+
+function cloneFormState(state: ProposalFormData): ProposalFormData {
+    return structuredClone(state) as ProposalFormData
+}
+
+function formsEqual(left: ProposalFormData, right: ProposalFormData): boolean {
+    return JSON.stringify(left) === JSON.stringify(right)
 }
 
 export function useProposalWizard(options: UseProposalWizardOptions = {}): UseProposalWizardReturn {
@@ -45,8 +65,70 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
     const { toast } = useToast()
 
     const [currentStep, setCurrentStep] = useState(0)
-    const [formState, setFormState] = useState<ProposalFormData>(() => createInitialProposalFormState())
+    const [formState, setFormStateState] = useState<ProposalFormData>(() => createInitialProposalFormState())
     const [manualErrors, setManualErrors] = useState<Record<string, string>>({})
+    const [undoStack, setUndoStack] = useState<ProposalFormData[]>([])
+    const [redoStack, setRedoStack] = useState<ProposalFormData[]>([])
+
+    const setFormState = useCallback((
+        state: ProposalFormData | ((prev: ProposalFormData) => ProposalFormData),
+        options: FormStateUpdateOptions = {},
+    ) => {
+        setFormStateState((prev) => {
+            const next = typeof state === 'function'
+                ? (state as (prev: ProposalFormData) => ProposalFormData)(prev)
+                : state
+
+            if (options.resetHistory) {
+                setUndoStack([])
+                setRedoStack([])
+                return next
+            }
+
+            if (options.recordHistory && !formsEqual(prev, next)) {
+                setUndoStack((current) => [cloneFormState(prev), ...current].slice(0, HISTORY_LIMIT))
+                setRedoStack([])
+            }
+
+            return next
+        })
+    }, [])
+
+    const clearHistory = useCallback(() => {
+        setUndoStack([])
+        setRedoStack([])
+    }, [])
+
+    const undo = useCallback(() => {
+        setUndoStack((current) => {
+            const [next, ...rest] = current
+            if (!next) {
+                return current
+            }
+
+            setRedoStack((redoCurrent) => [cloneFormState(formState), ...redoCurrent].slice(0, HISTORY_LIMIT))
+            setFormStateState(next)
+            setManualErrors({})
+            return rest
+        })
+    }, [formState])
+
+    const redo = useCallback(() => {
+        setRedoStack((current) => {
+            const [next, ...rest] = current
+            if (!next) {
+                return current
+            }
+
+            setUndoStack((undoCurrent) => [cloneFormState(formState), ...undoCurrent].slice(0, HISTORY_LIMIT))
+            setFormStateState(next)
+            setManualErrors({})
+            return rest
+        })
+    }, [formState])
+
+    const canUndo = undoStack.length > 0
+    const canRedo = redoStack.length > 0
 
     const steps = proposalSteps
     const step = steps[currentStep] ?? steps[0]!
@@ -88,24 +170,9 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
             const array = Array.isArray(target[field]) ? (target[field] as string[]) : []
             target[field] = array.includes(value) ? array.filter((item) => item !== value) : [...array, value]
             return updated
-        })
-        const fieldPath = path.join('.')
-        if (path[path.length - 1] === 'objectives' || path[path.length - 1] === 'services') {
-            // Check if we're adding a value (not removing)
-            setFormState((current) => {
-                const lastKey = path[path.length - 1]
-                const hasValues = lastKey === 'objectives'
-                    ? !current.goals.objectives.includes(value)
-                    : !current.scope.services.includes(value)
-                if (hasValues) {
-                    clearErrors(fieldPath)
-                }
-                return current
-            })
-        } else {
-            clearErrors(fieldPath)
-        }
-    }, [clearErrors])
+        }, { recordHistory: true })
+        clearErrors(path.join('.'))
+    }, [clearErrors, setFormState])
 
     const updateField = useCallback((path: string[], value: string) => {
         setFormState((prev) => {
@@ -123,9 +190,9 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
             })
             target[field] = value
             return updated
-        })
+        }, { recordHistory: true })
         clearErrors(path.join('.'))
-    }, [clearErrors])
+    }, [clearErrors, setFormState])
 
     const handleSocialHandleChange = useCallback((handle: string, value: string) => {
         setFormState((prev) => ({
@@ -137,8 +204,8 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
                     [handle]: value,
                 },
             },
-        }))
-    }, [])
+        }), { recordHistory: true })
+    }, [setFormState])
 
     const stepErrors = useMemo(
         () => collectStepValidationErrors(stepId, formState),
@@ -182,10 +249,10 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
     }, [isFirstStep])
 
     const resetWizard = useCallback(() => {
-        setFormState(createInitialProposalFormState())
+        setFormState(createInitialProposalFormState(), { resetHistory: true })
         setCurrentStep(0)
         setManualErrors({})
-    }, [])
+    }, [setFormState])
 
     return {
         currentStep,
@@ -203,6 +270,11 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
         toggleArrayValue,
         handleSocialHandleChange,
         clearErrors,
+        clearHistory,
+        undo,
+        redo,
+        canUndo,
+        canRedo,
         handleNext,
         handleBack,
         resetWizard,

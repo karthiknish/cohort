@@ -23,61 +23,9 @@ const AUTH_PAGE_FALLBACK = (
     <AuthPageSkeleton />
   </RevealTransitionFallback>
 )
-const FIXTURE_PASSWORD_STRENGTH = {
-  score: 3,
-  label: 'Strong',
-  color: 'bg-success',
-  checks: {
-    length: true,
-    uppercase: true,
-    lowercase: true,
-    number: true,
-    special: false,
-  },
-} as const
-const FIXTURE_SIGN_IN_DATA = { email: 'alex@northstar.studio', password: 'password123' } as const
-const FIXTURE_SIGN_UP_DATA = {
-  email: 'alex@northstar.studio',
-  password: 'SamplePass123',
-  confirmPassword: 'SamplePass123',
-  displayName: 'Alex Morgan',
-} as const
-
-function noop() {}
 
 function preventDefault(event: FormEvent<HTMLFormElement>) {
   event.preventDefault()
-}
-
-function AuthPageFixture() {
-  return (
-    <div className="flex min-h-dvh flex-1 items-center justify-center px-6 py-12 sm:py-16">
-      <div className="w-full max-w-120">
-        <AuthCard
-          activeTab="signin"
-          emailError={null}
-          isSubmitting={false}
-          isAuthLoading={false}
-          rememberMe={true}
-          showPassword={false}
-          showConfirmPassword={false}
-          passwordsMatch={true}
-          signInData={FIXTURE_SIGN_IN_DATA}
-          signUpData={FIXTURE_SIGN_UP_DATA}
-          passwordStrength={FIXTURE_PASSWORD_STRENGTH}
-          onTabChange={noop}
-          onRememberMeChange={noop}
-          onToggleShowPassword={noop}
-          onToggleShowConfirmPassword={noop}
-          onSignInChange={noop}
-          onSignUpChange={noop}
-          onSubmitSignIn={preventDefault}
-          onSubmitSignUp={preventDefault}
-          onGoogleSignIn={noop}
-        />
-      </div>
-    </div>
-  )
 }
 
 function getInitialTab(): 'signin' | 'signup' {
@@ -164,7 +112,6 @@ function HomeAuthPageContent() {
 
   const isAuthLoading = loading
   const loadingContent = useMemo(() => <AuthPageSkeleton />, [])
-  const fixtureContent = useMemo(() => <AuthPageFixture />, [])
   const passwordStrength = useMemo(() => calculatePasswordStrength(signUpData.password), [signUpData.password])
   const passwordsMatch = signUpData.password === signUpData.confirmPassword
 
@@ -354,7 +301,6 @@ function HomeAuthPageContent() {
         name="auth-main-page"
         loading={isAuthLoading && !user}
         loadingContent={loadingContent}
-        fixture={fixtureContent}
       >
         <div className="flex min-h-dvh flex-1 items-center justify-center px-6 py-12 sm:py-16">
           <div className="w-full max-w-120">

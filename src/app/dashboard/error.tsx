@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 type DashboardErrorProps = {
   error: Error & { digest?: string; componentStack?: string }
@@ -10,6 +11,8 @@ type DashboardErrorProps = {
 }
 
 export default function DashboardError({ error, unstable_retry, reset }: DashboardErrorProps) {
+  const router = useRouter()
+
   useEffect(() => {
     console.error('[DashboardErrorBoundary]', error)
 
@@ -29,10 +32,9 @@ export default function DashboardError({ error, unstable_retry, reset }: Dashboa
       return
     }
 
-    if (typeof window !== 'undefined') {
-      window.location.reload()
-    }
-  }, [reset, unstable_retry])
+    router.replace('/dashboard')
+    router.refresh()
+  }, [reset, router, unstable_retry])
 
   const isDevelopment = process.env.NODE_ENV === 'development'
 

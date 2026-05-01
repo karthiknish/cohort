@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Suspense, createElement, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Download,
@@ -48,6 +49,7 @@ import { ClientPipelineBoard } from './components/client-pipeline-board'
 import { useClientsData } from './use-clients-data'
 import { formatDate, getRelativeTimeString } from './utils'
 import type { OnboardingItem } from './types'
+import { BackLink } from '@/shared/components/back-link'
 
 type ClientsDashboardPageClientProps = {
   initialClientId?: string | null
@@ -64,6 +66,7 @@ export default function ClientsDashboardPageClient({ initialClientId = null }: C
 }
 
 function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClientProps) {
+  const router = useRouter()
   const { selectedClient, refreshClients, clients, selectClient, loading } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
@@ -148,6 +151,11 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
       })
   }, [refreshClients, refreshing, toast])
 
+  const handleBackToClients = useCallback(() => {
+    selectClient(null)
+    router.push('/dashboard/clients')
+  }, [router, selectClient])
+
   const handleExport = useCallback(() => {
     if (!selectedClient) return
 
@@ -212,17 +220,22 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
     <div className={cn(DASHBOARD_THEME.layout.container, DASHBOARD_THEME.animations.fadeIn)}>
       <div className={DASHBOARD_THEME.layout.header}>
         <div className="flex items-center gap-4">
-          <div className={DASHBOARD_THEME.icons.container}>
-            <UsersIcon className={DASHBOARD_THEME.icons.small} />
-          </div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className={DASHBOARD_THEME.layout.title}>{selectedClient.name}</h1>
+          <div className="space-y-2">
+            <BackLink label="Back to clients" onClick={handleBackToClients} />
+            <div className="flex items-center gap-4">
+              <div className={DASHBOARD_THEME.icons.container}>
+                <UsersIcon className={DASHBOARD_THEME.icons.small} />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-3">
+                  <h1 className={DASHBOARD_THEME.layout.title}>{selectedClient.name}</h1>
+                </div>
+                <p className={DASHBOARD_THEME.layout.subtitle}>
+                  Managed by <span className="font-bold text-foreground/80">{selectedClient.accountManager || 'your team'}</span>
+                  {clientAge && <span className="font-normal text-muted-foreground/70"> · Partnered {clientAge}</span>}
+                </p>
+              </div>
             </div>
-            <p className={DASHBOARD_THEME.layout.subtitle}>
-              Managed by <span className="font-bold text-foreground/80">{selectedClient.accountManager || 'your team'}</span>
-              {clientAge && <span className="font-normal text-muted-foreground/70"> · Partnered {clientAge}</span>}
-            </p>
           </div>
         </div>
 

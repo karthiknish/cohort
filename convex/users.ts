@@ -1,10 +1,12 @@
-import { mutation, query, internalQuery } from './_generated/server'
+import { query, internalQuery } from './_generated/server'
 import { v } from 'convex/values'
 import {
   authenticatedQuery,
+  optionalAuthenticatedQuery,
   zAdminMutation,
   zAdminQuery,
   zAuthenticatedQuery,
+  zRateLimitedAuthenticatedMutation,
   zWorkspaceQuery,
 } from './functions'
 import * as z from 'zod'
@@ -440,7 +442,7 @@ export const bulkUpsert = zAdminMutation({
 })
 
 // Safe version that returns null instead of throwing - for client-side queries
-export const getByLegacyIdSafe = query({
+export const getByLegacyIdSafe = optionalAuthenticatedQuery({
   args: { legacyId: v.string() },
   handler: async (ctx, args): Promise<{
     legacyId: string
@@ -469,8 +471,7 @@ export const getByLegacyIdSafe = query({
     createdAtMs: number | null
     updatedAtMs: number | null
   } | null> => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity || identity.subject !== args.legacyId) {
+    if (!ctx.legacyId || ctx.legacyId !== args.legacyId) {
       return null
     }
 
@@ -498,18 +499,18 @@ export const getByLegacyIdSafe = query({
   },
 })
 
-export const bootstrapUpsert = mutation({
+export const bootstrapUpsert = zRateLimitedAuthenticatedMutation({
+  rateLimit: 'sensitive',
   args: {
-    legacyId: v.string(),
-    email: v.optional(v.string()),
-    name: v.optional(v.string()),
-    role: v.optional(v.string()),
-    status: v.optional(v.string()),
-    agencyId: v.optional(v.string()),
+    legacyId: z.string(),
+    email: z.string().optional(),
+    name: z.string().optional(),
+    role: z.string().optional(),
+    status: z.string().optional(),
+    agencyId: z.string().optional(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (!identity || identity.subject !== args.legacyId) {
+    if (ctx.legacyId !== args.legacyId) {
       throw Errors.auth.unauthorized()
     }
 

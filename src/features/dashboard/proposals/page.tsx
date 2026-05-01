@@ -17,12 +17,14 @@ import { ProposalDeleteDialog } from './components/proposal-delete-dialog'
 import { ProposalWizardHeader } from './components/proposal-wizard-header'
 import { ProposalGenerationOverlay, DeckProgressOverlay, type DeckProgressStage } from './components/deck-progress-overlays'
 import { ProposalMetrics } from './components/proposal-metrics'
+import { LiveRegion } from '@/shared/ui/live-region'
 import {
   ProposalBuilderOverlay,
   ProposalPageActions,
   ProposalStartStateCard,
 } from './components/proposal-page-sections'
 import { createInitialProposalFormState, stepRequiredFieldLabels } from './utils/form-steps'
+import { useKeyboardShortcuts } from '@/shared/hooks/use-keyboard-shortcuts'
 
 // Extracted hooks
 import {
@@ -80,11 +82,16 @@ function ProposalsPageContent() {
     toggleArrayValue,
     handleSocialHandleChange,
     clearErrors,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     handleBack,
   } = wizard
 
   // Draft management hook
   const drafts = useProposalDrafts({
+    isPreviewMode,
     formState,
     currentStep,
     hasPersistableData,
@@ -109,6 +116,7 @@ function ProposalsPageContent() {
     setAutosaveStatus,
     refreshProposals,
     ensureDraftId,
+    saveDraftNow,
     handleCreateNewProposal,
     handleResumeProposal,
     handleDeleteProposal,
@@ -218,10 +226,43 @@ function ProposalsPageContent() {
         ...initialForm.company,
         name: selectedClient?.name ?? initialForm.company.name,
       },
-    })
+    }, { resetHistory: true })
     setCurrentStep(0)
     setIsWizardOpen(true)
   }, [selectedClient?.name, setAutosaveStatus, setCurrentStep, setDraftId, setFormState, submission])
+
+  useKeyboardShortcuts(
+    [
+      {
+        combo: 'mod+s',
+        description: 'Save draft now',
+        callback: () => {
+          void saveDraftNow({ showToast: true })
+        },
+        enabled: isWizardOpen && !submitted && !isPreviewMode,
+      },
+      {
+        combo: 'mod+z',
+        description: 'Undo last proposal edit',
+        callback: () => {
+          undo()
+        },
+        enabled: isWizardOpen && !submitted && canUndo,
+      },
+      {
+        combo: 'mod+shift+z',
+        description: 'Redo proposal edit',
+        callback: () => {
+          redo()
+        },
+        enabled: isWizardOpen && !submitted && canRedo,
+      },
+    ],
+    {
+      enabled: isWizardOpen,
+      allowInInput: true,
+    }
+  )
 
   const {
     handleSelectTemplate,
@@ -257,6 +298,22 @@ function ProposalsPageContent() {
     setIsWizardOpen(false)
   }, [])
 
+  const submissionAnnouncement = useMemo(() => {
+    if (isSubmitting) {
+      return 'Generating proposal deck. This can take a few minutes.'
+    }
+
+    if (isRecheckingDeck) {
+      return 'Rechecking proposal deck status.'
+    }
+
+    if (submitted && isPresentationReady) {
+      return 'Proposal deck is ready.'
+    }
+
+    return ''
+  }, [isPresentationReady, isRecheckingDeck, isSubmitting, submitted])
+
   const stepContent = useMemo(
     () => (
     <ProposalStepContent
@@ -279,6 +336,7 @@ function ProposalsPageContent() {
       loadingContent={loadingContent}
     >
       <div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
+        <LiveRegion message={submissionAnnouncement} />
         <div className={DASHBOARD_THEME.layout.header}>
           <ProposalWizardHeader />
           <ProposalPageActions

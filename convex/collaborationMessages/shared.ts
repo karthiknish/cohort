@@ -2,6 +2,7 @@ import { z } from 'zod/v4'
 import type { Doc, Id } from '/_generated/dataModel'
 import { Errors } from '../errors'
 import {
+  zRateLimitedWorkspaceMutation,
   zWorkspaceMutation,
   zWorkspaceQuery,
   zWorkspaceQueryActive,
@@ -623,6 +624,7 @@ export function canManageMessage(ctx: CollaborationCtx, row: CollaborationMessag
 export {
   z,
   Errors,
+  zRateLimitedWorkspaceMutation,
   zWorkspaceMutation,
   zWorkspaceQuery,
   zWorkspaceQueryActive,

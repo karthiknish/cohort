@@ -330,27 +330,29 @@ export function useTasks({
 
         const legacyId = typeof result === 'string' ? result : result?.legacyId
 
+        if (!legacyId) {
+          throw new Error('Task creation failed to return a task id.')
+        }
+
         toast({ title: 'Task created', description: `"${payload.title}" added.` })
 
-        return legacyId
-          ? {
-            id: legacyId,
-            title: payload.title,
-            description: payload.description ?? null,
-            status: payload.status,
-            priority: payload.priority as TaskRecord['priority'],
-            assignedTo: payload.assignedTo,
-            clientId: payload.clientId,
-            client: payload.client ?? null,
-            projectId: payload.projectId ?? null,
-            projectName: payload.projectName ?? null,
-            dueDate: payload.dueDate ?? null,
-            attachments: payload.attachments ?? [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            deletedAt: null,
-          }
-          : null
+        return {
+          id: legacyId,
+          title: payload.title,
+          description: payload.description ?? null,
+          status: payload.status,
+          priority: payload.priority as TaskRecord['priority'],
+          assignedTo: payload.assignedTo,
+          clientId: payload.clientId,
+          client: payload.client ?? null,
+          projectId: payload.projectId ?? null,
+          projectName: payload.projectName ?? null,
+          dueDate: payload.dueDate ?? null,
+          attachments: payload.attachments ?? [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          deletedAt: null,
+        }
       } catch (err) {
         logError(err, 'useTasks:handleCreateTask')
         toast({

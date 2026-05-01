@@ -388,6 +388,21 @@ export const authenticatedQuery = customQuery(query, {
   },
 })
 
+export const optionalAuthenticatedQuery = customQuery(query, {
+  args: {},
+  input: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity()
+    return {
+      ctx: {
+        ...ctx,
+        identity,
+        legacyId: identity?.subject ?? null,
+      },
+      args: {},
+    }
+  },
+})
+
 export const workspaceQuery = customQuery(query, {
   args: { workspaceId: v.string() },
   input: async (ctx, args) => {

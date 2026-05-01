@@ -7,6 +7,8 @@ export function PWAProvider() {
     if (typeof window === 'undefined') return
     if (!('serviceWorker' in navigator)) return
 
+    let cancelled = false
+
     // Service workers + cache-first strategies are great in prod but can easily
     // serve stale bundles in `next dev` (HMR/Turbopack), leading to confusing
     // mismatches like old fetch logic still running.
@@ -31,6 +33,15 @@ export function PWAProvider() {
 
     const register = async () => {
       try {
+        const response = await fetch('/sw.js', {
+          method: 'HEAD',
+          cache: 'no-store',
+        })
+
+        if (!response.ok || cancelled) {
+          return
+        }
+
         const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
         // Immediately update if a new service worker is found
         if (registration.waiting) {
@@ -46,14 +57,16 @@ export function PWAProvider() {
           })
         })
       } catch (error) {
-        console.error('[pwa] service worker registration failed', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[pwa] service worker registration failed', error)
+        }
       }
     }
 
-    register()
+    void register()
 
     return () => {
-      // No cleanup needed
+      cancelled = true
     }
   }, [])
 

@@ -11,6 +11,7 @@ import { DashboardAgencyRoutesGate } from '@/features/dashboard/home/components/
 import { DashboardMainRoleFrame } from '@/features/dashboard/home/components/dashboard-main-role-frame'
 import { PreviewDataBanner } from '@/features/dashboard/home/components/preview-data-banner'
 import { AgentModeDynamic } from '@/shared/components/agent-mode/agent-mode-dynamic'
+import { NetworkStatusBanner } from '@/shared/components/network-status-banner'
 import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
 import { isScreenRecordingAuthBypassEnabled, PREVIEW_ROUTE_REQUEST_HEADER } from '@/lib/preview-data'
 
@@ -31,6 +32,7 @@ export default async function DashboardLayout({
               <Sidebar />
               <div className="flex min-h-0 flex-1 flex-col bg-muted/20">
                 <Header />
+                <NetworkStatusBanner />
                 <ScrollArea className="min-h-0 flex-1">
                   <main className="min-h-full">
                     <DashboardMainRoleFrame>

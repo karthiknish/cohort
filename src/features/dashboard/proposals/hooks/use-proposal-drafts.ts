@@ -8,14 +8,16 @@ import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import { mergeProposalForm, type ProposalFormData } from '@/lib/proposals'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { trackDraftCreated } from '@/services/proposal-analytics'
+import type { FormStateUpdateOptions } from './use-proposal-wizard'
 
 import { createInitialProposalFormState } from '../utils/form-steps'
 
 export interface UseProposalDraftsOptions {
+    isPreviewMode: boolean
     formState: ProposalFormData
     currentStep: number
     hasPersistableData: boolean
-    onFormStateChange: (state: ProposalFormData) => void
+    onFormStateChange: (state: ProposalFormData | ((prev: ProposalFormData) => ProposalFormData), options?: FormStateUpdateOptions) => void
     onStepChange: (step: number) => void
     onSubmittedChange: (submitted: boolean) => void
     onPresentationDeckChange: (deck: ProposalPresentationDeck | null) => void
@@ -49,6 +51,7 @@ export interface UseProposalDraftsReturn {
     setAutosaveStatus: (status: 'idle' | 'saving' | 'saved' | 'error') => void
     refreshProposals: () => Promise<ProposalDraft[]>
     ensureDraftId: () => Promise<string | null>
+    saveDraftNow: (options?: { showToast?: boolean }) => Promise<void>
     handleCreateNewProposal: () => Promise<void>
     handleResumeProposal: (proposal: ProposalDraft, forceEdit?: boolean) => void;
     handleDeleteProposal: (proposal: ProposalDraft) => Promise<void>
@@ -79,6 +82,7 @@ type ProposalRow = {
 
 export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposalDraftsReturn {
     const {
+        isPreviewMode,
         formState,
         currentStep,
         hasPersistableData,
@@ -100,7 +104,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     const canQuery = Boolean(workspaceId && selectedClientId && !isSyncing && !authError)
     const convexProposals = useQuery(
         proposalsApi.list,
-        !canQuery
+        isPreviewMode || !canQuery
             ? 'skip'
             : {
                 workspaceId,
@@ -110,6 +114,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     )
 
     const convexCreateProposal = useMutation(proposalsApi.create)
+    const convexUpdateProposal = useMutation(proposalsApi.update)
     const convexRemoveProposal = useMutation(proposalsApi.remove)
 
     const proposals: ProposalDraft[] = useMemo(() => {
@@ -151,6 +156,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     const draftIdRef = useRef<string | null>(draftId)
     const wizardRef = useRef<HTMLDivElement | null>(null)
     const lastBootstrapKeyRef = useRef<string | null>(null)
+    const lastSavedSnapshotRef = useRef<string | null>(null)
     const toastRef = useRef(toast)
     const onFormStateChangeRef = useRef(onFormStateChange)
     const onStepChangeRef = useRef(onStepChange)
@@ -172,6 +178,20 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
     onLastSubmissionSnapshotChangeRef.current = onLastSubmissionSnapshotChange
 
     const isLoadingProposals = Boolean(selectedClientId && workspaceId && convexProposals === undefined)
+
+    const buildSnapshotKey = useCallback((snapshot: { form: ProposalFormData; step: number; clientId: string | null }) => {
+        return JSON.stringify({
+            clientId: snapshot.clientId,
+            step: snapshot.step,
+            form: snapshot.form,
+        })
+    }, [])
+
+    const currentSnapshotKey = useMemo(() => buildSnapshotKey({
+        form: formState,
+        step: currentStep,
+        clientId: selectedClientId,
+    }), [buildSnapshotKey, currentStep, formState, selectedClientId])
 
     const refreshProposals = useCallback(async () => {
         // Proposals are realtime via Convex; keep this for callers.
@@ -218,6 +238,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             })
             const newDraftId = res.legacyId
             setDraftId(newDraftId)
+            lastSavedSnapshotRef.current = currentSnapshotKey
             setAutosaveStatus('saved')
             return newDraftId
         } catch (error: unknown) {
@@ -233,6 +254,59 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             setIsCreatingDraft(false)
         }
     }, [draftId, hasPersistableData, isCreatingDraft, formState, currentStep, selectedClientId, selectedClient, toast, workspaceId, convexCreateProposal, user?.id])
+
+    const saveDraftNow = useCallback(async (saveOptions?: { showToast?: boolean }) => {
+        if (isPreviewMode || !hasPersistableData || !selectedClientId) {
+            return
+        }
+
+        let activeDraftId = draftIdRef.current
+
+        if (!activeDraftId) {
+            activeDraftId = await ensureDraftId()
+            if (!activeDraftId) {
+                return
+            }
+        }
+
+        try {
+            setAutosaveStatus('saving')
+            if (!workspaceId) {
+                throw new Error('Workspace is required to save a proposal draft')
+            }
+
+            const timestamp = Date.now()
+            await convexUpdateProposal({
+                workspaceId,
+                legacyId: activeDraftId,
+                formData: formState,
+                stepProgress: currentStep,
+                status: 'draft',
+                clientId: selectedClientId,
+                clientName: selectedClient?.name ?? null,
+                updatedAtMs: timestamp,
+                lastAutosaveAtMs: timestamp,
+            })
+
+            lastSavedSnapshotRef.current = currentSnapshotKey
+            setAutosaveStatus('saved')
+
+            if (saveOptions?.showToast) {
+                toast({
+                    title: 'Draft saved',
+                    description: 'Your proposal changes are saved.',
+                })
+            }
+        } catch (error: unknown) {
+            logError(error, 'useProposalDrafts:saveDraftNow')
+            setAutosaveStatus('error')
+
+            const message = asErrorMessage(error)
+            if (saveOptions?.showToast) {
+                toast({ title: 'Unable to save draft', description: message, variant: 'destructive' })
+            }
+        }
+    }, [convexUpdateProposal, currentSnapshotKey, currentStep, ensureDraftId, formState, hasPersistableData, isPreviewMode, selectedClient?.name, selectedClientId, toast, workspaceId])
 
     const handleCreateNewProposal = useCallback(async () => {
         if (!selectedClientId) {
@@ -278,6 +352,11 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             onPresentationDeckChange(null)
             onAiSuggestionsChange(null)
             onLastSubmissionSnapshotChange(null)
+            lastSavedSnapshotRef.current = buildSnapshotKey({
+                form: initialForm,
+                step: 0,
+                clientId: selectedClientId,
+            })
             setAutosaveStatus('saved')
 
             // Track draft creation for analytics
@@ -310,7 +389,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         const targetStep = Math.min(proposal.stepProgress ?? 0, steps.length - 1)
 
         setDraftId(proposal.id)
-        onFormStateChange(mergedForm)
+        onFormStateChange(mergedForm, { resetHistory: true })
         onStepChange(targetStep)
         onSubmittedChange(forceEdit ? false : proposal.status === 'ready')
         onPresentationDeckChange(proposal.presentationDeck ? { ...proposal.presentationDeck, storageUrl: proposal.presentationDeck.storageUrl ?? proposal.pptUrl ?? null } : null)
@@ -328,8 +407,14 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             onLastSubmissionSnapshotChange(null)
         }
 
+        lastSavedSnapshotRef.current = buildSnapshotKey({
+            form: mergedForm,
+            step: targetStep,
+            clientId: proposal.clientId ?? selectedClientId,
+        })
+
         wizardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, [steps, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange])
+    }, [buildSnapshotKey, onAiSuggestionsChange, onFormStateChange, onLastSubmissionSnapshotChange, onPresentationDeckChange, onStepChange, onSubmittedChange, selectedClientId, steps])
 
     const handleDeleteProposal = useCallback(async (proposal: ProposalDraft) => {
         if (deletingProposalId && deletingProposalId !== proposal.id) {
@@ -346,12 +431,17 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
 
             if (draftId === proposal.id) {
                 setDraftId(null)
-                onFormStateChange(createInitialProposalFormState())
+                onFormStateChange(createInitialProposalFormState(), { resetHistory: true })
                 onStepChange(0)
                 onSubmittedChange(false)
                 onPresentationDeckChange(null)
                 onAiSuggestionsChange(null)
                 onLastSubmissionSnapshotChange(null)
+                lastSavedSnapshotRef.current = buildSnapshotKey({
+                    form: createInitialProposalFormState(),
+                    step: 0,
+                    clientId: selectedClientId,
+                })
             }
 
             toast({ title: 'Proposal deleted', description: 'The proposal has been removed.' })
@@ -364,7 +454,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             setProposalPendingDelete(null)
             setIsDeleteDialogOpen(false)
         }
-    }, [deletingProposalId, draftId, toast, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange, workspaceId, convexRemoveProposal])
+    }, [buildSnapshotKey, convexRemoveProposal, deletingProposalId, draftId, onAiSuggestionsChange, onFormStateChange, onLastSubmissionSnapshotChange, onPresentationDeckChange, onStepChange, onSubmittedChange, selectedClientId, toast, workspaceId])
 
     const requestDeleteProposal = useCallback((proposal: ProposalDraft) => {
         setProposalPendingDelete(proposal)
@@ -402,12 +492,14 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
             try {
                 if (!selectedClientId) {
                     setDraftId(null)
-                    onFormStateChangeRef.current(createInitialProposalFormState())
+                    const initialForm = createInitialProposalFormState()
+                    onFormStateChangeRef.current(initialForm, { resetHistory: true })
                     onStepChangeRef.current(0)
                     onSubmittedChangeRef.current(false)
                     onPresentationDeckChangeRef.current(null)
                     onAiSuggestionsChangeRef.current(null)
                     onLastSubmissionSnapshotChangeRef.current(null)
+                    lastSavedSnapshotRef.current = buildSnapshotKey({ form: initialForm, step: 0, clientId: null })
                     return
                 }
 
@@ -420,20 +512,33 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
 
                 if (draft) {
                     setDraftId(draft.id)
-                    onFormStateChangeRef.current(mergeProposalForm(draft.formData as Partial<ProposalFormData>))
-                    onStepChangeRef.current(Math.min(draft.stepProgress ?? 0, steps.length - 1))
+                    const mergedForm = mergeProposalForm(draft.formData as Partial<ProposalFormData>)
+                    const targetStep = Math.min(draft.stepProgress ?? 0, steps.length - 1)
+                    onFormStateChangeRef.current(mergedForm, { resetHistory: true })
+                    onStepChangeRef.current(targetStep)
                     onSubmittedChangeRef.current(draft.status === 'ready')
                     onPresentationDeckChangeRef.current(draft.presentationDeck ? { ...draft.presentationDeck, storageUrl: draft.presentationDeck.storageUrl ?? draft.pptUrl ?? null } : null)
                     onAiSuggestionsChangeRef.current(draft.aiSuggestions ?? null)
                     onLastSubmissionSnapshotChangeRef.current(null)
+                    lastSavedSnapshotRef.current = buildSnapshotKey({
+                        form: mergedForm,
+                        step: targetStep,
+                        clientId: draft.clientId ?? selectedClientId,
+                    })
                 } else {
                     setDraftId(null)
-                    onFormStateChangeRef.current(createInitialProposalFormState())
+                    const initialForm = createInitialProposalFormState()
+                    onFormStateChangeRef.current(initialForm, { resetHistory: true })
                     onStepChangeRef.current(0)
                     onSubmittedChangeRef.current(false)
                     onPresentationDeckChangeRef.current(null)
                     onAiSuggestionsChangeRef.current(null)
                     onLastSubmissionSnapshotChangeRef.current(null)
+                    lastSavedSnapshotRef.current = buildSnapshotKey({
+                        form: initialForm,
+                        step: 0,
+                        clientId: selectedClientId,
+                    })
                 }
             } catch (err: unknown) {
                 if (cancelled) {
@@ -454,7 +559,27 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         return () => {
             cancelled = true
         }
-    }, [proposals, proposalsKey, selectedClientId, steps.length])
+    }, [buildSnapshotKey, proposals, proposalsKey, selectedClientId, steps.length])
+
+    useEffect(() => {
+        if (isPreviewMode || isBootstrapping || !hydrationRef.current || !hasPersistableData || !selectedClientId) {
+            return
+        }
+
+        if (lastSavedSnapshotRef.current === currentSnapshotKey) {
+            return
+        }
+
+        setAutosaveStatus('saving')
+
+        const timeoutId = window.setTimeout(() => {
+            void saveDraftNow()
+        }, 900)
+
+        return () => {
+            window.clearTimeout(timeoutId)
+        }
+    }, [currentSnapshotKey, hasPersistableData, isBootstrapping, isPreviewMode, saveDraftNow, selectedClientId])
 
     return {
         draftId,
@@ -470,6 +595,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         setAutosaveStatus,
         refreshProposals,
         ensureDraftId,
+        saveDraftNow,
         handleCreateNewProposal,
         handleResumeProposal,
         handleDeleteProposal,

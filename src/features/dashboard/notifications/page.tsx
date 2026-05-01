@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { LiveRegion } from '@/shared/ui/live-region'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { useToast } from '@/shared/ui/use-toast'
@@ -51,6 +52,7 @@ import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
 import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 
 const PAGE_SIZE = 25
+const MAX_NOTIFICATION_PAGES = 10
 const VIRTUAL_NOTIFICATIONS_THRESHOLD = 24
 const FILTER_VALUES = ['all', 'unread', 'mentions', 'system'] as const
 const NOTIFICATIONS_PAGE_FALLBACK = (
@@ -151,6 +153,7 @@ function NotificationsPageContent() {
   const activeFilter = filterTabs.value
   const setActiveFilter = filterTabs.setValue
   const [ackInFlight, setAckInFlight] = useState(false)
+  const [notificationAnnouncement, setNotificationAnnouncement] = useState('')
   const [previewNotificationState, setPreviewNotificationState] = useState<{
     sourceKey: string
     notifications: WorkspaceNotification[]
@@ -175,6 +178,7 @@ function NotificationsPageContent() {
     queryKey: ['notificationsPage', workspaceId, user?.role, selectedClientId, activeFilter],
     enabled: !isPreviewMode && Boolean(workspaceId),
     initialPageParam: null as NotificationsCursor | null,
+    maxPages: MAX_NOTIFICATION_PAGES,
     queryFn: async ({ pageParam }) => {
       if (!workspaceId) {
         return { notifications: [], nextCursor: null as NotificationsCursor | null }
@@ -226,11 +230,18 @@ function NotificationsPageContent() {
   const nextCursor = isPreviewMode ? false : notificationsInfiniteQuery.hasNextPage
 
   const updateNotificationStatus = useCallback(
-    (ids: string[], action: AckAction) => {
+    (ids: string[], action: AckAction, label?: string) => {
       if (isPreviewMode) {
         if (ids.length === 0) {
           return Promise.resolve()
         }
+
+        const announcementLabel = label ?? `${ids.length} notification${ids.length > 1 ? 's' : ''}`
+        setNotificationAnnouncement(
+          action === 'dismiss'
+            ? `Dismissing ${announcementLabel}.`
+            : `Marking ${announcementLabel} as read.`
+        )
 
         setPreviewNotificationState((current) => {
           const notifications = current?.sourceKey === previewSourceKey
@@ -259,12 +270,25 @@ function NotificationsPageContent() {
           description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
         })
 
+        setNotificationAnnouncement(
+          action === 'dismiss'
+            ? `${announcementLabel} dismissed.`
+            : `${announcementLabel} marked as read.`
+        )
+
         return Promise.resolve()
       }
 
       if (!workspaceId || ids.length === 0) {
         return Promise.resolve()
       }
+
+      const announcementLabel = label ?? `${ids.length} notification${ids.length > 1 ? 's' : ''}`
+      setNotificationAnnouncement(
+        action === 'dismiss'
+          ? `Dismissing ${announcementLabel}.`
+          : `Marking ${announcementLabel} as read.`
+      )
 
       setAckInFlight(true)
 
@@ -280,11 +304,17 @@ function NotificationsPageContent() {
             title: action === 'dismiss' ? 'Notifications cleared' : 'Marked as read',
             description: `${ids.length} notification${ids.length > 1 ? 's' : ''} ${action === 'dismiss' ? 'removed' : 'updated'} successfully.`,
           })
+          setNotificationAnnouncement(
+            action === 'dismiss'
+              ? `${announcementLabel} dismissed.`
+              : `${announcementLabel} marked as read.`
+          )
         })
         .catch((error) => {
           logError(error, 'Notifications:updateStatus')
           const message = asErrorMessage(error)
           toast({ title: 'Notification error', description: message, variant: 'destructive' })
+          setNotificationAnnouncement(`Could not update ${announcementLabel}. ${message}`)
         })
         .finally(() => {
           setAckInFlight(false)
@@ -323,15 +353,15 @@ function NotificationsPageContent() {
   }, [isPreviewMode, notificationsInfiniteQuery])
 
   const handleDismiss = useCallback(
-    (id: string) => {
-      void updateNotificationStatus([id], 'dismiss')
+    (id: string, title?: string) => {
+      void updateNotificationStatus([id], 'dismiss', title ? `${title} notification` : 'notification')
     },
     [updateNotificationStatus]
   )
 
   const handleMarkAsRead = useCallback(
-    (id: string) => {
-      void updateNotificationStatus([id], 'read')
+    (id: string, title?: string) => {
+      void updateNotificationStatus([id], 'read', title ? `${title} notification` : 'notification')
     },
     [updateNotificationStatus]
   )
@@ -356,7 +386,7 @@ function NotificationsPageContent() {
       toast({ title: 'All caught up!', description: 'You have no unread notifications.' })
       return
     }
-    void updateNotificationStatus(unreadIds, 'read')
+    void updateNotificationStatus(unreadIds, 'read', `${unreadIds.length} notifications`)
   }, [notifications, updateNotificationStatus, toast])
 
   const handleActiveFilterChange = useCallback((value: string) => {
@@ -369,7 +399,7 @@ function NotificationsPageContent() {
       toast({ title: 'Inbox empty', description: 'There are no notifications to clear.' })
       return
     }
-    void updateNotificationStatus(allIds, 'dismiss')
+    void updateNotificationStatus(allIds, 'dismiss', `${allIds.length} notifications`)
   }, [notifications, updateNotificationStatus, toast])
 
   const unreadCount = notifications.filter((item) => !item.read).length
@@ -404,6 +434,7 @@ function NotificationsPageContent() {
 
   return (
     <div className={DASHBOARD_THEME.layout.container}>
+      <LiveRegion message={notificationAnnouncement} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.notifications?.title ?? 'Notifications'}</h1>
@@ -634,7 +665,8 @@ function NotificationRow({
   getNotificationCategory: (kind: WorkspaceNotification['kind']) => string
   getNotificationIcon: (kind: WorkspaceNotification['kind']) => React.ReactNode
   handleDismiss: (id: string) => void
-  handleMarkAsRead: (id: string) => void
+  handleMarkAsRead: (id: string, title?: string) => void
+  handleDismiss: (id: string, title?: string) => void
   handleOpenNotification: (notification: WorkspaceNotification) => void
   notification: WorkspaceNotification
   renderTimestamp: (input: string | null) => string
@@ -644,12 +676,12 @@ function NotificationRow({
   }, [handleOpenNotification, notification])
 
   const handleRead = useCallback(() => {
-    handleMarkAsRead(notification.id)
-  }, [handleMarkAsRead, notification.id])
+    handleMarkAsRead(notification.id, notification.title)
+  }, [handleMarkAsRead, notification.id, notification.title])
 
   const handleRemove = useCallback(() => {
-    handleDismiss(notification.id)
-  }, [handleDismiss, notification.id])
+    handleDismiss(notification.id, notification.title)
+  }, [handleDismiss, notification.id, notification.title])
 
   return (
     <div

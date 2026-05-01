@@ -124,7 +124,7 @@ interface UseRealtimeMessagesOptions {
   setNextCursorByChannel: React.Dispatch<React.SetStateAction<Record<string, string | null>>>
   setLoadingChannelId: React.Dispatch<React.SetStateAction<string | null>>
   setMessagesError: React.Dispatch<React.SetStateAction<string | null>>
-  onError: (channel: Channel) => void
+  onError: (channel: Channel, errorMessage: string) => void
 }
 
 export function useRealtimeMessages({
@@ -136,6 +136,7 @@ export function useRealtimeMessages({
   setNextCursorByChannel,
   setLoadingChannelId,
   setMessagesError,
+  onError,
 }: UseRealtimeMessagesOptions) {
   const { isPreviewMode } = usePreview()
 
@@ -263,9 +264,14 @@ export function useRealtimeMessages({
       return
     }
 
-    setMessagesError(asErrorMessage(channelListResult))
+    const errorMessage = asErrorMessage(channelListResult)
+
+    setMessagesError(errorMessage)
     setLoadingChannelId((current) => (current === channelId ? null : current))
-  }, [channelId, channelListResult, convexEnabled, setLoadingChannelId, setMessagesError])
+    if (selectedChannel) {
+      onError(selectedChannel, errorMessage)
+    }
+  }, [channelId, channelListResult, convexEnabled, onError, selectedChannel, setLoadingChannelId, setMessagesError])
 
   useEffect(() => {
     if (convexEnabled) {

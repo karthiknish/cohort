@@ -31,11 +31,12 @@ import { Badge } from '@/shared/ui/badge'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useAuth } from '@/shared/contexts/auth-context'
-import { KeyboardShortcutBadge, useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
+import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { onboardingApi } from '@/lib/convex-api'
 import { useToast } from '@/shared/ui/use-toast'
 import { useOnboardingTour } from '@/shared/hooks/use-onboarding-tour'
+import { getShortcutsForRole } from './keyboard-shortcuts'
 
 function HelpStepActionLink({
   href,
@@ -197,13 +198,6 @@ function gettingStartedStepsForRole(role: string | null) {
   return steps
 }
 
-const getKeyboardShortcuts = () => [
-  { combo: 'mod+k', description: 'Open quick navigation' },
-  { combo: '?', description: 'Show help & shortcuts' },
-  { combo: 'escape', description: 'Close dialogs and modals' },
-  { combo: 'mod+/', description: 'Toggle AI assistant' },
-]
-
 const gettingStartedSteps = [
   {
     title: 'Select or create a client workspace',
@@ -234,7 +228,10 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
   const navigationForUser = useMemo(() => helpNavigationForRole(user?.role ?? null), [user?.role])
   const gettingStartedForUser = useMemo(() => gettingStartedStepsForRole(user?.role ?? null), [user?.role])
 
-  const keyboardShortcuts = getKeyboardShortcuts()
+  const keyboardShortcuts = useMemo(
+    () => getShortcutsForRole(user?.role, 'global').map(({ combo, description }) => ({ combo, description })),
+    [user?.role]
+  )
   const handleLaunchTour = useCallback(() => {
     onOpenChange(false)
     startTour()
@@ -547,14 +544,5 @@ export function useHelpModal() {
       void markWelcomeSeen()
     }
   }
-
-  useKeyboardShortcut({
-    combo: 'shift+?',
-    callback: () => {
-      setShowWelcome(false)
-      setOpen(true)
-    },
-  })
-
   return { open, setOpen, onOpenChange, showWelcome, setShowWelcome }
 }

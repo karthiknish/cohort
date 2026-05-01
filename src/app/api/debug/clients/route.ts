@@ -17,6 +17,7 @@ const querySchema = z.object({
 export const GET = createApiHandler(
   {
     auth: 'required',
+    adminOnly: true,
     querySchema,
     rateLimit: 'standard',
   },

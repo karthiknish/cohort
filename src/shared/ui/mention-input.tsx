@@ -5,6 +5,7 @@ import { User, X } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import { Input } from '@/shared/ui/input'
+import { LiveRegion } from '@/shared/ui/live-region'
 import { cn } from '@/lib/utils'
 
 export interface MentionableUser {
@@ -386,6 +387,31 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
       effectiveAllowMultiple && selectedMentions.length >= mentionLimit
 
     const showDropdown = mentionState.active && !disabled
+    const activeDescendantId = showDropdown && mentionResults.length > 0
+      ? `${inputId}-option-${mentionResults[effectiveHighlightedIndex]?.id}`
+      : undefined
+    const mentionStatusId = `${inputId}-mention-status`
+    const mentionInstructionsId = `${inputId}-mention-instructions`
+    const mentionAnnouncement = useMemo(() => {
+      if (!showDropdown) {
+        return hasReachedMentionLimit
+          ? `Mention limit reached. Maximum ${mentionLimit} mentions allowed.`
+          : ''
+      }
+
+      if (hasReachedMentionLimit) {
+        return 'Mention limit reached. Remove a mention to add another user.'
+      }
+
+      if (mentionResults.length === 0) {
+        return mentionState.query.length > 0
+          ? `No users found for ${mentionState.query}.`
+          : 'Start typing to search users to mention.'
+      }
+
+      const activeUser = mentionResults[effectiveHighlightedIndex]
+      return `${mentionResults.length} mention suggestions available.${activeUser ? ` ${activeUser.name} highlighted.` : ''}`
+    }, [effectiveHighlightedIndex, hasReachedMentionLimit, mentionLimit, mentionResults, mentionState.query, showDropdown])
 
     return (
       <div className={cn('space-y-2', className)}>
@@ -419,6 +445,10 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
         )}
 
         <div ref={containerRef} className="relative">
+          <LiveRegion id={mentionStatusId} message={mentionAnnouncement} />
+          <p id={mentionInstructionsId} className="sr-only">
+            Type the at symbol to open mention suggestions. Use the arrow keys to move through suggestions and press Enter to select.
+          </p>
           <Input
             ref={handleInputRef}
             id={inputId}
@@ -434,8 +464,11 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
             disabled={disabled}
             autoComplete="off"
             aria-autocomplete="list"
+            role="combobox"
             aria-expanded={showDropdown}
             aria-controls={showDropdown ? `${inputId}-mentions` : undefined}
+            aria-activedescendant={activeDescendantId}
+            aria-describedby={`${mentionInstructionsId} ${mentionStatusId}`}
             className={cn('h-11 rounded-lg', inputClassName)}
           />
 
@@ -443,6 +476,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
             <div
               id={`${inputId}-mentions`}
               role="listbox"
+              aria-label="Mention suggestions"
               onMouseDown={handleDropdownMouseDown}
               className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border border-muted/60 bg-popover shadow-lg"
             >

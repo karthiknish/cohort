@@ -1,10 +1,11 @@
 "use client"
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useId, useMemo, useState } from 'react'
 import { Calendar, ChevronsDownUp, ChevronsUpDown, Columns3, Eye, GripVertical, ListTodo, LoaderCircle, RefreshCw, TriangleAlert } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
+import { LiveRegion } from '@/shared/ui/live-region'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -51,6 +52,7 @@ type DraggedTask = {
 
 const EMPTY_SELECTED_TASK_IDS = new Set<string>()
 const EMPTY_TASK_PARTICIPANTS: TaskParticipant[] = []
+const KANBAN_STATUSES = TASK_STATUSES.filter((status): status is TaskStatus => status !== 'archived')
 
 export function TaskKanban({
   tasks,
@@ -85,6 +87,8 @@ export function TaskKanban({
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null)
   const [collapsedTaskIds, setCollapsedTaskIds] = useState<Set<string>>(new Set())
   const [viewingTask, setViewingTask] = useState<TaskRecord | null>(null)
+  const [boardAnnouncement, setBoardAnnouncement] = useState('')
+  const keyboardInstructionsId = useId()
 
   const toggleCollapsed = useCallback((taskId: string) => {
     setCollapsedTaskIds((current) => {
@@ -100,7 +104,7 @@ export function TaskKanban({
 
   const columns = useMemo(
     () =>
-      TASK_STATUSES.filter(s => s !== 'archived').map((status) => ({
+      KANBAN_STATUSES.map((status) => ({
         status,
         label: formatStatusLabel(status),
         items: tasks.filter((task) => task.status === status),
@@ -135,12 +139,35 @@ export function TaskKanban({
 
       const task = tasks.find((t) => t.id === draggedTask.id)
       if (task && draggedTask.sourceStatus !== targetStatus) {
+        setBoardAnnouncement(`${task.title} moved to ${formatStatusLabel(targetStatus)}.`)
         onQuickStatusChange(task, targetStatus)
       }
 
       setDraggedTask(null)
     },
     [draggedTask, tasks, onQuickStatusChange, bulkActive]
+  )
+
+  const handleKeyboardMoveTask = useCallback(
+    (task: TaskRecord, direction: 'previous' | 'next') => {
+      if (bulkActive || pendingStatusUpdates.has(task.id)) {
+        return
+      }
+
+      const currentIndex = KANBAN_STATUSES.indexOf(task.status)
+      const targetStatus = direction === 'previous'
+        ? KANBAN_STATUSES[currentIndex - 1]
+        : KANBAN_STATUSES[currentIndex + 1]
+
+      if (!targetStatus) {
+        setBoardAnnouncement(`${task.title} is already in the ${formatStatusLabel(task.status)} column.`)
+        return
+      }
+
+      setBoardAnnouncement(`${task.title} moved to ${formatStatusLabel(targetStatus)}.`)
+      onQuickStatusChange(task, targetStatus)
+    },
+    [bulkActive, onQuickStatusChange, pendingStatusUpdates]
   )
 
   const handleDragEnd = useCallback(() => {
@@ -223,6 +250,10 @@ export function TaskKanban({
 
   return (
     <div className="space-y-6">
+      <LiveRegion message={boardAnnouncement} />
+      <p id={keyboardInstructionsId} className="sr-only">
+        Use Alt plus Left Arrow or Alt plus Right Arrow on a focused task card to move it between workflow columns. You can also drag and drop tasks with a pointer.
+      </p>
       <div className="flex items-center justify-between px-1">
         <div>
           <div className="flex items-center gap-2.5 font-bold tracking-tight text-foreground">
@@ -251,6 +282,8 @@ export function TaskKanban({
               handleDragLeave={handleDragLeave}
               handleDragOver={handleDragOver}
               handleDrop={handleDrop}
+              keyboardInstructionsId={keyboardInstructionsId}
+              onKeyboardMoveTask={handleKeyboardMoveTask}
               handleViewTask={handleViewTask}
               onClone={onClone}
               onDelete={onDelete}
@@ -301,6 +334,8 @@ function KanbanColumn({
   handleDragLeave,
   handleDragOver,
   handleDrop,
+  keyboardInstructionsId,
+  onKeyboardMoveTask,
   handleViewTask,
   onClone,
   onDelete,
@@ -321,6 +356,8 @@ function KanbanColumn({
   handleDragLeave: () => void
   handleDragOver: (e: React.DragEvent, status: TaskStatus) => void
   handleDrop: (e: React.DragEvent, targetStatus: TaskStatus) => void
+  keyboardInstructionsId: string
+  onKeyboardMoveTask: (task: TaskRecord, direction: 'previous' | 'next') => void
   handleViewTask: (task: TaskRecord) => void
   onClone?: (task: TaskRecord) => void
   onDelete: (task: TaskRecord) => void
@@ -395,9 +432,12 @@ function KanbanColumn({
               handleDragEnd={handleDragEnd}
               handleViewTask={handleViewTask}
               isCollapsed={false}
+              isDragging={draggedTask?.id === task.id}
+              keyboardInstructionsId={keyboardInstructionsId}
               onClone={onClone}
               onDelete={onDelete}
               onEdit={onEdit}
+              onKeyboardMoveTask={onKeyboardMoveTask}
               onQuickStatusChange={onQuickStatusChange}
               onShare={onShare}
               onToggleCollapsed={onToggleCollapsed}
@@ -419,9 +459,12 @@ function KanbanTaskItem({
   handleDragEnd,
   handleViewTask,
   isCollapsed,
+  isDragging,
+  keyboardInstructionsId,
   onClone,
   onDelete,
   onEdit,
+  onKeyboardMoveTask,
   onQuickStatusChange,
   onShare,
   onToggleCollapsed,
@@ -435,9 +478,12 @@ function KanbanTaskItem({
   handleDragEnd: () => void
   handleViewTask: (task: TaskRecord) => void
   isCollapsed: boolean
+  isDragging: boolean
+  keyboardInstructionsId: string
   onClone?: (task: TaskRecord) => void
   onDelete: (task: TaskRecord) => void
   onEdit: (task: TaskRecord) => void
+  onKeyboardMoveTask: (task: TaskRecord, direction: 'previous' | 'next') => void
   onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
   onShare?: (task: TaskRecord) => void
   onToggleCollapsed: (taskId: string) => void
@@ -468,6 +514,23 @@ function KanbanTaskItem({
     handleViewTask(task)
   }, [handleViewTask, task])
 
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!event.altKey) {
+        return
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        onKeyboardMoveTask(task, 'previous')
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        onKeyboardMoveTask(task, 'next')
+      }
+    },
+    [onKeyboardMoveTask, task]
+  )
+
   return (
     <div
       key={task.id}
@@ -475,9 +538,14 @@ function KanbanTaskItem({
       tabIndex={bulkActive || pending ? -1 : 0}
       aria-selected={selected}
       aria-label={task.title}
+      aria-describedby={keyboardInstructionsId}
+      aria-grabbed={isDragging}
+      aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
+      aria-roledescription="task card"
       draggable={!bulkActive && !pending}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onKeyDown={handleKeyDown}
       className={cn(
         'motion-chromatic active:scale-[0.98]',
         !bulkActive && !pending && 'cursor-grab active:cursor-grabbing',

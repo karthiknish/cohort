@@ -69,6 +69,7 @@ export function FormulaBuilderCard({
     const [formulaName, setFormulaName] = useState('')
     const [formulaExpression, setFormulaExpression] = useState('')
     const [outputMetric, setOutputMetric] = useState('')
+    const [savingFormula, setSavingFormula] = useState(false)
 
     // Load formulas on mount
     useEffect(() => {
@@ -100,21 +101,31 @@ export function FormulaBuilderCard({
     }, [validation, metricTotals, executeFormula, formulaExpression])
 
     const handleSave = useCallback(async () => {
-        if (!validation?.valid || !formulaName.trim() || !outputMetric.trim()) return
+        if (savingFormula || !validation?.valid || !formulaName.trim() || !outputMetric.trim()) return
 
-        await createFormula({
-            name: formulaName.trim(),
-            formula: formulaExpression.trim(),
-            inputs: validation.inputs ?? [],
-            outputMetric: outputMetric.trim(),
-        })
+        setSavingFormula(true)
 
-        // Reset form
-        setFormulaName('')
-        setFormulaExpression('')
-        setOutputMetric('')
-        setDialogOpen(false)
-    }, [createFormula, formulaExpression, formulaName, outputMetric, validation])
+        try {
+            const created = await createFormula({
+                name: formulaName.trim(),
+                formula: formulaExpression.trim(),
+                inputs: validation.inputs ?? [],
+                outputMetric: outputMetric.trim(),
+            })
+
+            if (!created) {
+                return
+            }
+
+            // Reset form only after a confirmed successful save.
+            setFormulaName('')
+            setFormulaExpression('')
+            setOutputMetric('')
+            setDialogOpen(false)
+        } finally {
+            setSavingFormula(false)
+        }
+    }, [createFormula, formulaExpression, formulaName, outputMetric, savingFormula, validation])
 
     const handleInsertMetric = useCallback((metricName: string) => {
         setFormulaExpression((prev) => (prev ? `${prev} ${metricName}` : metricName))
@@ -183,6 +194,7 @@ export function FormulaBuilderCard({
                     onUseExample={handleUseExample}
                     outputMetric={outputMetric}
                     previewResult={previewResult}
+                    saving={savingFormula}
                     validation={validation}
                 />
             </FormulaBuilderHeader>

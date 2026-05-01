@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { AlertCircle, Hash, Inbox, MessageCircle, Plus, Search, Sparkles } from 'lucide-react'
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
+import { LiveRegion } from '@/shared/ui/live-region'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
@@ -90,6 +91,8 @@ export function ConversationListPane({
   totalUnread,
 }: ConversationListPaneProps) {
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const previousUnreadRef = useRef(totalUnread)
+  const [unreadAnnouncement, setUnreadAnnouncement] = useState('')
 
   const handleSearchChange = useCallback((event: { target: { value: string } }) => {
     onSearchQueryChange(event.target.value)
@@ -127,10 +130,31 @@ export function ConversationListPane({
     return () => window.removeEventListener('keydown', onGlobalKeyDown)
   }, [])
 
+  useEffect(() => {
+    if (isLoading) {
+      previousUnreadRef.current = totalUnread
+      return
+    }
+
+    const previousUnread = previousUnreadRef.current
+
+    if (totalUnread > previousUnread) {
+      const newMessages = totalUnread - previousUnread
+      setUnreadAnnouncement(
+        `${newMessages} new ${newMessages === 1 ? 'message has' : 'messages have'} arrived. ${totalUnread} unread ${totalUnread === 1 ? 'conversation' : 'conversations'} in inbox.`
+      )
+    } else if (totalUnread === 0 && previousUnread > 0) {
+      setUnreadAnnouncement('All inbox conversations are marked as read.')
+    }
+
+    previousUnreadRef.current = totalUnread
+  }, [isLoading, totalUnread])
+
   const showRecentLabel = sourceFilter === 'all' && !searchQuery.trim()
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden border-b border-muted/40 bg-muted/15 lg:w-[min(100%,20rem)] lg:border-b-0 lg:border-r">
+      <LiveRegion message={unreadAnnouncement} />
       <div className="space-y-3 border-b border-muted/30 p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
@@ -141,7 +165,15 @@ export function ConversationListPane({
               <h3 className="truncate text-sm font-semibold tracking-tight">Inbox</h3>
               <p className="text-[11px] text-muted-foreground">Channels & direct messages</p>
             </div>
-            {totalUnread > 0 ? <Badge variant="default" className="h-5 shrink-0 px-1.5 text-xs">{totalUnread}</Badge> : null}
+            {totalUnread > 0 ? (
+              <Badge
+                variant="default"
+                className="h-5 shrink-0 px-1.5 text-xs"
+                aria-label={`${totalUnread} unread ${totalUnread === 1 ? 'conversation' : 'conversations'}`}
+              >
+                {totalUnread}
+              </Badge>
+            ) : null}
           </div>
           <Button variant="ghost" size="sm" onClick={onNewDM} title="New direct message" aria-label="Start a new direct message">
             <Plus className="h-4 w-4" />

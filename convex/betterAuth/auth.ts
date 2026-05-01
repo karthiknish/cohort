@@ -13,6 +13,10 @@ type ConvexCompatibleBetterAuthOptions = BetterAuthOptions & {
   baseURL?: string;
 };
 
+type AuthOptionsConfig = {
+  enforceSecureProductionUrl?: boolean;
+};
+
 // Better Auth Component
 export const authComponent = createClient<DataModel, typeof schema>(
   components.betterAuth,
@@ -55,12 +59,20 @@ function buildTrustedOrigins(): string[] {
 }
 
 // Better Auth Options
-export const createAuthOptions = (ctx: GenericCtx<DataModel>): ConvexCompatibleBetterAuthOptions => {
+export const createAuthOptions = (
+  ctx: GenericCtx<DataModel>,
+  { enforceSecureProductionUrl = true }: AuthOptionsConfig = {},
+): ConvexCompatibleBetterAuthOptions => {
   // Access env vars at runtime for Convex compatibility
   const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL;
   const baseURL = process.env.BETTER_AUTH_URL || siteUrl;
   const secret = process.env.BETTER_AUTH_SECRET;
+  const isProduction = process.env.NODE_ENV === "production";
   const isSecureBaseUrl = typeof baseURL === "string" && baseURL.startsWith("https://");
+
+  if (enforceSecureProductionUrl && isProduction && !isSecureBaseUrl) {
+    throw new Error("BETTER_AUTH_URL or SITE_URL must use https:// in production.");
+  }
 
   return {
     appName: "Cohorts",
@@ -100,14 +112,16 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>): ConvexCompatibleB
       },
     },
     advanced: {
-      useSecureCookies: isSecureBaseUrl,
+      useSecureCookies: isProduction || isSecureBaseUrl,
     },
     plugins: [convex({ authConfig })],
   };
 };
 
 // For `@better-auth/cli`
-export const options = createAuthOptions({} as GenericCtx<DataModel>);
+export const options = createAuthOptions({} as GenericCtx<DataModel>, {
+  enforceSecureProductionUrl: false,
+});
 
 // Better Auth Instance
 export const createAuth = (ctx: GenericCtx<DataModel>) => {

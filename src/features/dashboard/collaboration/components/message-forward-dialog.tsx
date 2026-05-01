@@ -67,6 +67,10 @@ export function MessageForwardDialog({
   const selectedChannel = channels.find((c) => c.id === selectedChannelId)
 
   const handleForward = useCallback(async () => {
+    if (isForwarding) {
+      return
+    }
+
     if (!message || !workspaceId || !userId || !selectedChannel) {
       toast({
         title: 'Cannot forward message',
@@ -137,6 +141,7 @@ export function MessageForwardDialog({
     forwardMessage,
     includeAttachments,
     createMessage,
+    isForwarding,
     toast,
     onForward,
     onOpenChange,
@@ -202,7 +207,7 @@ export function MessageForwardDialog({
           {/* Channel selection */}
           <div className="space-y-2">
             <Label htmlFor="channel">Forward to</Label>
-            <Select value={selectedChannelId} onValueChange={setSelectedChannelId}>
+            <Select value={selectedChannelId} onValueChange={setSelectedChannelId} disabled={isForwarding}>
               <SelectTrigger id="channel">
                 <SelectValue placeholder="Select a channel" />
               </SelectTrigger>
@@ -234,6 +239,7 @@ export function MessageForwardDialog({
               placeholder="Add context or comments before the forwarded message…"
               value={forwardMessage}
               onChange={handleForwardMessageChange}
+              disabled={isForwarding}
               rows={3}
               maxLength={500}
             />
@@ -249,6 +255,7 @@ export function MessageForwardDialog({
                 id="attachments"
                 checked={includeAttachments}
                 onCheckedChange={handleIncludeAttachmentsChange}
+                disabled={isForwarding}
               />
               <Label
                 htmlFor="attachments"

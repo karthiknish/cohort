@@ -124,9 +124,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     if (!convexUser) return
 
+    const activeUser = currentUserRef.current
+    if (!activeUser || !betterAuthUserId) {
+      return
+    }
+
+    if (convexUser.legacyId !== betterAuthUserId || activeUser.id !== betterAuthUserId) {
+      return
+    }
+
     // Merge Convex user data (role, status, agencyId) with Better Auth user
     setUser((prev) => {
-      if (!prev) return prev
+      if (!prev || prev.id !== convexUser.legacyId) return prev
       const updated = {
         ...prev,
         role: (convexUser.role as AuthUser['role']) || prev.role || 'client',
@@ -136,7 +145,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       currentUserRef.current = updated
       return updated
     })
-  }, [convexUser])
+  }, [betterAuthUserId, convexUser])
 
   // Listen to Better Auth session changes
   useEffect(() => {

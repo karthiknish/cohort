@@ -2,6 +2,7 @@ import { internalMutation } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors } from './errors'
 import {
+  zRateLimitedWorkspaceMutation,
   zWorkspaceMutation,
   zWorkspaceQuery,
 } from './functions'
@@ -418,7 +419,8 @@ export const getUnreadCount = zWorkspaceQuery({
   },
 })
 
-export const ack = zWorkspaceMutation({
+export const ack = zRateLimitedWorkspaceMutation({
+  rateLimit: 'standard',
   args: {
     ids: z.array(z.string()),
     action: z.union([z.literal('read'), z.literal('dismiss')]),

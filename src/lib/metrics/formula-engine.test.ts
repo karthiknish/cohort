@@ -8,6 +8,7 @@ import {
     calculateBenchmarks,
     calculateCrossplatformBenchmarks,
     calculateCustomKpis,
+    safeEvaluateFormula,
 } from './formula-engine'
 import { runDerivedMetricsPipeline } from './derived-metrics-pipeline'
 import type { NormalizedAdMetric } from './types'
@@ -289,6 +290,31 @@ describe('calculateCustomKpis', () => {
         expect(result.mer).toBe(0)
         expect(result.aov).toBe(0)
         expect(result.profit).toBe(0)
+    })
+})
+
+describe('safeEvaluateFormula', () => {
+    it('evaluates arithmetic with supported functions', () => {
+        const result = safeEvaluateFormula('round(revenue / spend) + max(clicks, conversions)', {
+            revenue: 320,
+            spend: 80,
+            clicks: 12,
+            conversions: 8,
+        })
+
+        expect(result).toBe(16)
+    })
+
+    it('rejects constructor-chain payloads', () => {
+        const result = safeEvaluateFormula('Math.constructor.constructor("return process")()', {})
+
+        expect(result).toBeNull()
+    })
+
+    it('rejects formulas with undefined identifiers', () => {
+        const result = safeEvaluateFormula('revenue / missingMetric', { revenue: 100 })
+
+        expect(result).toBeNull()
     })
 })
 

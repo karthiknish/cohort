@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from './button'
 import { Inbox, FileSearch, Users, FolderOpen, CircleAlert, Plus, Calendar, MessageSquare, BarChart3, RefreshCw, WifiOff } from 'lucide-react'
@@ -30,11 +31,11 @@ const iconMap: Record<string, LucideIcon> = {
   alert: CircleAlert,
 }
 
-function createNetworkErrorAction(action: EmptyStateProps['action']) {
+function createNetworkErrorAction(action: EmptyStateProps['action'], onRetry: () => void) {
   return (
     action || {
       label: 'Retry',
-      onClick: () => window.location.reload(),
+      onClick: onRetry,
       icon: RefreshCw,
     }
   )
@@ -217,12 +218,18 @@ export function NoAnalyticsEmptyState(props: Partial<EmptyStateProps>) {
 }
 
 export function NetworkErrorEmptyState(props: Partial<EmptyStateProps>) {
+  const router = useRouter()
+
+  const handleRetry = React.useCallback(() => {
+    router.refresh()
+  }, [router])
+
   return (
     <EmptyState
       icon={WifiOff}
       title="Connection error"
       description="Unable to load data. Please check your connection and try again."
-      action={createNetworkErrorAction(props.action)}
+      action={createNetworkErrorAction(props.action, handleRetry)}
       {...props}
     />
   )

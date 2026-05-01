@@ -19,6 +19,7 @@ import {
   Shield,
   Rocket,
   AlertCircle,
+  Keyboard,
 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -42,9 +43,11 @@ import { useDashboardRoleAccent } from '@/shared/hooks/use-dashboard-role-accent
 import { NotificationsDropdownDynamic } from '@/shared/components/notifications-dropdown-dynamic'
 import { CommandMenuDynamic } from '@/shared/layout/navigation/command-menu-dynamic'
 import { HelpModal, useHelpModal } from '@/shared/layout/navigation/help-modal'
-import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
+import { KeyboardShortcutBadge, useKeyboardShortcuts } from '@/shared/hooks/use-keyboard-shortcuts'
 import { ProblemReportModal } from '@/shared/layout/navigation/problem-report-modal'
 import { toast } from '@/shared/ui/sonner'
+import { KeyboardShortcutsOverlay } from '@/shared/layout/navigation/keyboard-shortcuts-overlay'
+import { getShortcutsForRole } from '@/shared/layout/navigation/keyboard-shortcuts'
 import {
   Tooltip,
   TooltipContent,
@@ -355,12 +358,14 @@ export function Sidebar() {
 }
 
 export function Header() {
+  const router = useRouter()
   const { user, signOut } = useAuth()
   const { isPreviewMode } = usePreview()
   const accent = useDashboardRoleAccent()
   const [open, setOpen] = useState(false)
   const { open: helpOpen, onOpenChange: onHelpOpenChange, showWelcome, setShowWelcome } = useHelpModal()
   const [problemReportOpen, setProblemReportOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const previewProfile = getPreviewSettingsProfile()
   const displayedName = isPreviewMode ? previewProfile.name : (user?.name ?? 'Account')
   const displayedEmail = isPreviewMode ? previewProfile.email : (user?.email ?? 'user@example.com')
@@ -387,9 +392,15 @@ export function Header() {
     void onHelpOpenChange(true)
   }, [setShowWelcome, onHelpOpenChange])
   const handleOpenHelp = useCallback(() => {
+    setShortcutsOpen(false)
     setShowWelcome(false)
     void onHelpOpenChange(true)
   }, [setShowWelcome, onHelpOpenChange])
+  const handleOpenShortcuts = useCallback(() => {
+    setShowWelcome(false)
+    void onHelpOpenChange(false)
+    setShortcutsOpen(true)
+  }, [onHelpOpenChange, setShowWelcome])
   const handleOpenProblemReport = useCallback(() => setProblemReportOpen(true), [])
 
   const roleLabel = useMemo(() => {
@@ -400,6 +411,50 @@ export function Header() {
       default: return null
     }
   }, [user?.role])
+
+  const dashboardShortcuts = useMemo<Array<{ combo: string; description: string; callback: () => void }>>(() => {
+    const shortcuts = getShortcutsForRole(user?.role, 'global')
+
+    return shortcuts.reduce<Array<{ combo: string; description: string; callback: () => void }>>((accumulator, shortcut) => {
+      switch (shortcut.combo) {
+        case 'shift+?':
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: handleOpenShortcuts })
+          break
+        case 'g d':
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard') })
+          break
+        case 'g t':
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard/tasks') })
+          break
+        case 'g m':
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard/meetings') })
+          break
+        case 'g a':
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard/ads') })
+          break
+        case 'g p':
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard/proposals') })
+          break
+        case 'g s':
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/settings') })
+          break
+        case 'n t':
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard/tasks?action=create') })
+          break
+        case 'n p':
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard/proposals') })
+          break
+        default:
+          break
+      }
+
+      return accumulator
+    }, [])
+  }, [handleOpenShortcuts, router, user?.role])
+
+  useKeyboardShortcuts(dashboardShortcuts, {
+    enabled: !helpOpen && !shortcutsOpen,
+  })
 
   return (
     <>
@@ -444,17 +499,37 @@ export function Header() {
 
           {/* Search / Command menu (takes remaining space on desktop) */}
           <div className="hidden sm:flex flex-1 sm:max-w-md">
-            <CommandMenuDynamic onOpenHelp={handleOpenHelp} />
+            <CommandMenuDynamic onOpenHelp={handleOpenHelp} onOpenShortcuts={handleOpenShortcuts} />
           </div>
 
           {/* Right side actions (pinned to the right) */}
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             {/* Mobile search button - only visible on small screens */}
             <div className="sm:hidden">
-              <CommandMenuDynamic onOpenHelp={handleOpenHelp} />
+              <CommandMenuDynamic onOpenHelp={handleOpenHelp} onOpenShortcuts={handleOpenShortcuts} />
             </div>
 
             <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleOpenShortcuts}
+                    className="hidden sm:inline-flex"
+                    aria-label="Show keyboard shortcuts"
+                  >
+                    <Keyboard className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="flex items-center gap-2">
+                    <span>Keyboard shortcuts</span>
+                    <KeyboardShortcutBadge combo="shift+?" />
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -487,10 +562,7 @@ export function Header() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <div className="flex items-center gap-2">
-                    <span>Onboarding</span>
-                    <KeyboardShortcutBadge combo="shift+?" />
-                  </div>
+                  <span>Onboarding</span>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -563,13 +635,13 @@ export function Header() {
                   </>
                 )}
                 <DropdownMenuItem asChild>
-                  <Link href="/settings">Settings</Link>
+                  <Link href="/settings" onClick={handleNavigate}>Settings</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={handleOpenHelp}>
                   Help & Navigation
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={signOut} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -580,6 +652,7 @@ export function Header() {
       </header>
 
   <HelpModal open={helpOpen} onOpenChange={onHelpOpenChange} showWelcome={showWelcome} />
+      <KeyboardShortcutsOverlay open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <ProblemReportModal open={problemReportOpen} onOpenChange={setProblemReportOpen} />
     </>
   )

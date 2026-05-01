@@ -87,12 +87,12 @@ export function toISO(value: unknown): string | null {
 }
 
 /**
- * Basic XSS protection by stripping HTML tags from strings.
+ * Normalizes input strings before validation/storage.
+ * This is not HTML sanitization and must not be relied on for XSS protection.
  */
 export function sanitizeInput(value: string): string {
   if (typeof value !== 'string') return value
-  // Strip HTML tags and trim
-  return value.replace(/<[^>]*>?/gm, '').trim()
+  return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim()
 }
 
 /**

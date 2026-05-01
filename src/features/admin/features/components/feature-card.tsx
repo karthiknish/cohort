@@ -16,8 +16,8 @@ import {
 import { cn } from '@/lib/utils'
 import type { FeatureItem } from '@/types/features'
 import {
-  FEATURE_PRIORITY_COLORS,
   FEATURE_PRIORITY_LABELS,
+  getFeaturePriorityBadgeStyle,
 } from '@/types/features'
 
 interface FeatureCardProps {
@@ -114,7 +114,8 @@ export function FeatureCard({
       <div className="flex items-center justify-between gap-2 pl-4 pt-1">
         <Badge
           variant="outline"
-          className={cn('text-[10px] px-1.5 py-0 h-5', FEATURE_PRIORITY_COLORS[feature.priority])}
+          className="h-5 px-1.5 py-0 text-[10px]"
+          style={getFeaturePriorityBadgeStyle(feature.priority)}
         >
           {FEATURE_PRIORITY_LABELS[feature.priority]}
         </Badge>

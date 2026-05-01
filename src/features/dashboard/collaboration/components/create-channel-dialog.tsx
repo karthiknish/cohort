@@ -49,7 +49,7 @@ interface CreateChannelDialogProps {
   workspaceId: string | null
   userId: string | null
   teamMembers?: WorkspaceMemberOption[]
-  onCreate?: (channel: CreateChannelPayload) => Promise<void> | void
+  onCreate: (channel: CreateChannelPayload) => Promise<void> | void
   trigger?: React.ReactNode
 }
 
@@ -59,10 +59,12 @@ function sortMembers(members: WorkspaceMemberOption[]) {
 
 function ChannelMemberOptionRow({
   checked,
+  disabled = false,
   member,
   onToggle,
 }: {
   checked: boolean
+  disabled?: boolean
   member: WorkspaceMemberOption
   onToggle: (memberId: string) => void
 }) {
@@ -71,7 +73,7 @@ function ChannelMemberOptionRow({
 
   return (
     <div className="flex cursor-pointer items-start gap-3 rounded-xl border border-transparent bg-background/80 px-3 py-3 transition-colors hover:border-border hover:bg-background">
-      <Checkbox id={checkboxId} checked={checked} onCheckedChange={handleToggle} className="mt-0.5" />
+      <Checkbox id={checkboxId} checked={checked} onCheckedChange={handleToggle} disabled={disabled} className="mt-0.5" />
       <Label htmlFor={checkboxId} className="min-w-0 cursor-pointer">
         <p className="truncate text-sm font-medium text-foreground">{member.name}</p>
         <p className="truncate text-xs text-muted-foreground">
@@ -114,8 +116,12 @@ export function CreateChannelDialog({
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
+      if (!nextOpen && isCreating) {
+        return
+      }
+
       setOpen(nextOpen)
-      if (!nextOpen && !isCreating) {
+      if (!nextOpen) {
         resetForm()
       }
     },
@@ -135,10 +141,18 @@ export function CreateChannelDialog({
   }, [])
 
   const handleCancel = useCallback(() => {
+    if (isCreating) {
+      return
+    }
+
     setOpen(false)
-  }, [])
+  }, [isCreating])
 
   const handleCreate = useCallback(async () => {
+    if (isCreating) {
+      return
+    }
+
     if (!workspaceId || !userId) {
       toast({
         title: 'Authentication required',
@@ -160,33 +174,30 @@ export function CreateChannelDialog({
 
     setIsCreating(true)
 
-    await Promise.resolve(
-      onCreate?.({
+    try {
+      await onCreate({
         name: normalizedName,
         description: description.trim() || undefined,
         visibility,
         memberIds: selectedMemberIds,
-      }),
-    )
-      .then(() => {
-        toast({
-          title: 'Channel created',
-          description: `#${normalizedName} is ready for collaboration.`,
-        })
-        resetForm()
-        setOpen(false)
-        setIsCreating(false)
       })
-      .catch((error) => {
-        logError(error, 'CreateChannelDialog:handleCreate')
-        toast({
-          title: 'Channel creation failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
-        })
-        setIsCreating(false)
+      toast({
+        title: 'Channel created',
+        description: `#${normalizedName} is ready for collaboration.`,
       })
-  }, [channelName, description, onCreate, resetForm, selectedMemberIds, toast, userId, visibility, workspaceId])
+      resetForm()
+      setOpen(false)
+    } catch (error) {
+      logError(error, 'CreateChannelDialog:handleCreate')
+      toast({
+        title: 'Channel creation failed',
+        description: asErrorMessage(error),
+        variant: 'destructive',
+      })
+    } finally {
+      setIsCreating(false)
+    }
+  }, [channelName, description, isCreating, onCreate, resetForm, selectedMemberIds, toast, userId, visibility, workspaceId])
 
   const defaultTrigger = (
     <DialogTrigger asChild>
@@ -224,6 +235,7 @@ export function CreateChannelDialog({
                   id="channel-name"
                   value={channelName}
                   onChange={handleChannelNameChange}
+                  disabled={isCreating}
                   className="pl-9"
                   placeholder="leadership, launch-war-room, finance"
                   maxLength={50}
@@ -237,6 +249,7 @@ export function CreateChannelDialog({
                 id="channel-description"
                 value={description}
                 onChange={handleDescriptionChange}
+                disabled={isCreating}
                 placeholder="What should this channel be used for?"
                 rows={4}
                 maxLength={220}
@@ -245,7 +258,7 @@ export function CreateChannelDialog({
 
             <div className="space-y-2">
               <Label htmlFor="channel-visibility">Access</Label>
-              <Select value={visibility} onValueChange={handleVisibilityChange}>
+              <Select value={visibility} onValueChange={handleVisibilityChange} disabled={isCreating}>
                 <SelectTrigger id="channel-visibility">
                   <SelectValue />
                 </SelectTrigger>
@@ -293,6 +306,7 @@ export function CreateChannelDialog({
                     <ChannelMemberOptionRow
                       key={member.id}
                       checked={checked}
+                      disabled={isCreating}
                       member={member}
                       onToggle={handleMemberToggle}
                     />

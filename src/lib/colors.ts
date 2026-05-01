@@ -380,3 +380,11 @@ export function getPriorityColor(priority: string): string {
   }
   return colors[priority.toLowerCase()] || GRAYS[500]
 }
+
+export function getSemanticBadgeStyle(color: string, alpha = 0.12): { backgroundColor: string; borderColor: string; color: string } {
+  return {
+    backgroundColor: hexToRgba(color, alpha),
+    borderColor: hexToRgba(color, alpha + 0.08),
+    color,
+  }
+}

@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui/button'
 import { chromaticTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import type { FeatureItem, FeatureStatus } from '@/types/features'
-import { FEATURE_STATUSES, FEATURE_STATUS_LABELS, FEATURE_STATUS_COLORS } from '@/types/features'
+import { FEATURE_STATUSES, FEATURE_STATUS_LABELS, getFeatureStatusBadgeStyle } from '@/types/features'
 import { FeatureCard } from './feature-card'
 
 interface FeatureKanbanBoardProps {
@@ -167,10 +167,8 @@ function FeatureKanbanColumn({
       <div className="flex items-center justify-between border-b p-3">
         <div className="flex items-center gap-2">
           <span
-            className={cn(
-              'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-              FEATURE_STATUS_COLORS[status]
-            )}
+            className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium"
+            style={getFeatureStatusBadgeStyle(status)}
           >
             {FEATURE_STATUS_LABELS[status]}
           </span>

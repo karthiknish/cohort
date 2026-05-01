@@ -2,6 +2,8 @@
  * Feature planning types for Kanban board in admin section
  */
 
+import { getPriorityColor, getSemanticBadgeStyle, getStatusColor } from '@/lib/colors'
+
 export const FEATURE_STATUSES = ['backlog', 'planned', 'in_progress', 'completed'] as const
 export type FeatureStatus = typeof FEATURE_STATUSES[number]
 
@@ -56,15 +58,10 @@ export const FEATURE_PRIORITY_LABELS: Record<FeaturePriority, string> = {
   high: 'High',
 }
 
-export const FEATURE_STATUS_COLORS: Record<FeatureStatus, string> = {
-  backlog: 'bg-muted/50 text-muted-foreground',
-  planned: 'bg-info/10 text-info border border-info/20',
-  in_progress: 'bg-warning/10 text-warning border border-warning/20',
-  completed: 'bg-success/10 text-success border border-success/20',
+export function getFeatureStatusBadgeStyle(status: FeatureStatus): { backgroundColor: string; borderColor: string; color: string } {
+  return getSemanticBadgeStyle(getStatusColor(status))
 }
 
-export const FEATURE_PRIORITY_COLORS: Record<FeaturePriority, string> = {
-  low: 'border-info/20 text-info',
-  medium: 'border-warning/20 text-warning',
-  high: 'border-destructive/20 text-destructive',
+export function getFeaturePriorityBadgeStyle(priority: FeaturePriority): { backgroundColor: string; borderColor: string; color: string } {
+  return getSemanticBadgeStyle(getPriorityColor(priority), 0.08)
 }

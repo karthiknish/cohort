@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, Download, LoaderCircle, Presentation, Target, Layers, BarChart3, Rocket, Users, Lightbulb, Wallet, Calendar, Sparkles, Clock } from 'lucide-react'
+import { Download, LoaderCircle, Presentation, Target, Layers, BarChart3, Rocket, Users, Lightbulb, Wallet, Calendar, Sparkles, Clock } from 'lucide-react'
 import { useMemo, ViewTransition } from 'react'
 
 import { Button } from '@/shared/ui/button'
@@ -16,6 +16,7 @@ import { useQuery } from 'convex/react'
 import { proposalsApi } from '@/lib/convex-api'
 import { getPreviewProposals } from '@/lib/preview-data'
 import { DirectionalPageTransition } from '@/shared/ui/page-transition'
+import { BackLink } from '@/shared/components/back-link'
 
 export default function ProposalDeckPage() {
   const params = useParams<{ proposalId: string }>()
@@ -129,12 +130,7 @@ export default function ProposalDeckPage() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/dashboard/proposals" transitionTypes={['nav-back']}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to proposals
-              </Link>
-            </Button>
+            <BackLink label="Back to proposals" href="/dashboard/proposals" transitionTypes={['nav-back']} />
             {proposal ? (
               <ViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" default="none">
                 <h1 className="text-2xl font-semibold tracking-tight text-foreground">{proposalDisplayName}</h1>
@@ -165,7 +161,7 @@ export default function ProposalDeckPage() {
           </CardHeader>
           <CardContent>
             <Button variant="outline" asChild>
-                <Link href="/dashboard/proposals" transitionTypes={['nav-back']}>Return to proposals</Link>
+                <a href="/dashboard/proposals">Return to proposals</a>
             </Button>
           </CardContent>
         </Card>

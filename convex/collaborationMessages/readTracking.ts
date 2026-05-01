@@ -20,11 +20,13 @@ import {
   scanChannelRows,
   upsertReadCheckpoint,
   z,
+  zRateLimitedWorkspaceMutation,
   zWorkspaceMutation,
   zWorkspaceQuery,
 } from './shared'
 
-export const markAsRead = zWorkspaceMutation({
+export const markAsRead = zRateLimitedWorkspaceMutation({
+  rateLimit: 'standard',
   args: {
     legacyId: z.string(),
     userId: z.string(),
@@ -64,7 +66,8 @@ export const markAsRead = zWorkspaceMutation({
 })
 
 // Mark multiple messages as read (batch operation)
-export const markMultipleAsRead = zWorkspaceMutation({
+export const markMultipleAsRead = zRateLimitedWorkspaceMutation({
+  rateLimit: 'standard',
   args: {
     legacyIds: z.array(z.string()),
     userId: z.string(),
@@ -101,7 +104,8 @@ export const markMultipleAsRead = zWorkspaceMutation({
 })
 
 // Mark all messages in a channel as read for a user
-export const markChannelAsRead = zWorkspaceMutation({
+export const markChannelAsRead = zRateLimitedWorkspaceMutation({
+  rateLimit: 'standard',
   args: {
     channelId: z.string().nullable().optional(),
     channelType: z.string(),
@@ -266,7 +270,8 @@ export const getUnreadCount = zWorkspaceQuery({
   },
 })
 
-export const markThreadAsRead = zWorkspaceMutation({
+export const markThreadAsRead = zRateLimitedWorkspaceMutation({
+  rateLimit: 'standard',
   args: {
     channelId: z.string().nullable().optional(),
     channelType: z.string(),

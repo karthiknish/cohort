@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useQuery } from 'convex/react'
 import {
   ChevronRight,
   Home,
@@ -17,7 +18,9 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
+import { proposalsApi } from '@/lib/convex-api'
 import { useClientContext } from '@/shared/contexts/client-context'
+import { useAuth } from '@/shared/contexts/auth-context'
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
 import { isFeatureEnabled } from '@/lib/features'
 import {
@@ -48,7 +51,18 @@ export function NavigationBreadcrumbs() {
   const pathname = usePathname()
   const searchParams = useUrlSearchParams()
   const { selectedClient } = useClientContext()
+  const { user } = useAuth()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const pathSegments = pathname.replace('/dashboard/', '').split('/').filter(Boolean)
+  const proposalId = pathSegments[0] === 'proposals' && pathSegments[1] && pathSegments[1] !== 'analytics' && pathSegments[1] !== 'viewer'
+    ? pathSegments[1]
+    : null
+  const workspaceId = user?.agencyId ?? null
+
+  const proposalRow = useQuery(
+    proposalsApi.getByLegacyId,
+    workspaceId && proposalId ? { workspaceId, legacyId: proposalId } : 'skip'
+  )
 
   // Don't render if feature flag is disabled or not on dashboard pages
   if (!isFeatureEnabled('BREADCRUMBS') || !pathname.startsWith('/dashboard')) {
@@ -58,6 +72,8 @@ export function NavigationBreadcrumbs() {
   const items = generateBreadcrumbItems(pathname, searchParams, {
     id: selectedClient?.id ?? null,
     name: selectedClient?.name ?? null
+  }, {
+    proposalTitle: proposalRow?.clientName ?? proposalRow?.legacyId ?? null,
   })
 
   if (items.length <= 1) {
@@ -168,7 +184,8 @@ export function NavigationBreadcrumbs() {
 function generateBreadcrumbItems(
   pathname: string,
   searchParams: URLSearchParams,
-  selectedClient: { id: string | null; name: string | null }
+  selectedClient: { id: string | null; name: string | null },
+  dynamicLabels: { proposalTitle: string | null }
 ): NavBreadcrumbItem[] {
   const items: NavBreadcrumbItem[] = []
 
@@ -275,6 +292,19 @@ function generateBreadcrumbItems(
           label: 'Viewer',
           isCurrent: true,
         })
+      } else if (pathSegments[1]) {
+        const proposalTitle = searchParams.get('proposalName') || dynamicLabels.proposalTitle || 'Proposal'
+        items.push({
+          label: proposalTitle,
+          href: `/dashboard/proposals/${pathSegments[1]}`,
+        })
+
+        if (pathSegments[2] === 'deck') {
+          items.push({
+            label: 'Deck',
+            isCurrent: true,
+          })
+        }
       }
       break
 
@@ -304,11 +334,12 @@ function generateBreadcrumbItems(
           href: `/dashboard/ads?provider=${providerId}`,
         })
 
-        if (campaignId && campaignName) {
+        if (campaignId) {
           const isCreativePath = pathSegments[4] === 'creative' && pathSegments[5]
+          const campaignLabel = campaignName || 'Campaign details'
 
           items.push({
-            label: campaignName,
+            label: campaignLabel,
             href: isCreativePath ? `/dashboard/ads/campaigns/${providerId}/${campaignId}?${searchParams.toString()}` : undefined,
             isCurrent: !isCreativePath,
           })
@@ -316,7 +347,7 @@ function generateBreadcrumbItems(
           if (isCreativePath) {
             const creativeName = searchParams.get('creativeName')
             items.push({
-              label: creativeName || 'Creative Detail',
+              label: creativeName || 'Creative detail',
               isCurrent: true,
             })
           }

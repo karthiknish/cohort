@@ -52,6 +52,31 @@ const API_RATE_LIMIT_WINDOW_MS = parseInteger(
 
 const PROTECTED_ROUTE_MATCHER = ['/dashboard', '/admin']
 const AUTH_ROUTE_PREFIX = '/auth'
+const CONTENT_SECURITY_POLICY = [
+  "base-uri 'self'",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "form-action 'self'",
+  'upgrade-insecure-requests',
+].join('; ')
+
+function applySecurityHeaders(request: NextRequest, response: NextResponse): NextResponse {
+  response.headers.set('Content-Security-Policy', CONTENT_SECURITY_POLICY)
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set(
+    'Permissions-Policy',
+    'camera=(), geolocation=(), microphone=(), payment=(), usb=()'
+  )
+
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  if (request.nextUrl.protocol === 'https:' || forwardedProto === 'https') {
+    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
+  }
+
+  return response
+}
 
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_ROUTE_MATCHER.some(
@@ -64,7 +89,9 @@ async function hasValidSession(request: NextRequest): Promise<boolean> {
     const tokenResult = await getToken(convexSiteUrl, request.headers)
     return !!tokenResult?.token
   } catch (err) {
-    console.error('[Proxy] session check error:', err)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[Proxy] session check error:', err)
+    }
     return false
   }
 }
@@ -80,7 +107,10 @@ export async function proxy(request: NextRequest) {
       if (process.env.NODE_ENV !== 'production') {
         console.log(`[Proxy] Blocked ${userAgent} from ${pathname}`)
       }
-      return NextResponse.json({ success: false, error: 'Not allowed' }, { status: 403 })
+      return applySecurityHeaders(
+        request,
+        NextResponse.json({ success: false, error: 'Not allowed' }, { status: 403 })
+      )
     }
     const identifier = getClientIdentifier(request)
     const rateLimit = await checkConvexRateLimit(
@@ -88,18 +118,25 @@ export async function proxy(request: NextRequest) {
       createRateLimitConfig(API_RATE_LIMIT_MAX, API_RATE_LIMIT_WINDOW_MS),
     )
 
-    console.log(
-      `[Proxy] API Request: ${pathname} | ID: ${identifier} | Allowed: ${rateLimit.allowed}`,
-    )
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(
+        `[Proxy] API Request: ${pathname} | ID: ${identifier} | Allowed: ${rateLimit.allowed}`,
+      )
+    }
 
     if (!rateLimit.allowed) {
-      console.warn(`[Proxy] Rate limit exceeded for ${identifier} on ${pathname}`)
-      return NextResponse.json(
-        { error: 'Too many requests. Please slow down.' },
-        {
-          status: 429,
-          headers: buildRateLimitHeaders(rateLimit),
-        },
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[Proxy] Rate limit exceeded for ${identifier} on ${pathname}`)
+      }
+      return applySecurityHeaders(
+        request,
+        NextResponse.json(
+          { error: 'Too many requests. Please slow down.' },
+          {
+            status: 429,
+            headers: buildRateLimitHeaders(rateLimit),
+          },
+        ),
       )
     }
 
@@ -108,37 +145,42 @@ export async function proxy(request: NextRequest) {
     headers.forEach((value, key) => {
       response.headers.set(key, value)
     })
-    return response
+    return applySecurityHeaders(request, response)
   }
 
   if (isPreviewRouteRequest(pathname, request.nextUrl.searchParams)) {
     const requestHeaders = new Headers(request.headers)
     requestHeaders.set(PREVIEW_ROUTE_REQUEST_HEADER, '1')
 
-    return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    })
+    return applySecurityHeaders(
+      request,
+      NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      })
+    )
   }
 
   if (screenRecordingAuthBypassEnabled && pathname === '/dashboard') {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/dashboard/for-you'
-    return NextResponse.redirect(redirectUrl)
+    return applySecurityHeaders(request, NextResponse.redirect(redirectUrl))
   }
 
   if (screenRecordingAuthBypassEnabled && pathname.startsWith('/dashboard/')) {
-    return NextResponse.next()
+    return applySecurityHeaders(request, NextResponse.next())
   }
 
   const hasSession = await hasValidSession(request)
 
-  console.log(`[Proxy] Path: ${pathname} | Has valid session: ${hasSession}`)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[Proxy] Path: ${pathname} | Has valid session: ${hasSession}`)
+  }
 
   // Public auth pages should always be reachable without redirection.
   if (pathname.startsWith(AUTH_ROUTE_PREFIX)) {
-    return NextResponse.next()
+    return applySecurityHeaders(request, NextResponse.next())
   }
 
   // For the home page (/), redirect authenticated users directly to their
@@ -147,14 +189,14 @@ export async function proxy(request: NextRequest) {
     if (hasSession) {
       const redirectUrl = request.nextUrl.clone()
       redirectUrl.pathname = '/dashboard/for-you'
-      return NextResponse.redirect(redirectUrl)
+      return applySecurityHeaders(request, NextResponse.redirect(redirectUrl))
     }
     // No valid session - allow access to home/login page
-    return NextResponse.next()
+    return applySecurityHeaders(request, NextResponse.next())
   }
 
   if (!isProtectedPath(pathname)) {
-    return NextResponse.next()
+    return applySecurityHeaders(request, NextResponse.next())
   }
 
   // Check if session is missing or expired
@@ -163,7 +205,7 @@ export async function proxy(request: NextRequest) {
     redirectUrl.pathname = '/auth'
     // Preserve querystring so users land back exactly where they intended.
     redirectUrl.searchParams.set('redirect', `${pathname}${request.nextUrl.search}`)
-    return NextResponse.redirect(redirectUrl)
+    return applySecurityHeaders(request, NextResponse.redirect(redirectUrl))
   }
 
   // Preserve the legacy /dashboard entrypoint, but redirect it before the page
@@ -171,13 +213,13 @@ export async function proxy(request: NextRequest) {
   if (pathname === '/dashboard') {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/dashboard/for-you'
-    return NextResponse.redirect(redirectUrl)
+    return applySecurityHeaders(request, NextResponse.redirect(redirectUrl))
   }
 
   // Admin route protection is now enforced server-side in API routes and page loaders,
   // not via a forgeable cookie. Middleware only checks authentication.
 
-  return NextResponse.next()
+  return applySecurityHeaders(request, NextResponse.next())
 }
 
 export const config = {

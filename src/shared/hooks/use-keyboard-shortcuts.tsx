@@ -15,7 +15,15 @@ interface KeyboardShortcut {
 interface UseKeyboardShortcutOptions {
   enabled?: boolean
   targetRef?: React.RefObject<HTMLElement>
+  allowInInput?: boolean
 }
+
+type SequenceState = {
+  progress: number
+  lastMatchedAt: number
+}
+
+const SEQUENCE_TIMEOUT_MS = 1200
 
 // Parse key combo string into parts
 function parseCombo(combo: string): { modifiers: Set<string>; key: string } {
@@ -66,12 +74,72 @@ function matchesCombo(event: KeyboardEvent, combo: string): boolean {
   return keyMatches && modifiersMatch
 }
 
+function getSequenceSteps(combo: string): string[] {
+  return combo
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+}
+
+function matchesShortcutCombo(
+  event: KeyboardEvent,
+  combo: string,
+  sequenceStates: Map<string, SequenceState>,
+  stateKey: string,
+): 'none' | 'partial' | 'complete' {
+  const steps = getSequenceSteps(combo)
+  const firstStep = steps[0]
+
+  if (!firstStep) {
+    sequenceStates.delete(stateKey)
+    return 'none'
+  }
+
+  const state = sequenceStates.get(stateKey)
+  const now = Date.now()
+  const resetProgress = !state || (now - state.lastMatchedAt) > SEQUENCE_TIMEOUT_MS ? 0 : state.progress
+  const expectedStep = steps[resetProgress] ?? firstStep
+
+  if (matchesCombo(event, expectedStep)) {
+    if (steps.length === 1 || resetProgress === steps.length - 1) {
+      sequenceStates.delete(stateKey)
+      return 'complete'
+    }
+
+    sequenceStates.set(stateKey, {
+      progress: resetProgress + 1,
+      lastMatchedAt: now,
+    })
+    return 'partial'
+  }
+
+  if (resetProgress > 0 && matchesCombo(event, firstStep)) {
+    if (steps.length === 1) {
+      sequenceStates.delete(stateKey)
+      return 'complete'
+    }
+
+    sequenceStates.set(stateKey, {
+      progress: 1,
+      lastMatchedAt: now,
+    })
+    return 'partial'
+  }
+
+  if (resetProgress > 0) {
+    sequenceStates.delete(stateKey)
+  }
+
+  return 'none'
+}
+
 export function useKeyboardShortcut(
   shortcut: KeyboardShortcut,
   options: UseKeyboardShortcutOptions = {}
 ) {
-  const { enabled = true, targetRef } = options
+  const { enabled = true, targetRef, allowInInput = false } = options
   const callbackRef = useRef(shortcut.callback)
+  const sequenceStatesRef = useRef(new Map<string, SequenceState>())
   
   // Keep callback ref up to date
   useEffect(() => {
@@ -91,10 +159,24 @@ export function useKeyboardShortcut(
       const combos = Array.isArray(shortcut.combo) ? shortcut.combo : [shortcut.combo]
       const isEscape = combos.some((c) => c.toLowerCase() === 'escape')
       
-      if (isInput && !isEscape) return
+      if (isInput && !isEscape && !allowInInput) return
       
-      for (const combo of combos) {
-        if (matchesCombo(event, combo)) {
+      for (const [comboIndex, combo] of combos.entries()) {
+        const matchState = matchesShortcutCombo(
+          event,
+          combo,
+          sequenceStatesRef.current,
+          `${comboIndex}:${combo}`,
+        )
+
+        if (matchState === 'partial') {
+          if (shortcut.preventDefault !== false) {
+            event.preventDefault()
+          }
+          return
+        }
+
+        if (matchState === 'complete') {
           if (shortcut.preventDefault !== false) {
             event.preventDefault()
           }
@@ -103,7 +185,7 @@ export function useKeyboardShortcut(
         }
       }
     },
-    [enabled, shortcut.combo, shortcut.enabled, shortcut.preventDefault]
+    [allowInInput, enabled, shortcut.combo, shortcut.enabled, shortcut.preventDefault]
   )
   
   useEffect(() => {
@@ -121,7 +203,8 @@ export function useKeyboardShortcuts(
   shortcuts: KeyboardShortcut[],
   options: UseKeyboardShortcutOptions = {}
 ) {
-  const { enabled = true, targetRef } = options
+  const { enabled = true, targetRef, allowInInput = false } = options
+  const sequenceStatesRef = useRef(new Map<string, SequenceState>())
   
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -137,10 +220,24 @@ export function useKeyboardShortcuts(
         const combos = Array.isArray(shortcut.combo) ? shortcut.combo : [shortcut.combo]
         const isEscape = combos.some((c) => c.toLowerCase() === 'escape')
         
-        if (isInput && !isEscape) continue
+        if (isInput && !isEscape && !allowInInput) continue
         
-        for (const combo of combos) {
-          if (matchesCombo(event, combo)) {
+        for (const [comboIndex, combo] of combos.entries()) {
+          const matchState = matchesShortcutCombo(
+            event,
+            combo,
+            sequenceStatesRef.current,
+            `${shortcut.description ?? shortcut.callback.name ?? 'shortcut'}:${comboIndex}:${combo}`,
+          )
+
+          if (matchState === 'partial') {
+            if (shortcut.preventDefault !== false) {
+              event.preventDefault()
+            }
+            return
+          }
+
+          if (matchState === 'complete') {
             if (shortcut.preventDefault !== false) {
               event.preventDefault()
             }
@@ -150,7 +247,7 @@ export function useKeyboardShortcuts(
         }
       }
     },
-    [enabled, shortcuts]
+    [allowInInput, enabled, shortcuts]
   )
   
   useEffect(() => {
@@ -166,6 +263,7 @@ export function useKeyboardShortcuts(
 // Common keyboard shortcuts for the app
 export const APP_SHORTCUTS = {
   SEARCH: 'mod+k',
+  SHORTCUTS: 'shift+?',
   NEW_ITEM: 'mod+n',
   SAVE: 'mod+s',
   ESCAPE: 'escape',

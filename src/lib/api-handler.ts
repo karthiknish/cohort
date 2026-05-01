@@ -198,7 +198,8 @@ export type ApiHandlerOptions<TBody extends z.ZodTypeAny, TQuery extends z.ZodTy
 }
 
 /**
- * Recursively sanitizes all string values in an object.
+ * Recursively normalizes string values in request data.
+ * This does not make HTML safe to render.
  */
 function sanitizeBody<T>(data: T): T {
   if (typeof data === 'string') {
@@ -614,10 +615,12 @@ export function createApiHandler<
 
       // Log and handle unknown errors
       const isDev = process.env.NODE_ENV === 'development'
+      const exposeInternalErrors = isDev && process.env.COHORTS_EXPOSE_INTERNAL_ERRORS === '1'
       
       after(async () => {
-        // CRITICAL: Ensure we see the error in the terminal
-        console.error(`[API Error] ${req.method} ${req.nextUrl.pathname}:`, error)
+        if (isDev) {
+          console.error(`[API Error] ${req.method} ${req.nextUrl.pathname}:`, error)
+        }
         
         logApiError(error, req, { ...logContext, includeStack: isDev })
 
@@ -633,7 +636,7 @@ export function createApiHandler<
 
       return NextResponse.json({ 
         success: false,
-        error: options.errorMessage || (isDev && error instanceof Error ? error.message : 'Internal server error'),
+        error: options.errorMessage || (exposeInternalErrors && error instanceof Error ? error.message : 'Internal server error'),
         code: 'INTERNAL_ERROR',
         requestId,
       }, { 

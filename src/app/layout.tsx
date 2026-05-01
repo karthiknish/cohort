@@ -9,8 +9,6 @@ import { cn } from '@/lib/utils'
 import '@/shared/ui/livekit-styles'
 import { SiteHeader } from '@/shared/layout/site/site-header'
 import { SiteFooter } from '@/shared/layout/site/site-footer'
-import { Toaster } from '@/shared/ui/toaster'
-import { Toaster as SonnerToaster } from '@/shared/ui/sonner'
 import { PWAProvider } from '@/shared/providers/pwa-provider'
 import { AppProviders } from '@/shared/providers/app-providers'
 import { MotionProvider } from '@/shared/providers/motion-provider'
@@ -85,8 +83,6 @@ export default function RootLayout({
             <PWAProvider />
           </Suspense>
         </AppProviders>
-        <Toaster />
-        <SonnerToaster />
       </body>
     </html>
   )

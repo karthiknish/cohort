@@ -7,7 +7,8 @@
     "bun": ">=1.3.6"
   },
   "scripts": {
-    "dev": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 bun --bun next dev",
+    "dev": "bun --bun next dev",
+    "dev:insecure-tls": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 bun --bun next dev",
     "dev:local": "convex dev --local & bun --bun next dev",
     "convex:dev": "CONVEX_DEPLOYMENT=dev:grand-sparrow-698 convex dev",
     "convex:dev:local": "convex dev --local",
@@ -21,7 +22,7 @@
     "boneyard:build": "bunx boneyard-js build",
     "biome:check": "biome check .",
     "biome:format": "biome format --write .",
-    "start": "bun --bun next start",
+    "start": "node scripts/ensure-safe-runtime.cjs && bun --bun next start",
     "lint": "bun run biome:check && oxlint -c .oxlintrc.json",
     "typecheck": "bun --bun tsc -p tsconfig.json --noEmit",
     "test": "vitest run"

@@ -72,6 +72,7 @@ export function useMessagesData({
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
   const lastMarkedMessageByChannelRef = useRef<Record<string, string>>({})
   const previewReplyTimersRef = useRef<number[]>([])
+  const lastRealtimeErrorToastKeyRef = useRef<string | null>(null)
 
   const unreadCountsResult = useQuery(
     collaborationApi.getUnreadCountsByChannel,
@@ -330,6 +331,23 @@ export function useMessagesData({
     mutateThreadMessageById,
   })
 
+  const handleRealtimeMessagesError = useCallback(
+    (channel: Channel, errorMessage: string) => {
+      const toastKey = `${channel.id}:${channelListRetryNonce}:${errorMessage}`
+      if (lastRealtimeErrorToastKeyRef.current === toastKey) {
+        return
+      }
+
+      lastRealtimeErrorToastKeyRef.current = toastKey
+      toast({
+        title: 'Unable to load messages',
+        description: `${channel.name}: ${errorMessage}`,
+        variant: 'destructive',
+      })
+    },
+    [channelListRetryNonce, toast],
+  )
+
   useRealtimeMessages({
     workspaceId,
     selectedChannel,
@@ -339,7 +357,7 @@ export function useMessagesData({
     setNextCursorByChannel,
     setLoadingChannelId,
     setMessagesError,
-    onError: () => {},
+    onError: handleRealtimeMessagesError,
   })
 
   const { typingParticipants } = useRealtimeTyping({

@@ -1,7 +1,9 @@
 'use client'
 
 import { useCallback, useState, type ComponentType } from 'react'
+import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQuery } from 'convex/react'
 import {
   BarChart3,
   CheckSquare,
@@ -21,6 +23,7 @@ import {
   Share2,
 } from 'lucide-react'
 
+import { clientsApi, projectsApi, proposalsApi, tasksApi } from '@/lib/convex-api'
 import {
   CommandDialog,
   CommandEmpty,
@@ -32,7 +35,51 @@ import {
   CommandShortcut,
 } from '@/shared/ui/command'
 import { useAuth } from '@/shared/contexts/auth-context'
+import { useClientContext } from '@/shared/contexts/client-context'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
+
+const COMMAND_MENU_STATUS_ID = 'command-menu-status'
+
+type SearchableClient = {
+  legacyId: string
+  name: string
+}
+
+type SearchableTask = {
+  legacyId: string
+  title: string
+  status?: string | null
+  projectName?: string | null
+}
+
+type SearchableProject = {
+  legacyId: string
+  name: string
+  status?: string | null
+}
+
+type SearchableProposal = {
+  legacyId: string
+  clientName?: string | null
+  status?: string | null
+}
+
+type SearchEntityResult = {
+  id: string
+  href: string
+  label: string
+  description: string
+  icon: ComponentType<{ className?: string }>
+  group: 'Clients' | 'Tasks' | 'Projects' | 'Proposals'
+}
+
+function includesQuery(value: string | null | undefined, query: string): boolean {
+  return typeof value === 'string' && value.toLowerCase().includes(query)
+}
+
+function limitResults<T>(items: T[], limit = 4): T[] {
+  return items.slice(0, limit)
+}
 
 function CommandMenuRouteItem({
   description,
@@ -86,6 +133,7 @@ function CommandMenuActionItem({
 
 interface CommandMenuProps {
   onOpenHelp?: () => void
+  onOpenShortcuts?: () => void
 }
 
 const navigationItemDefs: Array<{
@@ -150,13 +198,174 @@ export function getQuickActionsForUserRole(userRole: string | null) {
   })
 }
 
-export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
+export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
   const [open, setOpen] = useState(false)
   const router = useRouter()
   const { user } = useAuth()
+  const { selectedClientId } = useClientContext()
+  const workspaceId = user?.agencyId ?? null
 
   const navigationItems = getNavigationItemsForUserRole(user?.role ?? null)
   const quickActionItems = getQuickActionsForUserRole(user?.role ?? null)
+
+  const [query, setQuery] = useState('')
+
+  const clientRows = useQuery(
+    clientsApi.list,
+    workspaceId
+      ? {
+          workspaceId,
+          limit: 100,
+          includeAllWorkspaces: user?.role === 'admin',
+        }
+      : 'skip'
+  ) as Array<SearchableClient> | undefined
+
+  const taskRows = useQuery(
+    selectedClientId ? tasksApi.listByClient : tasksApi.listForUser,
+    workspaceId
+      ? selectedClientId
+        ? { workspaceId, clientId: selectedClientId, limit: 100 }
+        : { workspaceId, limit: 100 }
+      : 'skip'
+  ) as Array<SearchableTask> | undefined
+
+  const projectRows = useQuery(
+    projectsApi.list,
+    workspaceId
+      ? {
+          workspaceId,
+          clientId: selectedClientId ?? undefined,
+          limit: 100,
+        }
+      : 'skip'
+  ) as Array<SearchableProject> | undefined
+
+  const proposalRows = useQuery(
+    proposalsApi.list,
+    workspaceId && selectedClientId
+      ? {
+          workspaceId,
+          clientId: selectedClientId,
+          limit: 100,
+        }
+      : 'skip'
+  ) as Array<SearchableProposal> | undefined
+
+  const normalizedQuery = query.trim().toLowerCase()
+
+  const searchResults = useMemo(() => {
+    if (normalizedQuery.length < 2) {
+      return [] as SearchEntityResult[]
+    }
+
+    const clientResults = limitResults(
+      (Array.isArray(clientRows) ? clientRows : [])
+        .filter((client) => includesQuery(client.name, normalizedQuery))
+        .map((client) => ({
+          id: `client-${client.legacyId}`,
+          href: '/admin/clients',
+          label: client.name,
+          description: 'Client workspace',
+          icon: Users,
+          group: 'Clients' as const,
+        }))
+    )
+
+    const taskResults = limitResults(
+      (Array.isArray(taskRows) ? taskRows : [])
+        .filter((task) => includesQuery(task.title, normalizedQuery) || includesQuery(task.projectName, normalizedQuery))
+        .map((task) => ({
+          id: `task-${task.legacyId}`,
+          href: task.projectName
+            ? `/dashboard/tasks?projectName=${encodeURIComponent(task.projectName)}`
+            : '/dashboard/tasks',
+          label: task.title,
+          description: task.projectName || task.status || 'Task',
+          icon: CheckSquare,
+          group: 'Tasks' as const,
+        }))
+    )
+
+    const projectResults = limitResults(
+      (Array.isArray(projectRows) ? projectRows : [])
+        .filter((project) => includesQuery(project.name, normalizedQuery))
+        .map((project) => ({
+          id: `project-${project.legacyId}`,
+          href: `/dashboard/projects?projectId=${encodeURIComponent(project.legacyId)}&projectName=${encodeURIComponent(project.name)}`,
+          label: project.name,
+          description: project.status || 'Project',
+          icon: Briefcase,
+          group: 'Projects' as const,
+        }))
+    )
+
+    const proposalResults = limitResults(
+      (Array.isArray(proposalRows) ? proposalRows : [])
+        .filter((proposal) => includesQuery(proposal.clientName, normalizedQuery) || includesQuery(proposal.legacyId, normalizedQuery))
+        .map((proposal) => ({
+          id: `proposal-${proposal.legacyId}`,
+          href: `/dashboard/proposals/${encodeURIComponent(proposal.legacyId)}/deck`,
+          label: proposal.clientName || 'Proposal deck',
+          description: proposal.status || proposal.legacyId,
+          icon: FileText,
+          group: 'Proposals' as const,
+        }))
+    )
+
+    return [...clientResults, ...taskResults, ...projectResults, ...proposalResults]
+  }, [clientRows, normalizedQuery, projectRows, proposalRows, taskRows])
+
+  const groupedSearchResults = useMemo(() => {
+    return searchResults.reduce<Record<string, SearchEntityResult[]>>((accumulator, result) => {
+      if (!accumulator[result.group]) {
+        accumulator[result.group] = []
+      }
+      accumulator[result.group]!.push(result)
+      return accumulator
+    }, {})
+  }, [searchResults])
+
+  const isSearchLoading = useMemo(() => {
+    if (normalizedQuery.length < 2 || !workspaceId) {
+      return false
+    }
+
+    if (clientRows === undefined || taskRows === undefined || projectRows === undefined) {
+      return true
+    }
+
+    if (selectedClientId && proposalRows === undefined) {
+      return true
+    }
+
+    return false
+  }, [clientRows, normalizedQuery.length, projectRows, proposalRows, selectedClientId, taskRows, workspaceId])
+
+  const searchStatusMessage = useMemo(() => {
+    if (!open) {
+      return ''
+    }
+
+    if (normalizedQuery.length === 0) {
+      return 'Type at least 2 characters to search pages, actions, and records.'
+    }
+
+    if (normalizedQuery.length === 1) {
+      return 'Type 1 more character to start searching.'
+    }
+
+    if (isSearchLoading) {
+      return `Searching for ${query.trim()}.`
+    }
+
+    if (searchResults.length === 0) {
+      return `No results found for ${query.trim()}.`
+    }
+
+    const groupCount = Object.keys(groupedSearchResults).length
+    return `${searchResults.length} results found for ${query.trim()} across ${groupCount} sections.`
+  }, [groupedSearchResults, isSearchLoading, normalizedQuery.length, open, query, searchResults.length])
 
   useKeyboardShortcut({
     combo: 'mod+k',
@@ -170,6 +379,7 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
   const handleNavigate = useCallback(
     (href: string) => {
       setOpen(false)
+      setQuery('')
       router.push(href)
     },
     [router]
@@ -186,8 +396,15 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
 
   const handleKeyboardShortcutsSelect = useCallback(() => {
     setOpen(false)
-    onOpenHelp?.()
-  }, [onOpenHelp])
+    onOpenShortcuts?.()
+  }, [onOpenShortcuts])
+
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setQuery('')
+    }
+  }, [])
 
   return (
     <>
@@ -218,10 +435,46 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
         <KeyboardShortcutBadge combo="mod+k" />
       </button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search pages, actions, or type a command…" />
-        <CommandList>
+      <CommandDialog open={open} onOpenChange={handleOpenChange}>
+        <p
+          id={COMMAND_MENU_STATUS_ID}
+          className="sr-only"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {searchStatusMessage}
+        </p>
+        <CommandInput
+          placeholder="Search pages, actions, clients, tasks, projects, or proposals…"
+          value={query}
+          onValueChange={setQuery}
+          aria-label="Search pages, actions, clients, tasks, projects, or proposals"
+          aria-describedby={COMMAND_MENU_STATUS_ID}
+        />
+        <CommandList aria-busy={isSearchLoading} aria-label="Quick navigation results">
           <CommandEmpty>No results found.</CommandEmpty>
+
+          {Object.entries(groupedSearchResults).length > 0 ? (
+            <>
+              {Object.entries(groupedSearchResults).map(([group, items]) => (
+                <CommandGroup key={group} heading={group}>
+                  {items.map((item) => (
+                    <CommandMenuRouteItem
+                      key={item.id}
+                      description={item.description}
+                      href={item.href}
+                      icon={item.icon}
+                      label={item.label}
+                      onNavigate={handleNavigate}
+                    />
+                  ))}
+                </CommandGroup>
+              ))}
+
+              <CommandSeparator />
+            </>
+          ) : null}
 
           <CommandGroup heading="Quick Actions">
             {quickActionItems.map((item) => {
@@ -270,7 +523,9 @@ export function CommandMenu({ onOpenHelp }: CommandMenuProps) {
               icon={Keyboard}
               label="Keyboard shortcuts"
               onSelect={handleKeyboardShortcutsSelect}
-            />
+            >
+              <CommandShortcut>?</CommandShortcut>
+            </CommandMenuActionItem>
           </CommandGroup>
         </CommandList>
       </CommandDialog>

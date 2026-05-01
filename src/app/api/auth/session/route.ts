@@ -14,7 +14,7 @@ const COOKIE_OPTIONS = {
   path: '/',
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  sameSite: 'strict' as const,
 }
 
 function generateCsrfToken(): string {
@@ -135,8 +135,6 @@ export const POST = createApiHandler(
     const expiresAt = Date.now() + COOKIE_OPTIONS.maxAge * 1000
     response.cookies.set('cohorts_session_expires', expiresAt.toString(), {
       ...COOKIE_OPTIONS,
-      httpOnly: false,
-      sameSite: 'strict',
     })
 
     const csrfToken = generateCsrfToken()

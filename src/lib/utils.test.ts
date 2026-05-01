@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cn, formatCurrency, toISO, sanitizeInput, sanitizeCsvValue, coerceBoolean, getSafeRedirectPath } from './utils'
 
+const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL
+
 afterEach(() => {
-  vi.unstubAllEnvs()
+  if (typeof originalAppUrl === 'string') {
+    process.env.NEXT_PUBLIC_APP_URL = originalAppUrl
+  } else {
+    delete process.env.NEXT_PUBLIC_APP_URL
+  }
 })
 
 describe('utils', () => {
@@ -40,8 +46,9 @@ describe('utils', () => {
   })
 
   describe('sanitizeInput', () => {
-    it('strips HTML tags', () => {
-      expect(sanitizeInput('<script>alert("xss")</script>Hello')).toBe('alert("xss")Hello')
+    it('normalizes control characters without pretending to sanitize HTML', () => {
+      expect(sanitizeInput('  hello\u0000world\n  ')).toBe('helloworld')
+      expect(sanitizeInput('<script>alert("xss")</script>Hello')).toBe('<script>alert("xss")</script>Hello')
     })
   })
 
@@ -82,7 +89,7 @@ describe('utils', () => {
     })
 
     it('normalizes same-origin absolute redirects to internal paths', () => {
-      vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://cohorts.test')
+      process.env.NEXT_PUBLIC_APP_URL = 'https://cohorts.test'
 
       expect(getSafeRedirectPath('https://cohorts.test/dashboard?tab=overview#activity')).toBe(
         '/dashboard?tab=overview#activity',
@@ -90,7 +97,7 @@ describe('utils', () => {
     })
 
     it('rejects external redirects', () => {
-      vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://cohorts.test')
+      process.env.NEXT_PUBLIC_APP_URL = 'https://cohorts.test'
 
       expect(getSafeRedirectPath('https://evil.example/phish')).toBeNull()
     })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useId, useMemo } from 'react'
 import { GripVertical, X, ChevronDown, ChevronUp, Eye, EyeOff, Settings2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -12,6 +12,7 @@ import {
 } from '@/shared/ui/tooltip'
 import { chromaticTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
+import { LiveRegion } from '@/shared/ui/live-region'
 import { useToast } from '@/shared/ui/use-toast'
 
 export type DashboardWidget = {
@@ -155,6 +156,8 @@ export function DashboardCustomization({
   onEditToggle,
 }: DashboardCustomizationProps) {
   const { toast } = useToast()
+  const instructionsId = useId()
+  const [layoutAnnouncement, setLayoutAnnouncement] = useState('')
 
   const visibleWidgets = useMemo(
     () => activeWidgets.filter((w) => w.visible),
@@ -168,25 +171,41 @@ export function DashboardCustomization({
 
   const handleMoveUp = useCallback((index: number) => {
     if (index === 0) return
+    const movedWidget = visibleWidgets[index]
     const newWidgets = [...visibleWidgets]
     const temp = newWidgets[index - 1]!
     newWidgets[index - 1] = newWidgets[index]!
     newWidgets[index] = temp
     onLayoutChange(newWidgets)
+    if (movedWidget) {
+      setLayoutAnnouncement(`${movedWidget.title} moved to position ${index}.`)
+    }
   }, [visibleWidgets, onLayoutChange])
 
   const handleMoveDown = useCallback((index: number) => {
     if (index === visibleWidgets.length - 1) return
+    const movedWidget = visibleWidgets[index]
     const newWidgets = [...visibleWidgets]
     const temp = newWidgets[index + 1]!
     newWidgets[index + 1] = newWidgets[index]!
     newWidgets[index] = temp
     onLayoutChange(newWidgets)
+    if (movedWidget) {
+      setLayoutAnnouncement(`${movedWidget.title} moved to position ${index + 2}.`)
+    }
   }, [visibleWidgets, onLayoutChange])
 
   const handleToggleVisibility = useCallback(
     (widgetId: string, currentlyVisible: boolean) => {
       onWidgetToggle(widgetId, !currentlyVisible)
+      const widget = availableWidgets.find((item) => item.id === widgetId)
+      if (widget) {
+        setLayoutAnnouncement(
+          currentlyVisible
+            ? `${widget.title} hidden from dashboard.`
+            : `${widget.title} added to dashboard.`
+        )
+      }
       toast({
         title: currentlyVisible ? 'Widget hidden' : 'Widget shown',
         description: currentlyVisible
@@ -194,14 +213,22 @@ export function DashboardCustomization({
           : 'The widget has been added to your dashboard.',
       })
     },
-    [onWidgetToggle, toast]
+    [availableWidgets, onWidgetToggle, toast]
   )
 
   const handleCollapse = useCallback(
     (widgetId: string, currentlyCollapsed: boolean) => {
       onWidgetCollapse(widgetId, !currentlyCollapsed)
+      const widget = activeWidgets.find((item) => item.id === widgetId)
+      if (widget) {
+        setLayoutAnnouncement(
+          currentlyCollapsed
+            ? `${widget.title} expanded.`
+            : `${widget.title} collapsed.`
+        )
+      }
     },
-    [onWidgetCollapse]
+    [activeWidgets, onWidgetCollapse]
   )
 
   const handleReset = useCallback(() => {
@@ -214,6 +241,7 @@ export function DashboardCustomization({
 
   return (
     <Card className={cn('border-dashed transition-colors', isEditing && 'border-primary')}>
+      <LiveRegion message={layoutAnnouncement} />
       <CardHeader className="flex flex-row items-center justify-between py-3">
         <div className="flex items-center gap-2">
           <Settings2 className="h-4 w-4 text-muted-foreground" />
@@ -247,14 +275,18 @@ export function DashboardCustomization({
 
       {isEditing && (
         <CardContent className="space-y-4">
+          <p id={instructionsId} className="sr-only">
+            Use the move up and move down buttons, or press Alt plus Up Arrow and Alt plus Down Arrow while focused on a widget row, to reorder widgets in your dashboard.
+          </p>
           {/* Active widgets */}
-          <div className="space-y-2">
+          <div className="space-y-2" role="list" aria-describedby={instructionsId}>
             <h3 className="text-xs font-medium text-muted-foreground uppercase">
               Active Widgets ({visibleWidgets.length})
             </h3>
             {visibleWidgets.map((widget, index) => (
               <DashboardWidgetRow
                 key={widget.id}
+                instructionsId={instructionsId}
                 widget={widget}
                 index={index}
                 total={visibleWidgets.length}
@@ -357,6 +389,7 @@ export function WidgetSizeSelector({
 }
 
 function DashboardWidgetRow({
+  instructionsId,
   widget,
   index,
   total,
@@ -365,6 +398,7 @@ function DashboardWidgetRow({
   onCollapse,
   onToggleVisibility,
 }: {
+  instructionsId: string
   widget: DashboardWidget
   index: number
   total: number
@@ -389,8 +423,32 @@ function DashboardWidgetRow({
     onToggleVisibility(widget.id, true)
   }, [onToggleVisibility, widget.id])
 
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!event.altKey) {
+        return
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        handleMoveUp()
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        handleMoveDown()
+      }
+    },
+    [handleMoveDown, handleMoveUp]
+  )
+
   return (
-    <div className="flex items-center gap-2 rounded-lg border bg-muted/30 p-2 group">
+    <div
+      className="flex items-center gap-2 rounded-lg border bg-muted/30 p-2 group"
+      role="listitem"
+      tabIndex={0}
+      aria-describedby={instructionsId}
+      aria-label={`${widget.title}, position ${index + 1} of ${total}`}
+      onKeyDown={handleKeyDown}
+    >
       <div className="flex flex-col gap-0.5">
         <Button
           type="button"
@@ -523,6 +581,8 @@ function WidgetSizeButton({
       type="button"
       onClick={handleClick}
       disabled={disabled}
+      aria-pressed={currentSize === size.value}
+      aria-label={`${size.label} width${currentSize === size.value ? ', selected' : ''}. ${size.width}`}
       className={cn(
         'flex h-6 w-6 items-center justify-center rounded text-xs font-medium transition-colors',
         currentSize === size.value

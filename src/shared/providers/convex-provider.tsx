@@ -38,27 +38,28 @@ export function ConvexClientProvider({ children, initialToken }: ConvexClientPro
         '[convex] NEXT_PUBLIC_CONVEX_URL is not set; Convex client is disabled.'
       )
     }
+
     return (
-      <>
+      <div className="flex min-h-screen items-center justify-center bg-background px-6 py-10">
         <div
           role="alert"
-          aria-live="polite"
-          className="border-b border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-foreground"
+          aria-live="assertive"
+          className="w-full max-w-xl rounded-2xl border border-destructive/40 bg-card p-8 text-center shadow-sm"
         >
-          <div className="mx-auto flex max-w-5xl items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
-            <div className="min-w-0">
-              <p className="font-medium">Convex is not configured</p>
-              <p className="mt-1 text-muted-foreground">
-                {process.env.NODE_ENV === 'production'
-                  ? 'Real-time data and server features are unavailable. Set NEXT_PUBLIC_CONVEX_URL in your deployment environment.'
-                  : 'Set NEXT_PUBLIC_CONVEX_URL in .env.local to enable Convex (real-time data, mutations, and server features).'}
-              </p>
-            </div>
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
+            <AlertTriangle className="h-7 w-7 text-destructive" aria-hidden />
           </div>
+          <h1 className="mt-5 text-xl font-semibold text-foreground">Convex is not configured</h1>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            {process.env.NODE_ENV === 'production'
+              ? 'Core data, authentication, and real-time features are unavailable because NEXT_PUBLIC_CONVEX_URL is missing from this deployment.'
+              : 'Set NEXT_PUBLIC_CONVEX_URL in .env.local to enable Convex before loading the application UI.'}
+          </p>
+          <p className="mt-4 text-xs uppercase tracking-[0.2em] text-muted-foreground/80">
+            Application unavailable until the data layer is configured
+          </p>
         </div>
-        {children}
-      </>
+      </div>
     )
   }
 

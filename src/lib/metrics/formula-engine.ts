@@ -601,6 +601,262 @@ export function calculateCustomKpis(
 
 const SUPPORTED_FUNCTIONS = ['abs', 'min', 'max', 'round', 'floor', 'ceil']
 
+type SupportedFunctionName = (typeof SUPPORTED_FUNCTIONS)[number]
+
+type FormulaToken =
+    | { type: 'number'; value: number }
+    | { type: 'operator'; value: '+' | '-' | '*' | '/' }
+    | { type: 'leftParen' }
+    | { type: 'rightParen' }
+    | { type: 'comma' }
+    | { type: 'function'; value: SupportedFunctionName }
+
+const SUPPORTED_FUNCTION_SET = new Set<SupportedFunctionName>(SUPPORTED_FUNCTIONS)
+
+function tokenizeFormula(formula: string, inputs: Record<string, number>): FormulaToken[] | null {
+    const tokens: FormulaToken[] = []
+    let index = 0
+
+    while (index < formula.length) {
+        const char = formula[index]
+
+        if (!char) break
+
+        if (/\s/.test(char)) {
+            index += 1
+            continue
+        }
+
+        if (/[0-9.]/.test(char)) {
+            let end = index + 1
+            while (end < formula.length && /[0-9.]/.test(formula[end] ?? '')) {
+                end += 1
+            }
+
+            const rawNumber = formula.slice(index, end)
+            if (!/^\d+(?:\.\d+)?$|^\.\d+$/.test(rawNumber)) {
+                return null
+            }
+
+            const value = Number(rawNumber)
+            if (!Number.isFinite(value)) {
+                return null
+            }
+
+            tokens.push({ type: 'number', value })
+            index = end
+            continue
+        }
+
+        if (/[a-zA-Z_]/.test(char)) {
+            let end = index + 1
+            while (end < formula.length && /[a-zA-Z0-9_]/.test(formula[end] ?? '')) {
+                end += 1
+            }
+
+            const identifier = formula.slice(index, end)
+            const normalized = identifier.toLowerCase()
+
+            if (SUPPORTED_FUNCTION_SET.has(normalized as SupportedFunctionName)) {
+                tokens.push({ type: 'function', value: normalized as SupportedFunctionName })
+                index = end
+                continue
+            }
+
+            const inputValue = inputs[identifier]
+            if (typeof inputValue !== 'number' || !Number.isFinite(inputValue)) {
+                return null
+            }
+
+            tokens.push({ type: 'number', value: inputValue })
+            index = end
+            continue
+        }
+
+        if (char === '+' || char === '-' || char === '*' || char === '/') {
+            tokens.push({ type: 'operator', value: char })
+            index += 1
+            continue
+        }
+
+        if (char === '(') {
+            tokens.push({ type: 'leftParen' })
+            index += 1
+            continue
+        }
+
+        if (char === ')') {
+            tokens.push({ type: 'rightParen' })
+            index += 1
+            continue
+        }
+
+        if (char === ',') {
+            tokens.push({ type: 'comma' })
+            index += 1
+            continue
+        }
+
+        return null
+    }
+
+    return tokens
+}
+
+class FormulaParser {
+    private readonly tokens: FormulaToken[]
+    private position = 0
+
+    constructor(tokens: FormulaToken[]) {
+        this.tokens = tokens
+    }
+
+    parse(): number | null {
+        const value = this.parseExpression()
+        if (value === null || this.position !== this.tokens.length || !Number.isFinite(value)) {
+            return null
+        }
+        return value
+    }
+
+    private parseExpression(): number | null {
+        let value = this.parseTerm()
+        if (value === null) return null
+
+        while (true) {
+            const token = this.peek()
+            if (!token || token.type !== 'operator' || (token.value !== '+' && token.value !== '-')) {
+                break
+            }
+
+            this.position += 1
+            const right = this.parseTerm()
+            if (right === null) return null
+
+            value = token.value === '+' ? value + right : value - right
+        }
+
+        return value
+    }
+
+    private parseTerm(): number | null {
+        let value = this.parseFactor()
+        if (value === null) return null
+
+        while (true) {
+            const token = this.peek()
+            if (!token || token.type !== 'operator' || (token.value !== '*' && token.value !== '/')) {
+                break
+            }
+
+            this.position += 1
+            const right = this.parseFactor()
+            if (right === null) return null
+            if (token.value === '/' && right === 0) {
+                return null
+            }
+
+            value = token.value === '*' ? value * right : value / right
+        }
+
+        return value
+    }
+
+    private parseFactor(): number | null {
+        const token = this.peek()
+        if (!token) return null
+
+        if (token.type === 'operator' && (token.value === '+' || token.value === '-')) {
+            this.position += 1
+            const value = this.parseFactor()
+            if (value === null) return null
+            return token.value === '-' ? -value : value
+        }
+
+        if (token.type === 'number') {
+            this.position += 1
+            return token.value
+        }
+
+        if (token.type === 'leftParen') {
+            this.position += 1
+            const value = this.parseExpression()
+            if (value === null) return null
+
+            const closing = this.peek()
+            if (!closing || closing.type !== 'rightParen') {
+                return null
+            }
+
+            this.position += 1
+            return value
+        }
+
+        if (token.type === 'function') {
+            return this.parseFunctionCall(token.value)
+        }
+
+        return null
+    }
+
+    private parseFunctionCall(name: SupportedFunctionName): number | null {
+        this.position += 1
+
+        const open = this.peek()
+        if (!open || open.type !== 'leftParen') {
+            return null
+        }
+        this.position += 1
+
+        const args: number[] = []
+        const next = this.peek()
+        if (!next || next.type === 'rightParen') {
+            return null
+        }
+
+        while (true) {
+            const value = this.parseExpression()
+            if (value === null) return null
+            args.push(value)
+
+            const separator = this.peek()
+            if (!separator) return null
+            if (separator.type === 'comma') {
+                this.position += 1
+                continue
+            }
+            if (separator.type === 'rightParen') {
+                this.position += 1
+                break
+            }
+            return null
+        }
+
+        return applySupportedFunction(name, args)
+    }
+
+    private peek(): FormulaToken | undefined {
+        return this.tokens[this.position]
+    }
+}
+
+function applySupportedFunction(name: SupportedFunctionName, args: number[]): number | null {
+    switch (name) {
+        case 'abs':
+        case 'round':
+        case 'floor':
+        case 'ceil':
+            if (args.length !== 1) return null
+            return Math[name](args[0]!)
+        case 'min':
+        case 'max':
+            if (args.length < 1) return null
+            return Math[name](...args)
+        default:
+            return null
+    }
+}
+
 /**
  * Extract variable names from a formula string
  */
@@ -625,39 +881,15 @@ export function extractFormulaVariables(formula: string): string[] {
  * Safely evaluate a formula with given inputs
  */
 export function safeEvaluateFormula(formula: string, inputs: Record<string, number>): number | null {
-    try {
-        // Replace variable names with their values
-        let expression = formula
-        Object.entries(inputs).forEach(([name, value]) => {
-            expression = expression.replace(
-                new RegExp(`\\b${name}\\b`, 'g'),
-                String(value)
-            )
-        })
-
-        // Replace function names with Math equivalents
-        expression = expression
-            .replace(/\babs\b/gi, 'Math.abs')
-            .replace(/\bmin\b/gi, 'Math.min')
-            .replace(/\bmax\b/gi, 'Math.max')
-            .replace(/\bround\b/gi, 'Math.round')
-            .replace(/\bfloor\b/gi, 'Math.floor')
-            .replace(/\bceil\b/gi, 'Math.ceil')
-
-        // Validate no remaining letters (which would indicate undefined variables)
-        if (/[a-zA-Z]/.test(expression.replace(/Math\./g, ''))) {
-            return null
-        }
-
-        const fn = new Function(`return (${expression})`)
-        const result = fn()
-
-        if (typeof result !== 'number' || !isFinite(result)) {
-            return null
-        }
-
-        return result
-    } catch {
+    const tokens = tokenizeFormula(formula, inputs)
+    if (!tokens || tokens.length === 0) {
         return null
     }
+
+    const result = new FormulaParser(tokens).parse()
+    if (result === null || !Number.isFinite(result)) {
+        return null
+    }
+
+    return result
 }

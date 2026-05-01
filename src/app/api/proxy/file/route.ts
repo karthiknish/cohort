@@ -7,6 +7,21 @@ const ALLOWED_DOMAINS = new Set([
   'storage.cloud.google.com',
 ])
 
+function sanitizeFilename(value: string): string {
+  const sanitized = value
+    .replace(/[\r\n]/g, '')
+    .replace(/["\\/;:]/g, '_')
+    .replace(/[\x00-\x1F\x7F]/g, '')
+    .trim()
+
+  return sanitized.length > 0 ? sanitized : 'file'
+}
+
+function encodeContentDispositionFilename(value: string): string {
+  return encodeURIComponent(value)
+    .replace(/['()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`)
+}
+
 function isAllowedHostname(hostname: string): boolean {
   // Only allow exact matches or subdomains of the allowlist.
   for (const domain of ALLOWED_DOMAINS) {
@@ -45,13 +60,14 @@ export const GET = createApiHandler({
 
   const contentType = upstream.headers.get('content-type') || 'application/octet-stream'
   const contentLength = upstream.headers.get('content-length')
-  const filename = decodeURIComponent(parsedUrl.pathname.split('/').pop() || 'file')
+  const rawFilename = decodeURIComponent(parsedUrl.pathname.split('/').pop() || 'file')
+  const filename = sanitizeFilename(rawFilename)
 
   const headers: Record<string, string> = {
     'Content-Type': contentType,
     // Avoid caching private files in shared caches.
     'Cache-Control': 'private, max-age=3600',
-    'Content-Disposition': `inline; filename="${filename}"`,
+    'Content-Disposition': `inline; filename="${filename}"; filename*=UTF-8''${encodeContentDispositionFilename(filename)}`,
   }
 
   if (contentLength) {
