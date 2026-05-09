@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useMemo, type ComponentType } from 'react'
+import { useReducer, useState, useCallback, useEffect, useEffectEvent, useMemo, type ComponentType } from 'react'
 import { Search, X, FileText, MessageSquare, Users, FolderOpen, Clock } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
@@ -66,6 +66,79 @@ const SEARCH_TYPE_LABELS: Record<SearchResultType, string> = {
   proposals: 'Proposal',
 }
 
+type GlobalSearchState = {
+  open: boolean
+  query: string
+  isSearching: boolean
+  results: SearchResult[]
+  selectedType: SearchResultType | 'all'
+}
+
+type GlobalSearchAction =
+  | { type: 'setOpen'; open: boolean }
+  | { type: 'setQuery'; query: string }
+  | { type: 'setIsSearching'; isSearching: boolean }
+  | { type: 'setResults'; results: SearchResult[] }
+  | { type: 'setSelectedType'; selectedType: SearchResultType | 'all' }
+  | { type: 'resetSearchState' }
+
+const INITIAL_GLOBAL_SEARCH_STATE: GlobalSearchState = {
+  open: false,
+  query: '',
+  isSearching: false,
+  results: [],
+  selectedType: 'all',
+}
+
+function globalSearchReducer(state: GlobalSearchState, action: GlobalSearchAction): GlobalSearchState {
+  switch (action.type) {
+    case 'setOpen':
+      return { ...state, open: action.open }
+    case 'setQuery':
+      return { ...state, query: action.query }
+    case 'setIsSearching':
+      return { ...state, isSearching: action.isSearching }
+    case 'setResults':
+      return { ...state, results: action.results }
+    case 'setSelectedType':
+      return { ...state, selectedType: action.selectedType }
+    case 'resetSearchState':
+      return {
+        ...state,
+        query: '',
+        results: [],
+        selectedType: 'all',
+      }
+    default:
+      return state
+  }
+}
+
+function SearchResultRelativeTime({ createdAt }: { createdAt: string }) {
+  const [relativeTime, setRelativeTime] = useState<string | null>(null)
+
+  useEffect(() => {
+    const createdAtDate = new Date(createdAt)
+    if (Number.isNaN(createdAtDate.getTime())) {
+      setRelativeTime(null)
+      return
+    }
+
+    setRelativeTime(formatRelativeTime(createdAtDate))
+  }, [createdAt])
+
+  if (!relativeTime) {
+    return null
+  }
+
+  return (
+    <span className="text-xs text-muted-foreground flex items-center gap-1">
+      <Clock className="h-3 w-3" />
+      {relativeTime}
+    </span>
+  )
+}
+
 /**
  * Global search dialog with keyboard shortcut support
  */
@@ -76,52 +149,33 @@ export function GlobalSearch({
   shortcut = 'Cmd+K',
 }: GlobalSearchProps) {
   const { toast } = useToast()
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
-  const [isSearching, setIsSearching] = useState(false)
-  const [results, setResults] = useState<SearchResult[]>([])
-  const [selectedType, setSelectedType] = useState<SearchResultType | 'all'>('all')
+  const [{ open, query, isSearching, results, selectedType }, dispatch] = useReducer(
+    globalSearchReducer,
+    INITIAL_GLOBAL_SEARCH_STATE,
+  )
 
   const resetSearchState = useCallback(() => {
-    setQuery('')
-    setResults([])
-    setSelectedType('all')
+    dispatch({ type: 'resetSearchState' })
   }, [])
 
-  // Keyboard shortcut handling
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
-      const keyCombo = isMac ? e.metaKey && e.key === 'k' : e.ctrlKey && e.key === 'k'
+  const handleShortcutKeyDown = useEffectEvent((e: KeyboardEvent) => {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+    const keyCombo = isMac ? e.metaKey && e.key === 'k' : e.ctrlKey && e.key === 'k'
 
-      if (keyCombo) {
-        e.preventDefault()
-        setOpen((prev) => {
-          const next = !prev
-          if (!next) {
-            resetSearchState()
-          }
-          return next
-        })
+    if (keyCombo) {
+      e.preventDefault()
+      const nextOpen = !open
+      dispatch({ type: 'setOpen', open: nextOpen })
+      if (!nextOpen) {
+        resetSearchState()
       }
     }
+  })
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [resetSearchState])
-
-  const handleOpenChange = useCallback((nextOpen: boolean) => {
-    setOpen(nextOpen)
-    if (!nextOpen) {
-      resetSearchState()
-    }
-  }, [resetSearchState])
-
-  // Perform search
-  const performSearch = useCallback(() => {
+  const runSearch = useEffectEvent(() => {
     if (!query.trim() || isSearching) return
 
-    setIsSearching(true)
+    dispatch({ type: 'setIsSearching', isSearching: true })
 
     const searchPromises = Object.entries(searchFunctions).map(async ([type, fn]) => {
       if (fn && (selectedType === 'all' || selectedType === type)) {
@@ -138,11 +192,11 @@ export function GlobalSearch({
         // Sort by relevance if available
         const sorted = flattened.sort((a, b) => (b.relevance ?? 0) - (a.relevance ?? 0))
 
-        setResults(sorted)
+        dispatch({ type: 'setResults', results: sorted })
       })
       .catch((error) => {
         logError(error, 'GlobalSearch:performSearch')
-        setResults([])
+        dispatch({ type: 'setResults', results: [] })
         toast({
           title: 'Search failed',
           description: asErrorMessage(error),
@@ -150,22 +204,39 @@ export function GlobalSearch({
         })
       })
       .finally(() => {
-        setIsSearching(false)
+        dispatch({ type: 'setIsSearching', isSearching: false })
       })
-  }, [query, selectedType, searchFunctions, isSearching, toast])
+  })
+
+  // Keyboard shortcut handling
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      handleShortcutKeyDown(e)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    dispatch({ type: 'setOpen', open: nextOpen })
+    if (!nextOpen) {
+      resetSearchState()
+    }
+  }, [resetSearchState])
 
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
       if (query.trim().length >= 2) {
-        performSearch()
+        runSearch()
       } else {
-        setResults([])
+        dispatch({ type: 'setResults', results: [] })
       }
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [query, performSearch])
+  }, [query, searchFunctions, selectedType])
 
   // Group results by type
   const groupedResults = useMemo(() => {
@@ -184,32 +255,32 @@ export function GlobalSearch({
   }, [groupedResults])
 
   const handleQueryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value)
+    dispatch({ type: 'setQuery', query: e.target.value })
   }, [])
 
   const handleSearchInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') {
       e.preventDefault()
-      setOpen(false)
+      dispatch({ type: 'setOpen', open: false })
     }
   }, [])
 
   const handleClearQuery = useCallback(() => {
-    setQuery('')
+    dispatch({ type: 'setQuery', query: '' })
   }, [])
 
   const handleSelectAllTypes = useCallback(() => {
-    setSelectedType('all')
+    dispatch({ type: 'setSelectedType', selectedType: 'all' })
   }, [])
 
   const handleSelectType = useCallback((type?: SearchResultType) => {
-    setSelectedType(type ?? 'all')
+    dispatch({ type: 'setSelectedType', selectedType: type ?? 'all' })
   }, [])
 
   const handleResultClick = useCallback(
     (result: SearchResult) => {
       onResultClick?.(result)
-      setOpen(false)
+      dispatch({ type: 'setOpen', open: false })
     },
     [onResultClick]
   )
@@ -433,12 +504,7 @@ function SearchResultItem({ result, onSelect }: SearchResultItemProps) {
                 {result.metadata.priority}
               </span>
             )}
-            {result.metadata?.createdAt && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {formatRelativeTime(new Date(result.metadata.createdAt))}
-              </span>
-            )}
+            {result.metadata?.createdAt ? <SearchResultRelativeTime createdAt={result.metadata.createdAt} /> : null}
             {result.metadata?.clientName && (
               <span className="text-xs text-muted-foreground">
                 {result.metadata.clientName}

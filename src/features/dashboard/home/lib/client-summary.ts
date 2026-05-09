@@ -45,13 +45,14 @@ export type ClientSummaryResult = {
 }
 
 const CLIENT_SUMMARY_HASH_VERSION = 'v1'
+const USD_SUMMARY_FORMATTER = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+})
 
 function formatMoney(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value)
+  return USD_SUMMARY_FORMATTER.format(value)
 }
 
 function formatRoasValue(value: number | null): string {
@@ -234,8 +235,10 @@ export function parseClientSummaryResponse(options: {
 
   const lines = raw
     .split(/\r?\n/g)
-    .map((line) => line.trim())
-    .filter(Boolean)
+    .flatMap((line) => {
+      const trimmedLine = line.trim()
+      return trimmedLine ? [trimmedLine] : []
+    })
 
   if (lines.length === 0) {
     return null
@@ -246,8 +249,10 @@ export function parseClientSummaryResponse(options: {
 
   const bullets = lines
     .filter((line) => line.startsWith('-'))
-    .map((line) => line.replace(/^-+\s*/, '').trim())
-    .filter(Boolean)
+    .flatMap((line) => {
+      const trimmedLine = line.replace(/^-+\s*/, '').trim()
+      return trimmedLine ? [trimmedLine] : []
+    })
     .slice(0, 3)
 
   if (!headline || bullets.length < 2) {

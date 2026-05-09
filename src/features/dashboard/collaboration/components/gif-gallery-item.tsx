@@ -91,7 +91,7 @@ export function GifGalleryItem({
             onClick={handlePreview}
             className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
           >
-            <Maximize2 className="h-8 w-8 text-white" />
+            <Maximize2 className="h-8 w-8 text-viewer-chrome" />
           </button>
         )}
       </div>
@@ -122,7 +122,7 @@ export function GifGalleryItem({
       {/* Loading indicator */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-background border-t-transparent" />
         </div>
       )}
 
@@ -134,7 +134,7 @@ export function GifGalleryItem({
             type="button"
             size="icon"
             variant="ghost"
-            className="h-8 w-8 text-white hover:bg-white/20"
+            className="h-8 w-8 text-viewer-chrome hover:bg-viewer-chrome/20"
             onClick={handlePlayPause}
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
@@ -152,7 +152,7 @@ export function GifGalleryItem({
               type="button"
               size="icon"
               variant="ghost"
-              className="h-8 w-8 text-white hover:bg-white/20"
+              className="h-8 w-8 text-viewer-chrome hover:bg-viewer-chrome/20"
               onClick={handleMuteToggle}
               aria-label={isMuted ? 'Unmute' : 'Mute'}
             >
@@ -168,7 +168,7 @@ export function GifGalleryItem({
               type="button"
               size="icon"
               variant="ghost"
-              className="h-8 w-8 text-white hover:bg-white/20"
+              className="h-8 w-8 text-viewer-chrome hover:bg-viewer-chrome/20"
               onClick={handleDownload}
               aria-label="Download"
             >
@@ -181,7 +181,7 @@ export function GifGalleryItem({
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="h-8 w-8 text-white hover:bg-white/20"
+                className="h-8 w-8 text-viewer-chrome hover:bg-viewer-chrome/20"
                 onClick={handlePreview}
                 aria-label="Open preview"
               >
@@ -194,7 +194,7 @@ export function GifGalleryItem({
         {/* GIF badge */}
         {isGif && (
           <div className="absolute top-2 left-2">
-            <span className="px-2 py-1 bg-black/70 rounded text-[10px] font-medium text-white uppercase">
+            <span className="px-2 py-1 bg-black/70 rounded text-[10px] font-medium text-viewer-chrome uppercase">
               GIF
             </span>
           </div>
@@ -209,8 +209,8 @@ export function GifGalleryItem({
           className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
           aria-label="Play video"
         >
-          <div className="h-12 w-12 rounded-full bg-white/90 flex items-center justify-center">
-            <Play className="h-5 w-5 text-black ml-0.5" aria-hidden />
+          <div className="h-12 w-12 rounded-full bg-card/95 flex items-center justify-center shadow-sm ring-1 ring-border/50">
+            <Play className="h-5 w-5 text-foreground ml-0.5" aria-hidden />
           </div>
         </button>
       )}
@@ -271,7 +271,7 @@ export function GifThumbnail({
 
       {/* GIF badge */}
       <div className="absolute bottom-2 right-2">
-        <span className="px-2 py-1 bg-black/70 rounded text-[10px] font-medium text-white uppercase flex items-center gap-1">
+        <span className="px-2 py-1 bg-black/70 rounded text-[10px] font-medium text-viewer-chrome uppercase flex items-center gap-1">
           <Play className="h-3 w-3" />
           GIF
         </span>
@@ -280,7 +280,7 @@ export function GifThumbnail({
       {/* Loading indicator */}
       {isHovered && !isLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-viewer-chrome border-t-transparent" />
         </div>
       )}
     </div>

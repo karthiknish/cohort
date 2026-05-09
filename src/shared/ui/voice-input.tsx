@@ -89,7 +89,7 @@ export function VoiceInputButton({
               : 'Start voice input'
           }
         >
-          <Mic className={cn('h-3.5 w-3.5', isListening && 'text-white')} />
+          <Mic className="h-3.5 w-3.5" />
         </Button>
       </div>
     )

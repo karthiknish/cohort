@@ -63,17 +63,16 @@ type NavItem = {
   roles?: ('admin' | 'team' | 'client')[] // If undefined, available to all roles
 }
 
-const NavItemLink = forwardRef<
-  HTMLAnchorElement,
-  {
-    item: NavItem
-    linkClasses: string
-    onNavigate?: () => void
-    prefetchRoute: (href: string) => void
-    collapsed: boolean
-    isActive?: boolean
-  } & Omit<React.ComponentPropsWithoutRef<typeof Link>, 'href' | 'className' | 'children'>
->(function NavItemLink(
+type NavItemLinkProps = {
+  item: NavItem
+  linkClasses: string
+  onNavigate?: () => void
+  prefetchRoute: (href: string) => void
+  collapsed: boolean
+  isActive?: boolean
+} & Omit<React.ComponentPropsWithoutRef<typeof Link>, 'href' | 'className' | 'children'>
+
+const NavItemLink = forwardRef<HTMLAnchorElement, NavItemLinkProps>(function NavItemLink(
   {
     item,
     linkClasses,

@@ -99,7 +99,7 @@ function ClientProposalsCardComponent({ proposals, loading }: ClientProposalsCar
                                     </ViewTransition>
                                 </div>
                                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                    <span className="flex items-center gap-1">
+                                    <span className="flex items-center gap-1" suppressHydrationWarning>
                                         <Clock className="h-3 w-3" />
                                         {proposal.updatedAt ? new Date(proposal.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Recently'}
                                     </span>

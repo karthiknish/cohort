@@ -94,7 +94,7 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
                         <span className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/80">
                           Team {Array.isArray(client.teamMembers) ? client.teamMembers.length : 0}
                         </span>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70" suppressHydrationWarning>
                           {client.createdAt ? new Date(client.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'NEW'}
                         </span>
                       </div>

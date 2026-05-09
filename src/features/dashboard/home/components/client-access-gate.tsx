@@ -55,7 +55,7 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
           <Skeleton className="h-28 rounded-lg" />
           <Skeleton className="h-28 rounded-lg" />
         </div>
-        <span className="sr-only">Loading client workspaces...</span>
+        <span className="sr-only">Loading client workspaces…</span>
       </div>
     )
   }

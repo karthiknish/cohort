@@ -18,7 +18,7 @@ export const convexSiteUrl = requireEnv(
   process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
 )
 
-export const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
+const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
 
 const authUtilities = convexBetterAuthNextJs({
   convexUrl,

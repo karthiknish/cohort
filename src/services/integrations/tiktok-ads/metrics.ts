@@ -188,8 +188,12 @@ export async function fetchTikTokAdsMetrics(options: TikTokMetricsOptions): Prom
       })
     })
 
-    const hasMore = Boolean(body?.data?.page_info?.has_more) || Boolean(body?.data?.cursor)
-    cursor = typeof body?.data?.cursor === 'string' && body.data.cursor.length > 0 ? body.data.cursor : undefined
+    const responseData = body?.data
+    const nextCursor = typeof responseData?.cursor === 'string' && responseData.cursor.length > 0
+      ? responseData.cursor
+      : undefined
+    const hasMore = Boolean(responseData?.page_info?.has_more) || Boolean(responseData?.cursor)
+    cursor = nextCursor
 
     if (!hasMore || !cursor) {
       break

@@ -7,12 +7,15 @@ import {
   META_API_BASE,
 } from '../client'
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
-import type { MetaCampaign } from '../types'
+import { isMutableAdvantageState, type MetaCampaign } from '../types'
 import type {
   CreateCampaignOptions,
   UpdateCampaignOptions,
   UpdateCampaignBiddingOptions,
 } from './types'
+
+const DEPRECATED_ADVANTAGE_STATE_ERROR =
+  'Meta Marketing API no longer supports advantage_plus_sales or advantage_plus_app campaign mutations. Create a classic campaign instead.'
 
 // =============================================================================
 // LIST CAMPAIGNS
@@ -133,8 +136,14 @@ export async function createMetaCampaign(
   if (specialAdCategories && specialAdCategories.length > 0) {
     params.set('special_ad_categories', JSON.stringify(specialAdCategories))
   }
-  // v24.0 Advantage+ fields
+  // Post-v25.0 only `classic` remains valid in Marketing API mutations.
   if (advantageState) {
+    if (!isMutableAdvantageState(advantageState)) {
+      return {
+        success: false,
+        error: DEPRECATED_ADVANTAGE_STATE_ERROR,
+      }
+    }
     params.set('advantage_state', advantageState)
   }
   if (isAdsetBudgetSharingEnabled !== undefined) {

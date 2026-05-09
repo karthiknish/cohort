@@ -31,7 +31,7 @@ export function PreviewDataBanner({ className }: PreviewDataBannerProps) {
     >
       {/* Animated background pattern */}
       <div className="pointer-events-none absolute inset-0 opacity-30">
-        <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_25%,hsl(var(--foreground)/0.1)_50%,transparent_75%)] bg-[length:250%_100%] animate-shimmer" />
+        <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_25%,rgb(from_var(--foreground)_r_g_b_/_0.1)_50%,transparent_75%)] bg-[length:250%_100%] animate-shimmer" />
       </div>
 
       <div className="relative flex items-center justify-between gap-4 px-4 py-3">

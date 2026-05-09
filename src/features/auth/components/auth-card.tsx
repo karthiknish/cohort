@@ -208,7 +208,7 @@ export function AuthCard({
                   {isSubmitting ? (
                     <>
                       <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                      Signing in...
+                      Signing in…
                     </>
                   ) : (
                     'Sign In'
@@ -412,7 +412,7 @@ export function AuthCard({
                   {isSubmitting ? (
                     <>
                       <LoaderCircle className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                      Creating account...
+                      Creating account…
                     </>
                   ) : (
                     'Create Account'

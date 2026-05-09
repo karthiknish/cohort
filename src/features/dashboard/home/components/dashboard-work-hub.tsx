@@ -180,7 +180,7 @@ export function DashboardWorkHub({ userRole }: DashboardWorkHubProps) {
           </Badge>
         </div>
         <CardDescription className="max-w-3xl text-pretty">
-          Team operations, shared delivery, and agency growth tools in one place—aligned with how modern ops suites surface
+          Team operations, shared delivery, and agency growth tools in one place, aligned with how modern ops suites surface
           time, scheduling, and forms on the home screen.
         </CardDescription>
       </CardHeader>

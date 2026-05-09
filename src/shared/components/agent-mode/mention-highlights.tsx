@@ -21,9 +21,10 @@ export function splitAgentTextWithMentions(text: string, mentionLabels: string[]
   const normalizedLabels = Array.from(
     new Set(
       mentionLabels
-        .map((label) => label.trim())
-        .filter(Boolean)
-        .map((label) => `@${label}`)
+        .flatMap((label) => {
+          const normalizedLabel = label.trim()
+          return normalizedLabel ? [`@${normalizedLabel}`] : []
+        })
     )
   ).sort((a, b) => b.length - a.length)
 

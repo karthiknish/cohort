@@ -61,7 +61,7 @@ export function MeetingAutomationPipeline(props: MeetingAutomationPipelineProps)
       </div>
       <ol className="mt-3 grid gap-2 lg:grid-cols-3">
         {steps.map((step, index) => (
-          <li key={step.label} className="rounded-xl border border-border/60 bg-background px-3 py-3">
+          <li key={step.label} className="rounded-xl border border-border/60 bg-background p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-medium text-foreground">{index + 1}. {step.label}</p>
               <Badge variant={step.variant}>{step.badge}</Badge>

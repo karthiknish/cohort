@@ -14,36 +14,36 @@ const PROOF_POINTS = [
     title: 'Guided onboarding',
     description: 'New modules ship with preview states first so teams can shape the workflow before persistence decisions get locked in.',
     icon: Sparkles,
-    wellClass: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+    wellClass: 'bg-info/10 text-info',
   },
   {
     title: 'Operational support',
     description: 'Operations modules sit beside chat and delivery so teams keep context in one workspace.',
     icon: Headphones,
-    wellClass: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+    wellClass: 'bg-muted/70 text-foreground',
   },
   {
     title: 'Audit visibility',
     description: 'Time, scheduling, and request flows are framed around reviewability, not just task completion.',
     icon: ShieldCheck,
-    wellClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    wellClass: 'bg-success/10 text-success',
   },
   {
     title: 'Fast rollout path',
     description: 'The new routes are intentionally scaffolded for a low-risk transition into live Convex-backed workflows.',
     icon: TimerReset,
-    wellClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+    wellClass: 'bg-warning/10 text-warning',
   },
 ] as const
 
 export function SupportProofSection() {
   return (
     <section className="relative overflow-hidden bg-muted/25 px-6 py-20 sm:py-28">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,hsl(var(--primary)/0.12),transparent)]" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgb(from_var(--foreground)_r_g_b_/_0.06),transparent)]" aria-hidden />
       <div className="relative mx-auto max-w-6xl">
         <FadeIn className="mb-8 max-w-3xl space-y-4">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary/50">Support and rollout</p>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Support and rollout</p>
+          <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             The expansion is designed to be supportable, reviewable, and easy to phase in
           </h2>
           <p className="text-base leading-7 text-muted-foreground sm:text-lg">
@@ -66,7 +66,7 @@ export function SupportProofSection() {
               <Card
                 className={cn(
                   'h-full border-border/60 bg-background/90 transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
-                  'hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-lg hover:shadow-primary/6',
+                  'hover:-translate-y-0.5 hover:border-border hover:shadow-lg hover:shadow-black/[0.06]',
                 )}
               >
                 <CardHeader className="space-y-4 pb-2">
@@ -84,13 +84,13 @@ export function SupportProofSection() {
         </div>
 
         <FadeIn className="mt-12">
-          <div className="flex flex-col gap-6 rounded-[2rem] border border-border/60 bg-gradient-to-br from-primary/[0.07] via-background to-muted/30 p-6 shadow-inner sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-8">
+          <div className="flex flex-col gap-6 rounded-[2rem] border border-border/60 bg-gradient-to-br from-muted/40 via-background to-muted/25 p-6 shadow-inner sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-8">
             <div className="min-w-0 space-y-2">
               <p className="text-lg font-semibold leading-snug text-foreground sm:text-xl">
                 Start with the operational layer, then wire the rest behind it.
               </p>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Time, scheduling, and forms create the strongest foundation for everything that follows — including live ad accounts.
+                Time, scheduling, and forms create the strongest foundation for everything that follows, including live ad accounts.
               </p>
             </div>
             <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center">

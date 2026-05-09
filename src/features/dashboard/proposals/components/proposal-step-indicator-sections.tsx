@@ -27,8 +27,8 @@ export function ProposalStepIndicatorRail({
               title={step.title}
               className={cn(
                 'block h-2.5 w-2.5 rounded-full transition-[background-color,box-shadow,transform] duration-200 motion-reduce:transition-none',
-                isComplete && 'bg-success shadow-[0_0_0_1px_hsl(var(--success)/0.25)]',
-                isCurrent && 'scale-110 bg-primary shadow-[0_0_0_3px_hsl(var(--primary)/0.2)]',
+                isComplete && 'bg-success ring-1 ring-success/25',
+                isCurrent && 'scale-110 bg-primary ring-[3px] ring-primary/20',
                 !isComplete && !isCurrent && 'bg-muted-foreground/25',
               )}
             />

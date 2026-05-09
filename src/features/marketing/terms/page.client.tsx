@@ -100,10 +100,10 @@ export default function TermsPage() {
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <Card className="border-border/60 shadow-xl shadow-primary/5">
+        <Card className="border-border/60 shadow-xl shadow-black/[0.04]">
           <CardHeader className="border-b bg-muted/30 pb-8 pt-8">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-foreground">
                 <FileText className="h-6 w-6" />
               </div>
               <div className="space-y-1">

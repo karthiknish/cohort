@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import '@/shared/ui/livekit-styles'
 import { SiteHeader } from '@/shared/layout/site/site-header'
 import { SiteFooter } from '@/shared/layout/site/site-footer'
+import { MarketingThemeScope } from '@/shared/layout/marketing-theme-scope'
 import { PWAProvider } from '@/shared/providers/pwa-provider'
 import { AppProviders } from '@/shared/providers/app-providers'
 import { MotionProvider } from '@/shared/providers/motion-provider'
@@ -39,7 +40,7 @@ export const metadata: Metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: 'hsl(var(--background))',
+  themeColor: '#ffffff',
 }
 
 const showAgentation = process.env.NODE_ENV === 'development'
@@ -58,7 +59,7 @@ export default function RootLayout({
           geistSans.variable,
           geistMono.variable,
           anybody.variable,
-          'min-h-screen bg-background font-sans antialiased text-foreground'
+          'min-h-screen bg-white font-sans antialiased text-foreground dark:bg-background'
         )}
       >
         <Suspense fallback={null}>
@@ -71,14 +72,14 @@ export default function RootLayout({
           >
             Skip to main content
           </a>
-          <div className="flex min-h-screen flex-col">
+          <MarketingThemeScope>
             <SiteHeader />
             <main id="main-content" className="flex-1">
               <MotionProvider>{children}</MotionProvider>
               {showAgentation ? <Agentation /> : null}
             </main>
             <SiteFooter />
-          </div>
+          </MarketingThemeScope>
           <Suspense fallback={null}>    
             <PWAProvider />
           </Suspense>

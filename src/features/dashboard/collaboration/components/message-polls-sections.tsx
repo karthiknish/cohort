@@ -34,7 +34,7 @@ export function PollCardHeader({
             {poll.endTime ? (
               <>
                 <span>•</span>
-                <span className={cn(isExpired && 'text-destructive')}>
+                <span className={cn(isExpired && 'text-destructive')} suppressHydrationWarning>
                   {isExpired ? 'Ended' : `Ends ${new Date(poll.endTime).toLocaleString()}`}
                 </span>
               </>

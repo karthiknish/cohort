@@ -4,6 +4,7 @@
 
 import type {
   AdvantageState,
+  MutableAdvantageState,
   PlacementSoftOptOut,
 } from '../types'
 
@@ -79,8 +80,8 @@ export interface CreateCampaignOptions {
   startTime?: string
   stopTime?: string
   specialAdCategories?: string[]
-  // v24.0 Advantage+ fields
-  advantageState?: AdvantageState
+  // Post-v25.0 Marketing API only supports `classic` in mutations.
+  advantageState?: MutableAdvantageState
   isAdsetBudgetSharingEnabled?: boolean
   maxRetries?: number
 }

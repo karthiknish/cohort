@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { useAction } from 'convex/react'
 import NextImage from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -191,7 +191,7 @@ function CreativeStatusToggle({
       {showLabel ? (
         <span className="w-14 text-xs font-medium capitalize">{status.toLowerCase()}</span>
       ) : (
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white">{status.toLowerCase()}</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-viewer-chrome">{status.toLowerCase()}</span>
       )}
     </div>
   )
@@ -423,15 +423,15 @@ function AdGridItem({
           )}
 
           {ad.videoUrl && ad.imageUrl ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90">
-                <Play className="ml-0.5 h-6 w-6 text-black" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-card/95 shadow-sm ring-1 ring-border/50">
+                <Play className="ml-0.5 h-6 w-6 text-foreground" />
               </div>
             </div>
           ) : null}
 
-          <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-colors group-hover:bg-black/10 group-hover:opacity-100">
-            <span className="rounded bg-black/60 px-2 py-1 text-xs font-medium text-white">View Details</span>
+          <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-colors group-hover:bg-black/15 group-hover:opacity-100">
+            <span className="rounded bg-primary px-2 py-1 text-xs font-medium text-primary-foreground shadow-sm">View Details</span>
           </div>
         </div>
 
@@ -460,7 +460,7 @@ function AdGridItem({
       </button>
 
       <div className="absolute right-2 top-2">
-        <div className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-2 py-1 backdrop-blur-sm">
+        <div className="flex items-center gap-1.5 rounded-full border border-viewer-chrome/20 bg-black/40 px-2 py-1 backdrop-blur-sm">
           <CreativeStatusToggle
             providerId={providerId}
             status={ad.status}
@@ -608,7 +608,7 @@ function AdListRow({
             <ExternalLink className="h-4 w-4" />
           </a>
         ) : (
-          <span className="text-muted-foreground">—</span>
+          <span className="text-muted-foreground">Unavailable</span>
         )}
       </TableCell>
       <TableCell>
@@ -771,17 +771,21 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
         setMetricsLoading(false)
       })
   }, [canLoad, campaignId, clientId, listAdMetrics, providerId, workspaceId])
+
+  const runInitialFetches = useEffectEvent(() => {
+    void fetchAds()
+    void fetchMetrics()
+  })
  
   useEffect(() => {
     const frameId = requestAnimationFrame(() => {
-      void fetchAds()
-      void fetchMetrics()
+      runInitialFetches()
     })
 
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [fetchAds, fetchMetrics])
+  }, [])
 
   const uniqueTypes = useMemo(() => {
     const types = new Set(ads.map(ad => ad.type || 'Unknown'))

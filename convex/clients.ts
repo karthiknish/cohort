@@ -361,14 +361,17 @@ export const getClientSummaries = zWorkspaceQueryActive({
       .collect()
 
     const now = Date.now()
+    const database = ctx.db
     const results = []
 
     for (const client of clients) {
+      const clientId = client.legacyId
+
       // Open tasks: status not in ['completed', 'archived']
-      const allClientTasks = await ctx.db
+      const allClientTasks = await database
         .query('tasks')
         .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
-          q.eq('workspaceId', args.workspaceId).eq('clientId', client.legacyId)
+          q.eq('workspaceId', args.workspaceId).eq('clientId', clientId)
         )
         .collect()
 
@@ -377,10 +380,10 @@ export const getClientSummaries = zWorkspaceQueryActive({
       ).length
 
       // Active projects
-      const activeProjects = await ctx.db
+      const activeProjects = await database
         .query('projects')
         .withIndex('by_workspace_clientId_updatedAtMs_legacyId', (q) =>
-          q.eq('workspaceId', args.workspaceId).eq('clientId', client.legacyId)
+          q.eq('workspaceId', args.workspaceId).eq('clientId', clientId)
         )
         .filter((q) => q.eq(q.field('status'), 'active'))
         .collect()
@@ -388,10 +391,10 @@ export const getClientSummaries = zWorkspaceQueryActive({
       const activeProjectCount = activeProjects.filter((p) => p.deletedAtMs == null).length
 
       // Next upcoming meeting (scheduled or in_progress, future startTimeMs)
-      const upcomingMeetings = await ctx.db
+      const upcomingMeetings = await database
         .query('meetings')
         .withIndex('by_workspace_client_startTimeMs', (q) =>
-          q.eq('workspaceId', args.workspaceId).eq('clientId', client.legacyId).gte('startTimeMs', now)
+          q.eq('workspaceId', args.workspaceId).eq('clientId', clientId).gte('startTimeMs', now)
         )
         .order('asc')
         .take(1)
@@ -404,7 +407,7 @@ export const getClientSummaries = zWorkspaceQueryActive({
           : null
 
       results.push({
-        legacyId: client.legacyId,
+        legacyId: clientId,
         name: client.name,
         accountManager: client.accountManager,
         teamMembersCount: client.teamMembers.length,

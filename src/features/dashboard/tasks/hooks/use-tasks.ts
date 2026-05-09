@@ -1,7 +1,7 @@
 'use client'
 
 import { useMutation, useQuery } from 'convex/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer } from 'react'
 
 import { useToast } from '@/shared/ui/use-toast'
 import { tasksApi } from '@/lib/convex-api'
@@ -95,6 +95,73 @@ type PaginatedTaskRows = {
   items: TaskQueryRow[]
 }
 
+type CreateTaskMutationResult = string | { legacyId?: string | null } | null | undefined
+
+type UseTasksState = {
+  tasks: TaskRecord[]
+  error: string | null
+  pendingStatusUpdates: Set<string>
+}
+
+type UseTasksAction =
+  | {
+      type: 'syncData'
+      tasks: TaskRecord[]
+      error: string | null
+    }
+  | {
+      type: 'setTasks'
+      updater: React.SetStateAction<TaskRecord[]>
+    }
+  | {
+      type: 'setError'
+      updater: React.SetStateAction<string | null>
+    }
+  | {
+      type: 'setPendingStatusUpdates'
+      updater: React.SetStateAction<Set<string>>
+    }
+
+const INITIAL_USE_TASKS_STATE: UseTasksState = {
+  tasks: [],
+  error: null,
+  pendingStatusUpdates: new Set(),
+}
+
+function resolveStateUpdate<T>(previous: T, updater: React.SetStateAction<T>): T {
+  return typeof updater === 'function'
+    ? (updater as (previousState: T) => T)(previous)
+    : updater
+}
+
+function useTasksReducer(state: UseTasksState, action: UseTasksAction): UseTasksState {
+  switch (action.type) {
+    case 'syncData':
+      return {
+        ...state,
+        tasks: action.tasks,
+        error: action.error,
+      }
+    case 'setTasks':
+      return {
+        ...state,
+        tasks: resolveStateUpdate(state.tasks, action.updater),
+      }
+    case 'setError':
+      return {
+        ...state,
+        error: resolveStateUpdate(state.error, action.updater),
+      }
+    case 'setPendingStatusUpdates':
+      return {
+        ...state,
+        pendingStatusUpdates: resolveStateUpdate(state.pendingStatusUpdates, action.updater),
+      }
+    default:
+      return state
+  }
+}
+
 function hasPaginatedItems(value: unknown): value is PaginatedTaskRows {
   if (!value || typeof value !== 'object') return false
   return Array.isArray((value as { items?: unknown }).items)
@@ -140,18 +207,38 @@ export function useTasks({
 }: UseTasksOptions): UseTasksReturn {
   const { toast } = useToast()
 
-  const [tasks, setTasks] = useState<TaskRecord[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [pendingStatusUpdates, setPendingStatusUpdates] = useState<Set<string>>(new Set())
+  const [{ tasks, error, pendingStatusUpdates }, dispatch] = useReducer(
+    useTasksReducer,
+    INITIAL_USE_TASKS_STATE,
+  )
 
-  const convexTasksQuery = useQuery(
-    clientId === undefined ? tasksApi.list : tasksApi.listByClient,
-    !isPreviewMode && !authLoading && workspaceId
-      ? clientId === undefined
-        ? { workspaceId, limit: 200 }
-        : { workspaceId, clientId: clientId ?? null, limit: 200 }
+  const setTasks = useCallback<React.Dispatch<React.SetStateAction<TaskRecord[]>>>((updater) => {
+    dispatch({ type: 'setTasks', updater })
+  }, [])
+
+  const setError = useCallback<React.Dispatch<React.SetStateAction<string | null>>>((updater) => {
+    dispatch({ type: 'setError', updater })
+  }, [])
+
+  const setPendingStatusUpdates = useCallback<React.Dispatch<React.SetStateAction<Set<string>>>>((updater) => {
+    dispatch({ type: 'setPendingStatusUpdates', updater })
+  }, [])
+
+  const convexAllTasksQuery = useQuery(
+    tasksApi.list,
+    !isPreviewMode && !authLoading && workspaceId && clientId === undefined
+      ? { workspaceId, limit: 200 }
       : 'skip'
   )
+
+  const convexClientTasksQuery = useQuery(
+    tasksApi.listByClient,
+    !isPreviewMode && !authLoading && workspaceId && clientId !== undefined
+      ? { workspaceId, clientId: clientId ?? null, limit: 200 }
+      : 'skip'
+  )
+
+  const convexTasksQuery = clientId === undefined ? convexAllTasksQuery : convexClientTasksQuery
 
   const createTask = useMutation(tasksApi.createTask)
   const patchTask = useMutation(tasksApi.patchTask)
@@ -168,14 +255,20 @@ export function useTasks({
 
   useEffect(() => {
     if (isPreviewMode) {
-      setTasks(getPreviewTasks(clientId ?? null))
-      setError(null)
+      dispatch({
+        type: 'syncData',
+        tasks: getPreviewTasks(clientId ?? null),
+        error: null,
+      })
       return
     }
 
     if (!userId || !workspaceId) {
-      setTasks([])
-      setError(null)
+      dispatch({
+        type: 'syncData',
+        tasks: [],
+        error: null,
+      })
       return
     }
 
@@ -194,8 +287,11 @@ export function useTasks({
       logError(convexTasksQuery, 'useTasks:unexpectedQueryShape')
     }
 
-    setTasks(rows.map(mapConvexTaskToTaskRecord))
-    setError(null)
+    dispatch({
+      type: 'syncData',
+      tasks: rows.map(mapConvexTaskToTaskRecord),
+      error: null,
+    })
   }, [clientId, convexTasksQuery, isPreviewMode, userId, workspaceId])
 
   const handleLoadMore = useCallback(async () => {
@@ -313,7 +409,7 @@ export function useTasks({
       }
 
       try {
-        const result = await createTask({
+        const result = (await createTask({
           workspaceId,
           title: payload.title,
           description: payload.description ?? null,
@@ -326,9 +422,13 @@ export function useTasks({
           projectName: payload.projectName ?? null,
           dueDateMs: msFromIsoDateString(payload.dueDate),
           attachments: payload.attachments ?? [],
-        })
+        })) as CreateTaskMutationResult
 
-        const legacyId = typeof result === 'string' ? result : result?.legacyId
+        const legacyId = typeof result === 'string'
+          ? result
+          : typeof result?.legacyId === 'string'
+            ? result.legacyId
+            : null
 
         if (!legacyId) {
           throw new Error('Task creation failed to return a task id.')

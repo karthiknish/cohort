@@ -135,7 +135,7 @@ export function CollaborationSidebarAssetLibrarySection({ sharedFiles }: { share
           title="No shared files yet"
           description="Files shared in messages will appear here automatically."
           variant="inline"
-          className="rounded-lg border-dashed bg-muted/10 px-3 py-3 [&_p:last-child]:text-xs"
+          className="rounded-lg border-dashed bg-muted/10 p-3 [&_p:last-child]:text-xs"
         />
       ) : (
         <div className="space-y-2.5">

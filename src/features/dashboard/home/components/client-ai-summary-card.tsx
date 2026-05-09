@@ -259,7 +259,7 @@ function ClientAiSummaryCardBody({
             </ul>
           </div>
 
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground" suppressHydrationWarning>
             Generated from the current dashboard snapshot at {new Date(state.summary.generatedAt).toLocaleString()}.
           </p>
 

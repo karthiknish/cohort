@@ -6,7 +6,10 @@ function escapeRegExp(value: string) {
 
 export function highlightText(text: string, terms?: string[]) {
   if (!terms || terms.length === 0 || !text) return text
-  const filtered = terms.map((t) => t.trim()).filter(Boolean)
+  const filtered = terms.flatMap((term) => {
+    const normalizedTerm = term.trim()
+    return normalizedTerm ? [normalizedTerm] : []
+  })
   if (filtered.length === 0) return text
 
   const pattern = filtered.map((term) => escapeRegExp(term)).join('|')

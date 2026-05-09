@@ -1,7 +1,7 @@
 // =============================================================================
 // GOOGLE ADS CREATIVES - Fetch creative assets and ad content
 // =============================================================================
-// GAQL reference: https://developers.google.com/google-ads/api/fields/v23/ad_group_ad
+// GAQL reference: https://developers.google.com/google-ads/api/fields/v24/ad_group_ad
 
 import { googleAdsSearch } from './client'
 import type { GoogleAdsResult, GoogleCreative } from './types'
@@ -10,6 +10,20 @@ export type BuildGoogleCreativesGaqlOptions = {
   campaignId?: string
   adGroupId?: string
   statusFilter?: ('ENABLED' | 'PAUSED' | 'REMOVED')[]
+}
+
+function compactTextValues(items?: Array<{ text?: string | null }>): string[] {
+  return items?.flatMap((item) => {
+    const text = item.text?.trim()
+    return text ? [text] : []
+  }) ?? []
+}
+
+function compactAssetValues(items?: Array<{ asset?: string | null }>): string[] {
+  return items?.flatMap((item) => {
+    const asset = item.asset?.trim()
+    return asset ? [asset] : []
+  }) ?? []
 }
 
 /** Build GAQL for `fetchGoogleCreatives` (exported for tests / debugging). */
@@ -62,6 +76,7 @@ export function buildGoogleCreativesGaql(options: BuildGoogleCreativesGaqlOption
       ad_group_ad.ad.demand_gen_video_responsive_ad.headlines,
       ad_group_ad.ad.demand_gen_video_responsive_ad.descriptions,
       ad_group_ad.ad.demand_gen_video_responsive_ad.videos,
+      ad_group_ad.ad.demand_gen_video_responsive_ad.logo_images,
       ad_group_ad.ad.demand_gen_carousel_ad.headline,
       ad_group_ad.ad.demand_gen_carousel_ad.description,
       ad_group_ad.ad.demand_gen_carousel_ad.business_name,
@@ -93,7 +108,10 @@ const YOUTUBE_VIDEO_ASSET_GAQL_CHUNK = 40
  * (used by `video_responsive_ad`, `demand_gen_video_responsive_ad`, `app_ad` `videos[].asset` / `youtube_videos[].asset`).
  */
 export function buildGoogleYoutubeVideoAssetsGaql(resourceNames: string[]): string {
-  const names = resourceNames.map((n) => n.trim()).filter(Boolean)
+  const names = resourceNames.flatMap((resourceName) => {
+    const normalizedName = resourceName.trim()
+    return normalizedName ? [normalizedName] : []
+  })
   if (names.length === 0) {
     return ''
   }
@@ -153,7 +171,10 @@ async function resolveYoutubeVideoIdsFromAssetResources(options: {
   /** Batched `googleAds:search` calls (40 assets per chunk). Default 5 chunks. */
   maxChunks?: number
 }): Promise<Map<string, string>> {
-  const unique = [...new Set(options.resourceNames.map((n) => n.trim()).filter(Boolean))]
+  const unique = [...new Set(options.resourceNames.flatMap((resourceName) => {
+    const normalizedName = resourceName.trim()
+    return normalizedName ? [normalizedName] : []
+  }))]
   const out = new Map<string, string>()
   const maxChunks = options.maxChunks ?? 5
   const { accessToken, developerToken, customerId, loginCustomerId, maxRetries } = options
@@ -352,6 +373,7 @@ export async function fetchGoogleCreatives(options: {
           headlines?: Array<{ text?: string }>
           descriptions?: Array<{ text?: string }>
           videos?: Array<{ asset?: string }>
+          logoImages?: Array<{ asset?: string }>
         }
         demandGenCarouselAd?: {
           headline?: string
@@ -415,26 +437,26 @@ export async function fetchGoogleCreatives(options: {
     let descriptions: string[] = []
 
     if (ad?.responsiveSearchAd) {
-      headlines = ad.responsiveSearchAd.headlines?.map((h) => h.text ?? '').filter(Boolean) ?? []
-      descriptions = ad.responsiveSearchAd.descriptions?.map((d) => d.text ?? '').filter(Boolean) ?? []
+      headlines = compactTextValues(ad.responsiveSearchAd.headlines)
+      descriptions = compactTextValues(ad.responsiveSearchAd.descriptions)
     } else if (ad?.responsiveDisplayAd) {
-      headlines = ad.responsiveDisplayAd.headlines?.map((h) => h.text ?? '').filter(Boolean) ?? []
-      descriptions = ad.responsiveDisplayAd.descriptions?.map((d) => d.text ?? '').filter(Boolean) ?? []
+      headlines = compactTextValues(ad.responsiveDisplayAd.headlines)
+      descriptions = compactTextValues(ad.responsiveDisplayAd.descriptions)
     } else if (ad?.videoResponsiveAd) {
-      headlines = ad.videoResponsiveAd.headlines?.map((h) => h.text ?? '').filter(Boolean) ?? []
-      descriptions = ad.videoResponsiveAd.descriptions?.map((d) => d.text ?? '').filter(Boolean) ?? []
+      headlines = compactTextValues(ad.videoResponsiveAd.headlines)
+      descriptions = compactTextValues(ad.videoResponsiveAd.descriptions)
     } else if (ad?.callAd) {
-      headlines = ad.callAd.headlines?.map((h) => h.text ?? '').filter(Boolean) ?? []
-      descriptions = ad.callAd.descriptions?.map((d) => d.text ?? '').filter(Boolean) ?? []
+      headlines = compactTextValues(ad.callAd.headlines)
+      descriptions = compactTextValues(ad.callAd.descriptions)
     } else if (ad?.appAd) {
-      headlines = ad.appAd.headlines?.map((h) => h.text ?? '').filter(Boolean) ?? []
-      descriptions = ad.appAd.descriptions?.map((d) => d.text ?? '').filter(Boolean) ?? []
+      headlines = compactTextValues(ad.appAd.headlines)
+      descriptions = compactTextValues(ad.appAd.descriptions)
     } else if (ad?.demandGenMultiAssetAd) {
-      headlines = ad.demandGenMultiAssetAd.headlines?.map((h) => h.text ?? '').filter(Boolean) ?? []
-      descriptions = ad.demandGenMultiAssetAd.descriptions?.map((d) => d.text ?? '').filter(Boolean) ?? []
+      headlines = compactTextValues(ad.demandGenMultiAssetAd.headlines)
+      descriptions = compactTextValues(ad.demandGenMultiAssetAd.descriptions)
     } else if (ad?.demandGenVideoResponsiveAd) {
-      headlines = ad.demandGenVideoResponsiveAd.headlines?.map((h) => h.text ?? '').filter(Boolean) ?? []
-      descriptions = ad.demandGenVideoResponsiveAd.descriptions?.map((d) => d.text ?? '').filter(Boolean) ?? []
+      headlines = compactTextValues(ad.demandGenVideoResponsiveAd.headlines)
+      descriptions = compactTextValues(ad.demandGenVideoResponsiveAd.descriptions)
     } else if (ad?.demandGenCarouselAd) {
       const h = ad.demandGenCarouselAd.headline?.trim()
       const d = ad.demandGenCarouselAd.description?.trim()
@@ -451,16 +473,19 @@ export async function fetchGoogleCreatives(options: {
     }
 
     const tallPortraitImages =
-      ad?.demandGenMultiAssetAd?.tallPortraitMarketingImages?.map((img) => img.asset ?? '').filter(Boolean) ?? []
+      compactAssetValues(ad?.demandGenMultiAssetAd?.tallPortraitMarketingImages)
 
     const portraitImages =
-      ad?.demandGenMultiAssetAd?.portraitMarketingImages?.map((img) => img.asset ?? '').filter(Boolean) ?? []
+      compactAssetValues(ad?.demandGenMultiAssetAd?.portraitMarketingImages)
 
     const squareImages =
-      ad?.demandGenMultiAssetAd?.squareMarketingImages?.map((img) => img.asset ?? '').filter(Boolean) ?? []
+      compactAssetValues(ad?.demandGenMultiAssetAd?.squareMarketingImages)
 
     const carouselCardAssets =
-      ad?.demandGenCarouselAd?.carouselCards?.map((c) => c.asset ?? '').filter(Boolean) ?? []
+      compactAssetValues(ad?.demandGenCarouselAd?.carouselCards)
+
+    const demandGenVideoLogoImages =
+      compactAssetValues(ad?.demandGenVideoResponsiveAd?.logoImages)
 
     const videoId = ad?.videoAd?.video?.id
 
@@ -486,6 +511,7 @@ export async function fetchGoogleCreatives(options: {
       displayUrl: ad?.displayUrl,
       imageUrl,
       videoId,
+      logoImages: demandGenVideoLogoImages.length > 0 ? demandGenVideoLogoImages : undefined,
       businessName:
         ad?.responsiveDisplayAd?.businessName
         || ad?.callAd?.businessName

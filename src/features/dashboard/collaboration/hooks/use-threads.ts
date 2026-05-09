@@ -196,25 +196,25 @@ export function useThreads({ workspaceId, currentUserId }: UseThreadsOptions) {
 
   // Keep state maps aligned with active thread set.
   useMemo(() => {
-    const ids = Array.from(activeThreadIds)
+    const activeIds = new Set(activeThreadIds)
     setThreadMessagesByRootId((prev) => {
       const next: ThreadMessagesState = { ...prev }
       for (const key of Object.keys(next)) {
-        if (!ids.includes(key)) delete next[key]
+        if (!activeIds.has(key)) delete next[key]
       }
       return next
     })
     setThreadNextCursorByRootId((prev) => {
       const next = { ...prev }
       for (const key of Object.keys(next)) {
-        if (!ids.includes(key)) delete next[key]
+        if (!activeIds.has(key)) delete next[key]
       }
       return next
     })
     setThreadLoadingByRootId((prev) => {
       const next = { ...prev }
       for (const key of Object.keys(next)) {
-        if (!ids.includes(key)) delete next[key]
+        if (!activeIds.has(key)) delete next[key]
       }
       return next
     })

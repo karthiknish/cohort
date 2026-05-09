@@ -3,7 +3,7 @@
 import type { CellContext, ColumnDef, HeaderContext } from '@tanstack/react-table'
 import { useAction } from 'convex/react'
 import { useRouter } from 'next/navigation'
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, ViewTransition } from 'react'
+import { createContext, use, useCallback, useEffect, useEffectEvent, useMemo, useReducer, ViewTransition } from 'react'
 
 import { Badge } from '@/shared/ui/badge'
 import { DataTableColumnHeader } from '@/shared/ui/data-table'
@@ -40,6 +40,132 @@ type Props = {
   setupDescription?: string
   setupActionLabel?: string
   onSetupAction?: () => void
+}
+
+type CampaignManagementState = {
+  campaigns: Campaign[]
+  loading: boolean
+  actionLoading: string | null
+  budgetDialogOpen: boolean
+  biddingDialogOpen: boolean
+  selectedCampaign: Campaign | null
+  selectedGroup: CampaignGroup | null
+  newBudget: string
+  newBidding: BiddingDraft
+  view: CampaignManagementView
+  groups: CampaignGroup[]
+  groupsLoading: boolean
+}
+
+type CampaignManagementAction =
+  | { type: 'setCampaigns'; campaigns: Campaign[] }
+  | { type: 'setLoading'; loading: boolean }
+  | { type: 'setActionLoading'; actionLoading: string | null }
+  | { type: 'openCampaignBudgetDialog'; campaign: Campaign }
+  | { type: 'openGroupBudgetDialog'; group: CampaignGroup }
+  | { type: 'setBudgetDialogOpen'; open: boolean }
+  | { type: 'resetBudgetDialog' }
+  | { type: 'openCampaignBiddingDialog'; campaign: Campaign }
+  | { type: 'setBiddingDialogOpen'; open: boolean }
+  | { type: 'closeBiddingDialog' }
+  | { type: 'setNewBudget'; newBudget: string }
+  | { type: 'setNewBidding'; newBidding: BiddingDraft }
+  | { type: 'setView'; view: CampaignManagementView }
+  | { type: 'setGroups'; groups: CampaignGroup[] }
+  | { type: 'setGroupsLoading'; groupsLoading: boolean }
+
+const INITIAL_CAMPAIGN_MANAGEMENT_STATE: CampaignManagementState = {
+  campaigns: [],
+  loading: false,
+  actionLoading: null,
+  budgetDialogOpen: false,
+  biddingDialogOpen: false,
+  selectedCampaign: null,
+  selectedGroup: null,
+  newBudget: '',
+  newBidding: {
+    type: '',
+    value: '',
+  },
+  view: 'campaigns',
+  groups: [],
+  groupsLoading: false,
+}
+
+function campaignManagementReducer(
+  state: CampaignManagementState,
+  action: CampaignManagementAction,
+): CampaignManagementState {
+  switch (action.type) {
+    case 'setCampaigns':
+      return { ...state, campaigns: action.campaigns }
+    case 'setLoading':
+      return { ...state, loading: action.loading }
+    case 'setActionLoading':
+      return { ...state, actionLoading: action.actionLoading }
+    case 'openCampaignBudgetDialog':
+      return {
+        ...state,
+        selectedGroup: null,
+        selectedCampaign: action.campaign,
+        newBudget: action.campaign.budget?.toString() || '',
+        budgetDialogOpen: true,
+      }
+    case 'openGroupBudgetDialog':
+      return {
+        ...state,
+        selectedCampaign: null,
+        selectedGroup: action.group,
+        newBudget: action.group.totalBudget?.toString() || '',
+        budgetDialogOpen: true,
+      }
+    case 'setBudgetDialogOpen':
+      return { ...state, budgetDialogOpen: action.open }
+    case 'resetBudgetDialog':
+      return {
+        ...state,
+        budgetDialogOpen: false,
+        selectedCampaign: null,
+        selectedGroup: null,
+        newBudget: '',
+      }
+    case 'openCampaignBiddingDialog':
+      return {
+        ...state,
+        selectedGroup: null,
+        selectedCampaign: action.campaign,
+        newBidding: {
+          type: action.campaign.biddingStrategy?.type || '',
+          value: (
+            action.campaign.biddingStrategy?.targetCpa ||
+            action.campaign.biddingStrategy?.targetRoas ||
+            action.campaign.biddingStrategy?.bidCeiling ||
+            0
+          ).toString(),
+        },
+        biddingDialogOpen: true,
+      }
+    case 'setBiddingDialogOpen':
+      return { ...state, biddingDialogOpen: action.open }
+    case 'closeBiddingDialog':
+      return {
+        ...state,
+        biddingDialogOpen: false,
+        selectedCampaign: null,
+      }
+    case 'setNewBudget':
+      return { ...state, newBudget: action.newBudget }
+    case 'setNewBidding':
+      return { ...state, newBidding: action.newBidding }
+    case 'setView':
+      return { ...state, view: action.view }
+    case 'setGroups':
+      return { ...state, groups: action.groups }
+    case 'setGroupsLoading':
+      return { ...state, groupsLoading: action.groupsLoading }
+    default:
+      return state
+  }
 }
 
 function toIsoDateOnly(date: Date): string {
@@ -269,21 +395,21 @@ export function CampaignManagementCard({
   const listCampaignGroups = useAction(adsCampaignGroupsApi.listCampaignGroups)
   const updateCampaignGroup = useAction(adsCampaignGroupsApi.updateCampaignGroup)
 
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [loading, setLoading] = useState(false)
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [budgetDialogOpen, setBudgetDialogOpen] = useState(false)
-  const [biddingDialogOpen, setBiddingDialogOpen] = useState(false)
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
-  const [selectedGroup, setSelectedGroup] = useState<CampaignGroup | null>(null)
-  const [newBudget, setNewBudget] = useState('')
-  const [newBidding, setNewBidding] = useState<BiddingDraft>({
-    type: '',
-    value: '',
-  })
-  const [view, setView] = useState<CampaignManagementView>('campaigns')
-  const [groups, setGroups] = useState<CampaignGroup[]>([])
-  const [groupsLoading, setGroupsLoading] = useState(false)
+  const [state, dispatch] = useReducer(campaignManagementReducer, INITIAL_CAMPAIGN_MANAGEMENT_STATE)
+  const {
+    campaigns,
+    loading,
+    actionLoading,
+    budgetDialogOpen,
+    biddingDialogOpen,
+    selectedCampaign,
+    selectedGroup,
+    newBudget,
+    newBidding,
+    view,
+    groups,
+    groupsLoading,
+  } = state
 
   const startDate = useMemo(() => toIsoDateOnly(dateRange.start), [dateRange.start])
   const endDate = useMemo(() => toIsoDateOnly(dateRange.end), [dateRange.end])
@@ -302,35 +428,23 @@ export function CampaignManagementCard({
     : selectedCurrencyCode
 
   const openCampaignBudgetDialog = useCallback((campaign: Campaign) => {
-    setSelectedGroup(null)
-    setSelectedCampaign(campaign)
-    setNewBudget(campaign.budget?.toString() || '')
-    setBudgetDialogOpen(true)
+    dispatch({ type: 'openCampaignBudgetDialog', campaign })
   }, [])
 
   const openGroupBudgetDialog = useCallback((group: CampaignGroup) => {
-    setSelectedCampaign(null)
-    setSelectedGroup(group)
-    setNewBudget(group.totalBudget?.toString() || '')
-    setBudgetDialogOpen(true)
+    dispatch({ type: 'openGroupBudgetDialog', group })
   }, [])
 
   const openCampaignBiddingDialog = useCallback((campaign: Campaign) => {
-    setSelectedGroup(null)
-    setSelectedCampaign(campaign)
-    setNewBidding({
-      type: campaign.biddingStrategy?.type || '',
-      value: (campaign.biddingStrategy?.targetCpa || campaign.biddingStrategy?.targetRoas || campaign.biddingStrategy?.bidCeiling || 0).toString(),
-    })
-    setBiddingDialogOpen(true)
+    dispatch({ type: 'openCampaignBiddingDialog', campaign })
   }, [])
 
   const fetchCampaigns = useCallback(async () => {
     if (!isConnected || setupRequired) return
 
-    setLoading(true)
+    dispatch({ type: 'setLoading', loading: true })
     if (!workspaceId) {
-      setLoading(false)
+      dispatch({ type: 'setLoading', loading: false })
       return
     }
 
@@ -340,7 +454,7 @@ export function CampaignManagementCard({
       clientId: selectedClientId ?? null,
     })
       .then((result) => {
-        setCampaigns(Array.isArray(result) ? (result as Campaign[]) : [])
+        dispatch({ type: 'setCampaigns', campaigns: Array.isArray(result) ? (result as Campaign[]) : [] })
       })
       .catch((error) => {
         logError(error, 'CampaignManagementCard:fetchCampaigns')
@@ -351,16 +465,16 @@ export function CampaignManagementCard({
         })
       })
       .finally(() => {
-        setLoading(false)
+        dispatch({ type: 'setLoading', loading: false })
       })
   }, [isConnected, listCampaigns, providerId, selectedClientId, setupRequired, workspaceId])
 
   const fetchGroups = useCallback(async () => {
     if (!isConnected || setupRequired || providerId !== 'linkedin') return
-    setGroupsLoading(true)
+    dispatch({ type: 'setGroupsLoading', groupsLoading: true })
 
     if (!workspaceId) {
-      setGroupsLoading(false)
+      dispatch({ type: 'setGroupsLoading', groupsLoading: false })
       return
     }
 
@@ -370,7 +484,7 @@ export function CampaignManagementCard({
       clientId: selectedClientId ?? null,
     })
       .then((result) => {
-        setGroups(Array.isArray(result) ? (result as CampaignGroup[]) : [])
+        dispatch({ type: 'setGroups', groups: Array.isArray(result) ? (result as CampaignGroup[]) : [] })
       })
       .catch((error) => {
         logError(error, 'CampaignManagementCard:fetchGroups')
@@ -381,7 +495,7 @@ export function CampaignManagementCard({
         })
       })
       .finally(() => {
-        setGroupsLoading(false)
+        dispatch({ type: 'setGroupsLoading', groupsLoading: false })
       })
   }, [isConnected, listCampaignGroups, providerId, selectedClientId, setupRequired, workspaceId])
 
@@ -394,21 +508,25 @@ export function CampaignManagementCard({
     void fetchCampaigns()
   }, [fetchCampaigns, fetchGroups, view])
 
+  const runInitialCampaignFetch = useEffectEvent(() => {
+    void fetchCampaigns()
+    if (providerId === 'linkedin') {
+      void fetchGroups()
+    }
+  })
+
   // Auto-load campaigns on mount when connected
   useEffect(() => {
     if (!isConnected || setupRequired) return
 
     const frameId = requestAnimationFrame(() => {
-      void fetchCampaigns()
-      if (providerId === 'linkedin') {
-        void fetchGroups()
-      }
+      runInitialCampaignFetch()
     })
 
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [fetchCampaigns, fetchGroups, isConnected, providerId, setupRequired])
+  }, [isConnected, setupRequired])
 
   const openInsightsPage = useCallback(
     (campaignOrGroupId: string, name: string) => {
@@ -425,7 +543,7 @@ export function CampaignManagementCard({
   )
 
   const handleAction = useCallback(async (campaignId: string, action: 'enable' | 'pause' | 'remove') => {
-    setActionLoading(campaignId)
+    dispatch({ type: 'setActionLoading', actionLoading: campaignId })
 
     if (!workspaceId) {
       toast({
@@ -433,7 +551,7 @@ export function CampaignManagementCard({
         description: 'Sign in required',
         variant: 'destructive',
       })
-      setActionLoading(null)
+      dispatch({ type: 'setActionLoading', actionLoading: null })
       return
     }
 
@@ -462,12 +580,12 @@ export function CampaignManagementCard({
         })
       })
       .finally(() => {
-        setActionLoading(null)
+        dispatch({ type: 'setActionLoading', actionLoading: null })
       })
   }, [fetchCampaigns, onRefresh, providerId, selectedClientId, updateCampaign, workspaceId])
 
   const handleGroupAction = useCallback(async (groupId: string, action: 'enable' | 'pause') => {
-    setActionLoading(groupId)
+    dispatch({ type: 'setActionLoading', actionLoading: groupId })
 
     if (!workspaceId) {
       toast({
@@ -475,7 +593,7 @@ export function CampaignManagementCard({
         description: 'Sign in required',
         variant: 'destructive',
       })
-      setActionLoading(null)
+      dispatch({ type: 'setActionLoading', actionLoading: null })
       return
     }
 
@@ -504,7 +622,7 @@ export function CampaignManagementCard({
         })
       })
       .finally(() => {
-        setActionLoading(null)
+        dispatch({ type: 'setActionLoading', actionLoading: null })
       })
   }, [fetchGroups, onRefresh, selectedClientId, updateCampaignGroup, workspaceId])
 
@@ -513,7 +631,7 @@ export function CampaignManagementCard({
     const targetId = isGroup ? selectedGroup?.id : selectedCampaign?.id
     if (!targetId || !newBudget) return
 
-    setActionLoading(targetId)
+    dispatch({ type: 'setActionLoading', actionLoading: targetId })
 
     const parsedBudget = parseFloat(newBudget)
 
@@ -523,7 +641,7 @@ export function CampaignManagementCard({
         description: 'Sign in required',
         variant: 'destructive',
       })
-      setActionLoading(null)
+      dispatch({ type: 'setActionLoading', actionLoading: null })
       return
     }
 
@@ -552,10 +670,7 @@ export function CampaignManagementCard({
           description: 'Budget updated successfully',
         })
 
-        setBudgetDialogOpen(false)
-        setSelectedCampaign(null)
-        setSelectedGroup(null)
-        setNewBudget('')
+        dispatch({ type: 'resetBudgetDialog' })
         if (isGroup) {
           void fetchGroups()
         } else {
@@ -572,14 +687,14 @@ export function CampaignManagementCard({
         })
       })
       .finally(() => {
-        setActionLoading(null)
+        dispatch({ type: 'setActionLoading', actionLoading: null })
       })
   }, [selectedCampaign, selectedGroup, newBudget, providerId, fetchCampaigns, fetchGroups, onRefresh, selectedClientId, view, workspaceId, updateCampaign, updateCampaignGroup])
 
   const handleBiddingUpdate = useCallback(async () => {
     if (!selectedCampaign || !newBidding.type) return
 
-    setActionLoading(selectedCampaign.id)
+    dispatch({ type: 'setActionLoading', actionLoading: selectedCampaign.id })
 
     if (!workspaceId) {
       toast({
@@ -587,7 +702,7 @@ export function CampaignManagementCard({
         description: 'Sign in required',
         variant: 'destructive',
       })
-      setActionLoading(null)
+      dispatch({ type: 'setActionLoading', actionLoading: null })
       return
     }
 
@@ -606,8 +721,7 @@ export function CampaignManagementCard({
           description: 'Bidding strategy updated successfully',
         })
 
-        setBiddingDialogOpen(false)
-        setSelectedCampaign(null)
+        dispatch({ type: 'closeBiddingDialog' })
         void fetchCampaigns()
         onRefresh?.()
       })
@@ -620,9 +734,29 @@ export function CampaignManagementCard({
         })
       })
       .finally(() => {
-        setActionLoading(null)
+        dispatch({ type: 'setActionLoading', actionLoading: null })
       })
   }, [selectedCampaign, newBidding, providerId, fetchCampaigns, onRefresh, selectedClientId, workspaceId, updateCampaign])
+
+  const handleBiddingChange = useCallback((value: BiddingDraft) => {
+    dispatch({ type: 'setNewBidding', newBidding: value })
+  }, [])
+
+  const handleBiddingOpenChange = useCallback((open: boolean) => {
+    dispatch({ type: 'setBiddingDialogOpen', open })
+  }, [])
+
+  const handleBudgetChange = useCallback((value: string) => {
+    dispatch({ type: 'setNewBudget', newBudget: value })
+  }, [])
+
+  const handleBudgetOpenChange = useCallback((open: boolean) => {
+    dispatch({ type: 'setBudgetDialogOpen', open })
+  }, [])
+
+  const handleViewChange = useCallback((nextView: CampaignManagementView) => {
+    dispatch({ type: 'setView', view: nextView })
+  }, [])
 
     const actionContextValue = useMemo(
       () => ({
@@ -737,15 +871,15 @@ export function CampaignManagementCard({
         loading={loading}
         newBidding={newBidding}
         newBudget={newBudget}
-        onBiddingChange={setNewBidding}
-        onBiddingOpenChange={setBiddingDialogOpen}
-        onBudgetChange={setNewBudget}
-        onBudgetOpenChange={setBudgetDialogOpen}
+        onBiddingChange={handleBiddingChange}
+        onBiddingOpenChange={handleBiddingOpenChange}
+        onBudgetChange={handleBudgetChange}
+        onBudgetOpenChange={handleBudgetOpenChange}
         onRefresh={handleRefresh}
         onRowClick={openInsightsPage}
         onSubmitBidding={handleBiddingUpdate}
         onSubmitBudget={handleBudgetUpdate}
-        onViewChange={setView}
+        onViewChange={handleViewChange}
         providerId={providerId}
         providerName={providerName}
         selectedCampaignName={selectedCampaign?.name}

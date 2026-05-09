@@ -139,7 +139,7 @@ export function MessageAttachments({ attachments, highlightTerms }: MessageAttac
                   </Button>
                 </div>
                 <div className="overflow-hidden rounded-md border border-muted/50">
-                  <video src={attachment.url} controls className="h-52 w-full bg-black" preload="metadata">
+                  <video src={attachment.url} controls className="h-52 w-full bg-gray-950" preload="metadata">
                     <track kind="captions" label={`${attachment.name || 'Video'} captions`} />
                     Sorry, your browser does not support embedded videos.
                   </video>

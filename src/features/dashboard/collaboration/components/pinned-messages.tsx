@@ -55,7 +55,7 @@ export function PinnedMessages({
             title="No pinned messages"
             description="Pin important messages to keep them easy to find."
             variant="inline"
-            className="rounded-lg border-dashed bg-muted/10 px-3 py-3 [&_p:last-child]:text-xs"
+            className="rounded-lg border-dashed bg-muted/10 p-3 [&_p:last-child]:text-xs"
           />
         </div>
       </div>

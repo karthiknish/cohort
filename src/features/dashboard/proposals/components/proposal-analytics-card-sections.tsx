@@ -278,7 +278,14 @@ export function ProposalAnalyticsByClientCard({ byClient }: { byClient: Proposal
             <div key={client.clientId} className="flex items-center justify-between rounded-md border border-muted/40 px-3 py-2">
               <div>
                 <p className="text-sm font-medium">{client.clientName}</p>
-                <p className="text-xs text-muted-foreground">Last proposal: {client.lastProposalAt ? new Date(client.lastProposalAt).toLocaleDateString() : 'N/A'}</p>
+                <p className="text-xs text-muted-foreground">
+                  Last proposal:{' '}
+                  {client.lastProposalAt ? (
+                    <time dateTime={client.lastProposalAt} suppressHydrationWarning>
+                      {new Date(client.lastProposalAt).toLocaleDateString()}
+                    </time>
+                  ) : 'N/A'}
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="outline">{client.proposalCount} drafts</Badge>

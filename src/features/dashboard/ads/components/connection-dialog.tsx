@@ -210,7 +210,7 @@ export const DisconnectDialog = memo(function DisconnectDialog({
             {isDisconnecting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Disconnecting...
+                Disconnecting…
               </>
             ) : (
               'Disconnect'

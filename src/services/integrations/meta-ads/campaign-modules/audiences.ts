@@ -13,6 +13,10 @@ import type { CreateAudienceOptions } from './types'
 // CREATE CUSTOM AUDIENCE
 // =============================================================================
 
+// This only provisions an empty Custom Audience container via Meta Marketing
+// API. It does not upload customer match rows or invoke any Data Manager-style
+// ingestion service.
+
 export async function createMetaAudience(
   options: CreateAudienceOptions
 ): Promise<{ success: boolean; id: string }> {

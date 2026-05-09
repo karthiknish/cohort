@@ -59,7 +59,7 @@ export function PlatformLogoStrip({ brands, className, variant = 'plain' }: Plat
       {brands.map((slug) => (
         <li key={slug}>
           {variant === 'pill' ? (
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/95 shadow-md shadow-black/10 ring-1 ring-black/5">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-card/95 shadow-md shadow-foreground/10 ring-1 ring-border/60">
               <PlatformBrandLogo brand={slug} className="h-6 w-6" labeled />
             </span>
           ) : (

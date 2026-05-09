@@ -139,21 +139,22 @@ export const listConversations = zWorkspaceQueryActive({
   handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
 
-    const asParticipantOne = await ctx.db
-      .query('directConversations')
-      .withIndex('by_workspace_participantOne_updatedAtMs', (q) =>
-        q.eq('workspaceId', args.workspaceId).eq('participantOneId', currentUserId)
-      )
-      .order('desc')
-      .collect()
-
-    const asParticipantTwo = await ctx.db
-      .query('directConversations')
-      .withIndex('by_workspace_participantTwo_updatedAtMs', (q) =>
-        q.eq('workspaceId', args.workspaceId).eq('participantTwoId', currentUserId)
-      )
-      .order('desc')
-      .collect()
+    const [asParticipantOne, asParticipantTwo] = await Promise.all([
+      ctx.db
+        .query('directConversations')
+        .withIndex('by_workspace_participantOne_updatedAtMs', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('participantOneId', currentUserId)
+        )
+        .order('desc')
+        .collect(),
+      ctx.db
+        .query('directConversations')
+        .withIndex('by_workspace_participantTwo_updatedAtMs', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('participantTwoId', currentUserId)
+        )
+        .order('desc')
+        .collect(),
+    ])
 
     const allConversations = [...asParticipantOne, ...asParticipantTwo]
       .filter((conv) => {
@@ -444,7 +445,8 @@ export const markAsRead = zWorkspaceMutation({
     const now2 = Date.now()
     for (const msg of unreadMessages) {
       const readBy = Array.isArray(msg.readBy) ? msg.readBy : []
-      if (!readBy.includes(currentUserId)) {
+      const readBySet = new Set(readBy)
+      if (!readBySet.has(currentUserId)) {
         await ctx.db.patch(msg._id, {
           readBy: [...readBy, currentUserId],
           readAtMs: msg.readAtMs ?? now2,
@@ -700,19 +702,20 @@ export const getUnreadCount = zWorkspaceQuery({
   handler: async (ctx, args) => {
     const currentUserId = ctx.user._id
 
-    const asParticipantOne = await ctx.db
-      .query('directConversations')
-      .withIndex('by_workspace_participantOne_read_updatedAtMs', (q) =>
-        q.eq('workspaceId', args.workspaceId).eq('participantOneId', currentUserId).eq('readByParticipantOne', false)
-      )
-      .collect()
-
-    const asParticipantTwo = await ctx.db
-      .query('directConversations')
-      .withIndex('by_workspace_participantTwo_read_updatedAtMs', (q) =>
-        q.eq('workspaceId', args.workspaceId).eq('participantTwoId', currentUserId).eq('readByParticipantTwo', false)
-      )
-      .collect()
+    const [asParticipantOne, asParticipantTwo] = await Promise.all([
+      ctx.db
+        .query('directConversations')
+        .withIndex('by_workspace_participantOne_read_updatedAtMs', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('participantOneId', currentUserId).eq('readByParticipantOne', false)
+        )
+        .collect(),
+      ctx.db
+        .query('directConversations')
+        .withIndex('by_workspace_participantTwo_read_updatedAtMs', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('participantTwoId', currentUserId).eq('readByParticipantTwo', false)
+        )
+        .collect(),
+    ])
 
     return asParticipantOne.length + asParticipantTwo.length
   },

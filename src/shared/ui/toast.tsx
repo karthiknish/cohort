@@ -9,20 +9,24 @@ import { interactiveTransitionClass } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
 
 type ToastPropsVariables = React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root>
+type ToastViewportProps = React.ComponentPropsWithRef<typeof ToastPrimitives.Viewport>
+type ToastPrimitiveProps = ToastPropsVariables & VariantProps<typeof toastVariants>
+type ToastActionProps = React.ComponentPropsWithRef<typeof ToastPrimitives.Action>
+type ToastCloseProps = React.ComponentPropsWithRef<typeof ToastPrimitives.Close>
+type ToastTitleProps = React.ComponentPropsWithRef<typeof ToastPrimitives.Title>
+type ToastDescriptionProps = React.ComponentPropsWithRef<typeof ToastPrimitives.Description>
 
 const ToastProvider = ToastPrimitives.Provider
 
-const ToastViewport = React.forwardRef<React.ElementRef<typeof ToastPrimitives.Viewport>, React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>>(
-  ({ className, ...props }, ref) => (
-    <ToastPrimitives.Viewport
-      ref={ref}
-      className={cn(
-        'fixed bottom-4 right-4 z-[100] flex w-full max-w-xs flex-col gap-2 p-1 sm:bottom-6 sm:right-6 sm:max-w-sm max-h-[360px] overflow-y-auto',
-        className
-      )}
-      {...props}
-    />
-  )
+const ToastViewport = ({ className, ref, ...props }: ToastViewportProps) => (
+  <ToastPrimitives.Viewport
+    ref={ref}
+    className={cn(
+      'fixed bottom-4 right-4 z-[100] flex w-full max-w-xs flex-col gap-2 p-1 sm:bottom-6 sm:right-6 sm:max-w-sm max-h-[360px] overflow-y-auto',
+      className
+    )}
+    {...props}
+  />
 )
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
@@ -43,62 +47,50 @@ const toastVariants = cva(
   }
 )
 
-type ToastPrimitiveProps = ToastPropsVariables & VariantProps<typeof toastVariants>
-
 type ToastVariantProps = VariantProps<typeof toastVariants>
 
-const Toast = React.forwardRef<React.ElementRef<typeof ToastPrimitives.Root>, ToastPrimitiveProps>(
-  ({ className, variant, ...props }, ref) => (
-    <ToastPrimitives.Root ref={ref} className={cn(toastVariants({ variant }), className)} {...props} />
-  )
+const Toast = ({ className, variant, ref, ...props }: ToastPrimitiveProps) => (
+  <ToastPrimitives.Root ref={ref} className={cn(toastVariants({ variant }), className)} {...props} />
 )
 Toast.displayName = ToastPrimitives.Root.displayName
 
-const ToastAction = React.forwardRef<React.ElementRef<typeof ToastPrimitives.Action>, React.ComponentPropsWithoutRef<typeof ToastPrimitives.Action>>(
-  ({ className, ...props }, ref) => (
-    <ToastPrimitives.Action
-      ref={ref}
-      className={cn(
-        'focus-ring-subtle inline-flex h-8 items-center justify-center rounded-md border border-input bg-transparent px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50',
-        interactiveTransitionClass,
-        className
-      )}
-      {...props}
-    />
-  )
+const ToastAction = ({ className, ref, ...props }: ToastActionProps) => (
+  <ToastPrimitives.Action
+    ref={ref}
+    className={cn(
+      'focus-ring-subtle inline-flex h-8 items-center justify-center rounded-md border border-input bg-transparent px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50',
+      interactiveTransitionClass,
+      className
+    )}
+    {...props}
+  />
 )
 ToastAction.displayName = ToastPrimitives.Action.displayName
 
-const ToastClose = React.forwardRef<React.ElementRef<typeof ToastPrimitives.Close>, React.ComponentPropsWithoutRef<typeof ToastPrimitives.Close>>(
-  ({ className, ...props }, ref) => (
-    <ToastPrimitives.Close
-      ref={ref}
-      className={cn(
-        'focus-ring-subtle absolute right-2 top-2 rounded-md p-1 text-current opacity-70 hover:opacity-100',
-        interactiveTransitionClass,
-        className
-      )}
-      aria-label="Dismiss notification"
-      toast-close=""
-      {...props}
-    >
-      <X className="h-4 w-4" />
-    </ToastPrimitives.Close>
-  )
+const ToastClose = ({ className, ref, ...props }: ToastCloseProps) => (
+  <ToastPrimitives.Close
+    ref={ref}
+    className={cn(
+      'focus-ring-subtle absolute right-2 top-2 rounded-md p-1 text-current opacity-70 hover:opacity-100',
+      interactiveTransitionClass,
+      className
+    )}
+    aria-label="Dismiss notification"
+    toast-close=""
+    {...props}
+  >
+    <X className="h-4 w-4" />
+  </ToastPrimitives.Close>
 )
 ToastClose.displayName = ToastPrimitives.Close.displayName
 
-const ToastTitle = React.forwardRef<React.ElementRef<typeof ToastPrimitives.Title>, React.ComponentPropsWithoutRef<typeof ToastPrimitives.Title>>(
-  ({ className, ...props }, ref) => (
-    <ToastPrimitives.Title ref={ref} className={cn('text-sm font-semibold', className)} {...props} />
-  )
+const ToastTitle = ({ className, ref, ...props }: ToastTitleProps) => (
+  <ToastPrimitives.Title ref={ref} className={cn('text-sm font-semibold', className)} {...props} />
 )
 ToastTitle.displayName = ToastPrimitives.Title.displayName
 
-const ToastDescription = React.forwardRef<React.ElementRef<typeof ToastPrimitives.Description>, React.ComponentPropsWithoutRef<typeof ToastPrimitives.Description>>(
-  ({ className, ...props }, ref) => (
-    <ToastPrimitives.Description ref={ref} className={cn('text-sm opacity-90', className)} {...props} />
-  )
+const ToastDescription = ({ className, ref, ...props }: ToastDescriptionProps) => (
+  <ToastPrimitives.Description ref={ref} className={cn('text-sm opacity-90', className)} {...props} />
 )
 ToastDescription.displayName = ToastPrimitives.Description.displayName
 

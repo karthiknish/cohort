@@ -588,7 +588,7 @@ export function useAnalyticsPageController() {
       entry.conversions += metric.conversions
       entry.revenue += metric.revenue ?? 0
     })
-    return Array.from(map.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    return Array.from(map.values()).toSorted((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   }, [filteredMetrics])
 
   const totals = useMemo(() => {

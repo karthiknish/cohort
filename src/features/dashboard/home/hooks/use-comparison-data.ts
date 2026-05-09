@@ -173,7 +173,7 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
                 })
 
                 if (!isCancelled) {
-                    const ordered = [...summaries].sort((a, b) => {
+                    const ordered = summaries.toSorted((a, b) => {
                         if (a.totalRevenue === b.totalRevenue) {
                             return b.totalAdSpend - a.totalAdSpend
                         }
@@ -210,14 +210,35 @@ export function useComparisonData(options: UseComparisonDataOptions): UseCompari
             return []
         }
 
-        const roasLeader = [...comparisonSummaries]
+        const roasLeader = comparisonSummaries
             .filter((summary) => Number.isFinite(summary.roas) && summary.roas !== 0)
-            .sort((a, b) => (b.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : b.roas) - (a.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : a.roas))[0]
+            .reduce<ClientComparisonSummary | undefined>((leader, summary) => {
+                if (!leader) {
+                    return summary
+                }
 
-        const spendLeader = [...comparisonSummaries].sort((a, b) => b.totalAdSpend - a.totalAdSpend)[0]
-        const cpaRisk = [...comparisonSummaries]
+                const leaderRoas = leader.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : leader.roas
+                const summaryRoas = summary.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : summary.roas
+                return summaryRoas > leaderRoas ? summary : leader
+            }, undefined)
+
+        const spendLeader = comparisonSummaries.reduce<ClientComparisonSummary | undefined>((leader, summary) => {
+            if (!leader || summary.totalAdSpend > leader.totalAdSpend) {
+                return summary
+            }
+
+            return leader
+        }, undefined)
+
+        const cpaRisk = comparisonSummaries
             .filter((summary) => summary.cpa !== null)
-            .sort((a, b) => (b.cpa ?? 0) - (a.cpa ?? 0))[0]
+            .reduce<ClientComparisonSummary | undefined>((leader, summary) => {
+                if (!leader || (summary.cpa ?? 0) > (leader.cpa ?? 0)) {
+                    return summary
+                }
+
+                return leader
+            }, undefined)
 
         const insights: ComparisonInsight[] = []
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/shared/ui/button'
@@ -368,17 +368,21 @@ export default function CreativeDetailPageClient({
     }
   }, [fetchCreative])
 
+  const runMetricsFetch = useEffectEvent(() => {
+    void fetchMetrics()
+  })
+
   useEffect(() => {
     if (!creative) return
 
     const frameId = requestAnimationFrame(() => {
-      void fetchMetrics()
+      runMetricsFetch()
     })
 
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [creative, fetchMetrics])
+  }, [creative])
 
   const handleCopy = useCallback((text: string, field: string) => {
     const canUseClipboardApi =
@@ -584,13 +588,19 @@ export default function CreativeDetailPageClient({
       const normalizedCta = editedCta.trim()
       const normalizedLandingPage = editedLandingPage.trim()
 
-      setCreative({
-        ...creative,
-        headlines: normalizedHeadlines,
-        descriptions: normalizedDescriptions,
-        callToAction: normalizedCta,
-        landingPageUrl: normalizedLandingPage,
-      })
+          setCreative((previousCreative) => {
+            if (!previousCreative) {
+              return previousCreative
+            }
+
+            return {
+              ...previousCreative,
+              headlines: normalizedHeadlines,
+              descriptions: normalizedDescriptions,
+              callToAction: normalizedCta,
+              landingPageUrl: normalizedLandingPage,
+            }
+          })
       setIsEditing(false)
       toast({
         title: 'Sample creative updated',
@@ -655,13 +665,19 @@ export default function CreativeDetailPageClient({
     })
       .then((result) => {
         if (creative) {
-          setCreative({
-            ...creative,
-            platformCreativeId: (result as { creativeId?: string } | undefined)?.creativeId ?? creative.platformCreativeId,
-            headlines: normalizedHeadlines,
-            descriptions: normalizedDescriptions,
-            callToAction: normalizedCta,
-            landingPageUrl: normalizedLandingPage,
+          setCreative((previousCreative) => {
+            if (!previousCreative) {
+              return previousCreative
+            }
+
+            return {
+              ...previousCreative,
+              platformCreativeId: (result as { creativeId?: string } | undefined)?.creativeId ?? previousCreative.platformCreativeId,
+              headlines: normalizedHeadlines,
+              descriptions: normalizedDescriptions,
+              callToAction: normalizedCta,
+              landingPageUrl: normalizedLandingPage,
+            }
           })
         }
 

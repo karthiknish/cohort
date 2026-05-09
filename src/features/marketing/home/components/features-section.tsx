@@ -46,9 +46,9 @@ const HUB_CORE_ANIMATE = {
   scale: [1, 1.035, 1],
   y: [0, -2, 0],
   boxShadow: [
-    '0 18px 40px hsl(var(--foreground) / 0.18)',
-    '0 22px 52px hsl(var(--primary) / 0.28)',
-    '0 18px 40px hsl(var(--foreground) / 0.18)',
+    '0 18px 40px rgb(from var(--foreground) r g b / 0.18)',
+    '0 22px 52px rgb(from var(--primary) r g b / 0.28)',
+    '0 18px 40px rgb(from var(--foreground) r g b / 0.18)',
   ],
 }
 const HUB_CORE_TRANSITION = {
@@ -97,7 +97,7 @@ const INTEGRATIONS_LEFT: Integration[] = [
     id: 'google',
     label: 'Google Ads',
     brand: 'googleads',
-    iconBg: 'bg-white ring-1 ring-border/70',
+    iconBg: 'bg-card ring-1 ring-border/70',
     accentColor: 'text-primary',
     insights: [
       { stat: '4.2×', label: 'Avg. ROAS', trend: '+18% MoM', trendUp: true },
@@ -109,7 +109,7 @@ const INTEGRATIONS_LEFT: Integration[] = [
     id: 'meta',
     label: 'Meta',
     brand: 'meta',
-    iconBg: 'bg-white ring-1 ring-border/70',
+    iconBg: 'bg-card ring-1 ring-border/70',
     accentColor: 'text-info',
     insights: [
       { stat: '$8.40', label: 'Avg. CPM', trend: '−12% vs last week', trendUp: true },
@@ -124,7 +124,7 @@ const INTEGRATIONS_RIGHT: Integration[] = [
     id: 'linkedin',
     label: 'LinkedIn',
     brand: 'linkedin',
-    iconBg: 'bg-white ring-1 ring-border/70',
+    iconBg: 'bg-card ring-1 ring-border/70',
     accentColor: 'text-accent',
     insights: [
       { stat: '$34', label: 'Cost per lead', trend: '−8% vs last month', trendUp: true },
@@ -136,7 +136,7 @@ const INTEGRATIONS_RIGHT: Integration[] = [
     id: 'stripe',
     label: 'Stripe',
     brand: 'stripe',
-    iconBg: 'bg-white ring-1 ring-border/70',
+    iconBg: 'bg-card ring-1 ring-border/70',
     accentColor: 'text-success',
     insights: [
       { stat: '$48.2K', label: 'MRR tracked', trend: '+9% MoM', trendUp: true },
@@ -219,7 +219,7 @@ function ScrollGroup() {
           className="flex items-center gap-3 rounded-[1.1rem] border border-border/50 bg-background/95 px-3 py-2.5 shadow-sm"
         >
           <Avatar className="h-9 w-9 shrink-0 ring-1 ring-border/60">
-            <AvatarFallback className={cn('text-[10px] font-semibold text-white', client.color)}>
+            <AvatarFallback className={cn('text-[10px] font-semibold text-viewer-chrome', client.color)}>
               {client.initials}
             </AvatarFallback>
           </Avatar>
@@ -316,26 +316,34 @@ function HubCore() {
   return (
     <LazyMotion features={domAnimation}>
       <m.div
-        className="relative hidden items-center rounded-full bg-primary px-5 py-2.5 shadow-2xl lg:flex"
+        className="relative hidden items-center rounded-full bg-foreground px-5 py-2.5 shadow-2xl lg:flex"
         initial={prefersReducedMotion ? false : HUB_CORE_INITIAL}
         animate={prefersReducedMotion ? HUB_CORE_REDUCED : HUB_CORE_ANIMATE}
         transition={HUB_CORE_TRANSITION}
       >
         <m.span
-          className="absolute inset-[1px] rounded-full border border-white/20"
+          className="absolute inset-[1px] rounded-full border border-viewer-chrome/20"
           aria-hidden="true"
           initial={prefersReducedMotion ? false : HUB_RING_INITIAL}
           animate={prefersReducedMotion ? HUB_RING_REDUCED : HUB_RING_ANIMATE}
           transition={HUB_CORE_TRANSITION}
         />
         <m.span
-          className="absolute -inset-3 rounded-full border border-primary/20"
+          className="absolute -inset-3 rounded-full border border-white/12"
           aria-hidden="true"
           initial={prefersReducedMotion ? false : HUB_GLOW_INITIAL}
           animate={prefersReducedMotion ? HUB_GLOW_REDUCED : HUB_GLOW_ANIMATE}
           transition={HUB_GLOW_TRANSITION}
         />
-        <Image src="/logo_white.svg" alt="Cohorts" width={100} height={32} className="relative h-8 w-auto" priority />
+        <Image
+          src="/logo_white.svg"
+          alt="Cohorts"
+          width={100}
+          height={32}
+          className="relative h-8 w-auto"
+          style={{ width: 'auto' }}
+          priority
+        />
       </m.div>
     </LazyMotion>
   )
@@ -368,7 +376,7 @@ function ProposalIllustration() {
             {PROPOSAL_BOUNCE_DOTS.map((dot) => (
               <span
                 key={dot.id}
-                className="block h-1.5 w-1.5 animate-bounce rounded-full bg-accent"
+                className="block h-1.5 w-1.5 animate-subtle-dot-drift rounded-full bg-accent"
                 style={dot.style}
               />
             ))}
@@ -399,7 +407,7 @@ function PortalIllustration() {
             </Badge>
           </div>
 
-          <div className="relative h-[176px] overflow-hidden rounded-2xl border border-border/50 bg-muted/20 px-2 py-2">
+          <div className="relative h-[176px] overflow-hidden rounded-2xl border border-border/50 bg-muted/20 p-2">
             <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-10 bg-gradient-to-b from-background via-background/70 to-transparent" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-12 bg-gradient-to-t from-background via-background/80 to-transparent" />
 
@@ -435,14 +443,14 @@ function TeamIllustration() {
                       index === 2 ? 'z-10 ring-2 ring-accent/40' : '',
                     )}
                   >
-                    <AvatarFallback className={cn('text-xs font-bold text-white', member.color)}>
+                    <AvatarFallback className={cn('text-xs font-bold text-viewer-chrome', member.color)}>
                       {member.initials}
                     </AvatarFallback>
                   </Avatar>
                 </TooltipTrigger>
                 <TooltipContent
                   side="top"
-                  className={cn('border-0 text-white', member.color)}
+                  className={cn('border-0 text-viewer-chrome', member.color)}
                 >
                   {member.name}
                 </TooltipContent>
@@ -476,7 +484,7 @@ export function FeaturesSection() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="mb-12 space-y-4 text-center sm:mb-16 lg:mb-20">
           <FadeIn>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary/50">Our Platform</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Our Platform</p>
           </FadeIn>
           <FadeIn>
             <h2 className="text-2xl font-semibold tracking-tight md:text-3xl lg:text-4xl">
@@ -492,8 +500,16 @@ export function FeaturesSection() {
 
         <FadeIn>
           <div className="relative mb-12 flex w-full flex-col items-center sm:mb-16 lg:mb-20">
-            <div className="flex items-center rounded-full bg-primary px-5 py-2.5 shadow-xl lg:hidden">
-              <Image src="/logo_white.svg" alt="Cohorts" width={100} height={32} className="h-8 w-auto" priority />
+            <div className="flex items-center rounded-full bg-foreground px-5 py-2.5 shadow-xl lg:hidden">
+              <Image
+                src="/logo_white.svg"
+                alt="Cohorts"
+                width={100}
+                height={32}
+                className="h-8 w-auto"
+                style={{ width: 'auto' }}
+                priority
+              />
             </div>
 
             <div className="relative max-lg:mt-6 max-lg:flex max-lg:flex-wrap max-lg:items-center max-lg:justify-center max-lg:gap-4 lg:grid lg:w-full lg:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto] lg:items-center">

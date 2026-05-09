@@ -321,14 +321,6 @@ export const clockAction = zAuthenticatedMutation({
     status: z.string(),
   }),
   handler: async (ctx, args) => {
-    const latest = await ctx.db
-      .query('workforceTimeSessions')
-      .withIndex('by_workspace_personId_updatedAtMs_legacyId', (q) =>
-        q.eq('workspaceId', args.workspaceId).eq('personId', ctx.legacyId),
-      )
-      .order('desc')
-      .first()
-
     if (args.action === 'clockIn') {
       const legacyId = generateLegacyId('time', ctx.now)
       await ctx.db.insert('workforceTimeSessions', {
@@ -351,6 +343,14 @@ export const clockAction = zAuthenticatedMutation({
 
       return { legacyId, status: 'clocked-in' }
     }
+
+    const latest = await ctx.db
+      .query('workforceTimeSessions')
+      .withIndex('by_workspace_personId_updatedAtMs_legacyId', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('personId', ctx.legacyId),
+      )
+      .order('desc')
+      .first()
 
     if (!latest) {
       throw Errors.resource.notFound('Time session (active)', ctx.legacyId)
@@ -437,19 +437,21 @@ export const getSchedulingDashboard = zWorkspaceQuery({
     swaps: z.array(shiftSwapZ),
   }),
   handler: async (ctx, args) => {
-    const shiftsRows = await ctx.db
-      .query('workforceShifts')
-      .withIndex('by_workspace_dayStartMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
-      .take(50)
-    const swapRows = await ctx.db
-      .query('workforceShiftSwaps')
-      .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
-      .order('desc')
-      .take(20)
-    const availabilityRows = await ctx.db
-      .query('workforceAvailability')
-      .withIndex('by_workspace_startMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
-      .take(200)
+    const [shiftsRows, swapRows, availabilityRows] = await Promise.all([
+      ctx.db
+        .query('workforceShifts')
+        .withIndex('by_workspace_dayStartMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+        .take(50),
+      ctx.db
+        .query('workforceShiftSwaps')
+        .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+        .order('desc')
+        .take(20),
+      ctx.db
+        .query('workforceAvailability')
+        .withIndex('by_workspace_startMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+        .take(200),
+    ])
 
     const avWindows = availabilityRows.map((row) => ({
       personId: row.personId,
@@ -787,16 +789,18 @@ export const getFormsDashboard = zWorkspaceQuery({
     submissions: z.array(submissionZ),
   }),
   handler: async (ctx, args) => {
-    const templateRows = await ctx.db
-      .query('workforceFormTemplates')
-      .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
-      .order('desc')
-      .take(25)
-    const submissionRows = await ctx.db
-      .query('workforceFormSubmissions')
-      .withIndex('by_workspace_submittedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
-      .order('desc')
-      .take(25)
+    const [templateRows, submissionRows] = await Promise.all([
+      ctx.db
+        .query('workforceFormTemplates')
+        .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+        .order('desc')
+        .take(25),
+      ctx.db
+        .query('workforceFormSubmissions')
+        .withIndex('by_workspace_submittedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+        .order('desc')
+        .take(25),
+    ])
 
     const templates = templateRows.map((row) => ({
       id: row.legacyId,
@@ -937,9 +941,11 @@ export const submitChecklist = zWorkspaceMutation({
       throw Errors.resource.notFound('Checklist template', args.templateLegacyId)
     }
 
+    const answersByFieldId = new Map(args.answers.map((answer) => [answer.fieldId, answer] as const))
+
     for (const field of template.fields) {
       if (field.required) {
-        const hit = args.answers.find((a) => a.fieldId === field.id)
+        const hit = answersByFieldId.get(field.id)
         if (!hit || !hit.value.trim()) {
           throw Errors.validation.invalidInput(`Required field: ${field.label}`, { fieldId: field.id })
         }
@@ -948,7 +954,7 @@ export const submitChecklist = zWorkspaceMutation({
 
     let completed = 0
     for (const field of template.fields) {
-      const hit = args.answers.find((a) => a.fieldId === field.id)
+      const hit = answersByFieldId.get(field.id)
       if (hit?.value?.trim()) {
         completed += 1
       }
@@ -1045,17 +1051,19 @@ export const getTimeOffDashboard = zWorkspaceQuery({
     requests: z.array(timeOffRequestZ),
   }),
   handler: async (ctx, args) => {
-    const balanceRows = await ctx.db
-      .query('workforceTimeOffBalances')
-      .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
-      .order('desc')
-      .take(20)
+    const [balanceRows, requestRows] = await Promise.all([
+      ctx.db
+        .query('workforceTimeOffBalances')
+        .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+        .order('desc')
+        .take(20),
 
-    const requestRows = await ctx.db
-      .query('workforceTimeOffRequests')
-      .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
-      .order('desc')
-      .take(50)
+      ctx.db
+        .query('workforceTimeOffRequests')
+        .withIndex('by_workspace_updatedAtMs_legacyId', (q) => q.eq('workspaceId', args.workspaceId))
+        .order('desc')
+        .take(50),
+    ])
 
     const balances = balanceRows.map((row) => ({
       id: row.legacyId,

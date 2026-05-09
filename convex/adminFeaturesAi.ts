@@ -89,12 +89,11 @@ async function generateWithGemini(prompt: string): Promise<string> {
 
   const text = Array.isArray(parts)
     ? parts
-        .map((part) => {
-          if (typeof part === 'string') return part
-          if (part && typeof part === 'object' && typeof part.text === 'string') return part.text
-          return null
+        .flatMap((part) => {
+          if (typeof part === 'string') return [part]
+          if (part && typeof part === 'object' && typeof part.text === 'string') return [part.text]
+          return []
         })
-        .filter(Boolean)
         .join('\n')
         .trim()
     : ''

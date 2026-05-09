@@ -22,17 +22,42 @@ export function WorkspaceTrendsCard({ summaries, periodDays, mixedCurrencies }: 
   const insights = useMemo(() => {
     if (summaries.length === 0) return null
 
-    const byRevenue = [...summaries].sort((a, b) => b.totalRevenue - a.totalRevenue)
-    const bySpend = [...summaries].sort((a, b) => b.totalAdSpend - a.totalAdSpend)
-    const byConversions = [...summaries].sort((a, b) => b.totalConversions - a.totalConversions)
-
     const roasCandidates = summaries.filter((s) => Number.isFinite(s.roas) && s.roas !== 0)
-    const roasLeader = [...roasCandidates].sort((a, b) => (b.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : b.roas) - (a.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : a.roas))[0]
+    const roasLeader = roasCandidates.reduce<ClientComparisonSummary | undefined>((leader, summary) => {
+      if (!leader) {
+        return summary
+      }
+
+      const leaderRoas = leader.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : leader.roas
+      const summaryRoas = summary.roas === Number.POSITIVE_INFINITY ? Number.MAX_VALUE : summary.roas
+      return summaryRoas > leaderRoas ? summary : leader
+    }, undefined)
+    const revenueLeader = summaries.reduce<ClientComparisonSummary | undefined>((leader, summary) => {
+      if (!leader || summary.totalRevenue > leader.totalRevenue) {
+        return summary
+      }
+
+      return leader
+    }, undefined)
+    const spendLeader = summaries.reduce<ClientComparisonSummary | undefined>((leader, summary) => {
+      if (!leader || summary.totalAdSpend > leader.totalAdSpend) {
+        return summary
+      }
+
+      return leader
+    }, undefined)
+    const conversionsLeader = summaries.reduce<ClientComparisonSummary | undefined>((leader, summary) => {
+      if (!leader || summary.totalConversions > leader.totalConversions) {
+        return summary
+      }
+
+      return leader
+    }, undefined)
 
     return {
-      revenueLeader: byRevenue[0],
-      spendLeader: bySpend[0],
-      conversionsLeader: byConversions[0],
+      revenueLeader,
+      spendLeader,
+      conversionsLeader,
       roasLeader,
     }
   }, [summaries])

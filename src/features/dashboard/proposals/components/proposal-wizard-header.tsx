@@ -15,11 +15,11 @@ export function ProposalWizardHeader() {
             Proposal generator
           </div>
         </div>
-        <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+        <h1 className="text-balance text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
           Build a tailored proposal in minutes
         </h1>
         <p className="text-pretty text-[15px] leading-relaxed text-muted-foreground md:text-base">
-          Walk through six short sections—company, goals, scope, and value. Your answers autosave as you go, then we
+          Walk through six short sections: company, goals, scope, and value. Your answers autosave as you go, then we
           assemble a client-ready deck you can refine and send.
         </p>
       </div>

@@ -276,7 +276,9 @@ export function ConversationListPane({
                     <div className="flex items-center justify-between gap-2">
                       <span className={cn('truncate text-sm', hasUnread ? 'font-semibold' : 'font-medium', selected && 'text-primary')}>{item.name}</span>
                       {item.lastMessageAtMs ? (
-                        <span className="shrink-0 text-[10px] text-muted-foreground">{formatRelativeTime(new Date(item.lastMessageAtMs).toISOString())}</span>
+                        <span className="shrink-0 text-[10px] text-muted-foreground" suppressHydrationWarning>
+                          {formatRelativeTime(new Date(item.lastMessageAtMs).toISOString())}
+                        </span>
                       ) : null}
                     </div>
 

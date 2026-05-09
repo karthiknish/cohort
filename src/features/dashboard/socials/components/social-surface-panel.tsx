@@ -313,7 +313,7 @@ export function SocialSurfacePanel({
                       Interaction mix
                     </CardTitle>
                     <CardDescription className="text-xs leading-relaxed sm:text-sm">
-                      Reactions, comments, shares, and saves—scaled so you can compare channel behavior at a glance.
+                      Reactions, comments, shares, and saves, scaled so you can compare channel behavior at a glance.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-5 pt-0">

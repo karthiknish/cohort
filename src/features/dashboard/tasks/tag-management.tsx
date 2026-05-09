@@ -74,7 +74,7 @@ export function TagManagement({
 
   // Sort tags: selected first, then alphabetically
   const sortedAvailableTags = useMemo(() => {
-    return [...availableTags].sort((a, b) => {
+    return availableTags.toSorted((a, b) => {
       const aSelected = selectedTags.includes(a)
       const bSelected = selectedTags.includes(b)
       if (aSelected && !bSelected) return -1
@@ -275,7 +275,7 @@ function SelectedTagBadge({
     >
       <Hash className="h-2.5 w-2.5" />
       {tag}
-      <button type="button" onClick={handleRemove} className="ml-0.5 rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/20">
+      <button type="button" onClick={handleRemove} className="ml-0.5 rounded-full p-0.5 hover:bg-foreground/10">
         <X className="h-3 w-3" />
       </button>
     </Badge>

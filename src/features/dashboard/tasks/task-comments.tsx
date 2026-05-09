@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { useConvex, useMutation, useQuery } from 'convex/react'
 
 import { Card, CardContent } from '@/shared/ui/card'
@@ -56,6 +56,103 @@ function getPreviewText(content: string | null | undefined): string {
   return `${normalized.slice(0, 69)}...`
 }
 
+type TaskCommentsPanelState = {
+  composerValue: string
+  sending: boolean
+  uploading: boolean
+  replyTo: TaskComment | null
+  editingCommentId: string | null
+  savingEdit: boolean
+  pendingAttachments: TaskCommentComposerAttachment[]
+  deleteTarget: TaskComment | null
+  deletingCommentId: string | null
+}
+
+type TaskCommentsPanelAction =
+  | { type: 'setComposerValue'; composerValue: string }
+  | { type: 'setSending'; sending: boolean }
+  | { type: 'setUploading'; uploading: boolean }
+  | { type: 'setReplyTo'; replyTo: TaskComment | null }
+  | { type: 'setEditingCommentId'; editingCommentId: string | null }
+  | { type: 'setSavingEdit'; savingEdit: boolean }
+  | { type: 'setPendingAttachments'; pendingAttachments: TaskCommentComposerAttachment[] }
+  | { type: 'setDeleteTarget'; deleteTarget: TaskComment | null }
+  | { type: 'setDeletingCommentId'; deletingCommentId: string | null }
+  | { type: 'resetComposer' }
+  | { type: 'startReply'; comment: TaskComment }
+  | { type: 'startEdit'; comment: TaskComment }
+  | { type: 'startSending' }
+
+const INITIAL_TASK_COMMENTS_PANEL_STATE: TaskCommentsPanelState = {
+  composerValue: '',
+  sending: false,
+  uploading: false,
+  replyTo: null,
+  editingCommentId: null,
+  savingEdit: false,
+  pendingAttachments: [],
+  deleteTarget: null,
+  deletingCommentId: null,
+}
+
+function taskCommentsPanelReducer(
+  state: TaskCommentsPanelState,
+  action: TaskCommentsPanelAction,
+): TaskCommentsPanelState {
+  switch (action.type) {
+    case 'setComposerValue':
+      return { ...state, composerValue: action.composerValue }
+    case 'setSending':
+      return { ...state, sending: action.sending }
+    case 'setUploading':
+      return { ...state, uploading: action.uploading }
+    case 'setReplyTo':
+      return { ...state, replyTo: action.replyTo }
+    case 'setEditingCommentId':
+      return { ...state, editingCommentId: action.editingCommentId }
+    case 'setSavingEdit':
+      return { ...state, savingEdit: action.savingEdit }
+    case 'setPendingAttachments':
+      return { ...state, pendingAttachments: action.pendingAttachments }
+    case 'setDeleteTarget':
+      return { ...state, deleteTarget: action.deleteTarget }
+    case 'setDeletingCommentId':
+      return { ...state, deletingCommentId: action.deletingCommentId }
+    case 'resetComposer':
+      return {
+        ...state,
+        composerValue: '',
+        replyTo: null,
+        editingCommentId: null,
+        pendingAttachments: [],
+      }
+    case 'startReply':
+      return {
+        ...state,
+        replyTo: action.comment,
+        editingCommentId: null,
+        composerValue: '',
+        pendingAttachments: [],
+      }
+    case 'startEdit':
+      return {
+        ...state,
+        editingCommentId: action.comment.id,
+        replyTo: null,
+        composerValue: action.comment.content,
+        pendingAttachments: [],
+      }
+    case 'startSending':
+      return {
+        ...state,
+        sending: true,
+        uploading: true,
+      }
+    default:
+      return state
+  }
+}
+
 export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
   const { taskId, workspaceId, userId, userName, userRole, participants, onCommentCountChange } = props
   const { toast } = useToast()
@@ -77,21 +174,28 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
   const createComment = useMutation(generatedApi.taskComments.create)
   const updateComment = useMutation(generatedApi.taskComments.updateContent)
   const deleteComment = useMutation(generatedApi.taskComments.softDelete)
-  const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
+  const generateUploadUrlMutation = useMutation(filesApi.generateUploadUrl)
+  const generateUploadUrl = useCallback(
+    () => generateUploadUrlMutation({}),
+    [generateUploadUrlMutation]
+  )
   const getPublicUrl = useCallback(
     (args: { storageId: string }) => convex.query(filesApi.getPublicUrl, args),
     [convex]
   )
 
-  const [composerValue, setComposerValue] = useState('')
-  const [sending, setSending] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [replyTo, setReplyTo] = useState<TaskComment | null>(null)
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
-  const [savingEdit, setSavingEdit] = useState(false)
-  const [pendingAttachments, setPendingAttachments] = useState<TaskCommentComposerAttachment[]>([])
-  const [deleteTarget, setDeleteTarget] = useState<TaskComment | null>(null)
-  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null)
+  const [state, dispatch] = useReducer(taskCommentsPanelReducer, INITIAL_TASK_COMMENTS_PANEL_STATE)
+  const {
+    composerValue,
+    sending,
+    uploading,
+    replyTo,
+    editingCommentId,
+    savingEdit,
+    pendingAttachments,
+    deleteTarget,
+    deletingCommentId,
+  } = state
 
   const sortedParticipants = useMemo(() => {
     const map = new Map<string, TaskParticipant>()
@@ -171,21 +275,24 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
   }, [comments, editingCommentId])
 
   const resetComposer = useCallback(() => {
-    setComposerValue('')
-    setReplyTo(null)
-    setEditingCommentId(null)
-    setPendingAttachments([])
+    dispatch({ type: 'resetComposer' })
   }, [])
 
   const handleAddAttachments = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return
     const next = buildPendingAttachments(files)
-    setPendingAttachments((prev) => [...prev, ...next].slice(0, 10))
-  }, [])
+    dispatch({
+      type: 'setPendingAttachments',
+      pendingAttachments: [...pendingAttachments, ...next].slice(0, 10),
+    })
+  }, [pendingAttachments])
 
   const handleRemovePendingAttachment = useCallback((attachmentId: string) => {
-    setPendingAttachments((prev) => prev.filter((item) => item.id !== attachmentId))
-  }, [])
+    dispatch({
+      type: 'setPendingAttachments',
+      pendingAttachments: pendingAttachments.filter((item) => item.id !== attachmentId),
+    })
+  }, [pendingAttachments])
 
   const handleAttachClick = useCallback(() => {
     if (activeEditingCommentId) return
@@ -193,17 +300,11 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
   }, [activeEditingCommentId])
 
   const handleStartReply = useCallback((comment: TaskComment) => {
-    setReplyTo(comment)
-    setEditingCommentId(null)
-    setComposerValue('')
-    setPendingAttachments([])
+    dispatch({ type: 'startReply', comment })
   }, [])
 
   const handleStartEdit = useCallback((comment: TaskComment) => {
-    setEditingCommentId(comment.id)
-    setReplyTo(null)
-    setComposerValue(comment.content)
-    setPendingAttachments([])
+    dispatch({ type: 'startEdit', comment })
   }, [])
 
   const handleSubmit = useCallback(() => {
@@ -211,7 +312,7 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
     if (!content || !workspaceId) return
 
     if (activeEditingCommentId) {
-      setSavingEdit(true)
+      dispatch({ type: 'setSavingEdit', savingEdit: true })
       void updateComment({
         workspaceId: String(workspaceId),
         taskLegacyId: String(taskId),
@@ -232,15 +333,14 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
           })
         })
         .finally(() => {
-          setSavingEdit(false)
+          dispatch({ type: 'setSavingEdit', savingEdit: false })
         })
       return
     }
 
     if (!userId) return
 
-    setSending(true)
-    setUploading(true)
+    dispatch({ type: 'startSending' })
 
     void Promise.resolve()
       .then(async () => {
@@ -298,8 +398,8 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
         })
       })
       .finally(() => {
-        setUploading(false)
-        setSending(false)
+        dispatch({ type: 'setUploading', uploading: false })
+        dispatch({ type: 'setSending', sending: false })
       })
   }, [
     composerValue,
@@ -323,7 +423,7 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
   const handleConfirmDelete = useCallback(() => {
     if (!workspaceId || !deleteTarget) return
 
-    setDeletingCommentId(deleteTarget.id)
+    dispatch({ type: 'setDeletingCommentId', deletingCommentId: deleteTarget.id })
     void deleteComment({
       workspaceId: String(workspaceId),
       taskLegacyId: String(taskId),
@@ -336,9 +436,9 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
           resetComposer()
         }
         if (replyTo?.id === deleteTarget.id) {
-          setReplyTo(null)
+          dispatch({ type: 'setReplyTo', replyTo: null })
         }
-        setDeleteTarget(null)
+        dispatch({ type: 'setDeleteTarget', deleteTarget: null })
       })
       .catch((error) => {
         logError(error, 'TaskCommentsPanel:handleDeleteComment')
@@ -349,7 +449,7 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
         })
       })
       .finally(() => {
-        setDeletingCommentId(null)
+        dispatch({ type: 'setDeletingCommentId', deletingCommentId: null })
       })
   }, [deleteComment, deleteTarget, editingCommentId, replyTo?.id, resetComposer, taskId, toast, workspaceId])
 
@@ -407,7 +507,15 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
   )
 
   const handleCloseDeleteDialog = useCallback(() => {
-    setDeleteTarget(null)
+    dispatch({ type: 'setDeleteTarget', deleteTarget: null })
+  }, [])
+
+  const handleComposerChange = useCallback((value: string) => {
+    dispatch({ type: 'setComposerValue', composerValue: value })
+  }, [])
+
+  const handleRequestDelete = useCallback((comment: TaskComment) => {
+    dispatch({ type: 'setDeleteTarget', deleteTarget: comment })
   }, [])
 
   return (
@@ -431,7 +539,7 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
             canManageComment={canManageComment}
             onStartReply={handleStartReply}
             onStartEdit={handleStartEdit}
-            onRequestDelete={setDeleteTarget}
+            onRequestDelete={handleRequestDelete}
           />
 
           <Separator />
@@ -452,7 +560,7 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
             onAddAttachments={handleAddAttachments}
             onRemovePendingAttachment={handleRemovePendingAttachment}
             onAttachClick={handleAttachClick}
-            onComposerChange={setComposerValue}
+            onComposerChange={handleComposerChange}
             onSubmit={handleSubmit}
           />
         </CardContent>

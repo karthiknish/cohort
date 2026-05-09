@@ -254,7 +254,13 @@ export function useDirectMessages({
       [...prev]
         .map((conversation) => {
           const messages = previewMessagesByConversation[conversation.legacyId] ?? []
-          const lastMessage = [...messages].sort((a, b) => b.createdAtMs - a.createdAtMs)[0] ?? null
+          const lastMessage = messages.reduce<typeof messages[number] | null>((latest, message) => {
+            if (latest === null || message.createdAtMs > latest.createdAtMs) {
+              return message
+            }
+
+            return latest
+          }, null)
           const isRead = !messages.some(
             (message) => message.senderId !== previewUserId && !message.readBy.includes(previewUserId)
           )
@@ -300,15 +306,10 @@ export function useDirectMessages({
     .sort((a, b) => (b.lastMessageAtMs ?? 0) - (a.lastMessageAtMs ?? 0))
 
   const conversations = isPreviewMode ? previewConversations : liveConversations
-  const currentMessages = useMemo(
-    () => (isPreviewMode
-      ? (selectedConversation ? previewMessagesByConversation[selectedConversation.legacyId] ?? [] : [])
-      : allMessages),
-    [allMessages, isPreviewMode, previewMessagesByConversation, selectedConversation],
-  )
-  const visibleMessages = useMemo(() => {
-    return normalizedMessageSearch ? searchResults : currentMessages
-  }, [currentMessages, normalizedMessageSearch, searchResults])
+  const currentMessages = isPreviewMode
+    ? (selectedConversation ? previewMessagesByConversation[selectedConversation.legacyId] ?? [] : [])
+    : allMessages
+  const visibleMessages = normalizedMessageSearch ? searchResults : currentMessages
 
   const retryDirectMessageSearch = useCallback(() => {
     setSearchRetryNonce((n) => n + 1)
@@ -795,28 +796,27 @@ export function useDirectMessages({
             let nextReactions = currentReactions
 
             if (existingReaction) {
-              const hasReacted = existingReaction.userIds.includes(reactionUserId)
-              nextReactions = currentReactions
-                .map((reaction) => {
-                  if (reaction.emoji !== emoji) {
-                    return reaction
-                  }
+              const existingReactionUserIds = new Set(existingReaction.userIds)
+              const hasReacted = existingReactionUserIds.has(reactionUserId)
+              nextReactions = currentReactions.flatMap<NonNullable<DirectMessage['reactions']>[number]>((reaction) => {
+                if (reaction.emoji !== emoji) {
+                  return [reaction]
+                }
 
-                  const nextUserIds = hasReacted
-                    ? reaction.userIds.filter((entry) => entry !== reactionUserId)
-                    : [...reaction.userIds, reactionUserId]
+                const nextUserIds = hasReacted
+                  ? reaction.userIds.filter((entry) => entry !== reactionUserId)
+                  : [...reaction.userIds, reactionUserId]
 
-                  if (nextUserIds.length === 0) {
-                    return null
-                  }
+                if (nextUserIds.length === 0) {
+                  return []
+                }
 
-                  return {
-                    ...reaction,
-                    count: nextUserIds.length,
-                    userIds: nextUserIds,
-                  }
-                })
-                .filter(Boolean) as NonNullable<DirectMessage['reactions']>
+                return [{
+                  ...reaction,
+                  count: nextUserIds.length,
+                  userIds: nextUserIds,
+                }]
+              })
             } else {
               nextReactions = [...currentReactions, { emoji, count: 1, userIds: [reactionUserId] }]
             }

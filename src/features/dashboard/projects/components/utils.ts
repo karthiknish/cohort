@@ -170,8 +170,10 @@ export function addDays(date: Date, days: number): Date {
   return next
 }
 
+const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' })
+
 export function formatShortDate(date: Date): string {
-  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(date)
+  return SHORT_DATE_FORMATTER.format(date)
 }
 
 export function milestoneStatusColor(status: string): string {

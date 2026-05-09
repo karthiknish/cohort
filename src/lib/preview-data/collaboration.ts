@@ -856,7 +856,13 @@ export function getPreviewDirectConversations(self?: PreviewSelfContext): Direct
     return PREVIEW_DIRECT_CONVERSATIONS.map((seed) => {
         const otherParticipant = PREVIEW_PARTICIPANTS.find((participant) => participant.id === seed.otherParticipantId)
         const messages = getPreviewDirectMessages(seed.legacyId, resolvedSelf)
-        const lastMessage = [...messages].sort((a, b) => b.createdAtMs - a.createdAtMs)[0] ?? null
+        const lastMessage = messages.reduce<typeof messages[number] | null>((latest, message) => {
+            if (latest === null || message.createdAtMs > latest.createdAtMs) {
+                return message
+            }
+
+            return latest
+        }, null)
         const isRead = !messages.some(
             (message) => message.senderId !== resolvedSelf.id && !message.readBy.includes(resolvedSelf.id)
         )

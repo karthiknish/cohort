@@ -117,7 +117,7 @@ export function DashboardFilterBar({
               Clear
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={handleCloseMenu}>
-              Done
+              Close filters
             </Button>
           </div>
         </DropdownMenuContent>

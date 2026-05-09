@@ -84,7 +84,7 @@ export function GoogleSetupDialog({
               disabled={loadingAccounts || initializing || accountOptions.length === 0}
             >
               <SelectTrigger>
-                <SelectValue placeholder={loadingAccounts ? 'Loading accounts...' : 'Select Google Ads account'} />
+                <SelectValue placeholder={loadingAccounts ? 'Loading accounts…' : 'Select Google Ads account'} />
               </SelectTrigger>
               <SelectContent>
                 {accountOptions.map((account) => (
@@ -126,7 +126,7 @@ export function GoogleSetupDialog({
             {initializing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Finishing...
+                Finishing…
               </>
             ) : (
               'Finish setup'

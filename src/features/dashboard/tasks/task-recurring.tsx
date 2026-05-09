@@ -100,6 +100,7 @@ export function RecurrenceEditor({
                   value={endDate || ''}
                   onChange={handleEndDateChange}
                   min={new Date().toISOString().split('T')[0]}
+                  suppressHydrationWarning
                 />
                 {endDate && (
                   <Button
@@ -120,7 +121,7 @@ export function RecurrenceEditor({
       {value !== 'none' && (
         <div className="flex items-start gap-2 rounded-md bg-info/10 p-2 text-xs text-info">
           <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-          <p>
+          <p suppressHydrationWarning>
             New tasks will be created automatically based on this recurrence pattern.
             {endDate && ` Recurring until ${new Date(endDate).toLocaleDateString()}.`}
           </p>
@@ -222,7 +223,7 @@ export function NextOccurrenceDisplay({
 
   return (
     <div className="text-xs text-muted-foreground">
-      Next: <span className="font-medium">{next.toLocaleDateString()}</span>
+      Next: <span className="font-medium" suppressHydrationWarning>{next.toLocaleDateString()}</span>
     </div>
   )
 }
@@ -252,12 +253,12 @@ export function RecurringSeriesInfo({
         </div>
         <div>
           <span className="text-muted-foreground">Started:</span>
-          <span className="ml-1 font-medium">{new Date(startDate).toLocaleDateString()}</span>
+          <span className="ml-1 font-medium" suppressHydrationWarning>{new Date(startDate).toLocaleDateString()}</span>
         </div>
         {endDate && (
           <div>
             <span className="text-muted-foreground">Ends:</span>
-            <span className="ml-1 font-medium">{new Date(endDate).toLocaleDateString()}</span>
+            <span className="ml-1 font-medium" suppressHydrationWarning>{new Date(endDate).toLocaleDateString()}</span>
           </div>
         )}
         {count !== undefined && (

@@ -292,7 +292,7 @@ export function UnifiedThreadReplyCard({
           <span className="font-medium text-foreground">{reply.senderName}</span>
           {reply.senderRole ? <span>{reply.senderRole}</span> : null}
           {reply.createdAt ? (
-            <span>
+            <span suppressHydrationWarning>
               {new Date(reply.createdAt).toLocaleTimeString(undefined, {
                 hour: '2-digit',
                 minute: '2-digit',

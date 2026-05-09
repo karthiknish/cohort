@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
 import { AnimatePresence, domAnimation, LazyMotion } from '@/shared/ui/motion'
 
 import type { AgentConversationSummary, AgentMessage, ConnectionStatus } from '@/shared/hooks/use-agent-mode'
@@ -113,12 +113,14 @@ export function AgentModePanel({
 
   // Focus input when panel opens
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      const focusTimeoutId = window.setTimeout(() => inputRef.current?.focus(), 100)
+    if (!isOpen || !inputRef.current) {
+      return
+    }
 
-      return () => {
-        window.clearTimeout(focusTimeoutId)
-      }
+    const focusTimeoutId = window.setTimeout(() => inputRef.current?.focus(), 100)
+
+    return () => {
+      window.clearTimeout(focusTimeoutId)
     }
   }, [isOpen])
 
@@ -293,31 +295,35 @@ export function AgentModePanel({
     setEditingConversationId(null)
   }, [])
 
+  const handleDocumentEscape = useEffectEvent((e: globalThis.KeyboardEvent) => {
+    if (e.key !== 'Escape') return
+    if (showMentions) return
+    if (showHistory && editingConversationId) {
+      e.preventDefault()
+      e.stopPropagation()
+      setEditingConversationId(null)
+      return
+    }
+    if (showHistory) {
+      e.preventDefault()
+      e.stopPropagation()
+      setShowHistory(false)
+      return
+    }
+    e.preventDefault()
+    e.stopPropagation()
+    onClose()
+  })
+
   // Escape: close history / stop title edit first; leave @-mention dropdown to its own listener (bubble)
   useEffect(() => {
     if (!isOpen) return
     const onDocumentKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      if (showMentions) return
-      if (showHistory && editingConversationId) {
-        e.preventDefault()
-        e.stopPropagation()
-        setEditingConversationId(null)
-        return
-      }
-      if (showHistory) {
-        e.preventDefault()
-        e.stopPropagation()
-        setShowHistory(false)
-        return
-      }
-      e.preventDefault()
-      e.stopPropagation()
-      onClose()
+      handleDocumentEscape(e)
     }
     document.addEventListener('keydown', onDocumentKeyDown, true)
     return () => document.removeEventListener('keydown', onDocumentKeyDown, true)
-  }, [editingConversationId, isOpen, onClose, showHistory, showMentions])
+  }, [isOpen])
 
   const showEmptyState = messages.length === 0 && !isConversationLoading
 

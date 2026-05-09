@@ -290,26 +290,28 @@ export const markThreadAsRead = zRateLimitedWorkspaceMutation({
       projectId: args.projectId,
     })
     await assertChannelAccess(ctx, args.workspaceId, scope)
-    const threadCheckpoint = await getReadCheckpoint(ctx, {
-      workspaceId: args.workspaceId,
-      userId: currentUserId,
-      scopeType: 'thread',
-      channelId: scope.channelId,
-      channelType: scope.channelType,
-      clientId: scope.clientId,
-      projectId: scope.projectId,
-      threadRootId: args.threadRootId,
-    })
-    const channelCheckpoint = await getReadCheckpoint(ctx, {
-      workspaceId: args.workspaceId,
-      userId: currentUserId,
-      scopeType: 'channel',
-      channelId: scope.channelId,
-      channelType: scope.channelType,
-      clientId: scope.clientId,
-      projectId: scope.projectId,
-      threadRootId: null,
-    })
+    const [threadCheckpoint, channelCheckpoint] = await Promise.all([
+      getReadCheckpoint(ctx, {
+        workspaceId: args.workspaceId,
+        userId: currentUserId,
+        scopeType: 'thread',
+        channelId: scope.channelId,
+        channelType: scope.channelType,
+        clientId: scope.clientId,
+        projectId: scope.projectId,
+        threadRootId: args.threadRootId,
+      }),
+      getReadCheckpoint(ctx, {
+        workspaceId: args.workspaceId,
+        userId: currentUserId,
+        scopeType: 'channel',
+        channelId: scope.channelId,
+        channelType: scope.channelType,
+        clientId: scope.clientId,
+        projectId: scope.projectId,
+        threadRootId: null,
+      }),
+    ])
     const checkpoint = pickNewestCheckpoint(threadCheckpoint, channelCheckpoint)
 
     let marked = 0

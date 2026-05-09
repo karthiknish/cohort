@@ -23,7 +23,7 @@ export function DashboardHeader({ userDisplayName, onRefresh, isRefreshing, last
     <FadeIn>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-2xl font-semibold tracking-tight">
             {getGreeting()}, {userDisplayName || 'there'}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -32,7 +32,7 @@ export function DashboardHeader({ userDisplayName, onRefresh, isRefreshing, last
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex flex-col items-end gap-0.5 mr-2">
-            <span className="text-sm font-medium">
+            <span className="text-sm font-medium" suppressHydrationWarning>
               {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
             </span>
             {lastRefreshed && (

@@ -1,16 +1,20 @@
+const USD_CURRENCY_FORMATTER = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+const WHOLE_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 0,
+})
+
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
+  return USD_CURRENCY_FORMATTER.format(value)
 }
 
 function formatWholeNumber(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: 0,
-  }).format(value)
+  return WHOLE_NUMBER_FORMATTER.format(value)
 }
 
 function formatPercent(value: number): string {

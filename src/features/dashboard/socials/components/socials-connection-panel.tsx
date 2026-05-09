@@ -73,7 +73,7 @@ export function SocialsConnectionPanel({
                 </div>
                 <CardDescription className="text-pretty text-sm leading-relaxed">
                   One Meta Business login covers <span className="font-medium text-foreground">Facebook Pages</span> and{' '}
-                  <span className="font-medium text-foreground">Instagram business</span> organic metrics for this workspace—no
+                  <span className="font-medium text-foreground">Instagram business</span> organic metrics for this workspace, no
                   separate sign-ins.
                 </CardDescription>
               </div>

@@ -506,5 +506,5 @@ function calculateByClient(events: EventRow[]) {
     row.avgDeckTime = deck.length > 0 ? deck.reduce((a, b) => a + b, 0) / deck.length : null
   }
 
-  return Array.from(map.values()).sort((a, b) => b.submissions - a.submissions)
+  return Array.from(map.values()).toSorted((a, b) => b.submissions - a.submissions)
 }

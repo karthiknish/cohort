@@ -4,7 +4,7 @@
 
 import type { NormalizedMetric } from '@/types/integrations'
 
-export const GOOGLE_API_VERSION = 'v23'
+export const GOOGLE_API_VERSION = 'v24'
 export const GOOGLE_API_BASE = `https://googleads.googleapis.com/${GOOGLE_API_VERSION}`
 
 // =============================================================================
@@ -369,6 +369,7 @@ export type GoogleCreative = {
   displayUrl?: string
   imageUrl?: string
   videoId?: string
+  logoImages?: string[]
   businessName?: string
   callToAction?: string
   // v22.0 Demand Gen specific fields

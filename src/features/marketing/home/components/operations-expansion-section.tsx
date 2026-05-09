@@ -49,11 +49,11 @@ const ROLLOUT_STEPS = [
 export function OperationsExpansionSection() {
   return (
     <section className="relative border-y border-border/50 bg-gradient-to-b from-background via-muted/15 to-background px-6 py-20 sm:py-28">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" aria-hidden />
       <div className="mx-auto max-w-6xl space-y-12">
         <FadeIn className="max-w-3xl space-y-4">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary/50">Expanded surface area</p>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Expanded surface area</p>
+          <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Cohorts now stretches beyond campaign delivery into day-to-day operations
           </h2>
           <p className="text-base leading-7 text-muted-foreground sm:text-lg">
@@ -64,16 +64,16 @@ export function OperationsExpansionSection() {
         <FadeIn>
           <div className="flex flex-col gap-5 rounded-[1.75rem] border border-border/60 bg-card/90 p-5 shadow-sm backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-6">
             <div className="min-w-0 space-y-1.5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/60">Campaign stack unchanged</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Campaign stack unchanged</p>
               <p className="text-sm font-medium leading-snug text-foreground sm:text-base">
-                Same Google Ads, Meta, LinkedIn, and TikTok connectors — now sitting beside time, comms, and people ops.
+                Same Google Ads, Meta, LinkedIn, and TikTok connectors, now sitting beside time, comms, and people ops.
               </p>
             </div>
             <div className="flex flex-col gap-4 sm:items-end">
               <PlatformLogoStrip brands={[...PAID_MEDIA_BRANDS]} variant="plain" className="justify-start sm:justify-end" />
               <Link
                 href="/dashboard/ads"
-                className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
+                className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-foreground underline-offset-4 transition-colors hover:underline"
               >
                 Open Ads workspace
                 <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden />
@@ -84,10 +84,12 @@ export function OperationsExpansionSection() {
 
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
           <FadeIn>
-            <div className="relative overflow-hidden rounded-[2rem] border border-border/60 bg-card p-6 text-foreground shadow-xl shadow-primary/[0.07] sm:p-8">
-              <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-primary/6 blur-2xl" aria-hidden />
+            <div className="relative overflow-hidden rounded-[2rem] border border-border/60 bg-card p-6 text-foreground shadow-xl shadow-black/[0.06] sm:p-8">
+              <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-muted/40 blur-2xl" aria-hidden />
               <div className="relative space-y-5">
-                <Badge className="border-primary/25 bg-primary/10 text-primary hover:bg-primary/10">New operating system layer</Badge>
+                <Badge variant="secondary" className="rounded-full border-border/60 bg-muted/50 font-medium text-foreground">
+                  New operating system layer
+                </Badge>
                 <h3 className="max-w-xl text-2xl font-semibold tracking-tight sm:text-3xl">
                   One navigation system for delivery, operations, and internal coordination
                 </h3>
@@ -103,19 +105,19 @@ export function OperationsExpansionSection() {
                     href={pillar.href}
                     className={cn(
                       'group relative rounded-2xl border border-border/50 bg-muted/25 p-4 transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
-                      'hover:-translate-y-0.5 hover:border-primary/30 hover:bg-muted/40 hover:shadow-md',
+                      'hover:-translate-y-0.5 hover:border-border hover:bg-muted/50 hover:shadow-md',
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-background ring-1 ring-border/60">
-                        <pillar.icon className="h-4 w-4 text-primary" aria-hidden />
+                        <pillar.icon className="h-4 w-4 text-foreground" aria-hidden />
                       </span>
                       <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{pillar.badge}</span>
                     </div>
                     <p className="mt-4 font-medium text-foreground">{pillar.title}</p>
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">{pillar.description}</p>
                     <ArrowUpRight
-                      className="absolute right-3 top-3 h-4 w-4 text-primary/60 opacity-0 transition-all motion-reduce:transition-none group-hover:opacity-100"
+                      className="absolute right-3 top-3 h-4 w-4 text-muted-foreground opacity-0 transition-all motion-reduce:transition-none group-hover:opacity-100"
                       aria-hidden
                     />
                   </Link>
@@ -127,11 +129,11 @@ export function OperationsExpansionSection() {
           <FadeIn>
             <div className="grid h-full gap-5">
               <div className="rounded-[1.75rem] border border-border/60 bg-card/80 p-6 shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary/55">What changed</p>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">What changed</p>
                 <ul className="mt-4 space-y-3">
                   {WHAT_CHANGED.map((line) => (
                     <li key={line} className="flex gap-3 text-sm leading-6 text-muted-foreground">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
                         <Check className="h-3 w-3" strokeWidth={2.5} aria-hidden />
                       </span>
                       <span>{line}</span>
@@ -141,7 +143,7 @@ export function OperationsExpansionSection() {
               </div>
 
               <div className="rounded-[1.75rem] border border-border/60 bg-gradient-to-br from-card to-muted/25 p-6 shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary/55">Suggested rollout</p>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">Suggested rollout</p>
                 <ol className="mt-5 space-y-0">
                   {ROLLOUT_STEPS.map((item, i) => (
                     <li key={item.step} className="relative flex gap-4 pb-6 last:pb-0">
@@ -151,7 +153,7 @@ export function OperationsExpansionSection() {
                           aria-hidden
                         />
                       ) : null}
-                      <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/25 bg-primary/10 text-xs font-bold text-primary">
+                      <span className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold text-foreground">
                         {item.step}
                       </span>
                       <div className="min-w-0 pt-0.5">

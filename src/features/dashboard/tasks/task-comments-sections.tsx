@@ -158,7 +158,7 @@ function TaskCommentThreadItem({
               {isBusy ? (
                 <span className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                  Updating thread...
+                  Updating thread…
                 </span>
               ) : null}
             </div>
@@ -251,7 +251,7 @@ export function TaskCommentsThreadList({
     <div className="space-y-4">
       {loading ? (
         <div className="rounded-3xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
-          Loading comments...
+          Loading comments…
         </div>
       ) : roots.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
@@ -432,7 +432,7 @@ export function TaskCommentsDeleteDialog({
             disabled={Boolean(deletingCommentId)}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {deletingCommentId ? 'Deleting...' : 'Delete'}
+            {deletingCommentId ? 'Deleting…' : 'Delete'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

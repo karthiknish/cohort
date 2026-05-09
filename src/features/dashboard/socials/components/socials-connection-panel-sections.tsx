@@ -95,21 +95,21 @@ export function SocialsMetaSetupCard(props: {
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <div className="rounded-2xl border border-muted/50 bg-background px-3 py-3">
+        <div className="rounded-2xl border border-muted/50 bg-background p-3">
           <p className={DASHBOARD_THEME.stats.label}>Meta source</p>
           <div className="mt-2 flex items-center gap-2 text-sm text-foreground">
             {sourceSelectionRequired ? <AlertTriangle className="h-4 w-4 text-warning" /> : <CheckCircle2 className="h-4 w-4 text-success" />}
             <span>{sourceSelectionRequired ? 'Selection still required' : selectedSourceLabel ?? 'Source selected'}</span>
           </div>
         </div>
-        <div className="rounded-2xl border border-muted/50 bg-background px-3 py-3">
+        <div className="rounded-2xl border border-muted/50 bg-background p-3">
           <div className="flex items-center justify-between gap-3">
             <p className={DASHBOARD_THEME.stats.label}>Facebook Pages</p>
             <Badge variant={getSurfaceStatusVariant(facebookStatus)} className={DASHBOARD_THEME.badges.base}>{getSurfaceStatusLabel(facebookStatus, facebookCount)}</Badge>
           </div>
           <p className="mt-2 text-sm text-foreground">{facebookCount > 0 ? `${facebookCount} Pages discovered from the selected Meta source.` : sourceSelectionRequired ? 'Choose a source before Pages can load.' : 'Pages have not surfaced yet from this source.'}</p>
         </div>
-        <div className="rounded-2xl border border-muted/50 bg-background px-3 py-3">
+        <div className="rounded-2xl border border-muted/50 bg-background p-3">
           <div className="flex items-center justify-between gap-3">
             <p className={DASHBOARD_THEME.stats.label}>Instagram Profiles</p>
             <Badge variant={getSurfaceStatusVariant(instagramStatus)} className={DASHBOARD_THEME.badges.base}>{getSurfaceStatusLabel(instagramStatus, instagramCount)}</Badge>

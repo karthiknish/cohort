@@ -51,7 +51,7 @@ export function TaskArchiveView({
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
-          <p className="text-sm text-muted-foreground">Loading archive...</p>
+          <p className="text-sm text-muted-foreground">Loading archive…</p>
         </div>
       </div>
     )
@@ -197,7 +197,7 @@ function ArchivedTaskRow({
         </div>
         <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
           <span>Due: {task.dueDate ? formatDate(task.dueDate) : 'No date'}</span>
-          {task.deletedAt ? <span>Archived {formatRelativeTime(new Date(task.deletedAt))}</span> : null}
+          {task.deletedAt ? <span suppressHydrationWarning>Archived {formatRelativeTime(new Date(task.deletedAt))}</span> : null}
         </div>
       </div>
       <div className="flex items-center gap-2">

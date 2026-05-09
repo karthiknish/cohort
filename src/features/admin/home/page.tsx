@@ -571,7 +571,7 @@ export default function AdminPage() {
                         const date = new Date(day.date)
                         const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
                         return (
-                          <div key={day.date} className="flex-1 text-center text-xs text-muted-foreground">
+                          <div key={day.date} className="flex-1 text-center text-xs text-muted-foreground" suppressHydrationWarning>
                             {dayName}
                           </div>
                         )

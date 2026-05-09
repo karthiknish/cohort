@@ -147,9 +147,9 @@ export function buildClientAllocationSummary(users: AllocationUser[], clients: A
 	const byUserId: Record<string, UserClientAllocation> = {}
 	allocations.forEach((value, userId) => {
 		byUserId[userId] = {
-			managedClientNames: Array.from(value.managed).sort(),
-			supportingClientNames: Array.from(value.supporting).sort(),
-			totalClientNames: Array.from(value.total).sort(),
+			managedClientNames: Array.from(value.managed).toSorted(),
+			supportingClientNames: Array.from(value.supporting).toSorted(),
+			totalClientNames: Array.from(value.total).toSorted(),
 		}
 	})
 

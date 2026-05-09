@@ -125,7 +125,7 @@ export function TaskActivityLog({ activities, loading, className, maxItems = 20 
                     <span className="font-medium text-foreground">{activity.userName}</span>
                     <span className="text-muted-foreground"> {formatActivityMessage(activity)}</span>
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5" suppressHydrationWarning>
                     {formatRelativeTime(new Date(activity.timestamp))}
                   </p>
                 </div>

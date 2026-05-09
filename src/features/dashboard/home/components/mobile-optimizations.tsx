@@ -204,7 +204,7 @@ export function MobileQuickActions({ actions, className }: MobileQuickActionsPro
               <div className="relative">
                 <action.icon className="h-5 w-5" />
                 {action.badge && (
-                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-white">
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
                     {action.badge}
                   </span>
                 )}

@@ -81,7 +81,7 @@ export function TeamActivityWidget({
 
   // Sort members by activity
   const sortedMembers = useMemo(() => {
-    return [...data.members].sort((a, b) => {
+    return data.members.toSorted((a, b) => {
       // Online members first
       const statusOrder = { online: 0, away: 1, busy: 2, offline: 3 }
       const aStatus = statusOrder[a.status] ?? 3

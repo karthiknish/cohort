@@ -21,11 +21,11 @@ export function SiteFooter() {
   }
 
   return (
-    <footer className="border-t border-muted/50 bg-background/95" style={SITE_FOOTER_TRANSITION_STYLE}>
+    <footer className="border-t border-border/40 bg-background" style={SITE_FOOTER_TRANSITION_STYLE}>
       <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
         <div className="grid gap-10 sm:grid-cols-2">
           <div className="space-y-3">
-            <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-primary">
+            <Link href="/" className="flex items-center gap-2 text-lg font-semibold text-foreground">
               <Image src="/logo.svg" alt="Cohorts" width={50} height={50} className="h-20 w-20" priority />
             </Link>
             <p className="text-sm text-muted-foreground">
@@ -38,10 +38,10 @@ export function SiteFooter() {
         <div className="flex flex-col gap-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <span>© {currentYear} Cohorts. All rights reserved.</span>
           <div className="flex items-center gap-4">
-            <Link href="/terms" className="transition hover:text-primary">
+            <Link href="/terms" className="transition hover:text-foreground hover:underline underline-offset-4">
               Terms
             </Link>
-            <Link href="/privacy" className="transition hover:text-primary">
+            <Link href="/privacy" className="transition hover:text-foreground hover:underline underline-offset-4">
               Privacy
             </Link>
           </div>

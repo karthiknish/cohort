@@ -96,7 +96,7 @@ function AttachmentItem({
   }, [onRemoveAttachment, attachment.id])
 
   return (
-    <div key={attachment.id} className="rounded-2xl border bg-card/70 px-3 py-3 shadow-sm">
+    <div key={attachment.id} className="rounded-2xl border bg-card/70 p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="rounded-xl bg-primary/10 p-2 text-primary">
@@ -169,7 +169,7 @@ function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
       {status === 'retrying' ? (
         <>
           <Loader2 className="h-3 w-3 animate-spin" />
-          <span>Reconnecting...</span>
+          <span>Reconnecting…</span>
         </>
       ) : (
         <>
@@ -193,7 +193,7 @@ export function RateLimitBanner({ countdown, onDismiss }: { countdown: number; o
   >
       <div className="flex items-center gap-2 text-warning">
         <Clock className="h-4 w-4 shrink-0" />
-        <span>Too many requests. Please wait <strong>{countdown}s</strong>...</span>
+        <span>Too many requests. Please wait <strong>{countdown}s</strong>…</span>
       </div>
       {onDismiss ? (
         <Button variant="ghost" size="sm" onClick={onDismiss} className="h-7 px-2 text-warning hover:text-warning/80" aria-label="Dismiss rate limit notice">
@@ -398,7 +398,7 @@ export function AgentComposerSection({
           value={inputValue}
           onChange={onInputChange}
           onKeyDown={onKeyDown}
-          placeholder={isCentered ? 'Create projects, run analytics, send messages, or navigate...' : 'Ask naturally for project, analytics, ads, task, or meeting actions'}
+          placeholder={isCentered ? 'Create projects, run analytics, send messages, or navigate…' : 'Ask naturally for project, analytics, ads, task, or meeting actions'}
           disabled={disabled}
           mentionLabels={mentionLabels}
         />
@@ -604,7 +604,7 @@ function ConversationItem({
                 {isConversationLoading && conversation.id === loadingConversationId ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                 ) : conversation.lastMessageAt ? (
-                  <span className="shrink-0 text-xs text-muted-foreground">{new Date(conversation.lastMessageAt).toLocaleString()}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground" suppressHydrationWarning>{new Date(conversation.lastMessageAt).toLocaleString()}</span>
                 ) : null}
               </div>
             </button>
@@ -710,7 +710,7 @@ export function AgentHistoryPanel({
         {isHistoryLoading ? (
           <HistorySkeleton />
         ) : history.length === 0 ? (
-          <p className="px-4 py-4 text-center text-sm text-muted-foreground">No previous chats yet.</p>
+          <p className="p-4 text-center text-sm text-muted-foreground">No previous chats yet.</p>
         ) : (
           <div className="p-2">
             {history.map((conversation) => (
@@ -804,7 +804,7 @@ export function AgentMessagesSection({
             >
               <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2.5 text-sm">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                <span className="text-foreground">Thinking...</span>
+                <span className="text-foreground">Thinking…</span>
               </div>
             </m.div>
           ) : null}

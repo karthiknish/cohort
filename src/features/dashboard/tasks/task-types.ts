@@ -201,7 +201,7 @@ export function mergeTaskParticipants(sources: TaskParticipant[][]): TaskPartici
     }
   }
 
-  return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name))
+  return Array.from(byName.values()).toSorted((a, b) => a.name.localeCompare(b.name))
 }
 
 /**

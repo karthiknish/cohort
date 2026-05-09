@@ -218,7 +218,7 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
 
         <div className="flex justify-end pt-4 border-t">
           <Button variant="outline" onClick={handleDone}>
-            Done
+            Close share dialog
           </Button>
         </div>
       </DialogContent>

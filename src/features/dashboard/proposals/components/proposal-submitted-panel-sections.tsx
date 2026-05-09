@@ -72,7 +72,7 @@ export function ProposalSubmittedHero({
       <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-40">
         <m.div animate="animate" variants={blobVariants} className="absolute -right-[10%] -top-[20%] h-[300px] w-[300px] rounded-full bg-primary/10 blur-[100px]" />
         <m.div animate="animate" variants={blobVariantsSlow} className="absolute -bottom-[20%] -left-[5%] h-[400px] w-[400px] rounded-full bg-primary/5 blur-[120px]" />
-        <div className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(circle_at_center,transparent_0%,hsl(var(--background)/0.75)_100%)]" />
+        <div className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(circle_at_center,transparent_0%,rgb(from_var(--background)_r_g_b_/_0.75)_100%)]" />
       </div>
 
       <div className="relative flex flex-col items-center gap-10 md:flex-row">
@@ -151,7 +151,7 @@ export function ProposalStrategyBriefCard({ onCopySummary, summary }: { onCopySu
                   <Badge key={objective} variant="secondary" className="border-primary/10 bg-primary/5 px-2 py-0.5 text-[10px] font-semibold text-primary">
                     {objective}
                   </Badge>
-                )) : <span className="text-xs italic text-muted-foreground">—</span>}
+                )) : <span className="text-xs italic text-muted-foreground">None yet</span>}
               </div>
             </div>
 
@@ -202,7 +202,7 @@ function ProposalDeckReadyState({
     <div className="flex h-full flex-col gap-6">
       <div className="grid gap-6 sm:grid-cols-2">
         <div className="group relative aspect-[16/10] overflow-hidden rounded-2xl bg-muted/40 ring-1 ring-muted motion-chromatic hover:shadow-xl hover:shadow-primary/5 hover:ring-primary/40">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(var(--primary),0.05)_0%,transparent_70%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgb(from_var(--primary)_r_g_b_/_0.05)_0%,transparent_70%)]" />
           <div className="absolute inset-4 space-y-3">
             <div className="h-2 w-1/3 rounded-full bg-primary/20" />
             <div className="h-3 w-3/4 rounded-full bg-primary/10" />
@@ -261,7 +261,7 @@ function ProposalDeckReadyState({
 
       <div className="mt-auto flex items-center justify-between border-t border-muted/40 pt-6">
         <div className="flex items-center gap-2 text-[11px] font-bold text-muted-foreground">
-          <div className="h-2 w-2 rounded-full bg-success shadow-[0_0_8px_hsl(var(--success)/0.5)]" />
+          <div className="h-2 w-2 rounded-full bg-success shadow-[0_0_8px_rgb(from_var(--success)_r_g_b_/_0.45)]" />
           AUTHENTICATED & VERIFIED
         </div>
         {onRecheckDeck && (presentationDeck.status === 'pending' || presentationDeck.status === 'processing') ? (

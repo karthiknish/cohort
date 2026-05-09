@@ -204,7 +204,10 @@ export const create = zWorkspaceMutation({
       throw Errors.validation.invalidInput('A collaboration channel with that name already exists')
     }
 
-    const memberIds = Array.from(new Set((args.memberIds ?? []).map((value) => value.trim()).filter(Boolean)))
+    const memberIds = Array.from(new Set((args.memberIds ?? []).flatMap((value) => {
+      const trimmedValue = value.trim()
+      return trimmedValue ? [trimmedValue] : []
+    })))
     const memberSummaries = await buildMemberSummaries(ctx, args.workspaceId, memberIds)
     const legacyId = `channel_${ctx.now}_${Math.random().toString(16).slice(2, 10)}`
 
@@ -239,17 +242,21 @@ export const updateMembers = zWorkspaceMutation({
   handler: async (ctx, args) => {
     assertAdmin(ctx.user.role)
 
-    const row = await ctx.db
-      .query('collaborationChannels')
-      .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
-      .unique()
+    const memberIds = Array.from(new Set(args.memberIds.flatMap((value) => {
+      const trimmedValue = value.trim()
+      return trimmedValue ? [trimmedValue] : []
+    })))
+    const [row, memberSummaries] = await Promise.all([
+      ctx.db
+        .query('collaborationChannels')
+        .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
+        .unique(),
+      buildMemberSummaries(ctx, args.workspaceId, memberIds),
+    ])
 
     if (!row || row.archivedAtMs !== null) {
       throw Errors.resource.notFound('Collaboration channel', args.legacyId)
     }
-
-    const memberIds = Array.from(new Set(args.memberIds.map((value) => value.trim()).filter(Boolean)))
-    const memberSummaries = await buildMemberSummaries(ctx, args.workspaceId, memberIds)
 
     await ctx.db.patch(row._id, {
       memberIds,

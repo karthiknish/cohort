@@ -116,7 +116,7 @@ function createChannelDialogReducer(
 }
 
 function sortMembers(members: WorkspaceMemberOption[]) {
-  return [...members].sort((a, b) => a.name.localeCompare(b.name))
+  return members.toSorted((a, b) => a.name.localeCompare(b.name))
 }
 
 function ChannelMemberOptionRow({
@@ -134,7 +134,7 @@ function ChannelMemberOptionRow({
   const handleToggle = useCallback(() => onToggle(member.id), [member.id, onToggle])
 
   return (
-    <div className="flex cursor-pointer items-start gap-3 rounded-xl border border-transparent bg-background/80 px-3 py-3 transition-colors hover:border-border hover:bg-background">
+    <div className="flex cursor-pointer items-start gap-3 rounded-xl border border-transparent bg-background/80 p-3 transition-colors hover:border-border hover:bg-background">
       <Checkbox id={checkboxId} checked={checked} onCheckedChange={handleToggle} disabled={disabled} className="mt-0.5" />
       <Label htmlFor={checkboxId} className="min-w-0 cursor-pointer">
         <p className="truncate text-sm font-medium text-foreground">{member.name}</p>

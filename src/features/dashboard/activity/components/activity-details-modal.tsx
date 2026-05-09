@@ -66,8 +66,10 @@ export function ActivityDetailsModal({
             </div>
             <div>
               <DialogTitle className="text-lg">{activity.entityName}</DialogTitle>
-              <DialogDescription>
+              <DialogDescription asChild>
+                <time dateTime={activity.timestamp} suppressHydrationWarning>
                 {format(new Date(activity.timestamp), 'MMMM d, yyyy • h:mm a')}
+                </time>
               </DialogDescription>
             </div>
           </div>

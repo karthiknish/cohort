@@ -5,6 +5,8 @@ import { EditProjectFormFields } from './edit-project-dialog-form'
 
 const clients = [{ id: 'client-1', name: 'Acme Corp' }]
 const validationErrors = {}
+const PROJECT_START_DATE = new Date('2026-03-01T00:00:00.000Z')
+const PROJECT_END_DATE = new Date('2026-03-31T00:00:00.000Z')
 
 const formatStatusLabel = (value: string) => value
 
@@ -17,8 +19,8 @@ describe('EditProjectFormFields', () => {
         description="Refresh the public site."
         status="active"
         clientId="client-1"
-        startDate={new Date('2026-03-01T00:00:00.000Z')}
-        endDate={new Date('2026-03-31T00:00:00.000Z')}
+        startDate={PROJECT_START_DATE}
+        endDate={PROJECT_END_DATE}
         tags={['design', 'marketing']}
         tagInput="seo"
         validationErrors={validationErrors}

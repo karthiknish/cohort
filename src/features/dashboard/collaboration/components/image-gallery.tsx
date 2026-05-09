@@ -39,9 +39,9 @@ function PreviewTile({ image, previewIndex, onPreview, className, aspectClassNam
         <LazyImage src={image.url} alt={image.name} className="h-full w-full object-cover transition-transform duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none group-hover:scale-105" />
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
           {typeof overlayCount === 'number' ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-2xl font-bold text-white">+{overlayCount}</div>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-2xl font-bold text-viewer-chrome">+{overlayCount}</div>
           ) : (
-            <div className="rounded-full bg-black/60 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="rounded-full bg-black/60 p-2 text-viewer-chrome opacity-0 transition-opacity group-hover:opacity-100">
               <ZoomIn className="h-4 w-4" />
             </div>
           )}

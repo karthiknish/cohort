@@ -63,7 +63,7 @@ export function ProposalGenerationOverlayContent({
 
       <div className="z-10 flex flex-col items-center gap-4 text-center">
         <div className="space-y-1">
-          <h3 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
+          <h3 className="text-2xl font-bold tracking-tight text-foreground">
             {isComplete ? 'Proposal Generated!' : currentStageLabel}
           </h3>
           <p className="max-w-sm text-sm font-medium text-muted-foreground/80">

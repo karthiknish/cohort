@@ -564,7 +564,7 @@ export async function fetchMetaCreatives(options: {
         let picture = videoPayload?.picture
         const thumbnails = videoPayload?.thumbnails?.data
         if (Array.isArray(thumbnails) && thumbnails.length > 0) {
-          const sorted = [...thumbnails].sort((a, b) => ((b.width || 0) * (b.height || 0)) - ((a.width || 0) * (a.height || 0)))
+          const sorted = thumbnails.toSorted((a, b) => ((b.width || 0) * (b.height || 0)) - ((a.width || 0) * (a.height || 0)))
           if (sorted[0]?.uri) {
             picture = sorted[0].uri
           }

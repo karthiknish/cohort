@@ -152,10 +152,7 @@ export function useRealtimeMessages({
     Boolean(channelId) &&
     Boolean(channelType)
 
-  const channelListQueryId = useMemo(
-    () => `channelList:${channelId ?? 'none'}:${channelListRetryNonce}`,
-    [channelId, channelListRetryNonce],
-  )
+  const channelListQueryId = `channelList:${channelId ?? 'none'}:${channelListRetryNonce}`
 
   const channelListQueries = useMemo(() => {
     if (!convexEnabled) {

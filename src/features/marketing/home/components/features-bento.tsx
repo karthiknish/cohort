@@ -176,7 +176,7 @@ export function FeaturesBento() {
                       <TrendingUp className="size-4 text-primary" aria-hidden="true" />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Campaigns improved by <span className="text-card-foreground">18%</span> this month — 312 qualified leads generated
+                      Campaigns improved by <span className="text-card-foreground">18%</span> this month, 312 qualified leads generated
                     </p>
                   </div>
                 </div>
@@ -186,7 +186,7 @@ export function FeaturesBento() {
             {/* Text */}
             <div className="flex flex-col gap-4 px-6">
               <h5 className="text-2xl font-semibold">Campaign Reach</h5>
-              <p className="text-lg text-muted-foreground">See how many people your clients' campaigns reach across every ad platform — in one unified view.</p>
+              <p className="text-lg text-muted-foreground">See how many people your clients' campaigns reach across every ad platform, in one unified view.</p>
             </div>
           </div>
         </FadeIn>
@@ -233,7 +233,7 @@ export function FeaturesBento() {
             {/* Text */}
             <div className="flex flex-col gap-4 px-6">
               <h5 className="text-2xl font-semibold">Audience Segments</h5>
-              <p className="text-lg text-muted-foreground">Target the right audience for each client — by industry, intent, or behaviour — with precision you can actually see.</p>
+              <p className="text-lg text-muted-foreground">Target the right audience for each client by industry, intent, or behaviour, with precision you can actually see.</p>
             </div>
           </div>
         </FadeIn>
@@ -412,7 +412,7 @@ export function FeaturesBento() {
             {/* Text */}
             <div className="flex flex-col gap-4 px-6">
               <h5 className="text-2xl font-semibold">Client Spotlight</h5>
-              <p className="text-lg text-muted-foreground">Live performance cards for every client — revenue trend, ROI, and campaign health at a glance.</p>
+              <p className="text-lg text-muted-foreground">Live performance cards for every client: revenue trend, ROI, and campaign health at a glance.</p>
             </div>
           </div>
         </FadeIn>
@@ -438,7 +438,7 @@ export function FeaturesBento() {
             {/* Text */}
             <div className="flex flex-col gap-4 px-6">
               <h5 className="text-2xl font-semibold">Live Activity</h5>
-              <p className="text-lg text-muted-foreground">Track proposals sent, meeting notes ready, and campaign alerts as they happen — no more status chasing.</p>
+              <p className="text-lg text-muted-foreground">Track proposals sent, meeting notes ready, and campaign alerts as they happen, no more status chasing.</p>
             </div>
           </div>
         </FadeIn>

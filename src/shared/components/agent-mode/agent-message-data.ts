@@ -8,6 +8,17 @@ export type AgentDataSection =
   | { type: 'metrics'; title: string; items: MetricItem[] }
   | { type: 'list'; title: string; items: ListItem[] }
 
+const AGENT_MESSAGE_CURRENCY_FORMATTER = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+const AGENT_MESSAGE_WHOLE_NUMBER_FORMATTER = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 0,
+})
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -33,16 +44,11 @@ function compact<T>(items: Array<T | null>): T[] {
 }
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
+  return AGENT_MESSAGE_CURRENCY_FORMATTER.format(value)
 }
 
 function formatWholeNumber(value: number): string {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)
+  return AGENT_MESSAGE_WHOLE_NUMBER_FORMATTER.format(value)
 }
 
 function formatPercent(value: number): string {

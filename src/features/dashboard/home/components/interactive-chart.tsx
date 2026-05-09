@@ -301,16 +301,16 @@ export function MultiMetricChart({
   return (
     <ResponsiveContainer width="100%" height={height} className={className}>
       <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.2} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.2} />
         <XAxis
           dataKey={xAxisKey}
           tick={AXIS_TICK_STYLE}
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           strokeOpacity={0.5}
         />
         <YAxis
           tick={AXIS_TICK_STYLE}
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           strokeOpacity={0.5}
         />
         <Tooltip content={renderTooltipContent} />

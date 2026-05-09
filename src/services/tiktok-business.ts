@@ -115,7 +115,10 @@ export async function exchangeTikTokCodeForToken(options: {
   const scopesArray = Array.isArray(data.scope)
     ? data.scope
     : typeof data.scope === 'string'
-      ? data.scope.split(',').map((scope) => scope.trim()).filter(Boolean)
+      ? data.scope.split(',').flatMap((scope) => {
+          const normalizedScope = scope.trim()
+          return normalizedScope ? [normalizedScope] : []
+        })
       : []
 
   return {
@@ -229,7 +232,10 @@ export function buildTikTokOAuthUrl(options: {
 function getDefaultTikTokScopes(): string[] {
   const envScopes = process.env.TIKTOK_OAUTH_SCOPES
   if (typeof envScopes === 'string' && envScopes.trim().length > 0) {
-    return envScopes.split(',').map((scope) => scope.trim()).filter(Boolean)
+    return envScopes.split(',').flatMap((scope) => {
+      const normalizedScope = scope.trim()
+      return normalizedScope ? [normalizedScope] : []
+    })
   }
   return ['ad.manage', 'ad.read', 'report.advertiser']
 }

@@ -20,7 +20,7 @@ export function TaskResultsCount({ sortedCount, totalCount, loading }: TaskResul
       {loading && (
         <span className="flex items-center gap-1">
           <LoaderCircle className="h-3 w-3 animate-spin" />
-          Updating...
+          Updating…
         </span>
       )}
     </div>

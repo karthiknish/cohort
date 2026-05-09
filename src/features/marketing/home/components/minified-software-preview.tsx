@@ -251,7 +251,7 @@ const WINDOW_STATUS_DOTS = [
 function BouncingStatusDot({ style }: { style: { animationDelay: string } }) {
   const dotStyle = useMemo(() => style, [style])
 
-  return <span className="block h-1.5 w-1.5 animate-bounce rounded-full bg-accent" style={dotStyle} />
+  return <span className="block h-1.5 w-1.5 animate-subtle-dot-drift rounded-full bg-accent" style={dotStyle} />
 }
 
 function ClientHealthMeter({ health }: { health: number }) {
@@ -409,7 +409,7 @@ function ClientsPanel() {
       {CLIENT_ACCOUNTS.map((client) => (
         <div key={client.id} className="rounded-xl border border-border/40 bg-muted/20 px-3 py-2.5">
           <div className="flex items-center gap-2.5">
-            <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white', client.color)}>
+            <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-viewer-chrome', client.color)}>
               {client.initials}
             </div>
             <div className="min-w-0 flex-1">
@@ -441,7 +441,7 @@ function MeetingsPanel() {
     <div className="space-y-2.5">
       <div className="flex items-center gap-2 rounded-xl border border-border/40 bg-muted/20 px-3 py-2">
         <CalendarClock className="h-3.5 w-3.5 text-primary/50" />
-        <span className="text-[11px] font-semibold text-foreground/70">Today — 3 meetings scheduled</span>
+        <span className="text-[11px] font-semibold text-foreground/70">Today, 3 meetings scheduled</span>
         <span className="ml-auto rounded-full border border-info/30 bg-info/10 px-2 py-0.5 text-[9px] font-semibold text-info">Wed</span>
       </div>
 
@@ -462,7 +462,7 @@ function MeetingsPanel() {
                   {meeting.attendees.slice(0, 3).map((att) => (
                     <div
                       key={att}
-                      className={cn('flex h-4 w-4 items-center justify-center rounded-full border border-background text-[7px] font-bold text-white', ATTENDEE_COLORS[att] ?? 'bg-muted-foreground')}
+                      className={cn('flex h-4 w-4 items-center justify-center rounded-full border border-background text-[7px] font-bold text-viewer-chrome', ATTENDEE_COLORS[att] ?? 'bg-muted-foreground')}
                     >
                       {att[0]}
                     </div>

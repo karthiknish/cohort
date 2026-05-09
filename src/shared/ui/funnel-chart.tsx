@@ -54,7 +54,7 @@ export function FunnelChart({
     })
   }, [steps])
 
-  const defaultColor = 'hsl(var(--primary))'
+  const defaultColor = 'var(--primary)'
   const legendDotStyle = useMemo(() => ({ backgroundColor: defaultColor }), [defaultColor])
 
   if (isLoading) {
@@ -169,13 +169,8 @@ function FunnelStepRow({
   totalSteps: number
 }) {
   const stepColor = step.color || defaultColor
-  const barStyle = useMemo(
-    () => ({
-      width: `${step.width}%`,
-      backgroundColor: stepColor,
-    }),
-    [step.width, stepColor]
-  )
+  const widthStyle = useMemo(() => ({ width: `${step.width}%` }), [step.width])
+  const fillStyle = useMemo(() => ({ backgroundColor: stepColor }), [stepColor])
   const labelStyle = useMemo(
     () => ({
       justifyContent: step.width < 15 ? 'flex-start' : step.width < 30 ? 'center' : 'flex-end',
@@ -196,18 +191,18 @@ function FunnelStepRow({
         {/* Background track */}
         <div className="absolute inset-y-0 left-0 w-full bg-muted/20" />
 
-        {/* Filled bar */}
+        {/* Filled segment + label (clipped to bar width so light label never sits on muted track) */}
         <div
-          className="absolute inset-y-0 left-0 h-full rounded-lg transition-[width] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
-          style={barStyle}
-        />
-
-        {/* Labels inside bar */}
-        <div
-          className="absolute inset-0 flex items-center px-3 text-[10px] font-medium text-white mix-blend-plus-lighter"
-          style={labelStyle}
+          className="absolute inset-y-0 left-0 h-full min-w-0 overflow-hidden rounded-lg transition-[width] duration-[var(--motion-duration-slow)] ease-[var(--motion-ease-out)] motion-reduce:transition-none"
+          style={widthStyle}
         >
-          {step.label || step.name}
+          <div className="h-full w-full rounded-lg" style={fillStyle} />
+          <div
+            className="pointer-events-none absolute inset-0 flex min-w-0 items-center px-3 text-[10px] font-medium text-viewer-chrome drop-shadow-[0_1px_2px_rgb(0_0_0/0.55)]"
+            style={labelStyle}
+          >
+            <span className="min-w-0 truncate">{step.label || step.name}</span>
+          </div>
         </div>
       </div>
 

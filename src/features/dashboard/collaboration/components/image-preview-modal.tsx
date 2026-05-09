@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -72,7 +72,7 @@ function ThumbnailButton({
       className={cn(
         "h-14 w-14 overflow-hidden rounded-md border-2 motion-chromatic",
         index === normalizedIndex
-          ? "border-white opacity-100"
+          ? "border-viewer-chrome opacity-100"
           : "border-transparent opacity-50 hover:opacity-80"
       )}
       onClick={handleClick}
@@ -244,33 +244,37 @@ export function ImagePreviewModal({
     [zoom, position.x, position.y]
   )
 
+  const handleWindowKeyDown = useEffectEvent((e: KeyboardEvent) => {
+    if (!isOpen) return
+
+    switch (e.key) {
+      case 'Escape':
+        handleClose()
+        break
+      case 'ArrowLeft':
+        handlePrevious()
+        break
+      case 'ArrowRight':
+        handleNext()
+        break
+      case '+':
+      case '=':
+        handleZoomIn()
+        break
+      case '-':
+        handleZoomOut()
+        break
+    }
+  })
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return
-
-      switch (e.key) {
-        case "Escape":
-          handleClose()
-          break
-        case "ArrowLeft":
-          handlePrevious()
-          break
-        case "ArrowRight":
-          handleNext()
-          break
-        case "+":
-        case "=":
-          handleZoomIn()
-          break
-        case "-":
-          handleZoomOut()
-          break
-      }
+      handleWindowKeyDown(e)
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [handleClose, handleNext, handlePrevious, handleZoomIn, handleZoomOut, isOpen])
+  }, [])
 
   if (!isOpen || !currentImage) {
     return null
@@ -281,7 +285,7 @@ export function ImagePreviewModal({
       <DialogPortal>
         <DialogOverlay className="fixed inset-0 z-[1200] bg-black/90 backdrop-blur-sm animate-in fade-in duration-200" />
         <DialogContent
-          className="fixed inset-0 z-[1200] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-0"
+          className="fixed inset-0 z-[1200] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-viewer-chrome/60 focus-visible:ring-offset-0"
           onPointerDownOutside={handleClose}
         >
           <DialogTitle className="sr-only">
@@ -290,14 +294,14 @@ export function ImagePreviewModal({
       {/* Header */}
       <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent p-4">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-white/90 truncate max-w-[300px]">
+          <span className="text-sm font-medium text-viewer-chrome/90 truncate max-w-[300px]">
             {currentImage.name}
           </span>
           {currentImage.size && (
-            <span className="text-xs text-white/60">{currentImage.size}</span>
+            <span className="text-xs text-viewer-chrome/60">{currentImage.size}</span>
           )}
           {hasMultipleImages && (
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/80">
+            <span className="rounded-full bg-viewer-chrome/10 px-2 py-0.5 text-xs text-viewer-chrome/80">
               {normalizedIndex + 1} / {images.length}
             </span>
           )}
@@ -307,29 +311,29 @@ export function ImagePreviewModal({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
+            className="h-9 w-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10"
             onClick={handleZoomOutClick}
             disabled={zoom <= 1}
             aria-label="Zoom out"
           >
             <ZoomOut className="h-5 w-5" aria-hidden />
           </Button>
-          <span className="min-w-[50px] text-center text-xs text-white/70" aria-live="polite">
+          <span className="min-w-[50px] text-center text-xs text-viewer-chrome/70" aria-live="polite">
             {Math.round(zoom * 100)}%
           </span>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
+            className="h-9 w-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10"
             onClick={handleZoomInClick}
             disabled={zoom >= 4}
             aria-label="Zoom in"
           >
             <ZoomIn className="h-5 w-5" aria-hidden />
           </Button>
-          <div className="mx-2 h-6 w-px bg-white/20" />
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10" asChild>
+          <div className="mx-2 h-6 w-px bg-viewer-chrome/20" />
+          <Button variant="ghost" size="icon" className="h-9 w-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10" asChild>
             <a
               href={currentImage.url}
               target="_blank"
@@ -340,7 +344,7 @@ export function ImagePreviewModal({
               <ExternalLink className="h-5 w-5" aria-hidden />
             </a>
           </Button>
-          <Button variant="ghost" size="icon" className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10" asChild>
+          <Button variant="ghost" size="icon" className="h-9 w-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10" asChild>
             <a
               href={currentImage.url}
               download={currentImage.name}
@@ -350,12 +354,12 @@ export function ImagePreviewModal({
               <Download className="h-5 w-5" aria-hidden />
             </a>
           </Button>
-          <div className="mx-2 h-6 w-px bg-white/20" />
+          <div className="mx-2 h-6 w-px bg-viewer-chrome/20" />
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
+            className="h-9 w-9 text-viewer-chrome/80 hover:text-viewer-chrome hover:bg-viewer-chrome/10"
             onClick={handleCloseClick}
             aria-label="Close preview"
           >
@@ -371,7 +375,7 @@ export function ImagePreviewModal({
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/40 text-white hover:bg-black/60"
+            className="absolute left-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/40 text-viewer-chrome hover:bg-black/60"
             onClick={handlePreviousClick}
             aria-label="Previous image"
           >
@@ -381,7 +385,7 @@ export function ImagePreviewModal({
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/40 text-white hover:bg-black/60"
+            className="absolute right-4 top-1/2 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/40 text-viewer-chrome hover:bg-black/60"
             onClick={handleNextClick}
             aria-label="Next image"
           >
@@ -436,7 +440,7 @@ export function ImagePreviewModal({
       )}
 
       {/* Keyboard hints */}
-      <div className="absolute bottom-4 right-4 text-xs text-white/40" aria-hidden>
+      <div className="absolute bottom-4 right-4 text-xs text-viewer-chrome/40" aria-hidden>
         <span>← → Navigate</span>
         <span className="mx-2">•</span>
         <span>+/- Zoom</span>

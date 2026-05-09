@@ -334,7 +334,7 @@ export default function AdminIssuesPage() {
               aria-busy="true"
             >
               <LoaderCircle className="mb-4 h-8 w-8 animate-spin" aria-hidden />
-              <p>Loading reports...</p>
+              <p>Loading reports…</p>
             </div>
           ) : filteredReports.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border rounded-lg border-dashed">

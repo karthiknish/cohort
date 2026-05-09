@@ -138,7 +138,7 @@ export function MeetingOperationsSyncCards({
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <div className="rounded-2xl border border-border/70 bg-card px-3 py-3 shadow-sm">
+      <div className="rounded-2xl border border-border/70 bg-card p-3 shadow-sm">
         <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Speech sync</p>
         <p className="mt-2 text-sm text-foreground">{transcriptStatus}</p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -148,7 +148,7 @@ export function MeetingOperationsSyncCards({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border/70 bg-card px-3 py-3 shadow-sm">
+      <div className="rounded-2xl border border-border/70 bg-card p-3 shadow-sm">
         <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Summary sync</p>
         <p className="mt-2 text-sm text-foreground">{summaryStatus}</p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -302,5 +302,5 @@ export function MeetingOperationsSummaryCard({
 }
 
 export function MeetingOperationsLiveCapturePreview({ interimTranscript }: { interimTranscript: string }) {
-  return <div className="rounded-2xl border border-border bg-muted/30 px-3 py-3 text-xs text-foreground">Live capture: {interimTranscript}</div>
+  return <div className="rounded-2xl border border-border bg-muted/30 p-3 text-xs text-foreground">Live capture: {interimTranscript}</div>
 }

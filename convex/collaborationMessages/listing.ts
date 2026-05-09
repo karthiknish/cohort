@@ -156,8 +156,14 @@ export const searchChannel = zWorkspaceQueryActive({
         const mentions = Array.isArray(row?.mentions) ? row.mentions : []
         if (mentionTerm) {
           const mentionNames = mentions
-            .map((m) => (typeof m?.name === 'string' ? normalizeTerm(m.name) : ''))
-            .filter(Boolean)
+            .flatMap((mention) => {
+              if (typeof mention?.name !== 'string') {
+                return []
+              }
+
+              const normalizedMention = normalizeTerm(mention.name)
+              return normalizedMention ? [normalizedMention] : []
+            })
           const hasMention = mentionNames.some((name: string) => name.includes(mentionTerm))
           if (!hasMention) return null
         }
@@ -165,8 +171,14 @@ export const searchChannel = zWorkspaceQueryActive({
         const attachments = Array.isArray(row?.attachments) ? row.attachments : []
         if (attachmentTerm) {
           const attachmentNames = attachments
-            .map((a) => (typeof a?.name === 'string' ? normalizeTerm(a.name) : ''))
-            .filter(Boolean)
+            .flatMap((attachment) => {
+              if (typeof attachment?.name !== 'string') {
+                return []
+              }
+
+              const normalizedAttachment = normalizeTerm(attachment.name)
+              return normalizedAttachment ? [normalizedAttachment] : []
+            })
           const hasAttachment = attachmentNames.some((name: string) => name.includes(attachmentTerm))
           if (!hasAttachment) return null
         }

@@ -40,7 +40,7 @@ function ProposalDeckViewerFallback() {
         <div className="flex aspect-[16/9] items-center justify-center rounded-lg border bg-muted/20">
           <div className="text-center">
             <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p className="text-sm text-muted-foreground">Loading presentation...</p>
+            <p className="text-sm text-muted-foreground">Loading presentation…</p>
           </div>
         </div>
       </CardContent>

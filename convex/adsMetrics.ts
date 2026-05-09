@@ -263,16 +263,18 @@ export const listMetricsWithSummary = workspaceQuery({
     const fetchLimit = shouldAggregate ? 3000 : pageSize
     const { start, end } = adMetricsDateRangeForQuery({ startDate: args.startDate, endDate: args.endDate })
 
-    const all = await ctx.db
-      .query('adMetrics')
-      .withIndex('by_workspace_date', (q) =>
-        q.eq('workspaceId', args.workspaceId).gte('date', start).lte('date', end),
-      )
-      .take(AD_METRICS_RANGE_MAX_ROWS)
-    const integrations = await ctx.db
-      .query('adIntegrations')
-      .withIndex('by_workspace_provider', (q) => q.eq('workspaceId', args.workspaceId))
-      .collect()
+    const [all, integrations] = await Promise.all([
+      ctx.db
+        .query('adMetrics')
+        .withIndex('by_workspace_date', (q) =>
+          q.eq('workspaceId', args.workspaceId).gte('date', start).lte('date', end),
+        )
+        .take(AD_METRICS_RANGE_MAX_ROWS),
+      ctx.db
+        .query('adIntegrations')
+        .withIndex('by_workspace_provider', (q) => q.eq('workspaceId', args.workspaceId))
+        .collect(),
+    ])
 
     const accountCurrencyMap = new Map<string, string>()
     const providerDefaultCurrencyMap = new Map<string, string>()
@@ -487,19 +489,21 @@ export const listMetricsWithSummaryV2 = workspaceQuery({
     const fetchLimit = shouldAggregate ? 3000 : pageSize
     const { start, end } = adMetricsDateRangeForQuery({ startDate: args.startDate, endDate: args.endDate })
 
-    const all = await ctx.db
-      .query('adMetrics')
-      .withIndex('by_workspace_date', (q) =>
-        q.eq('workspaceId', args.workspaceId).gte('date', start).lte('date', end),
-      )
-      .take(AD_METRICS_RANGE_MAX_ROWS)
+    const [all, integrations] = await Promise.all([
+      ctx.db
+        .query('adMetrics')
+        .withIndex('by_workspace_date', (q) =>
+          q.eq('workspaceId', args.workspaceId).gte('date', start).lte('date', end),
+        )
+        .take(AD_METRICS_RANGE_MAX_ROWS),
 
-    // Build currency lookup from integrations for rows that were written before
-    // the currency stamping was introduced (backfill / legacy rows).
-    const integrations = await ctx.db
-      .query('adIntegrations')
-      .withIndex('by_workspace_provider', (q) => q.eq('workspaceId', args.workspaceId))
-      .collect()
+      // Build currency lookup from integrations for rows that were written before
+      // the currency stamping was introduced (backfill / legacy rows).
+      ctx.db
+        .query('adIntegrations')
+        .withIndex('by_workspace_provider', (q) => q.eq('workspaceId', args.workspaceId))
+        .collect(),
+    ])
 
     // accountKey → currency, providerKey → default currency
     const accountCurrencyMap = new Map<string, string>()

@@ -56,7 +56,7 @@ export function SmartDefaultsDebug() {
             </div>
             <div className="flex justify-between">
               <span>Due Date:</span>
-              <span className="font-mono">
+              <span className="font-mono" suppressHydrationWarning>
                 {taskDefaults.dueDate ? new Date(taskDefaults.dueDate).toLocaleDateString() : 'None'}
               </span>
             </div>

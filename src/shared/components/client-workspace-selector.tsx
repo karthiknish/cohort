@@ -46,16 +46,19 @@ function parseSinglePerson(input: string): string {
 function parseTeamMembers(input: string): ClientTeamMember[] {
   return normalizeMentionInputValue(input)
     .split(',')
-    .map((member) => member.trim())
-    .filter(Boolean)
-    .map((entry) => {
+    .flatMap((member) => {
+      const entry = member.trim()
+      if (!entry) {
+        return []
+      }
+
       const parts = entry.split(':')
       const name = parts[0]?.trim() ?? ''
       const role = parts[1]
-      return {
+      return [{
         name,
         role: role ? role.trim() : 'Contributor',
-      }
+      }]
     })
     .filter((member) => member.name.length > 0)
 }

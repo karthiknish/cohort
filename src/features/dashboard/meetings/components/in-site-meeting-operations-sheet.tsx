@@ -111,7 +111,7 @@ export function InSiteMeetingOperationsSheet(props: MeetingOperationsSheetProps)
       <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-[440px]">
         <MeetingOperationsSheetHeader joinConfig={joinConfig} meetingRoomName={meetingRoomName} />
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
           <MeetingOperationsCaptureCard captureStatus={captureStatus} joinConfig={joinConfig} transcriptSource={transcriptSource} />
 
           <MeetingOperationsAttendeesCard meetingAttendeeEmails={meetingAttendeeEmails} />

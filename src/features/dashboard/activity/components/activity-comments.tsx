@@ -91,9 +91,13 @@ export function ActivityComments({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xs font-medium">{comment.userName}</span>
-                      <span className="text-[10px] text-muted-foreground">
+                      <time
+                        className="text-[10px] text-muted-foreground"
+                        dateTime={comment.timestamp}
+                        suppressHydrationWarning
+                      >
                         {format(new Date(comment.timestamp), 'MMM d, h:mm a')}
-                      </span>
+                      </time>
                     </div>
                     <p className="text-xs text-muted-foreground break-words">
                       {comment.text}

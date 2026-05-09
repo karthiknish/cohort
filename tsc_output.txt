@@ -1,0 +1,60 @@
+src/features/admin/features/components/feature-form-dialog.tsx(182,38): error TS2554: Expected 1 arguments, but got 0.
+src/features/dashboard/ads/campaigns/components/audience-control-section.tsx(119,9): error TS2322: Type 'string' is not assignable to type '"facebook" | "google" | "linkedin" | "tiktok"'.
+src/features/dashboard/ads/campaigns/components/budget-control-section.tsx(127,7): error TS2322: Type 'string' is not assignable to type '"facebook" | "google" | "linkedin" | "tiktok"'.
+src/features/dashboard/ads/campaigns/components/create-creative-dialog.tsx(263,9): error TS2740: Type 'number[]' is missing the following properties from type 'ArrayBuffer': byteLength, maxByteLength, resizable, resize, and 4 more.
+src/features/dashboard/ads/campaigns/components/create-creative-dialog.tsx(267,36): error TS2339: Property 'error' does not exist on type '{ success: boolean; creativeSpec: string | undefined; }'.
+src/features/dashboard/ads/campaigns/components/create-creative-dialog.tsx(375,9): error TS2322: Type 'CreativeObjectType' is not assignable to type '"IMAGE" | "VIDEO" | "CAROUSEL_IMAGE" | "CAROUSEL_VIDEO" | "DYNAMIC_CAROUSEL" | undefined'.
+  Type '"DYNAMIC"' is not assignable to type '"IMAGE" | "VIDEO" | "CAROUSEL_IMAGE" | "CAROUSEL_VIDEO" | "DYNAMIC_CAROUSEL" | undefined'.
+src/features/dashboard/ads/components/audience-builder-dialog.tsx(157,7): error TS2322: Type 'string' is not assignable to type '"facebook" | "google" | "linkedin" | "tiktok"'.
+src/features/dashboard/ads/components/audience-targeting-card.tsx(117,9): error TS2322: Type 'string' is not assignable to type '"facebook" | "google" | "linkedin" | "tiktok"'.
+src/features/dashboard/ads/components/creatives-card.tsx(71,9): error TS2322: Type 'string' is not assignable to type '"facebook" | "google" | "linkedin" | "tiktok"'.
+src/features/dashboard/ads/hooks/use-ads-automation.ts(201,11): error TS2353: Object literal may only specify known properties, and 'force' does not exist in type '{ clientId?: string | null | undefined; linkedAtMs?: number | null | undefined; timeframeDays?: number | undefined; providerId: string; workspaceId: string; }'.
+src/features/dashboard/collaboration/components/collaboration-dashboard-provider.tsx(218,19): error TS2304: Cannot find name 'use'.
+src/features/dashboard/collaboration/hooks/use-messages-data.ts(947,22): error TS2352: Conversion of type '{ items: { _id: Id<"collaborationMessages">; _creationTime: number; channelId?: string | null | undefined; sharedTo?: "email"[] | null | undefined; createdAtMs: number; updatedAtMs: number | null; ... 25 more ...; pinnedBy: string | null; }[]; nextCursor: { ...; } | null; }' to type 'Record<string, unknown>[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ items: { _id: Id<"collaborationMessages">; _creationTime: number; channelId?: string | null | undefined; sharedTo?: "email"[] | null | undefined; createdAtMs: number; updatedAtMs: number | null; ... 25 more ...; pinnedBy: string | null; }[]; nextCursor: { ...; } | null; }' is missing the following properties from type 'Record<string, unknown>[]': length, pop, push, concat, and 35 more.
+src/features/dashboard/collaboration/hooks/use-messages-data.ts(954,11): error TS2353: Object literal may only specify known properties, and 'afterCreatedAtMs' does not exist in type '{ channelType: string; channelId?: string | null | undefined; clientId?: string | null | undefined; projectId?: string | null | undefined; cursor?: { legacyId: string; fieldValue: string | number; } | null | undefined; limit?: number | undefined; workspaceId: string; }'.
+src/features/dashboard/collaboration/hooks/use-messages.ts(117,11): error TS2322: Type 'CollaborationMention[]' is not assignable to type '{ slug: string; name: string; role: string | null; }[]'.
+  Type 'CollaborationMention' is not assignable to type '{ slug: string; name: string; role: string | null; }'.
+    Types of property 'role' are incompatible.
+      Type 'string | null | undefined' is not assignable to type 'string | null'.
+        Type 'undefined' is not assignable to type 'string | null'.
+src/features/dashboard/collaboration/hooks/use-messages.ts(200,35): error TS2345: Argument of type 'FunctionReference<"query", "public", { channelType: string; channelId?: string | null | undefined; clientId?: string | null | undefined; projectId?: string | null | undefined; cursor?: { legacyId: string; fieldValue: string | number; } | null | undefined; limit?: number | undefined; workspaceId: string; }, { ...; },...' is not assignable to parameter of type 'FunctionReference<"mutation">'.
+  Type '"query"' is not assignable to type '"mutation"'.
+src/features/dashboard/collaboration/hooks/use-threads.ts(161,20): error TS2352: Conversion of type '{ items: { _id: Id<"collaborationMessages">; _creationTime: number; channelId?: string | null | undefined; sharedTo?: "email"[] | null | undefined; createdAtMs: number; updatedAtMs: number | null; ... 25 more ...; pinnedBy: string | null; }[]; nextCursor: { ...; } | null; }' to type 'ConvexThreadRow[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ items: { _id: Id<"collaborationMessages">; _creationTime: number; channelId?: string | null | undefined; sharedTo?: "email"[] | null | undefined; createdAtMs: number; updatedAtMs: number | null; ... 25 more ...; pinnedBy: string | null; }[]; nextCursor: { ...; } | null; }' is missing the following properties from type 'ConvexThreadRow[]': length, pop, push, concat, and 35 more.
+src/features/dashboard/collaboration/hooks/use-threads.ts(165,9): error TS2353: Object literal may only specify known properties, and 'afterCreatedAtMs' does not exist in type '{ threadRootId: string; cursor?: { legacyId: string; fieldValue: string | number; } | null | undefined; limit?: number | undefined; workspaceId: string; }'.
+src/features/dashboard/notifications/page.tsx(667,3): error TS2300: Duplicate identifier 'handleDismiss'.
+src/features/dashboard/notifications/page.tsx(669,3): error TS2300: Duplicate identifier 'handleDismiss'.
+src/features/dashboard/notifications/page.tsx(669,3): error TS2717: Subsequent property declarations must have the same type.  Property 'handleDismiss' must be of type '(id: string) => void', but here has type '(id: string, title?: string | undefined) => void'.
+src/features/dashboard/notifications/page.tsx(683,36): error TS2554: Expected 1 arguments, but got 2.
+src/features/dashboard/projects/create-milestone-dialog.tsx(149,9): error TS2322: Type 'string | undefined' is not assignable to type 'string | null'.
+  Type 'undefined' is not assignable to type 'string | null'.
+src/features/dashboard/projects/create-milestone-dialog.tsx(150,9): error TS2322: Type 'number | undefined' is not assignable to type 'number | null'.
+  Type 'undefined' is not assignable to type 'number | null'.
+src/features/dashboard/projects/create-milestone-dialog.tsx(151,9): error TS2322: Type 'number | undefined' is not assignable to type 'number | null'.
+  Type 'undefined' is not assignable to type 'number | null'.
+src/features/dashboard/proposals/[proposalId]/deck/page.tsx(46,9): error TS2322: Type 'ProposalDraft | { id: string; status: string; stepProgress: number; formData: { company: { name: string; website: string; industry: string; size: string; locations: string; }; marketing: { ...; }; goals: { ...; }; scope: { ...; }; timelines: { ...; }; value: { ...; }; }; ... 10 more ...; gammaDeck: Record<...> | nul...' is not assignable to type 'ProposalDraft | null'.
+  Type '{ id: string; status: string; stepProgress: number; formData: { company: { name: string; website: string; industry: string; size: string; locations: string; }; marketing: { budget: string; platforms: string[]; adAccounts: "Yes" | "No"; socialHandles: Record<...>; }; goals: { ...; }; scope: { ...; }; timelines: { ......' is not assignable to type 'ProposalDraft'.
+    Types of property 'status' are incompatible.
+      Type 'string' is not assignable to type 'ProposalStatus'.
+src/features/dashboard/proposals/hooks/use-proposal-drafts.ts(107,9): error TS2345: Argument of type '"skip" | { workspaceId: string | null; clientId: string | null; limit: number; }' is not assignable to parameter of type '{ workspaceId: string; limit: number; status?: string | undefined; clientId?: string | undefined; afterUpdatedAtMs?: number | undefined; afterLegacyId?: string | undefined; } | "skip"'.
+  Type '{ workspaceId: string | null; clientId: string | null; limit: number; }' is not assignable to type '{ workspaceId: string; limit: number; status?: string | undefined; clientId?: string | undefined; afterUpdatedAtMs?: number | undefined; afterLegacyId?: string | undefined; } | "skip"'.
+    Types of property 'workspaceId' are incompatible.
+      Type 'string | null' is not assignable to type 'string | undefined'.
+        Type 'null' is not assignable to type 'string | undefined'.
+src/features/dashboard/proposals/hooks/use-proposal-submission.ts(152,9): error TS2345: Argument of type '"skip" | { workspaceId: string | null; legacyId: string | null; }' is not assignable to parameter of type '{ workspaceId: string; legacyId: string; } | "skip"'.
+  Type '{ workspaceId: string | null; legacyId: string | null; }' is not assignable to type '{ workspaceId: string; legacyId: string; } | "skip"'.
+    Types of property 'workspaceId' are incompatible.
+      Type 'string | null' is not assignable to type 'string | undefined'.
+        Type 'null' is not assignable to type 'string | undefined'.
+src/features/dashboard/tasks/hooks/use-task-form.ts(189,15): error TS2322: Type 'ReactMutation<FunctionReference<"mutation", "public", { idempotencyKey?: string | undefined; }, { url: string; }, string | undefined>>' is not assignable to type '() => Promise<{ url: string; }>'.
+  Target signature provides too few arguments. Expected 1 or more, but got 0.
+src/features/dashboard/tasks/task-creation-modal.tsx(127,17): error TS2322: Type 'ReactMutation<FunctionReference<"mutation", "public", { idempotencyKey?: string | undefined; }, { url: string; }, string | undefined>>' is not assignable to type '() => Promise<{ url: string; }>'.
+  Target signature provides too few arguments. Expected 1 or more, but got 0.
+src/features/dashboard/tasks/task-creation-modal.tsx(152,72): error TS2339: Property 'legacyId' does not exist on type 'never'.
+src/features/settings/components/profile-card.tsx(198,38): error TS2554: Expected 1 arguments, but got 0.
+src/shared/hooks/use-agent-mode.ts(490,9): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/shared/layout/navigation/command-menu.tsx(226,5): error TS2345: Argument of type '"skip" | { workspaceId: string; clientId: string; limit: number; } | { workspaceId: string; limit: number; }' is not assignable to parameter of type '{ clientId: string; cursor?: { legacyId: string; fieldValue: string | number; } | null | undefined; limit?: number | undefined; workspaceId: string; } | { userId: string; workspaceId: string; } | "skip"'.
+  Type '{ workspaceId: string; limit: number; }' is not assignable to type '{ clientId: string; cursor?: { legacyId: string; fieldValue: string | number; } | null | undefined; limit?: number | undefined; workspaceId: string; } | { userId: string; workspaceId: string; } | "skip"'.
+    Property 'clientId' is missing in type '{ workspaceId: string; limit: number; }' but required in type '{ clientId: string; cursor?: { legacyId: string; fieldValue: string | number; } | null | undefined; limit?: number | undefined; workspaceId: string; }'.

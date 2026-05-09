@@ -47,6 +47,25 @@ type TaskAttachmentInput = {
   size?: unknown
 }
 
+const DAY_KEY_FORMATTERS = new Map<string, Intl.DateTimeFormat>()
+
+function getDayKeyFormatter(timeZone?: string | null): Intl.DateTimeFormat {
+  const normalizedTimeZone = typeof timeZone === 'string' && timeZone.trim().length > 0 ? timeZone : ''
+  const existingFormatter = DAY_KEY_FORMATTERS.get(normalizedTimeZone)
+  if (existingFormatter) {
+    return existingFormatter
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: normalizedTimeZone || undefined,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+  DAY_KEY_FORMATTERS.set(normalizedTimeZone, formatter)
+  return formatter
+}
+
 function normalizeTaskAttachments(raw: unknown): Array<z.infer<typeof taskAttachmentZ>> {
   if (!Array.isArray(raw)) return []
 
@@ -102,12 +121,7 @@ function getCurrentDayKey(nowMs: number, timeZone?: string | null): string {
 
   if (timeZone) {
     try {
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      }).formatToParts(currentDate)
+      const parts = getDayKeyFormatter(timeZone).formatToParts(currentDate)
 
       const year = parts.find((part) => part.type === 'year')?.value
       const month = parts.find((part) => part.type === 'month')?.value

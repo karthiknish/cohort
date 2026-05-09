@@ -4,6 +4,37 @@
 
 import { escapeHtml, wrapEmailTemplate } from './utils'
 
+const MEETING_CANCELLED_DATE_FORMATTERS = new Map<string, Intl.DateTimeFormat>()
+const MEETING_CANCELLED_TIME_FORMATTERS = new Map<string, Intl.DateTimeFormat>()
+
+function getMeetingCancelledDateFormatter(timezone: string): Intl.DateTimeFormat {
+  const existingFormatter = MEETING_CANCELLED_DATE_FORMATTERS.get(timezone)
+  if (existingFormatter) {
+    return existingFormatter
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'full',
+    timeZone: timezone,
+  })
+  MEETING_CANCELLED_DATE_FORMATTERS.set(timezone, formatter)
+  return formatter
+}
+
+function getMeetingCancelledTimeFormatter(timezone: string): Intl.DateTimeFormat {
+  const existingFormatter = MEETING_CANCELLED_TIME_FORMATTERS.get(timezone)
+  if (existingFormatter) {
+    return existingFormatter
+  }
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeStyle: 'short',
+    timeZone: timezone,
+  })
+  MEETING_CANCELLED_TIME_FORMATTERS.set(timezone, formatter)
+  return formatter
+}
+
 export interface MeetingCancelledTemplateParams {
   meetingTitle: string
   meetingStartIso: string
@@ -15,15 +46,9 @@ export interface MeetingCancelledTemplateParams {
 function formatMeetingTime(startIso: string, timezone: string): string {
   try {
     const start = new Date(startIso)
-    const dateLabel = new Intl.DateTimeFormat('en-US', {
-      dateStyle: 'full',
-      timeZone: timezone,
-    }).format(start)
+    const dateLabel = getMeetingCancelledDateFormatter(timezone).format(start)
 
-    const startLabel = new Intl.DateTimeFormat('en-US', {
-      timeStyle: 'short',
-      timeZone: timezone,
-    }).format(start)
+    const startLabel = getMeetingCancelledTimeFormatter(timezone).format(start)
 
     return `${dateLabel} at ${startLabel}`
   } catch {

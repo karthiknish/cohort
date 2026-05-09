@@ -278,7 +278,7 @@ export function MyTasksSection() {
         ) : tasks.length === 0 ? (
           <div className="rounded-xl border border-dashed p-5 text-center text-sm text-muted-foreground">
             <CheckSquare className="mx-auto mb-2 h-6 w-6 opacity-30" />
-            <p>You&apos;re all caught up — no open tasks assigned to you right now.</p>
+            <p>You&apos;re all caught up, no open tasks assigned to you right now.</p>
           </div>
         ) : (
           <div className="space-y-5">

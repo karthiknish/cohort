@@ -464,16 +464,18 @@ export const ack = zRateLimitedWorkspaceMutation({
 
       const readBy = Array.isArray(row.readBy) ? row.readBy : []
       const acknowledgedBy = Array.isArray(row.acknowledgedBy) ? row.acknowledgedBy : []
+      const readBySet = new Set(readBy)
+      const acknowledgedBySet = new Set(acknowledgedBy)
 
       if (args.action === 'dismiss') {
         await ctx.db.patch(row._id, {
-          readBy: readBy.includes(userId) ? readBy : [...readBy, userId],
-          acknowledgedBy: acknowledgedBy.includes(userId) ? acknowledgedBy : [...acknowledgedBy, userId],
+          readBy: readBySet.has(userId) ? readBy : [...readBy, userId],
+          acknowledgedBy: acknowledgedBySet.has(userId) ? acknowledgedBy : [...acknowledgedBy, userId],
           updatedAtMs: Date.now(),
         })
       } else {
         await ctx.db.patch(row._id, {
-          readBy: readBy.includes(userId) ? readBy : [...readBy, userId],
+          readBy: readBySet.has(userId) ? readBy : [...readBy, userId],
           updatedAtMs: Date.now(),
         })
       }

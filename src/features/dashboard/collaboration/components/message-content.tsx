@@ -127,7 +127,7 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
     ol: ({ children }) => <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-foreground">{children}</ol>,
     li: ({ children }) => <li>{highlightChildren(children, highlightTerms)}</li>,
     blockquote: ({ children }) => (
-      <blockquote className="border-l-2 border-primary/40 pl-3 text-sm italic text-muted-foreground bg-muted/20 py-1 rounded-r-md">{highlightChildren(children, highlightTerms)}</blockquote>
+      <blockquote className="rounded-md bg-gradient-to-r from-primary/5 to-muted/20 px-3 py-1.5 text-sm italic text-muted-foreground ring-1 ring-primary/10">{highlightChildren(children, highlightTerms)}</blockquote>
     ),
     code: ({ inline, className, children }: CodeProps) => {
       const language = extractLanguage(className)

@@ -177,7 +177,7 @@ export function ActivityItem({
                   </Badge>
                 )}
                 <span className="text-xs text-muted-foreground">
-                  <time dateTime={activity.timestamp}>
+                  <time dateTime={activity.timestamp} suppressHydrationWarning>
                     {format(new Date(activity.timestamp), 'h:mm a')}
                   </time>
                 </span>

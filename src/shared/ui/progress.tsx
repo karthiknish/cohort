@@ -12,10 +12,9 @@ function getProgressTransformStyle(value: number | null | undefined) {
   }
 }
 
-const Progress = React.forwardRef<
-  React.ElementRef<typeof ProgressPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
->(({ className, value, ...props }, ref) => (
+type ProgressProps = React.ComponentPropsWithRef<typeof ProgressPrimitive.Root>
+
+const Progress = ({ className, value, ref, ...props }: ProgressProps) => (
   <ProgressPrimitive.Root
     ref={ref}
     className={cn(
@@ -29,7 +28,7 @@ const Progress = React.forwardRef<
       style={getProgressTransformStyle(value)}
     />
   </ProgressPrimitive.Root>
-))
+)
 Progress.displayName = ProgressPrimitive.Root.displayName
 
 export { Progress }

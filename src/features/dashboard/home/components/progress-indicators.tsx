@@ -324,7 +324,7 @@ function OperationItem({
                     {step.name}
                   </span>
                   {step.timestamp && (
-                    <span className="text-muted-foreground ml-auto">
+                    <span className="text-muted-foreground ml-auto" suppressHydrationWarning>
                       {new Date(step.timestamp).toLocaleTimeString()}
                     </span>
                   )}

@@ -11,7 +11,7 @@ export interface UseAudioAnalyzerReturn {
 
 export function useAudioAnalyzer(isActive: boolean): UseAudioAnalyzerReturn {
     const [volume, setVolume] = useState(0)
-    const [frequencies, setFrequencies] = useState<number[]>(new Array(12).fill(0))
+    const [frequencies, setFrequencies] = useState<number[]>(() => new Array(12).fill(0))
     const [isAnalyzing, setIsAnalyzing] = useState(false)
     const [error, setError] = useState<string | null>(null)
 

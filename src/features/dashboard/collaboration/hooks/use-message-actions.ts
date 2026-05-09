@@ -100,26 +100,24 @@ export function useMessageActions({
             let nextReactions: CollaborationReaction[]
             if (existingReaction) {
               const hasReacted = existingReaction.userIds.includes(reactionUserId)
-              nextReactions = currentReactions
-                .map((reaction) => {
-                  if (reaction.emoji !== emoji) {
-                    return reaction
-                  }
-                  const nextUserIds = hasReacted
-                    ? reaction.userIds.filter((entry) => entry !== reactionUserId)
-                    : [...reaction.userIds, reactionUserId]
+              nextReactions = currentReactions.flatMap<CollaborationReaction>((reaction) => {
+                if (reaction.emoji !== emoji) {
+                  return [reaction]
+                }
+                const nextUserIds = hasReacted
+                  ? reaction.userIds.filter((entry) => entry !== reactionUserId)
+                  : [...reaction.userIds, reactionUserId]
 
-                  if (nextUserIds.length === 0) {
-                    return null
-                  }
+                if (nextUserIds.length === 0) {
+                  return []
+                }
 
-                  return {
-                    ...reaction,
-                    count: nextUserIds.length,
-                    userIds: nextUserIds,
-                  }
-                })
-                .filter(Boolean) as CollaborationReaction[]
+                return [{
+                  ...reaction,
+                  count: nextUserIds.length,
+                  userIds: nextUserIds,
+                }]
+              })
             } else {
               nextReactions = [...currentReactions, { emoji, count: 1, userIds: [reactionUserId] }]
             }

@@ -417,8 +417,10 @@ export const workspaceQuery = customQuery(query, {
 const _authenticatedMutationBase = customMutation(mutation, {
   args: { idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args) => {
-    const auth = await getAuthenticatedContext(ctx)
-    const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
+    const [auth, { cachedResponse, commitIdempotency }] = await Promise.all([
+      getAuthenticatedContext(ctx),
+      checkIdempotency(ctx, args.idempotencyKey),
+    ])
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,
@@ -598,8 +600,10 @@ export const zWorkspaceQueryActive = zCustomQuery(query, {
 const _zAuthenticatedMutationBase = zCustomMutation(mutation, {
   args: { idempotencyKey: v.optional(v.string()) },
   input: async (ctx, args) => {
-    const auth = await getAuthenticatedContext(ctx)
-    const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
+    const [auth, { cachedResponse, commitIdempotency }] = await Promise.all([
+      getAuthenticatedContext(ctx),
+      checkIdempotency(ctx, args.idempotencyKey),
+    ])
     return {
       ctx: { ...ctx, ...auth, now: Date.now(), cachedResponse },
       args,

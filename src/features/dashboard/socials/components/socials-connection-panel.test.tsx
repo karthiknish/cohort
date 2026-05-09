@@ -9,6 +9,8 @@ vi.mock('next/link', () => ({
 
 import { SocialsConnectionPanel } from './socials-connection-panel'
 
+const LAST_SYNCED_AT_MS = Date.parse('2026-05-09T12:00:00.000Z')
+
 describe('SocialsConnectionPanel', () => {
   it('renders a single Meta connect action', () => {
     const markup = renderToStaticMarkup(
@@ -38,7 +40,7 @@ describe('SocialsConnectionPanel', () => {
         selectedClientName={null}
         connected={true}
         accountName="My Business Account"
-        lastSyncedAtMs={Date.now()}
+        lastSyncedAtMs={LAST_SYNCED_AT_MS}
         oauthPending={false}
         connectionError={null}
         onConnectMeta={vi.fn(async () => undefined)}

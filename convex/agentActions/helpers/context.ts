@@ -76,9 +76,14 @@ function uniqueStrings(values: Array<string | null | undefined>): string[] {
 
 function extractAssignmentQueries(text: string, labels: string[]): string[] {
   const results: string[] = []
+  const patternsByLabel = new Map<string, RegExp>()
 
   for (const label of labels) {
-    const pattern = new RegExp(`${label}\\s*(?::|is|=)?\\s+([^\\n.;]+)`, 'ig')
+    let pattern = patternsByLabel.get(label)
+    if (!pattern) {
+      pattern = new RegExp(`${label}\\s*(?::|is|=)?\\s+([^\\n.;]+)`, 'ig')
+      patternsByLabel.set(label, pattern)
+    }
     for (const match of text.matchAll(pattern)) {
       const captured = asNonEmptyString(match[1])
       if (!captured) continue

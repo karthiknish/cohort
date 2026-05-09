@@ -471,7 +471,7 @@ function SearchResultItem({ result, onSelect }: SearchResultItemProps) {
             </Badge>
             <span className="text-xs text-muted-foreground">{channel.name}</span>
             {message.createdAt && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground" suppressHydrationWarning>
                 {formatRelativeTime(new Date(message.createdAt))}
               </span>
             )}

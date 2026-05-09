@@ -207,9 +207,10 @@ export function useProjectsPageController() {
       }
 
       const mapped: Record<string, MilestoneRecord[]> = {}
+      const projectIdSet = new Set(projectIds)
 
       for (const [projectId, rows] of Object.entries(milestonesRealtime)) {
-        if (projectIds.length > 0 && !projectIds.includes(projectId)) {
+        if (projectIdSet.size > 0 && !projectIdSet.has(projectId)) {
           continue
         }
 

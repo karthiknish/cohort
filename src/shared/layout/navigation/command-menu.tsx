@@ -431,7 +431,7 @@ export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
         className="hidden sm:inline-flex w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground shadow-sm transition hover:bg-muted hover:text-foreground"
       >
         <Search className="h-4 w-4 shrink-0" aria-hidden />
-        <span className="flex-1 text-left truncate">Quick navigation...</span>
+        <span className="flex-1 text-left truncate">Quick navigation…</span>
         <KeyboardShortcutBadge combo="mod+k" />
       </button>
 

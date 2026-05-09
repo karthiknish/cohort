@@ -17,7 +17,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
               <div className="flex min-h-0 flex-1 flex-col bg-muted/20">
                 <Header />
                 <ScrollArea className="min-h-0 flex-1">
-                  <main className="min-h-full space-y-6 px-6 py-6">
+                  <main className="min-h-full space-y-6 p-6">
                     <NavigationBreadcrumbs />
                     {children}
                   </main>

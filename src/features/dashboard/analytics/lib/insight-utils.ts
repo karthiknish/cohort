@@ -1,6 +1,6 @@
 export function buildProviderIdsKey(providerIds?: string[]): string {
   if (!providerIds || providerIds.length === 0) return ''
-  return [...providerIds].sort().join('|')
+  return providerIds.toSorted().join('|')
 }
 
 export function normalizeProviderIds(providerIds?: string[]): string[] | undefined {

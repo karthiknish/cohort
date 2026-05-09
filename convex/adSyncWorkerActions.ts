@@ -262,34 +262,36 @@ export const processAllQueuedJobs = internalAction({
             timeframeDays: job.timeframeDays,
           })
 
-          await ctx.runMutation(internal.adsIntegrations.completeSyncJobInternal, {
-            jobId: job.id,
-          })
-
-          await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
-            workspaceId,
-            providerId: job.providerId,
-            clientId: job.clientId,
-            status: 'success',
-            message: null,
-          })
+          await Promise.all([
+            ctx.runMutation(internal.adsIntegrations.completeSyncJobInternal, {
+              jobId: job.id,
+            }),
+            ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+              workspaceId,
+              providerId: job.providerId,
+              clientId: job.clientId,
+              status: 'success',
+              message: null,
+            }),
+          ])
 
           processed++
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : 'Unknown error'
 
-          await ctx.runMutation(internal.adsIntegrations.failSyncJobInternal, {
-            jobId: job.id,
-            message,
-          })
-
-          await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
-            workspaceId,
-            providerId: job.providerId,
-            clientId: job.clientId,
-            status: 'error',
-            message,
-          })
+          await Promise.all([
+            ctx.runMutation(internal.adsIntegrations.failSyncJobInternal, {
+              jobId: job.id,
+              message,
+            }),
+            ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+              workspaceId,
+              providerId: job.providerId,
+              clientId: job.clientId,
+              status: 'error',
+              message,
+            }),
+          ])
 
           failed++
         }
@@ -354,34 +356,36 @@ export const runManualSync = action({
         timeframeDays: job.timeframeDays,
       })
 
-      await ctx.runMutation(internal.adsIntegrations.completeSyncJobInternal, {
-        jobId: job.id,
-      })
-
-      await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
-        workspaceId: args.workspaceId,
-        providerId: job.providerId,
-        clientId: job.clientId,
-        status: 'success',
-        message: null,
-      })
+      await Promise.all([
+        ctx.runMutation(internal.adsIntegrations.completeSyncJobInternal, {
+          jobId: job.id,
+        }),
+        ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+          workspaceId: args.workspaceId,
+          providerId: job.providerId,
+          clientId: job.clientId,
+          status: 'success',
+          message: null,
+        }),
+      ])
 
       return { synced: true }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error'
 
-      await ctx.runMutation(internal.adsIntegrations.failSyncJobInternal, {
-        jobId: job.id,
-        message,
-      })
-
-      await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
-        workspaceId: args.workspaceId,
-        providerId: job.providerId,
-        clientId: job.clientId,
-        status: 'error',
-        message,
-      })
+      await Promise.all([
+        ctx.runMutation(internal.adsIntegrations.failSyncJobInternal, {
+          jobId: job.id,
+          message,
+        }),
+        ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+          workspaceId: args.workspaceId,
+          providerId: job.providerId,
+          clientId: job.clientId,
+          status: 'error',
+          message,
+        }),
+      ])
 
       throw err
     }

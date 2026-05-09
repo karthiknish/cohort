@@ -1,7 +1,7 @@
 'use client'
 
 import { LoaderCircle, type LucideIcon } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useReducer } from 'react'
 
 import {
   DeckProgressOverlayContent,
@@ -72,19 +72,64 @@ interface ProposalGenerationOverlayProps {
   isPresentationReady?: boolean
 }
 
+type ProposalGenerationOverlayState = {
+  stageIndex: number
+  shouldShowOverlay: boolean
+  showCompletionState: boolean
+}
+
+type ProposalGenerationOverlayAction =
+  | { type: 'startSubmitting' }
+  | { type: 'showCompletionState' }
+  | { type: 'dismissOverlay' }
+  | { type: 'advanceStage' }
+
+const INITIAL_PROPOSAL_GENERATION_OVERLAY_STATE: ProposalGenerationOverlayState = {
+  stageIndex: 0,
+  shouldShowOverlay: false,
+  showCompletionState: false,
+}
+
+function proposalGenerationOverlayReducer(
+  state: ProposalGenerationOverlayState,
+  action: ProposalGenerationOverlayAction,
+): ProposalGenerationOverlayState {
+  switch (action.type) {
+    case 'startSubmitting':
+      return {
+        stageIndex: 0,
+        shouldShowOverlay: true,
+        showCompletionState: false,
+      }
+    case 'showCompletionState':
+      return {
+        ...state,
+        showCompletionState: true,
+      }
+    case 'dismissOverlay':
+      return INITIAL_PROPOSAL_GENERATION_OVERLAY_STATE
+    case 'advanceStage':
+      return {
+        ...state,
+        stageIndex: Math.min(state.stageIndex + 1, generationFlow.length - 1),
+      }
+    default:
+      return state
+  }
+}
+
 export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = false }: ProposalGenerationOverlayProps) {
-  const [stageIndex, setStageIndex] = useState(0)
-  const [shouldShowOverlay, setShouldShowOverlay] = useState(false)
-  const [showCompletionState, setShowCompletionState] = useState(false)
+  const [{ stageIndex, shouldShowOverlay, showCompletionState }, dispatch] = useReducer(
+    proposalGenerationOverlayReducer,
+    INITIAL_PROPOSAL_GENERATION_OVERLAY_STATE,
+  )
 
   // Track when overlay should be shown (starts when isSubmitting, stays until isPresentationReady)
   useEffect(() => {
     if (!isSubmitting) return
 
     const frameId = requestAnimationFrame(() => {
-      setShouldShowOverlay(true)
-      setShowCompletionState(false)
-      setStageIndex(0)
+      dispatch({ type: 'startSubmitting' })
     })
 
     return () => {
@@ -97,13 +142,11 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
     if (!isPresentationReady || !shouldShowOverlay) return
 
     const frameId = requestAnimationFrame(() => {
-      setShowCompletionState(true)
+      dispatch({ type: 'showCompletionState' })
     })
 
     const dismissTimer = setTimeout(() => {
-      setShouldShowOverlay(false)
-      setShowCompletionState(false)
-      setStageIndex(0)
+      dispatch({ type: 'dismissOverlay' })
     }, 1500) // Show success state for 1.5 seconds before dismissing
 
     return () => {
@@ -119,7 +162,7 @@ export function ProposalGenerationOverlay({ isSubmitting, isPresentationReady = 
     if (!current || current.duration === null) return
 
     const id = setTimeout(() => {
-      setStageIndex((prev) => Math.min(prev + 1, generationFlow.length - 1))
+      dispatch({ type: 'advanceStage' })
     }, current.duration)
 
     return () => clearTimeout(id)

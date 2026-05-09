@@ -22,7 +22,7 @@ export function HomeHero({ headline, subhead, highlights }: HomeHeroProps) {
           <span className="flex h-2 w-2 rounded-full bg-success mr-2" aria-hidden="true"></span>
           Now in public beta
         </div>
-        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl xl:text-6xl">
+        <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl xl:text-6xl">
           {headline}
         </h1>
         <p className="max-w-xl text-lg text-muted-foreground leading-relaxed">{subhead}</p>

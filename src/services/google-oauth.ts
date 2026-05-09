@@ -107,7 +107,10 @@ export function resolveGoogleAnalyticsOAuthRedirectUri(appUrl?: string | null): 
 
 export function parseGoogleScopeList(scopeValue: string | undefined | null, fallback: string[] = []): string[] {
   const scopes = typeof scopeValue === 'string'
-    ? scopeValue.split(' ').map((scope) => scope.trim()).filter(Boolean)
+    ? scopeValue.split(' ').flatMap((scope) => {
+        const normalizedScope = scope.trim()
+        return normalizedScope ? [normalizedScope] : []
+      })
     : []
 
   if (scopes.length > 0) {

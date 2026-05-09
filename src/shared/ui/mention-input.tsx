@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, useCallback, useId, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type SyntheticEvent } from 'react'
+import { useCallback, useId, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type SyntheticEvent } from 'react'
 import { User, X } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
@@ -36,6 +36,10 @@ interface MentionState {
   query: string
 }
 
+type MentionInputComponentProps = MentionInputProps & {
+  ref?: React.Ref<HTMLInputElement>
+}
+
 const DEFAULT_MENTION_STATE: MentionState = {
   active: false,
   startIndex: -1,
@@ -44,28 +48,30 @@ const DEFAULT_MENTION_STATE: MentionState = {
 
 const MAX_MENTION_RESULTS = 50
 
-export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
-  function MentionInput(
-    {
-      value,
-      onChange,
-      users,
-      placeholder = 'Type @ to mention users...',
-      disabled = false,
-      className,
-      inputClassName,
-      label,
-      maxMentions = 10,
-      allowMultiple = true,
-      singleSelect = false,
-    },
-    ref
-  ) {
+export function MentionInput(
+  {
+    value,
+    onChange,
+    users,
+    placeholder = 'Type @ to mention users...',
+    disabled = false,
+    className,
+    inputClassName,
+    label,
+    maxMentions = 10,
+    allowMultiple = true,
+    singleSelect = false,
+    ref,
+  }: MentionInputComponentProps
+) {
     const inputId = useId()
     const containerRef = useRef<HTMLDivElement>(null)
     const inputRef = useRef<HTMLInputElement>(null)
     const [mentionState, setMentionState] = useState<MentionState>(DEFAULT_MENTION_STATE)
     const [highlightedIndex, setHighlightedIndex] = useState(0)
+    const usersByName = useMemo(() => {
+      return new Map(users.map((user) => [user.name, user] as const))
+    }, [users])
 
     const effectiveAllowMultiple = allowMultiple && !singleSelect
     const mentionLimit = Math.max(1, singleSelect ? 1 : maxMentions)
@@ -78,7 +84,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
 
       while (match !== null) {
         const name = match[1]
-        const user = users.find((u) => u.name === name)
+        const user = usersByName.get(name)
         if (user && !seenIds.has(user.id)) {
           seenIds.add(user.id)
           mentions.push(user)
@@ -88,7 +94,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
       }
 
       return mentions
-    }, [users])
+    }, [usersByName])
 
     const selectedMentions = useMemo(() => {
       return resolveMentionsFromValue(value)
@@ -545,5 +551,4 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
         )}
       </div>
     )
-  }
-)
+}

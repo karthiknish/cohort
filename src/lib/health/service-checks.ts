@@ -8,7 +8,7 @@ import {
 import { resolveGoogleWorkspaceOAuthCredentials, resolveGoogleWorkspaceOAuthRedirectUri } from '@/services/google-workspace'
 import { resolveLiveKitCredentials } from '@/services/livekit'
 
-export type ServiceCheckStatus = 'ok' | 'warning' | 'error'
+type ServiceCheckStatus = 'ok' | 'warning' | 'error'
 
 export type ServiceCheck = {
   status: ServiceCheckStatus

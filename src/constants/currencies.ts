@@ -34,6 +34,30 @@ export interface CurrencyInfo {
   symbolPosition: 'before' | 'after'
 }
 
+const MONEY_FORMATTER_CACHE = new Map<string, Intl.NumberFormat>()
+
+function getMoneyFormatter(
+  locale: string | undefined,
+  currency: string,
+  minimumFractionDigits: number,
+  maximumFractionDigits: number,
+): Intl.NumberFormat {
+  const cacheKey = `${locale ?? 'default'}|${currency}|${minimumFractionDigits}|${maximumFractionDigits}`
+  const existingFormatter = MONEY_FORMATTER_CACHE.get(cacheKey)
+  if (existingFormatter) {
+    return existingFormatter
+  }
+
+  const formatter = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits,
+    maximumFractionDigits,
+  })
+  MONEY_FORMATTER_CACHE.set(cacheKey, formatter)
+  return formatter
+}
+
 export const SUPPORTED_CURRENCIES: Record<CurrencyCode, CurrencyInfo> = {
   USD: {
     code: 'USD',
@@ -197,7 +221,7 @@ export const SUPPORTED_CURRENCIES: Record<CurrencyCode, CurrencyInfo> = {
   },
 }
 
-export const CURRENCY_CODES = Object.keys(SUPPORTED_CURRENCIES) as CurrencyCode[]
+const CURRENCY_CODES = Object.keys(SUPPORTED_CURRENCIES) as CurrencyCode[]
 
 export const DEFAULT_CURRENCY: CurrencyCode = 'USD'
 
@@ -242,17 +266,6 @@ export const POPULAR_CURRENCIES: CurrencyCode[] = [
 ]
 
 /**
- * Get popular currency options for select dropdowns
- */
-export function getPopularCurrencyOptions(): Array<{ value: CurrencyCode; label: string; symbol: string }> {
-  return POPULAR_CURRENCIES.map((code) => ({
-    value: code,
-    label: `${code} - ${SUPPORTED_CURRENCIES[code].name}`,
-    symbol: SUPPORTED_CURRENCIES[code].symbol,
-  }))
-}
-
-/**
  * Normalize a currency code to uppercase
  */
 export function normalizeCurrencyCode(value?: string | null): string {
@@ -270,63 +283,15 @@ export function formatMoney(amount: number, currency?: string | null): string {
 
   try {
     const info = getCurrencyInfo(code)
-    return new Intl.NumberFormat(info.locale, {
-      style: 'currency',
-      currency: code,
-      minimumFractionDigits: info.decimalDigits,
-      maximumFractionDigits: info.decimalDigits,
-    }).format(amount)
+    return getMoneyFormatter(info.locale, code, info.decimalDigits, info.decimalDigits).format(amount)
   } catch {
     // Fallback for unsupported currencies
     try {
-      return new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: code,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(amount)
+      return getMoneyFormatter(undefined, code, 2, 2).format(amount)
     } catch {
       // Ultimate fallback
-      return new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(amount)
+      return getMoneyFormatter(undefined, 'USD', 2, 2).format(amount)
     }
   }
 }
 
-/**
- * Format a monetary amount in compact form (e.g., $1.2K, $3.5M)
- */
-export function formatMoneyCompact(amount: number, currency?: string | null): string {
-  const code = normalizeCurrencyCode(currency)
-
-  try {
-    const info = getCurrencyInfo(code)
-    return new Intl.NumberFormat(info.locale, {
-      style: 'currency',
-      currency: code,
-      notation: 'compact',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 1,
-    }).format(amount)
-  } catch {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: 'USD',
-      notation: 'compact',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 1,
-    }).format(amount)
-  }
-}
-
-/**
- * Get the currency symbol for a currency code
- */
-export function getCurrencySymbol(currency?: string | null): string {
-  const code = normalizeCurrencyCode(currency)
-  return getCurrencyInfo(code).symbol
-}

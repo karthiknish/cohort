@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, use, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 
 import { useQuery, useMutation } from 'convex/react'
 
@@ -92,12 +92,70 @@ function getInitialPreviewClientId(): string | null {
   return isPreviewModeEnabled() ? getPreviewClients()[0]?.id ?? null : null
 }
 
+type ClientProviderState = {
+  selectedClientId: string | null
+  loading: boolean
+  error: string | null
+}
+
+type ClientProviderAction =
+  | {
+      type: 'syncState'
+      selectedClientId: string | null
+      loading: boolean
+      error: string | null
+    }
+  | {
+      type: 'setSelectedClientId'
+      selectedClientId: string | null
+    }
+  | {
+      type: 'setError'
+      error: string | null
+    }
+
+function createInitialClientProviderState(): ClientProviderState {
+  return {
+    selectedClientId: getInitialPreviewClientId(),
+    loading: false,
+    error: null,
+  }
+}
+
+function clientProviderReducer(
+  state: ClientProviderState,
+  action: ClientProviderAction,
+): ClientProviderState {
+  switch (action.type) {
+    case 'syncState':
+      return {
+        selectedClientId: action.selectedClientId,
+        loading: action.loading,
+        error: action.error,
+      }
+    case 'setSelectedClientId':
+      return {
+        ...state,
+        selectedClientId: action.selectedClientId,
+      }
+    case 'setError':
+      return {
+        ...state,
+        error: action.error,
+      }
+    default:
+      return state
+  }
+}
+
 export function ClientProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading, isSyncing } = useAuth()
 
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(() => getInitialPreviewClientId())
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [{ selectedClientId, loading, error }, dispatch] = useReducer(
+    clientProviderReducer,
+    undefined,
+    createInitialClientProviderState,
+  )
   const [retryKey, setRetryKey] = useState(0)
 
   const [previewEnabled, setPreviewEnabled] = useState(() => isPreviewModeEnabled())
@@ -154,12 +212,15 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
         // Entering preview mode - use ref to get current value without deps
         selectionBeforePreviewRef.current = selectedClientIdRef.current
         const previewClients = getPreviewClients()
-        setSelectedClientId(previewClients[0]?.id ?? null)
-        setError(null)
-        setLoading(false)
+        dispatch({
+          type: 'syncState',
+          selectedClientId: previewClients[0]?.id ?? null,
+          loading: false,
+          error: null,
+        })
       } else if (selectionBeforePreviewRef.current !== null) {
         // Leaving preview mode - restore previous selection
-        setSelectedClientId(selectionBeforePreviewRef.current)
+        dispatch({ type: 'setSelectedClientId', selectedClientId: selectionBeforePreviewRef.current })
         selectionBeforePreviewRef.current = null
       }
     }
@@ -187,8 +248,12 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     const frame = requestAnimationFrame(() => {
       // Handle preview mode
       if (previewEnabled) {
-        setLoading(false)
-        setError(null)
+        dispatch({
+          type: 'syncState',
+          selectedClientId: selectedClientIdRef.current,
+          loading: false,
+          error: null,
+        })
         return
       }
 
@@ -199,29 +264,37 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
       // No workspace
       if (!workspaceId) {
-        setSelectedClientId(null)
-        setLoading(false)
-        setError(null)
+        dispatch({
+          type: 'syncState',
+          selectedClientId: null,
+          loading: false,
+          error: null,
+        })
         return
       }
 
       // Loading state
       if (convexClients === undefined) {
-        setLoading(true)
+        dispatch({
+          type: 'syncState',
+          selectedClientId: selectedClientIdRef.current,
+          loading: true,
+          error: null,
+        })
         return
       }
-
-      setLoading(false)
 
       const rows = extractRows(convexClients)
 
       if (rows.length === 0) {
-        setSelectedClientId(null)
-        setError('No clients found for this workspace')
+        dispatch({
+          type: 'syncState',
+          selectedClientId: null,
+          loading: false,
+          error: 'No clients found for this workspace',
+        })
         return
       }
-
-      setError(null)
 
       // Sync selected client - use ref to avoid infinite loop
       const clients = mapClients(rows)
@@ -232,9 +305,12 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       // Mark as initialized so the persistence effect can safely remove entries
       hasInitializedRef.current = true
 
-      if (targetId !== selectedClientIdRef.current) {
-        setSelectedClientId(targetId)
-      }
+      dispatch({
+        type: 'syncState',
+        selectedClientId: targetId,
+        loading: false,
+        error: null,
+      })
     })
 
     return () => {
@@ -302,12 +378,12 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const retryClients = useCallback(() => {
-    setError(null)
+    dispatch({ type: 'setError', error: null })
     setRetryKey((current) => current + 1)
   }, [])
 
   const selectClient = useCallback((clientId: string | null) => {
-    setSelectedClientId(clientId)
+    dispatch({ type: 'setSelectedClientId', selectedClientId: clientId })
   }, [])
 
   const createClient = useCallback(async (
@@ -352,7 +428,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       updatedAt: new Date().toISOString(),
     }
 
-    setSelectedClientId(created.id)
+    dispatch({ type: 'setSelectedClientId', selectedClientId: created.id })
     return created
   }, [workspaceId, convexCreateClient, user?.id])
 
@@ -372,7 +448,10 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
       deletedAtMs: Date.now(),
     })
 
-    setSelectedClientId((current) => (current === clientId ? fallbackClientId : current))
+    dispatch({
+      type: 'setSelectedClientId',
+      selectedClientId: selectedClientIdRef.current === clientId ? fallbackClientId : selectedClientIdRef.current,
+    })
   }, [workspaceId, convexSoftDeleteClient])
 
   const selectedClient = useMemo(() => {

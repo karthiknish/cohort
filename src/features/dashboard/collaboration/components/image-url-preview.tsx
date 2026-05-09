@@ -98,7 +98,7 @@ export function ImageUrlPreview({ url, className }: ImageUrlPreviewProps) {
             onError={handleImageError}
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-            <div className="flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-viewer-chrome opacity-0 transition-opacity group-hover:opacity-100">
               <ZoomIn className="h-4 w-4" />
               <span className="text-xs font-medium">Preview</span>
             </div>

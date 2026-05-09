@@ -88,7 +88,7 @@ export function AnalyticsCreativesSection({
                             <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur-md">
                                 <tr className="border-b border-muted/20">
                                     <th className="py-4 pl-6 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">Creative Asset</th>
-                                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                                    <th className="p-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
                                         <div className="flex items-center gap-1.5">
                                             Spend
                                             <TooltipProvider>
@@ -103,7 +103,7 @@ export function AnalyticsCreativesSection({
                                             </TooltipProvider>
                                         </div>
                                     </th>
-                                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                                    <th className="p-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
                                         <div className="flex items-center gap-1.5">
                                             Clicks
                                             <TooltipProvider>
@@ -118,7 +118,7 @@ export function AnalyticsCreativesSection({
                                             </TooltipProvider>
                                         </div>
                                     </th>
-                                    <th className="py-4 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                                    <th className="p-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
                                         <div className="flex items-center gap-1.5">
                                             Conv
                                             <TooltipProvider>
@@ -159,13 +159,13 @@ export function AnalyticsCreativesSection({
                                                 <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">{creative.date}</span>
                                             </div>
                                         </td>
-                                        <td className="py-4 px-4">
+                                        <td className="p-4">
                                             <span className="text-sm font-bold text-foreground">{formatCurrency(creative.spend ?? 0)}</span>
                                         </td>
-                                        <td className="py-4 px-4">
+                                        <td className="p-4">
                                             <span className="text-sm font-bold text-foreground">{creative.clicks?.toLocaleString() ?? '—'}</span>
                                         </td>
-                                        <td className="py-4 px-4">
+                                        <td className="p-4">
                                             <span className="text-sm font-bold text-foreground">{creative.conversions?.toLocaleString() ?? '—'}</span>
                                         </td>
                                         <td className="py-4 pr-6 text-right">

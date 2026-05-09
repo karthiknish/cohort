@@ -149,7 +149,7 @@ export function analyzeTrend(
   metricKey: 'spend' | 'revenue' | 'clicks' | 'conversions' | 'impressions'
 ): TrendResult {
   // Sort by date
-  const sorted = [...dataPoints].sort(
+  const sorted = dataPoints.toSorted(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   )
 
@@ -251,7 +251,7 @@ export function getTrendChartData(
   dataPoints: MetricDataPoint[],
   metricKey: 'spend' | 'revenue' | 'clicks' | 'conversions' | 'impressions' | 'roas'
 ): { date: string; actual: number; trend: number; forecast?: number }[] {
-  const sorted = [...dataPoints].sort(
+  const sorted = dataPoints.toSorted(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   )
 

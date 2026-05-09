@@ -115,7 +115,7 @@ function ProposalVersionHistoryRow({
   }, [])
 
   return (
-    <DropdownMenuItem className="flex cursor-default flex-col items-start gap-1 px-2 py-2" onSelect={handleSelect}>
+    <DropdownMenuItem className="flex cursor-default flex-col items-start gap-1 p-2" onSelect={handleSelect}>
       <div className="flex w-full items-center justify-between">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs">v{version.versionNumber}</Badge>

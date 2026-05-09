@@ -39,7 +39,10 @@ export const POST = createApiHandler(
       redirect,
       clientId: query.clientId ?? null,
     })
-    const scopes = process.env.TIKTOK_OAUTH_SCOPES?.split(',').map((scope) => scope.trim()).filter(Boolean)
+    const scopes = process.env.TIKTOK_OAUTH_SCOPES?.split(',').flatMap((scope) => {
+      const normalizedScope = scope.trim()
+      return normalizedScope ? [normalizedScope] : []
+    })
     const url = buildTikTokOAuthUrl({ clientKey, redirectUri, state, scopes })
 
     return { url }

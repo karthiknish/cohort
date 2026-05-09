@@ -10,8 +10,8 @@ const BODY_STYLE: CSSProperties = {
   justifyContent: 'center',
   height: '100vh',
   margin: 0,
-  backgroundColor: 'hsl(var(--background))',
-  color: 'hsl(var(--foreground))',
+  backgroundColor: 'var(--background)',
+  color: 'var(--foreground)',
 }
 
 const CONTAINER_STYLE: CSSProperties = {
@@ -27,13 +27,13 @@ const TITLE_STYLE: CSSProperties = {
 }
 
 const MESSAGE_STYLE: CSSProperties = {
-  color: 'hsl(var(--muted-foreground))',
+  color: 'var(--muted-foreground)',
   marginBottom: '2rem',
 }
 
 const ACTION_BUTTON_STYLE: CSSProperties = {
-  backgroundColor: 'hsl(var(--foreground))',
-  color: 'hsl(var(--background))',
+  backgroundColor: 'var(--foreground)',
+  color: 'var(--background)',
   padding: '0.75rem 1.5rem',
   borderRadius: '0.375rem',
   border: 'none',
@@ -45,7 +45,7 @@ const ERROR_ID_STYLE: CSSProperties = {
   marginTop: '2rem',
   fontSize: '0.75rem',
   fontFamily: 'monospace',
-  color: 'hsl(var(--muted-foreground))',
+  color: 'var(--muted-foreground)',
 }
 
 export default function GlobalError({

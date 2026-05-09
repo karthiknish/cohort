@@ -58,7 +58,7 @@ export function SetupAlerts({
           </div>
           <div>
             <AlertTitle className="text-sm font-semibold">
-              Completing {platform} setup...
+              Completing {platform} setup…
             </AlertTitle>
             <AlertDescription className="text-xs text-muted-foreground">
               Fetching your ad accounts and configuring sync. This usually takes 5-10 seconds.
@@ -102,7 +102,7 @@ export function SetupAlerts({
                 disabled={loadingMetaAccountOptions || initializingMeta || metaAccountOptions.length === 0}
               >
                 <SelectTrigger className="sm:max-w-xs">
-                  <SelectValue placeholder={loadingMetaAccountOptions ? 'Loading ad accounts...' : 'Select Meta ad account'} />
+                  <SelectValue placeholder={loadingMetaAccountOptions ? 'Loading ad accounts…' : 'Select Meta ad account'} />
                 </SelectTrigger>
                 <SelectContent>
                   {metaAccountOptions.map((account) => (
@@ -128,7 +128,7 @@ export function SetupAlerts({
                 {initializingMeta ? (
                   <>
                     <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                    Finishing...
+                    Finishing…
                   </>
                 ) : (
                   'Finish setup'
@@ -169,7 +169,7 @@ export function SetupAlerts({
               {initializingTikTok ? (
                 <>
                   <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Finishing...
+                  Finishing…
                 </>
               ) : (
                 'Finish setup'

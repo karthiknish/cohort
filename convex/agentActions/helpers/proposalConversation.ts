@@ -87,12 +87,17 @@ function splitListValues(value: string) {
   const prepared = value.replace(/[\n;/]+/g, ',').replace(/\s+and\s+/gi, ',')
   return prepared
     .split(',')
-    .map((part) => part.trim())
-    .filter(Boolean)
+    .flatMap((part) => {
+      const trimmedPart = part.trim()
+      return trimmedPart ? [trimmedPart] : []
+    })
 }
 
 function dedupe(values: string[]) {
-  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)))
+  return Array.from(new Set(values.flatMap((value) => {
+    const trimmedValue = value.trim()
+    return trimmedValue ? [trimmedValue] : []
+  })))
 }
 
 function normalizeSelections(value: string, aliases: Array<{ value: string; aliases: string[] }>) {

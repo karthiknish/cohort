@@ -252,9 +252,9 @@ export function TypingIndicator({ users, className }: TypingIndicatorProps) {
   return (
     <div className={cn('flex items-center gap-2 text-xs text-muted-foreground', className)}>
       <div className="flex gap-0.5">
-        <span className="animate-bounce" style={typingDotStyles[0]}>●</span>
-        <span className="animate-bounce" style={typingDotStyles[1]}>●</span>
-        <span className="animate-bounce" style={typingDotStyles[2]}>●</span>
+        <span className="animate-subtle-dot-drift" style={typingDotStyles[0]}>●</span>
+        <span className="animate-subtle-dot-drift" style={typingDotStyles[1]}>●</span>
+        <span className="animate-subtle-dot-drift" style={typingDotStyles[2]}>●</span>
       </div>
       <span>{getText()}</span>
     </div>

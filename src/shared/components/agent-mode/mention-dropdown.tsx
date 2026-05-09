@@ -1,7 +1,7 @@
 "use client";
 
 import { Building2, FolderKanban, Loader2, User, Users, type LucideIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { motionDurationSeconds, motionEasing } from "@/lib/animation-system";
 import { cn } from "@/lib/utils";
 import {
@@ -246,12 +246,17 @@ export function MentionDropdown({
 		selectedIndex,
 		Math.max(filteredItems.length - 1, 0),
 	);
+	const closeDropdown = useEffectEvent(() => {
+		onClose();
+	});
+	const selectMention = useEffectEvent((item: MentionItem) => {
+		onSelect(item);
+	});
 	const handleAllCategoryClick = useCallback(() => {
 		setActiveCategory(null);
 	}, []);
 
-	// Handle keyboard navigation
-	const handleKeyDown = useCallback(
+	const handleDocumentKeyDown = useEffectEvent(
 		(e: KeyboardEvent) => {
 			if (!isOpen) return;
 
@@ -270,13 +275,13 @@ export function MentionDropdown({
 					e.preventDefault();
 					const selectedItem = filteredItems[clampedSelectedIndex];
 					if (selectedItem) {
-						onSelect(selectedItem);
+						selectMention(selectedItem);
 					}
 					break;
 				}
 				case "Escape": {
 					e.preventDefault();
-					onClose();
+					closeDropdown();
 					break;
 				}
 				case "Tab": {
@@ -296,21 +301,17 @@ export function MentionDropdown({
 					break;
 				}
 			}
-		},
-		[
-			activeCategory,
-			clampedSelectedIndex,
-			filteredItems,
-			isOpen,
-			onClose,
-			onSelect,
-		],
+		}
 	);
 
 	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			handleDocumentKeyDown(e);
+		};
+
 		document.addEventListener("keydown", handleKeyDown);
 		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [handleKeyDown]);
+	}, []);
 
 	// Close on outside click
 	useEffect(() => {
@@ -319,14 +320,14 @@ export function MentionDropdown({
 				dropdownRef.current &&
 				!dropdownRef.current.contains(e.target as Node)
 			) {
-				onClose();
+				closeDropdown();
 			}
 		};
 		if (isOpen) {
 			document.addEventListener("mousedown", handleClickOutside);
 		}
 		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, [isOpen, onClose]);
+	}, [isOpen]);
 
 	if (!isOpen) return null;
 

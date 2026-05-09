@@ -132,7 +132,7 @@ export function ProposalHistoryRow({
     <div
       className={cn(
         'group relative rounded-xl border bg-card p-5 motion-chromatic hover:border-info/20 hover:shadow-sm',
-        isActiveDraft && 'border-info bg-info/[0.01] shadow-[0_0_0_1px_hsl(var(--info)/0.05)]',
+        isActiveDraft && 'border-info bg-info/[0.01] ring-1 ring-info/10',
       )}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -161,7 +161,7 @@ export function ProposalHistoryRow({
             ) : null}
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5" suppressHydrationWarning>
               <Clock className="h-3.5 w-3.5" />
               {proposal.updatedAt ? new Date(proposal.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'}
             </span>

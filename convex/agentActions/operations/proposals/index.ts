@@ -72,7 +72,15 @@ function findConversationProposal(records: unknown[], conversationId: string) {
     .map((record) => asRecord(record))
     .filter((record): record is Record<string, unknown> => Boolean(record))
     .filter((record) => asString(record.agentConversationId) === conversationId)
-    .sort((left, right) => (asNumber(right.lastAgentInteractionAtMs) ?? 0) - (asNumber(left.lastAgentInteractionAtMs) ?? 0))[0] ?? null
+    .reduce<Record<string, unknown> | null>((latest, record) => {
+      if (latest === null) {
+        return record
+      }
+
+      return (asNumber(record.lastAgentInteractionAtMs) ?? 0) > (asNumber(latest.lastAgentInteractionAtMs) ?? 0)
+        ? record
+        : latest
+    }, null)
 }
 
 function buildCollectingProposalResponse(args: {

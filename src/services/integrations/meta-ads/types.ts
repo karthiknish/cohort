@@ -327,13 +327,27 @@ export type MetaAdAccount = {
 // =============================================================================
 
 /**
- * Advantage+ campaign state values for v24.0 API
+ * Legacy and supported Advantage campaign state values.
+ *
+ * `advantage_plus_sales` and `advantage_plus_app` remain in the read model for
+ * backward compatibility with existing campaign payloads, but Meta no longer
+ * allows those states in Marketing API create/update flows.
  * Reference: https://developers.facebook.com/docs/marketing-api/advantage-campaigns/
  */
-export type AdvantageState =
+export type LegacyAdvantageState =
   | 'advantage_plus_sales'
   | 'advantage_plus_app'
+
+export type MutableAdvantageState =
   | 'classic'
+
+export type AdvantageState =
+  | LegacyAdvantageState
+  | MutableAdvantageState
+
+export function isMutableAdvantageState(value: string): value is MutableAdvantageState {
+  return value === 'classic'
+}
 
 /**
  * Placement soft opt-out configuration for v24.0 API

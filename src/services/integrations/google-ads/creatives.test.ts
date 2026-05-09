@@ -24,9 +24,10 @@ describe('buildGoogleCreativesGaql', () => {
     expect(q).toContain("ad_group_ad.status != 'REMOVED'")
   })
 
-  it('selects video_responsive and demand gen carousel fields', () => {
+  it('selects video_responsive and current demand gen fields', () => {
     const q = buildGoogleCreativesGaql({})
     expect(q).toContain('video_responsive_ad.headlines')
+    expect(q).toContain('demand_gen_video_responsive_ad.logo_images')
     expect(q).toContain('demand_gen_carousel_ad.headline')
     expect(q).toContain('shopping_product_ad')
     expect(q).toContain('app_ad.youtube_videos')

@@ -82,7 +82,7 @@ export function PollCard({
 
   // Sort options by vote count (descending)
   const sortedOptions = useMemo(() => {
-    return [...poll.options].sort((a, b) => b.voters.length - a.voters.length)
+    return poll.options.toSorted((a, b) => b.voters.length - a.voters.length)
   }, [poll.options])
 
   const handleVote = useCallback(async () => {

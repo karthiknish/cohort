@@ -14,7 +14,7 @@ const PptViewer = dynamic(() => import('@/shared/components/ppt-viewer').then(m 
     <div className="flex items-center justify-center aspect-[16/9] rounded-lg border bg-muted/20">
       <div className="text-center">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-        <p className="text-sm text-muted-foreground">Loading presentation...</p>
+        <p className="text-sm text-muted-foreground">Loading presentation…</p>
       </div>
     </div>
   ),

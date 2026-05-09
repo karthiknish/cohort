@@ -59,7 +59,7 @@ export function ProposalTemplateDropdownContent(props: {
       <DropdownMenuSeparator />
 
       {loading ? (
-        <div className="space-y-2 px-2 py-2">{[0, 1, 2].map((slot) => <Skeleton key={slot} className="h-16 w-full rounded-lg" />)}</div>
+        <div className="space-y-2 p-2">{[0, 1, 2].map((slot) => <Skeleton key={slot} className="h-16 w-full rounded-lg" />)}</div>
       ) : templates.length > 0 ? (
         templates.map((template) => (
           <ProposalTemplateMenuItem

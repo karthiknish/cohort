@@ -160,7 +160,7 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
                   }`}
                 >
                   <p className="text-sm font-medium">{event.name}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground" suppressHydrationWarning>
                     {new Date(event.date).toLocaleDateString()} • {event.interested} interested
                   </p>
                 </button>

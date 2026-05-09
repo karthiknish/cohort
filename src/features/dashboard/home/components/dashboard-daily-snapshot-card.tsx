@@ -37,7 +37,7 @@ export function DashboardDailySnapshotCard({
             <CardTitle className="text-lg tracking-tight">Today&apos;s snapshot</CardTitle>
           </div>
           <CardDescription className="max-w-xl text-pretty">
-            Quick counts for what usually needs a glance before standups—open execution, pipeline, and client-facing
+            Quick counts for what usually needs a glance before standups: open execution, pipeline, and client-facing
             work.
           </CardDescription>
         </div>

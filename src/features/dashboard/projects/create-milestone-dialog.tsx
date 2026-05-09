@@ -113,7 +113,7 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
   }, [open, defaultProjectId])
 
   const sortedProjects = useMemo(() => {
-    return [...projects].sort((a, b) => a.name.localeCompare(b.name))
+    return projects.toSorted((a, b) => a.name.localeCompare(b.name))
   }, [projects])
 
   const handleSubmit = useCallback((event: React.FormEvent) => {
@@ -146,9 +146,11 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
         projectId,
         title: title.trim(),
         status,
-        description: description.trim() || undefined,
-        startDateMs: startDate ? startDate.getTime() : undefined,
-        endDateMs: endDate ? endDate.getTime() : undefined,
+        description: description.trim() || null,
+        startDateMs: startDate ? startDate.getTime() : null,
+        endDateMs: endDate ? endDate.getTime() : null,
+        ownerId: user.id,
+        order: null,
       })
 
       .then(() => {

@@ -9,6 +9,24 @@ export const CHANNEL_TYPE_COLORS: ChannelTypeColorMap = {
   project: 'bg-accent/10 text-accent',
 }
 
+const RELATIVE_DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+})
+
+const TIMESTAMP_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+})
+
+const DATE_SEPARATOR_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric',
+})
+
 export function normalizeTeamMembers(members: ClientTeamMember[] = []): ClientTeamMember[] {
   const map = new Map<string, ClientTeamMember>()
 
@@ -81,10 +99,7 @@ export function formatRelativeTime(value: string | null): string {
   const diffDays = Math.floor(diffHours / 24)
   if (diffDays < 7) return `${diffDays}d ago`
 
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-  }).format(date)
+  return RELATIVE_DATE_FORMATTER.format(date)
 }
 
 export function formatTimestamp(value: string | null): string {
@@ -92,12 +107,7 @@ export function formatTimestamp(value: string | null): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
 
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date)
+  return TIMESTAMP_FORMATTER.format(date)
 }
 
 export function collectSharedFiles(messages: CollaborationAttachment[][]): CollaborationAttachment[] {
@@ -247,9 +257,5 @@ export function formatDateSeparator(date: Date): string {
     return 'Yesterday'
   }
 
-  return new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  }).format(date)
+  return DATE_SEPARATOR_FORMATTER.format(date)
 }

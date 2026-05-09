@@ -613,23 +613,26 @@ export class GammaService {
             console.log(`[GammaService] Poll attempt ${pollCount} for generation ${generationId}`)
 
             const result = await this.getGeneration(generationId)
+            const generatedFiles = result.generatedFiles
+            const generatedFileCount = generatedFiles.length
+            const generatedFileTypes = generatedFiles.map((file) => normalizeGammaFileType(file.fileType))
             const normalizedStatus = typeof result.status === 'string' ? result.status.toLowerCase() : 'unknown'
             const elapsed = Date.now() - startedAt
-            const hasRequiredFiles = hasAllRequiredExports(result.generatedFiles, requiredExports)
+            const hasRequiredFiles = hasAllRequiredExports(generatedFiles, requiredExports)
 
             console.log(`[GammaService] Poll ${pollCount} result:`, {
                 status: result.status,
-                hasFiles: result.generatedFiles.length > 0,
+                hasFiles: generatedFileCount > 0,
                 hasRequiredFiles,
-                fileCount: result.generatedFiles.length,
-                fileTypes: result.generatedFiles.map((file) => normalizeGammaFileType(file.fileType)),
+                fileCount: generatedFileCount,
+                fileTypes: generatedFileTypes,
                 elapsed,
             })
 
             if (hasRequiredFiles) {
                 console.log(`[GammaService] Required exports ready after ${pollCount} polls, ${elapsed}ms`, {
                     generationId,
-                    fileCount: result.generatedFiles.length,
+                    fileCount: generatedFileCount,
                 })
                 return result
             }
@@ -638,7 +641,7 @@ export class GammaService {
                 console.warn('[GammaService] Generation reached terminal failure state; returning latest result', {
                     generationId,
                     status: result.status,
-                    fileTypes: result.generatedFiles.map((file) => normalizeGammaFileType(file.fileType)),
+                    fileTypes: generatedFileTypes,
                     elapsed,
                 })
                 return result
@@ -654,7 +657,7 @@ export class GammaService {
                 console.log(`[GammaService] Generation timeout after ${pollCount} polls, ${elapsed}ms`, {
                     generationId,
                     lastStatus: result.status,
-                    fileTypes: result.generatedFiles.map((file) => normalizeGammaFileType(file.fileType)),
+                    fileTypes: generatedFileTypes,
                 })
                 return result
             }

@@ -624,7 +624,7 @@ export function DashboardPreview() {
                     <div className="mt-4 space-y-3">
                       {currentMetric.focusItems.map((item) => (
                         <ViewTransition key={item}>
-                          <div className="flex items-start gap-3 rounded-2xl border border-border/50 bg-background/85 px-3 py-3">
+                          <div className="flex items-start gap-3 rounded-2xl border border-border/50 bg-background/85 p-3">
                             <span className={cn('mt-1 h-2.5 w-2.5 rounded-full', TONE_DOT_CLASSES[currentMetric.tone])} />
                             <p className="text-sm leading-6 text-foreground">{item}</p>
                           </div>
@@ -651,7 +651,7 @@ export function DashboardPreview() {
                   <div className="mt-4 space-y-3">
                     {currentView.queue.map((item) => (
                       <ViewTransition key={item.id}>
-                        <div className="rounded-2xl border border-border/50 bg-muted/35 px-3 py-3 transition-colors hover:bg-muted/60">
+                        <div className="rounded-2xl border border-border/50 bg-muted/35 p-3 transition-colors hover:bg-muted/60">
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="text-sm font-semibold text-foreground">{item.title}</p>
@@ -679,7 +679,7 @@ export function DashboardPreview() {
                   <div className="mt-4 space-y-3">
                     {currentView.agentItems.map((item) => (
                       <ViewTransition key={item.id}>
-                        <div className="rounded-2xl border border-primary-foreground/12 bg-primary-foreground/8 px-3 py-3">
+                        <div className="rounded-2xl border border-primary-foreground/12 bg-primary-foreground/8 p-3">
                           <div className="flex items-start gap-3">
                             <Bot className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                             <div>

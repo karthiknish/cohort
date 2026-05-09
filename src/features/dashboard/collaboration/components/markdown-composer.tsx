@@ -91,7 +91,7 @@ interface MarkdownPreviewProps {
 export function MarkdownPreview({
   value,
   onChange,
-  placeholder = 'Type your message...',
+  placeholder = 'Type your message…',
   maxLength = 2000,
   className,
   minRows = 3,
@@ -170,7 +170,7 @@ export function MarkdownPreview({
             <MarkdownPreviewContent value={value} />
           ) : (
             <p className="text-sm text-muted-foreground italic">
-              Nothing to preview...
+              Nothing to preview…
             </p>
           )}
         </div>
@@ -205,7 +205,7 @@ export function MarkdownPreview({
                 <MarkdownPreviewContent value={value} />
               ) : (
                 <p className="text-sm text-muted-foreground italic">
-                  Nothing to preview...
+                  Nothing to preview…
                 </p>
               )}
             </div>

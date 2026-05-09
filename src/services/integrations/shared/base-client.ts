@@ -16,6 +16,7 @@ import {
     parseRetryAfterMs,
     sleepWithSignal,
 } from '@/lib/retry-utils'
+import { GOOGLE_API_BASE } from '@/services/integrations/google-ads/types'
 import { META_API_BASE } from '@/services/integrations/meta-ads/constants'
 
 const DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS = 45_000
@@ -188,6 +189,7 @@ export class IntegrationApiClient {
             }
 
             const duration = Date.now() - startTime
+            const platformLabel = this.platform.toUpperCase()
 
             // Parse response - clone first to allow re-reading if needed
             let payload: T
@@ -198,15 +200,17 @@ export class IntegrationApiClient {
                 const responseClone = response.clone()
                 if (contentType.includes('application/json')) {
                     rawBody = await responseClone.text()
-                    console.log(`[${this.platform.toUpperCase()} API] Raw response body:`, rawBody?.slice(0, 500))
+                    const rawBodyPreview = rawBody?.slice(0, 500)
+                    console.log(`[${platformLabel} API] Raw response body:`, rawBodyPreview)
                     payload = JSON.parse(rawBody) as T
                 } else {
                     rawBody = await responseClone.text()
                     payload = rawBody as unknown as T
                 }
             } catch (parseError) {
-                console.error(`[${this.platform.toUpperCase()} API] Failed to parse response:`, parseError, 'Raw body:', rawBody?.slice(0, 500))
-                payload = { error: 'Failed to parse response', rawBody: rawBody?.slice(0, 500) } as unknown as T
+                const rawBodyPreview = rawBody?.slice(0, 500)
+                console.error(`[${platformLabel} API] Failed to parse response:`, parseError, 'Raw body:', rawBodyPreview)
+                payload = { error: 'Failed to parse response', rawBody: rawBodyPreview } as unknown as T
             }
 
             // Check success
@@ -224,7 +228,7 @@ export class IntegrationApiClient {
             }
 
             // Parse error
-            console.log(`[${this.platform.toUpperCase()} API] Error response payload:`, payload)
+            console.log(`[${platformLabel} API] Error response payload:`, payload)
             const error = parseIntegrationError(response, payload, this.platform)
             lastError = error
 
@@ -262,7 +266,7 @@ export class IntegrationApiClient {
                 onRateLimitHit?.(retryAfterMs)
 
                 if (attempt < maxRetries - 1) {
-                    console.warn(`[${this.platform.toUpperCase()} API] Rate limited, waiting ${retryAfterMs}ms`)
+                    console.warn(`[${platformLabel} API] Rate limited, waiting ${retryAfterMs}ms`)
                     await sleepWithSignal(retryAfterMs, signal)
                     continue
                 }
@@ -357,7 +361,7 @@ export const metaAdsClient = new IntegrationApiClient({
 
 export const googleAdsClient = new IntegrationApiClient({
     platform: 'google',
-    baseUrl: 'https://googleads.googleapis.com/v15',
+    baseUrl: GOOGLE_API_BASE,
     defaultTimeoutMs: DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS,
 })
 

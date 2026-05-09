@@ -177,7 +177,7 @@ export function MessageList({
   const [showJumpToLatest, setShowJumpToLatest] = useState(false)
 
   const sortedMessages = useMemo(() => 
-    [...messages].sort((a, b) => a.createdAtMs - b.createdAtMs),
+    messages.toSorted((a, b) => a.createdAtMs - b.createdAtMs),
     [messages]
   )
   

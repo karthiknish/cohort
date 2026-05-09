@@ -172,7 +172,7 @@ function ThreadCard({
                 </span>
 
                 {lastReplyAt && (
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1" suppressHydrationWarning>
                     <Clock className="h-3 w-3" />
                     {formatRelativeTime(new Date(lastReplyAt))}
                   </span>
@@ -250,7 +250,7 @@ export function ThreadBadge({
         <span className="font-medium">({unreadCount} new)</span>
       )}
       {lastReplyAt && (
-        <span className="text-muted-foreground">
+        <span className="text-muted-foreground" suppressHydrationWarning>
           {formatRelativeTime(new Date(lastReplyAt))}
         </span>
       )}

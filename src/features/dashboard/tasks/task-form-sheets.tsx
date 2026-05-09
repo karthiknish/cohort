@@ -180,7 +180,7 @@ export function EditTaskSheet({
               />
             ) : null}
           </div>
-          <SheetFooter className="border-t px-4 py-4">
+          <SheetFooter className="border-t p-4">
             <SheetClose asChild>
               <Button type="button" variant="outline" disabled={updating}>
                 Cancel

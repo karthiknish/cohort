@@ -245,7 +245,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
       <div className={cn('flex items-center justify-center rounded-lg border bg-muted p-12', className)}>
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <Loader2 className="h-8 w-8 animate-spin" />
-          <p>Loading presentation...</p>
+          <p>Loading presentation…</p>
         </div>
       </div>
     )
@@ -274,7 +274,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
       <h3 className="sr-only">{title}</h3>
 
       {/* Slide display */}
-      <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg border bg-black">
+      <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg border bg-gray-950">
         {currentSlideData?.imageUrl ? (
           <Image
             src={currentSlideData.imageUrl}
@@ -301,7 +301,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 disabled:opacity-30"
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-viewer-chrome hover:bg-black/70 disabled:opacity-30"
               onClick={handlePreviousSlide}
               disabled={currentSlide === 0}
               aria-label="Previous slide"
@@ -311,7 +311,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white hover:bg-black/70 disabled:opacity-30"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-viewer-chrome hover:bg-black/70 disabled:opacity-30"
               onClick={handleNextSlide}
               disabled={currentSlide === slides.length - 1}
               aria-label="Next slide"
@@ -325,7 +325,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
         <Button
           variant="ghost"
           size="icon"
-          className="absolute right-2 top-2 bg-black/50 text-white hover:bg-black/70"
+          className="absolute right-2 top-2 bg-black/50 text-viewer-chrome hover:bg-black/70"
           onClick={handleToggleFullscreen}
           aria-label={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
         >
@@ -333,7 +333,7 @@ export function PptViewer({ url, className, title = 'Presentation' }: PptViewerP
         </Button>
 
         {/* Slide counter */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-sm text-white">
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-sm text-viewer-chrome">
           {currentSlide + 1} / {slides.length}
         </div>
       </div>

@@ -27,7 +27,7 @@ export function RetainerSlider() {
   }, [])
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border px-5 py-4 shadow-sm">
+    <div className="flex flex-col gap-3 rounded-xl border border-border px-5 py-4 shadow-sm">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">Monthly retainer target</span>
         <Badge className="rounded-full px-1.5">{formatValue(value)}</Badge>
@@ -56,7 +56,7 @@ export function RetainerSlider() {
 
         {/* Thumb */}
         <div
-          className="pointer-events-none absolute size-4 rounded-full border border-primary bg-white shadow-sm transition-[left] duration-75"
+          className="pointer-events-none absolute size-4 rounded-full border border-primary bg-background shadow-sm transition-[left] duration-75"
           style={thumbStyle}
           aria-hidden="true"
         />

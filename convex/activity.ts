@@ -184,7 +184,7 @@ export const listForClient = zAuthenticatedQuery({
         navigationUrl,
         userId: typeof n.actorId === 'string' ? n.actorId : null,
         userName: n.actorName ?? null,
-        isRead: Array.isArray(n.readBy) && n.readBy.includes(userId),
+        isRead: Array.isArray(n.readBy) && new Set(n.readBy).has(userId),
         kind: n.kind,
       })
     }

@@ -19,7 +19,7 @@ export type GoogleAnalyticsStatusSummary = {
   lastSyncRequestedAtMs: number | null
 }
 
-export type FeatureSpace = {
+type FeatureSpace = {
   id: string
   title: string
   subtitle: string
@@ -31,7 +31,7 @@ export type FeatureSpace = {
   tone: HubTone
 }
 
-export type PriorityItem = {
+type PriorityItem = {
   id: string
   title: string
   detail: string
@@ -50,7 +50,7 @@ export type SpotlightItem = {
   tone: HubTone
 }
 
-export type SpotlightTab = {
+type SpotlightTab = {
   id: string
   label: string
   count: number
@@ -171,13 +171,13 @@ export function buildActivityHubModel({
   googleWorkspaceConnected,
   nowMs = Date.now(),
 }: BuildActivityHubModelArgs): ActivityHubModel {
-  const recentActivities = [...activities].sort((left, right) => {
+  const recentActivities = activities.toSorted((left, right) => {
     return (parseMs(right.timestamp) ?? 0) - (parseMs(left.timestamp) ?? 0)
   })
   const unreadActivities = recentActivities.filter((activity) => !activity.isRead)
   const collaborationUpdates = recentActivities.filter((activity) => activity.type === 'message_posted')
   const openTasks = tasks.filter((task) => task.status !== 'completed' && task.status !== 'archived')
-  const taskFocus = [...openTasks].sort((left, right) => {
+  const taskFocus = openTasks.toSorted((left, right) => {
     const leftDue = parseMs(left.dueDate) ?? Number.MAX_SAFE_INTEGER
     const rightDue = parseMs(right.dueDate) ?? Number.MAX_SAFE_INTEGER
     if (leftDue !== rightDue) return leftDue - rightDue
@@ -202,7 +202,7 @@ export function buildActivityHubModel({
     },
     { total: 0, planning: 0, active: 0, on_hold: 0, completed: 0 }
   )
-  const sortedMeetings = [...meetings].sort((left, right) => left.startTimeMs - right.startTimeMs)
+  const sortedMeetings = meetings.toSorted((left, right) => left.startTimeMs - right.startTimeMs)
   const liveMeetings = sortedMeetings.filter((meeting) => meeting.status === 'in_progress')
   const upcomingMeetings = sortedMeetings.filter((meeting) => isUpcomingMeeting(meeting, nowMs))
   const nextMeeting = upcomingMeetings[0] ?? null

@@ -296,6 +296,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
     let cancelled = false
 
     const syncSessionExpiry = async () => {
+      if (cancelled) return
       const metadata = await fetchSessionMetadata()
       if (cancelled) return
       scheduleSessionPrompts(metadata)

@@ -12,6 +12,7 @@ const DEFAULT_BASE_DELAY_MS = 1000
 const DEFAULT_MAX_DELAY_MS = 10000
 
 const RETRYABLE_STATUS_CODES = [408, 429, 500, 502, 503, 504]
+const RETRYABLE_STATUS_CODE_SET = new Set(RETRYABLE_STATUS_CODES)
 
 export interface RetryOptions {
   maxRetries?: number
@@ -78,7 +79,7 @@ export async function retryFetch(
         message: errorMessage,
         status: response.status,
         code: `HTTP_${response.status}`,
-        isRetryable: RETRYABLE_STATUS_CODES.includes(response.status),
+        isRetryable: RETRYABLE_STATUS_CODE_SET.has(response.status),
       })
 
       if (!apiError.isRetryable) {

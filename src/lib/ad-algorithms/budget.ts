@@ -163,7 +163,7 @@ export function generateBudgetInsights(
   const enriched = summaries.map(enrichSummaryWithMetrics)
 
   // Sort by ROAS
-  const sortedByRoas = [...enriched].sort((a, b) => b.averageRoaS - a.averageRoaS)
+  const sortedByRoas = enriched.toSorted((a, b) => b.averageRoaS - a.averageRoaS)
   const best = sortedByRoas[0]!
   const worst = sortedByRoas[sortedByRoas.length - 1]!
 
@@ -254,9 +254,10 @@ export function projectBudgetImpact(
 ): { projectedRevenue: number; projectedRoas: number; revenueChange: number } {
   let projectedRevenue = 0
   let totalProjectedSpend = 0
+  const summariesByProviderId = new Map(summaries.map((summary) => [summary.providerId, summary] as const))
 
   for (const allocation of allocations) {
-    const summary = summaries.find(s => s.providerId === allocation.providerId)
+    const summary = summariesByProviderId.get(allocation.providerId)
     if (!summary) continue
 
     // Project revenue based on current ROAS adjusted for diminishing returns

@@ -393,7 +393,7 @@ function AnalyticsSyncingState() {
           <LoaderCircle className="h-10 w-10 animate-spin text-primary" />
         </div>
         <h3 className="mb-2 text-base font-medium text-foreground">Syncing analytics data</h3>
-        <p className="max-w-md text-sm text-muted-foreground">Importing your Google Analytics data. This may take a moment...</p>
+        <p className="max-w-md text-sm text-muted-foreground">Importing your Google Analytics data. This may take a moment…</p>
       </CardContent>
     </Card>
   )

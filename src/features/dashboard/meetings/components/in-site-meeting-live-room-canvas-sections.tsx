@@ -102,7 +102,7 @@ export function LiveRoomCanvasOverlay({
               : 'border-warning/20 bg-warning/10 text-warning-foreground',
           )}
         >
-          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-warning shadow-[0_0_0_4px_hsl(var(--warning)/0.18)]" />
+          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-warning ring-4 ring-warning/20" />
           <span className={compactBadgeTextColor}>{captureLabel}</span>
         </div>
 

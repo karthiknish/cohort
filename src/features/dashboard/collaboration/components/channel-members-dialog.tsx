@@ -69,7 +69,7 @@ function ChannelMembersDialogForm({
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   const sortedMembers = useMemo(
-    () => [...teamMembers].sort((a, b) => a.name.localeCompare(b.name)),
+    () => teamMembers.toSorted((a, b) => a.name.localeCompare(b.name)),
     [teamMembers],
   )
 
@@ -208,7 +208,7 @@ function ChannelMembersDialogForm({
                     key={member.id}
                     type="button"
                     onClick={memberToggleHandlers[member.id]}
-                    className="flex w-full cursor-pointer items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-muted/40"
+                    className="flex w-full cursor-pointer items-start gap-3 rounded-xl p-3 text-left transition-colors hover:bg-muted/40"
                   >
                     <Checkbox
                       checked={checked}

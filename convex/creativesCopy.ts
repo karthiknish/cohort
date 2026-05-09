@@ -82,8 +82,10 @@ function uniqStrings(values: string[]): string[] {
 
 function clampLength(values: string[], maxLen: number): string[] {
   return values
-    .map((v) => v.trim())
-    .filter(Boolean)
+    .flatMap((value) => {
+      const trimmedValue = value.trim()
+      return trimmedValue ? [trimmedValue] : []
+    })
     .map((v) => (v.length > maxLen ? v.slice(0, maxLen - 1).trimEnd() + '…' : v))
 }
 
@@ -229,18 +231,26 @@ export const generateCopy = action({
       const requestedCaptions = kind === 'captions' || kind === 'both'
 
       const existingHeadlines = Array.isArray(args.existingHeadlines)
-        ? args.existingHeadlines.map(cleanSuggestion).filter(Boolean)
+        ? args.existingHeadlines.flatMap((headline) => {
+            const cleanedHeadline = cleanSuggestion(headline)
+            return cleanedHeadline ? [cleanedHeadline] : []
+          })
         : []
       const existingCaptions = Array.isArray(args.existingCaptions)
-        ? args.existingCaptions.map(cleanSuggestion).filter(Boolean)
+        ? args.existingCaptions.flatMap((caption) => {
+            const cleanedCaption = cleanSuggestion(caption)
+            return cleanedCaption ? [cleanedCaption] : []
+          })
         : []
 
       const headlines = requestedHeadlines
         ? uniqStrings(
             clampLength(
               validated.headlines
-                .map(cleanSuggestion)
-                .filter(Boolean)
+                .flatMap((headline) => {
+                  const cleanedHeadline = cleanSuggestion(headline)
+                  return cleanedHeadline ? [cleanedHeadline] : []
+                })
                 .filter(
                   (s: string) => !existingHeadlines.some((e) => e.toLowerCase() === s.toLowerCase())
                 ),
@@ -253,8 +263,10 @@ export const generateCopy = action({
         ? uniqStrings(
             clampLength(
               validated.captions
-                .map(cleanSuggestion)
-                .filter(Boolean)
+                .flatMap((caption) => {
+                  const cleanedCaption = cleanSuggestion(caption)
+                  return cleanedCaption ? [cleanedCaption] : []
+                })
                 .filter(
                   (s: string) => !existingCaptions.some((e) => e.toLowerCase() === s.toLowerCase())
                 ),

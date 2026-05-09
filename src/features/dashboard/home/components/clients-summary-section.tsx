@@ -93,7 +93,7 @@ function ClientSummaryCard({ client }: { client: ClientSummary }) {
       <div className="flex items-start gap-3 p-4 pb-3">
         <div
           className={cn(
-            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-md ring-1 ring-black/8 dark:ring-white/10',
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold shadow-md ring-1 ring-foreground/10',
             avatarColor(client.name)
           )}
         >
@@ -248,7 +248,7 @@ export function ClientsSummarySection() {
           <div>
             <CardTitle className="text-base">All clients</CardTitle>
             <CardDescription>
-              Live snapshot across every client workspace — tasks, projects, and upcoming meetings.
+              Live snapshot across every client workspace: tasks, projects, and upcoming meetings.
             </CardDescription>
           </div>
           <Button asChild variant="ghost" size="sm" className="w-fit">
@@ -265,7 +265,7 @@ export function ClientsSummarySection() {
           </div>
         ) : resolvedSummaries.length === 0 ? (
           <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-            No clients yet —{' '}
+            No clients yet.{` `}
             <Link href="/admin/clients" className="font-medium text-primary hover:underline">
               add your first client
             </Link>{' '}

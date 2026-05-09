@@ -86,7 +86,7 @@ export function calculateMovingAverage(
     const dailyValues = groupByDate(metrics, field)
 
     // Sort dates chronologically
-    const sortedDates = Array.from(dailyValues.keys()).sort()
+    const sortedDates = Array.from(dailyValues.keys()).toSorted()
 
     if (sortedDates.length === 0) return []
 
@@ -333,7 +333,7 @@ const INDUSTRY_ROAS_BY_PROVIDER: Record<string, number> = {
 function median(values: number[]): number | null {
     const filtered = values.filter((v) => Number.isFinite(v))
     if (filtered.length === 0) return null
-    const sorted = [...filtered].sort((a, b) => a - b)
+    const sorted = filtered.toSorted((a, b) => a - b)
     const mid = Math.floor(sorted.length / 2)
     if (sorted.length % 2 === 1) return sorted[mid]!
     return (sorted[mid - 1]! + sorted[mid]!) / 2

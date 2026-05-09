@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { Bell, Check, LoaderCircle, Trash2, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
@@ -210,6 +210,10 @@ export function NotificationsDropdown() {
     [fetchNotifications]
   )
 
+  const markUnreadNotificationsRead = useEffectEvent((ids: string[]) => {
+    void updateNotificationStatus(ids, 'read', { silent: true })
+  })
+
   useEffect(() => {
     if (!open || ackInFlight) {
       return
@@ -221,13 +225,13 @@ export function NotificationsDropdown() {
     }
 
     const frame = requestAnimationFrame(() => {
-      void updateNotificationStatus(unreadIds, 'read', { silent: true })
+      markUnreadNotificationsRead(unreadIds)
     })
 
     return () => {
       cancelAnimationFrame(frame)
     }
-  }, [ackInFlight, notifications, open, updateNotificationStatus])
+  }, [ackInFlight, notifications, open])
 
   const handleRefresh = useCallback(() => {
     void notificationsInfiniteQuery.refetch()

@@ -100,7 +100,7 @@ export function useMentionData() {
       }
     }
 
-    return Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name))
+    return Array.from(merged.values()).toSorted((a, b) => a.name.localeCompare(b.name))
   }, [allUsersRealtime, teamMembers])
 
   // For now, treat teams as empty - could fetch actual team data if needed

@@ -70,7 +70,7 @@ export function NotificationPreferencesCard({
         {notificationsLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
             <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
-            Loading notification preferences...
+            Loading notification preferences…
           </div>
         ) : (
           <div className="space-y-6">

@@ -109,7 +109,7 @@ function calculateMovingAverage(
     days: number
 ): MovingAverageResult {
     // Sort by date descending and take last N days
-    const sorted = [...metrics].sort(
+    const sorted = metrics.toSorted(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     )
     const subset = sorted.slice(0, days)
@@ -159,7 +159,7 @@ function splitMetricsByPeriod(
     metrics: MetricRecord[],
     daysPerPeriod: number
 ): { current: MetricRecord[]; previous: MetricRecord[] } {
-    const sorted = [...metrics].sort(
+    const sorted = metrics.toSorted(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     )
 

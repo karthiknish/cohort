@@ -123,11 +123,11 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
 function getUrgencyDotClass(level: SummaryStat['urgency']): string {
   switch (level) {
     case 'high':
-      return 'bg-destructive shadow-[0_0_0_4px_hsl(var(--destructive)/0.12)]'
+      return 'bg-destructive ring-4 ring-destructive/12'
     case 'medium':
-      return 'bg-warning shadow-[0_0_0_4px_hsl(var(--warning)/0.16)]'
+      return 'bg-warning ring-4 ring-warning/16'
     case 'low':
-      return 'bg-success shadow-[0_0_0_4px_hsl(var(--success)/0.14)]'
+      return 'bg-success ring-4 ring-success/14'
     default:
       return 'bg-muted-foreground'
   }

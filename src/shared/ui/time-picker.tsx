@@ -61,7 +61,7 @@ export function TimePicker({
     }
 
     options.add(minute)
-    return Array.from(options).sort((left, right) => left - right)
+    return Array.from(options).toSorted((left, right) => left - right)
   }, [minute, minuteStep])
 
   const hourValue = String(hour12)

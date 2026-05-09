@@ -19,6 +19,11 @@ type LeafletMapProps = {
   onMarkerClick?: (location: LocationMarker) => void
 }
 
+type LeafletMarkerBinding = {
+  marker: L.Marker
+  clickHandler?: () => void
+}
+
 function getZoomForLocation(location: LocationMarker) {
   const type = location.type?.toLowerCase() ?? ''
 
@@ -33,7 +38,7 @@ function getZoomForLocation(location: LocationMarker) {
 export function LeafletMap({ locations, interactive = false, onMarkerClick }: LeafletMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
-  const markersRef = useRef<L.Marker[]>([])
+  const markersRef = useRef<LeafletMarkerBinding[]>([])
   const [mapReady, setMapReady] = useState(false)
   const initialViewRef = useRef<{ center: L.LatLngTuple; zoom: number }>(
     locations.length === 1
@@ -70,12 +75,15 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
     }).addTo(map)
 
     mapInstanceRef.current = map
-    
-    map.whenReady(() => {
+
+    const handleMapReady = () => {
       setMapReady(true)
-    })
+    }
+
+    map.whenReady(handleMapReady)
 
     return () => {
+      map.off('load', handleMapReady)
       map.remove()
       mapInstanceRef.current = null
       setMapReady(false)
@@ -88,15 +96,13 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
 
      let frameId: number | null = null
 
-     const clearMarkers = () => {
-       markersRef.current.forEach((marker) => {
-         marker.off()
-         marker.remove()
-       })
-       markersRef.current = []
-     }
-
-     clearMarkers()
+     markersRef.current.forEach(({ marker, clickHandler }) => {
+       if (clickHandler) {
+         marker.off('click', clickHandler)
+       }
+       marker.remove()
+     })
+     markersRef.current = []
 
      const validLocations = locations.filter(
        (loc) => Number.isFinite(loc.lat) && Number.isFinite(loc.lng) && !(loc.lat === 0 && loc.lng === 0)
@@ -114,11 +120,14 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
            `<div class="text-sm"><p class="font-medium">${loc.name}</p>${loc.type ? `<p class="text-xs opacity-70 capitalize">${loc.type}</p>` : ''}</div>`
          )
 
+       let clickHandler: (() => void) | undefined
+
        if (onMarkerClick) {
-         marker.on('click', () => onMarkerClick(loc))
+         clickHandler = () => onMarkerClick(loc)
+         marker.on('click', clickHandler)
        }
 
-       markersRef.current.push(marker)
+       markersRef.current.push({ marker, clickHandler })
      })
 
      // Ensure the map has a real size before fitting/centering.
@@ -154,7 +163,14 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
        if (frameId !== null) {
          cancelAnimationFrame(frameId)
        }
-       clearMarkers()
+
+       markersRef.current.forEach(({ marker, clickHandler }) => {
+         if (clickHandler) {
+           marker.off('click', clickHandler)
+         }
+         marker.remove()
+       })
+       markersRef.current = []
      }
    }, [locations, onMarkerClick, mapReady])
 

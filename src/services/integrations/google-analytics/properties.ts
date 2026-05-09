@@ -77,5 +77,5 @@ export async function fetchGoogleAnalyticsProperties(options: {
     page += 1
   } while (nextPageToken && page < maxPages)
 
-  return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name))
+  return Array.from(unique.values()).toSorted((a, b) => a.name.localeCompare(b.name))
 }

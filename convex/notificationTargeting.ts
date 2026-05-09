@@ -117,7 +117,7 @@ export async function resolveWorkspaceUserIds(
     }
   }
 
-  return [...matches].sort()
+  return Array.from(matches).toSorted()
 }
 
 export function matchesNotificationRecipient(
