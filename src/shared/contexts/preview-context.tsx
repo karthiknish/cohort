@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback, useMemo, type PropsWithChildren } from 'react'
+import { createContext, use, useEffect, useState, useCallback, useMemo, type PropsWithChildren } from 'react'
 
 import {
   isPreviewModeEnabled,
@@ -82,7 +82,7 @@ export function PreviewProvider({ children }: PropsWithChildren) {
 }
 
 export function usePreview() {
-  const context = useContext(PreviewContext)
+  const context = use(PreviewContext)
   if (context === undefined) {
     return DEFAULT_PREVIEW_CONTEXT
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
 import { asErrorMessage } from '@/lib/convex-errors'
@@ -157,7 +157,7 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
 }
 
 export function usePreferences() {
-  const context = useContext(PreferencesContext)
+  const context = use(PreferencesContext)
   if (context === undefined) {
     throw new Error('usePreferences must be used within a PreferencesProvider')
   }
@@ -169,6 +169,6 @@ export function usePreferences() {
  * Returns the user's preferred currency or USD as default
  */
 export function useCurrency(): CurrencyCode {
-  const context = useContext(PreferencesContext)
+  const context = use(PreferencesContext)
   return context?.preferences.currency ?? DEFAULT_CURRENCY
 }

@@ -215,7 +215,7 @@ export function CollaborationDashboardProvider({ children }: { children: ReactNo
 }
 
 export function useCollaborationDashboardContext(): CollaborationDashboardContextValue {
-  const context = useContext(CollaborationDashboardContext)
+  const context = use(CollaborationDashboardContext)
 
   if (!context) {
     throw new Error('useCollaborationDashboardContext must be used within a CollaborationDashboardProvider')

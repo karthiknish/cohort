@@ -41,7 +41,7 @@ function ObjectiveSelectorCard({
 }) {
   const Icon = ICON_MAP[config.icon]
 
-  const handleClick = useCallback(() => {
+  const selectObjective = useCallback(() => {
     onChange(config.value)
   }, [config.value, onChange])
 
@@ -66,7 +66,7 @@ function ObjectiveSelectorCard({
     <button
       type="button"
       disabled={disabled}
-      onClick={handleClick}
+      onClick={selectObjective}
       className={cn(
         'relative flex flex-col items-start p-4 rounded-lg border-2 text-left motion-chromatic',
         'hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2',
@@ -78,7 +78,7 @@ function ObjectiveSelectorCard({
     >
       {isSelected && (
         <div
-          className="absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full"
+          className="absolute top-3 right-3 flex size-5 items-center justify-center rounded-full"
           style={selectedIndicatorStyle}
         >
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={checkStyle}>
@@ -87,7 +87,7 @@ function ObjectiveSelectorCard({
         </div>
       )}
 
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg" style={iconContainerStyle}>
+      <div className="mb-3 flex size-12 items-center justify-center rounded-lg" style={iconContainerStyle}>
         <Icon className="h-6 w-6" style={iconStyle} />
       </div>
 

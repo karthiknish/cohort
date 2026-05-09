@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, use, type ReactNode } from 'react'
 
 import { useMeetingsPageController } from '../hooks/use-meetings-page-controller'
 
@@ -19,7 +19,7 @@ export function MeetingsPageProvider({ children }: { children: ReactNode }) {
 }
 
 export function useMeetingsPageContext(): MeetingsPageContextValue {
-  const context = useContext(MeetingsPageContext)
+  const context = use(MeetingsPageContext)
 
   if (!context) {
     throw new Error('useMeetingsPageContext must be used within a MeetingsPageProvider')

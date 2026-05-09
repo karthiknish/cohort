@@ -716,6 +716,38 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     }
   }, [liveRoomLayoutContext.widget, settingsWidgetOpen])
 
+  const performAutoSync = useCallback((transcript: string) => {
+    setAutoSyncing(true)
+
+    const mode: TranscriptMode =
+      transcript.length >= 80 ? 'save-transcript-and-generate-notes' : 'save-transcript'
+
+    void submitTranscriptAction(mode, {
+      transcriptText: transcript,
+      source: 'livekit-browser-voice',
+    })
+      .then((data) => {
+        lastAutoSyncedTranscriptRef.current = transcript
+        setLastAutoSyncAt(Date.now())
+        applyTranscriptActionResult(data)
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : 'Room automation sync failed'
+        logError(error, 'useInSiteMeetingRoomController:autoSyncTranscript')
+
+        if (mode === 'save-transcript-and-generate-notes') {
+          setNotesReason('generation_failed')
+          setNotesProcessingState('failed')
+          setNotesProcessingError(message)
+        } else {
+          setTranscriptProcessingError(message)
+        }
+      })
+      .finally(() => {
+        setAutoSyncing(false)
+      })
+  }, [applyTranscriptActionResult, submitTranscriptAction])
+
   useEffect(() => {
     if (!joinConfig || !canPersist || normalizedTranscript.length < 20) {
       return
@@ -726,40 +758,13 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
     }
 
     const timeoutId = window.setTimeout(() => {
-      setAutoSyncing(true)
-      const mode: TranscriptMode =
-        normalizedTranscript.length >= 80 ? 'save-transcript-and-generate-notes' : 'save-transcript'
-
-      void submitTranscriptAction(mode, {
-        transcriptText: normalizedTranscript,
-        source: 'livekit-browser-voice',
-      })
-        .then((data) => {
-          lastAutoSyncedTranscriptRef.current = normalizedTranscript
-          setLastAutoSyncAt(Date.now())
-          applyTranscriptActionResult(data)
-        })
-        .catch((error) => {
-          const message = error instanceof Error ? error.message : 'Room automation sync failed'
-          logError(error, 'useInSiteMeetingRoomController:autoSyncTranscript')
-
-          if (mode === 'save-transcript-and-generate-notes') {
-            setNotesReason('generation_failed')
-            setNotesProcessingState('failed')
-            setNotesProcessingError(message)
-          } else {
-            setTranscriptProcessingError(message)
-          }
-        })
-        .finally(() => {
-          setAutoSyncing(false)
-        })
+      performAutoSync(normalizedTranscript)
     }, 10_000)
 
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [applyTranscriptActionResult, canPersist, joinConfig, normalizedTranscript, submitTranscriptAction])
+  }, [canPersist, joinConfig, normalizedTranscript, performAutoSync])
 
   return {
     liveRoomLayoutContext,

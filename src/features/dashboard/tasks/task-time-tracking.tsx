@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useReducer, useCallback, useEffect, useRef, useState } from 'react'
 import { Play, Square, Clock, Plus } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import {
@@ -30,6 +30,56 @@ type TaskTimeTrackingProps = {
   readonly?: boolean
 }
 
+type TaskTimeTrackingState = {
+  open: boolean
+  trackingNote: string
+  elapsedSeconds: number
+}
+
+type TaskTimeTrackingAction =
+  | { type: 'setOpen'; open: boolean }
+  | { type: 'setTrackingNote'; note: string }
+  | { type: 'incrementElapsedSeconds' }
+  | { type: 'resetElapsedSeconds' }
+  | { type: 'clearTrackingNote' }
+
+const INITIAL_TASK_TIME_TRACKING_STATE: TaskTimeTrackingState = {
+  open: false,
+  trackingNote: '',
+  elapsedSeconds: 0,
+}
+
+function getTimeEntryDurationSeconds(entry: TimeEntry): number {
+  const endTimestamp = Date.parse(entry.endTime ?? entry.startTime)
+  const startTimestamp = Date.parse(entry.startTime)
+
+  if (!Number.isFinite(endTimestamp) || !Number.isFinite(startTimestamp)) {
+    return 0
+  }
+
+  return Math.max(0, Math.floor((endTimestamp - startTimestamp) / 1000))
+}
+
+function taskTimeTrackingReducer(
+  state: TaskTimeTrackingState,
+  action: TaskTimeTrackingAction,
+): TaskTimeTrackingState {
+  switch (action.type) {
+    case 'setOpen':
+      return { ...state, open: action.open }
+    case 'setTrackingNote':
+      return { ...state, trackingNote: action.note }
+    case 'incrementElapsedSeconds':
+      return { ...state, elapsedSeconds: state.elapsedSeconds + 1 }
+    case 'resetElapsedSeconds':
+      return { ...state, elapsedSeconds: 0 }
+    case 'clearTrackingNote':
+      return { ...state, trackingNote: '' }
+    default:
+      return state
+  }
+}
+
 export function TaskTimeTracking({
   timeEntries,
   totalTimeMinutes,
@@ -40,9 +90,10 @@ export function TaskTimeTracking({
   onDeleteEntry,
   readonly = false,
 }: TaskTimeTrackingProps) {
-  const [open, setOpen] = useState(false)
-  const [trackingNote, setTrackingNote] = useState('')
-  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [{ open, trackingNote, elapsedSeconds }, dispatch] = useReducer(
+    taskTimeTrackingReducer,
+    INITIAL_TASK_TIME_TRACKING_STATE,
+  )
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
@@ -50,7 +101,7 @@ export function TaskTimeTracking({
 
     if (isRunning) {
       intervalRef.current = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1)
+        dispatch({ type: 'incrementElapsedSeconds' })
       }, 1000)
     } else {
       if (intervalRef.current) {
@@ -58,7 +109,7 @@ export function TaskTimeTracking({
         intervalRef.current = null
       }
       frame = requestAnimationFrame(() => {
-        setElapsedSeconds(0)
+        dispatch({ type: 'resetElapsedSeconds' })
       })
     }
 
@@ -83,9 +134,9 @@ export function TaskTimeTracking({
   }
 
   const handleStart = useCallback(() => {
-    setElapsedSeconds(0)
+    dispatch({ type: 'resetElapsedSeconds' })
     onStartTracking?.(trackingNote || undefined)
-    setTrackingNote('')
+    dispatch({ type: 'clearTrackingNote' })
   }, [onStartTracking, trackingNote])
 
   const handleStop = useCallback(() => {
@@ -95,13 +146,17 @@ export function TaskTimeTracking({
   const handleAddTimeSubmit = useCallback(
     (minutes: number, note: string) => {
       onAddTime?.(minutes, note)
-      setOpen(false)
+      dispatch({ type: 'setOpen', open: false })
     },
     [onAddTime]
   )
 
   const handleAddTimeCancel = useCallback(() => {
-    setOpen(false)
+    dispatch({ type: 'setOpen', open: false })
+  }, [])
+
+  const handleDialogOpenChange = useCallback((nextOpen: boolean) => {
+    dispatch({ type: 'setOpen', open: nextOpen })
   }, [])
 
   const handleDeleteEntry = useCallback(
@@ -155,7 +210,7 @@ export function TaskTimeTracking({
 
       {/* Quick add time dialog */}
       {!readonly && onAddTime && (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
             <Button variant="ghost" size="sm" className="h-7 gap-1 w-full justify-start">
               <Plus className="h-3 w-3" />
@@ -197,16 +252,7 @@ export function TaskTimeTracking({
                         ? `${Math.floor(entry.duration / 60)}h ${entry.duration % 60}m`
                         : isRunning && !entry.endTime
                         ? formatTime(elapsedSeconds)
-                        : formatTime(
-                            Math.max(
-                              0,
-                              Math.floor(
-                                (new Date(entry.endTime ?? entry.startTime).getTime() -
-                                  new Date(entry.startTime).getTime()) /
-                                  1000
-                              )
-                            )
-                          )
+                        : formatTime(getTimeEntryDurationSeconds(entry))
                       }
                     </span>
                     <span className="text-muted-foreground truncate">

@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, createContext, useContext } from 'react'
+import { type ReactNode, createContext, use } from 'react'
 
 import { useProjectsPageController } from '../hooks/use-projects-page-controller'
 
@@ -19,7 +19,7 @@ export function ProjectsPageProvider({ children }: { children: ReactNode }) {
 }
 
 export function useProjectsPageContext(): ProjectsPageContextValue {
-  const context = useContext(ProjectsPageContext)
+  const context = use(ProjectsPageContext)
 
   if (!context) {
     throw new Error('useProjectsPageContext must be used within a ProjectsPageProvider')

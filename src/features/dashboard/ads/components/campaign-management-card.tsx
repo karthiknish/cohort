@@ -127,7 +127,7 @@ type CampaignManagementActionContextValue = {
 const CampaignManagementActionContext = createContext<CampaignManagementActionContextValue | null>(null)
 
 function useCampaignManagementActions() {
-  const context = useContext(CampaignManagementActionContext)
+  const context = use(CampaignManagementActionContext)
   if (!context) {
     throw new Error('CampaignManagementActionContext is missing')
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { type ReactNode, createContext, useContext } from 'react'
+import { type ReactNode, createContext, use } from 'react'
 
 import type { UnifiedMessage } from './message-list'
 
@@ -33,5 +33,5 @@ export function MessageListRenderProvider({
 }
 
 export function useMessageListRenderContext() {
-  return useContext(MessageListRenderContext)
+  return use(MessageListRenderContext)
 }

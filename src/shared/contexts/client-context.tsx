@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useQuery, useMutation } from 'convex/react'
 
@@ -398,7 +398,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useClientContext() {
-  const context = useContext(ClientContext)
+  const context = use(ClientContext)
   if (!context) {
     throw new Error('useClientContext must be used within a ClientProvider')
   }

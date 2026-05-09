@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useReducer } from 'react'
 import { Hash, LoaderCircle, Lock, Plus, Users } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -53,6 +53,68 @@ interface CreateChannelDialogProps {
   trigger?: React.ReactNode
 }
 
+type CreateChannelDialogState = {
+  open: boolean
+  channelName: string
+  description: string
+  visibility: 'public' | 'private'
+  selectedMemberIds: string[]
+  isCreating: boolean
+}
+
+type CreateChannelDialogAction =
+  | { type: 'setOpen'; open: boolean }
+  | { type: 'setChannelName'; channelName: string }
+  | { type: 'setDescription'; description: string }
+  | { type: 'setVisibility'; visibility: 'public' | 'private' }
+  | { type: 'toggleMember'; memberId: string }
+  | { type: 'setIsCreating'; isCreating: boolean }
+  | { type: 'resetForm' }
+
+const INITIAL_CREATE_CHANNEL_DIALOG_STATE: CreateChannelDialogState = {
+  open: false,
+  channelName: '',
+  description: '',
+  visibility: 'private',
+  selectedMemberIds: [],
+  isCreating: false,
+}
+
+function createChannelDialogReducer(
+  state: CreateChannelDialogState,
+  action: CreateChannelDialogAction,
+): CreateChannelDialogState {
+  switch (action.type) {
+    case 'setOpen':
+      return { ...state, open: action.open }
+    case 'setChannelName':
+      return { ...state, channelName: action.channelName }
+    case 'setDescription':
+      return { ...state, description: action.description }
+    case 'setVisibility':
+      return { ...state, visibility: action.visibility }
+    case 'toggleMember':
+      return {
+        ...state,
+        selectedMemberIds: state.selectedMemberIds.includes(action.memberId)
+          ? state.selectedMemberIds.filter((id) => id !== action.memberId)
+          : [...state.selectedMemberIds, action.memberId],
+      }
+    case 'setIsCreating':
+      return { ...state, isCreating: action.isCreating }
+    case 'resetForm':
+      return {
+        ...state,
+        channelName: '',
+        description: '',
+        visibility: 'private',
+        selectedMemberIds: [],
+      }
+    default:
+      return state
+  }
+}
+
 function sortMembers(members: WorkspaceMemberOption[]) {
   return [...members].sort((a, b) => a.name.localeCompare(b.name))
 }
@@ -92,26 +154,19 @@ export function CreateChannelDialog({
   trigger,
 }: CreateChannelDialogProps) {
   const { toast } = useToast()
-  const [open, setOpen] = useState(false)
-  const [channelName, setChannelName] = useState('')
-  const [description, setDescription] = useState('')
-  const [visibility, setVisibility] = useState<'public' | 'private'>('private')
-  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([])
-  const [isCreating, setIsCreating] = useState(false)
+  const [{ open, channelName, description, visibility, selectedMemberIds, isCreating }, dispatch] = useReducer(
+    createChannelDialogReducer,
+    INITIAL_CREATE_CHANNEL_DIALOG_STATE,
+  )
 
   const sortedMembers = useMemo(() => sortMembers(teamMembers), [teamMembers])
 
   const resetForm = useCallback(() => {
-    setChannelName('')
-    setDescription('')
-    setVisibility('private')
-    setSelectedMemberIds([])
+    dispatch({ type: 'resetForm' })
   }, [])
 
   const handleMemberToggle = useCallback((memberId: string) => {
-    setSelectedMemberIds((prev) =>
-      prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId],
-    )
+    dispatch({ type: 'toggleMember', memberId })
   }, [])
 
   const handleOpenChange = useCallback(
@@ -120,7 +175,7 @@ export function CreateChannelDialog({
         return
       }
 
-      setOpen(nextOpen)
+      dispatch({ type: 'setOpen', open: nextOpen })
       if (!nextOpen) {
         resetForm()
       }
@@ -129,15 +184,15 @@ export function CreateChannelDialog({
   )
 
   const handleChannelNameChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    setChannelName(event.target.value)
+    dispatch({ type: 'setChannelName', channelName: event.target.value })
   }, [])
 
   const handleDescriptionChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
-    setDescription(event.target.value)
+    dispatch({ type: 'setDescription', description: event.target.value })
   }, [])
 
   const handleVisibilityChange = useCallback((value: string) => {
-    setVisibility(value as 'public' | 'private')
+    dispatch({ type: 'setVisibility', visibility: value as 'public' | 'private' })
   }, [])
 
   const handleCancel = useCallback(() => {
@@ -145,7 +200,7 @@ export function CreateChannelDialog({
       return
     }
 
-    setOpen(false)
+    dispatch({ type: 'setOpen', open: false })
   }, [isCreating])
 
   const handleCreate = useCallback(async () => {
@@ -172,7 +227,7 @@ export function CreateChannelDialog({
       return
     }
 
-    setIsCreating(true)
+    dispatch({ type: 'setIsCreating', isCreating: true })
 
     try {
       await onCreate({
@@ -186,7 +241,7 @@ export function CreateChannelDialog({
         description: `#${normalizedName} is ready for collaboration.`,
       })
       resetForm()
-      setOpen(false)
+      dispatch({ type: 'setOpen', open: false })
     } catch (error) {
       logError(error, 'CreateChannelDialog:handleCreate')
       toast({
@@ -194,9 +249,8 @@ export function CreateChannelDialog({
         description: asErrorMessage(error),
         variant: 'destructive',
       })
-    } finally {
-      setIsCreating(false)
     }
+    dispatch({ type: 'setIsCreating', isCreating: false })
   }, [channelName, description, isCreating, onCreate, resetForm, selectedMemberIds, toast, userId, visibility, workspaceId])
 
   const defaultTrigger = (

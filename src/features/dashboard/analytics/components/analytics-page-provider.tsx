@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, use, type ReactNode } from 'react'
 
 import { useAnalyticsPageController } from '../hooks/use-analytics-page-controller'
 
@@ -19,7 +19,7 @@ export function AnalyticsPageProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAnalyticsPageContext(): AnalyticsPageContextValue {
-  const context = useContext(AnalyticsPageContext)
+  const context = use(AnalyticsPageContext)
 
   if (!context) {
     throw new Error('useAnalyticsPageContext must be used within an AnalyticsPageProvider')

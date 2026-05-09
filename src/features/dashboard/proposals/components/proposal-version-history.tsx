@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useReducer } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
 import { Dialog } from '@/shared/ui/dialog'
@@ -37,6 +37,49 @@ type VersionRow = {
   createdBy?: string
   createdByName?: string | null
   createdAtMs?: number
+}
+
+type ProposalVersionHistoryState = {
+  open: boolean
+  saving: boolean
+  restoring: boolean
+  previewVersion: ProposalVersion | null
+  restoreConfirmVersion: ProposalVersion | null
+}
+
+type ProposalVersionHistoryAction =
+  | { type: 'setOpen'; open: boolean }
+  | { type: 'setSaving'; saving: boolean }
+  | { type: 'setRestoring'; restoring: boolean }
+  | { type: 'setPreviewVersion'; version: ProposalVersion | null }
+  | { type: 'setRestoreConfirmVersion'; version: ProposalVersion | null }
+
+const INITIAL_PROPOSAL_VERSION_HISTORY_STATE: ProposalVersionHistoryState = {
+  open: false,
+  saving: false,
+  restoring: false,
+  previewVersion: null,
+  restoreConfirmVersion: null,
+}
+
+function proposalVersionHistoryReducer(
+  state: ProposalVersionHistoryState,
+  action: ProposalVersionHistoryAction,
+): ProposalVersionHistoryState {
+  switch (action.type) {
+    case 'setOpen':
+      return { ...state, open: action.open }
+    case 'setSaving':
+      return { ...state, saving: action.saving }
+    case 'setRestoring':
+      return { ...state, restoring: action.restoring }
+    case 'setPreviewVersion':
+      return { ...state, previewVersion: action.version }
+    case 'setRestoreConfirmVersion':
+      return { ...state, restoreConfirmVersion: action.version }
+    default:
+      return state
+  }
 }
 
 export function ProposalVersionHistory({
@@ -78,14 +121,21 @@ export function ProposalVersionHistory({
 
   const loading = rows === undefined
 
-  const [open, setOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [restoring, setRestoring] = useState(false)
-  const [previewVersion, setPreviewVersion] = useState<ProposalVersion | null>(null)
-  const [restoreConfirmVersion, setRestoreConfirmVersion] = useState<ProposalVersion | null>(null)
+  const [{ open, saving, restoring, previewVersion, restoreConfirmVersion }, dispatch] = useReducer(
+    proposalVersionHistoryReducer,
+    INITIAL_PROPOSAL_VERSION_HISTORY_STATE,
+  )
 
   const handleOpenChange = useCallback((isOpen: boolean) => {
-    setOpen(isOpen)
+    dispatch({ type: 'setOpen', open: isOpen })
+  }, [])
+
+  const setPreviewVersion = useCallback((version: ProposalVersion | null) => {
+    dispatch({ type: 'setPreviewVersion', version })
+  }, [])
+
+  const setRestoreConfirmVersion = useCallback((version: ProposalVersion | null) => {
+    dispatch({ type: 'setRestoreConfirmVersion', version })
   }, [])
 
   const handleSaveVersion = useCallback(async () => {
@@ -106,7 +156,7 @@ export function ProposalVersionHistory({
       return
     }
 
-    setSaving(true)
+    dispatch({ type: 'setSaving', saving: true })
 
     if (!workspaceId) {
       toast({
@@ -114,7 +164,7 @@ export function ProposalVersionHistory({
         description: 'Workspace context missing',
         variant: 'destructive',
       })
-      setSaving(false)
+      dispatch({ type: 'setSaving', saving: false })
       return
     }
 
@@ -145,7 +195,7 @@ export function ProposalVersionHistory({
         })
       })
       .finally(() => {
-        setSaving(false)
+        dispatch({ type: 'setSaving', saving: false })
       })
   }, [createSnapshot, proposalId, toast, user?.email, user?.id, workspaceId])
 
@@ -159,7 +209,7 @@ export function ProposalVersionHistory({
     if (!isOpen) {
       setRestoreConfirmVersion(null)
     }
-  }, [])
+  }, [setRestoreConfirmVersion])
 
   const handleRestoreVersion = useCallback(async () => {
     if (!proposalId || !restoreConfirmVersion) return
@@ -173,7 +223,7 @@ export function ProposalVersionHistory({
       return
     }
 
-    setRestoring(true)
+    dispatch({ type: 'setRestoring', restoring: true })
 
     if (!workspaceId) {
       toast({
@@ -181,7 +231,7 @@ export function ProposalVersionHistory({
         description: 'Workspace context missing',
         variant: 'destructive',
       })
-      setRestoring(false)
+      dispatch({ type: 'setRestoring', restoring: false })
       return
     }
 
@@ -211,9 +261,9 @@ export function ProposalVersionHistory({
         })
       })
       .finally(() => {
-        setRestoring(false)
+        dispatch({ type: 'setRestoring', restoring: false })
       })
-  }, [proposalId, restoreConfirmVersion, onVersionRestored, toast, restoreToVersion, user?.email, user?.id, workspaceId])
+  }, [proposalId, restoreConfirmVersion, onVersionRestored, setRestoreConfirmVersion, toast, restoreToVersion, user?.email, user?.id, workspaceId])
 
   const versionSummary = useMemo(() => {
     if (versions.length === 0) return null

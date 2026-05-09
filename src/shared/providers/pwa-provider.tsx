@@ -8,6 +8,10 @@ export function PWAProvider() {
     if (!('serviceWorker' in navigator)) return
 
     let cancelled = false
+    let registration: ServiceWorkerRegistration | null = null
+    let updateFoundHandler: (() => void) | null = null
+    let stateChangeWorker: ServiceWorker | null = null
+    let stateChangeHandler: (() => void) | null = null
 
     // Service workers + cache-first strategies are great in prod but can easily
     // serve stale bundles in `next dev` (HMR/Turbopack), leading to confusing
@@ -42,20 +46,30 @@ export function PWAProvider() {
           return
         }
 
-        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' })
         // Immediately update if a new service worker is found
         if (registration.waiting) {
           registration.waiting.postMessage({ type: 'SKIP_WAITING' })
         }
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing
+        updateFoundHandler = () => {
+          const newWorker = registration?.installing
           if (!newWorker) return
-          newWorker.addEventListener('statechange', () => {
+
+          if (stateChangeWorker && stateChangeHandler) {
+            stateChangeWorker.removeEventListener('statechange', stateChangeHandler)
+          }
+
+          stateChangeWorker = newWorker
+          stateChangeHandler = () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               newWorker.postMessage({ type: 'SKIP_WAITING' })
             }
-          })
-        })
+          }
+
+          newWorker.addEventListener('statechange', stateChangeHandler)
+        }
+
+        registration.addEventListener('updatefound', updateFoundHandler)
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
           console.warn('[pwa] service worker registration failed', error)
@@ -67,6 +81,14 @@ export function PWAProvider() {
 
     return () => {
       cancelled = true
+
+      if (registration && updateFoundHandler) {
+        registration.removeEventListener('updatefound', updateFoundHandler)
+      }
+
+      if (stateChangeWorker && stateChangeHandler) {
+        stateChangeWorker.removeEventListener('statechange', stateChangeHandler)
+      }
     }
   }, [])
 

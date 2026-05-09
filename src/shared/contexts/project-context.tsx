@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, use, useCallback, useMemo, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 
 import { useClientContext } from '@/shared/contexts/client-context'
@@ -100,7 +100,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useProjectContext() {
-  const context = useContext(ProjectContext)
+  const context = use(ProjectContext)
   if (context === undefined) {
     throw new Error('useProjectContext must be used within a ProjectProvider')
   }

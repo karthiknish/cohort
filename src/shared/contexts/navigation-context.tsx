@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useUrlSearchParams } from '@/shared/hooks/use-url-search-params'
@@ -280,7 +280,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 }
 
 export function useNavigationContext() {
-  const context = useContext(NavigationContext)
+  const context = use(NavigationContext)
   if (!context) {
     throw new Error('useNavigationContext must be used within a NavigationProvider')
   }

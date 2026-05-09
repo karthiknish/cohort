@@ -38,7 +38,7 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
     <Card className="overflow-hidden border-muted/30 bg-card shadow-sm motion-chromatic hover:shadow-md">
       <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-primary" />
+          <div className="size-2 rounded-full bg-primary" />
           <div>
             <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Client pipeline</CardTitle>
             <CardDescription className="text-xs font-medium leading-tight text-muted-foreground">CRM overview stage transition tracking</CardDescription>
@@ -56,7 +56,7 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
                     {items.length}
                   </Badge>
                 </div>
-                <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/20" />
+                <div className="size-1.5 rounded-full bg-muted-foreground/20" />
               </div>
 
               {items.length === 0 ? (
@@ -86,7 +86,7 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
                           </div>
                         </div>
                         {client.id === selectedClientId && (
-                          <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                          <div className="size-1.5 rounded-full bg-primary animate-pulse" />
                         )}
                       </div>
 

@@ -86,8 +86,17 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
      const map = mapInstanceRef.current
      if (!map || !mapReady) return
 
-     markersRef.current.forEach((marker) => marker.remove())
-     markersRef.current = []
+     let frameId: number | null = null
+
+     const clearMarkers = () => {
+       markersRef.current.forEach((marker) => {
+         marker.off()
+         marker.remove()
+       })
+       markersRef.current = []
+     }
+
+     clearMarkers()
 
      const validLocations = locations.filter(
        (loc) => Number.isFinite(loc.lat) && Number.isFinite(loc.lng) && !(loc.lat === 0 && loc.lng === 0)
@@ -105,10 +114,6 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
            `<div class="text-sm"><p class="font-medium">${loc.name}</p>${loc.type ? `<p class="text-xs opacity-70 capitalize">${loc.type}</p>` : ''}</div>`
          )
 
-       marker.on('add', () => {
-         // no-op; ensures marker is attached before bounds fit
-       })
-
        if (onMarkerClick) {
          marker.on('click', () => onMarkerClick(loc))
        }
@@ -117,7 +122,7 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
      })
 
      // Ensure the map has a real size before fitting/centering.
-     requestAnimationFrame(() => {
+     frameId = requestAnimationFrame(() => {
        map.invalidateSize()
 
        if (validLocations.length === 1) {
@@ -144,6 +149,13 @@ export function LeafletMap({ locations, interactive = false, onMarkerClick }: Le
 
        map.fitBounds(bounds, { padding: [50, 50], animate: false, maxZoom: 12 })
      })
+
+     return () => {
+       if (frameId !== null) {
+         cancelAnimationFrame(frameId)
+       }
+       clearMarkers()
+     }
    }, [locations, onMarkerClick, mapReady])
 
   return <div ref={mapRef} className="h-full w-full" />
