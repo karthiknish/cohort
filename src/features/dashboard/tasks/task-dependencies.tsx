@@ -40,7 +40,7 @@ const DEPENDENCY_TYPE_COLORS: Record<TaskDependency['type'], string> = {
   blocks: 'bg-destructive/10 text-destructive border-destructive/20',
   'blocked-by': 'bg-warning/10 text-warning border-warning/20',
   related: 'bg-info/10 text-info border-info/20',
-  parent: 'bg-primary/10 text-primary border-primary/20',
+  parent: 'bg-accent/10 text-primary border-accent/20',
   child: 'bg-success/10 text-success border-success/20',
 }
 

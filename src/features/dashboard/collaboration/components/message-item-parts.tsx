@@ -448,8 +448,8 @@ export interface MessageAvatarProps {
 
 export function MessageAvatar({ senderName, isReply = false }: MessageAvatarProps) {
   const avatarClass = isReply
-    ? 'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-medium text-primary ring-2 ring-background'
-    : 'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary ring-2 ring-background'
+    ? 'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-[10px] font-medium text-primary ring-2 ring-background'
+    : 'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-medium text-primary ring-2 ring-background'
 
   return <span className={avatarClass}>{getInitials(senderName)}</span>
 }

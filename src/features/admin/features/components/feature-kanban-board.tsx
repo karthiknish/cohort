@@ -161,7 +161,7 @@ function FeatureKanbanColumn({
       className={cn(
         'flex flex-col rounded-xl border bg-muted/30 min-h-[500px]',
         chromaticTransitionClass,
-        isDropTarget && !isDraggedFromThis && 'border-primary bg-primary/5 ring-2 ring-primary/20'
+        isDropTarget && !isDraggedFromThis && 'border-primary bg-accent/5 ring-2 ring-primary/20'
       )}
     >
       <div className="flex items-center justify-between border-b p-3">

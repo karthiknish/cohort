@@ -328,6 +328,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
   useEffect(() => {
     if (!hasPreviewAccess && user && user.status !== 'active' && pathname !== '/pending-approval') {
       const nextUrl = `/pending-approval?status=${encodeURIComponent(user.status)}`
+      // Intentional client-side redirect: auth state only available in browser
       router.replace(nextUrl)
     }
   }, [hasPreviewAccess, pathname, router, user])

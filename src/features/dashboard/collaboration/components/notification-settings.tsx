@@ -475,7 +475,7 @@ function KeywordTag({ keyword, onRemove }: KeywordTagProps) {
   }, [keyword, onRemove])
 
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs">
+    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-accent/10 text-primary text-xs">
       {keyword}
       <button
         type="button"

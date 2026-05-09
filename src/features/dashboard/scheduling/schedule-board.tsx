@@ -115,10 +115,10 @@ export function ScheduleBoard({
                 </p>
               ) : null}
               {shift.conflictWithTimeOff ? (
-                <p className="text-xs text-amber-700 dark:text-amber-400">Time off: {shift.conflictWithTimeOff}</p>
+                <p className="text-xs text-amber-700 off: {shift.conflictWithTimeOff}</p>
               ) : null}
               {shift.conflictWithAvailability ? (
-                <p className="text-xs text-amber-700 dark:text-amber-400">Availability: {shift.conflictWithAvailability}</p>
+                <p className="text-xs text-amber-700 {shift.conflictWithAvailability}</p>
               ) : null}
             </div>
             <div className="mt-4 space-y-2">

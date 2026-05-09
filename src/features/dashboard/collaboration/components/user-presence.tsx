@@ -112,7 +112,7 @@ export function UserAvatarWithPresence({
       <Avatar
         className={cn(
           sizeClasses[size],
-          'rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary ring-2 ring-background'
+          'rounded-full bg-accent/10 flex items-center justify-center text-xs font-medium text-primary ring-2 ring-background'
         )}
       >
         {src ? <AvatarImage src={src} alt={alt} className="object-cover" /> : null}
@@ -189,7 +189,7 @@ export function ChannelPresenceList({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="relative">
-                  <Avatar className="h-7 w-7 rounded-full bg-primary/10 text-[10px] font-medium text-primary ring-2 ring-background">
+                  <Avatar className="h-7 w-7 rounded-full bg-accent/10 text-[10px] font-medium text-primary ring-2 ring-background">
                     {member.avatarUrl ? <AvatarImage src={member.avatarUrl} alt={member.name} className="object-cover" /> : null}
                     <AvatarFallback>{member.name.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>

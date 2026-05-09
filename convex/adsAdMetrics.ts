@@ -45,6 +45,32 @@ export type NormalizedAdMetric = {
   reach?: number
 }
 
+type AdsMetricsProviderId = 'google' | 'tiktok' | 'linkedin' | 'facebook'
+type AdsMetricsLevel = 'ad' | 'adGroup' | 'creative'
+
+export function resolveRequestedMetricsLevel(providerId: AdsMetricsProviderId, requestedLevel?: AdsMetricsLevel): AdsMetricsLevel {
+  if (requestedLevel) {
+    return requestedLevel
+  }
+
+  return providerId === 'linkedin' ? 'creative' : 'ad'
+}
+
+function assertSupportedMetricsLevel(providerId: AdsMetricsProviderId, level: AdsMetricsLevel): void {
+  const supportedLevels: Record<AdsMetricsProviderId, readonly AdsMetricsLevel[]> = {
+    google: ['ad', 'adGroup'],
+    tiktok: ['ad'],
+    linkedin: ['creative'],
+    facebook: ['ad'],
+  }
+
+  if (supportedLevels[providerId].includes(level)) {
+    return
+  }
+
+  throw Errors.base.notImplemented(`${providerId} ${level} metrics`)
+}
+
 function normalizeGoogleMetrics(metrics: GoogleAdMetric[]): NormalizedAdMetric[] {
   return metrics.map((m) => {
     const ctr = m.impressions > 0 ? (m.clicks / m.impressions) * 100 : 0
@@ -162,6 +188,9 @@ export const listAdMetrics = action({
 
     const timeframeDays = Number.parseInt(args.days ?? '7', 10) || 7
     const clientId = normalizeClientId(args.clientId ?? null)
+    const level = resolveRequestedMetricsLevel(args.providerId, args.level)
+
+    assertSupportedMetricsLevel(args.providerId, level)
 
     const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
       workspaceId: args.workspaceId,
@@ -190,7 +219,7 @@ export const listAdMetrics = action({
         throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
       }
 
-      if (args.level === 'adGroup') {
+      if (level === 'adGroup') {
         const googleMetrics = await fetchGoogleAdGroupMetrics({
           accessToken: integration.accessToken,
           developerToken,

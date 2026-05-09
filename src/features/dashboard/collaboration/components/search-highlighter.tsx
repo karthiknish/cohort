@@ -27,7 +27,7 @@ export function highlightText(text: string, terms?: string[]) {
       // Reset regex.lastIndex side-effect from test
       regex.lastIndex = 0
       return (
-        <mark key={`highlight-${keyBase}`} className="rounded-sm bg-primary/20 px-0.5 py-[1px] text-primary">
+        <mark key={`highlight-${keyBase}`} className="rounded-sm bg-accent/20 px-0.5 py-[1px] text-primary">
           {segment}
         </mark>
       )

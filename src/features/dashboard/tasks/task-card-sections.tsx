@@ -156,7 +156,7 @@ function TaskCardContextPills({ task }: { task: TaskRecord }) {
         <Link
           href={`/dashboard/clients?clientId=${task.clientId}`}
           className={cn(
-            'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors hover:border-primary/30 hover:text-primary',
+            'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors hover:border-accent/30 hover:text-primary',
             taskPillColors.client
           )}
         >
@@ -174,7 +174,7 @@ function TaskCardContextPills({ task }: { task: TaskRecord }) {
         <Link
           href={buildProjectRoute(task.projectId, task.projectName)}
           className={cn(
-            'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors hover:border-primary/30 hover:text-primary',
+            'inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors hover:border-accent/30 hover:text-primary',
             taskPillColors.project,
           )}
         >

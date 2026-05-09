@@ -125,13 +125,13 @@ function HubCluster({
               href={tile.href}
               className={cn(
                 'group flex min-h-[5.5rem] flex-col rounded-xl border border-muted/50 bg-background/80 p-4 shadow-sm transition',
-                'hover:border-primary/30 hover:bg-primary/[0.03] hover:shadow-md',
+                'hover:border-accent/30 hover:bg-accent/[0.03] hover:shadow-md',
               )}
             >
               <div className="flex items-start justify-between gap-2">
                 <span
                   className={cn(
-                    'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/10',
+                    'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary ring-1 ring-primary/10',
                   )}
                 >
                   <Icon className="h-5 w-5" aria-hidden />

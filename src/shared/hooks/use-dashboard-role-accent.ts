@@ -50,7 +50,7 @@ export function useDashboardRoleAccent(): DashboardRoleAccent {
             'h-[3px] w-full shrink-0 bg-linear-to-r from-primary via-primary/65 to-transparent',
           mainFrameClass: 'border-t-2 border-t-primary/25 bg-linear-to-b from-primary/5 to-transparent',
           accountBadgeClass:
-            'border border-primary/35 bg-primary/12 text-primary font-semibold shadow-sm',
+            'border border-accent/35 bg-accent/12 text-primary font-semibold shadow-sm',
           shellCaption: 'Administrator · full workspace access',
         }
       case 'team':

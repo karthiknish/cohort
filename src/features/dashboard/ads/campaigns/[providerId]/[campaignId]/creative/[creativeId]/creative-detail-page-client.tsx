@@ -467,7 +467,7 @@ export default function CreativeDetailPageClient({
       if (kind === 'headlines') {
         setEditedHeadlines((prev) => {
           const base = prev.length > 0 ? prev : (creative.headlines ?? [])
-          const seen = new Set(base.map((value) => value.trim().toLowerCase()).filter(Boolean))
+          const seen = new Set(base.flatMap((value) => { const v = value.trim().toLowerCase(); return v ? [v] : [] }))
           const uniqueAdditions = additions.filter((value) => {
             const key = value.trim().toLowerCase()
             if (!key || seen.has(key)) {
@@ -481,7 +481,7 @@ export default function CreativeDetailPageClient({
       } else {
         setEditedDescriptions((prev) => {
           const base = prev.length > 0 ? prev : (creative.descriptions ?? [])
-          const seen = new Set(base.map((value) => value.trim().toLowerCase()).filter(Boolean))
+          const seen = new Set(base.flatMap((value) => { const v = value.trim().toLowerCase(); return v ? [v] : [] }))
           const uniqueAdditions = additions.filter((value) => {
             const key = value.trim().toLowerCase()
             if (!key || seen.has(key)) {
@@ -531,7 +531,7 @@ export default function CreativeDetailPageClient({
           }
           setEditedHeadlines((prev) => {
             const base = prev.length ? prev : []
-            const existing = new Set(base.map((s) => s.trim().toLowerCase()).filter(Boolean))
+            const existing = new Set(base.flatMap((s) => { const v = s.trim().toLowerCase(); return v ? [v] : [] }))
             const additions = headlines.filter((h: string) => {
               const key = h.trim().toLowerCase()
               if (!key) return false
@@ -552,7 +552,7 @@ export default function CreativeDetailPageClient({
 
         setEditedDescriptions((prev) => {
           const base = prev.length ? prev : []
-          const existing = new Set(base.map((s) => s.trim().toLowerCase()).filter(Boolean))
+            const existing = new Set(base.flatMap((s) => { const v = s.trim().toLowerCase(); return v ? [v] : [] }))
           const additions = captions.filter((c: string) => {
             const key = c.trim().toLowerCase()
             if (!key) return false
@@ -583,8 +583,8 @@ export default function CreativeDetailPageClient({
         return
       }
 
-      const normalizedHeadlines = editedHeadlines.map((headline) => headline.trim()).filter(Boolean)
-      const normalizedDescriptions = editedDescriptions.map((description) => description.trim()).filter(Boolean)
+      const normalizedHeadlines = editedHeadlines.flatMap((headline) => { const h = headline.trim(); return h ? [h] : [] })
+      const normalizedDescriptions = editedDescriptions.flatMap((description) => { const d = description.trim(); return d ? [d] : [] })
       const normalizedCta = editedCta.trim()
       const normalizedLandingPage = editedLandingPage.trim()
 
@@ -638,8 +638,8 @@ export default function CreativeDetailPageClient({
 
     setIsSaving(true)
 
-    const normalizedHeadlines = editedHeadlines.map((headline) => headline.trim()).filter(Boolean)
-    const normalizedDescriptions = editedDescriptions.map((description) => description.trim()).filter(Boolean)
+    const normalizedHeadlines = editedHeadlines.flatMap((headline) => { const h = headline.trim(); return h ? [h] : [] })
+    const normalizedDescriptions = editedDescriptions.flatMap((description) => { const d = description.trim(); return d ? [d] : [] })
     const normalizedCta = editedCta.trim()
     const normalizedLandingPage = editedLandingPage.trim()
 

@@ -151,7 +151,7 @@ export function NewDMDialog({
                   className="w-full flex items-center gap-3 p-3 rounded-lg text-left motion-chromatic hover:bg-muted/50 disabled:opacity-50"
                 >
                   <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                    <AvatarFallback className="bg-accent/10 text-primary text-sm">
                       {getInitials(user.name)}
                     </AvatarFallback>
                   </Avatar>

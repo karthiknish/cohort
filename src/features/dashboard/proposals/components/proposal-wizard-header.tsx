@@ -7,7 +7,7 @@ export function ProposalWizardHeader() {
     <div className="flex max-w-3xl flex-col gap-4 lg:flex-row lg:items-start">
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/8 text-primary shadow-sm">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent/15 bg-accent/8 text-primary shadow-sm">
             <ClipboardList className="h-5 w-5" aria-hidden />
           </div>
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">

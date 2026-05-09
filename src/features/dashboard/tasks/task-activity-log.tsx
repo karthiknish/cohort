@@ -25,13 +25,13 @@ const ACTIVITY_ICONS: Record<TaskActivity['action'], React.ElementType> = {
 }
 
 const ACTIVITY_COLORS: Record<TaskActivity['action'], string> = {
-  created: 'bg-success/10 text-success dark:bg-success/15 dark:text-success',
-  updated: 'bg-info/10 text-info dark:bg-info/15 dark:text-info',
-  deleted: 'bg-destructive/10 text-destructive dark:bg-destructive/15 dark:text-destructive',
-  status_changed: 'bg-warning/10 text-warning dark:bg-warning/15 dark:text-warning',
-  assigned: 'bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary',
-  comment_added: 'bg-info/10 text-info dark:bg-info/15 dark:text-info',
-  time_logged: 'bg-warning/10 text-warning dark:bg-warning/15 dark:text-warning',
+  created: 'bg-success/10 text-success
+  updated: 'bg-info/10 text-info
+  deleted: 'bg-destructive/10 text-destructive
+  status_changed: 'bg-warning/10 text-warning
+  assigned: 'bg-accent/10 text-primary
+  comment_added: 'bg-info/10 text-info
+  time_logged: 'bg-warning/10 text-warning
 }
 
 function formatActivityMessage(activity: TaskActivity): string {

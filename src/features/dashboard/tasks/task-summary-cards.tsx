@@ -66,8 +66,8 @@ const TaskSummaryStatusCard = memo(function TaskSummaryStatusCard({
       onKeyDown={isInteractive ? handleKeyDown : undefined}
       className={cn(
         'overflow-hidden border-border/70 bg-card shadow-sm transition-[box-shadow,ring-color,border-color,transform]',
-        isInteractive && 'cursor-pointer hover:border-primary/25 hover:shadow-md active:scale-[0.99]',
-        isSelected && 'border-primary/30 ring-2 ring-primary/35',
+        isInteractive && 'cursor-pointer hover:border-accent/25 hover:shadow-md active:scale-[0.99]',
+        isSelected && 'border-accent/30 ring-2 ring-primary/35',
       )}
       aria-pressed={isInteractive ? isSelected : undefined}
       aria-label={

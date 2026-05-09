@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { Suspense, useCallback } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { X } from 'lucide-react'
 
@@ -30,7 +30,7 @@ function SchedulingStat({
   )
 }
 
-export function ProjectsSchedulingPanel() {
+function ProjectsSchedulingPanelInner() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
@@ -68,7 +68,7 @@ export function ProjectsSchedulingPanel() {
   }
 
   return (
-    <Card className="border-primary/15 shadow-sm">
+    <Card className="border-accent/15 shadow-sm">
       <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <CardTitle className="text-lg">Scheduling and coverage</CardTitle>
@@ -159,5 +159,13 @@ export function ProjectsSchedulingPanel() {
         ) : null}
       </CardContent>
     </Card>
+  )
+}
+
+export function ProjectsSchedulingPanel() {
+  return (
+    <Suspense fallback={null}>
+      <ProjectsSchedulingPanelInner />
+    </Suspense>
   )
 }

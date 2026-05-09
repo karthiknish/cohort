@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { useInfiniteQuery, useMutation } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@convex/_generated/api'
 import { useConvex, useQuery as useConvexQuery } from 'convex/react'
 
@@ -95,6 +95,7 @@ export function useAdminClients(): UseAdminClientsReturn {
     const { isPreviewMode } = usePreview()
     const { toast } = useToast()
     const convex = useConvex()
+    const queryClient = useQueryClient()
 
     const workspaceContext = useConvexQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
     const workspaceId = workspaceContext?.workspaceId ?? null
@@ -126,6 +127,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.create as never, args as never),
         onSuccess: () => {
             void clientsInfiniteQuery.refetch()
+            void queryClient.invalidateQueries({ queryKey: ['adminClients'] })
         },
     })
 
@@ -133,6 +135,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.softDelete as never, args as never),
         onSuccess: () => {
             void clientsInfiniteQuery.refetch()
+            void queryClient.invalidateQueries({ queryKey: ['adminClients'] })
         },
     })
 
@@ -140,6 +143,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.addTeamMember as never, args as never),
         onSuccess: () => {
             void clientsInfiniteQuery.refetch()
+            void queryClient.invalidateQueries({ queryKey: ['adminClients'] })
         },
     })
 
@@ -147,6 +151,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         mutationFn: async (args: ConvexArgs) => await convex.mutation(clientsApi.removeTeamMember as never, args as never),
         onSuccess: () => {
             void clientsInfiniteQuery.refetch()
+            void queryClient.invalidateQueries({ queryKey: ['adminClients'] })
         },
     })
 

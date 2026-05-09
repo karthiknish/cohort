@@ -125,7 +125,7 @@ const INTEGRATIONS_RIGHT: Integration[] = [
     label: 'LinkedIn',
     brand: 'linkedin',
     iconBg: 'bg-card ring-1 ring-border/70',
-    accentColor: 'text-accent',
+    accentColor: 'text-primary',
     insights: [
       { stat: '$34', label: 'Cost per lead', trend: '−8% vs last month', trendUp: true },
       { stat: '890', label: 'Leads this month', trend: '+11% MoM', trendUp: true },
@@ -154,7 +154,7 @@ const PORTAL_CLIENTS = [
     time: 'Today, 11:42',
     value: '+12.4%',
     color: 'bg-primary',
-    tone: 'border-primary/20 bg-primary/10 text-primary',
+    tone: 'border-accent/20 bg-accent/10 text-primary',
     status: 'Report approved',
   },
   {
@@ -183,23 +183,23 @@ const PORTAL_CLIENTS = [
     initials: 'NL',
     time: 'Today, 08:54',
     value: '+7.9%',
-    color: 'bg-accent',
-    tone: 'border-accent/20 bg-accent/15 text-accent',
+    color: 'bg-foreground',
+    tone: 'border-foreground/20 bg-foreground/10 text-foreground',
     status: 'Awaiting approval',
   },
 ] as const
 
 const TEAM_MEMBERS = [
-  { id: 't1', initials: 'JL', name: 'James Liu', color: 'bg-accent' },
-  { id: 't2', initials: 'SR', name: 'Sofia Reyes', color: 'bg-primary' },
-  { id: 't3', initials: 'KP', name: 'Kiran Patel', color: 'bg-success' },
-  { id: 't4', initials: 'MA', name: 'Maya Adler', color: 'bg-warning' },
-  { id: 't5', initials: 'DW', name: 'Dan Wright', color: 'bg-destructive' },
+  { id: 't1', initials: 'JL', name: 'James Liu', color: 'bg-primary' },
+  { id: 't2', initials: 'SR', name: 'Sofia Reyes', color: 'bg-secondary' },
+  { id: 't3', initials: 'KP', name: 'Kiran Patel', color: 'bg-info' },
+  { id: 't4', initials: 'MA', name: 'Maya Adler', color: 'bg-success' },
+  { id: 't5', initials: 'DW', name: 'Dan Wright', color: 'bg-foreground' },
 ] as const
 
 const TEAM_TASKS = [
   { id: 'tk1', label: 'Q3 report for Apex', stage: 'In review', stageClass: 'border-info/30 bg-info/10 text-info' },
-  { id: 'tk2', label: 'Campaign brief: BlueOrbit', stage: 'Assigned', stageClass: 'border-accent/30 bg-accent/15 text-accent' },
+  { id: 'tk2', label: 'Campaign brief: BlueOrbit', stage: 'Assigned', stageClass: 'border-accent/30 bg-accent/10 text-primary' },
   { id: 'tk3', label: 'Kickoff deck: Novex', stage: 'Done', stageClass: 'border-success/30 bg-success/10 text-success' },
 ] as const
 
@@ -251,7 +251,7 @@ function DotConnector({ direction }: { direction: 'ltr' | 'rtl' }) {
         {HUB_CONNECTOR_DOTS.map((dot, index) => (
           <m.span
             key={dot.id}
-            className="block h-[5px] w-[5px] rounded-full bg-primary/50"
+            className="block h-[5px] w-[5px] rounded-full bg-accent/50"
             initial={prefersReducedMotion ? false : CONNECTOR_DOT_INITIAL}
             animate={prefersReducedMotion ? CONNECTOR_DOT_REDUCED : CONNECTOR_DOT_ANIMATE}
             transition={getConnectorTransition(direction, index)}
@@ -402,7 +402,7 @@ function PortalIllustration() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/65">Client portal</p>
               <p className="mt-1 text-sm font-semibold text-foreground">Live approvals and reporting</p>
             </div>
-            <Badge variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-[10px] text-primary">
+            <Badge variant="outline" className="rounded-full border-accent/20 bg-accent/5 text-[10px] text-primary">
               4 active workspaces
             </Badge>
           </div>

@@ -89,7 +89,7 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
     return (
       <Card className="mx-auto max-w-2xl overflow-hidden border-muted/60 bg-background shadow-sm">
         <CardHeader>
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-md bg-accent/10 text-primary">
             <Building2 className="h-6 w-6" aria-hidden />
           </div>
           <CardTitle className="text-lg">{canManageClients ? 'Create your first client workspace' : 'No client workspace assigned'}</CardTitle>
@@ -117,7 +117,7 @@ export function ClientAccessGate({ children }: PropsWithChildren) {
 
   if (!selectedClientId) {
     return (
-      <Card className="mx-auto max-w-xl border-primary/30 bg-primary/5">
+      <Card className="mx-auto max-w-xl border-accent/30 bg-accent/5">
         <CardHeader>
           <CardTitle className="text-lg">Select a client workspace</CardTitle>
           <CardDescription>Choose a client to unlock analytics, tasks, collaboration, and project tools.</CardDescription>

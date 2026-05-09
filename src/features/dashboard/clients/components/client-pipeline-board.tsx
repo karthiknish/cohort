@@ -70,8 +70,8 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
                       key={client.id}
                       href={`/dashboard/clients?clientId=${client.id}`}
                       className={cn(
-                        'group block rounded-xl border border-muted/30 bg-card p-4 shadow-sm motion-chromatic hover:border-primary/40 hover:shadow-md active:scale-[0.99]',
-                        client.id === selectedClientId && 'border-primary/50 bg-primary/[0.02] shadow-md ring-1 ring-primary/20'
+                        'group block rounded-xl border border-muted/30 bg-card p-4 shadow-sm motion-chromatic hover:border-accent/40 hover:shadow-md active:scale-[0.99]',
+                        client.id === selectedClientId && 'border-accent/50 bg-accent/[0.02] shadow-md ring-1 ring-primary/20'
                       )}
                     >
                       <div className="flex items-start justify-between gap-3">

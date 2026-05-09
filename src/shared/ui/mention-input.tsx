@@ -432,7 +432,7 @@ export function MentionInput(
             {selectedMentions.map((mention) => (
               <div
                 key={mention.id}
-                className="inline-flex items-center gap-1.5 rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-sm text-primary"
+                className="inline-flex items-center gap-1.5 rounded-md border border-accent/20 bg-accent/10 px-2 py-1 text-sm text-primary"
               >
                 <User className="h-3 w-3" />
                 <span>{mention.name}</span>
@@ -507,7 +507,7 @@ export function MentionInput(
                         className={cn(
                           'flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors',
                           index === effectiveHighlightedIndex
-                            ? 'bg-primary/10 text-primary'
+                            ? 'bg-accent/10 text-primary'
                             : 'hover:bg-muted'
                         )}
                       >

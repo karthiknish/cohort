@@ -17,6 +17,8 @@ type AuthOptionsConfig = {
   enforceSecureProductionUrl?: boolean;
 };
 
+const LOCAL_DEV_AUTH_ORIGIN = "http://localhost:3000";
+
 function isStaticAuthBootstrap(ctx: GenericCtx<DataModel>): boolean {
   return Object.keys((ctx ?? {}) as object).length === 0;
 }
@@ -25,18 +27,36 @@ function isSecureUrl(value: string | undefined | null): value is string {
   return typeof value === "string" && value.startsWith("https://");
 }
 
+function isLocalDevUrl(value: string | undefined | null): value is string {
+  return typeof value === "string" && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(value);
+}
+
+function shouldForceLocalhostAuthOrigin(): boolean {
+  return [
+    process.env.BETTER_AUTH_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.SITE_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+  ].some(isLocalDevUrl);
+}
+
 function resolveAuthBaseUrl(): string | undefined {
   const explicitBaseUrl = process.env.BETTER_AUTH_URL;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   const convexSiteUrl =
     process.env.NEXT_PUBLIC_CONVEX_SITE_URL
     || process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
     || process.env.CONVEX_SITE_URL;
   const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL;
 
+  if (shouldForceLocalhostAuthOrigin()) return LOCAL_DEV_AUTH_ORIGIN;
+
   if (isSecureUrl(explicitBaseUrl)) return explicitBaseUrl;
+  if (isSecureUrl(appUrl)) return appUrl;
+  if (isSecureUrl(siteUrl)) return siteUrl;
   if (isSecureUrl(convexSiteUrl)) return convexSiteUrl;
 
-  return explicitBaseUrl || siteUrl || convexSiteUrl || undefined;
+  return explicitBaseUrl || appUrl || siteUrl || convexSiteUrl || undefined;
 }
 
 // Better Auth Component
@@ -64,20 +84,26 @@ function buildSocialProviders() {
 
 // Build trusted origins from env
 function buildTrustedOrigins(): string[] {
-  const origins: string[] = [];
-
-  const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-
-  if (siteUrl) origins.push(siteUrl);
-  if (appUrl && appUrl !== siteUrl) origins.push(appUrl);
-
-  // Add localhost for development
-  if (process.env.NODE_ENV !== "production") {
-    origins.push("http://localhost:3000");
+  if (shouldForceLocalhostAuthOrigin()) {
+    return [LOCAL_DEV_AUTH_ORIGIN];
   }
 
-  return origins;
+  const origins = new Set<string>();
+
+  const explicitBaseUrl = process.env.BETTER_AUTH_URL;
+  const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const convexSiteUrl =
+    process.env.NEXT_PUBLIC_CONVEX_SITE_URL
+    || process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
+    || process.env.CONVEX_SITE_URL;
+
+  if (explicitBaseUrl) origins.add(explicitBaseUrl);
+  if (siteUrl) origins.add(siteUrl);
+  if (appUrl) origins.add(appUrl);
+  if (convexSiteUrl) origins.add(convexSiteUrl);
+
+  return [...origins];
 }
 
 // Better Auth Options

@@ -45,9 +45,9 @@ const PLATFORM_STATS = [
 ] as const
 
 const CLIENT_SPOTLIGHT = [
-  { name: 'NovaTech Digital', badge: '+12.4%', Icon: LayoutDashboard as IconType, iconBg: 'bg-primary/10', iconColor: 'text-primary' },
+  { name: 'NovaTech Digital', badge: '+12.4%', Icon: LayoutDashboard as IconType, iconBg: 'bg-accent/10', iconColor: 'text-primary' },
   { name: 'BlueOrbit', badge: '+5.6%', Icon: Globe as IconType, iconBg: 'bg-secondary/50', iconColor: 'text-secondary-foreground' },
-  { name: 'Meridian Health', badge: '+10.2%', Icon: Sparkles as IconType, iconBg: 'bg-primary/5', iconColor: 'text-primary' },
+  { name: 'Meridian Health', badge: '+10.2%', Icon: Sparkles as IconType, iconBg: 'bg-accent/5', iconColor: 'text-primary' },
 ] as const
 
 // Pre-computed stable inline styles for CLIENT_SPOTLIGHT stacked cards
@@ -96,7 +96,7 @@ type ActivityItemProps = {
 function ActivityItem({ item }: ActivityItemProps) {
   return (
     <div className="flex w-56 shrink-0 items-center gap-3 rounded-xl border bg-card py-1.5 pr-3 pl-2 shadow-sm">
-      <div className="grid size-9 shrink-0 place-content-center rounded-xl bg-primary/10">
+      <div className="grid size-9 shrink-0 place-content-center rounded-xl bg-accent/10">
         <item.Icon className="size-4 text-primary" aria-hidden="true" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -128,7 +128,7 @@ export function FeaturesBento() {
               <div className="flex w-full flex-col gap-4 rounded-xl border p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="grid size-8 place-content-center rounded-sm bg-primary/10">
+                    <div className="grid size-8 place-content-center rounded-sm bg-accent/10">
                       <BarChart2 className="size-4 text-primary" aria-hidden="true" />
                     </div>
                     <span className="text-sm">Total impressions</span>
@@ -158,7 +158,7 @@ export function FeaturesBento() {
                     <div className="text-2xl font-medium">{bar.pct}%</div>
                     <div className="flex min-h-25 flex-1 items-end">
                       <div
-                        className={cn('grow rounded-xl', i === 0 ? 'bg-primary' : i === 1 ? 'bg-secondary' : 'bg-primary/60')}
+                        className={cn('grow rounded-xl', i === 0 ? 'bg-primary' : i === 1 ? 'bg-secondary' : 'bg-accent/60')}
                         style={PLATFORM_BAR_HEIGHT_STYLES[i]}
                       />
                     </div>
@@ -172,7 +172,7 @@ export function FeaturesBento() {
                 {/* Floating insight bubble */}
                 <div className="absolute -bottom-14 left-1/2 w-72 -translate-x-1/2">
                   <div className="flex items-center gap-2 rounded-xl border bg-card p-4 shadow-lg">
-                    <div className="grid size-9 shrink-0 place-content-center rounded-full bg-primary/10">
+                    <div className="grid size-9 shrink-0 place-content-center rounded-full bg-accent/10">
                       <TrendingUp className="size-4 text-primary" aria-hidden="true" />
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -267,7 +267,7 @@ export function FeaturesBento() {
                 <div className="flex flex-col gap-4 rounded-xl border p-6 shadow-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="grid size-8 place-content-center rounded-sm bg-primary/10">
+                      <div className="grid size-8 place-content-center rounded-sm bg-accent/10">
                         <TrendingUp className="size-4 text-primary" aria-hidden="true" />
                       </div>
                       <span className="text-sm">Total revenue</span>

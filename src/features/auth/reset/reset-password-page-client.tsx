@@ -125,8 +125,8 @@ function ResetPasswordFixture() {
       </Link>
 
       <div className="space-y-2 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <Lock className="h-6 w-6 text-primary" />
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
+          <Lock className="h-6 w-6 text-accent" />
         </div>
         <h1 className="text-2xl font-semibold text-foreground">Set new password</h1>
         <p className="text-sm text-muted-foreground">
@@ -337,8 +337,8 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
       </Link>
 
       <div className="space-y-2 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <Lock className="h-6 w-6 text-primary" />
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
+          <Lock className="h-6 w-6 text-accent" />
         </div>
         <h1 className="text-2xl font-semibold text-foreground">Set new password</h1>
         <p className="text-sm text-muted-foreground">
@@ -348,7 +348,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
 
       {status === 'loading' && (
         <div className="flex flex-col items-center gap-4 py-8">
-          <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+          <LoaderCircle className="h-8 w-8 animate-spin text-accent" />
           <p className="text-sm text-muted-foreground">Verifying your reset link…</p>
         </div>
       )}

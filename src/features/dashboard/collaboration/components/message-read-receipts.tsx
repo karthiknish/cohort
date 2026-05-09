@@ -170,7 +170,7 @@ export function ReadReceiptDetail({
               return (
                 <span
                   key={userId}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-accent/10 text-primary text-xs"
                 >
                   {member?.name || userId}
                 </span>

@@ -203,7 +203,7 @@ export function CollaborationMessageItem({
 
   const containerClass = cn(
     'relative group flex items-start gap-3 px-6 py-2.5 motion-chromatic',
-    isSearchResult && 'bg-primary/5 ring-1 ring-primary/20',
+    isSearchResult && 'bg-accent/5 ring-1 ring-primary/20',
     !showAvatar && !isReply && 'py-1',
     isReply && 'ml-14 mt-2',
   )

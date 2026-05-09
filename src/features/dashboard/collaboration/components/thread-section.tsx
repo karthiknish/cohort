@@ -35,8 +35,8 @@ export function ThreadToggleButton({
       variant="ghost"
       size="sm"
       className={cn(
-        'inline-flex items-center gap-2 text-xs text-primary transition-colors hover:bg-primary/5 hover:text-primary/90',
-        isOpen && 'bg-primary/5'
+        'inline-flex items-center gap-2 text-xs text-primary transition-colors hover:bg-accent/5 hover:text-primary/90',
+        isOpen && 'bg-accent/5'
       )}
       onClick={onToggle}
       disabled={isLoading && !isOpen && !hasRepliesLoaded}
@@ -54,7 +54,7 @@ export function ThreadToggleButton({
         {replyCount === 1 ? '1 reply' : `${replyCount} replies`}
       </span>
       {unreadCount > 0 && (
-        <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+        <span className="rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
           {unreadCount} new
         </span>
       )}
@@ -278,7 +278,7 @@ export function ThreadSection({
 
       {/* Thread Replies Container */}
       {isOpen && (
-        <div id={panelId} className="mt-3 animate-in slide-in-from-top-2 space-y-2 border-l-2 border-primary/20 pl-4 duration-200">
+        <div id={panelId} className="mt-3 animate-in slide-in-from-top-2 space-y-2 border-l-2 border-accent/20 pl-4 duration-200">
           {threadState === 'error' ? <ThreadError error={error ?? 'Unable to load replies.'} isLoading={isLoading} onRetry={onRetry} /> : null}
 
           {threadState === 'loading' ? <ThreadLoading hasReplies={false} /> : null}

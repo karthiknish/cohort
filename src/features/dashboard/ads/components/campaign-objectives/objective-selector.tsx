@@ -76,7 +76,7 @@ function ObjectiveOptionCard({
       className={cn(
         'relative flex flex-col items-start rounded-lg border-2 p-4 text-left motion-chromatic',
         'hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2',
-        isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-border bg-card hover:border-primary/50',
+        isSelected ? 'border-primary bg-accent/5 shadow-sm' : 'border-border bg-card hover:border-accent/50',
         disabled && 'cursor-not-allowed opacity-50'
       )}
       style={buttonStyle}

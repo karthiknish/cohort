@@ -3,6 +3,7 @@
 import { useSearchParams } from 'next/navigation'
 import { useMemo } from 'react'
 
+/** @deprecated Consumers of this hook must be wrapped in <Suspense> */
 export function useUrlSearchParams() {
   const searchParams = useSearchParams()
 

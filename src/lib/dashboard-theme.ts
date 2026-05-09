@@ -15,7 +15,7 @@ export const DASHBOARD_THEME = {
   },
   badges: {
     base: 'rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest',
-    primary: 'bg-primary/10 text-primary border border-primary/20',
+    primary: 'bg-accent/10 text-primary border border-accent/20',
     secondary: 'bg-muted/50 text-muted-foreground border-muted/40',
     success: 'bg-success/10 text-success border border-success/20',
     warning: 'bg-warning/10 text-warning border border-warning/20',
@@ -23,12 +23,12 @@ export const DASHBOARD_THEME = {
   },
   buttons: {
     base: 'rounded-xl font-bold uppercase tracking-widest text-[11px] shadow-sm transition-[transform,box-shadow,background-color,color] active:scale-[0.98]',
-    primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+    primary: 'bg-primary text-primary-foreground hover:bg-accent/90',
     outline: 'border-muted/40 bg-background hover:bg-muted/5 hover:text-primary',
     ghost: 'hover:bg-muted/5 hover:text-primary',
   },
   icons: {
-    container: 'flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm border border-primary/20',
+    container: 'flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-primary shadow-sm border border-accent/20',
     small: 'h-6 w-6',
     medium: 'h-8 w-8',
     large: 'h-12 w-12',

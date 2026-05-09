@@ -77,7 +77,7 @@ function WorkspaceRow({
   return (
     <div className="flex items-center justify-between rounded-lg border border-muted/60 bg-muted/30 px-4 py-3 text-sm transition-colors hover:bg-muted/50">
       <div className="flex items-center gap-3">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-accent/10 text-primary">
           <Building2 className="h-3.5 w-3.5" />
         </div>
         <span className="font-medium">{client.name}</span>
@@ -266,15 +266,15 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
             id="tour-workspace-selector"
             className={cn(
               'h-11 w-full border-input bg-background/50 backdrop-blur-sm motion-chromatic',
-              'hover:bg-background hover:border-primary/30 hover:shadow-sm',
-              'focus:ring-2 focus:ring-primary/20 focus:border-primary/40',
+              'hover:bg-background hover:border-accent/30 hover:shadow-sm',
+              'focus:ring-2 focus:ring-primary/20 focus:border-accent/40',
               'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-background/50',
-              'data-[state=open]:bg-background data-[state=open]:border-primary/40 data-[state=open]:shadow-md',
+              'data-[state=open]:bg-background data-[state=open]:border-accent/40 data-[state=open]:shadow-md',
               'rounded-xl px-4'
             )}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-primary">
                 <Building2 className="h-3.5 w-3.5" />
               </div>
               <SelectValue placeholder={placeholder}>
@@ -296,7 +296,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                   key={client.id}
                   value={client.id}
                   hideIndicator
-                  className="cursor-pointer py-2.5 px-3 rounded-md mx-1 my-0.5 transition-colors hover:bg-primary/5 focus:bg-primary/5 data-[state=checked]:bg-primary/10 data-[state=checked]:font-medium"
+                  className="cursor-pointer py-2.5 px-3 rounded-md mx-1 my-0.5 transition-colors hover:bg-accent/5 focus:bg-accent/5 data-[state=checked]:bg-accent/10 data-[state=checked]:font-medium"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
@@ -316,7 +316,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
             size="icon"
             variant="outline"
             onClick={handleOpenSheet}
-            className="h-11 w-11 rounded-xl border-input bg-background/50 backdrop-blur-sm hover:bg-background hover:border-primary/30 hover:shadow-sm motion-chromatic shrink-0"
+            className="h-11 w-11 rounded-xl border-input bg-background/50 backdrop-blur-sm hover:bg-background hover:border-accent/30 hover:shadow-sm motion-chromatic shrink-0"
           >
             <Plus className="h-4 w-4" />
             <span className="sr-only">Manage clients</span>

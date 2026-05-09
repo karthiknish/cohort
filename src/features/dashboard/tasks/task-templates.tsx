@@ -117,7 +117,7 @@ function TaskTemplateCard({
 
   return (
     <button type="button" onClick={handleClick} className="text-left group">
-      <div className="rounded-lg border border-muted/40 bg-background p-4 motion-chromatic hover:border-primary/40 hover:shadow-md">
+      <div className="rounded-lg border border-muted/40 bg-background p-4 motion-chromatic hover:border-accent/40 hover:shadow-md">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-2">

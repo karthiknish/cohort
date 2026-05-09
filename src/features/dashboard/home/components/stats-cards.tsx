@@ -76,7 +76,7 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
   )
 
   const cardBody = (
-    <Card className={cn('shadow-sm transition-colors', stat.href && 'group-hover:border-primary/60 group-hover:shadow-md')}>
+    <Card className={cn('shadow-sm transition-colors', stat.href && 'group-hover:border-accent/60 group-hover:shadow-md')}>
       <CardContent className="flex items-center justify-between p-6">
         <div className="space-y-2">
           <CardDescription className="text-xs font-medium uppercase text-muted-foreground">

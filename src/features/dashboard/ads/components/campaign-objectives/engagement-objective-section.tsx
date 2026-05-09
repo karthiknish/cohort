@@ -111,8 +111,8 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
                   disabled={disabled}
                   className={`w-full p-3 rounded-lg border text-left motion-chromatic ${
                     formData.postId === post.id
-                      ? 'border-primary/20 bg-primary/10'
-                      : 'border-border hover:border-primary/50'
+                      ? 'border-accent/20 bg-accent/10'
+                      : 'border-border hover:border-accent/50'
                   }`}
                 >
                   <p className="text-sm font-medium line-clamp-2">{post.message}</p>
@@ -155,8 +155,8 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
                   disabled={disabled}
                   className={`w-full p-3 rounded-lg border text-left motion-chromatic ${
                     formData.eventId === event.id
-                      ? 'border-primary/20 bg-primary/10'
-                      : 'border-border hover:border-primary/50'
+                      ? 'border-accent/20 bg-accent/10'
+                      : 'border-border hover:border-accent/50'
                   }`}
                 >
                   <p className="text-sm font-medium">{event.name}</p>
@@ -189,7 +189,7 @@ export function EngagementObjectiveSection({ formData, onChange, disabled }: Obj
       )}
 
       {/* Tips */}
-      <Card className="border-primary/20 bg-primary/10">
+      <Card className="border-accent/20 bg-accent/10">
         <CardContent className="pt-6">
           <div className="flex gap-3">
             <Heart className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />

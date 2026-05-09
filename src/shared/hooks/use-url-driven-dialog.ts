@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 type UseUrlDrivenDialogOptions<TValue extends string> = {
@@ -16,6 +16,7 @@ type UseUrlDrivenDialogResult<TValue extends string> = {
   onOpenChange: (open: boolean) => void
 }
 
+/** @deprecated Consumers of this hook must be wrapped in <Suspense> */
 export function useUrlDrivenDialog<TValue extends string>({
   paramName,
   allowedValues,
@@ -30,11 +31,7 @@ export function useUrlDrivenDialog<TValue extends string>({
     return value && allowedValueSet.has(value as TValue) ? (value as TValue) : null
   }, [allowedValueSet, paramName, searchParams])
 
-  const [activeValue, setActiveValue] = useState<TValue | null>(searchValue)
-
-  useEffect(() => {
-    setActiveValue(searchValue)
-  }, [searchValue])
+  const activeValue = searchValue
 
   const syncUrl = useCallback((value: TValue | null) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -49,12 +46,10 @@ export function useUrlDrivenDialog<TValue extends string>({
   }, [paramName, pathname, router, searchParams])
 
   const openValue = useCallback((value: TValue) => {
-    setActiveValue(value)
     syncUrl(value)
   }, [syncUrl])
 
   const close = useCallback(() => {
-    setActiveValue(null)
     syncUrl(null)
   }, [syncUrl])
 

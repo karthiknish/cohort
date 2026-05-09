@@ -52,14 +52,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body
-        suppressHydrationWarning
         className={cn(
           geistSans.variable,
           geistMono.variable,
           anybody.variable,
-          'min-h-screen bg-white font-sans antialiased text-foreground dark:bg-background'
+          'min-h-screen bg-white font-sans antialiased text-foreground'
         )}
       >
         <Suspense fallback={null}>

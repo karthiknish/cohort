@@ -14,7 +14,7 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90 shadow-sm",
+          "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-accent/90 shadow-sm",
         secondary:
           "border-transparent bg-secondary/80 text-secondary-foreground [a&]:hover:bg-secondary/90",
         destructive:
@@ -22,7 +22,7 @@ const badgeVariants = cva(
         outline:
           "text-foreground border-muted-foreground/30 [a&]:hover:bg-accent [a&]:hover:text-accent-foreground [a&]:hover:border-accent",
         success:
-          "border-transparent bg-primary/10 text-primary [a&]:hover:bg-primary/15",
+          "border-transparent bg-accent/10 text-primary [a&]:hover:bg-accent/15",
         warning:
           "border-transparent bg-accent text-accent-foreground [a&]:hover:bg-accent/90",
         info:

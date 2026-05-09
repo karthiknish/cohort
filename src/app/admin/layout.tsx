@@ -92,7 +92,7 @@ function AdminNav() {
               size="sm"
               className={cn(
                 'shrink-0 gap-2 rounded-md',
-                isActive && 'bg-primary/10 text-primary shadow-sm hover:bg-primary/15',
+                isActive && 'bg-accent/10 text-primary shadow-sm hover:bg-accent/15',
               )}
             >
               <Link href={item.href} className="whitespace-nowrap">

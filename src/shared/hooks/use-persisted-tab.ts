@@ -35,6 +35,7 @@ function arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
   return a.every((v, i) => v === b[i])
 }
 
+/** @deprecated Consumers of this hook must be wrapped in <Suspense> */
 export function usePersistedTab<TValue extends string>(
   options: UsePersistedTabOptions<TValue>,
 ): UsePersistedTabReturn<TValue> {

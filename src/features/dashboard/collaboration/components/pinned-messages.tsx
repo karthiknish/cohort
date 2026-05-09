@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useTransition } from 'react'
 
 import { LoaderCircle, Pin, PinOff } from 'lucide-react'
 
@@ -139,7 +139,7 @@ function PinnedMessageItem({ message, workspaceId, onClick }: PinnedMessageItemP
         onClick={handleClick}
         aria-label={`Open pinned message from ${message.senderName}`}
       >
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary ring-2 ring-background">
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-medium text-primary ring-2 ring-background">
           {message.senderName.charAt(0).toUpperCase()}
         </div>
 
@@ -208,41 +208,40 @@ export function PinMessageButton({
   const pinMessageMutation = useMutation(generatedApi.collaborationMessages.pinMessage)
   const unpinMessageMutation = useMutation(generatedApi.collaborationMessages.unpinMessage)
 
-  const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   const isPinned = message.isPinned ?? false
 
   const handleTogglePin = useCallback(
     async (e?: React.MouseEvent) => {
       e?.stopPropagation()
-      if (!workspaceId || isLoading) return
+      if (!workspaceId || isPending) return
 
-      setIsLoading(true)
-      const mutation = isPinned
-        ? unpinMessageMutation({
-            workspaceId: String(workspaceId),
-            legacyId: message.id,
-          }).then(() => {
-            toast({
-              title: 'Message unpinned',
-              description: 'The message has been removed from pinned messages.',
+      startTransition(async () => {
+        const mutation = isPinned
+          ? unpinMessageMutation({
+              workspaceId: String(workspaceId),
+              legacyId: message.id,
+            }).then(() => {
+              toast({
+                title: 'Message unpinned',
+                description: 'The message has been removed from pinned messages.',
+              })
+              onPinChange?.(message.id, false)
             })
-            onPinChange?.(message.id, false)
-          })
-        : pinMessageMutation({
-            workspaceId: String(workspaceId),
-            legacyId: message.id,
-            userId: String(userId),
-          }).then(() => {
-            toast({
-              title: 'Message pinned',
-              description: 'The message has been pinned to the channel.',
+          : pinMessageMutation({
+              workspaceId: String(workspaceId),
+              legacyId: message.id,
+              userId: String(userId),
+            }).then(() => {
+              toast({
+                title: 'Message pinned',
+                description: 'The message has been pinned to the channel.',
+              })
+              onPinChange?.(message.id, true)
             })
-            onPinChange?.(message.id, true)
-          })
 
-      await mutation
-        .catch((error) => {
+        await mutation.catch((error) => {
           logError(error, 'PinMessageButton:handleTogglePin')
           toast({
             title: 'Failed to update pin',
@@ -250,11 +249,9 @@ export function PinMessageButton({
             variant: 'destructive',
           })
         })
-        .finally(() => {
-          setIsLoading(false)
-        })
+      })
     },
-    [workspaceId, userId, message.id, isPinned, pinMessageMutation, unpinMessageMutation, isLoading, toast, onPinChange]
+    [workspaceId, userId, message.id, isPinned, pinMessageMutation, unpinMessageMutation, isPending, toast, onPinChange]
   )
 
   if (variant === 'button') {
@@ -264,10 +261,10 @@ export function PinMessageButton({
         variant={isPinned ? 'default' : 'outline'}
         size="sm"
         onClick={handleTogglePin}
-        disabled={isLoading}
+        disabled={isPending}
         className={cn('gap-2', className)}
       >
-        {isLoading ? (
+        {isPending ? (
           <LoaderCircle className="h-4 w-4 animate-spin" />
         ) : isPinned ? (
           <PinOff className="h-4 w-4" />
@@ -288,17 +285,17 @@ export function PinMessageButton({
             variant="ghost"
             size="icon"
             className={cn('h-7 w-7', isPinned && 'text-primary', className)}
-            onClick={handleTogglePin}
-            disabled={isLoading}
-            aria-label={isPinned ? 'Unpin message' : 'Pin message'}
-          >
-            {isLoading ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
-            ) : isPinned ? (
-              <Pin className="h-4 w-4 fill-primary" aria-hidden />
-            ) : (
-              <Pin className="h-4 w-4" aria-hidden />
-            )}
+          onClick={handleTogglePin}
+          disabled={isPending}
+          aria-label={isPinned ? 'Unpin message' : 'Pin message'}
+        >
+          {isPending ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+          ) : isPinned ? (
+            <Pin className="h-4 w-4 fill-primary" aria-hidden />
+          ) : (
+            <Pin className="h-4 w-4" aria-hidden />
+          )}
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">
@@ -316,7 +313,7 @@ export function PinnedMessageBadge({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium',
+        'flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/10 text-primary text-xs font-medium',
         className
       )}
     >

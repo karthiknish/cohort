@@ -37,7 +37,7 @@ export function AutoRefreshControls({
   className,
   defaultInterval = 'off',
 }: AutoRefreshProps) {
-  const [interval, setRefreshInterval] = useState<RefreshInterval>(defaultInterval)
+  const [interval, setRefreshInterval] = useState<RefreshInterval>(() => defaultInterval)
   const timeoutRef = useRef<ReturnType<typeof globalThis.setInterval> | undefined>(undefined)
 
   const selectedIntervalMs = INTERVAL_OPTIONS.find((opt) => opt.value === interval)?.ms ?? null

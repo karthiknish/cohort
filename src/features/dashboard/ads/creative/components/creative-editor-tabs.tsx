@@ -127,7 +127,7 @@ function HeadlineDisplayRow(props: {
   }, [index, onCopy, value])
 
   return (
-    <div className="group flex items-start justify-between gap-3 p-3 rounded-xl border bg-background hover:border-primary/20 transition-colors">
+    <div className="group flex items-start justify-between gap-3 p-3 rounded-xl border bg-background hover:border-accent/20 transition-colors">
       <div className="flex gap-3">
         <span className="mt-0.5 text-[10px] font-bold text-muted-foreground/50">{index + 1}</span>
         <p className="text-sm font-medium">{value}</p>
@@ -196,7 +196,7 @@ function DescriptionDisplayRow(props: {
   }, [index, onCopy, value])
 
   return (
-    <div className="group flex items-start justify-between gap-3 p-4 rounded-xl border bg-background hover:border-primary/20 transition-colors">
+    <div className="group flex items-start justify-between gap-3 p-4 rounded-xl border bg-background hover:border-accent/20 transition-colors">
       <div className="flex gap-3">
         <span className="mt-0.5 text-[10px] font-bold text-muted-foreground/50">{index + 1}</span>
         <p className="text-sm leading-relaxed">{value}</p>
@@ -365,7 +365,7 @@ export function CreativeEditorTabs(props: {
                   </CardDescription>
                 </div>
                 {isEditing ? (
-                  <Button variant="outline" size="sm" onClick={onAddHeadline} className="h-8 gap-1 border-primary/20 hover:bg-primary/5">
+                  <Button variant="outline" size="sm" onClick={onAddHeadline} className="h-8 gap-1 border-accent/20 hover:bg-accent/5">
                     <Plus className="h-3.5 w-3.5 text-primary" />
                     New Variant
                   </Button>
@@ -417,7 +417,7 @@ export function CreativeEditorTabs(props: {
                     size="sm"
                     onClick={onGenerateHeadlines}
                     disabled={!onGenerateHeadlines || generatingHeadlines}
-                    className="h-7 text-[10px] font-bold gap-1 text-primary hover:text-primary hover:bg-primary/5"
+                    className="h-7 text-[10px] font-bold gap-1 text-primary hover:text-primary hover:bg-accent/5"
                   >
                     <Sparkles className="h-3 w-3" />
                     {generatingHeadlines ? 'GENERATING…' : 'GENERATE AI ALTERNATIVES'}
@@ -441,7 +441,7 @@ export function CreativeEditorTabs(props: {
                   </CardDescription>
                 </div>
                 {isEditing ? (
-                  <Button variant="outline" size="sm" onClick={onAddDescription} className="h-8 gap-1 border-primary/20 hover:bg-primary/5">
+                  <Button variant="outline" size="sm" onClick={onAddDescription} className="h-8 gap-1 border-accent/20 hover:bg-accent/5">
                     <Plus className="h-3.5 w-3.5 text-primary" />
                     New Variant
                   </Button>
@@ -493,7 +493,7 @@ export function CreativeEditorTabs(props: {
                     size="sm"
                     onClick={onGenerateDescriptions}
                     disabled={!onGenerateDescriptions || generatingDescriptions}
-                    className="h-7 text-[10px] font-bold gap-1 text-primary hover:text-primary hover:bg-primary/5"
+                    className="h-7 text-[10px] font-bold gap-1 text-primary hover:text-primary hover:bg-accent/5"
                   >
                     <Sparkles className="h-3 w-3" />
                     {generatingDescriptions ? 'GENERATING…' : 'GENERATE AI ALTERNATIVES'}
@@ -531,7 +531,7 @@ export function CreativeEditorTabs(props: {
                     </Select>
                   ) : creative.callToAction ? (
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 border-none px-3 py-1">
+                      <Badge variant="secondary" className="bg-accent/10 text-primary hover:bg-accent/20 border-none px-3 py-1">
                         {formatCTALabel(creative.callToAction)}
                       </Badge>
                     </div>
@@ -651,7 +651,7 @@ export function CreativeEditorTabs(props: {
                       {formatCurrency(performanceSummary.totalRevenue, currency, { maximumFractionDigits: 0 })}
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+                  <div className="p-4 rounded-xl bg-accent/10 border border-accent/20">
                     <p className="text-[10px] font-bold text-primary uppercase tracking-wider">ROAS</p>
                     <p className="text-xl font-bold mt-1 text-primary">{performanceSummary.roas.toFixed(2)}x</p>
                   </div>
@@ -703,7 +703,7 @@ export function CreativeEditorTabs(props: {
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {algorithmicInsights.map((insight) => (
-                    <div key={`${insight.title}-${insight.message}-${insight.suggestion}`} className="group relative p-5 rounded-2xl bg-gradient-to-br from-background to-muted/20 border border-muted shadow-sm hover:border-primary/20 motion-chromatic">
+                    <div key={`${insight.title}-${insight.message}-${insight.suggestion}`} className="group relative p-5 rounded-2xl bg-gradient-to-br from-background to-muted/20 border border-muted shadow-sm hover:border-accent/20 motion-chromatic">
                       <div className="flex items-center justify-between gap-4 mb-2">
                         <p className="font-bold text-sm tracking-tight">{insight.title}</p>
                         {typeof insight.score === 'number' ? (
@@ -714,12 +714,12 @@ export function CreativeEditorTabs(props: {
                             <span className="text-[10px] font-bold">{Math.round(insight.score)}%</span>
                           </div>
                         ) : (
-                          <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-none">TIP</Badge>
+                          <Badge variant="secondary" className="text-[10px] bg-accent/10 text-primary border-none">TIP</Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed mb-4">{insight.message}</p>
 
-                      <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
+                      <div className="p-3 rounded-xl bg-accent/5 border border-accent/10">
                         <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1 flex items-center gap-1">
                           <Zap className="h-3 w-3" /> Recommendation
                         </p>

@@ -37,6 +37,7 @@ export const HEAD = createApiHandler({
 
   const response = await fetch(url, {
     method: 'HEAD',
+    cache: 'no-store',
     headers: {
       Accept: 'application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation,*/*',
     },
@@ -76,6 +77,7 @@ export const GET = createApiHandler({
   }
 
   const response = await fetch(url, {
+    cache: 'no-store',
     headers: {
       'Accept': 'application/octet-stream,application/vnd.openxmlformats-officedocument.presentationml.presentation,*/*',
     },

@@ -75,9 +75,9 @@ function TaskCardComponent({
     <ViewTransition>
       <div
         className={cn(
-          'group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-border/70 bg-gradient-to-b from-background via-background to-muted/20 p-5 shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
+          'group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-border/70 bg-gradient-to-b from-background via-background to-muted/20 p-5 shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-md',
           isPendingUpdate && 'opacity-75 pointer-events-none',
-          selected && 'border-primary/40 ring-2 ring-primary/15 shadow-md',
+          selected && 'border-accent/40 ring-2 ring-primary/15 shadow-md',
           overdue && 'border-destructive/20 bg-destructive/10',
           dueSoon && !overdue && 'border-warning/20 bg-warning/10',
           task.parentId && 'ml-4'

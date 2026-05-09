@@ -163,11 +163,11 @@ export function AnalyticsDateRangePicker({
     <div className={cn('flex items-center gap-2', className)}>
       {/* Preset Selector */}
       <div className="relative group">
-        <div className="absolute -left-3 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full bg-primary/40 opacity-0 transition-opacity group-focus-within:opacity-100" />
+        <div className="absolute -left-3 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-full bg-accent/40 opacity-0 transition-opacity group-focus-within:opacity-100" />
         <select
           value={currentPreset}
           onChange={handlePresetChange}
-          className="block w-full min-w-[140px] cursor-pointer appearance-none rounded-xl border border-muted/30 bg-background px-4 py-2.5 pr-10 text-xs font-bold uppercase tracking-wider shadow-sm transition-[border-color,box-shadow] hover:border-primary/40 focus:border-primary/60 focus:outline-none focus:ring-4 focus:ring-primary/5"
+          className="block w-full min-w-[140px] cursor-pointer appearance-none rounded-xl border border-muted/30 bg-background px-4 py-2.5 pr-10 text-xs font-bold uppercase tracking-wider shadow-sm transition-[border-color,box-shadow] hover:border-accent/40 focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-primary/5"
         >
           {PERIOD_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>

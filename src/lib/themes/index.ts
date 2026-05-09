@@ -72,34 +72,34 @@ export const PROVIDER_THEMES: Record<ProviderId, {
   iconBg: string
 }> = {
   google: {
-    bg: 'bg-gradient-to-br from-[rgb(var(--provider-google-rgb)/0.08)] to-[rgb(var(--provider-google-rgb)/0.03)] dark:from-[rgb(var(--provider-google-rgb)/0.18)] dark:to-[rgb(var(--provider-google-rgb)/0.08)]',
-    border: 'border-[rgb(var(--provider-google-rgb)/0.2)] dark:border-[rgb(var(--provider-google-rgb)/0.35)]',
-    accent: 'text-[rgb(var(--provider-google-rgb))] dark:text-[rgb(var(--provider-google-rgb)/0.85)]',
-    iconBg: 'from-[rgb(var(--provider-google-rgb)/0.16)] to-[rgb(var(--provider-google-rgb)/0.08)] dark:from-[rgb(var(--provider-google-rgb)/0.25)] dark:to-[rgb(var(--provider-google-rgb)/0.14)]',
+    bg: 'bg-gradient-to-br from-[rgb(var(--provider-google-rgb)/0.08)] to-[rgb(var(--provider-google-rgb)/0.03)]
+    border: 'border-[rgb(var(--provider-google-rgb)/0.2)]
+    accent: 'text-[rgb(var(--provider-google-rgb))]
+    iconBg: 'from-[rgb(var(--provider-google-rgb)/0.16)] to-[rgb(var(--provider-google-rgb)/0.08)]
   },
   facebook: {
-    bg: 'bg-gradient-to-br from-[rgb(var(--provider-facebook-rgb)/0.08)] to-[rgb(var(--provider-facebook-rgb)/0.03)] dark:from-[rgb(var(--provider-facebook-rgb)/0.18)] dark:to-[rgb(var(--provider-facebook-rgb)/0.08)]',
-    border: 'border-[rgb(var(--provider-facebook-rgb)/0.2)] dark:border-[rgb(var(--provider-facebook-rgb)/0.35)]',
-    accent: 'text-[rgb(var(--provider-facebook-rgb))] dark:text-[rgb(var(--provider-facebook-rgb)/0.85)]',
-    iconBg: 'from-[rgb(var(--provider-facebook-rgb)/0.16)] to-[rgb(var(--provider-facebook-rgb)/0.08)] dark:from-[rgb(var(--provider-facebook-rgb)/0.25)] dark:to-[rgb(var(--provider-facebook-rgb)/0.14)]',
+    bg: 'bg-gradient-to-br from-[rgb(var(--provider-facebook-rgb)/0.08)] to-[rgb(var(--provider-facebook-rgb)/0.03)]
+    border: 'border-[rgb(var(--provider-facebook-rgb)/0.2)]
+    accent: 'text-[rgb(var(--provider-facebook-rgb))]
+    iconBg: 'from-[rgb(var(--provider-facebook-rgb)/0.16)] to-[rgb(var(--provider-facebook-rgb)/0.08)]
   },
   meta: {
-    bg: 'bg-gradient-to-br from-[rgb(var(--provider-meta-rgb)/0.08)] to-[rgb(var(--provider-meta-rgb)/0.03)] dark:from-[rgb(var(--provider-meta-rgb)/0.18)] dark:to-[rgb(var(--provider-meta-rgb)/0.08)]',
-    border: 'border-[rgb(var(--provider-meta-rgb)/0.2)] dark:border-[rgb(var(--provider-meta-rgb)/0.35)]',
-    accent: 'text-[rgb(var(--provider-meta-rgb))] dark:text-[rgb(var(--provider-meta-rgb)/0.85)]',
-    iconBg: 'from-[rgb(var(--provider-meta-rgb)/0.16)] to-[rgb(var(--provider-meta-rgb)/0.08)] dark:from-[rgb(var(--provider-meta-rgb)/0.25)] dark:to-[rgb(var(--provider-meta-rgb)/0.14)]',
+    bg: 'bg-gradient-to-br from-[rgb(var(--provider-meta-rgb)/0.08)] to-[rgb(var(--provider-meta-rgb)/0.03)]
+    border: 'border-[rgb(var(--provider-meta-rgb)/0.2)]
+    accent: 'text-[rgb(var(--provider-meta-rgb))]
+    iconBg: 'from-[rgb(var(--provider-meta-rgb)/0.16)] to-[rgb(var(--provider-meta-rgb)/0.08)]
   },
   linkedin: {
-    bg: 'bg-gradient-to-br from-[rgb(var(--provider-linkedin-rgb)/0.08)] to-[rgb(var(--provider-linkedin-rgb)/0.03)] dark:from-[rgb(var(--provider-linkedin-rgb)/0.18)] dark:to-[rgb(var(--provider-linkedin-rgb)/0.08)]',
-    border: 'border-[rgb(var(--provider-linkedin-rgb)/0.2)] dark:border-[rgb(var(--provider-linkedin-rgb)/0.35)]',
-    accent: 'text-[rgb(var(--provider-linkedin-rgb))] dark:text-[rgb(var(--provider-linkedin-rgb)/0.85)]',
-    iconBg: 'from-[rgb(var(--provider-linkedin-rgb)/0.16)] to-[rgb(var(--provider-linkedin-rgb)/0.08)] dark:from-[rgb(var(--provider-linkedin-rgb)/0.25)] dark:to-[rgb(var(--provider-linkedin-rgb)/0.14)]',
+    bg: 'bg-gradient-to-br from-[rgb(var(--provider-linkedin-rgb)/0.08)] to-[rgb(var(--provider-linkedin-rgb)/0.03)]
+    border: 'border-[rgb(var(--provider-linkedin-rgb)/0.2)]
+    accent: 'text-[rgb(var(--provider-linkedin-rgb))]
+    iconBg: 'from-[rgb(var(--provider-linkedin-rgb)/0.16)] to-[rgb(var(--provider-linkedin-rgb)/0.08)]
   },
   tiktok: {
-    bg: 'bg-gradient-to-br from-[rgb(var(--provider-tiktok-rgb)/0.08)] to-[rgb(var(--provider-tiktok-rgb)/0.03)] dark:from-[rgb(var(--provider-tiktok-rgb)/0.18)] dark:to-[rgb(var(--provider-tiktok-rgb)/0.08)]',
-    border: 'border-[rgb(var(--provider-tiktok-rgb)/0.2)] dark:border-[rgb(var(--provider-tiktok-rgb)/0.35)]',
-    accent: 'text-[rgb(var(--provider-tiktok-rgb))] dark:text-[rgb(var(--provider-tiktok-rgb)/0.85)]',
-    iconBg: 'from-[rgb(var(--provider-tiktok-rgb)/0.16)] to-[rgb(var(--provider-tiktok-rgb)/0.08)] dark:from-[rgb(var(--provider-tiktok-rgb)/0.25)] dark:to-[rgb(var(--provider-tiktok-rgb)/0.14)]',
+    bg: 'bg-gradient-to-br from-[rgb(var(--provider-tiktok-rgb)/0.08)] to-[rgb(var(--provider-tiktok-rgb)/0.03)]
+    border: 'border-[rgb(var(--provider-tiktok-rgb)/0.2)]
+    accent: 'text-[rgb(var(--provider-tiktok-rgb))]
+    iconBg: 'from-[rgb(var(--provider-tiktok-rgb)/0.16)] to-[rgb(var(--provider-tiktok-rgb)/0.08)]
   },
 } as const
 
@@ -270,40 +270,40 @@ export const KPI_THEMES: Record<KpiTheme, {
   iconBg: string
 }> = {
   success: {
-    bg: 'bg-gradient-to-br from-[rgb(var(--kpi-emerald-rgb)/0.08)] to-[rgb(var(--kpi-emerald-rgb)/0.03)] dark:from-[rgb(var(--kpi-emerald-rgb)/0.18)] dark:to-[rgb(var(--kpi-emerald-rgb)/0.08)]',
-    border: 'border-[rgb(var(--kpi-emerald-rgb)/0.2)] dark:border-[rgb(var(--kpi-emerald-rgb)/0.35)]',
-    accent: 'text-[rgb(var(--kpi-emerald-rgb))] dark:text-[rgb(var(--kpi-emerald-rgb)/0.85)]',
-    iconBg: 'from-[rgb(var(--kpi-emerald-rgb)/0.16)] to-[rgb(var(--kpi-emerald-rgb)/0.08)] dark:from-[rgb(var(--kpi-emerald-rgb)/0.25)] dark:to-[rgb(var(--kpi-emerald-rgb)/0.14)]',
+    bg: 'bg-gradient-to-br from-[rgb(var(--kpi-emerald-rgb)/0.08)] to-[rgb(var(--kpi-emerald-rgb)/0.03)]
+    border: 'border-[rgb(var(--kpi-emerald-rgb)/0.2)]
+    accent: 'text-[rgb(var(--kpi-emerald-rgb))]
+    iconBg: 'from-[rgb(var(--kpi-emerald-rgb)/0.16)] to-[rgb(var(--kpi-emerald-rgb)/0.08)]
   },
   info: {
-    bg: 'bg-gradient-to-br from-[rgb(var(--kpi-blue-rgb)/0.08)] to-[rgb(var(--kpi-blue-rgb)/0.03)] dark:from-[rgb(var(--kpi-blue-rgb)/0.18)] dark:to-[rgb(var(--kpi-blue-rgb)/0.08)]',
-    border: 'border-[rgb(var(--kpi-blue-rgb)/0.2)] dark:border-[rgb(var(--kpi-blue-rgb)/0.35)]',
-    accent: 'text-[rgb(var(--kpi-blue-rgb))] dark:text-[rgb(var(--kpi-blue-rgb)/0.85)]',
-    iconBg: 'from-[rgb(var(--kpi-blue-rgb)/0.16)] to-[rgb(var(--kpi-blue-rgb)/0.08)] dark:from-[rgb(var(--kpi-blue-rgb)/0.25)] dark:to-[rgb(var(--kpi-blue-rgb)/0.14)]',
+    bg: 'bg-gradient-to-br from-[rgb(var(--kpi-blue-rgb)/0.08)] to-[rgb(var(--kpi-blue-rgb)/0.03)]
+    border: 'border-[rgb(var(--kpi-blue-rgb)/0.2)]
+    accent: 'text-[rgb(var(--kpi-blue-rgb))]
+    iconBg: 'from-[rgb(var(--kpi-blue-rgb)/0.16)] to-[rgb(var(--kpi-blue-rgb)/0.08)]
   },
   accent: {
-    bg: 'bg-gradient-to-br from-[rgb(var(--kpi-violet-rgb)/0.08)] to-[rgb(var(--kpi-violet-rgb)/0.03)] dark:from-[rgb(var(--kpi-violet-rgb)/0.18)] dark:to-[rgb(var(--kpi-violet-rgb)/0.08)]',
-    border: 'border-[rgb(var(--kpi-violet-rgb)/0.2)] dark:border-[rgb(var(--kpi-violet-rgb)/0.35)]',
-    accent: 'text-[rgb(var(--kpi-violet-rgb))] dark:text-[rgb(var(--kpi-violet-rgb)/0.85)]',
-    iconBg: 'from-[rgb(var(--kpi-violet-rgb)/0.16)] to-[rgb(var(--kpi-violet-rgb)/0.08)] dark:from-[rgb(var(--kpi-violet-rgb)/0.25)] dark:to-[rgb(var(--kpi-violet-rgb)/0.14)]',
+    bg: 'bg-gradient-to-br from-[rgb(var(--kpi-violet-rgb)/0.08)] to-[rgb(var(--kpi-violet-rgb)/0.03)]
+    border: 'border-[rgb(var(--kpi-violet-rgb)/0.2)]
+    accent: 'text-[rgb(var(--kpi-violet-rgb))]
+    iconBg: 'from-[rgb(var(--kpi-violet-rgb)/0.16)] to-[rgb(var(--kpi-violet-rgb)/0.08)]
   },
   warning: {
-    bg: 'bg-gradient-to-br from-[rgb(var(--kpi-amber-rgb)/0.08)] to-[rgb(var(--kpi-amber-rgb)/0.03)] dark:from-[rgb(var(--kpi-amber-rgb)/0.18)] dark:to-[rgb(var(--kpi-amber-rgb)/0.08)]',
-    border: 'border-[rgb(var(--kpi-amber-rgb)/0.2)] dark:border-[rgb(var(--kpi-amber-rgb)/0.35)]',
-    accent: 'text-[rgb(var(--kpi-amber-rgb))] dark:text-[rgb(var(--kpi-amber-rgb)/0.85)]',
-    iconBg: 'from-[rgb(var(--kpi-amber-rgb)/0.16)] to-[rgb(var(--kpi-amber-rgb)/0.08)] dark:from-[rgb(var(--kpi-amber-rgb)/0.25)] dark:to-[rgb(var(--kpi-amber-rgb)/0.14)]',
+    bg: 'bg-gradient-to-br from-[rgb(var(--kpi-amber-rgb)/0.08)] to-[rgb(var(--kpi-amber-rgb)/0.03)]
+    border: 'border-[rgb(var(--kpi-amber-rgb)/0.2)]
+    accent: 'text-[rgb(var(--kpi-amber-rgb))]
+    iconBg: 'from-[rgb(var(--kpi-amber-rgb)/0.16)] to-[rgb(var(--kpi-amber-rgb)/0.08)]
   },
   destructive: {
-    bg: 'bg-gradient-to-br from-[rgb(var(--kpi-rose-rgb)/0.08)] to-[rgb(var(--kpi-rose-rgb)/0.03)] dark:from-[rgb(var(--kpi-rose-rgb)/0.18)] dark:to-[rgb(var(--kpi-rose-rgb)/0.08)]',
-    border: 'border-[rgb(var(--kpi-rose-rgb)/0.2)] dark:border-[rgb(var(--kpi-rose-rgb)/0.35)]',
-    accent: 'text-[rgb(var(--kpi-rose-rgb))] dark:text-[rgb(var(--kpi-rose-rgb)/0.85)]',
-    iconBg: 'from-[rgb(var(--kpi-rose-rgb)/0.16)] to-[rgb(var(--kpi-rose-rgb)/0.08)] dark:from-[rgb(var(--kpi-rose-rgb)/0.25)] dark:to-[rgb(var(--kpi-rose-rgb)/0.14)]',
+    bg: 'bg-gradient-to-br from-[rgb(var(--kpi-rose-rgb)/0.08)] to-[rgb(var(--kpi-rose-rgb)/0.03)]
+    border: 'border-[rgb(var(--kpi-rose-rgb)/0.2)]
+    accent: 'text-[rgb(var(--kpi-rose-rgb))]
+    iconBg: 'from-[rgb(var(--kpi-rose-rgb)/0.16)] to-[rgb(var(--kpi-rose-rgb)/0.08)]
   },
   secondary: {
-    bg: 'bg-gradient-to-br from-[rgb(var(--kpi-cyan-rgb)/0.08)] to-[rgb(var(--kpi-cyan-rgb)/0.03)] dark:from-[rgb(var(--kpi-cyan-rgb)/0.18)] dark:to-[rgb(var(--kpi-cyan-rgb)/0.08)]',
-    border: 'border-[rgb(var(--kpi-cyan-rgb)/0.2)] dark:border-[rgb(var(--kpi-cyan-rgb)/0.35)]',
-    accent: 'text-[rgb(var(--kpi-cyan-rgb))] dark:text-[rgb(var(--kpi-cyan-rgb)/0.85)]',
-    iconBg: 'from-[rgb(var(--kpi-cyan-rgb)/0.16)] to-[rgb(var(--kpi-cyan-rgb)/0.08)] dark:from-[rgb(var(--kpi-cyan-rgb)/0.25)] dark:to-[rgb(var(--kpi-cyan-rgb)/0.14)]',
+    bg: 'bg-gradient-to-br from-[rgb(var(--kpi-cyan-rgb)/0.08)] to-[rgb(var(--kpi-cyan-rgb)/0.03)]
+    border: 'border-[rgb(var(--kpi-cyan-rgb)/0.2)]
+    accent: 'text-[rgb(var(--kpi-cyan-rgb))]
+    iconBg: 'from-[rgb(var(--kpi-cyan-rgb)/0.16)] to-[rgb(var(--kpi-cyan-rgb)/0.08)]
   },
 } as const
 

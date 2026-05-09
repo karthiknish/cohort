@@ -24,7 +24,7 @@ export const ACTIVITY_COLORS: Record<ActivityType, string> = {
   task_activity:
     'bg-success/10 text-success border border-success/20',
   message_posted:
-    'bg-primary/10 text-primary border border-primary/20',
+    'bg-accent/10 text-primary border border-accent/20',
   client_added:
     'bg-secondary/80 text-foreground border border-border/40',
   proposal_created:

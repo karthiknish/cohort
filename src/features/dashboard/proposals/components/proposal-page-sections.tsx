@@ -74,11 +74,11 @@ export function ProposalStartStateCard(props: {
   const { canStart, isCreatingDraft, onStartProposal, blockedHint } = props
 
   return (
-    <Card className="overflow-hidden border-dashed border-primary/25 bg-linear-to-br from-primary/6 via-background to-background shadow-sm">
+    <Card className="overflow-hidden border-dashed border-accent/25 bg-linear-to-br from-primary/6 via-background to-background shadow-sm">
       <CardHeader className="space-y-4 pb-2">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-primary shadow-sm">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-accent/15 bg-accent/10 text-primary shadow-sm">
               <FileText className="h-6 w-6" aria-hidden />
             </div>
             <div className="space-y-2">
@@ -139,7 +139,7 @@ export function ProposalPreviewModeSection(props: {
         </Button>
       </div>
 
-      <Card className="border-dashed border-primary/30 bg-primary/5">
+      <Card className="border-dashed border-accent/30 bg-accent/5">
         <CardHeader>
           <div className="flex flex-col gap-2">
             <h3 className="text-lg font-semibold text-foreground">Sample proposal data</h3>

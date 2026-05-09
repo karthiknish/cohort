@@ -72,11 +72,11 @@ export function FeatureTips({ tips, storageKey, className }: FeatureTipsProps) {
   const currentTip = tips[currentIndex]!
 
   return (
-    <Card className={cn('border-primary/20 bg-primary/5', className)}>
+    <Card className={cn('border-accent/20 bg-accent/5', className)}>
       <CardContent className="py-3 px-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/20 text-primary">
               <Lightbulb className="h-4 w-4" />
             </div>
             <div className="space-y-1">

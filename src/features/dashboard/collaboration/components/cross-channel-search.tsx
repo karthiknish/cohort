@@ -458,7 +458,7 @@ function SearchResultItem({ result, onSelect }: SearchResultItemProps) {
     >
       <div className="flex items-start gap-3">
         {/* Avatar */}
-        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary flex-shrink-0">
+        <div className="h-8 w-8 rounded-full bg-accent/10 flex items-center justify-center text-xs font-medium text-primary flex-shrink-0">
           {message.senderName.charAt(0).toUpperCase()}
         </div>
 
@@ -506,7 +506,7 @@ function SearchResultItem({ result, onSelect }: SearchResultItemProps) {
               {highlights.slice(0, 3).map((highlight) => (
                 <span
                   key={`${result.message.id}-${highlight}`}
-                  className="px-1.5 py-0.5 bg-primary/10 text-primary text-xs rounded"
+                  className="px-1.5 py-0.5 bg-accent/10 text-primary text-xs rounded"
                 >
                   {highlight}
                 </span>

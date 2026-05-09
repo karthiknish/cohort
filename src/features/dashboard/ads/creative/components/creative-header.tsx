@@ -85,7 +85,7 @@ export function CreativeHeader(props: {
       >
         <div className="flex items-center gap-5">
         <Link href={backUrl} className="group">
-          <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center border border-muted-foreground/10 group-hover:bg-primary/10 group-hover:border-primary/20 motion-chromatic-lg">
+          <div className="h-10 w-10 rounded-xl bg-muted/50 flex items-center justify-center border border-muted-foreground/10 group-hover:bg-accent/10 group-hover:border-accent/20 motion-chromatic-lg">
             <ArrowLeft className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
         </Link>
@@ -111,7 +111,7 @@ export function CreativeHeader(props: {
                 href={socialPermalink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-muted-foreground/15 text-muted-foreground hover:border-primary/30 hover:text-primary"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-muted-foreground/15 text-muted-foreground hover:border-accent/30 hover:text-primary"
                 title="Open post on Instagram or Facebook"
                 aria-label="Open social permalink"
               >
@@ -132,7 +132,7 @@ export function CreativeHeader(props: {
             <Button
               onClick={onSave}
               disabled={isSaving}
-              className="h-8 px-5 text-xs font-bold rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 text-primary-foreground"
+              className="h-8 px-5 text-xs font-bold rounded-xl bg-primary hover:bg-accent/90 shadow-lg shadow-primary/20 text-primary-foreground"
             >
               {isSaving ? (
                 <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" />
@@ -153,7 +153,7 @@ export function CreativeHeader(props: {
 
             <Button
               onClick={onStartEditing}
-              className="h-9 px-6 rounded-xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 font-bold text-xs tracking-tight"
+              className="h-9 px-6 rounded-xl bg-primary hover:bg-accent/90 shadow-xl shadow-primary/20 font-bold text-xs tracking-tight"
             >
               <Edit2 className="h-4 w-4 mr-2" />
               Social Editor
@@ -185,8 +185,8 @@ export function CreativeHeader(props: {
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="my-2" />
-                <DropdownMenuItem className="gap-3 py-2.5 rounded-xl cursor-pointer text-primary focus:bg-primary/10">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <DropdownMenuItem className="gap-3 py-2.5 rounded-xl cursor-pointer text-primary focus:bg-accent/10">
+                  <div className="h-8 w-8 rounded-lg bg-accent/10 flex items-center justify-center">
                     <Sparkles className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex flex-col">

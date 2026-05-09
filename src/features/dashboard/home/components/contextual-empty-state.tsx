@@ -40,7 +40,7 @@ export function ContextualEmptyState({
   return (
     <Card className={cn('border-dashed', className)}>
       <CardContent className="flex flex-col items-center justify-center py-12 px-6 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/10 text-primary mb-4">
           <Icon className="h-8 w-8" />
         </div>
         

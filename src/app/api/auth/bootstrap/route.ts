@@ -25,6 +25,7 @@ async function fetchConvexTokenFromRequest(req: Request): Promise<string | null>
     const siteUrl = new URL(req.url).origin
     const response = await fetch(`${siteUrl}/api/auth/convex/token`, {
       method: 'GET',
+      cache: 'no-store',
       headers: {
         'Cookie': req.headers.get('cookie') || '',
       },

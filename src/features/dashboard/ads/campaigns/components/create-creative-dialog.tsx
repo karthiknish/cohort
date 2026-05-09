@@ -55,7 +55,12 @@ export function CreateCreativeDialog({
   const [uploadingImage, setUploadingImage] = useState(false)
   const [loadingPageActors, setLoadingPageActors] = useState(false)
   const [metaPageActors, setMetaPageActors] = useState<MetaPageActorOption[]>([])
-  const [selectedAdSetId, setSelectedAdSetId] = useState<string | undefined>(propAdSetId)
+  const [selectedAdSetId, setSelectedAdSetId] = useState<string | undefined>(() => propAdSetId)
+  const previousPropAdSetIdRef = useRef(propAdSetId)
+  if (previousPropAdSetIdRef.current !== propAdSetId) {
+    previousPropAdSetIdRef.current = propAdSetId
+    setSelectedAdSetId(propAdSetId)
+  }
 
   const listMetaPageActors = useAction(adsCreativesApi.listMetaPageActors)
   const createCreative = useAction(adsCreativesApi.createCreative)

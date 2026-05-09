@@ -84,7 +84,7 @@ function ProjectsHeaderSection() {
     <div className={DASHBOARD_THEME.layout.header}>
       <div className="max-w-3xl space-y-3">
         <div className="flex flex-wrap items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/8 text-primary shadow-sm">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-accent/15 bg-accent/8 text-primary shadow-sm">
             <Briefcase className="h-6 w-6" aria-hidden />
           </div>
           <div className="min-w-0 space-y-2">
@@ -330,7 +330,7 @@ function ProjectsBacklogSection() {
         </div>
 
         {focusedProject.id || focusedProject.name ? (
-          <div className="rounded-xl border border-primary/15 bg-primary/5 p-3">
+          <div className="rounded-xl border border-accent/15 bg-accent/5 p-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-foreground">
@@ -461,7 +461,7 @@ function ProjectsListState({
 
   if (projects.length === 0 && !hasActiveFilters) {
     return (
-      <div className="rounded-xl border border-dashed border-primary/20 bg-linear-to-br from-primary/5 via-muted/5 to-background p-8 text-center shadow-sm">
+      <div className="rounded-xl border border-dashed border-accent/20 bg-linear-to-br from-primary/5 via-muted/5 to-background p-8 text-center shadow-sm">
         <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/50" />
         <h3 className="mt-4 text-lg font-semibold tracking-tight text-foreground">No projects yet</h3>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">

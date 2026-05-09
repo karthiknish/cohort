@@ -89,6 +89,7 @@ export const POST = createApiHandler(
           // Call the process endpoint; it will claim and process the next queued job in this workspace.
           const processResponse = await fetch(`${origin}/api/integrations/process`, {
             method: 'POST',
+            cache: 'no-store',
             headers: {
               'Content-Type': 'application/json',
               'x-cron-key': cronSecret

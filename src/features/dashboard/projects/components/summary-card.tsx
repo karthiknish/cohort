@@ -13,9 +13,9 @@ export interface SummaryCardProps {
 
 export function SummaryCard({ label, value, icon: Icon, description }: SummaryCardProps) {
   return (
-    <Card className="overflow-hidden border-muted/50 bg-background shadow-sm motion-chromatic hover:shadow-md dark:hover:bg-muted/5">
+    <Card className="overflow-hidden border-muted/50 bg-background shadow-sm motion-chromatic hover:shadow-md
       <CardContent className="flex items-center gap-5 p-5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary shadow-sm dark:bg-primary/10">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/5 text-primary shadow-sm
           <Icon className="h-6 w-6" />
         </div>
         <div className="min-w-0 flex-1">

@@ -155,7 +155,7 @@ export function ActivityItem({
           'flex flex-col gap-1 rounded-lg border p-3 transition-colors',
           activity.isRead
             ? 'border-transparent bg-transparent hover:bg-muted/50 hover:border-muted'
-            : 'border-primary/20 bg-primary/5 hover:bg-primary/10',
+            : 'border-accent/20 bg-accent/5 hover:bg-accent/10',
           isSelected && 'ring-2 ring-primary ring-offset-2'
         )}
       >

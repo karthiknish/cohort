@@ -482,7 +482,7 @@ function SearchResultItem({ result, onSelect }: SearchResultItemProps) {
       className="w-full text-left p-3 rounded-lg hover:bg-muted transition-colors"
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-accent/10">
           <IconComponent className="h-4 w-4 text-primary" />
         </div>
 

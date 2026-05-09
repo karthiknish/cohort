@@ -93,7 +93,7 @@ export function AgentModePanel({
   const inputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const [isDraggingFiles, setIsDraggingFiles] = useState(false)
+  const isDraggingFilesRef = useRef(false)
   const latestMessageId = messages.at(-1)?.id ?? null
 
   // Fetch data for mentions
@@ -237,7 +237,7 @@ export function AgentModePanel({
   const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
     if (event.dataTransfer.types.includes('Files')) {
-      setIsDraggingFiles(true)
+      isDraggingFilesRef.current = true
     }
   }, [])
 
@@ -245,13 +245,13 @@ export function AgentModePanel({
     event.preventDefault()
     const nextTarget = event.relatedTarget
     if (!nextTarget || !(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
-      setIsDraggingFiles(false)
+      isDraggingFilesRef.current = false
     }
   }, [])
 
   const handleDrop = useCallback(async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
-    setIsDraggingFiles(false)
+    isDraggingFilesRef.current = false
     if (event.dataTransfer.files.length === 0) return
     await onAddAttachments(event.dataTransfer.files)
   }, [onAddAttachments])

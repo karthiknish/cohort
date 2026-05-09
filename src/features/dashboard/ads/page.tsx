@@ -299,7 +299,7 @@ export default function AdsPage() {
         {!isPreviewMode && (
           <section
             aria-label="Ad platform setup and connections"
-            className="space-y-6 rounded-xl border border-muted/50 bg-muted/10 p-4 sm:p-6 dark:bg-muted/5"
+            className="space-y-6 rounded-xl border border-muted/50 bg-muted/10 p-4 sm:p-6
           >
             {showWorkflow ? (
               <FadeIn>

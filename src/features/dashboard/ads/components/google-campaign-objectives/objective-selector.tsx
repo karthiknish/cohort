@@ -71,8 +71,8 @@ function ObjectiveSelectorCard({
         'relative flex flex-col items-start p-4 rounded-lg border-2 text-left motion-chromatic',
         'hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2',
         isSelected
-          ? 'border-primary bg-primary/5 shadow-sm'
-          : 'border-border bg-card hover:border-primary/50',
+          ? 'border-primary bg-accent/5 shadow-sm'
+          : 'border-border bg-card hover:border-accent/50',
         disabled && 'opacity-50 cursor-not-allowed'
       )}
     >

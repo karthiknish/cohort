@@ -466,7 +466,7 @@ function KanbanColumn({
       className={cn(
         'group flex min-w-[292px] max-w-[360px] flex-1 flex-col overflow-hidden rounded-[1.5rem] border border-border/60 bg-gradient-to-b from-background to-muted/20 shadow-sm transition-colors',
         !bulkActive && 'hover:border-border hover:bg-muted/25',
-        isDragTarget && 'border-primary/30 bg-primary/10',
+        isDragTarget && 'border-accent/30 bg-accent/10',
         isDraggingFrom && 'opacity-50'
       )}
       onDragOver={handleColumnDragOver}
@@ -488,7 +488,7 @@ function KanbanColumn({
         {column.items.length === 0 ? (
           <div className={cn(
             'flex h-32 flex-col items-center justify-center rounded-[1.15rem] border border-dashed border-border/60 bg-background/70 p-4 text-center transition-colors',
-            isDragTarget && 'border-primary/40 bg-primary/5'
+            isDragTarget && 'border-accent/40 bg-accent/5'
           )}>
             {draggedTask ? (
               <>
@@ -632,7 +632,7 @@ function KanbanTaskItem({
           type="button"
           onClick={handleExpand}
           className={cn(
-            'flex w-full flex-col gap-3 rounded-[1.35rem] border border-border/60 bg-gradient-to-b from-background via-background to-muted/20 p-4 text-left shadow-sm motion-chromatic hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
+            'flex w-full flex-col gap-3 rounded-[1.35rem] border border-border/60 bg-gradient-to-b from-background via-background to-muted/20 p-4 text-left shadow-sm motion-chromatic hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-md',
             pending && 'pointer-events-none opacity-75'
           )}
           aria-label={`Expand task ${task.title}`}

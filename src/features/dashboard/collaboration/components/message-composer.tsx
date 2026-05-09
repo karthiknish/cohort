@@ -104,7 +104,7 @@ export function ReplyIndicator({ message, onCancel }: ReplyIndicatorProps) {
   return (
     <div className="flex items-center justify-between rounded-t-lg border-b border-muted/40 bg-muted/20 px-3 py-2 text-xs animate-in fade-in slide-in-from-bottom-2 duration-200">
       <div className="flex items-center gap-2">
-        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10">
+        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/10">
           <Reply className="h-3 w-3 text-primary" />
         </div>
         <div className="flex flex-col">
@@ -192,7 +192,7 @@ export function MessageComposer({
         />
 
         <div className="space-y-3">
-          <div className="w-full rounded-lg border border-muted/40 bg-background shadow-sm motion-chromatic focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20">
+          <div className="w-full rounded-lg border border-muted/40 bg-background shadow-sm motion-chromatic focus-within:border-accent/40 focus-within:ring-1 focus-within:ring-primary/20">
             {replyingToMessage && (
               <ReplyIndicator message={replyingToMessage} onCancel={onCancelReply} />
             )}

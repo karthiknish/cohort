@@ -149,14 +149,14 @@ export function DMSidebar({
                   className={cn(
                     'w-full flex items-center gap-3 p-3 rounded-lg text-left motion-chromatic',
                     'hover:bg-muted/50',
-                    isSelected && 'bg-primary/5 border border-primary/20',
+                    isSelected && 'bg-accent/5 border border-accent/20',
                     hasUnread && !isSelected && 'bg-muted/30'
                   )}
                 >
                   <Avatar className="h-10 w-10 shrink-0">
                     <AvatarFallback className={cn(
                       'text-xs font-medium',
-                      hasUnread && 'bg-primary/10 text-primary'
+                      hasUnread && 'bg-accent/10 text-primary'
                     )}>
                       {getInitials(conversation.otherParticipantName)}
                     </AvatarFallback>

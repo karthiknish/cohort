@@ -56,7 +56,7 @@ function HomePageContent() {
         loadingContent={HOME_PAGE_FALLBACK}
       >
       <div className="w-full bg-background">
-      {/* ── Hero: tokens come from .theme-marketing-light under html.dark (layout) ── */}
+      {/* ── Hero section ── */}
       <section className="relative overflow-hidden border-b border-border/40 bg-background px-6 pb-16 pt-24 text-center">
         <div className="relative z-10 mx-auto max-w-6xl">
           <div className="mx-auto max-w-4xl">
@@ -83,7 +83,7 @@ function HomePageContent() {
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/auth?tab=signup"
-                className="rounded-full bg-accent px-8 py-3 text-sm font-semibold text-accent-foreground shadow-md transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100 hover:scale-[1.02] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="rounded-full bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100 hover:scale-[1.02] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Get started free
               </Link>
@@ -98,7 +98,7 @@ function HomePageContent() {
         </div>
       </section>
 
-      <section className="border-t border-border/40 bg-muted/20 px-6 py-14 sm:py-16 dark:bg-muted/15">
+      <section className="border-t border-border/40 bg-muted/20 px-6 py-14 sm:py-16">
         <div className="mx-auto max-w-6xl space-y-4">
           <p className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Interactive preview · sample data
@@ -111,7 +111,7 @@ function HomePageContent() {
       <FeaturesSection />
 
       {/* ── Features bento ── */}
-      <section className="bg-muted/25 py-16 sm:py-24 dark:bg-muted/20">
+      <section className="bg-muted/25 py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-6">
           <FadeIn className="mb-16 text-center">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Features</p>
@@ -130,7 +130,7 @@ function HomePageContent() {
       <SupportProofSection />
 
       {/* ── CTA ── */}
-      <section className="border-t border-border/40 bg-muted/15 px-6 py-24 dark:bg-muted/10">
+      <section className="border-t border-border/40 bg-muted/15 px-6 py-24">
         <div className="mx-auto max-w-4xl rounded-3xl border border-border/60 bg-card p-8 shadow-xl shadow-black/[0.04] sm:p-12">
           <FadeIn className="text-center">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Get Started</p>
@@ -143,7 +143,7 @@ function HomePageContent() {
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/auth?tab=signup"
-                className="rounded-full bg-accent px-8 py-3 text-sm font-semibold text-accent-foreground shadow-md transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100 hover:scale-[1.02] hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="rounded-full bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all duration-200 motion-reduce:transition-none motion-reduce:hover:scale-100 hover:scale-[1.02] hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Create account
               </Link>

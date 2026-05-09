@@ -307,19 +307,27 @@ const DASHBOARD_VIEWS = [
 const PREVIEW_VIEW_IDS = new Set<string>(DASHBOARD_VIEWS.map((view) => view.id))
 
 const TONE_BADGE_CLASSES = {
-  primary: 'border-primary/20 bg-primary/10 text-primary',
-  accent: 'border-accent/30 bg-accent/15 text-accent',
-  info: 'border-info/20 bg-info/10 text-info',
+  primary: 'border-border/70 bg-background text-foreground',
+  accent: 'border-border/70 bg-background text-accent',
+  info: 'border-border/70 bg-background text-info',
   success: 'border-success/20 bg-success/10 text-success',
   warning: 'border-warning/20 bg-warning/10 text-warning',
 } as const satisfies Record<PreviewTone, string>
 
 const TONE_DOT_CLASSES = {
-  primary: 'bg-primary',
+  primary: 'bg-foreground/55',
   accent: 'bg-accent',
   info: 'bg-info',
   success: 'bg-success',
   warning: 'bg-warning',
+} as const satisfies Record<PreviewTone, string>
+
+const EMPHASIZED_BAR_CLASSES = {
+  primary: 'bg-foreground/65',
+  accent: 'bg-accent/70',
+  info: 'bg-info/70',
+  success: 'bg-success/80',
+  warning: 'bg-warning/80',
 } as const satisfies Record<PreviewTone, string>
 
 const INITIAL_VIEW_ID = DASHBOARD_VIEWS[0].id
@@ -451,8 +459,8 @@ export function DashboardPreview() {
 
   return (
     <div className="relative mx-auto w-full max-w-280">
-      <div aria-hidden="true" className="absolute inset-x-12 top-10 h-24 rounded-full bg-accent/20 blur-3xl" />
-      <div aria-hidden="true" className="absolute -right-4 top-28 h-44 w-44 rounded-full bg-info/15 blur-3xl" />
+      <div aria-hidden="true" className="absolute inset-x-12 top-10 h-24 rounded-full bg-muted/90 blur-3xl" />
+      <div aria-hidden="true" className="absolute -right-4 top-28 h-44 w-44 rounded-full bg-foreground/6 blur-3xl" />
 
       <div
         className="relative perspective-[1800px]"
@@ -509,7 +517,7 @@ export function DashboardPreview() {
                     className={cn(
                       'flex min-h-20 flex-col items-start justify-between rounded-2xl border px-3 py-3 text-left transition-colors lg:min-h-27',
                       isActive
-                        ? 'border-primary/30 bg-primary/8 text-foreground'
+                        ? 'border-accent/30 bg-accent/8 text-foreground'
                         : 'border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted/70',
                     )}
                   >
@@ -539,7 +547,7 @@ export function DashboardPreview() {
                       </p>
                     </div>
                     <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/60 px-3 py-1.5 text-xs font-medium text-foreground">
-                      <span className="h-2 w-2 rounded-full bg-accent" />
+                      <span className="h-2 w-2 rounded-full bg-foreground/55" />
                       {currentView.status}
                     </div>
                   </div>
@@ -600,7 +608,9 @@ export function DashboardPreview() {
                             className={cn(
                               'w-full rounded-t-2xl transition-[height,background-color] duration-300',
                               bar.heightClass,
-                              'emphasized' in bar && bar.emphasized ? 'bg-accent' : 'bg-primary/12',
+                              'emphasized' in bar && bar.emphasized
+                                ? EMPHASIZED_BAR_CLASSES[currentMetric.tone]
+                                : 'bg-foreground/10',
                             )}
                           />
                           <span className="text-[11px] font-medium text-muted-foreground">{bar.label}</span>
@@ -667,7 +677,7 @@ export function DashboardPreview() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-primary/12 bg-primary px-4 py-4 text-primary-foreground sm:px-5 sm:py-5">
+                <div className="rounded-3xl border border-accent/12 bg-primary px-4 py-4 text-primary-foreground sm:px-5 sm:py-5">
                   <div className="flex items-center gap-2 text-primary-foreground/80">
                     <Sparkles className="h-4 w-4" />
                     <p className="text-[11px] font-semibold tracking-[0.18em] uppercase">Agent readout</p>
@@ -681,7 +691,7 @@ export function DashboardPreview() {
                       <ViewTransition key={item.id}>
                         <div className="rounded-2xl border border-primary-foreground/12 bg-primary-foreground/8 p-3">
                           <div className="flex items-start gap-3">
-                            <Bot className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                            <Bot className="mt-0.5 h-4 w-4 shrink-0 text-foreground/65" />
                             <div>
                               <p className="text-sm font-semibold text-primary-foreground">{item.label}</p>
                               <p className="mt-1 text-[11px] font-medium tracking-[0.16em] text-primary-foreground/70 uppercase">
@@ -697,7 +707,7 @@ export function DashboardPreview() {
                   <Link
                     href="/dashboard"
                     transitionTypes={['nav-forward']}
-                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90"
+                    className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
                   >
                     Launch workspace
                     <ArrowUpRight className="h-4 w-4" />
@@ -711,7 +721,7 @@ export function DashboardPreview() {
 
       <div className="mt-4 flex flex-col gap-2 text-[11px] font-medium tracking-[0.16em] text-primary-foreground/65 uppercase sm:flex-row sm:items-center sm:justify-between">
         <div className="inline-flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-accent" />
+          <span className="h-2 w-2 rounded-full bg-foreground/55" />
           Hover to tilt, tap lanes to inspect the board.
         </div>
         <div className="inline-flex items-center gap-2">

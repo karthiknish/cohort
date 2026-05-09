@@ -43,6 +43,7 @@ function decodeEmailFromIdToken(idToken: string | undefined): string | null {
 async function fetchGoogleUserEmail(accessToken: string): Promise<string | null> {
   try {
     const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      cache: 'no-store',
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },

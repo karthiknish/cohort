@@ -120,7 +120,7 @@ function ThreadCard({
       className={cn(
         'cv-scroll-item border rounded-lg overflow-hidden transition-colors',
         'hover:bg-muted/50',
-        unreadCount > 0 && 'border-primary/50 bg-primary/5'
+        unreadCount > 0 && 'border-accent/50 bg-accent/5'
       )}
     >
       {/* Thread header - always visible */}
@@ -240,7 +240,7 @@ export function ThreadBadge({
       className={cn(
         'inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs',
         'bg-muted hover:bg-muted/70 transition-colors',
-        unreadCount && unreadCount > 0 && 'bg-primary/10 text-primary hover:bg-primary/20',
+        unreadCount && unreadCount > 0 && 'bg-accent/10 text-primary hover:bg-accent/20',
         className
       )}
     >

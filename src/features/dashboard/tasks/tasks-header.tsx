@@ -99,7 +99,7 @@ export function TasksHeader({
       {newTaskDisabledReason ? (
         <p
           id="tasks-new-task-disabled"
-          className="text-balance text-xs text-amber-800 dark:text-amber-200"
+          className="text-balance text-xs text-amber-800
           role="status"
         >
           {newTaskDisabledReason}

@@ -98,14 +98,14 @@ export function PollOptionRow({
       className={cn(
         'relative rounded-lg border p-3 transition-colors',
         interactive && 'cursor-pointer hover:bg-background',
-        isSelected && 'border-primary bg-primary/5',
-        showOptionResults && hasLeadingWinner && percentage > 0 && 'border-primary/50',
+        isSelected && 'border-primary bg-accent/5',
+        showOptionResults && hasLeadingWinner && percentage > 0 && 'border-accent/50',
       )}
       onClick={handleRowClick}
       disabled={!interactive}
     >
       {showOptionResults && percentage > 0 ? (
-        <div className="absolute inset-0 -z-10 rounded-lg bg-primary/5" style={barStyle} />
+        <div className="absolute inset-0 -z-10 rounded-lg bg-accent/5" style={barStyle} />
       ) : null}
 
       <div className="flex items-start gap-3">

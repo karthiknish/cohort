@@ -107,7 +107,7 @@ export default function ProposalDeckPage() {
     return rawSlides.map((s, index) => {
       const titleMatch = s.match(/Slide \d+:\s*([^*]+)/)
       const title = typeof titleMatch?.[1] === 'string' ? titleMatch[1].trim() : `Slide ${index + 1}`
-      const points = s.split('*').slice(1).map(p => p.trim()).filter(Boolean)
+      const points = s.split('*').slice(1).flatMap(p => { const t = p.trim(); return t ? [t] : [] })
       
       return { 
         id: index + 1,
@@ -197,13 +197,13 @@ export default function ProposalDeckPage() {
                     
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {slideGuidance.map((slide, index) => (
-                        <Card key={slide.id} className="relative overflow-hidden border-muted/40 bg-muted/5 motion-chromatic hover:bg-muted/10 hover:border-primary/20 group">
+                        <Card key={slide.id} className="relative overflow-hidden border-muted/40 bg-muted/5 motion-chromatic hover:bg-muted/10 hover:border-accent/20 group">
                           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-100 transition-opacity">
                             <span className="text-4xl font-black text-primary/10">0{slide.id}</span>
                           </div>
                           <CardHeader className="p-4 pb-2">
                             <div className="flex items-center gap-2 text-primary">
-                              <div className="p-1.5 rounded-lg bg-primary/10 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                              <div className="p-1.5 rounded-lg bg-accent/10 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                                 {getSlideIcon(index)}
                               </div>
                               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Slide {slide.id}</span>
@@ -214,7 +214,7 @@ export default function ProposalDeckPage() {
                             <ul className="space-y-2">
                               {slide.points.map((point) => (
                                 <li key={`${slide.id}-${point}`} className="flex gap-2 text-[12px] leading-relaxed text-muted-foreground">
-                                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-primary/40" />
+                                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent/40" />
                                   {point}
                                 </li>
                               ))}

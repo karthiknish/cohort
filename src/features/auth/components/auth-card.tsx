@@ -100,7 +100,7 @@ export function AuthCard({
 }: AuthCardProps) {
   return (
     <FadeIn as="section" className="mx-auto w-full max-w-md lg:max-w-120">
-      <Card className="border-border/60 shadow-xl shadow-primary/5 motion-reduce:shadow-md">
+      <Card className="border-border/60 shadow-xl shadow-accent/5 motion-reduce:shadow-md">
         <CardHeader className="space-y-1 pb-6 text-center">
           <CardTitle className="text-2xl">Welcome to Cohorts</CardTitle>
           <CardDescription className="text-base">
@@ -155,7 +155,7 @@ export function AuthCard({
                 <FadeInItem as="div" className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="signInPassword">Password</Label>
-                    <Link href="/auth/forgot" className="text-xs font-medium text-primary hover:underline">
+                    <Link href="/auth/forgot" className="text-xs font-medium text-accent hover:underline">
                       Forgot password?
                     </Link>
                   </div>
@@ -472,11 +472,11 @@ export function AuthCard({
 
           <p className="px-6 text-center text-xs text-muted-foreground">
             By clicking continue, you agree to our{' '}
-            <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
+            <Link href="/terms" className="underline underline-offset-4 hover:text-accent">
               Terms of Service
             </Link>{' '}
             and{' '}
-            <Link href="/privacy" className="underline underline-offset-4 hover:text-primary">
+            <Link href="/privacy" className="underline underline-offset-4 hover:text-accent">
               Privacy Policy
             </Link>
             .

@@ -11,7 +11,7 @@ export function ClockSessionMap({ sessions }: { sessions: TimeSession[] }) {
         <CardDescription>Preview GPS and workplace context without wiring live device signals yet.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-3xl border border-dashed border-primary/30 bg-card p-5">
+        <div className="rounded-3xl border border-dashed border-accent/30 bg-card p-5">
           <div className="grid gap-3 sm:grid-cols-2">
             {sessions.map((session) => (
               <div key={session.id} className="rounded-2xl border border-muted/40 bg-muted/20 p-4">

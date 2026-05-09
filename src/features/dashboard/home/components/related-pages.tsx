@@ -48,9 +48,9 @@ export function RelatedPages({ title = 'Related pages', description, pages, clas
               <Link
                 key={page.href}
                 href={page.href}
-                className="group flex items-center gap-3 rounded-lg border border-muted/40 p-3 motion-chromatic hover:border-primary/40 hover:bg-muted/30"
+                className="group flex items-center gap-3 rounded-lg border border-muted/40 p-3 motion-chromatic hover:border-accent/40 hover:bg-muted/30"
               >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent/10 text-primary">
                   <Icon className="h-4 w-4" />
                 </span>
                 <div className="flex-1 min-w-0">

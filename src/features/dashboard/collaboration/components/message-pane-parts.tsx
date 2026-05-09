@@ -28,7 +28,7 @@ export function MessagePaneHeader({
     <div className="flex items-center justify-between gap-4 border-b border-muted/40 bg-background/60 p-5 backdrop-blur-md sticky top-0 z-20">
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0 shadow-sm border border-primary/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-primary shrink-0 shadow-sm border border-accent/10">
             <MessageSquare className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">

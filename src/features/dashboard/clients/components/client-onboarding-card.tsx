@@ -57,12 +57,12 @@ export function ClientOnboardingChecklist({ items }: { items: ClientChecklistIte
                 key={item.id}
                 className={cn(
                   "group flex items-start gap-3 rounded-xl border border-muted/30 p-3 motion-chromatic",
-                  item.done ? "bg-primary/[0.03] border-primary/20" : "bg-muted/5"
+                  item.done ? "bg-accent/[0.03] border-accent/20" : "bg-muted/5"
                 )}
               >
                 <div className={cn(
                   "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors",
-                  item.done ? "bg-primary/10 text-primary" : "bg-muted/20 text-muted-foreground/70"
+                  item.done ? "bg-accent/10 text-primary" : "bg-muted/20 text-muted-foreground/70"
                 )}>
                   <Icon
                     className={cn(

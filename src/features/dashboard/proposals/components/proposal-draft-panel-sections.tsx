@@ -98,7 +98,7 @@ export function ProposalDraftFooter({
         variant="outline"
         onClick={onBack}
         disabled={isFirstStep}
-        className="h-10 px-6 font-medium motion-chromatic hover:border-primary/20 hover:bg-primary/5 hover:text-primary"
+        className="h-10 px-6 font-medium motion-chromatic hover:border-accent/20 hover:bg-accent/5 hover:text-primary"
       >
         <ChevronLeft className="mr-2 h-4 w-4" /> Previous
       </Button>

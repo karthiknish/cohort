@@ -34,7 +34,7 @@ export function OnboardingCard() {
     <Card className="border-muted/70 bg-gradient-to-br from-primary/5 via-background to-background shadow-sm">
       <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-primary">
             <Sparkles className="h-5 w-5" />
           </span>
           <div>
@@ -50,7 +50,7 @@ export function OnboardingCard() {
             onClick={startTour}
             size="sm"
             variant="default"
-            className="bg-primary hover:bg-primary/90"
+            className="bg-primary hover:bg-accent/90"
           >
             Start Tour
             <Sparkles className="ml-1.5 h-3.5 w-3.5" />
@@ -68,7 +68,7 @@ export function OnboardingCard() {
           {onboardingSteps.map((step, index) => (
             <div
               key={step.title}
-              className="group relative space-y-3 rounded-lg border border-muted/60 bg-background p-4 motion-chromatic hover:border-primary/40 hover:shadow-sm"
+              className="group relative space-y-3 rounded-lg border border-muted/60 bg-background p-4 motion-chromatic hover:border-accent/40 hover:shadow-sm"
             >
               <div className="flex items-start justify-between">
                 <Badge variant="outline" className="text-xs">

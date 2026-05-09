@@ -67,16 +67,16 @@ export function WorkforcePageShell({
         actions={headerAction}
       />
 
-      <Card className="border-primary/20 bg-card shadow-xl shadow-primary/10">
+      <Card className="border-accent/20 bg-card shadow-xl shadow-primary/10">
         <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
           <div className="max-w-2xl space-y-2">
-            <Badge className="border-primary/20 bg-primary/10 text-primary hover:bg-primary/10">Team operations</Badge>
+            <Badge className="border-accent/20 bg-accent/10 text-primary hover:bg-accent/10">Team operations</Badge>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">Team work and agency tools in one workspace</h2>
             <p className="text-sm leading-6 text-muted-foreground">
               Run schedules, time, and checklists here; use Agency tools for analytics, paid media, and client-facing deliverables.
             </p>
           </div>
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-accent/20 bg-accent/5 p-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2 font-medium text-foreground">
               <Construction className="h-4 w-4" />
               Tip
@@ -113,7 +113,7 @@ export function WorkforcePageShell({
                 className="rounded-2xl border border-muted/50 bg-muted/10 p-4 transition-colors hover:bg-muted/20"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="rounded-2xl bg-primary/10 p-3 text-primary">
+                  <div className="rounded-2xl bg-accent/10 p-3 text-primary">
                     <route.icon className="h-4 w-4" />
                   </div>
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />

@@ -73,7 +73,7 @@ export function MeetingsDefaultView({
 
       <div className="space-y-3">
         {showPreviewMode ? (
-          <Alert className="border-primary/25 bg-primary/5 text-foreground">
+          <Alert className="border-accent/25 bg-accent/5 text-foreground">
             <Info className="text-primary" aria-hidden />
             <AlertTitle>Preview mode</AlertTitle>
             <AlertDescription>

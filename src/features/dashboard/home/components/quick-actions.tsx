@@ -183,11 +183,11 @@ export function QuickActions({ compact }: QuickActionsProps) {
               <Link
                 key={link.href}
                 href={link.href}
-                className="group flex h-full flex-col justify-between rounded-lg border border-muted/60 bg-background p-4 transition hover:border-primary/80 hover:shadow-sm"
+                className="group flex h-full flex-col justify-between rounded-lg border border-muted/60 bg-background p-4 transition hover:border-accent/80 hover:shadow-sm"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-accent/10 text-primary">
                       <Icon className="h-4 w-4" />
                     </span>
                     {link.badge && (

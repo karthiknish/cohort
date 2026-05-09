@@ -77,6 +77,7 @@ export const POST = createApiHandler(
 
     const response = await fetch(emailWebhookUrl, {
       method: 'POST',
+      cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'email.notification',

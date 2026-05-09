@@ -19,7 +19,7 @@ export function ProjectFilterBanner({
   if (!projectId && !projectName) return null
 
   return (
-    <div className="mx-4 mb-3 mt-2 flex items-center justify-between rounded-md border border-primary/40 bg-primary/5 px-3 py-2 text-xs text-primary">
+    <div className="mx-4 mb-3 mt-2 flex items-center justify-between rounded-md border border-accent/40 bg-accent/5 px-3 py-2 text-xs text-primary">
       <span className="font-medium">
         Showing tasks for {projectName ?? 'selected project'}
       </span>

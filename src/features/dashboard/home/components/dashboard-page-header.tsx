@@ -92,7 +92,7 @@ export function StatCard({ label, value, description, icon: Icon, variant = 'def
     <div className={getStatCardClasses(variant)}>
       <div className="flex items-center gap-5 p-5">
         {Icon && (
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/5 text-primary">
             <Icon className="h-5 w-5" />
           </div>
         )}

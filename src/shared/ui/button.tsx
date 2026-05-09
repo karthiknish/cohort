@@ -44,17 +44,17 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md",
+        default: "bg-primary text-primary-foreground border border-border hover:bg-accent/90 shadow-sm hover:shadow-md",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 shadow-sm",
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground hover:border-primary/30",
+          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground hover:border-accent/30",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm",
         ghost:
           "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md focus-visible:ring-primary/20",
+        success: "bg-primary text-primary-foreground border border-border hover:bg-accent/90 shadow-sm hover:shadow-md focus-visible:ring-primary/20",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

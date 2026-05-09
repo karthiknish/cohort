@@ -77,7 +77,7 @@ function ProposalAnalyticsChartBar({
 
   return (
     <div className="flex flex-1 flex-col justify-end" title={`${point.date}: ${totalGenerations} generations, ${totalFailures} failures`}>
-      <div className="relative w-full rounded-t bg-primary/20 motion-chromatic hover:bg-primary/30" style={barStyle}>
+      <div className="relative w-full rounded-t bg-accent/20 motion-chromatic hover:bg-accent/30" style={barStyle}>
         {failureHeight > 0 ? <div className="absolute inset-x-0 bottom-0 rounded-t bg-destructive/50" style={failureStyle} /> : null}
       </div>
     </div>
@@ -186,7 +186,7 @@ export function ProposalAnalyticsHeader({
 export function ProposalAnalyticsSummaryGrid({ summary, formatDuration }: { summary: ProposalAnalyticsSummary; formatDuration: (ms: number | null) => string }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <SummaryStatCard iconKey="drafts" label="Drafts Created" toneClassName="bg-primary/10" value={summary.totalDrafts} />
+      <SummaryStatCard iconKey="drafts" label="Drafts Created" toneClassName="bg-accent/10" value={summary.totalDrafts} />
       <SummaryStatCard iconKey="submitted" label="Proposals Submitted" toneClassName="bg-success/10" value={summary.totalSubmitted} />
       <SummaryStatCard iconKey="sent" label="Proposals Sent" toneClassName="bg-info/10" value={summary.totalSent} />
       <SummaryStatCard iconKey="average" label="Avg. AI Generation" toneClassName="bg-warning/10" value={formatDuration(summary.averageAiGenerationTime)} />
@@ -247,7 +247,7 @@ export function ProposalAnalyticsActivityChart({ chartData }: { chartData: Chart
         </div>
         <div className="mt-3 flex items-center justify-center gap-4 text-xs">
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-primary/40" />
+            <span className="h-2 w-2 rounded-full bg-accent/40" />
             Generations ({chartData.totalGenerations})
           </span>
           {chartData.totalFailures > 0 ? (

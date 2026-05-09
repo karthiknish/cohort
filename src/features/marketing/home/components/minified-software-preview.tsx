@@ -40,7 +40,7 @@ const TONE_BADGE: Record<Tone, string> = {
   success: 'border-success/30 bg-success/10 text-success',
   warning: 'border-warning/30 bg-warning/10 text-warning',
   info: 'border-info/30 bg-info/10 text-info',
-  accent: 'border-accent/30 bg-accent/15 text-accent',
+  accent: 'border-accent/30 bg-accent/10 text-primary',
 }
 
 /* ------------------------------------------------------------------ */
@@ -232,8 +232,8 @@ const MEETING_ITEMS: readonly {
 ]
 
 const ATTENDEE_COLORS: Record<string, string> = {
-  JL: 'bg-accent', SR: 'bg-primary', KP: 'bg-success',
-  MA: 'bg-warning', DW: 'bg-destructive',
+  JL: 'bg-primary', SR: 'bg-secondary', KP: 'bg-info',
+  MA: 'bg-success', DW: 'bg-foreground',
 }
 
 const BOUNCE_DOT_STYLES = [
@@ -331,7 +331,7 @@ function OverviewPanel({
             {metric.bars.map((bar) => (
               <div
                 key={bar.id}
-                className={cn('flex-1 rounded-t-md transition-[height,background-color] duration-300', bar.h, bar.accent ? 'bg-accent' : 'bg-primary/10')}
+                className={cn('flex-1 rounded-t-md transition-[height,background-color] duration-300', bar.h, bar.accent ? 'bg-accent' : 'bg-accent/10')}
               />
             ))}
           </div>
@@ -671,7 +671,7 @@ export function MinifiedSoftwarePreview() {
                   className={cn(
                     'flex h-9 w-9 items-center justify-center rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                     t.id === activeTabId
-                      ? 'bg-primary/12 text-primary shadow-sm'
+                      ? 'bg-accent/12 text-primary shadow-sm'
                       : 'text-muted-foreground/55 hover:bg-muted/50 hover:text-muted-foreground',
                   )}
                 >
@@ -730,7 +730,7 @@ export function MinifiedSoftwarePreview() {
                   className={cn(
                     'flex snap-start shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold tracking-wide uppercase outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                     t.id === activeTabId
-                      ? 'border-primary/30 bg-primary/8 text-primary'
+                      ? 'border-accent/30 bg-accent/8 text-primary'
                       : 'border-border/40 text-muted-foreground/60 hover:border-border/60 hover:bg-muted/30',
                   )}
                 >
@@ -751,7 +751,7 @@ export function MinifiedSoftwarePreview() {
           </div>
 
           {/* ── Agent right panel ── */}
-          <div className="hidden border-l border-border/30 bg-primary/[0.03] lg:block">
+          <div className="hidden border-l border-border/30 bg-accent/[0.03] lg:block">
             <div className="border-b border-border/30 px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-3.5 w-3.5 text-accent" />

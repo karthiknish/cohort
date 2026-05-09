@@ -80,9 +80,9 @@ function HelpNavigationLink({
     <Link
       href={href}
       onClick={handleClick}
-      className="group flex items-start gap-3 rounded-lg border border-muted/60 p-3 transition hover:border-primary/40 hover:bg-muted/30"
+      className="group flex items-start gap-3 rounded-lg border border-muted/60 p-3 transition hover:border-accent/40 hover:bg-muted/30"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-primary">
         <Icon className="h-4 w-4" />
       </span>
       <div className="flex-1 space-y-1">
@@ -291,9 +291,9 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                   </Button>
                 </div>
 
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <div className="rounded-lg border border-accent/20 bg-accent/5 p-4">
                   <div className="flex items-start gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-primary">
                       <Sparkles className="h-4 w-4" />
                     </span>
                     <div>
@@ -309,7 +309,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
                   {gettingStartedForUser.map((step, index) => (
                     <div
                       key={step.title}
-                      className="group flex items-start gap-4 rounded-lg border border-muted/60 p-4 transition hover:border-primary/40 hover:bg-muted/30"
+                      className="group flex items-start gap-4 rounded-lg border border-muted/60 p-4 transition hover:border-accent/40 hover:bg-muted/30"
                     >
                       <Badge variant="secondary" className="shrink-0">
                         {index + 1}
@@ -366,7 +366,7 @@ export function HelpModal({ open, onOpenChange, showWelcome = false }: HelpModal
 
             {!showWelcome && (
               <TabsContent value="tips" className="mt-4 space-y-4">
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <div className="rounded-lg border border-accent/20 bg-accent/5 p-4">
                   <h4 className="font-semibold text-foreground">Pro tips for power users</h4>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Get more done with these helpful features.

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -145,7 +145,6 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
     const { selectedClientId } = useClientContext()
     const { toast } = useToast()
 
-    const [formulas, setFormulas] = useState<CustomFormula[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -176,24 +175,10 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
         })
     }, [formulasResult])
 
-    useEffect(() => {
-        setFormulas(formulasFromQuery)
-    }, [formulasFromQuery])
-
     // Load formulas from storage (compat shim)
     const loadFormulas = useCallback(async () => {
-        if (!selectedClientId) return
-        setLoading(true)
-        setError(null)
-        try {
-            setFormulas(formulasFromQuery)
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to load formulas'
-            setError(message)
-        } finally {
-            setLoading(false)
-        }
-    }, [selectedClientId, formulasFromQuery])
+        // Data is reactive via Convex useQuery, manual refresh not needed
+    }, [])
 
     // Create a new formula
     const handleCreateFormula = useCallback(async (
@@ -297,7 +282,7 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
     }, [])
 
     return {
-        formulas,
+        formulas: formulasFromQuery,
         loading,
         error,
         loadFormulas,

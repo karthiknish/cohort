@@ -213,7 +213,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null)
   const [connectionErrors, setConnectionErrors] = useState<Record<string, string>>({})
   const [connectedProviders, setConnectedProviders] = useState<Record<string, boolean>>({})
-  const [integrationStatuses, setIntegrationStatuses] = useState<IntegrationStatusResponse | null>(null)
+  // integrationStatuses is derived directly from mappedStatuses
   const [syncingProviders, setSyncingProviders] = useState<Record<string, boolean>>({})
 
   // Setup state
@@ -232,14 +232,15 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   const [loadingMetaAccountOptions, setLoadingMetaAccountOptions] = useState(false)
 
   // Reset account selection state when the active client changes.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: selectedClientId is an intentional trigger; only stable setters are called inside
-  useEffect(() => {
+  const prevClientIdRef = useRef(selectedClientId)
+  if (prevClientIdRef.current !== selectedClientId) {
+    prevClientIdRef.current = selectedClientId
     setGoogleAccountOptions([])
     setSelectedGoogleAccountId('')
     setGoogleSetupDialogOpen(false)
     setMetaAccountOptions([])
     setSelectedMetaAccountId('')
-  }, [selectedClientId])
+  }
 
   // Trigger refresh
   const triggerRefresh = useCallback(() => {
@@ -247,7 +248,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
   }, [onRefresh])
 
   // Derived state
-  const automationStatuses = integrationStatuses?.statuses ?? []
+  const automationStatuses = mappedStatuses?.statuses ?? []
 
   // Create a map of provider status info for easier access
   const integrationStatusMap: Record<string, IntegrationStatusInfo> = {}
@@ -518,23 +519,18 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     }
   }, [initializeAdAccount, toast, selectedClientId, triggerRefresh, workspaceId])
 
-  // Keep local state in sync with Convex/preview.
-  useEffect(() => {
-    setIntegrationStatuses(mappedStatuses)
-  }, [mappedStatuses])
-
   // Sync connected providers from statuses
   useEffect(() => {
-    if (!integrationStatuses?.statuses) return
+    if (!mappedStatuses?.statuses) return
     const updatedConnected: Record<string, boolean> = {}
-    integrationStatuses.statuses.forEach((status) => {
+    mappedStatuses.statuses.forEach((status) => {
       // `status.status` is derived from lastSyncStatus. Immediately after OAuth we store
       // integrations with lastSyncStatus = 'pending', so requiring 'success' makes the UI
       // look disconnected even though the account is linked.
       updatedConnected[status.providerId] = Boolean(status.linkedAt) || status.status === 'success'
     })
     setConnectedProviders(updatedConnected)
-  }, [integrationStatuses])
+  }, [mappedStatuses])
 
   // URL signaling handler
   const oauthProcessedRef = useRef<Record<string, boolean>>({})
@@ -851,7 +847,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     connectedProviders,
     connectingProvider,
     connectionErrors,
-    integrationStatuses,
+    integrationStatuses: mappedStatuses,
     integrationStatusMap,
     automationStatuses,
     syncingProviders,

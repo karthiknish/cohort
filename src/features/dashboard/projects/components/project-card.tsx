@@ -83,7 +83,7 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
   return (
     <ViewTransition>
       <div className={cn(
-        "group relative flex flex-col justify-between rounded-xl border border-muted/40 bg-background p-5 shadow-sm motion-chromatic hover:border-primary/40 hover:shadow-md dark:hover:bg-muted/10",
+        "group relative flex flex-col justify-between rounded-xl border border-muted/40 bg-background p-5 shadow-sm motion-chromatic hover:border-accent/40 hover:shadow-md
         isPendingUpdate && "opacity-75 pointer-events-none"
       )}>
       {/* Status accent bar */}
@@ -224,13 +224,13 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
       </div>
 
       <div className="mt-5 flex items-center gap-2.5 pt-4 border-t border-muted/30">
-        <Button asChild size="sm" variant="ghost" className="flex-1 h-9 text-xs font-bold uppercase tracking-wider hover:bg-primary/5 hover:text-primary motion-chromatic">
+        <Button asChild size="sm" variant="ghost" className="flex-1 h-9 text-xs font-bold uppercase tracking-wider hover:bg-accent/5 hover:text-primary motion-chromatic">
           <Link href={tasksHref} prefetch>
             Tasks
           </Link>
         </Button>
         <Separator orientation="vertical" className="h-4 opacity-50" />
-        <Button asChild size="sm" variant="ghost" className="flex-1 h-9 text-xs font-bold uppercase tracking-wider hover:bg-primary/5 hover:text-primary motion-chromatic">
+        <Button asChild size="sm" variant="ghost" className="flex-1 h-9 text-xs font-bold uppercase tracking-wider hover:bg-accent/5 hover:text-primary motion-chromatic">
           <Link href={collaborationHref} prefetch>
             Discussion
           </Link>

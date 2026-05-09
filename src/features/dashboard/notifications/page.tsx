@@ -687,7 +687,7 @@ function NotificationRow({
     <div
       className={cn(
         'cv-scroll-item group flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50',
-        !notification.read && 'border-primary/30 bg-primary/5'
+        !notification.read && 'border-accent/30 bg-accent/5'
       )}
     >
       <div className="text-2xl">{getNotificationIcon(notification.kind)}</div>

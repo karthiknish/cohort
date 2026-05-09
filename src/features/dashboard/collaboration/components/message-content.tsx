@@ -162,7 +162,7 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
       if (!href) return <span>{children}</span>
       if (href.startsWith(MENTION_PROTOCOL)) {
         return (
-          <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium leading-none text-primary">
+          <span className="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium leading-none text-primary">
             {children}
           </span>
         )

@@ -122,7 +122,7 @@ export default function TermsPage() {
                   index !== sections.length - 1 && "border-b border-border/40"
                 )}>
                   <div className="flex flex-col gap-4 sm:flex-row sm:gap-8">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:bg-accent/10 group-hover:text-primary transition-colors">
                       <section.icon className="h-5 w-5" />
                     </div>
                     <div className="space-y-2">

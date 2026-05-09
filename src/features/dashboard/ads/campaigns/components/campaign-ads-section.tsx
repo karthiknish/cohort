@@ -392,7 +392,7 @@ function AdGridItem({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-lg border bg-card text-left motion-chromatic hover:border-primary/50 hover:shadow-md"
+      className="group relative overflow-hidden rounded-lg border bg-card text-left motion-chromatic hover:border-accent/50 hover:shadow-md"
     >
       <button
         type="button"

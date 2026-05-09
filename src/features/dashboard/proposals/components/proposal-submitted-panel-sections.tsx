@@ -68,10 +68,10 @@ export function ProposalSubmittedHero({
     : null
 
   return (
-    <m.div initial="hidden" animate="visible" variants={fadeInUpVariants} className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-background p-10 shadow-2xl shadow-primary/5">
+    <m.div initial="hidden" animate="visible" variants={fadeInUpVariants} className="relative overflow-hidden rounded-[2rem] border border-accent/20 bg-background p-10 shadow-2xl shadow-primary/5">
       <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-40">
-        <m.div animate="animate" variants={blobVariants} className="absolute -right-[10%] -top-[20%] h-[300px] w-[300px] rounded-full bg-primary/10 blur-[100px]" />
-        <m.div animate="animate" variants={blobVariantsSlow} className="absolute -bottom-[20%] -left-[5%] h-[400px] w-[400px] rounded-full bg-primary/5 blur-[120px]" />
+        <m.div animate="animate" variants={blobVariants} className="absolute -right-[10%] -top-[20%] h-[300px] w-[300px] rounded-full bg-accent/10 blur-[100px]" />
+        <m.div animate="animate" variants={blobVariantsSlow} className="absolute -bottom-[20%] -left-[5%] h-[400px] w-[400px] rounded-full bg-accent/5 blur-[120px]" />
         <div className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(circle_at_center,transparent_0%,rgb(from_var(--background)_r_g_b_/_0.75)_100%)]" />
       </div>
 
@@ -92,7 +92,7 @@ export function ProposalSubmittedHero({
           </p>
           <div className="flex flex-wrap justify-center gap-4 pt-4 md:justify-start">
             {deckDownloadUrl && presentationHref ? (
-              <Button size="lg" className="h-14 rounded-2xl bg-primary px-8 text-base font-bold shadow-xl shadow-primary/25 motion-chromatic hover:scale-105 hover:bg-primary/90 active:scale-95" asChild>
+              <Button size="lg" className="h-14 rounded-2xl bg-primary px-8 text-base font-bold shadow-xl shadow-primary/25 motion-chromatic hover:scale-105 hover:bg-accent/90 active:scale-95" asChild>
                 <Link href={presentationHref} transitionTypes={['nav-forward']}>
                   <Presentation className="mr-3 h-6 w-6" />
                   View Presentation
@@ -119,12 +119,12 @@ export function ProposalStrategyBriefCard({ onCopySummary, summary }: { onCopySu
         <CardHeader className="border-b border-muted/40 bg-muted/30 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+              <div className="rounded-lg bg-accent/10 p-1.5 text-primary">
                 <FileText className="h-4 w-4" />
               </div>
               <CardTitle className="text-sm font-bold uppercase tracking-wider">Strategy Brief</CardTitle>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full transition-colors hover:bg-primary/10 hover:text-primary" onClick={onCopySummary} aria-label="Copy strategy brief">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full transition-colors hover:bg-accent/10 hover:text-primary" onClick={onCopySummary} aria-label="Copy strategy brief">
               <Copy className="h-4 w-4" />
             </Button>
           </div>
@@ -148,7 +148,7 @@ export function ProposalStrategyBriefCard({ onCopySummary, summary }: { onCopySu
               <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Value Proposition</p>
               <div className="flex flex-wrap gap-1.5">
                 {summary.goals.objectives.length ? summary.goals.objectives.map((objective) => (
-                  <Badge key={objective} variant="secondary" className="border-primary/10 bg-primary/5 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                  <Badge key={objective} variant="secondary" className="border-accent/10 bg-accent/5 px-2 py-0.5 text-[10px] font-semibold text-primary">
                     {objective}
                   </Badge>
                 )) : <span className="text-xs italic text-muted-foreground">None yet</span>}
@@ -204,8 +204,8 @@ function ProposalDeckReadyState({
         <div className="group relative aspect-[16/10] overflow-hidden rounded-2xl bg-muted/40 ring-1 ring-muted motion-chromatic hover:shadow-xl hover:shadow-primary/5 hover:ring-primary/40">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgb(from_var(--primary)_r_g_b_/_0.05)_0%,transparent_70%)]" />
           <div className="absolute inset-4 space-y-3">
-            <div className="h-2 w-1/3 rounded-full bg-primary/20" />
-            <div className="h-3 w-3/4 rounded-full bg-primary/10" />
+            <div className="h-2 w-1/3 rounded-full bg-accent/20" />
+            <div className="h-3 w-3/4 rounded-full bg-accent/10" />
             <div className="grid grid-cols-2 gap-2 pt-4">
               <div className="aspect-video rounded-lg bg-muted-foreground/10" />
               <div className="aspect-video rounded-lg bg-muted-foreground/10" />
@@ -224,9 +224,9 @@ function ProposalDeckReadyState({
           <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">Export & Share</p>
           <div className="space-y-3">
             {presentationDeck.storageUrl || presentationDeck.pptxUrl ? (
-              <Button variant="outline" className="group h-14 w-full justify-start rounded-2xl border-muted/60 motion-chromatic hover:border-primary/30 hover:bg-primary/[0.03]" asChild>
+              <Button variant="outline" className="group h-14 w-full justify-start rounded-2xl border-muted/60 motion-chromatic hover:border-accent/30 hover:bg-accent/[0.03]" asChild>
                 <a href={presentationDeck.storageUrl || presentationDeck.pptxUrl || '#'} target="_blank" rel="noreferrer">
-                  <div className="mr-4 rounded-xl bg-muted p-2 transition-colors group-hover:bg-primary/10">
+                  <div className="mr-4 rounded-xl bg-muted p-2 transition-colors group-hover:bg-accent/10">
                     <Download className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
                   </div>
                   <div className="text-left">
@@ -238,9 +238,9 @@ function ProposalDeckReadyState({
             ) : null}
 
             {viewerHref ? (
-              <Button variant="outline" className="group h-14 w-full justify-start rounded-2xl border-muted/60 motion-chromatic hover:border-primary/30 hover:bg-primary/[0.03]" asChild>
+              <Button variant="outline" className="group h-14 w-full justify-start rounded-2xl border-muted/60 motion-chromatic hover:border-accent/30 hover:bg-accent/[0.03]" asChild>
                 <Link href={viewerHref}>
-                  <div className="mr-4 rounded-xl bg-muted p-2 transition-colors group-hover:bg-primary/10">
+                  <div className="mr-4 rounded-xl bg-muted p-2 transition-colors group-hover:bg-accent/10">
                     <ExternalLink className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
                   </div>
                   <div className="text-left">
@@ -251,7 +251,7 @@ function ProposalDeckReadyState({
               </Button>
             ) : null}
 
-            <Button variant="ghost" className="h-10 w-full justify-center rounded-xl text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground motion-chromatic hover:bg-primary/5 hover:text-primary" onClick={onCopyShareLink}>
+            <Button variant="ghost" className="h-10 w-full justify-center rounded-xl text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground motion-chromatic hover:bg-accent/5 hover:text-primary" onClick={onCopyShareLink}>
               <Copy className="mr-2 h-3.5 w-3.5" />
               Copy Share Link
             </Button>
@@ -265,7 +265,7 @@ function ProposalDeckReadyState({
           AUTHENTICATED & VERIFIED
         </div>
         {onRecheckDeck && (presentationDeck.status === 'pending' || presentationDeck.status === 'processing') ? (
-          <Button variant="ghost" size="sm" onClick={onRecheckDeck} disabled={isRecheckingDeck} className="h-8 rounded-xl border border-primary/10 px-4 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/5">
+          <Button variant="ghost" size="sm" onClick={onRecheckDeck} disabled={isRecheckingDeck} className="h-8 rounded-xl border border-accent/10 px-4 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-accent/5">
             {isRecheckingDeck ? <LoaderCircle className="mr-2 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-2 h-3 w-3" />}
             Sync
           </Button>
@@ -282,7 +282,7 @@ function ProposalDeckGeneratingState() {
         <m.div
           animate={proposalPulseAnimate}
           transition={proposalPulseTransition}
-          className="absolute inset-0 rounded-full bg-primary/20 blur-2xl"
+          className="absolute inset-0 rounded-full bg-accent/20 blur-2xl"
         />
         <div className="relative rounded-[2rem] border border-muted bg-muted/40 p-6 ring-1 ring-muted-foreground/10">
           <LoaderCircle className="h-12 w-12 animate-spin text-primary/40" />
@@ -292,7 +292,7 @@ function ProposalDeckGeneratingState() {
       <p className="max-w-[280px] text-sm leading-relaxed text-muted-foreground">
         Our AI engine is currently structuring your presentation slides. It usually takes less than 60 seconds.
       </p>
-      <m.div initial={proposalTrackInitial} animate={proposalTrackAnimate} transition={proposalTrackTransition} className="relative mt-8 h-1 w-full max-w-[200px] overflow-hidden rounded-full bg-primary/30">
+      <m.div initial={proposalTrackInitial} animate={proposalTrackAnimate} transition={proposalTrackTransition} className="relative mt-8 h-1 w-full max-w-[200px] overflow-hidden rounded-full bg-accent/30">
         <m.div animate={proposalTrackShimmerAnimate} transition={transitions.shimmer} className="absolute inset-0 w-1/3 bg-primary" />
       </m.div>
     </div>
@@ -320,7 +320,7 @@ export function ProposalAssetDeliveryCard({
         <CardHeader className="border-b border-muted/40 bg-muted/30 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-primary/10 p-1.5 text-primary">
+              <div className="rounded-lg bg-accent/10 p-1.5 text-primary">
                 <Presentation className="h-4 w-4" />
               </div>
               <CardTitle className="text-sm font-bold uppercase tracking-wider">Asset Delivery</CardTitle>
@@ -330,7 +330,7 @@ export function ProposalAssetDeliveryCard({
                 variant="outline"
                 className={cn(
                   'h-6 rounded-lg px-2.5 text-[10px] font-bold uppercase tracking-[0.1em]',
-                  presentationDeck.status === 'ready' ? 'border-success/20 bg-success/10 text-success' : 'border-primary/20 bg-primary/5 text-primary',
+                  presentationDeck.status === 'ready' ? 'border-success/20 bg-success/10 text-success' : 'border-accent/20 bg-accent/5 text-primary',
                 )}
               >
                 {presentationDeck.status}

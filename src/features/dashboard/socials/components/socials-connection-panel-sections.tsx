@@ -166,7 +166,7 @@ export function SocialsMetaSourceSwitcherCard(props: {
     null
 
   return (
-    <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/[0.03] p-5">
+    <div className="rounded-2xl border border-dashed border-accent/25 bg-accent/[0.03] p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2">
           <div className="flex items-center gap-2">

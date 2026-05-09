@@ -66,10 +66,10 @@ export function AnalyticsInsightsSection({
     return (
         <>
             {/* Recommended Actions Card */}
-            <Card className="overflow-hidden border-primary/30 bg-primary/5 shadow-sm motion-chromatic hover:bg-primary/[0.07] hover:shadow-md">
-                <CardHeader className="border-b border-primary/10 bg-primary/[0.03] py-4">
+            <Card className="overflow-hidden border-accent/30 bg-accent/5 shadow-sm motion-chromatic hover:bg-accent/[0.07] hover:shadow-md">
+                <CardHeader className="border-b border-accent/10 bg-accent/[0.03] py-4">
                     <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary shadow-sm">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 text-primary shadow-sm">
                             <Lightbulb className="h-4 w-4" />
                         </div>
                         <div>
@@ -86,7 +86,7 @@ export function AnalyticsInsightsSection({
                             ))}
                         </div>
                     ) : algorithmic.length === 0 ? (
-                        <NoInsightsData className="rounded-xl border-primary/10 bg-background/50" />
+                        <NoInsightsData className="rounded-xl border-accent/10 bg-background/50" />
                     ) : (
                         <div className="grid gap-4 sm:grid-cols-2">
                             {algorithmic.flatMap((group) =>
@@ -124,7 +124,7 @@ export function AnalyticsInsightsSection({
                                                 <p className="text-xs font-medium text-muted-foreground/80 leading-relaxed">{suggestion.message}</p>
                                             </div>
                                             {suggestion.score && (
-                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-background shadow-sm">
+                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent/20 bg-background shadow-sm">
                                                     <div className="flex flex-col items-center">
                                                         <span className="text-xs font-black text-primary leading-none">{suggestion.score}</span>
                                                         <span className="text-[7px] font-bold uppercase tracking-tighter text-muted-foreground/50">Score</span>
@@ -191,7 +191,7 @@ export function AnalyticsInsightsSection({
                     ) : (
                         insights.map((insight) => (
                             <div key={insight.providerId} className="group relative overflow-hidden rounded-xl border border-muted/30 bg-muted/5 p-5 motion-chromatic hover:bg-muted/10">
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20 motion-chromatic group-hover:bg-primary" />
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent/20 motion-chromatic group-hover:bg-primary" />
                                 <div className="flex items-center gap-2.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
                                     <TrendingUp className="h-3.5 w-3.5" />
                                     <span>{formatInsightProviderLabel(insight.providerId)}</span>

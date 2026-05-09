@@ -158,7 +158,7 @@ export function ConversationListPane({
       <div className="space-y-3 border-b border-muted/30 p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-primary ring-1 ring-primary/15">
               <Inbox className="h-4 w-4" />
             </div>
             <div className="min-w-0">
@@ -262,12 +262,12 @@ export function ConversationListPane({
                     'cv-scroll-item-compact flex w-full items-center gap-3 rounded-xl p-3 text-left',
                     chromaticTransitionClass,
                     'hover:bg-muted/60',
-                    selected && 'border border-primary/25 bg-primary/8 shadow-sm ring-1 ring-primary/10',
+                    selected && 'border border-accent/25 bg-accent/8 shadow-sm ring-1 ring-primary/10',
                     hasUnread && !selected && 'bg-muted/25',
                   )}
                 >
                   <Avatar className="h-10 w-10 shrink-0">
-                    <AvatarFallback className={cn('text-xs font-medium', hasUnread && 'bg-primary/10 text-primary', item.type === 'channel' && 'bg-muted')}>
+                    <AvatarFallback className={cn('text-xs font-medium', hasUnread && 'bg-accent/10 text-primary', item.type === 'channel' && 'bg-muted')}>
                       {item.type === 'channel' ? SOURCE_ICONS.channel : getInitials(item.name)}
                     </AvatarFallback>
                   </Avatar>
@@ -479,7 +479,7 @@ export function ChannelConversationPane({
     if (!showMissingDeepLinkNotice) return null
 
     return (
-      <Alert className="mx-4 mt-4 border-warning/20 bg-warning/10 text-warning-foreground dark:border-warning/30 dark:bg-warning/10 dark:text-warning-foreground">
+      <Alert className="mx-4 mt-4 border-warning/20 bg-warning/10 text-warning-foreground
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Linked message unavailable</AlertTitle>
         <AlertDescription className="space-y-2">
@@ -719,7 +719,7 @@ export function EmptyConversationPane({
     <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-muted/20 via-background to-background px-6 py-12">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
       <div className="relative max-w-md text-center">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 text-primary ring-1 ring-primary/15">
           <Sparkles className="h-8 w-8" />
         </div>
         <h3 className="text-xl font-semibold tracking-tight text-foreground">Pick a conversation</h3>

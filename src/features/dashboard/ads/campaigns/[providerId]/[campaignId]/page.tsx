@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, createElement, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAction } from 'convex/react'
 import { useParams } from 'next/navigation'
 
@@ -152,7 +152,7 @@ function CampaignInsightsPageContent() {
   const campaignStartFromUrl = parseIsoDateTime(searchParams.get('campaignStartTime'))
   const campaignStopFromUrl = parseIsoDateTime(searchParams.get('campaignStopTime'))
 
-  const [dateRangeTouched, setDateRangeTouched] = useState(false)
+  const dateRangeTouchedRef = useRef(false)
 
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     // 1. PRIORITIZE campaign start/stop times if available (show full campaign duration by default)
@@ -179,7 +179,7 @@ function CampaignInsightsPageContent() {
   })
 
   const handleDateRangeChange = useCallback((next: DateRange) => {
-    setDateRangeTouched(true)
+    dateRangeTouchedRef.current = true
     setDateRange(next)
   }, [])
 
@@ -207,7 +207,7 @@ function CampaignInsightsPageContent() {
 
   useEffect(() => {
     // Only update if user hasn't manually changed the date range
-    if (dateRangeTouched) return
+    if (dateRangeTouchedRef.current) return
 
     const campaignStart = parseIsoDateTime(campaign?.startTime ?? null)
     const campaignStop = parseIsoDateTime(campaign?.stopTime ?? null)

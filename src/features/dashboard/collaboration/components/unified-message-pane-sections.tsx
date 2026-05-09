@@ -284,7 +284,7 @@ export function UnifiedThreadReplyCard({
       className={cn(
         'group relative rounded-md border border-muted/40 bg-muted/15 px-3 py-2',
         chromaticTransitionClass,
-        !message.deleted && 'hover:border-primary/20 hover:bg-muted/25',
+        !message.deleted && 'hover:border-accent/20 hover:bg-muted/25',
       )}
     >
       <div className="min-w-0 space-y-2 pr-14">
@@ -447,7 +447,7 @@ export function UnifiedConversationHeader({ header }: { header: MessagePaneHeade
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <Avatar className="mt-0.5 ring-1 ring-border/60">
-            <AvatarFallback className={cn(header.type === 'channel' ? 'bg-muted' : 'bg-primary/10 text-primary')}>
+            <AvatarFallback className={cn(header.type === 'channel' ? 'bg-muted' : 'bg-accent/10 text-primary')}>
               {header.type === 'channel' ? <Hash className="h-4 w-4" /> : getInitials(header.name)}
             </AvatarFallback>
           </Avatar>
@@ -672,9 +672,9 @@ export function UnifiedComposerSection({
       />
       <div
         className={cn(
-          'w-full rounded-lg border border-muted/40 bg-background shadow-sm focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20',
+          'w-full rounded-lg border border-muted/40 bg-background shadow-sm focus-within:border-accent/40 focus-within:ring-1 focus-within:ring-primary/20',
           chromaticTransitionClass,
-          (isComposerFocused || hasPendingAttachments) && 'border-primary/30 shadow-md shadow-primary/5',
+          (isComposerFocused || hasPendingAttachments) && 'border-accent/30 shadow-md shadow-primary/5',
         )}
       >
         <RichComposer

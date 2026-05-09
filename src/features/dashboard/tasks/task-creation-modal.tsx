@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, useTransition } from 'react'
 import { MessageSquare } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -58,7 +58,7 @@ export function TaskCreationModal({
 
   const createTask = useMutation(tasksApi.createTask)
   const generateUploadUrl = useMutation(filesApi.generateUploadUrl)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [pendingAttachments, setPendingAttachments] = useState<PendingTaskAttachment[]>([])
 
@@ -95,45 +95,44 @@ export function TaskCreationModal({
       return
     }
 
-    setIsLoading(true)
-    setError(null)
-
-    const payload = {
-      title: formData.title.trim(),
-      description: formData.description.trim() || undefined,
-      priority: formData.priority,
-      status: 'todo' as const,
-      dueDate: formData.dueDate || undefined,
-      assignedTo: formData.assignedTo,
-      clientId: selectedClientId || undefined,
-      client: selectedClient?.name || undefined,
-      projectId: formData.projectId || undefined,
-      projectName: formData.projectName || undefined,
-    }
-
     if (!user?.agencyId) {
       setError('Workspace context missing')
-      setIsLoading(false)
       return
     }
 
-    const attachmentsPromise =
-      pendingAttachments.length > 0
-        ? Promise.all(
-            pendingAttachments.map((attachment) =>
-              uploadTaskAttachment({
-                userId: user.id,
-                file: attachment.file,
-                generateUploadUrl,
-                getPublicUrl: (args) => convex.query(filesApi.getPublicUrl, args),
-              })
-            )
-          )
-        : Promise.resolve([])
+    startTransition(async () => {
+      setError(null)
 
-    void attachmentsPromise
-      .then((attachments) => {
-        return createTask({
+      const payload = {
+        title: formData.title.trim(),
+        description: formData.description.trim() || undefined,
+        priority: formData.priority,
+        status: 'todo' as const,
+        dueDate: formData.dueDate || undefined,
+        assignedTo: formData.assignedTo,
+        clientId: selectedClientId || undefined,
+        client: selectedClient?.name || undefined,
+        projectId: formData.projectId || undefined,
+        projectName: formData.projectName || undefined,
+      }
+
+      const attachmentsPromise =
+        pendingAttachments.length > 0
+          ? Promise.all(
+              pendingAttachments.map((attachment) =>
+                uploadTaskAttachment({
+                  userId: user.id,
+                  file: attachment.file,
+                  generateUploadUrl,
+                  getPublicUrl: (args) => convex.query(filesApi.getPublicUrl, args),
+                })
+              )
+            )
+          : Promise.resolve([])
+
+      try {
+        const attachments = await attachmentsPromise
+        const result = await createTask({
           workspaceId: user.agencyId,
           title: payload.title,
           description: payload.description ?? null,
@@ -146,9 +145,8 @@ export function TaskCreationModal({
           projectName: payload.projectName ?? null,
           dueDateMs: payload.dueDate ? Date.parse(payload.dueDate) : null,
           attachments,
-        }).then((result) => ({ attachments, result }))
-      })
-      .then(({ attachments, result }) => {
+        })
+
         const legacyId = typeof result === 'string' ? result : result?.legacyId
 
         if (!legacyId) {
@@ -199,8 +197,7 @@ export function TaskCreationModal({
           projectName: taskDefaults.projectName || '',
         })
         setPendingAttachments([])
-      })
-      .catch((err) => {
+      } catch (err) {
         logError(err, 'TaskCreationModal:submit')
         const message = asErrorMessage(err)
         setError(message)
@@ -209,10 +206,8 @@ export function TaskCreationModal({
           description: message,
           variant: 'destructive',
         })
-      })
-      .finally(() => {
-        setIsLoading(false)
-      })
+      }
+    })
   }, [convex, createTask, defaultDueDate, formData, generateUploadUrl, onClose, onTaskCreated, pendingAttachments, selectedClient, selectedClientId, taskDefaults, toast, user])
 
   const handleAddAttachments = useCallback((files: FileList | null) => {
@@ -271,7 +266,7 @@ export function TaskCreationModal({
             clientName={contextInfo.clientName}
             assigneeCount={formData.assignedTo.length}
             error={error}
-            isLoading={isLoading}
+            isLoading={isPending}
             pendingAttachments={pendingAttachments}
             fileInputRef={fileInputRef}
             onTitleChange={handleTitleChange}

@@ -99,7 +99,7 @@ function SnapshotMetric({
     <Link
       href={href}
       className={cn(
-        'rounded-xl border border-muted/50 bg-muted/10 p-4 transition hover:border-primary/25 hover:bg-background',
+        'rounded-xl border border-muted/50 bg-muted/10 p-4 transition hover:border-accent/25 hover:bg-background',
       )}
     >
       <div className="flex items-center justify-between gap-2">

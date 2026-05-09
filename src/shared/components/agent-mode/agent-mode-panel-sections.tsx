@@ -99,7 +99,7 @@ function AttachmentItem({
     <div key={attachment.id} className="rounded-2xl border bg-card/70 p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className="rounded-xl bg-primary/10 p-2 text-primary">
+          <div className="rounded-xl bg-accent/10 p-2 text-primary">
             <FileText className="h-4 w-4" />
           </div>
           <div className="min-w-0">
@@ -282,7 +282,7 @@ function AgentComposerInput({
       {activeMentions.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
           {activeMentions.map((mention) => (
-            <Badge key={mention} variant="secondary" className="rounded-full bg-primary/10 text-primary hover:bg-primary/10">
+            <Badge key={mention} variant="secondary" className="rounded-full bg-accent/10 text-primary hover:bg-accent/10">
               {mention}
             </Badge>
           ))}
@@ -743,7 +743,7 @@ export function AgentEmptyState({ children }: { children: ReactNode }) {
     <div className="flex flex-1 items-center justify-center p-6">
       <div className="w-full max-w-xl">
         <div className="mb-4 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
             <Sparkles className="h-6 w-6 text-primary" />
           </div>
           <p className="text-base font-medium">Where would you like to go?</p>

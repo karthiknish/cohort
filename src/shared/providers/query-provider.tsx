@@ -12,7 +12,7 @@ function QueryFetchingIndicator() {
   if (n === 0) return null
   return (
     <div
-      className="pointer-events-none fixed top-0 right-0 left-0 z-[200] h-0.5 overflow-hidden bg-primary/15 motion-safe:animate-pulse"
+      className="pointer-events-none fixed top-0 right-0 left-0 z-[200] h-0.5 overflow-hidden bg-accent/15 motion-safe:animate-pulse"
       role="status"
       aria-live="polite"
       aria-label="Refreshing data in the background"

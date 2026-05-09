@@ -186,7 +186,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
                     'flex h-9 w-full items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
                     collapsed ? 'justify-center px-0' : 'justify-start',
                     isActive
-                      ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
+                      ? 'bg-primary text-primary-foreground hover:bg-accent/90 shadow-sm'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
                   )
 
@@ -337,7 +337,7 @@ export function Sidebar() {
         type="button"
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         className={cn(
-          'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-muted/50',
+          'mb-6 inline-flex h-9 w-9 items-center justify-center rounded-md border border-muted/60 text-muted-foreground hover:border-accent/40 hover:text-primary hover:bg-muted/50',
           chromaticTransitionClass,
           collapsed && 'mt-2'
         )}

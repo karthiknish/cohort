@@ -356,13 +356,12 @@ export function useRealtimeTyping({ userId, workspaceId, selectedChannel }: UseR
 
     const list = typingRows
       .filter((row) => typeof row?.userId === 'string' && row.userId !== userId)
-      .map((row) => {
+      .flatMap((row) => {
         const name = typeof row?.name === 'string' ? row.name : null
-        if (!name || name.trim().length === 0) return null
+        if (!name || name.trim().length === 0) return []
         const role = typeof row?.role === 'string' ? row.role : null
-        return { name, role } as TypingParticipant
-      })
-      .filter(Boolean) as TypingParticipant[]
+        return [{ name, role } as TypingParticipant]
+      }) as TypingParticipant[]
 
     setTypingParticipants(list)
   }, [convexEnabled, typingRows, userId])

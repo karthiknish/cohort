@@ -64,7 +64,7 @@ export function MiniTaskKanban({ tasks, loading }: MiniTaskKanbanProps) {
                       <Link
                         key={task.id}
                         href={`/dashboard/tasks?taskId=${task.id}`}
-                        className="block rounded-md border border-muted/40 bg-background p-2 text-sm shadow-sm transition hover:border-primary/40 hover:shadow"
+                        className="block rounded-md border border-muted/40 bg-background p-2 text-sm shadow-sm transition hover:border-accent/40 hover:shadow"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="truncate font-medium" title={task.title}>{task.title}</span>

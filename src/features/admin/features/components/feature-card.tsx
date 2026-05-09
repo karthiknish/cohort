@@ -49,7 +49,7 @@ export function FeatureCard({
     <div
       className={cn(
         'group relative flex flex-col gap-3 rounded-lg border bg-card p-4 shadow-sm motion-chromatic',
-        'hover:border-primary/30 hover:shadow-md',
+        'hover:border-accent/30 hover:shadow-md',
         isDragging && 'opacity-50 rotate-2 shadow-lg'
       )}
     >

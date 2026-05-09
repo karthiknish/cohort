@@ -248,18 +248,18 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 rounded-xl border-muted/40 shadow-xl backdrop-blur-md">
-              <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-primary/5 focus:text-primary">
+              <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-accent/5 focus:text-primary">
                 <Link href="/admin/clients" className="flex items-center">
                   <Settings className="mr-2 h-4 w-4 opacity-70" />
                   Manage client
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExport} className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-primary/5 focus:text-primary">
+              <DropdownMenuItem onClick={handleExport} className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-accent/5 focus:text-primary">
                 <Download className="mr-2 h-4 w-4 opacity-70" />
                 Export data
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-primary/5 focus:text-primary">
+              <DropdownMenuItem asChild className="rounded-lg text-[11px] font-bold uppercase tracking-wider focus:bg-accent/5 focus:text-primary">
                 <Link href={`/dashboard/collaboration?clientId=${selectedClient.id}`} className="flex items-center">
                   <UsersIcon className="mr-2 h-4 w-4 opacity-70" />
                   Collaboration

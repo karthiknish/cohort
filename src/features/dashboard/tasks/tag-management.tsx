@@ -28,8 +28,8 @@ type TagStyle = {
 
 // Semantic shadcn token assignments for tags.
 const TAG_STYLES: TagStyle[] = [
-  { chip: 'border-transparent bg-destructive/10 text-destructive dark:bg-destructive/15', dot: 'bg-destructive' },
-  { chip: 'border-transparent bg-primary/10 text-primary dark:bg-primary/15', dot: 'bg-primary' },
+  { chip: 'border-transparent bg-destructive/10 text-destructive dot: 'bg-destructive' },
+  { chip: 'border-transparent bg-accent/10 text-primary dot: 'bg-primary' },
   { chip: 'border-transparent bg-secondary text-secondary-foreground', dot: 'bg-secondary-foreground' },
   { chip: 'border-transparent bg-accent text-accent-foreground', dot: 'bg-accent-foreground' },
   { chip: 'border-border bg-background text-foreground', dot: 'bg-foreground' },
@@ -226,7 +226,7 @@ export function TagFilter({
         <Button
           variant="outline"
           size="sm"
-          className={cn('gap-1.5', selectedTag && 'border-primary/50', className)}
+          className={cn('gap-1.5', selectedTag && 'border-accent/50', className)}
         >
           <Tag className="h-3.5 w-3.5" />
           {selectedTag || 'All tags'}
@@ -301,7 +301,7 @@ function AvailableTagButton({
       onClick={handleClick}
       className={cn(
         'w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-        selected ? 'bg-primary/10 text-primary' : 'hover:bg-muted'
+        selected ? 'bg-accent/10 text-primary' : 'hover:bg-muted'
       )}
     >
       <div className={cn('h-2 w-2 rounded-full shrink-0', getTagDotColor(tag))} />

@@ -28,7 +28,7 @@ export function ClientStatsGrid({
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {/* Projects Stats */}
       <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm motion-chromatic hover:bg-muted/10">
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 motion-chromatic group-hover:bg-primary" />
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent/70 motion-chromatic group-hover:bg-primary" />
         <CardHeader className="pb-2">
           <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Projects</CardTitle>
         </CardHeader>
@@ -51,7 +51,7 @@ export function ClientStatsGrid({
 
       {/* Tasks Stats */}
       <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm motion-chromatic hover:bg-muted/10">
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 motion-chromatic group-hover:bg-primary" />
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent/70 motion-chromatic group-hover:bg-primary" />
         <CardHeader className="pb-2">
           <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tasks</CardTitle>
         </CardHeader>
@@ -74,7 +74,7 @@ export function ClientStatsGrid({
 
       {/* Team Stats */}
       <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm motion-chromatic hover:bg-muted/10">
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 motion-chromatic group-hover:bg-primary" />
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent/70 motion-chromatic group-hover:bg-primary" />
         <CardHeader className="pb-2">
           <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Team</CardTitle>
         </CardHeader>
@@ -91,7 +91,7 @@ export function ClientStatsGrid({
 
       {/* Proposals Stats */}
       <Card className="group relative overflow-hidden border-muted/30 bg-card shadow-sm motion-chromatic hover:bg-muted/10">
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/70 motion-chromatic group-hover:bg-primary" />
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent/70 motion-chromatic group-hover:bg-primary" />
         <CardHeader className="pb-2">
           <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Proposals</CardTitle>
         </CardHeader>

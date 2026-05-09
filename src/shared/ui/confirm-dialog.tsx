@@ -32,7 +32,7 @@ const variantConfig = {
   default: {
     icon: CircleCheck,
     iconClass: 'text-primary',
-    bgClass: 'bg-primary/10',
+    bgClass: 'bg-accent/10',
     buttonVariant: 'default' as const,
   },
   destructive: {
@@ -124,7 +124,7 @@ interface UseConfirmDialogOptions {
 
 export function useConfirmDialog(defaultOptions: UseConfirmDialogOptions) {
   const [isOpen, setIsOpen] = React.useState(false)
-  const [isLoading, setIsLoading] = React.useState(false)
+  const [isPending, startTransition] = React.useTransition()
   const resolveRef = React.useRef<((value: boolean) => void) | null>(null)
   const optionsRef = React.useRef(defaultOptions)
 
@@ -142,14 +142,18 @@ export function useConfirmDialog(defaultOptions: UseConfirmDialogOptions) {
   )
 
   const handleConfirm = React.useCallback(() => {
-    resolveRef.current?.(true)
-    setIsOpen(false)
-  }, [])
+    startTransition(() => {
+      resolveRef.current?.(true)
+      setIsOpen(false)
+    })
+  }, [startTransition])
 
   const handleCancel = React.useCallback(() => {
-    resolveRef.current?.(false)
-    setIsOpen(false)
-  }, [])
+    startTransition(() => {
+      resolveRef.current?.(false)
+      setIsOpen(false)
+    })
+  }, [startTransition])
 
   const ConfirmDialogComponent = React.useCallback(
     () => (
@@ -161,18 +165,18 @@ export function useConfirmDialog(defaultOptions: UseConfirmDialogOptions) {
         confirmLabel={optionsRef.current.confirmLabel}
         cancelLabel={optionsRef.current.cancelLabel}
         variant={optionsRef.current.variant}
-        isLoading={isLoading}
+        isLoading={isPending}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />
     ),
-    [isOpen, isLoading, handleConfirm, handleCancel]
+    [isOpen, isPending, handleConfirm, handleCancel]
   )
 
   return {
     confirm,
     isOpen,
-    setIsLoading,
+    isPending,
     ConfirmDialog: ConfirmDialogComponent,
   }
 }

@@ -630,11 +630,11 @@ export default function AdminPage() {
               {adminSections.map(({ title, description, href, icon: Icon, cta, badge, badgeVariant }) => (
                 <Card
                   key={href}
-                  className="group relative overflow-hidden border-border bg-card motion-chromatic hover:border-primary/20 hover:shadow-md"
+                  className="group relative overflow-hidden border-border bg-card motion-chromatic hover:border-accent/20 hover:shadow-md"
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                         <Icon className="h-5 w-5" />
                       </div>
                       {badge && (
@@ -801,7 +801,7 @@ function DailyActiveUsersBar({
       <div
         className={cn(
           'w-full rounded-t-sm motion-chromatic',
-          isLatest ? 'bg-primary' : 'bg-primary/40'
+          isLatest ? 'bg-primary' : 'bg-accent/40'
         )}
         style={barStyle}
         title={`${day.count} users on ${day.date}`}

@@ -58,14 +58,14 @@ function AudienceStepButton({
           activeTab === step.id
             ? 'bg-primary text-primary-foreground'
             : step.complete
-              ? 'bg-primary/10 text-primary'
+              ? 'bg-accent/10 text-primary'
               : 'bg-muted text-muted-foreground',
         )}
       >
         <span
           className={cn(
             'flex h-4 w-4 items-center justify-center rounded-full text-[10px]',
-            step.complete ? 'bg-primary/20' : 'bg-muted-foreground/20',
+            step.complete ? 'bg-accent/20' : 'bg-muted-foreground/20',
           )}
         >
           {index + 1}
@@ -165,7 +165,7 @@ function InterestBadge({
       <button
         type="button"
         onClick={handleClick}
-        className="cursor-pointer rounded-lg transition-colors hover:border-primary hover:bg-primary/10"
+        className="cursor-pointer rounded-lg transition-colors hover:border-primary hover:bg-accent/10"
         aria-label={`Add interest: ${interest}`}
       >
         <Plus className="mr-1 h-3 w-3" aria-hidden />
@@ -280,7 +280,7 @@ export function AudienceBuilderDialogHeader({
   return (
     <DialogHeader className="border-b bg-gradient-to-r from-primary/5 to-transparent p-6 pb-4">
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10 ring-1 ring-primary/20">
           <Users className="h-5 w-5 text-primary" />
         </div>
         <div>

@@ -6,7 +6,9 @@ import { fetchLinkedInAdAccounts } from '@/services/integrations/linkedin-ads'
 // LINKEDIN OAUTH CONFIGURATION
 // =============================================================================
 
+// Public OAuth endpoint URL (not a secret)
 const LINKEDIN_AUTH_ENDPOINT = 'https://www.linkedin.com/oauth/v2/authorization'
+// Public OAuth endpoint URL (not a secret)
 const LINKEDIN_TOKEN_ENDPOINT = 'https://www.linkedin.com/oauth/v2/accessToken'
 
 // Required scopes for LinkedIn Ads API access

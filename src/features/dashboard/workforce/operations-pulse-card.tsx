@@ -29,7 +29,7 @@ function PulseMetric({
   return (
     <div className="rounded-2xl border border-muted/50 bg-background p-4">
       <div className="flex items-start justify-between gap-3">
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary" aria-hidden>
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/10 text-primary" aria-hidden>
           <Icon className="h-4 w-4" />
         </span>
         <Button
@@ -81,7 +81,7 @@ function OperationsPulseCardContent() {
   }, [openValue])
 
   return (
-    <Card className="border-primary/15 shadow-sm">
+    <Card className="border-accent/15 shadow-sm">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-3">

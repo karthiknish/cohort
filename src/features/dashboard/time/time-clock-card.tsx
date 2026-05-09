@@ -35,7 +35,7 @@ export function TimeClockCard({
     : 'Not clocked in'
 
   return (
-    <Card className="border-primary/20">
+    <Card className="border-accent/20">
       <CardHeader>
         <CardTitle className="flex items-center justify-between text-lg">
           <span>Live clock state</span>
@@ -44,9 +44,9 @@ export function TimeClockCard({
         <CardDescription>Run time actions against Convex while keeping preview mode available for demos.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="rounded-2xl border border-primary/15 bg-primary/5 p-5">
+        <div className="rounded-2xl border border-accent/15 bg-accent/5 p-5">
           <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-primary/10 p-3 text-primary">
+            <div className="rounded-2xl bg-accent/10 p-3 text-primary">
               <Clock3 className="h-5 w-5" />
             </div>
             <div>

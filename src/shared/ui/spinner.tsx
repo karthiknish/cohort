@@ -61,7 +61,7 @@ export function LoadingOverlay({
       {...props}
     >
       <div className="relative">
-        <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+        <div className="absolute inset-0 animate-ping rounded-full bg-accent/20" />
         <Spinner size="lg" variant="primary" />
       </div>
       {message && (

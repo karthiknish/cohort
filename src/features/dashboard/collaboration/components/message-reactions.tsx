@@ -49,7 +49,7 @@ function ReactionButton({
           variant={isActive ? 'secondary' : 'outline'}
           className={cn(
             'h-7 rounded-full px-2.5 text-xs motion-chromatic hover:scale-105',
-            isActive && 'border-primary/30 bg-primary/10 hover:bg-primary/20'
+            isActive && 'border-accent/30 bg-accent/10 hover:bg-accent/20'
           )}
           disabled={disabled}
           aria-pressed={isActive}

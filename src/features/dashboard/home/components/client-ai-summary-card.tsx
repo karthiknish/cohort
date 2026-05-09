@@ -247,7 +247,7 @@ function ClientAiSummaryCardBody({
             ) : null}
           </div>
 
-          <div className="rounded-xl border border-primary/10 bg-background/80 p-4">
+          <div className="rounded-xl border border-accent/10 bg-background/80 p-4">
             <p className="text-sm font-semibold text-foreground">{state.summary.headline}</p>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               {state.summary.bullets.map((bullet) => (
@@ -319,7 +319,7 @@ export function ClientAiSummaryCard({
   }, [])
 
   return (
-    <Card className="border-primary/15 bg-gradient-to-br from-background via-background to-primary/5 shadow-sm">
+    <Card className="border-accent/15 bg-gradient-to-br from-background via-background to-primary/5 shadow-sm">
       <CardHeader className="flex flex-row items-start justify-between gap-3">
         <div>
           <CardTitle className="flex items-center gap-2 text-base">

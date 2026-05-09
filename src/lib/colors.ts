@@ -46,16 +46,16 @@ export const SEMANTIC_COLOR_TOKENS = {
 
 export const COLORS = {
   primary: {
-    DEFAULT: '#071740',
-    foreground: '#f9fafb',
+    DEFAULT: '#ffffff',
+    foreground: '#0f172a',
   },
   secondary: {
     DEFAULT: '#1e293b',
     foreground: '#f9fafb',
   },
   accent: {
-    DEFAULT: '#facc15',
-    foreground: '#0f172a',
+    DEFAULT: '#3b82f6',
+    foreground: '#ffffff',
   },
   destructive: {
     DEFAULT: '#dc2626',
@@ -89,18 +89,18 @@ export const COLORS = {
     1: '#16a34a',
     2: '#15803d',
     3: '#1e293b',
-    4: '#facc15',
+    4: '#3b82f6',
     5: '#0ea5e9',
   },
   sidebar: {
     DEFAULT: '#1e293b',
     foreground: '#f9fafb',
-    primary: '#071740',
-    'primary-foreground': '#f9fafb',
-    accent: '#facc15',
-    'accent-foreground': '#0f172a',
+    primary: '#ffffff',
+    'primary-foreground': '#0f172a',
+    accent: '#3b82f6',
+    'accent-foreground': '#ffffff',
     border: '#243041',
-    ring: '#16a34a',
+    ring: '#3b82f6',
   },
 } as const
 
@@ -230,7 +230,7 @@ export const EMAIL_COLORS = {
   card: '#ffffff',
   muted: '#f8fafc',
   highlight: '#eef2ff',
-  heading: '#071740',
+  heading: '#0f172a',
   body: '#334155',
   subtle: '#64748b',
   mutedText: '#94a3b8',
@@ -238,14 +238,14 @@ export const EMAIL_COLORS = {
   border: '#e2e8f0',
   lightBorder: '#edf2f7',
   brand: {
-    primary: '#071740',
+    primary: '#ffffff',
     secondary: '#0f172a',
     foreground: '#f8fafc',
-    accent: '#facc15',
-    accentSoft: '#fef3c7',
+    accent: '#3b82f6',
+    accentSoft: '#dbeafe',
   },
   button: {
-    primary: '#071740',
+    primary: '#ffffff',
     dark: '#0f172a',
   },
   success: {

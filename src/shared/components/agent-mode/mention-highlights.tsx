@@ -106,7 +106,7 @@ export function AgentMentionText({ text, mentionLabels = EMPTY_MENTION_LABELS, c
             <span
               className={cn(
                 'inline rounded-md px-1.5 py-0.5 font-medium ring-1 ring-inset',
-                'bg-primary/15 text-primary ring-primary/20',
+                'bg-accent/15 text-primary ring-primary/20',
                 mentionClassName
               )}
             >

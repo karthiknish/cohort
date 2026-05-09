@@ -256,7 +256,7 @@ export function CreativeSocialPreview(props: {
                 </div>
 
                 {creative.callToAction && (
-                  <Button className="w-full h-10 text-[11px] font-black tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl">
+                  <Button className="w-full h-10 text-[11px] font-black tracking-widest uppercase bg-primary hover:bg-accent/90 text-primary-foreground rounded-xl">
                     {formatCTALabel(creative.callToAction)}
                   </Button>
                 )}
@@ -540,7 +540,7 @@ export function CreativeSocialPreview(props: {
           <Card className="border border-border/60 bg-card shadow-lg rounded-[2.5rem] overflow-hidden">
             <CardHeader className="pb-4 pt-8 px-8">
               <CardTitle className="text-xs font-black uppercase tracking-[0.3em] flex items-center gap-3 text-primary/80">
-                <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                <div className="h-6 w-6 rounded-lg bg-accent/10 flex items-center justify-center">
                   <Activity className="h-3.5 w-3.5 text-primary" />
                 </div>
                 The Alpha Score
@@ -568,7 +568,7 @@ export function CreativeSocialPreview(props: {
               </div>
 
               <div className="space-y-3">
-                <div className="h-3 w-full rounded-full bg-primary/5 border border-primary/5 p-0.5 overflow-hidden">
+                <div className="h-3 w-full rounded-full bg-accent/5 border border-accent/5 p-0.5 overflow-hidden">
                   <m.div
                     initial={progressBarInitial}
                     animate={progressBarAnimate}

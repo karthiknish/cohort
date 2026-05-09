@@ -183,7 +183,7 @@ export function MeetingRoomEmptyState({
   return (
     <div className="flex min-h-[420px] items-center justify-center rounded-[32px] border border-border bg-card p-6 shadow-sm lg:min-h-[560px] lg:p-8">
       <div className="max-w-3xl space-y-6 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-primary/20 bg-primary/10 text-primary">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-accent/20 bg-accent/10 text-primary">
           <Video className="h-7 w-7" />
         </div>
         <div className="space-y-3">

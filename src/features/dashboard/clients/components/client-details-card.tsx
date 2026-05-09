@@ -38,7 +38,7 @@ export function ClientDetailsCard({
       </CardHeader>
       <CardContent className="pt-6 space-y-5">
         <div className="group flex items-center gap-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/5 text-primary shadow-sm border border-primary/10 transition-colors group-hover:bg-primary/10">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/5 text-primary shadow-sm border border-accent/10 transition-colors group-hover:bg-accent/10">
             <Calendar className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
@@ -50,7 +50,7 @@ export function ClientDetailsCard({
         </div>
 
          <div className="group flex items-center gap-4">
-           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/5 text-primary shadow-sm border border-primary/10 transition-colors group-hover:bg-primary/10">
+           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/5 text-primary shadow-sm border border-accent/10 transition-colors group-hover:bg-accent/10">
              <Calendar className="h-4 w-4" />
            </div>
           <div className="min-w-0 flex-1">
@@ -63,7 +63,7 @@ export function ClientDetailsCard({
 
          {createdAt && (
            <div className="group flex items-center gap-4">
-             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/5 text-primary shadow-sm border border-primary/10 transition-colors group-hover:bg-primary/10">
+             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/5 text-primary shadow-sm border border-accent/10 transition-colors group-hover:bg-accent/10">
                <Calendar className="h-4 w-4" />
              </div>
             <div className="min-w-0 flex-1">

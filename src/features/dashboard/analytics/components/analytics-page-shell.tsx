@@ -132,7 +132,7 @@ function GoogleAnalyticsConnectionSection() {
                   ? 'bg-destructive/10 text-destructive'
                   : gaNeedsPropertySelection
                     ? 'bg-accent text-accent-foreground'
-                    : 'bg-primary/10 text-primary'
+                    : 'bg-accent/10 text-primary'
               )}
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
@@ -191,7 +191,7 @@ function GoogleAnalyticsConnectionSection() {
                 size="sm"
                 onClick={handleSyncClick}
                 disabled={isSyncPending || gaLoading || !gaConnected || gaNeedsPropertySelection}
-                className="h-9 rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-none transition-colors hover:bg-primary/90"
+                className="h-9 rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-none transition-colors hover:bg-accent/90"
               >
                 {isSyncPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
                 Sync data
@@ -214,7 +214,7 @@ function GoogleAnalyticsConnectionSection() {
         ) : (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/10">
                 <TrendingUp className="h-3 w-3 text-primary" />
               </div>
               <p className="text-xs text-muted-foreground">
@@ -364,7 +364,7 @@ function AnalyticsEmptyState() {
               Link Google Analytics
             </Button>
           ) : gaNeedsPropertySelection ? (
-            <Button type="button" size="sm" onClick={handleOpenGoogleAnalyticsSetup} className="rounded-md bg-primary text-primary-foreground shadow-none hover:bg-primary/90">
+            <Button type="button" size="sm" onClick={handleOpenGoogleAnalyticsSetup} className="rounded-md bg-primary text-primary-foreground shadow-none hover:bg-accent/90">
               Select property
             </Button>
           ) : (
@@ -373,7 +373,7 @@ function AnalyticsEmptyState() {
               size="sm"
               onClick={handleSyncClick}
               disabled={isSyncPending || gaLoading || !gaConnected}
-              className="rounded-md bg-primary text-primary-foreground shadow-none hover:bg-primary/90"
+              className="rounded-md bg-primary text-primary-foreground shadow-none hover:bg-accent/90"
             >
               {isSyncPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
               Sync data now
@@ -389,7 +389,7 @@ function AnalyticsSyncingState() {
   return (
     <Card className="overflow-hidden border border-border/60 bg-card shadow-sm">
       <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
-        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-accent/10">
           <LoaderCircle className="h-10 w-10 animate-spin text-primary" />
         </div>
         <h3 className="mb-2 text-base font-medium text-foreground">Syncing analytics data</h3>
@@ -491,7 +491,7 @@ function AnalyticsPerformanceSection() {
 
 function GoogleAnalyticsIcon({ className = 'h-8 w-8' }: { className?: string }) {
   return (
-    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-primary">
       <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
         <path
           d="M21.805 10.023H12v4.042h5.615c-.242 1.304-.967 2.409-2.056 3.147v2.617h3.33c1.948-1.793 3.076-4.434 3.076-7.564 0-.739-.067-1.449-.16-2.242Z"

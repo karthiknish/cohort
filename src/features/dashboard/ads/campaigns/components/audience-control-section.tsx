@@ -397,7 +397,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
       <CardContent className="space-y-6">
         {geocodeFailedNames.length > 0 ? (
           <Alert variant="default" className="border-amber-500/40 bg-amber-500/10">
-            <AlertTriangle className="h-4 w-4 text-amber-800 dark:text-amber-200" />
+            <AlertTriangle className="h-4 w-4 text-amber-800 />
             <AlertTitle>Some locations could not be placed on the map</AlertTitle>
             <AlertDescription>
               The map may be incomplete for: {geocodeFailedNames.join(', ')}. Check spelling or try a broader place

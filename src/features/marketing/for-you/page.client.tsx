@@ -113,7 +113,7 @@ function PinnedSectionCard({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-1 gap-3.5">
             <div
-              className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary shadow-sm"
+              className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-accent/15 bg-accent/10 text-primary shadow-sm"
               aria-hidden
             >
               <Icon className="h-5 w-5" />
@@ -343,7 +343,7 @@ export default function ForYouPage() {
       <div className={DASHBOARD_THEME.layout.header}>
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-primary">
+            <Badge variant="outline" className="rounded-full border-accent/20 bg-accent/5 text-primary">
               <Zap aria-hidden="true" className="mr-1 h-3.5 w-3.5" />
               Personal summary
             </Badge>

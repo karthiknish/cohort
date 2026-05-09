@@ -23,6 +23,7 @@ const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
 const authUtilities = convexBetterAuthNextJs({
   convexUrl,
   convexSiteUrl,
+  basePath: '/api/auth',
 });
 
 export const {

@@ -6,7 +6,9 @@ import { getGoogleAnalyticsIntegration, persistGoogleAnalyticsTokens } from '@/l
 // GOOGLE OAUTH CONFIGURATION
 // =============================================================================
 
+// Public OAuth endpoint URL (not a secret)
 const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
+// Public OAuth endpoint URL (not a secret)
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 
 // Required scope for Google Ads API access

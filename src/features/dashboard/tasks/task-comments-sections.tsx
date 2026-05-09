@@ -82,7 +82,7 @@ function TaskCommentThreadItem({
         className={cn(
           'rounded-3xl border px-4 py-4 shadow-sm transition-colors',
           depth === 0 ? 'bg-card/95' : 'bg-muted/30',
-          isActiveReply && 'border-primary/30 bg-primary/10 shadow-primary/10',
+          isActiveReply && 'border-accent/30 bg-accent/10 shadow-primary/10',
           isActiveEdit && 'border-accent/40 bg-accent/20 shadow-accent/10'
         )}
       >
@@ -211,7 +211,7 @@ export function TaskCommentsSummaryHeader({
           </p>
         </div>
         {replyTo ? (
-          <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
+          <span className="rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
             Thread reply
           </span>
         ) : editingCommentId ? (

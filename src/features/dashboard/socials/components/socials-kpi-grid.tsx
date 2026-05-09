@@ -45,7 +45,7 @@ export function SocialsKpiGrid({ items }: SocialsKpiGridProps) {
             key={item.id}
             className={cn(
               DASHBOARD_THEME.stats.card,
-              'overflow-hidden border-muted/50 shadow-sm transition-[box-shadow,border-color] hover:border-primary/15 hover:shadow-md',
+              'overflow-hidden border-muted/50 shadow-sm transition-[box-shadow,border-color] hover:border-accent/15 hover:shadow-md',
               accent,
             )}
           >

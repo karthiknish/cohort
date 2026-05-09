@@ -25,9 +25,9 @@ export const SORT_OPTIONS: { value: SortField; label: string }[] = [
 
 export const statusColors: Record<TaskStatus, string> = {
   todo: 'border-border bg-muted text-muted-foreground shadow-sm',
-  'in-progress': 'border-transparent bg-primary/10 text-primary shadow-sm',
+  'in-progress': 'border-transparent bg-accent/10 text-primary shadow-sm',
   review: 'border-transparent bg-accent text-accent-foreground shadow-sm',
-  completed: 'border-transparent bg-primary/10 text-primary shadow-sm',
+  completed: 'border-transparent bg-accent/10 text-primary shadow-sm',
   archived: 'border-border bg-background text-muted-foreground shadow-sm',
 }
 
@@ -41,7 +41,7 @@ export const statusLaneColors: Record<TaskStatus, string> = {
 
 export const priorityColors: Record<TaskPriority, string> = {
   low: 'border-transparent bg-secondary text-secondary-foreground shadow-sm',
-  medium: 'border-transparent bg-primary/10 text-primary shadow-sm',
+  medium: 'border-transparent bg-accent/10 text-primary shadow-sm',
   high: 'border-transparent bg-accent text-accent-foreground shadow-sm',
   urgent: 'border-transparent bg-destructive/10 text-destructive shadow-sm',
 }
@@ -49,14 +49,14 @@ export const priorityColors: Record<TaskPriority, string> = {
 export const taskPillColors = {
   count: 'border-border bg-background text-foreground shadow-sm',
   client: 'border-border bg-muted text-muted-foreground shadow-sm',
-  project: 'border-transparent bg-primary/10 text-primary shadow-sm',
+  project: 'border-transparent bg-accent/10 text-primary shadow-sm',
   neutral: 'border-border bg-muted text-muted-foreground shadow-sm',
   subtask: 'border-transparent bg-secondary text-secondary-foreground shadow-sm',
   comments: 'border-transparent bg-accent text-accent-foreground shadow-sm',
   attachments: 'border-border bg-background text-muted-foreground shadow-sm',
-  time: 'border-transparent bg-primary/10 text-primary shadow-sm',
+  time: 'border-transparent bg-accent/10 text-primary shadow-sm',
   recurring: 'border-transparent bg-secondary text-secondary-foreground shadow-sm',
-  shared: 'border-transparent bg-primary/10 text-primary shadow-sm',
+  shared: 'border-transparent bg-accent/10 text-primary shadow-sm',
   tag: 'border-border bg-background text-muted-foreground shadow-sm',
   dueSoon: 'border-transparent bg-accent text-accent-foreground shadow-sm',
   overdue: 'border-transparent bg-destructive/10 text-destructive shadow-sm',

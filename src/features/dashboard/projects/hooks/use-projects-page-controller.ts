@@ -82,6 +82,7 @@ function mapMilestoneRecord(row: unknown): MilestoneRecord {
   }
 }
 
+/** @deprecated Consumers of this hook must be wrapped in <Suspense> */
 export function useProjectsPageController() {
   const searchParams = useSearchParams()
   const router = useRouter()

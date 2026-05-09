@@ -229,7 +229,7 @@ function MarketingPlatformButton({
       className={cn(
         `flex cursor-pointer items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
         isSelected
-          ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
+          ? 'border-primary bg-accent/[0.03] ring-1 ring-primary/20 shadow-sm'
           : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/10',
       )}
     >
@@ -362,7 +362,7 @@ function GoalOptionButton({
       className={cn(
         `flex cursor-pointer items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
         isSelected
-          ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
+          ? 'border-primary bg-accent/[0.03] ring-1 ring-primary/20 shadow-sm'
           : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/10',
       )}
     >
@@ -497,7 +497,7 @@ function ScopeServiceButton({
       className={cn(
         `flex cursor-pointer items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
         isSelected
-          ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
+          ? 'border-primary bg-accent/[0.03] ring-1 ring-primary/20 shadow-sm'
           : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/10',
       )}
       onClick={handleClick}
@@ -573,7 +573,7 @@ function TimelineOptionButton({
       className={cn(
         `flex items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
         isSelected
-          ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
+          ? 'border-primary bg-accent/[0.03] ring-1 ring-primary/20 shadow-sm'
           : 'border-muted/60 bg-background/50 hover:bg-muted/10',
       )}
     >
@@ -641,7 +641,7 @@ function ProposalValueButton({
       className={cn(
         'flex flex-col items-center justify-center gap-2 rounded-2xl border p-6 motion-chromatic-lg',
         isSelected
-          ? 'scale-[1.05] border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-lg'
+          ? 'scale-[1.05] border-primary bg-accent/[0.03] ring-1 ring-primary/20 shadow-lg'
           : 'border-muted/60 bg-background/50 hover:border-muted-foreground/30 hover:bg-muted/5',
       )}
     >
@@ -671,7 +671,7 @@ function EngagementTypeButton({
       className={cn(
         `flex items-center justify-between rounded-xl border p-4 ${interactiveCardClassName}`,
         isSelected
-          ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm'
+          ? 'border-primary bg-accent/[0.03] ring-1 ring-primary/20 shadow-sm'
           : 'border-muted/60 bg-background/50 hover:bg-muted/10',
       )}
     >
@@ -701,7 +701,7 @@ function PresentationThemeButton({
       className={cn(
         'group relative flex flex-col gap-2 rounded-xl border p-4 motion-chromatic-lg',
         isSelected
-          ? 'border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-md'
+          ? 'border-primary bg-accent/[0.03] ring-1 ring-primary/20 shadow-md'
           : 'border-muted/60 bg-background hover:border-muted-foreground/30 hover:shadow-sm',
       )}
     >
@@ -764,7 +764,7 @@ export function ProposalValueStepSection({ formState, summary, validationErrors,
         </div>
       </div>
 
-      <Card className="border-dashed border-primary/20 bg-primary/5">
+      <Card className="border-dashed border-accent/20 bg-accent/5">
         <CardHeader className="space-y-1">
           <CardTitle className="text-lg">Proposal summary</CardTitle>
           <CardDescription>Review the information before submitting.</CardDescription>

@@ -238,12 +238,14 @@ function HomeAuthPageContent() {
   const handleGoogleSignIn = useCallback(async () => {
     setIsSubmitting(true)
 
-    await authClient.signIn.social({ provider: 'google' })
+    await authClient.signIn.social({
+      provider: 'google',
+      callbackURL: '/dashboard',
+    })
       .catch((error) => {
         toast({
           title: 'Google sign-in failed',
           description: getFriendlyAuthErrorMessage(error),
-          variant: 'destructive',
         })
       })
       .finally(() => {

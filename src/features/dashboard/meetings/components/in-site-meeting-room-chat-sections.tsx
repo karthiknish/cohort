@@ -166,7 +166,7 @@ export function MeetingChatMessageItem({
         <div
           className={cn(
             'space-y-2 rounded-2xl border px-3 py-2 shadow-sm',
-            isLocal ? 'border-primary/30 bg-primary text-primary-foreground' : 'border-border/80 bg-background/95 text-foreground',
+            isLocal ? 'border-accent/30 bg-primary text-primary-foreground' : 'border-border/80 bg-background/95 text-foreground',
           )}
         >
           <div className={cn('mb-1 flex items-center gap-2 text-[11px] font-medium', isLocal ? 'justify-end text-primary-foreground/80' : 'text-muted-foreground')}>
@@ -179,7 +179,7 @@ export function MeetingChatMessageItem({
               text={content.text}
               mentionLabels={mentionLabels}
               className={cn('whitespace-pre-wrap text-sm leading-6', isLocal ? 'text-primary-foreground' : 'text-foreground')}
-              mentionClassName={cn(isLocal ? 'bg-primary-foreground/15 text-primary-foreground ring-primary-foreground/20' : 'bg-primary/15 text-primary ring-primary/20')}
+              mentionClassName={cn(isLocal ? 'bg-primary-foreground/15 text-primary-foreground ring-primary-foreground/20' : 'bg-accent/15 text-primary ring-primary/20')}
             />
           ) : null}
           {content.attachments.length > 0 ? (
@@ -196,9 +196,9 @@ export function MeetingChatMessageItem({
         </div>
       </div>
       {isLocal ? (
-        <Avatar className="h-8 w-8 shrink-0 border border-primary/25">
+        <Avatar className="h-8 w-8 shrink-0 border border-accent/25">
           {avatarUrl ? <AvatarImage src={avatarUrl} alt={authorLabel} /> : null}
-          <AvatarFallback className="bg-primary/15 text-[11px] font-semibold text-primary">{getMeetingChatInitials(authorLabel)}</AvatarFallback>
+          <AvatarFallback className="bg-accent/15 text-[11px] font-semibold text-primary">{getMeetingChatInitials(authorLabel)}</AvatarFallback>
         </Avatar>
       ) : null}
     </div>
@@ -418,7 +418,7 @@ export function MeetingChatPanel({
             <Button
               type="button"
               size="sm"
-              className="min-w-[110px] bg-primary text-primary-foreground hover:bg-primary/90"
+              className="min-w-[110px] bg-primary text-primary-foreground hover:bg-accent/90"
               disabled={!canSend || isSending || uploadingFiles}
               onClick={onSend}
             >

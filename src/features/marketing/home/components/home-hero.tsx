@@ -33,9 +33,9 @@ export function HomeHero({ headline, subhead, highlights }: HomeHeroProps) {
           <FadeInItem
             key={item.title}
             as="div"
-            className="group flex gap-4 rounded-2xl border border-border/50 bg-background/50 p-5 shadow-sm motion-chromatic hover:border-primary/20 hover:bg-background hover:shadow-md"
+            className="group flex gap-4 rounded-2xl border border-border/50 bg-background/50 p-5 shadow-sm motion-chromatic hover:border-accent/20 hover:bg-background hover:shadow-md"
           >
-            <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+            <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
               <CircleCheck className="h-5 w-5" />
             </div>
             <div className="space-y-1">

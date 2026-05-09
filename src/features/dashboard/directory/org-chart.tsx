@@ -9,7 +9,7 @@ export function OrgChart({ teams }: { teams: TeamNode[] }) {
         <CardDescription>A lightweight org view built from the same team-node data used elsewhere in the directory.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-3xl border border-dashed border-primary/25 bg-card p-5">
+        <div className="rounded-3xl border border-dashed border-accent/25 bg-card p-5">
           <div className="mx-auto max-w-xs rounded-2xl border border-muted/40 bg-muted/20 p-4 text-center">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Executive operations</p>
             <p className="mt-2 font-semibold text-foreground">Dan Wright</p>

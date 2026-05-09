@@ -70,7 +70,7 @@ export function RecurrenceEditor({
           disabled={disabled}
           onValueChange={handleRuleChange}
         >
-          <SelectTrigger className={cn('flex-1', value !== 'none' && 'border-primary/50')}>
+          <SelectTrigger className={cn('flex-1', value !== 'none' && 'border-accent/50')}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

@@ -51,9 +51,9 @@ export function SetupAlerts({
   if (initializingMeta || initializingTikTok) {
     const platform = initializingMeta ? 'Meta' : 'TikTok'
     return (
-      <Alert className="border-primary/40 bg-primary/5">
+      <Alert className="border-accent/40 bg-accent/5">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
           </div>
           <div>
@@ -88,7 +88,7 @@ export function SetupAlerts({
       )}
 
       {metaNeedsAccountSelection && !metaSetupMessage && (
-        <Alert className="border-primary/40 bg-primary/5">
+        <Alert className="border-accent/40 bg-accent/5">
           <AlertTitle className="flex items-center gap-2 text-sm font-semibold">
             <CircleAlert className="h-4 w-4 text-primary" /> Complete Meta setup
           </AlertTitle>
@@ -160,7 +160,7 @@ export function SetupAlerts({
       )}
 
       {tiktokNeedsAccountSelection && !tiktokSetupMessage && (
-        <Alert className="border-primary/40 bg-primary/5">
+        <Alert className="border-accent/40 bg-accent/5">
           <AlertTitle className="flex items-center justify-between gap-3 text-sm font-semibold">
             <span className="flex items-center gap-2">
               <CircleAlert className="h-4 w-4 text-primary" /> Complete TikTok setup

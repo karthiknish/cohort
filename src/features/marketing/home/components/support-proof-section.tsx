@@ -32,7 +32,7 @@ const PROOF_POINTS = [
     title: 'Fast rollout path',
     description: 'The new routes are intentionally scaffolded for a low-risk transition into live Convex-backed workflows.',
     icon: TimerReset,
-    wellClass: 'bg-warning/10 text-warning',
+    wellClass: 'bg-accent/10 text-primary',
   },
 ] as const
 

@@ -21,9 +21,9 @@ export function DashboardRoleBanner({ userRole, userDisplayName }: DashboardRole
   if (userRole === 'admin') {
     return (
       <FadeIn>
-        <Card className="border-primary/25 bg-primary/5">
+        <Card className="border-accent/25 bg-accent/5">
           <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/12">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/12">
               <Shield className="h-5 w-5 text-primary" />
             </div>
             <div className="min-w-0 flex-1 space-y-1">
@@ -34,7 +34,7 @@ export function DashboardRoleBanner({ userRole, userDisplayName }: DashboardRole
               </p>
             </div>
             <Link href="/admin" className="shrink-0">
-              <Button variant="outline" size="sm" className="border-primary/30 hover:bg-primary/10">
+              <Button variant="outline" size="sm" className="border-accent/30 hover:bg-accent/10">
                 Admin panel <ArrowUpRight className="ml-1 h-3 w-3" />
               </Button>
             </Link>

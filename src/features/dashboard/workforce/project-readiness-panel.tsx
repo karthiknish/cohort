@@ -27,7 +27,7 @@ function ReadinessStat({
   return (
     <div className="rounded-2xl border border-muted/50 bg-background p-4">
       <div className="flex items-center gap-3">
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/10 text-primary">
           <Icon className="h-4 w-4" />
         </span>
         <div>
@@ -70,7 +70,7 @@ function ProjectReadinessPanelContent() {
   }, [addChecklistTemplate])
 
   return (
-    <Card className="border-primary/15 shadow-sm">
+    <Card className="border-accent/15 shadow-sm">
       <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex items-center gap-3">

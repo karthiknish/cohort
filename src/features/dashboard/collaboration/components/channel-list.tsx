@@ -71,7 +71,7 @@ export function CollaborationChannelList({
                   className={cn(
                     'flex w-full flex-col gap-1.5 rounded-lg border p-3 text-left motion-chromatic outline-none focus-visible:ring-2 focus-visible:ring-primary/20',
                     isSelected
-                      ? 'border-primary/20 bg-primary/5 shadow-sm'
+                      ? 'border-accent/20 bg-accent/5 shadow-sm'
                       : 'border-transparent hover:bg-muted/50 hover:border-muted/40'
                   )}
                 >

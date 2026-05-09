@@ -92,7 +92,7 @@ export function CollaborationSidebarRosterSection({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 border-b border-muted/20 pb-2.5">
-        <div className="h-2 w-2 rounded-full bg-primary/60" />
+        <div className="h-2 w-2 rounded-full bg-accent/60" />
         <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Workspace Roster</p>
       </div>
       {channel ? (
@@ -100,7 +100,7 @@ export function CollaborationSidebarRosterSection({
           <div className="space-y-4">
             {channelParticipants.map((participant) => (
               <div key={participant.name} className="group flex items-center gap-3 px-1">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-muted/60 bg-background text-xs font-bold text-foreground shadow-sm motion-chromatic duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] group-hover:border-primary/40 group-hover:bg-primary/5 motion-reduce:transition-none">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-muted/60 bg-background text-xs font-bold text-foreground shadow-sm motion-chromatic duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] group-hover:border-accent/40 group-hover:bg-accent/5 motion-reduce:transition-none">
                   {getInitials(participant.name)}
                 </div>
                 <div className="flex min-w-0 flex-col">
@@ -141,9 +141,9 @@ export function CollaborationSidebarAssetLibrarySection({ sharedFiles }: { share
         <div className="space-y-2.5">
           {sharedFiles.map((file) => (
             <a key={`${file.url}-${file.name}`} href={file.url} target="_blank" rel="noopener noreferrer" className="group block">
-              <Card className="overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] group-hover:border-primary/30 group-hover:shadow-md motion-reduce:transition-none">
+              <Card className="overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] group-hover:border-accent/30 group-hover:shadow-md motion-reduce:transition-none">
                 <CardContent className="flex items-center gap-3 p-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/20 text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/20 text-muted-foreground transition-colors group-hover:bg-accent/10 group-hover:text-primary">
                     <FileText className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">

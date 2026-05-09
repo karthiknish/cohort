@@ -10,14 +10,14 @@
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #071740;
-  --primary-foreground: #f9fafb;
+  --primary: #ffffff;
+  --primary-foreground: #0f172a;
   --secondary: #1e293b;
   --secondary-foreground: #f9fafb;
   --muted: #e2e8f0;
   --muted-foreground: #475569;
-  --accent: #facc15;
-  --accent-foreground: #0f172a;
+  --accent: #3b82f6;
+  --accent-foreground: #ffffff;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --success: #16a34a;
@@ -31,23 +31,23 @@
   --info-border: #2563eb;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #071740;
+  --ring: #3b82f6;
   --radius: 0.625rem;
   --background: #f9fafb;
   --foreground: #0f172a;
   --chart-1: #16a34a;
   --chart-2: #15803d;
   --chart-3: #1e293b;
-  --chart-4: #facc15;
+  --chart-4: #3b82f6;
   --chart-5: #0ea5e9;
   --sidebar: #1e293b;
   --sidebar-foreground: #f9fafb;
-  --sidebar-primary: #071740;
-  --sidebar-primary-foreground: #f9fafb;
-  --sidebar-accent: #facc15;
-  --sidebar-accent-foreground: #0f172a;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #0f172a;
+  --sidebar-accent: #3b82f6;
+  --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #243041;
-  --sidebar-ring: #16a34a;
+  --sidebar-ring: #3b82f6;
   --success-bg: var(--success);
   --success-text: var(--success-foreground);
   --warning-bg: var(--warning);
@@ -83,119 +83,6 @@
   /* Light UI on dark imagery (full-screen viewer, video controls) */
   --viewer-chrome: #f8fafc;
 }
-
-.dark,
-[data-theme='dark'] {
-  color-scheme: dark;
-  --card: #0f172a;
-  --card-foreground: #e2e8f0;
-  --popover: #111827;
-  --popover-foreground: #e2e8f0;
-  --primary: #dbeafe;
-  --primary-foreground: #071740;
-  --secondary: #1e293b;
-  --secondary-foreground: #e2e8f0;
-  --muted: #172033;
-  --muted-foreground: #94a3b8;
-  --accent: #facc15;
-  --accent-foreground: #0f172a;
-  --destructive: #ef4444;
-  --destructive-foreground: #fef2f2;
-  --success: #22c55e;
-  --success-foreground: #052e16;
-  --success-border: #15803d;
-  --warning: #fbbf24;
-  --warning-foreground: #451a03;
-  --warning-border: #d97706;
-  --info: #60a5fa;
-  --info-foreground: #082f49;
-  --info-border: #2563eb;
-  --border: #243041;
-  --input: #243041;
-  --ring: #bfdbfe;
-  --background: #020617;
-  --foreground: #e2e8f0;
-  --chart-1: #4ade80;
-  --chart-2: #60a5fa;
-  --chart-3: #c084fc;
-  --chart-4: #facc15;
-  --chart-5: #22d3ee;
-  --sidebar: #020617;
-  --sidebar-foreground: #e2e8f0;
-  --sidebar-primary: #dbeafe;
-  --sidebar-primary-foreground: #071740;
-  --sidebar-accent: #facc15;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #243041;
-  --sidebar-ring: #4ade80;
-  --success-bg: #14532d;
-  --success-text: #dcfce7;
-  --warning-bg: #78350f;
-  --warning-text: #fef3c7;
-  --info-bg: #1e3a8a;
-  --info-text: #dbeafe;
-  /* Light foreground on dark imagery (viewer overlays; fixed across themes) */
-  --viewer-chrome: #f8fafc;
-}
-
-/*
- * Public marketing shell (/, terms, privacy, for-you, …): keep light semantic tokens even when
- * root uses html.dark — avoids light gray text on white cards from dark --foreground/--muted.
- */
-html.dark .theme-marketing-light,
-html[data-theme='dark'] .theme-marketing-light {
-  color-scheme: light;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #071740;
-  --primary-foreground: #f9fafb;
-  --secondary: #1e293b;
-  --secondary-foreground: #f9fafb;
-  --muted: #e2e8f0;
-  --muted-foreground: #475569;
-  --accent: #facc15;
-  --accent-foreground: #0f172a;
-  --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
-  --success: #16a34a;
-  --success-foreground: #ffffff;
-  --success-border: #15803d;
-  --warning: #f59e0b;
-  --warning-foreground: #78350f;
-  --warning-border: #d97706;
-  --info: #3b82f6;
-  --info-foreground: #ffffff;
-  --info-border: #2563eb;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #071740;
-  --background: #f9fafb;
-  --foreground: #0f172a;
-  --chart-1: #16a34a;
-  --chart-2: #15803d;
-  --chart-3: #1e293b;
-  --chart-4: #facc15;
-  --chart-5: #0ea5e9;
-  --sidebar: #1e293b;
-  --sidebar-foreground: #f9fafb;
-  --sidebar-primary: #071740;
-  --sidebar-primary-foreground: #f9fafb;
-  --sidebar-accent: #facc15;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #243041;
-  --sidebar-ring: #16a34a;
-  --success-bg: var(--success);
-  --success-text: var(--success-foreground);
-  --warning-bg: var(--warning);
-  --warning-text: var(--warning-foreground);
-  --info-bg: var(--info);
-  --info-text: var(--info-foreground);
-  --viewer-chrome: #f8fafc;
-}
-
-
 
 @theme inline {
   --color-background: var(--background);
@@ -693,7 +580,7 @@ h6 {
 
   /* Premium Driver.js / Onboarding Tour styling */
   .cohorts-tour-popover {
-    @apply !bg-background !backdrop-blur-md !border !border-primary/20 !shadow-2xl !rounded-xl !p-0 !overflow-hidden !max-w-[320px] transition-[transform,opacity,box-shadow] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none;
+    @apply !bg-background !backdrop-blur-md !border !border-accent/20 !shadow-2xl !rounded-xl !p-0 !overflow-hidden !max-w-[320px] transition-[transform,opacity,box-shadow] duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none;
   }
 
   .cohorts-tour-popover .driver-popover-title {
@@ -717,7 +604,7 @@ h6 {
   }
 
   .cohorts-tour-popover .driver-popover-next-btn {
-    @apply !bg-primary !text-primary-foreground !border-primary hover:!bg-primary/90;
+    @apply !bg-primary !text-primary-foreground !border-primary hover:!bg-accent/90;
   }
 
   .cohorts-tour-popover .driver-popover-next-btn::before,
@@ -742,7 +629,7 @@ h6 {
 
   /* Custom animation for tour highlights */
   .driver-active-element {
-    box-shadow: 0 0 0 4px rgba(7, 23, 64, 0.1), 0 0 20px rgba(7, 23, 64, 0.2);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1), 0 0 20px rgba(59, 130, 246, 0.2);
     @apply !transition-[box-shadow] !duration-500;
   }
 

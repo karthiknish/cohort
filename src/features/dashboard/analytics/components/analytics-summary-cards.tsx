@@ -30,7 +30,7 @@ export function AnalyticsSummaryCards({
     return (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/80" />
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent/80" />
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <div className="flex items-center gap-2">
                         <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Total users</CardTitle>
@@ -45,7 +45,7 @@ export function AnalyticsSummaryCards({
                             </Tooltip>
                         </TooltipProvider>
                     </div>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/5 text-primary">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/5 text-primary">
                         <Users className="h-4 w-4" />
                     </div>
                 </CardHeader>

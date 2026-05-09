@@ -169,7 +169,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
               <span className="font-medium">{formatDateRange(project.startDate, project.endDate)}</span>
             </span>
             <span className="inline-flex items-center gap-2">
-              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-accent/10 text-primary">
                 <MessageSquare className="h-3 w-3" />
               </div>
               <span className="tabular-nums">
@@ -207,7 +207,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 px-3 text-xs font-semibold gap-2 bg-primary/5 text-primary border-primary/20 hover:bg-primary/10 motion-chromatic">
+                <Button variant="outline" size="sm" className="h-8 px-3 text-xs font-semibold gap-2 bg-accent/5 text-primary border-accent/20 hover:bg-accent/10 motion-chromatic">
                   <span>View Project</span>
                   <MoreHorizontal className="h-3.5 w-3.5" />
                 </Button>

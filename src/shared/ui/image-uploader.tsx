@@ -206,8 +206,8 @@ export function ImageUploader({
             'aspect-video w-full rounded-lg border-2 border-dashed',
             'cursor-pointer transition-colors',
             isDragging
-              ? 'border-primary bg-primary/5'
-              : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50',
+              ? 'border-primary bg-accent/5'
+              : 'border-muted-foreground/25 hover:border-accent/50 hover:bg-muted/50',
             (disabled || isUploading) && 'cursor-not-allowed opacity-50'
           )}
         >

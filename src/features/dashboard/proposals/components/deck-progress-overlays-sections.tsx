@@ -24,8 +24,8 @@ export function DeckProgressOverlayShell({ children, className }: { children: Re
 function ProposalGenerationStatusIcon({ isComplete }: { isComplete: boolean }) {
   return (
     <div className="relative">
-      <div className="absolute inset-0 rounded-full bg-primary/20 blur-3xl" />
-      <div className="relative flex h-24 w-24 items-center justify-center rounded-full border-4 border-primary/20 bg-background shadow-xl">
+      <div className="absolute inset-0 rounded-full bg-accent/20 blur-3xl" />
+      <div className="relative flex h-24 w-24 items-center justify-center rounded-full border-4 border-accent/20 bg-background shadow-xl">
         {isComplete ? (
           <div className="animate-in zoom-in fill-mode-forwards duration-500 text-success">
             <CircleCheck className="h-12 w-12" />
@@ -100,8 +100,8 @@ export function ProposalGenerationOverlayContent({
         </div>
       </div>
 
-      <div className="absolute -left-8 top-1/4 h-16 w-16 animate-pulse rounded-full bg-primary/5 blur-xl" />
-      <div className="absolute -right-8 bottom-1/4 h-20 w-20 animate-pulse rounded-full bg-primary/10 blur-2xl delay-700" />
+      <div className="absolute -left-8 top-1/4 h-16 w-16 animate-pulse rounded-full bg-accent/5 blur-xl" />
+      <div className="absolute -right-8 bottom-1/4 h-20 w-20 animate-pulse rounded-full bg-accent/10 blur-2xl delay-700" />
     </div>
   )
 }

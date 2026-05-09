@@ -76,7 +76,7 @@ function getTypeColor(type: MentionType): string {
 		case "team":
 			return "bg-warning/10 text-warning border-warning/20";
 		case "user":
-			return "bg-primary/10 text-primary border-primary/20";
+			return "bg-accent/10 text-primary border-accent/20";
 	}
 }
 
@@ -136,7 +136,7 @@ function MentionResultButton({
 			onClick={handleClick}
 			className={cn(
 				"flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
-				index === clampedSelectedIndex ? "bg-primary/10" : "hover:bg-muted",
+				index === clampedSelectedIndex ? "bg-accent/10" : "hover:bg-muted",
 			)}
 		>
 			<div

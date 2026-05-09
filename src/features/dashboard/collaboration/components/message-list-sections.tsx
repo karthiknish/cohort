@@ -161,7 +161,7 @@ function MessageReactionRow({
             className={cn(
               'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs',
               chromaticTransitionClass,
-              reaction.userIds.includes(currentUserId ?? '') ? 'border border-primary/20 bg-primary/10' : 'bg-muted hover:bg-muted/80',
+              reaction.userIds.includes(currentUserId ?? '') ? 'border border-accent/20 bg-accent/10' : 'bg-muted hover:bg-muted/80',
             )}
           >
             {isPending ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <span>{reaction.emoji}</span>}
@@ -247,7 +247,7 @@ export function ChannelMessageCard({
         listRowEnterAnimationClass,
         chromaticTransitionClass,
         !message.deleted && 'hover:bg-muted/5',
-        highlighted && 'rounded-lg bg-primary/10 ring-1 ring-primary/30',
+        highlighted && 'rounded-lg bg-accent/10 ring-1 ring-primary/30',
       )}
     >
       {showAvatars ? (

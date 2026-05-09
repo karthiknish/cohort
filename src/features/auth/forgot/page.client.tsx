@@ -87,8 +87,8 @@ export default function ForgotPasswordPage() {
         </Link>
 
         <div className="space-y-2 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-4">
-            <Mail className="h-6 w-6 text-primary" />
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 mb-4">
+            <Mail className="h-6 w-6 text-accent" />
           </div>
           <h1 className="text-2xl font-semibold text-foreground">Forgot password?</h1>
           <p className="text-sm text-muted-foreground">
@@ -139,8 +139,8 @@ export default function ForgotPasswordPage() {
         ) : (
           <FadeIn as="div" className="space-y-6">
             <div className="rounded-lg border border-border bg-muted/40 p-6 text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <CircleCheck className="h-6 w-6 text-primary" />
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
+                <CircleCheck className="h-6 w-6 text-accent" />
               </div>
               <h3 className="font-semibold text-foreground mb-1">Check your email</h3>
               <p className="text-sm text-muted-foreground mb-4">
@@ -152,7 +152,7 @@ export default function ForgotPasswordPage() {
                 <button
                   type="button"
                   onClick={handleResetAnotherEmail}
-                  className="font-medium text-primary hover:underline"
+                  className="font-medium text-accent hover:underline"
                 >
                   try another email
                 </button>
@@ -178,7 +178,7 @@ export default function ForgotPasswordPage() {
 
         <div className="text-center text-xs text-muted-foreground">
           Remember your password?{' '}
-          <Link href="/auth" className="font-medium text-primary hover:underline">
+          <Link href="/auth" className="font-medium text-accent hover:underline">
             Return to sign in
           </Link>
         </div>

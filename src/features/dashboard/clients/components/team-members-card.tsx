@@ -48,7 +48,7 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
       <Avatar className="h-10 w-10 border border-muted/20">
         <AvatarFallback className={cn(
           'text-xs font-bold uppercase tracking-wider',
-          isManager ? 'bg-primary/10 text-primary' : 'bg-muted/30 text-muted-foreground'
+          isManager ? 'bg-accent/10 text-primary' : 'bg-muted/30 text-muted-foreground'
         )}>
           {getInitials(member.name)}
         </AvatarFallback>
@@ -61,7 +61,7 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
         variant="secondary"
         className={cn(
           'shrink-0 h-6 px-2 text-[10px] font-black uppercase tracking-widest rounded-full border-none',
-          isManager ? 'bg-primary/10 text-primary' : 'bg-muted/20 text-muted-foreground'
+          isManager ? 'bg-accent/10 text-primary' : 'bg-muted/20 text-muted-foreground'
         )}
       >
         {isManager ? 'Coach' : 'Collaborator'}
@@ -128,7 +128,7 @@ export function TeamMembersCard({
                 placeholder="Search team…"
                 value={teamSearch}
                 onChange={handleTeamSearchChange}
-                className="h-9 w-full rounded-xl border-muted/30 bg-card pl-10 pr-8 text-[11px] font-medium shadow-sm motion-chromatic focus:border-primary/40 focus:ring-4 focus:ring-primary/5 sm:w-48"
+                className="h-9 w-full rounded-xl border-muted/30 bg-card pl-10 pr-8 text-[11px] font-medium shadow-sm motion-chromatic focus:border-accent/40 focus:ring-4 focus:ring-primary/5 sm:w-48"
               />
               {teamSearch && (
                 <Button

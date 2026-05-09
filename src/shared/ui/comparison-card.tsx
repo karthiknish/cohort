@@ -107,7 +107,7 @@ export function ComparisonCard({ title, description, metrics, isLoading, classNa
                   <div
                     className={cn(
                       'flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase',
-                      change.type === 'up' && 'bg-primary/10 text-primary',
+                      change.type === 'up' && 'bg-accent/10 text-primary',
                       change.type === 'down' && 'bg-destructive/10 text-destructive',
                       change.type === 'neutral' && 'bg-muted text-muted-foreground'
                     )}
@@ -235,7 +235,7 @@ export function SideBySideComparison({
                   className={cn(
                     'text-[10px] font-bold',
                     metric.diffPercent > 0
-                      ? 'bg-primary/10 text-primary border-primary/20'
+                      ? 'bg-accent/10 text-primary border-accent/20'
                       : 'bg-destructive/10 text-destructive border-destructive/20'
                   )}
                 >

@@ -153,8 +153,8 @@ function toneSurfaceClasses(tone: PresentationTone): { shell: string; header: st
   switch (tone) {
     case 'success':
       return {
-        shell: 'border-primary/25 bg-primary/[0.07]',
-        header: 'border-primary/20 bg-primary/10',
+        shell: 'border-accent/25 bg-accent/[0.07]',
+        header: 'border-accent/20 bg-accent/10',
       }
     case 'error':
       return {
@@ -181,8 +181,8 @@ function toneAccentClasses(tone: PresentationTone): { icon: string; title: strin
         icon: 'text-primary',
         title: 'text-primary',
         badge: 'bg-background text-primary',
-        mention: 'bg-primary/15 text-primary ring-primary/20',
-        section: 'border-primary/20',
+        mention: 'bg-accent/15 text-primary ring-primary/20',
+        section: 'border-accent/20',
       }
     case 'error':
       return {
@@ -346,7 +346,7 @@ export function AgentMessageCard({
                                   <span
                                     className={cn(
                                       'rounded-full px-1.5 py-0.5 text-[10px] font-semibold normal-case',
-                                      item.deltaTone === 'positive' && 'bg-primary/10 text-primary',
+                                      item.deltaTone === 'positive' && 'bg-accent/10 text-primary',
                                       item.deltaTone === 'negative' && 'bg-destructive/10 text-destructive',
                                       item.deltaTone === 'neutral' && 'bg-muted text-muted-foreground',
                                     )}
@@ -381,7 +381,7 @@ export function AgentMessageCard({
                                   <div
                                     className={cn(
                                       'mt-2 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                                      item.deltaTone === 'positive' && 'bg-primary/10 text-primary',
+                                      item.deltaTone === 'positive' && 'bg-accent/10 text-primary',
                                       item.deltaTone === 'negative' && 'bg-destructive/10 text-destructive',
                                       item.deltaTone === 'neutral' && 'bg-muted text-muted-foreground',
                                     )}
@@ -406,7 +406,7 @@ export function AgentMessageCard({
                                     <span
                                       className={cn(
                                         'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                                        item.deltaTone === 'positive' && 'bg-primary/10 text-primary',
+                                        item.deltaTone === 'positive' && 'bg-accent/10 text-primary',
                                         item.deltaTone === 'negative' && 'bg-destructive/10 text-destructive',
                                         item.deltaTone === 'neutral' && 'bg-muted text-muted-foreground',
                                       )}

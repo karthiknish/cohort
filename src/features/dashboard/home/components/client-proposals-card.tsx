@@ -76,7 +76,7 @@ function ClientProposalsCardComponent({ proposals, loading }: ClientProposalsCar
                         recentProposals.map((proposal) => (
                             <div
                                 key={proposal.id}
-                                className="group flex flex-col gap-1 p-3 rounded-xl border bg-card hover:border-primary/30 transition-colors shadow-none"
+                                className="group flex flex-col gap-1 p-3 rounded-xl border bg-card hover:border-accent/30 transition-colors shadow-none"
                             >
                                 <div className="flex items-center justify-between">
                                     <ViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" default="none">

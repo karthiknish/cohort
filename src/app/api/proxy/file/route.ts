@@ -47,6 +47,7 @@ export const GET = createApiHandler({
 
   // Fetch the file from Cloud Storage
   const upstream = await fetch(fileUrl, {
+    cache: 'no-store',
     headers: {
       // Help upstream pick the right representation.
       Accept:

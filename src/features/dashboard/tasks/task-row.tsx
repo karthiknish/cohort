@@ -81,7 +81,7 @@ function TaskRowComponent({
           'group relative border-b border-border/60 px-6 py-5 hover:bg-muted/40 last:border-0',
           chromaticTransitionClass,
           isPendingUpdate && 'opacity-75 pointer-events-none',
-          selected && 'bg-primary/5'
+          selected && 'bg-accent/5'
         )}
       >
       {/* Priority accent bar */}
@@ -132,7 +132,7 @@ function TaskRowComponent({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 text-xs gap-1.5 font-medium hover:bg-primary/5 hover:text-primary transition-colors"
+                className="h-8 text-xs gap-1.5 font-medium hover:bg-accent/5 hover:text-primary transition-colors"
                 onClick={handleEditClick}
               >
                 <Pencil className="h-3.5 w-3.5" />
@@ -188,7 +188,7 @@ function TaskRowComponent({
                 <Link href={`/dashboard/clients?clientId=${task.clientId}`}>
                   <Badge
                     variant="outline"
-                    className={cn('h-7 rounded-full px-2.5 text-[11px] font-semibold transition-colors hover:border-primary/30 hover:text-primary', taskPillColors.client)}
+                    className={cn('h-7 rounded-full px-2.5 text-[11px] font-semibold transition-colors hover:border-accent/30 hover:text-primary', taskPillColors.client)}
                   >
                     {task.client}
                   </Badge>
@@ -203,7 +203,7 @@ function TaskRowComponent({
               <Link href={buildProjectRoute(task.projectId, task.projectName)}>
                 <Badge
                   variant="outline"
-                  className={cn('h-7 rounded-full px-2.5 text-[11px] font-semibold transition-colors hover:border-primary/30 hover:text-primary', taskPillColors.project)}
+                  className={cn('h-7 rounded-full px-2.5 text-[11px] font-semibold transition-colors hover:border-accent/30 hover:text-primary', taskPillColors.project)}
                 >
                   <FolderKanban className="mr-1.5 h-3.5 w-3.5" />
                   {task.projectName ?? task.projectId}

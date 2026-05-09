@@ -32,7 +32,7 @@ const PRIORITY_CONFIGS: Record<MessagePriority, PriorityConfig> = {
   none: { value: 'none', label: 'No Priority', color: '', icon: '🏳️' },
   low: { value: 'low', label: 'Low', color: 'bg-secondary text-secondary-foreground border-secondary/40', icon: '🔵' },
   medium: { value: 'medium', label: 'Medium', color: 'bg-accent text-accent-foreground border-accent/40', icon: '🟡' },
-  high: { value: 'high', label: 'High', color: 'bg-primary/10 text-primary border-primary/20', icon: '🟠' },
+  high: { value: 'high', label: 'High', color: 'bg-accent/10 text-primary border-accent/20', icon: '🟠' },
   urgent: { value: 'urgent', label: 'Urgent', color: 'bg-destructive/10 text-destructive border-destructive/20', icon: '🔴' },
 }
 

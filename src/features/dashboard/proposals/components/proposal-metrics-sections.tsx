@@ -27,7 +27,7 @@ export function ProposalMetricsLoadingGrid() {
 
 export function ProposalMetricCard({ stat }: { stat: ProposalMetricStat }) {
   return (
-    <Card className="overflow-hidden border-muted/50 transition-colors duration-200 hover:border-primary/20">
+    <Card className="overflow-hidden border-muted/50 transition-colors duration-200 hover:border-accent/20">
       <CardContent className="relative p-6">
         <div className="space-y-1">
           <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>

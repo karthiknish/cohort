@@ -237,7 +237,7 @@ export function MarkdownPreview({
 
 function MarkdownPreviewContent({ value }: { value: string }) {
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+    <div className="prose prose-sm max-w-none break-words">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={MARKDOWN_PREVIEW_COMPONENTS}
