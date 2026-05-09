@@ -3,9 +3,7 @@ import { persistIntegrationTokens } from '@/lib/ads-admin'
 import { exchangeMetaCodeForToken } from '@/services/facebook-oauth'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
 import { logger } from '@/lib/logger'
-
-// Meta Graph API version - updated to v24.0 (latest as of January 2026)
-const META_API_VERSION = 'v24.0'
+import { META_API_VERSION, META_OAUTH_TOKEN_ENDPOINT } from '@/services/integrations/meta-ads/constants'
 
 interface MetaOAuthContext {
   state: string
@@ -133,7 +131,7 @@ export async function completeMetaOAuthFlow(options: {
       logger.debug('[Meta OAuth Flow] Attempting long-lived token exchange', { userId, attempt: attempt + 1 })
       
       const longLivedResponse = await fetch(
-        `https://graph.facebook.com/${META_API_VERSION}/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(
+        `${META_OAUTH_TOKEN_ENDPOINT}?grant_type=fb_exchange_token&client_id=${encodeURIComponent(
           appId,
         )}&client_secret=${encodeURIComponent(appSecret)}&fb_exchange_token=${encodeURIComponent(tokenResponse.access_token)}`,
       )

@@ -17,6 +17,28 @@ type AuthOptionsConfig = {
   enforceSecureProductionUrl?: boolean;
 };
 
+function isStaticAuthBootstrap(ctx: GenericCtx<DataModel>): boolean {
+  return Object.keys((ctx ?? {}) as object).length === 0;
+}
+
+function isSecureUrl(value: string | undefined | null): value is string {
+  return typeof value === "string" && value.startsWith("https://");
+}
+
+function resolveAuthBaseUrl(): string | undefined {
+  const explicitBaseUrl = process.env.BETTER_AUTH_URL;
+  const convexSiteUrl =
+    process.env.NEXT_PUBLIC_CONVEX_SITE_URL
+    || process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
+    || process.env.CONVEX_SITE_URL;
+  const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (isSecureUrl(explicitBaseUrl)) return explicitBaseUrl;
+  if (isSecureUrl(convexSiteUrl)) return convexSiteUrl;
+
+  return explicitBaseUrl || siteUrl || convexSiteUrl || undefined;
+}
+
 // Better Auth Component
 export const authComponent = createClient<DataModel, typeof schema>(
   components.betterAuth,
@@ -65,12 +87,14 @@ export const createAuthOptions = (
 ): ConvexCompatibleBetterAuthOptions => {
   // Access env vars at runtime for Convex compatibility
   const siteUrl = process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL;
-  const baseURL = process.env.BETTER_AUTH_URL || siteUrl;
+  const baseURL = resolveAuthBaseUrl();
   const secret = process.env.BETTER_AUTH_SECRET;
   const isProduction = process.env.NODE_ENV === "production";
-  const isSecureBaseUrl = typeof baseURL === "string" && baseURL.startsWith("https://");
+  const isSecureBaseUrl = isSecureUrl(baseURL);
+  const shouldEnforceSecureProductionUrl =
+    enforceSecureProductionUrl && !isStaticAuthBootstrap(ctx);
 
-  if (enforceSecureProductionUrl && isProduction && !isSecureBaseUrl) {
+  if (shouldEnforceSecureProductionUrl && isProduction && !isSecureBaseUrl) {
     throw new Error("BETTER_AUTH_URL or SITE_URL must use https:// in production.");
   }
 

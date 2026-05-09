@@ -2,6 +2,7 @@ import { getAdIntegration, updateIntegrationCredentials } from '@/lib/ads-admin'
 import { getGoogleAnalyticsIntegration, updateGoogleAnalyticsCredentials } from '@/lib/analytics-admin'
 import { logger } from '@/lib/logger'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
+import { META_API_VERSION, META_OAUTH_TOKEN_ENDPOINT } from '@/services/integrations/meta-ads/constants'
 import {
   resolveGoogleAdsOAuthCredentials,
   resolveGoogleAnalyticsOAuthCredentials,
@@ -17,7 +18,6 @@ interface RefreshParams {
 
 // Token refresh endpoints - updated to latest API versions
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
-const META_TOKEN_ENDPOINT = 'https://graph.facebook.com/v24.0/oauth/access_token'
 const TIKTOK_REFRESH_ENDPOINT = 'https://business-api.tiktok.com/open_api/v1.3/oauth2/refresh_token/'
 const LINKEDIN_TOKEN_ENDPOINT = 'https://www.linkedin.com/oauth/v2/accessToken'
 
@@ -276,7 +276,7 @@ export async function refreshGoogleAccessToken({ userId, clientId, providerId }:
 }
 
 export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams): Promise<string> {
-  logger.info('[Meta Token Refresh] Starting token refresh', { userId, clientId, apiVersion: 'v24.0' })
+  logger.info('[Meta Token Refresh] Starting token refresh', { userId, clientId, apiVersion: META_API_VERSION })
 
   const integration = await getAdIntegration({ userId, providerId: 'facebook', clientId })
 
@@ -306,7 +306,7 @@ export async function refreshMetaAccessToken({ userId, clientId }: RefreshParams
     try {
       logger.debug('[Meta Token Refresh] Attempting refresh', { userId, attempt: attempt + 1, maxRetries: TOKEN_REFRESH_CONFIG.maxRetries })
       
-      const response = await fetch(`${META_TOKEN_ENDPOINT}?${params.toString()}`)
+      const response = await fetch(`${META_OAUTH_TOKEN_ENDPOINT}?${params.toString()}`)
 
       if (!response.ok) {
         const errorPayload = await response.text()

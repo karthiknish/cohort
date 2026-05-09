@@ -1,6 +1,11 @@
 import { URLSearchParams } from 'node:url'
 
 import { logger } from '@/lib/logger'
+import {
+  META_API_VERSION,
+  META_OAUTH_DIALOG_BASE,
+  META_OAUTH_TOKEN_ENDPOINT,
+} from '@/services/integrations/meta-ads/constants'
 
 interface BuildMetaAuthUrlOptions {
   businessConfigId: string
@@ -11,10 +16,6 @@ interface BuildMetaAuthUrlOptions {
 }
 
 const DEFAULT_SCOPES = ['ads_management', 'ads_read', 'business_management']
-
-// Meta Graph API version - updated to v24.0 (latest as of January 2026)
-// Changelog: https://developers.facebook.com/docs/graph-api/changelog/
-const META_GRAPH_API_VERSION = 'v24.0'
 
 export function buildMetaBusinessLoginUrl(options: BuildMetaAuthUrlOptions): string {
   const { businessConfigId, appId, redirectUri, state, scopes = DEFAULT_SCOPES } = options
@@ -45,7 +46,7 @@ export function buildMetaBusinessLoginUrl(options: BuildMetaAuthUrlOptions): str
     params.set('state', state)
   }
 
-  const finalUrl = `https://www.facebook.com/${META_GRAPH_API_VERSION}/dialog/oauth?${params.toString()}`
+  const finalUrl = `${META_OAUTH_DIALOG_BASE}/dialog/oauth?${params.toString()}`
 
   // Debug: Log all OAuth parameters (sanitized)
   logger.debug('[Meta OAuth] Generated login URL', {
@@ -55,7 +56,7 @@ export function buildMetaBusinessLoginUrl(options: BuildMetaAuthUrlOptions): str
     response_type: 'code',
     scopes: scopes.join(','),
     state_present: !!state,
-    api_version: META_GRAPH_API_VERSION,
+    api_version: META_API_VERSION,
   })
 
   return finalUrl
@@ -109,7 +110,7 @@ export class MetaTokenExchangeError extends Error {
 export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Promise<MetaTokenResponse> {
   const { appId, appSecret, redirectUri, code } = options
 
-  logger.info('[Meta OAuth] Starting code exchange', { apiVersion: META_GRAPH_API_VERSION })
+  logger.info('[Meta OAuth] Starting code exchange', { apiVersion: META_API_VERSION })
 
   if (!appId || !appSecret) {
     logger.error('[Meta OAuth] Missing app credentials')
@@ -132,10 +133,10 @@ export async function exchangeMetaCodeForToken(options: ExchangeCodeOptions): Pr
     code,
   })
 
-  const url = `https://graph.facebook.com/${META_GRAPH_API_VERSION}/oauth/access_token?${params.toString()}`
+  const url = `${META_OAUTH_TOKEN_ENDPOINT}?${params.toString()}`
 
   logger.debug('[Meta OAuth] Token exchange request', { 
-    apiVersion: META_GRAPH_API_VERSION,
+    apiVersion: META_API_VERSION,
     redirectUri 
   })
 

@@ -16,6 +16,7 @@ import {
     parseRetryAfterMs,
     sleepWithSignal,
 } from '@/lib/retry-utils'
+import { META_API_BASE } from '@/services/integrations/meta-ads/constants'
 
 const DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS = 45_000
 
@@ -344,7 +345,7 @@ export class IntegrationApiClient {
 
 export const metaAdsClient = new IntegrationApiClient({
     platform: 'meta',
-    baseUrl: 'https://graph.facebook.com/v24.0',
+    baseUrl: META_API_BASE,
     defaultTimeoutMs: DEFAULT_INTEGRATION_REQUEST_TIMEOUT_MS,
     isSuccess: (response, payload) => {
         // Meta returns 200 even for errors - check for error object in payload

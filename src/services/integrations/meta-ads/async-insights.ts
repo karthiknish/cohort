@@ -16,6 +16,65 @@ import {
 import { metaAdsClient } from '../shared/base-client'
 import type { MetaInsightsResponse, MetaInsightsRow, MetaPagingState } from './types'
 
+type MetaAsyncInsightsCallbacks = {
+  refreshAccessToken?: () => Promise<string>
+  onRateLimitHit?: (retryAfterMs: number) => void
+  onTokenRefresh?: () => void
+}
+
+type MetaAsyncInsightsRequestState = {
+  accessToken: string
+  tokenRefreshAttempted: boolean
+}
+
+function createMetaAsyncInsightsRequestState(accessToken: string): MetaAsyncInsightsRequestState {
+  return {
+    accessToken,
+    tokenRefreshAttempted: false,
+  }
+}
+
+async function executeMetaAsyncInsightsRequest<T>(options: {
+  url: string
+  operation: string
+  requestState: MetaAsyncInsightsRequestState
+  maxRetries?: number
+  method?: 'GET' | 'POST'
+  body?: string
+} & MetaAsyncInsightsCallbacks): Promise<{ response: Response; payload: T }> {
+  const {
+    url,
+    operation,
+    requestState,
+    maxRetries,
+    method,
+    body,
+    refreshAccessToken,
+    onRateLimitHit,
+    onTokenRefresh,
+  } = options
+
+  return metaAdsClient.executeRequest<T>({
+    url,
+    operation,
+    maxRetries,
+    method,
+    body,
+    headers: body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : undefined,
+    onAuthError: async () => {
+      if (refreshAccessToken && !requestState.tokenRefreshAttempted) {
+        requestState.tokenRefreshAttempted = true
+        requestState.accessToken = await refreshAccessToken()
+        onTokenRefresh?.()
+        return { retry: true, newToken: requestState.accessToken }
+      }
+
+      return { retry: false }
+    },
+    onRateLimitHit,
+  })
+}
+
 function formatAdAccountId(adAccountId: string): string {
   return adAccountId.startsWith('act_') ? adAccountId : `act_${adAccountId}`
 }
@@ -53,13 +112,21 @@ export type MetaAsyncInsightsJobStatus =
   | 'Job Skipped'
   | (string & {})
 
-export async function startMetaAccountInsightsReport(options: {
-  accessToken: string
+async function startMetaAccountInsightsReportInternal(options: {
   adAccountId: string
   timeframeDays: number
   maxRetries?: number
-}): Promise<{ reportRunId: string }> {
-  const { accessToken, adAccountId, timeframeDays, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries } = options
+  requestState: MetaAsyncInsightsRequestState
+} & MetaAsyncInsightsCallbacks): Promise<{ reportRunId: string }> {
+  const {
+    adAccountId,
+    timeframeDays,
+    maxRetries = DEFAULT_RETRY_CONFIG.maxRetries,
+    requestState,
+    refreshAccessToken,
+    onRateLimitHit,
+    onTokenRefresh,
+  } = options
 
   const timeRange = buildTimeRange(timeframeDays)
   const params = new URLSearchParams({
@@ -71,22 +138,29 @@ export async function startMetaAccountInsightsReport(options: {
     limit: '500',
   })
 
-  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+  await appendMetaAuthParams({
+    params,
+    accessToken: requestState.accessToken,
+    appSecret: process.env.META_APP_SECRET,
+  })
 
   const account = formatAdAccountId(adAccountId)
   const url = `${META_API_BASE}/${account}/insights`
 
-  const { payload } = await metaAdsClient.executeRequest<{
+  const { payload } = await executeMetaAsyncInsightsRequest<{
     report_run_id?: unknown
     id?: unknown
     error?: { message?: string }
   }>({
     url,
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params.toString(),
     operation: 'startMetaAccountInsightsReport',
     maxRetries,
+    requestState,
+    refreshAccessToken,
+    onRateLimitHit,
+    onTokenRefresh,
   })
 
   if (payload?.error) {
@@ -101,24 +175,57 @@ export async function startMetaAccountInsightsReport(options: {
   return { reportRunId }
 }
 
-export async function getMetaAsyncInsightsReportStatus(options: {
+export async function startMetaAccountInsightsReport(options: {
   accessToken: string
+  adAccountId: string
+  timeframeDays: number
+  maxRetries?: number
+  refreshAccessToken?: () => Promise<string>
+  onRateLimitHit?: (retryAfterMs: number) => void
+  onTokenRefresh?: () => void
+}): Promise<{ reportRunId: string }> {
+  const requestState = createMetaAsyncInsightsRequestState(options.accessToken)
+
+  return startMetaAccountInsightsReportInternal({
+    adAccountId: options.adAccountId,
+    timeframeDays: options.timeframeDays,
+    maxRetries: options.maxRetries,
+    requestState,
+    refreshAccessToken: options.refreshAccessToken,
+    onRateLimitHit: options.onRateLimitHit,
+    onTokenRefresh: options.onTokenRefresh,
+  })
+}
+
+async function getMetaAsyncInsightsReportStatusInternal(options: {
   reportRunId: string
   maxRetries?: number
-}): Promise<{
+  requestState: MetaAsyncInsightsRequestState
+} & MetaAsyncInsightsCallbacks): Promise<{
   status: MetaAsyncInsightsJobStatus
   percentComplete: number
 }> {
-  const { accessToken, reportRunId, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries } = options
+  const {
+    reportRunId,
+    maxRetries = DEFAULT_RETRY_CONFIG.maxRetries,
+    requestState,
+    refreshAccessToken,
+    onRateLimitHit,
+    onTokenRefresh,
+  } = options
 
   const params = new URLSearchParams({
     fields: 'async_status,async_percent_completion,account_id',
   })
-  await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+  await appendMetaAuthParams({
+    params,
+    accessToken: requestState.accessToken,
+    appSecret: process.env.META_APP_SECRET,
+  })
 
   const url = `${META_API_BASE}/${reportRunId}?${params.toString()}`
 
-  const { payload } = await metaAdsClient.executeRequest<{
+  const { payload } = await executeMetaAsyncInsightsRequest<{
     async_status?: string
     async_percent_completion?: number
     error?: { message?: string }
@@ -126,6 +233,10 @@ export async function getMetaAsyncInsightsReportStatus(options: {
     url,
     operation: 'getMetaAsyncInsightsReportStatus',
     maxRetries,
+    requestState,
+    refreshAccessToken,
+    onRateLimitHit,
+    onTokenRefresh,
   })
 
   if (payload?.error) {
@@ -141,20 +252,55 @@ export async function getMetaAsyncInsightsReportStatus(options: {
   return { status, percentComplete }
 }
 
-export async function fetchMetaAsyncInsightsReportRows(options: {
+export async function getMetaAsyncInsightsReportStatus(options: {
   accessToken: string
+  reportRunId: string
+  maxRetries?: number
+  refreshAccessToken?: () => Promise<string>
+  onRateLimitHit?: (retryAfterMs: number) => void
+  onTokenRefresh?: () => void
+}): Promise<{
+  status: MetaAsyncInsightsJobStatus
+  percentComplete: number
+}> {
+  const requestState = createMetaAsyncInsightsRequestState(options.accessToken)
+
+  return getMetaAsyncInsightsReportStatusInternal({
+    reportRunId: options.reportRunId,
+    maxRetries: options.maxRetries,
+    requestState,
+    refreshAccessToken: options.refreshAccessToken,
+    onRateLimitHit: options.onRateLimitHit,
+    onTokenRefresh: options.onTokenRefresh,
+  })
+}
+
+async function fetchMetaAsyncInsightsReportRowsInternal(options: {
   reportRunId: string
   maxPages?: number
   maxRetries?: number
-}): Promise<MetaInsightsRow[]> {
-  const { accessToken, reportRunId, maxPages = 25, maxRetries = DEFAULT_RETRY_CONFIG.maxRetries } = options
+  requestState: MetaAsyncInsightsRequestState
+} & MetaAsyncInsightsCallbacks): Promise<MetaInsightsRow[]> {
+  const {
+    reportRunId,
+    maxPages = 25,
+    maxRetries = DEFAULT_RETRY_CONFIG.maxRetries,
+    requestState,
+    refreshAccessToken,
+    onRateLimitHit,
+    onTokenRefresh,
+  } = options
 
   const rows: MetaInsightsRow[] = []
   let paging: MetaPagingState | undefined
 
   for (let page = 0; page < maxPages; page += 1) {
     const params = new URLSearchParams({ limit: '500' })
-    await appendMetaAuthParams({ params, accessToken, appSecret: process.env.META_APP_SECRET })
+    await appendMetaAuthParams({
+      params,
+      accessToken: requestState.accessToken,
+      appSecret: process.env.META_APP_SECRET,
+    })
 
     if (paging?.after) {
       params.set('after', paging.after)
@@ -162,10 +308,14 @@ export async function fetchMetaAsyncInsightsReportRows(options: {
 
     const url = `${META_API_BASE}/${reportRunId}/insights?${params.toString()}`
 
-    const { payload } = await metaAdsClient.executeRequest<MetaInsightsResponse>({
+    const { payload } = await executeMetaAsyncInsightsRequest<MetaInsightsResponse>({
       url,
       operation: `fetchMetaAsyncInsightsReportRows:page${page}`,
       maxRetries,
+      requestState,
+      refreshAccessToken,
+      onRateLimitHit,
+      onTokenRefresh,
     })
 
     const batch = Array.isArray(payload?.data) ? payload.data : []
@@ -181,25 +331,57 @@ export async function fetchMetaAsyncInsightsReportRows(options: {
   return rows
 }
 
-export async function waitForMetaAsyncInsightsReport(options: {
+export async function fetchMetaAsyncInsightsReportRows(options: {
   accessToken: string
+  reportRunId: string
+  maxPages?: number
+  maxRetries?: number
+  refreshAccessToken?: () => Promise<string>
+  onRateLimitHit?: (retryAfterMs: number) => void
+  onTokenRefresh?: () => void
+}): Promise<MetaInsightsRow[]> {
+  const requestState = createMetaAsyncInsightsRequestState(options.accessToken)
+
+  return fetchMetaAsyncInsightsReportRowsInternal({
+    reportRunId: options.reportRunId,
+    maxPages: options.maxPages,
+    maxRetries: options.maxRetries,
+    requestState,
+    refreshAccessToken: options.refreshAccessToken,
+    onRateLimitHit: options.onRateLimitHit,
+    onTokenRefresh: options.onTokenRefresh,
+  })
+}
+
+async function waitForMetaAsyncInsightsReportInternal(options: {
   reportRunId: string
   maxWaitMs?: number
   pollIntervalMs?: number
   maxRetries?: number
-}): Promise<{ status: MetaAsyncInsightsJobStatus }> {
+  requestState: MetaAsyncInsightsRequestState
+} & MetaAsyncInsightsCallbacks): Promise<{ status: MetaAsyncInsightsJobStatus }> {
   const {
-    accessToken,
     reportRunId,
     maxWaitMs = 180_000,
     pollIntervalMs = 2_000,
     maxRetries,
+    requestState,
+    refreshAccessToken,
+    onRateLimitHit,
+    onTokenRefresh,
   } = options
 
   const deadline = Date.now() + maxWaitMs
 
   while (Date.now() < deadline) {
-    const { status } = await getMetaAsyncInsightsReportStatus({ accessToken, reportRunId, maxRetries })
+    const { status } = await getMetaAsyncInsightsReportStatusInternal({
+      reportRunId,
+      maxRetries,
+      requestState,
+      refreshAccessToken,
+      onRateLimitHit,
+      onTokenRefresh,
+    })
 
     if (status === 'Job Completed') {
       return { status }
@@ -214,6 +396,30 @@ export async function waitForMetaAsyncInsightsReport(options: {
   throw new Error('Meta async insights: timed out waiting for Job Completed')
 }
 
+export async function waitForMetaAsyncInsightsReport(options: {
+  accessToken: string
+  reportRunId: string
+  maxWaitMs?: number
+  pollIntervalMs?: number
+  maxRetries?: number
+  refreshAccessToken?: () => Promise<string>
+  onRateLimitHit?: (retryAfterMs: number) => void
+  onTokenRefresh?: () => void
+}): Promise<{ status: MetaAsyncInsightsJobStatus }> {
+  const requestState = createMetaAsyncInsightsRequestState(options.accessToken)
+
+  return waitForMetaAsyncInsightsReportInternal({
+    reportRunId: options.reportRunId,
+    maxWaitMs: options.maxWaitMs,
+    pollIntervalMs: options.pollIntervalMs,
+    maxRetries: options.maxRetries,
+    requestState,
+    refreshAccessToken: options.refreshAccessToken,
+    onRateLimitHit: options.onRateLimitHit,
+    onTokenRefresh: options.onTokenRefresh,
+  })
+}
+
 /**
  * Convenience: start job, block until complete, return raw insight rows (same shape as sync insights).
  * For production sync, prefer start + store reportRunId + poll from a worker instead of blocking.
@@ -226,26 +432,40 @@ export async function runMetaAccountInsightsReportToCompletion(options: {
   pollIntervalMs?: number
   maxPages?: number
   maxRetries?: number
+  refreshAccessToken?: () => Promise<string>
+  onRateLimitHit?: (retryAfterMs: number) => void
+  onTokenRefresh?: () => void
 }): Promise<MetaInsightsRow[]> {
-  const { reportRunId } = await startMetaAccountInsightsReport({
-    accessToken: options.accessToken,
+  const requestState = createMetaAsyncInsightsRequestState(options.accessToken)
+
+  const { reportRunId } = await startMetaAccountInsightsReportInternal({
     adAccountId: options.adAccountId,
     timeframeDays: options.timeframeDays,
     maxRetries: options.maxRetries,
+    requestState,
+    refreshAccessToken: options.refreshAccessToken,
+    onRateLimitHit: options.onRateLimitHit,
+    onTokenRefresh: options.onTokenRefresh,
   })
 
-  await waitForMetaAsyncInsightsReport({
-    accessToken: options.accessToken,
+  await waitForMetaAsyncInsightsReportInternal({
     reportRunId,
     maxWaitMs: options.maxWaitMs,
     pollIntervalMs: options.pollIntervalMs,
     maxRetries: options.maxRetries,
+    requestState,
+    refreshAccessToken: options.refreshAccessToken,
+    onRateLimitHit: options.onRateLimitHit,
+    onTokenRefresh: options.onTokenRefresh,
   })
 
-  return fetchMetaAsyncInsightsReportRows({
-    accessToken: options.accessToken,
+  return fetchMetaAsyncInsightsReportRowsInternal({
     reportRunId,
     maxPages: options.maxPages,
     maxRetries: options.maxRetries,
+    requestState,
+    refreshAccessToken: options.refreshAccessToken,
+    onRateLimitHit: options.onRateLimitHit,
+    onTokenRefresh: options.onTokenRefresh,
   })
 }

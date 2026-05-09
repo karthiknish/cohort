@@ -114,7 +114,11 @@ export function AgentModePanel({
   // Focus input when panel opens
   useEffect(() => {
     if (isOpen && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100)
+      const focusTimeoutId = window.setTimeout(() => inputRef.current?.focus(), 100)
+
+      return () => {
+        window.clearTimeout(focusTimeoutId)
+      }
     }
   }, [isOpen])
 

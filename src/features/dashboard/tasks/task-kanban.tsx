@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useId, useMemo, useState } from 'react'
+import { useCallback, useId, useMemo, useReducer } from 'react'
 import { Calendar, ChevronsDownUp, ChevronsUpDown, Columns3, Eye, GripVertical, ListTodo, LoaderCircle, RefreshCw, TriangleAlert } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -50,6 +50,76 @@ type DraggedTask = {
   sourceStatus: TaskStatus
 }
 
+type TaskKanbanState = {
+  draggedTask: DraggedTask | null
+  dragOverStatus: TaskStatus | null
+  collapsedTaskIds: Set<string>
+  viewingTask: TaskRecord | null
+  boardAnnouncement: string
+}
+
+type TaskKanbanAction =
+  | { type: 'toggleCollapsed'; taskId: string }
+  | { type: 'startDrag'; draggedTask: DraggedTask }
+  | { type: 'setDragOverStatus'; status: TaskStatus | null }
+  | { type: 'resetDragState' }
+  | { type: 'setBoardAnnouncement'; message: string }
+  | { type: 'setViewingTask'; task: TaskRecord | null }
+
+const INITIAL_TASK_KANBAN_STATE: TaskKanbanState = {
+  draggedTask: null,
+  dragOverStatus: null,
+  collapsedTaskIds: new Set<string>(),
+  viewingTask: null,
+  boardAnnouncement: '',
+}
+
+function taskKanbanReducer(state: TaskKanbanState, action: TaskKanbanAction): TaskKanbanState {
+  switch (action.type) {
+    case 'toggleCollapsed': {
+      const nextCollapsedTaskIds = new Set(state.collapsedTaskIds)
+      if (nextCollapsedTaskIds.has(action.taskId)) {
+        nextCollapsedTaskIds.delete(action.taskId)
+      } else {
+        nextCollapsedTaskIds.add(action.taskId)
+      }
+
+      return {
+        ...state,
+        collapsedTaskIds: nextCollapsedTaskIds,
+      }
+    }
+    case 'startDrag':
+      return {
+        ...state,
+        draggedTask: action.draggedTask,
+      }
+    case 'setDragOverStatus':
+      return {
+        ...state,
+        dragOverStatus: action.status,
+      }
+    case 'resetDragState':
+      return {
+        ...state,
+        draggedTask: null,
+        dragOverStatus: null,
+      }
+    case 'setBoardAnnouncement':
+      return {
+        ...state,
+        boardAnnouncement: action.message,
+      }
+    case 'setViewingTask':
+      return {
+        ...state,
+        viewingTask: action.task,
+      }
+    default:
+      return state
+  }
+}
+
 const EMPTY_SELECTED_TASK_IDS = new Set<string>()
 const EMPTY_TASK_PARTICIPANTS: TaskParticipant[] = []
 const KANBAN_STATUSES = TASK_STATUSES.filter((status): status is TaskStatus => status !== 'archived')
@@ -83,23 +153,14 @@ export function TaskKanban({
   userRole = null,
   participants = EMPTY_TASK_PARTICIPANTS,
 }: TaskKanbanProps) {
-  const [draggedTask, setDraggedTask] = useState<DraggedTask | null>(null)
-  const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null)
-  const [collapsedTaskIds, setCollapsedTaskIds] = useState<Set<string>>(new Set())
-  const [viewingTask, setViewingTask] = useState<TaskRecord | null>(null)
-  const [boardAnnouncement, setBoardAnnouncement] = useState('')
+  const [{ draggedTask, dragOverStatus, collapsedTaskIds, viewingTask, boardAnnouncement }, dispatch] = useReducer(
+    taskKanbanReducer,
+    INITIAL_TASK_KANBAN_STATE,
+  )
   const keyboardInstructionsId = useId()
 
   const toggleCollapsed = useCallback((taskId: string) => {
-    setCollapsedTaskIds((current) => {
-      const next = new Set(current)
-      if (next.has(taskId)) {
-        next.delete(taskId)
-      } else {
-        next.add(taskId)
-      }
-      return next
-    })
+    dispatch({ type: 'toggleCollapsed', taskId })
   }, [])
 
   const columns = useMemo(
@@ -114,7 +175,10 @@ export function TaskKanban({
 
   const handleDragStart = useCallback((e: React.DragEvent, task: TaskRecord) => {
     if (bulkActive) return // Disable drag during bulk operations
-    setDraggedTask({ id: task.id, sourceStatus: task.status })
+    dispatch({
+      type: 'startDrag',
+      draggedTask: { id: task.id, sourceStatus: task.status },
+    })
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', task.id)
   }, [bulkActive])
@@ -123,27 +187,30 @@ export function TaskKanban({
     if (bulkActive) return
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
-    setDragOverStatus(status)
+    dispatch({ type: 'setDragOverStatus', status })
   }, [bulkActive])
 
   const handleDragLeave = useCallback(() => {
-    setDragOverStatus(null)
+    dispatch({ type: 'setDragOverStatus', status: null })
   }, [])
 
   const handleDrop = useCallback(
     (e: React.DragEvent, targetStatus: TaskStatus) => {
       e.preventDefault()
-      setDragOverStatus(null)
+      dispatch({ type: 'setDragOverStatus', status: null })
 
       if (!draggedTask || bulkActive) return
 
       const task = tasks.find((t) => t.id === draggedTask.id)
       if (task && draggedTask.sourceStatus !== targetStatus) {
-        setBoardAnnouncement(`${task.title} moved to ${formatStatusLabel(targetStatus)}.`)
+        dispatch({
+          type: 'setBoardAnnouncement',
+          message: `${task.title} moved to ${formatStatusLabel(targetStatus)}.`,
+        })
         onQuickStatusChange(task, targetStatus)
       }
 
-      setDraggedTask(null)
+      dispatch({ type: 'resetDragState' })
     },
     [draggedTask, tasks, onQuickStatusChange, bulkActive]
   )
@@ -160,28 +227,33 @@ export function TaskKanban({
         : KANBAN_STATUSES[currentIndex + 1]
 
       if (!targetStatus) {
-        setBoardAnnouncement(`${task.title} is already in the ${formatStatusLabel(task.status)} column.`)
+        dispatch({
+          type: 'setBoardAnnouncement',
+          message: `${task.title} is already in the ${formatStatusLabel(task.status)} column.`,
+        })
         return
       }
 
-      setBoardAnnouncement(`${task.title} moved to ${formatStatusLabel(targetStatus)}.`)
+      dispatch({
+        type: 'setBoardAnnouncement',
+        message: `${task.title} moved to ${formatStatusLabel(targetStatus)}.`,
+      })
       onQuickStatusChange(task, targetStatus)
     },
     [bulkActive, onQuickStatusChange, pendingStatusUpdates]
   )
 
   const handleDragEnd = useCallback(() => {
-    setDraggedTask(null)
-    setDragOverStatus(null)
+    dispatch({ type: 'resetDragState' })
   }, [])
 
   const handleViewTask = useCallback((task: TaskRecord) => {
-    setViewingTask(task)
+    dispatch({ type: 'setViewingTask', task })
   }, [])
 
   const handleViewingTaskDialogOpenChange = useCallback((open: boolean) => {
     if (!open) {
-      setViewingTask(null)
+      dispatch({ type: 'setViewingTask', task: null })
     }
   }, [])
 
@@ -275,6 +347,7 @@ export function TaskKanban({
             <KanbanColumn
               key={column.status}
               bulkActive={bulkActive}
+              collapsedTaskIds={collapsedTaskIds}
               column={column}
               dragOverStatus={dragOverStatus}
               draggedTask={draggedTask}
@@ -327,6 +400,7 @@ export function TaskKanban({
 
 function KanbanColumn({
   bulkActive,
+  collapsedTaskIds,
   column,
   dragOverStatus,
   draggedTask,
@@ -349,6 +423,7 @@ function KanbanColumn({
   selectedTaskIds,
 }: {
   bulkActive: boolean
+  collapsedTaskIds: Set<string>
   column: { status: TaskStatus; label: string; items: TaskRecord[] }
   dragOverStatus: TaskStatus | null
   draggedTask: DraggedTask | null
@@ -431,7 +506,7 @@ function KanbanColumn({
               bulkActive={bulkActive}
               handleDragEnd={handleDragEnd}
               handleViewTask={handleViewTask}
-              isCollapsed={false}
+              isCollapsed={collapsedTaskIds.has(task.id)}
               isDragging={draggedTask?.id === task.id}
               keyboardInstructionsId={keyboardInstructionsId}
               onClone={onClone}

@@ -214,6 +214,9 @@ async function fetchMetaAdsMetricsInternal(options: MetaAdsOptions): Promise<Nor
       timeframeDays,
       maxPages,
       maxRetries,
+      refreshAccessToken,
+      onRateLimitHit,
+      onTokenRefresh,
       maxWaitMs: Number.isFinite(maxWaitParsed) ? maxWaitParsed : undefined,
       pollIntervalMs: Number.isFinite(pollParsed) ? pollParsed : undefined,
     })

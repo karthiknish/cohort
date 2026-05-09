@@ -1,6 +1,7 @@
 import { action } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from './errors'
+import { META_API_BASE } from '@/services/integrations/meta-ads/constants'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -180,7 +181,7 @@ export const listCampaigns = action({
       (async () => {
         try {
           const res = await fetch(
-            `https://graph.facebook.com/v24.0/${adAccountId}?fields=currency,name,promote_pages{name,picture}&access_token=${integration.accessToken}`
+            `${META_API_BASE}/${adAccountId}?fields=currency,name,promote_pages{name,picture}&access_token=${integration.accessToken}`
           )
           const data =
             (await res.json().catch(() => ({}))) as {

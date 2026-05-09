@@ -10,15 +10,14 @@ import { coerceNumber as coerceNumberNullable } from '@/lib/utils'
 
 import { metaAdsClient } from '../shared/base-client'
 import { executeIntegrationRequest } from '../shared/execute-integration-request'
+import { META_API_BASE, META_API_VERSION } from './constants'
 
 export { DEFAULT_RETRY_CONFIG, calculateBackoffDelay, isRetryableStatus, sleep } from '../shared/retry'
+export { META_API_BASE, META_API_VERSION } from './constants'
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
-
-export const META_API_VERSION = 'v24.0'
-export const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`
 
 // =============================================================================
 // UTILITY FUNCTIONS
