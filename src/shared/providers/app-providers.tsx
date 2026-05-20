@@ -8,7 +8,6 @@ import { AnalyticsProvider } from '@/shared/providers/analytics-provider'
 import { PostHogProvider } from '@/shared/providers/posthog-provider'
 import { ConvexClientProvider } from '@/shared/providers/convex-provider'
 import { QueryProvider } from '@/shared/providers/query-provider'
-import { Toaster } from '@/shared/ui/toaster'
 import { Toaster as SonnerToaster } from '@/shared/ui/sonner'
 
 interface AppProvidersProps {
@@ -26,7 +25,6 @@ export function AppProviders({ children, initialToken }: AppProvidersProps) {
               <AnalyticsProvider>
                 <PostHogProvider>
                   {children}
-                  <Toaster />
                   <SonnerToaster />
                 </PostHogProvider>
               </AnalyticsProvider>

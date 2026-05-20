@@ -48,7 +48,7 @@ import { CommandMenuDynamic } from '@/shared/layout/navigation/command-menu-dyna
 import { HelpModal, useHelpModal } from '@/shared/layout/navigation/help-modal'
 import { KeyboardShortcutBadge, useKeyboardShortcuts } from '@/shared/hooks/use-keyboard-shortcuts'
 import { ProblemReportModal } from '@/shared/layout/navigation/problem-report-modal'
-import { toast } from '@/shared/ui/sonner'
+import { notifyFailure } from '@/lib/notifications'
 import { KeyboardShortcutsOverlay } from '@/shared/layout/navigation/keyboard-shortcuts-overlay'
 import { getShortcutsForRole } from '@/shared/layout/navigation/keyboard-shortcuts'
 import {
@@ -385,7 +385,11 @@ export function Header() {
     setOpen(false)
     void signOut().catch((err: unknown) => {
       const message = err instanceof Error ? err.message : 'Sign out failed. You were signed out locally; try again or clear cookies if issues persist.'
-      toast.error('Sign out incomplete', { description: message })
+      notifyFailure({
+        title: 'Sign out incomplete',
+        message,
+        fallbackMessage: 'Sign out failed. You were signed out locally; try again or clear cookies if issues persist.',
+      })
     })
   }, [signOut])
   const handleShowOnboarding = useCallback(() => {

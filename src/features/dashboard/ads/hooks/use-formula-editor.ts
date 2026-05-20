@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
@@ -185,14 +186,20 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
         input: CreateCustomFormulaInput
     ): Promise<CustomFormula | null> => {
         if (!selectedClientId || !user?.id) {
-            toast({ title: 'Error', description: 'Not authenticated', variant: 'destructive' })
+            notifyFailure({
+        title: 'Error',
+        message: 'Not authenticated',
+      })
             return null
         }
 
         // Validate formula first
         const validation = validateFormulaSyntax(input.formula)
         if (!validation.valid) {
-            toast({ title: 'Invalid Formula', description: validation.error, variant: 'destructive' })
+            notifyFailure({
+              title: 'Invalid Formula',
+              message: validation.error ?? 'Invalid formula',
+            })
             return null
         }
 
@@ -216,7 +223,10 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
             return created
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to create formula'
-            toast({ title: 'Error', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Error',
+        message: message,
+      })
             return null
         }
     }, [selectedClientId, user?.id, toast, createFormulaMutation, formulasFromQuery])
@@ -231,7 +241,10 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
         if (input.formula) {
             const validation = validateFormulaSyntax(input.formula)
             if (!validation.valid) {
-                toast({ title: 'Invalid Formula', description: validation.error, variant: 'destructive' })
+                notifyFailure({
+                  title: 'Invalid Formula',
+                  message: validation.error ?? 'Invalid formula',
+                })
                 return
             }
         }
@@ -251,7 +264,10 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
             toast({ title: 'Formula Updated' })
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to update formula'
-            toast({ title: 'Error', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Error',
+        message: message,
+      })
         }
     }, [selectedClientId, toast, updateFormulaMutation])
 
@@ -264,7 +280,10 @@ export function useFormulaEditor(options: UseFormulaEditorOptions = {}): UseForm
             toast({ title: 'Formula Deleted' })
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to delete formula'
-            toast({ title: 'Error', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Error',
+        message: message,
+      })
         }
     }, [selectedClientId, toast, removeFormulaMutation])
 

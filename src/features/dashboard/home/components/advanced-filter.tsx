@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useState, useCallback } from 'react'
 import { Filter, X, Save } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
@@ -144,10 +145,9 @@ export function AdvancedFilter({
 
   const saveCurrentConfig = useCallback(() => {
     if (!filterName.trim()) {
-      toast({
+      notifyFailure({
         title: 'Filter name required',
-        description: 'Please enter a name for this filter configuration.',
-        variant: 'destructive',
+        message: 'Please enter a name for this filter configuration.',
       })
       return
     }

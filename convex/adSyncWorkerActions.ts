@@ -319,7 +319,7 @@ export const runManualSync = action({
   handler: async (ctx, args): Promise<{ synced: boolean }> => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) {
-      throw new Error('Authentication required')
+      throw Errors.auth.unauthorized()
     }
 
     const clientId =

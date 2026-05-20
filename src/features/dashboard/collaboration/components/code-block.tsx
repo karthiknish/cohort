@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useState, useCallback, useMemo } from 'react'
 import { Copy, Check, Code, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
@@ -67,12 +68,12 @@ export function CodeBlock({
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (error) {
-      logError(error, 'CodeBlock:handleCopy')
-      toast({
+      reportConvexFailure({
+        error: error,
+        context: 'CodeBlock:handleCopy',
         title: 'Copy failed',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
+        fallbackMessage: 'Copy failed',
+        })
     }
   }, [code, toast])
 

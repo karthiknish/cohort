@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCreateLayoutContext } from '@/shared/ui/livekit'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -420,10 +422,9 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
 
   const handleGenerateNotes = useCallback(async () => {
     if (!canGenerateNotes) {
-      toast({
-        variant: 'destructive',
+      notifyFailure({
         title: 'Transcript too short',
-        description: 'Capture a bit more conversation before generating AI meeting notes.',
+        message: 'Capture a bit more conversation before generating AI meeting notes.',
       })
       return
     }
@@ -447,25 +448,24 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
           description: 'The room sidebar now reflects the latest generated summary.',
         })
       } else if (result.notesReason === 'ai_not_configured') {
-        toast({
-          variant: 'destructive',
-          title: 'AI notes unavailable',
-          description: 'Gemini is not configured for meeting note generation in this environment.',
-        })
+        notifyFailure({
+        title: 'AI notes unavailable',
+        message: 'Gemini is not configured for meeting note generation in this environment.',
+      })
       } else if (result.notesReason === 'generation_failed') {
-        toast({
-          variant: 'destructive',
-          title: 'AI summary failed',
-          description: 'The request completed, but note generation failed. Try again after more transcript is captured.',
-        })
+        notifyFailure({
+        title: 'AI summary failed',
+        message: 'The request completed, but note generation failed. Try again after more transcript is captured.',
+      })
       }
     } catch (error) {
       setNotesProcessingState('failed')
       setNotesProcessingError(error instanceof Error ? error.message : 'Unknown error')
-      toast({
-        variant: 'destructive',
+      reportConvexFailure({
+        error,
+        context: 'useInSiteMeetingRoomController:generateNotes',
         title: 'AI summary failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        fallbackMessage: 'Unable to generate meeting notes.',
       })
     } finally {
       setGeneratingNotes(false)
@@ -474,19 +474,17 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
 
   const handleRetryPostCallProcessing = useCallback(async () => {
     if (!canPersist) {
-      toast({
-        variant: 'destructive',
+      notifyFailure({
         title: 'Post-call retry unavailable',
-        description: 'This meeting cannot persist transcript updates in the current environment.',
+        message: 'This meeting cannot persist transcript updates in the current environment.',
       })
       return
     }
 
     if (normalizedTranscript.length < 20) {
-      toast({
-        variant: 'destructive',
+      notifyFailure({
         title: 'Transcript too short',
-        description: 'Capture a little more conversation before retrying post-call processing.',
+        message: 'Capture a little more conversation before retrying post-call processing.',
       })
       return
     }
@@ -547,10 +545,9 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
           notesProcessingError: 'AI notes could not be generated because post-call finalization failed.',
         }),
       )
-      toast({
-        variant: 'destructive',
+      notifyFailure({
         title: 'Post-call retry failed',
-        description: message,
+        message: message,
       })
     } finally {
       setRetryingPostCallProcessing(false)
@@ -569,20 +566,18 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
 
   const togglePictureInPicture = useCallback(async () => {
     if (!joinConfig) {
-      toast({
-        variant: 'destructive',
+      notifyFailure({
         title: 'Join the room first',
-        description: 'Picture in Picture becomes available once the LiveKit room is active.',
+        message: 'Picture in Picture becomes available once the LiveKit room is active.',
       })
       return
     }
 
     const video = getRoomVideoElement()
     if (!video) {
-      toast({
-        variant: 'destructive',
+      notifyFailure({
         title: 'Video unavailable',
-        description: 'Turn on camera or wait for a participant video tile before entering Picture in Picture.',
+        message: 'Turn on camera or wait for a participant video tile before entering Picture in Picture.',
       })
       return
     }
@@ -619,10 +614,11 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
 
       throw new Error('Picture in Picture is not supported in this browser.')
     } catch (error) {
-      toast({
-        variant: 'destructive',
+      reportConvexFailure({
+        error,
+        context: 'useInSiteMeetingRoomController:enterPictureInPicture',
         title: 'Picture in Picture unavailable',
-        description: error instanceof Error ? error.message : 'This browser could not enter Picture in Picture mode.',
+        fallbackMessage: 'Picture in Picture is not available in this browser.',
       })
     }
   }, [getRoomVideoElement, joinConfig, toast])

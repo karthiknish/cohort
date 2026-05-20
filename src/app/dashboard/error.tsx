@@ -1,5 +1,6 @@
 'use client'
 
+import { logRouteError } from '@/shared/ui/log-route-error'
 import { useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -14,10 +15,9 @@ export default function DashboardError({ error, unstable_retry, reset }: Dashboa
   const { replace, refresh } = useRouter()
 
   useEffect(() => {
-    console.error('[DashboardErrorBoundary]', error)
-
+    logRouteError(error, 'dashboard')
     if (typeof error.componentStack === 'string' && error.componentStack.length > 0) {
-      console.error('[DashboardErrorBoundary] componentStack:', error.componentStack)
+      console.error('[RouteError:dashboard] componentStack:', error.componentStack)
     }
   }, [error])
 

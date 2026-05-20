@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useConvexAuth } from 'convex/react'
 import Link from 'next/link'
@@ -527,12 +528,12 @@ export function useHelpModal() {
       welcomeSeen: true,
       welcomeSeenAtMs: Date.now(),
     }).catch((error: unknown) => {
-      logError(error, 'useHelpModal:markWelcomeSeen')
-      toast({
+      reportConvexFailure({
+        error: error,
+        context: 'useHelpModal:markWelcomeSeen',
         title: 'Could not save welcome state',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
+        fallbackMessage: 'Could not save welcome state',
+        })
     })
   }
 

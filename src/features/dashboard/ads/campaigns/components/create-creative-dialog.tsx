@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAction } from 'convex/react'
 import { Plus } from 'lucide-react'
@@ -230,10 +232,11 @@ export function CreateCreativeDialog({
         setMetaPageActors([])
         setPageId('')
         setInstagramActorId('')
-        toast({
-          title: 'Failed to load Meta pages',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'create-creative-dialog.tsx:catch',
+        title: 'Failed to load Meta pages',
+        fallbackMessage: 'Failed to load Meta pages',
         })
       })
       .finally(() => {
@@ -254,22 +257,20 @@ export function CreateCreativeDialog({
       if (!file) return
 
       if (providerId !== 'facebook') {
-        toast({
-          title: 'Platform not supported',
-          description: 'Image upload is currently only supported for Meta (Facebook/Instagram) ads.',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Platform not supported',
+        message: 'Image upload is currently only supported for Meta (Facebook/Instagram) ads.',
+      })
         return
       }
 
       setUploadingImage(true)
 
       if (!workspaceId) {
-        toast({
-          title: 'Upload failed',
-          description: 'Sign in required',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Upload failed',
+        message: 'Sign in required',
+      })
         setUploadingImage(false)
         return
       }
@@ -301,12 +302,12 @@ export function CreateCreativeDialog({
           }
         })
         .catch((error) => {
-          logError(error, 'CreateCreativeDialog:handleImageUpload')
-          toast({
-            title: 'Upload failed',
-            description: asErrorMessage(error),
-            variant: 'destructive',
-          })
+          reportConvexFailure({
+        error: error,
+        context: 'CreateCreativeDialog:handleImageUpload',
+        title: 'Upload failed',
+        fallbackMessage: 'Upload failed',
+        })
         })
         .finally(() => {
           setUploadingImage(false)
@@ -320,56 +321,50 @@ export function CreateCreativeDialog({
       e.preventDefault()
 
       if (!workspaceId) {
-        toast({
-          title: 'Error',
-          description: 'Sign in required',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Error',
+        message: 'Sign in required',
+      })
         return
       }
 
       if (!name.trim()) {
-        toast({
-          title: 'Validation error',
-          description: 'Creative name is required',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Validation error',
+        message: 'Creative name is required',
+      })
         return
       }
 
       if (providerId !== 'facebook') {
-        toast({
-          title: 'Platform not supported',
-          description: 'Creating creatives is currently only supported for Meta (Facebook/Instagram) ads.',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Platform not supported',
+        message: 'Creating creatives is currently only supported for Meta (Facebook/Instagram) ads.',
+      })
         return
       }
 
       if (!selectedAdSetId) {
-        toast({
-          title: 'Ad Set required',
-          description: 'Please select an ad set to create the ad.',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Ad Set required',
+        message: 'Please select an ad set to create the ad.',
+      })
         return
       }
 
       if (!pageId) {
-        toast({
-          title: 'Facebook Page required',
-          description: 'Select a Facebook Page before creating a Meta creative.',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Facebook Page required',
+        message: 'Select a Facebook Page before creating a Meta creative.',
+      })
         return
       }
 
       if (!metaPageActors.some((actor) => actor.id === pageId)) {
-        toast({
-          title: 'Invalid Facebook Page',
-          description: 'The selected page is no longer available. Reload the page list and try again.',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Invalid Facebook Page',
+        message: 'The selected page is no longer available. Reload the page list and try again.',
+      })
         return
       }
 
@@ -417,12 +412,12 @@ export function CreateCreativeDialog({
           onSuccess?.()
         })
         .catch((error) => {
-          logError(error, 'CreateCreativeDialog:handleSubmit')
-          toast({
-            title: 'Creation failed',
-            description: asErrorMessage(error),
-            variant: 'destructive',
-          })
+          reportConvexFailure({
+        error: error,
+        context: 'CreateCreativeDialog:handleSubmit',
+        title: 'Creation failed',
+        fallbackMessage: 'Creation failed',
+        })
         })
         .finally(() => {
           setLoading(false)

@@ -11,6 +11,7 @@ import { mergeProposalForm } from '@/lib/proposals'
 import type { ProposalDraft } from '@/types/proposals'
 import { adsMetricsApi, proposalsApi, tasksApi } from '@/lib/convex-api'
 import { emitDashboardRefresh, onDashboardRefresh } from '@/lib/refresh-bus'
+import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import { getWorkspaceId } from '@/lib/utils'
 
 export interface UseDashboardDataOptions {
@@ -54,9 +55,9 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     const canQueryConvex = isConvexAuthenticated && !isConvexLoading && !!user?.id && !!workspaceId
 
     const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
-    const [metricsError, setMetricsError] = useState<string | null>(null)
-    const [tasksError, setTasksError] = useState<string | null>(null)
-    const [proposalsError, setProposalsError] = useState<string | null>(null)
+    const [shapeMetricsError, setShapeMetricsError] = useState<string | null>(null)
+    const [shapeTasksError, setShapeTasksError] = useState<string | null>(null)
+    const [shapeProposalsError, setShapeProposalsError] = useState<string | null>(null)
 
     const proposalsArgs = useMemo(() => (usePreviewData || !workspaceId || !canQueryConvex
             ? 'skip'
@@ -101,6 +102,33 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
             }), [usePreviewData, workspaceId, canQueryConvex, selectedClientId])
 
     const metricsRealtime = useQuery(adsMetricsApi.listMetricsWithSummary, metricsArgs) as { metrics: MetricRecord[] } | undefined
+
+    const metricsSkipped = usePreviewData || !workspaceId || !canQueryConvex
+    const tasksSkipped = usePreviewData || !workspaceId || !canQueryConvex || !user?.id
+    const proposalsSkipped = usePreviewData || !workspaceId || !canQueryConvex
+
+    const metricsQueryError = useConvexQueryError({
+        data: metricsRealtime,
+        skipped: metricsSkipped,
+        loading: !metricsSkipped && metricsRealtime === undefined,
+        fallbackMessage: 'Unable to load dashboard metrics.',
+    })
+    const tasksQueryError = useConvexQueryError({
+        data: convexTasks,
+        skipped: tasksSkipped,
+        loading: !tasksSkipped && convexTasks === undefined,
+        fallbackMessage: 'Unable to load dashboard tasks.',
+    })
+    const proposalsQueryError = useConvexQueryError({
+        data: convexProposals,
+        skipped: proposalsSkipped,
+        loading: !proposalsSkipped && convexProposals === undefined,
+        fallbackMessage: 'Unable to load proposals.',
+    })
+
+    const metricsError = mergeQueryErrors(shapeMetricsError, metricsQueryError)
+    const tasksError = mergeQueryErrors(shapeTasksError, tasksQueryError)
+    const proposalsError = mergeQueryErrors(shapeProposalsError, proposalsQueryError)
 
     const triggerReload = useCallback(() => {
         setLastRefreshed(new Date())
@@ -155,7 +183,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     }, [usePreviewData, selectedClientId, user?.id, metricsRealtime])
 
     useEffect(() => {
-        setMetricsError(metricsResult.error)
+        setShapeMetricsError(metricsResult.error)
     }, [metricsResult.error])
 
     const metrics = metricsResult.data
@@ -213,7 +241,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     }, [usePreviewData, selectedClientId, user?.id, convexTasks])
 
     useEffect(() => {
-        setTasksError(tasksResult.error)
+        setShapeTasksError(tasksResult.error)
     }, [tasksResult.error])
 
     const rawTasks = tasksResult.data
@@ -276,7 +304,7 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
     }, [usePreviewData, selectedClientId, user?.id, user?.role, convexProposals])
 
     useEffect(() => {
-        setProposalsError(proposalsResult.error)
+        setShapeProposalsError(proposalsResult.error)
     }, [proposalsResult.error])
 
     const proposals = proposalsResult.data

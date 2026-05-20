@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useReducer, useState, useCallback, useEffect, useEffectEvent, useMemo, type ComponentType } from 'react'
 import { Search, X, FileText, MessageSquare, Users, FolderOpen, Clock } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
@@ -197,10 +198,11 @@ export function GlobalSearch({
       .catch((error) => {
         logError(error, 'GlobalSearch:performSearch')
         dispatch({ type: 'setResults', results: [] })
-        toast({
-          title: 'Search failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'global-search.tsx:catch',
+        title: 'Search failed',
+        fallbackMessage: 'Search failed',
         })
       })
       .finally(() => {

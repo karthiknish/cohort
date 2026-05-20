@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { type ChangeEvent, type FormEvent, useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { LoaderCircle, ImagePlus, Trash2 } from 'lucide-react'
 import { useMutation, useQuery, useConvex } from 'convex/react'
@@ -136,7 +137,10 @@ export function ProfileCard({
         .catch((submitError) => {
           const message = submitError instanceof Error ? submitError.message : 'Failed to update profile'
           setProfileError(message)
-          toast({ title: 'Profile update failed', description: message, variant: 'destructive' })
+          notifyFailure({
+        title: 'Profile update failed',
+        message: message,
+      })
         })
         .finally(() => {
           setSavingProfile(false)
@@ -182,7 +186,10 @@ export function ProfileCard({
         logError(removeError, 'ProfileCard:removeAvatar')
         const msg = asErrorMessage(removeError)
         setAvatarError(msg)
-        toast({ title: 'Remove failed', description: msg, variant: 'destructive' })
+        notifyFailure({
+        title: 'Remove failed',
+        message: msg,
+      })
       })
       .finally(() => {
         setAvatarUploading(false)
@@ -288,7 +295,10 @@ export function ProfileCard({
           const msg = asErrorMessage(uploadError)
           setAvatarError(msg)
           setAvatarPreviewOverride(previousUrl ?? null)
-          toast({ title: 'Upload failed', description: msg, variant: 'destructive' })
+          notifyFailure({
+        title: 'Upload failed',
+        message: msg,
+      })
         })
         .finally(() => {
           setAvatarUploading(false)

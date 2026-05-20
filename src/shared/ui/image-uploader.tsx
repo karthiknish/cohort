@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { ImagePlus, LoaderCircle, Trash2, Upload } from 'lucide-react'
 
@@ -81,11 +82,10 @@ export function ImageUploader({
           console.error('Image upload failed:', err)
           const message = asErrorMessage(err)
           setError('Upload failed. Please try again.')
-          toast({
-            title: 'Upload failed',
-            description: message,
-            variant: 'destructive',
-          })
+          notifyFailure({
+        title: 'Upload failed',
+        message: message,
+      })
           URL.revokeObjectURL(objectUrl)
           setPreviewUrl(value ?? null)
         })

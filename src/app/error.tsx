@@ -4,6 +4,7 @@ import { useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, Home, RefreshCw } from 'lucide-react'
 
+import { logRouteError } from '@/shared/ui/log-route-error'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 
@@ -20,7 +21,7 @@ export default function RootAppError({
   reset?: () => void
 }) {
   useEffect(() => {
-    console.error('[RootAppError]', error)
+    logRouteError(error, 'root')
   }, [error])
 
   const handleRetry = useCallback(() => {

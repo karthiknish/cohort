@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import { useMutation } from 'convex/react'
@@ -72,16 +74,18 @@ export function useMessageActions({
   const handleToggleReaction = useCallback(
     async (channelId: string, messageId: string, emoji: string) => {
       if (!channels.some((channel) => channel.id === channelId)) {
-        toast({ title: 'Channel unavailable', description: 'Refresh and try reacting again.', variant: 'destructive' })
+        notifyFailure({
+        title: 'Channel unavailable',
+        message: 'Refresh and try reacting again.',
+      })
         return
       }
 
       if (!COLLABORATION_REACTION_SET.has(emoji)) {
-        toast({
-          title: 'Reaction unavailable',
-          description: 'That emoji is not supported for reactions.',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Reaction unavailable',
+        message: 'That emoji is not supported for reactions.',
+      })
         return
       }
 
@@ -152,8 +156,12 @@ export function useMessageActions({
             reactions,
         }))
       } catch (error) {
-        logError(error, 'useMessageActions:handleToggleReaction')
-        toast({ title: 'Reaction failed', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'useMessageActions:handleToggleReaction',
+        title: 'Reaction failed',
+        fallbackMessage: 'Reaction failed',
+        })
         throw error
       } finally {
         setReactionUpdatingByMessage((prev) => {
@@ -172,12 +180,18 @@ export function useMessageActions({
     async (channelId: string, messageId: string, nextContent: string) => {
       const trimmedContent = nextContent.trim()
       if (!trimmedContent) {
-        toast({ title: 'Message required', description: 'Enter a message before saving.', variant: 'destructive' })
+        notifyFailure({
+        title: 'Message required',
+        message: 'Enter a message before saving.',
+      })
         return
       }
 
       if (!channels.some((channel) => channel.id === channelId)) {
-        toast({ title: 'Channel unavailable', description: 'Refresh the page and try editing again.', variant: 'destructive' })
+        notifyFailure({
+        title: 'Channel unavailable',
+        message: 'Refresh the page and try editing again.',
+      })
         return
       }
 
@@ -258,8 +272,12 @@ export function useMessageActions({
 
         toast({ title: 'Message updated', description: 'Your edit is live for the team.' })
       } catch (error) {
-        logError(error, 'useMessageActions:handleEditMessage')
-        toast({ title: 'Collaboration error', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'useMessageActions:handleEditMessage',
+        title: 'Collaboration error',
+        fallbackMessage: 'Collaboration error',
+        })
         throw error
       } finally {
         setMessageUpdatingId((current) => (current === messageId ? null : current))
@@ -272,7 +290,10 @@ export function useMessageActions({
   const handleDeleteMessage = useCallback(
     async (channelId: string, messageId: string) => {
       if (!channels.some((channel) => channel.id === channelId)) {
-        toast({ title: 'Channel unavailable', description: 'Refresh and try deleting again.', variant: 'destructive' })
+        notifyFailure({
+        title: 'Channel unavailable',
+        message: 'Refresh and try deleting again.',
+      })
         return
       }
 
@@ -340,8 +361,12 @@ export function useMessageActions({
 
         toast({ title: 'Message removed', description: 'The message is no longer visible to teammates.' })
       } catch (error) {
-        logError(error, 'useMessageActions:handleDeleteMessage')
-        toast({ title: 'Collaboration error', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'useMessageActions:handleDeleteMessage',
+        title: 'Collaboration error',
+        fallbackMessage: 'Collaboration error',
+        })
         throw error
       } finally {
         setMessageDeletingId((current) => (current === messageId ? null : current))

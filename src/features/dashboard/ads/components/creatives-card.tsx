@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState } from 'react'
 import { useAction } from 'convex/react'
 
@@ -84,11 +85,11 @@ export function CreativesCard({ providerId, providerName, isConnected, maxMetaCr
         setSummary(null)
       })
       .catch((error) => {
-        logError(error, 'CreativesCard:fetchCreatives')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CreativesCard:fetchCreatives',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
       .finally(() => {

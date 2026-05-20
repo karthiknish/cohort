@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState } from 'react'
 import { useMutation } from 'convex/react'
 import { AlertCircle, LoaderCircle, MessageSquare } from 'lucide-react'
@@ -94,10 +95,11 @@ export function ProblemReportModal({ open, onOpenChange }: ProblemReportModalPro
       })
       .catch((error) => {
         console.error('Error submitting problem report:', error)
-        toast({
-          title: 'Could not submit report',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'problem-report-modal.tsx:catch',
+        title: 'Could not submit report',
+        fallbackMessage: 'Could not submit report',
         })
       })
       .finally(() => {

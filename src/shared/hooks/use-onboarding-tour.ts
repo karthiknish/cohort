@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useMemo } from 'react'
 import { driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
@@ -104,11 +105,12 @@ export function useOnboardingTour() {
                     })
                 } catch (error: unknown) {
                     console.error('Failed to save onboarding tour state:', error)
-                    toast({
-                        title: 'Could not save tour progress',
-                        description: asErrorMessage(error),
-                        variant: 'destructive',
-                    })
+                    reportConvexFailure({
+        error: error,
+        context: 'use-onboarding-tour.ts:catch',
+        title: 'Could not save tour progress',
+        fallbackMessage: 'Could not save tour progress',
+        })
                 }
             }
         })

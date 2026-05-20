@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
@@ -320,11 +321,11 @@ export function useCollaborationDashboardActions({
           description: `Access for #${selectedCustomChannel.name} has been updated.`,
         })
       } catch (error) {
-        logError(error, 'useCollaborationDashboardActions:handleSaveChannelMembers')
-        toast({
-          title: 'Update failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'useCollaborationDashboardActions:handleSaveChannelMembers',
+        title: 'Update failed',
+        fallbackMessage: 'Update failed',
         })
         throw error
       }
@@ -350,12 +351,12 @@ export function useCollaborationDashboardActions({
         description: `#${selectedCustomChannel.name} has been removed from collaboration.`,
       })
     } catch (error) {
-      logError(error, 'useCollaborationDashboardActions:handleDeleteChannel')
-      toast({
+      reportConvexFailure({
+        error: error,
+        context: 'useCollaborationDashboardActions:handleDeleteChannel',
         title: 'Delete failed',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
+        fallbackMessage: 'Delete failed',
+        })
       throw error
     }
   }, [closeManageMembersDialog, removeChannel, selectChannel, selectedCustomChannel, toast, workspaceId])

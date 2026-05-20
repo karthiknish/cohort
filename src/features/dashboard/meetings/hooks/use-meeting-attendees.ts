@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { type KeyboardEvent, useCallback, useMemo, useState } from 'react'
 
 import { useToast } from '@/shared/ui/use-toast'
@@ -45,11 +46,10 @@ function useAttendeeController(options: UseMeetingAttendeesOptions) {
       const participantEntries = sanitizeMeetingParticipantEmails(entries, options.organizerEmail)
 
       if (includesOrganizer && participantEntries.length === 0) {
-        toast({
-          variant: 'destructive',
-          title: 'Add another participant',
-          description: 'Your own profile is already the meeting organizer. Add at least one other participant.',
-        })
+        notifyFailure({
+        title: 'Add another participant',
+        message: 'Your own profile is already the meeting organizer. Add at least one other participant.',
+      })
         return
       }
 
@@ -63,10 +63,9 @@ function useAttendeeController(options: UseMeetingAttendeesOptions) {
     const parsed = parseAttendeeInput(input)
 
     if (parsed.length === 0 && input.trim().length > 0) {
-      toast({
-        variant: 'destructive',
+      notifyFailure({
         title: 'Invalid attendee email',
-        description: 'Enter a valid email or choose a teammate from suggestions.',
+        message: 'Enter a valid email or choose a teammate from suggestions.',
       })
       return false
     }

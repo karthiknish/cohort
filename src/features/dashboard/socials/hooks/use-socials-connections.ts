@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useConvexAuth, useMutation, useQuery } from 'convex/react'
@@ -125,10 +127,9 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
     } else if (oauthError) {
       const errorMessage = message ?? 'Meta authorization failed'
       setConnectionError(errorMessage)
-      toast({
-        variant: 'destructive',
+      notifyFailure({
         title: 'Connection failed',
-        description: errorMessage,
+        message: errorMessage,
       })
     }
   }, [isPreviewMode, toast])
@@ -152,10 +153,9 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
     }
 
     if (convexAuthLoading || !isAuthenticated || !user) {
-      toast({
-        variant: 'destructive',
+      notifyFailure({
         title: 'Sign in required',
-        description: 'You must be signed in to connect Meta.',
+        message: 'You must be signed in to connect Meta.',
       })
       router.push('/')
       return
@@ -179,10 +179,9 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
       logError(error, 'useSocialsConnections:handleConnectMeta')
       const message = asErrorMessage(error)
       setConnectionError(message)
-      toast({
-        variant: 'destructive',
+      notifyFailure({
         title: 'Connection failed',
-        description: message,
+        message: message,
       })
       setOauthPending(false)
     }
@@ -213,12 +212,10 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
       })
       toast({ title: 'Disconnected', description: 'Organic Meta social connection removed (Ads unchanged).' })
     } catch (error: unknown) {
-      logError(error, 'useSocialsConnections:handleDisconnect')
-      toast({
-        variant: 'destructive',
-        title: 'Disconnect failed',
-        description: asErrorMessage(error),
-      })
+      reportConvexFailure({
+        error: error,
+        context: 'useSocialsConnections:handleDisconnect',
+        })
     }
   }, [
     disconnectIntegration,
@@ -238,10 +235,9 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
     if (!workspaceId) return
 
     if (!status?.setupComplete) {
-      toast({
-        variant: 'destructive',
+      notifyFailure({
         title: 'Setup required',
-        description: 'Select a Facebook Page before syncing organic metrics.',
+        message: 'Select a Facebook Page before syncing organic metrics.',
       })
       return
     }
@@ -255,12 +251,12 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
       })
       toast({ title: 'Sync requested', description: 'Organic metrics will refresh shortly.' })
     } catch (error: unknown) {
-      logError(error, 'useSocialsConnections:handleRequestSync')
       setSyncPending(false)
-      toast({
-        variant: 'destructive',
+      reportConvexFailure({
+        error,
+        context: 'useSocialsConnections:handleRequestSync',
         title: 'Sync failed',
-        description: asErrorMessage(error),
+        fallbackMessage: 'Unable to start social sync.',
       })
     }
   }, [

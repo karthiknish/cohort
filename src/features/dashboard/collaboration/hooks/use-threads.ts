@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useConvex } from 'convex/react'
@@ -245,7 +246,10 @@ export function useThreads({ workspaceId, currentUserId }: UseThreadsOptions) {
         logError(error, 'useThreads:loadThreadReplies')
         const message = asErrorMessage(error)
         setThreadErrorsByRootId((prev: ThreadErrorsState) => ({ ...prev, [trimmedId]: message }))
-        toast({ title: 'Thread loading failed', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Thread loading failed',
+        message: message,
+      })
       } finally {
         setThreadLoadingByRootId((prev) => ({ ...prev, [trimmedId]: false }))
       }
@@ -277,7 +281,10 @@ export function useThreads({ workspaceId, currentUserId }: UseThreadsOptions) {
         logError(error, 'useThreads:loadMoreThreadReplies')
         const message = asErrorMessage(error)
         setThreadErrorsByRootId((prev: ThreadErrorsState) => ({ ...prev, [trimmedId]: message }))
-        toast({ title: 'Thread loading failed', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Thread loading failed',
+        message: message,
+      })
       } finally {
         setThreadLoadingByRootId((prev) => ({ ...prev, [trimmedId]: false }))
       }

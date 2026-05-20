@@ -206,10 +206,7 @@ export const updateContent = workspaceMutation({
     content: v.string(),
     updatedBy: v.string(),
   },
-  returns: v.union(
-    v.object({ ok: v.literal(true) }),
-    v.object({ ok: v.literal(false), error: v.literal('not_found') })
-  ),
+  returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, args) => {
     const currentUserId = typeof ctx?.user?._id === 'string' ? ctx.user._id : null
     if (!currentUserId) {
@@ -223,7 +220,9 @@ export const updateContent = workspaceMutation({
       )
       .unique()
 
-    if (!row) return { ok: false as const, error: 'not_found' as const }
+    if (!row) {
+      throw Errors.resource.notFound('Comment', args.legacyId)
+    }
 
     const isAdmin = ctx?.user?.role === 'admin'
     const isAuthor = typeof row.authorId === 'string' && row.authorId === currentUserId
@@ -247,10 +246,7 @@ export const softDelete = workspaceMutation({
     legacyId: v.string(),
     deletedBy: v.string(),
   },
-  returns: v.union(
-    v.object({ ok: v.literal(true) }),
-    v.object({ ok: v.literal(false), error: v.literal('not_found') })
-  ),
+  returns: v.object({ ok: v.literal(true) }),
   handler: async (ctx, args) => {
     const currentUserId = typeof ctx?.user?._id === 'string' ? ctx.user._id : null
     if (!currentUserId) {
@@ -268,7 +264,9 @@ export const softDelete = workspaceMutation({
       )
       .unique()
 
-    if (!row) return { ok: false as const, error: 'not_found' as const }
+    if (!row) {
+      throw Errors.resource.notFound('Comment', args.legacyId)
+    }
 
     const isAdmin = ctx?.user?.role === 'admin'
     const isAuthor = typeof row.authorId === 'string' && row.authorId === currentUserId

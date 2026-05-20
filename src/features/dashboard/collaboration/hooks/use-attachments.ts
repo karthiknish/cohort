@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import { useMutation } from 'convex/react'
@@ -27,10 +29,9 @@ export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
     const result = validateAttachments(files, pendingAttachments.length, MAX_ATTACHMENTS)
 
     if (result.errors.length > 0) {
-      toast({
-        title: 'Some files couldn\'t be attached',
-        description: result.errors.join('. '),
-        variant: 'destructive',
+      notifyFailure({
+        title: "Some files couldn't be attached",
+        message: result.errors.join('. '),
       })
     }
 
@@ -89,12 +90,12 @@ export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
 
       return results
     } catch (error) {
-      logError(error, 'useAttachments:uploadAttachments')
-      toast({
+      reportConvexFailure({
+        error: error,
+        context: 'useAttachments:uploadAttachments',
         title: 'Upload failed',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
+        fallbackMessage: 'Upload failed',
+        })
       return []
     } finally {
       setUploading(false)

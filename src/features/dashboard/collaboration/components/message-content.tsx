@@ -1,5 +1,6 @@
 "use client"
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { Fragment, memo, useMemo, useState, useCallback, Children } from "react"
 import type { ComponentPropsWithoutRef, ReactNode } from "react"
 import ReactMarkdown from "react-markdown"
@@ -65,12 +66,12 @@ function CopyButton({ code }: { code: string }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      logError(err, "MessageContent:CopyButton")
-      toast({
-        title: "Copy failed",
-        description: asErrorMessage(err),
-        variant: "destructive",
-      })
+      reportConvexFailure({
+        error: err,
+        context: 'MessageContent:CopyButton',
+        title: 'Copy failed',
+        fallbackMessage: 'Copy failed',
+        })
     }
   }, [code, toast])
 

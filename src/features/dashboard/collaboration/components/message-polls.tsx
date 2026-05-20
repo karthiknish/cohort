@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { createElement, useState, useCallback, useMemo } from 'react'
 import {
   Dialog,
@@ -98,11 +100,11 @@ export function PollCard({
         setShowResults(true)
       })
       .catch((error) => {
-        logError(error, 'PollCard:handleVote')
-        toast({
-          title: 'Failed to record vote',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'PollCard:handleVote',
+        title: 'Failed to record vote',
+        fallbackMessage: 'Failed to record vote',
         })
       })
       .finally(() => {
@@ -135,12 +137,12 @@ export function PollCard({
         description: 'The poll has been closed and results are final.',
       })
     } catch (error) {
-      logError(error, 'PollCard:handleEndPoll')
-      toast({
+      reportConvexFailure({
+        error: error,
+        context: 'PollCard:handleEndPoll',
         title: 'Failed to end poll',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
+        fallbackMessage: 'Failed to end poll',
+        })
     }
   }, [onEndPoll, poll.id, toast])
 
@@ -237,19 +239,18 @@ export function CreatePollDialog({
 
   const handleCreate = useCallback(async () => {
     if (!workspaceId || !userId) {
-      toast({
+      notifyFailure({
         title: 'Authentication required',
-        variant: 'destructive',
+        message: 'Authentication required',
       })
       return
     }
 
     const trimmedQuestion = question.trim()
     if (!trimmedQuestion) {
-      toast({
+      notifyFailure({
         title: 'Question required',
-        description: 'Please enter a question for the poll.',
-        variant: 'destructive',
+        message: 'Please enter a question for the poll.',
       })
       return
     }
@@ -259,10 +260,9 @@ export function CreatePollDialog({
       .map((opt) => ({ ...opt, text: opt.text.trim(), id: crypto.randomUUID() }))
 
     if (validOptions.length < 2) {
-      toast({
+      notifyFailure({
         title: 'At least 2 options required',
-        description: 'Please provide at least 2 answer options.',
-        variant: 'destructive',
+        message: 'Please provide at least 2 answer options.',
       })
       return
     }
@@ -296,11 +296,11 @@ export function CreatePollDialog({
         setOpen(false)
       })
       .catch((error) => {
-        logError(error, 'CreatePollDialog:handleCreate')
-        toast({
-          title: 'Failed to create poll',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CreatePollDialog:handleCreate',
+        title: 'Failed to create poll',
+        fallbackMessage: 'Failed to create poll',
         })
       })
       .finally(() => {

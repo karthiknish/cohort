@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useMemo, useState } from 'react'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@convex/_generated/api'
@@ -242,7 +243,10 @@ export function useAdminClients(): UseAdminClientsReturn {
         } catch (err: unknown) {
             logError(err, 'useAdminClients:handleLoadMore')
             const message = asErrorMessage(err)
-            toast({ title: 'Could not load more', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Could not load more',
+        message: message,
+      })
         }
     }, [clientsInfiniteQuery, isPreviewMode, toast])
 
@@ -288,7 +292,10 @@ export function useAdminClients(): UseAdminClientsReturn {
         } catch (err: unknown) {
             logError(err, 'useAdminClients:handleDeleteClient')
             const message = asErrorMessage(err)
-            toast({ title: 'Client delete failed', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Client delete failed',
+        message: message,
+      })
         } finally {
             setDeletingClientId(null)
         }
@@ -317,7 +324,10 @@ export function useAdminClients(): UseAdminClientsReturn {
 
         const name = memberName.trim()
         if (!name) {
-            toast({ title: 'Name required', description: 'Enter a teammate name before adding.', variant: 'destructive' })
+            notifyFailure({
+        title: 'Name required',
+        message: 'Enter a teammate name before adding.',
+      })
             return
         }
 
@@ -325,11 +335,10 @@ export function useAdminClients(): UseAdminClientsReturn {
             (member) => member.name.trim().toLowerCase() === name.toLowerCase()
         )
         if (alreadyAssigned) {
-            toast({
-                title: 'Already assigned',
-                description: `${name} is already on ${clientPendingMembers.name}.`,
-                variant: 'destructive',
-            })
+            notifyFailure({
+        title: 'Already assigned',
+        message: '${name} is already on ${clientPendingMembers.name}.',
+      })
             return
         }
 
@@ -376,7 +385,10 @@ export function useAdminClients(): UseAdminClientsReturn {
         } catch (err: unknown) {
             logError(err, 'useAdminClients:handleAddTeamMember')
             const message = asErrorMessage(err)
-            toast({ title: 'Add teammate failed', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Add teammate failed',
+        message: message,
+      })
         } finally {
             setAddingMember(false)
         }
@@ -387,11 +399,10 @@ export function useAdminClients(): UseAdminClientsReturn {
         if (!normalizedName) return
 
         if (normalizedName.toLowerCase() === client.accountManager.toLowerCase()) {
-            toast({
-                title: 'Cannot remove account manager',
-                description: 'Change the account manager before removing this teammate.',
-                variant: 'destructive',
-            })
+            notifyFailure({
+        title: 'Cannot remove account manager',
+        message: 'Change the account manager before removing this teammate.',
+      })
             return
         }
 
@@ -433,7 +444,10 @@ export function useAdminClients(): UseAdminClientsReturn {
         } catch (err: unknown) {
             logError(err, 'useAdminClients:handleRemoveTeamMember')
             const message = asErrorMessage(err)
-            toast({ title: 'Remove teammate failed', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Remove teammate failed',
+        message: message,
+      })
         } finally {
             setRemovingTeamMemberKey(null)
         }
@@ -463,7 +477,10 @@ export function useAdminClients(): UseAdminClientsReturn {
         const accountManager = clientAccountManager.trim()
 
         if (!name || !accountManager) {
-            toast({ title: 'Missing details', description: 'Client name and account manager are required.', variant: 'destructive' })
+            notifyFailure({
+        title: 'Missing details',
+        message: 'Client name and account manager are required.',
+      })
             return
         }
 
@@ -520,7 +537,10 @@ export function useAdminClients(): UseAdminClientsReturn {
         } catch (err: unknown) {
             logError(err, 'useAdminClients:handleCreateClient')
             const message = asErrorMessage(err)
-            toast({ title: 'Client create failed', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Client create failed',
+        message: message,
+      })
         } finally {
             setClientSaving(false)
         }

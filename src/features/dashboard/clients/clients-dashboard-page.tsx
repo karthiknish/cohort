@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Suspense, createElement, useCallback, useEffect, useMemo, useState } from 'react'
@@ -143,11 +144,10 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
         })
       })
       .catch(() => {
-        toast({
-          title: 'Refresh failed',
-          description: 'Unable to update client data. Please try again.',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Refresh failed',
+        message: 'Unable to update client data. Please try again.',
+      })
       })
       .finally(() => {
         setRefreshing(false)

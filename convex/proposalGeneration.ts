@@ -105,8 +105,9 @@ export const generateFromProposal = zWorkspaceAction({
       // Check circuit breaker before starting
       if (!circuitBreaker.canExecute()) {
         const state = circuitBreaker.getState()
-        throw new Error(
-          `Gamma API is temporarily unavailable due to too many recent failures. Circuit breaker state: ${state.state}. Please try again in a minute.`
+        throw Errors.integration.error(
+          'Gamma',
+          `Gamma API is temporarily unavailable. Please try again in a minute.`
         )
       }
 

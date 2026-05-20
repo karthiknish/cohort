@@ -15,7 +15,13 @@
  * - Dismissal handling
  */
 
-import { asErrorMessage } from '@/lib/convex-errors'
+import {
+  asErrorMessage,
+  extractErrorCode,
+  isConflictAppError,
+  isReadLimitAppError,
+} from '@/lib/convex-errors'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { toast as sonnerToast } from '@/shared/ui/sonner'
 import * as React from 'react'
 
@@ -26,6 +32,8 @@ import * as React from 'react'
 export type ToastPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top-center' | 'bottom-center'
 
 type BaseToastOptions = {
+  /** Stable Sonner toast id (for dismiss/update) */
+  id?: string | number
   /** Optional title for the toast */
   title?: string
   /** Main message content (renders as description in Sonner) */
@@ -97,6 +105,45 @@ function resolveToastContent(options: BaseToastOptions): {
   }
 }
 
+function resolveFailureTitle(options: FailureToastOptions): string | undefined {
+  const explicitTitle = options.title?.trim()
+  if (explicitTitle) {
+    return explicitTitle
+  }
+
+  const error = options.error
+  if (!error) {
+    return undefined
+  }
+
+  if (isReadLimitAppError(error)) {
+    return 'Query too large'
+  }
+  if (isConflictAppError(error)) {
+    return 'Data changed'
+  }
+
+  const code = extractErrorCode(error)
+  if (!code) {
+    return undefined
+  }
+
+  if (code === 'TOO_MANY_REQUESTS') {
+    return 'Rate limited'
+  }
+  if (code.startsWith('INTEGRATION_') || code === 'INTEGRATION_ERROR') {
+    return 'Integration issue'
+  }
+  if (code === 'UNAUTHORIZED' || code === 'FORBIDDEN') {
+    return 'Access denied'
+  }
+  if (code === 'VALIDATION_ERROR' || code === 'INVALID_INPUT' || code === 'INVALID_STATE') {
+    return 'Invalid input'
+  }
+
+  return undefined
+}
+
 function resolveFailureMessage(options: FailureToastOptions): string {
   const explicitMessage = options.message?.trim()
   if (explicitMessage) {
@@ -127,6 +174,7 @@ export function notifySuccess(options: SuccessToastOptions): string | number {
   const content = resolveToastContent(options)
 
   return sonnerToast.success(content.message, {
+    id: options.id,
     description: content.description,
     duration: options.duration ?? 4000,
     position: options.position,
@@ -147,6 +195,7 @@ export function notifyError(options: ErrorToastOptions): string | number {
   const content = resolveToastContent(options)
 
   return sonnerToast.error(content.message, {
+    id: options.id,
     description: content.description,
     duration: options.duration ?? 6000,
     position: options.position,
@@ -167,6 +216,7 @@ export function notifyWarning(options: WarningToastOptions): string | number {
   const content = resolveToastContent(options)
 
   return sonnerToast.warning(content.message, {
+    id: options.id,
     description: content.description,
     duration: options.duration ?? 5000,
     position: options.position,
@@ -187,6 +237,7 @@ export function notifyInfo(options: InfoToastOptions): string | number {
   const content = resolveToastContent(options)
 
   return sonnerToast.info(content.message, {
+    id: options.id,
     description: content.description,
     duration: options.duration ?? 4000,
     position: options.position,
@@ -249,11 +300,11 @@ export async function notifyApiCall<T>(
     options?.onSuccess?.(result)
     return result
   } catch (error) {
-    const errorMessage = options?.errorMessage ??
-      (error instanceof Error ? error.message : 'An unexpected error occurred')
-    notifyError({
+    notifyFailure({
       title: `${operation} failed`,
-      message: errorMessage,
+      error,
+      message: options?.errorMessage,
+      fallbackMessage: 'An unexpected error occurred',
     })
     options?.onError?.(error as Error)
     return undefined
@@ -264,11 +315,15 @@ export async function notifyApiCall<T>(
  * Show a normalized failure toast for validation, network, and operation errors.
  */
 export function notifyFailure(options: FailureToastOptions): string | number {
+  const title = resolveFailureTitle(options)
   return notifyError({
     ...options,
+    title,
     message: resolveFailureMessage(options),
   })
 }
+
+export { reportConvexFailure, convexErrorMessage } from '@/lib/handle-convex-error'
 
 /**
  * Dismiss a toast by ID
@@ -534,6 +589,8 @@ export function useNotifications() {
       syncStarted: notifySyncStarted,
       syncCompleted: notifySyncCompleted,
       syncFailed: notifySyncFailed,
+      failure: notifyFailure,
+      reportConvexFailure,
       dismiss: dismissToast,
       dismissAll: dismissAllToasts,
     }),

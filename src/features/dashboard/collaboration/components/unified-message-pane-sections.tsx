@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import type { ChangeEvent, ClipboardEvent, DragEvent, ReactNode, RefObject } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
@@ -432,11 +433,10 @@ export function UnifiedConversationHeader({
         }, 2000)
       },
       () => {
-        toast({
-          title: 'Could not copy',
-          description: 'Allow clipboard access or copy the URL from the address bar.',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Could not copy',
+        message: 'Allow clipboard access or copy the URL from the address bar.',
+      })
       },
     )
   }, [header, toast])

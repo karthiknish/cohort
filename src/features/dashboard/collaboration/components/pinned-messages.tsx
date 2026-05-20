@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState, useTransition } from 'react'
 
 import { LoaderCircle, Pin, PinOff } from 'lucide-react'
@@ -113,12 +114,12 @@ function PinnedMessageItem({ message, workspaceId, onClick }: PinnedMessageItemP
           })
         })
         .catch((error) => {
-          logError(error, 'PinnedMessageItem:handleUnpin')
-          toast({
-            title: 'Failed to unpin message',
-            description: asErrorMessage(error),
-            variant: 'destructive',
-          })
+          reportConvexFailure({
+        error: error,
+        context: 'PinnedMessageItem:handleUnpin',
+        title: 'Failed to unpin message',
+        fallbackMessage: 'Failed to unpin message',
+        })
         })
         .finally(() => {
           setIsUnpinning(false)
@@ -242,12 +243,12 @@ export function PinMessageButton({
             })
 
         await mutation.catch((error) => {
-          logError(error, 'PinMessageButton:handleTogglePin')
-          toast({
-            title: 'Failed to update pin',
-            description: asErrorMessage(error),
-            variant: 'destructive',
-          })
+          reportConvexFailure({
+        error: error,
+        context: 'PinMessageButton:handleTogglePin',
+        title: 'Failed to update pin',
+        fallbackMessage: 'Failed to update pin',
+        })
         })
       })
     },

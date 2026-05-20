@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useState, useRef } from 'react'
 import { Download, Loader2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
@@ -52,10 +53,9 @@ export function AnalyticsExportButton({ metrics, disabled }: AnalyticsExportButt
       }, 1000)
     } catch {
       setIsExporting(false)
-      toast({
+      notifyFailure({
         title: 'Export failed',
-        description: 'There was a problem exporting your data. Please try again.',
-        variant: 'destructive',
+        message: 'There was a problem exporting your data. Please try again.',
       })
     }
   }, [canExport, exportToCSV, exportToJSON, isExporting, toast])

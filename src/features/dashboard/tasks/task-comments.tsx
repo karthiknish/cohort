@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { useConvex, useMutation, useQuery } from 'convex/react'
 
@@ -325,12 +326,12 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
           resetComposer()
         })
         .catch((error) => {
-          logError(error, 'TaskCommentsPanel:handleSaveEdit')
-          toast({
-            title: 'Failed to update comment',
-            description: asErrorMessage(error),
-            variant: 'destructive',
-          })
+          reportConvexFailure({
+        error: error,
+        context: 'TaskCommentsPanel:handleSaveEdit',
+        title: 'Failed to update comment',
+        fallbackMessage: 'Failed to update comment',
+        })
         })
         .finally(() => {
           dispatch({ type: 'setSavingEdit', savingEdit: false })
@@ -390,11 +391,11 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
         resetComposer()
       })
       .catch((error) => {
-        logError(error, 'TaskCommentsPanel:handleSend')
-        toast({
-          title: 'Failed to post comment',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'TaskCommentsPanel:handleSend',
+        title: 'Failed to post comment',
+        fallbackMessage: 'Failed to post comment',
         })
       })
       .finally(() => {
@@ -441,11 +442,11 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
         dispatch({ type: 'setDeleteTarget', deleteTarget: null })
       })
       .catch((error) => {
-        logError(error, 'TaskCommentsPanel:handleDeleteComment')
-        toast({
-          title: 'Failed to delete comment',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'TaskCommentsPanel:handleDeleteComment',
+        title: 'Failed to delete comment',
+        fallbackMessage: 'Failed to delete comment',
         })
       })
       .finally(() => {

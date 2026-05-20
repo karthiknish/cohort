@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useState, useCallback, useMemo } from 'react'
 import {
   Line,
@@ -194,11 +195,11 @@ export function InteractiveChart({
           }
         }
       } catch (error) {
-        logError(error, 'InteractiveChart:handleExport')
-        toast({
-          title: 'Export failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'InteractiveChart:handleExport',
+        title: 'Export failed',
+        fallbackMessage: 'Export failed',
         })
       }
     },

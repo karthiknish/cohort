@@ -150,11 +150,13 @@ const posts = await ctx.db
 ### Authentication Pattern
 
 ```typescript
+import { Errors } from './errors'
+
 export const myMutation = mutation({
   args: { /* ... */ },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthenticated");
+    if (!identity) throw Errors.auth.unauthorized();
     // identity.tokenIdentifier is the unique user ID
   },
 });

@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useState } from 'react'
 
 import { useToast } from '@/shared/ui/use-toast'
@@ -124,11 +125,10 @@ export function MeetingRoomPage(props: MeetingRoomPageProps) {
               description: 'Share the Cohorts room URL with attendees who need direct access.',
             })
           } catch {
-            toast({
-              variant: 'destructive',
-              title: 'Copy failed',
-              description: 'Clipboard access is unavailable. Copy the room URL manually from the address bar.',
-            })
+            notifyFailure({
+        title: 'Copy failed',
+        message: 'Clipboard access is unavailable. Copy the room URL manually from the address bar.',
+      })
           }
         }, [meetingLink, toast])
 

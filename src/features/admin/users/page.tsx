@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useMemo, useState } from 'react'
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import {
@@ -446,7 +447,10 @@ export default function AdminUsersPage() {
 
     if (!ROLE_ASSIGNABLE.includes(nextRole) && record.role !== nextRole) {
       // Only admin can assign admin role from team page
-      toast({ title: 'Unsupported role', description: 'This page only manages team or client roles.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Unsupported role',
+        message: 'This page only manages team or client roles.',
+      })
       return
     }
 
@@ -470,7 +474,10 @@ export default function AdminUsersPage() {
       })
       .catch((err: unknown) => {
         const message = asErrorMessage(err)
-        toast({ title: 'Admin error', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Admin error',
+        message: message,
+      })
       })
       .finally(() => {
         setSavingId(null)
@@ -479,7 +486,10 @@ export default function AdminUsersPage() {
 
   const handleApprovalToggle = useCallback((record: AdminUserRecord, approved: boolean) => {
     if (record.role === 'admin' && !approved) {
-      toast({ title: 'Cannot disable admin', description: 'Admin accounts must remain active.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Cannot disable admin',
+        message: 'Admin accounts must remain active.',
+      })
       return
     }
 
@@ -514,7 +524,10 @@ export default function AdminUsersPage() {
       .catch((err: unknown) => {
         logError(err, 'AdminUsers:handleApprovalToggle')
         const message = asErrorMessage(err)
-        toast({ title: 'Admin error', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Admin error',
+        message: message,
+      })
       })
       .finally(() => {
         setSavingId(null)
@@ -575,7 +588,10 @@ export default function AdminUsersPage() {
       .catch((err: unknown) => {
         logError(err, 'AdminUsers:handleInviteUser')
         const message = asErrorMessage(err)
-        toast({ title: 'Invitation error', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Invitation error',
+        message: message,
+      })
       })
       .finally(() => {
         setInviteSending(false)
@@ -613,7 +629,10 @@ export default function AdminUsersPage() {
       .catch((err: unknown) => {
         logError(err, 'AdminUsers:handleResendInvitation')
         const message = asErrorMessage(err)
-        toast({ title: 'Resend failed', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Resend failed',
+        message: message,
+      })
       })
       .finally(() => {
         setInvitationActionKey((current) => (current === actionKey ? null : current))
@@ -644,7 +663,10 @@ export default function AdminUsersPage() {
       .catch((err: unknown) => {
         logError(err, 'AdminUsers:handleRevokeInvitation')
         const message = asErrorMessage(err)
-        toast({ title: 'Revoke failed', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Revoke failed',
+        message: message,
+      })
       })
       .finally(() => {
         setInvitationActionKey((current) => (current === actionKey ? null : current))

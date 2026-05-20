@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useAction, useConvex, useMutation } from 'convex/react'
@@ -254,11 +256,11 @@ export function FeatureFormDialog({
         }
       })
       .catch((error) => {
-        logError(error, 'FeatureFormDialog:generateFeatureAi')
-        toast({
-          title: 'Generation failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'FeatureFormDialog:generateFeatureAi',
+        title: 'Generation failed',
+        fallbackMessage: 'Generation failed',
         })
       })
       .finally(() => {
@@ -272,10 +274,9 @@ export function FeatureFormDialog({
     if (!trimmedUrl) return
 
     if (!URL.canParse(trimmedUrl)) {
-      toast({
+      notifyFailure({
         title: 'Invalid URL',
-        description: 'Please enter a valid URL',
-        variant: 'destructive',
+        message: 'Please enter a valid URL',
       })
       return
     }
@@ -333,11 +334,10 @@ export function FeatureFormDialog({
       e.preventDefault()
 
       if (!title.trim()) {
-        toast({
-          title: 'Title required',
-          description: 'Please enter a feature title',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Title required',
+        message: 'Please enter a feature title',
+      })
         return
       }
 
@@ -356,12 +356,12 @@ export function FeatureFormDialog({
           onOpenChange(false)
         })
         .catch((error) => {
-          logError(error, 'FeatureFormDialog:handleSubmit')
-          toast({
-            title: 'Save failed',
-            description: asErrorMessage(error),
-            variant: 'destructive',
-          })
+          reportConvexFailure({
+        error: error,
+        context: 'FeatureFormDialog:handleSubmit',
+        title: 'Save failed',
+        fallbackMessage: 'Save failed',
+        })
         })
         .finally(() => {
           setIsSubmitting(false)

@@ -2,6 +2,7 @@ import { internalMutation, internalQuery, mutation } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 import { v } from 'convex/values'
 import { z } from 'zod/v4'
+import { Errors } from '../errors'
 import { zWorkspaceMutation } from '../functions'
 
 function normalizeClientId(value: string | null | undefined): string | null {
@@ -71,7 +72,7 @@ export const requestManualSync = zWorkspaceMutation({
       .unique()
 
     if (!integration?.accessToken || !integration.facebookPageId) {
-      throw new Error('Connect Meta and select a Facebook Page before syncing')
+      throw Errors.integration.notConfigured('Meta', 'Connect Meta and select a Facebook Page before syncing')
     }
 
     const id = await ctx.db.insert('socialSyncJobs', {

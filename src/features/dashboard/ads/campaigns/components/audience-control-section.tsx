@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, RefreshCw, Target, Users, Plus } from 'lucide-react'
 
@@ -104,10 +105,9 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
     }
 
     if (!workspaceId) {
-      toast({
+      notifyFailure({
         title: 'Error',
-        description: 'Missing workspace id',
-        variant: 'destructive',
+        message: 'Missing workspace id',
       })
       setLoading(false)
       return
@@ -148,11 +148,10 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         if (message.includes('Unknown Meta API error') || message.includes('INTERNAL_ERROR')) {
           logError(new Error(message), 'AudienceControl:fetchTargeting:suppressedMeta')
         } else {
-          toast({
-            title: 'Error',
-            description: message,
-            variant: 'destructive',
-          })
+          notifyFailure({
+        title: 'Error',
+        message: message,
+      })
         }
       })
       .finally(() => {

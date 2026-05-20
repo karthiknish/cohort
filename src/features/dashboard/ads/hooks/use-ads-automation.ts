@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation } from 'convex/react'
 
@@ -127,19 +128,15 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
     async (providerId: string) => {
       const draft = automationDraft[providerId]
       if (!draft) {
-        toast({
-          variant: 'destructive',
-          title: TOAST_TITLES.NO_SETTINGS,
-          description: 'Connect an integration before adjusting automation.',
-        })
+        notifyFailure({
+        message: 'Connect an integration before adjusting automation.',
+      })
         return
       }
       if (!user?.id) {
-        toast({
-          variant: 'destructive',
-          title: TOAST_TITLES.SESSION_EXPIRED,
-          description: 'Please sign in again to update your preferences.',
-        })
+        notifyFailure({
+        message: 'Please sign in again to update your preferences.',
+      })
         return
       }
 
@@ -168,7 +165,9 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
         logError(error, 'useAdsAutomation:handleSaveAutomation')
         const message = asErrorMessage(error)
         setSettingsErrors((prev) => ({ ...prev, [providerId]: message }))
-        toast({ variant: 'destructive', title: TOAST_TITLES.SAVE_FAILED, description: message })
+        notifyFailure({
+        message: message,
+      })
       } finally {
         setSavingSettings((prev) => ({ ...prev, [providerId]: false }))
       }
@@ -183,7 +182,10 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
   const runManualSync = useCallback(
     async (providerId: string) => {
       if (!user?.id) {
-        toast({ variant: 'destructive', title: TOAST_TITLES.UNABLE_TO_SYNC, description: ERROR_MESSAGES.SIGN_IN_REQUIRED })
+        notifyFailure({
+          title: TOAST_TITLES.UNABLE_TO_SYNC,
+          message: ERROR_MESSAGES.SIGN_IN_REQUIRED,
+        })
         return
       }
       setSyncingProvider(providerId)
@@ -209,11 +211,9 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
         logError(error, 'useAdsAutomation:runManualSync')
         const message = asErrorMessage(error)
 
-        toast({
-          variant: 'destructive',
-          title: TOAST_TITLES.SYNC_FAILED,
-          description: message,
-        })
+        notifyFailure({
+        message: message,
+      })
       } finally {
         setSyncingProvider(null)
       }

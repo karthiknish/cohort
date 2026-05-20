@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useState } from 'react'
 
 import { useAction } from 'convex/react'
@@ -103,10 +104,9 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
     if (!isConnected) return
 
     if (!workspaceId) {
-      toast({
+      notifyFailure({
         title: 'Error',
-        description: 'Missing workspace id',
-        variant: 'destructive',
+        message: 'Missing workspace id',
       })
       return
     }
@@ -128,23 +128,20 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
         const message = error instanceof Error ? error.message : 'Failed to load audience targeting data'
 
         if (message.includes('not configured') || message.includes('missing token') || message.includes('expired')) {
-          toast({
-            title: 'Integration Issue',
-            description: 'Please connect or refresh your Meta ad account.',
-            variant: 'destructive',
-          })
+          notifyFailure({
+        title: 'Integration Issue',
+        message: 'Please connect or refresh your Meta ad account.',
+      })
         } else if (message.includes('Meta API') || message.includes('Facebook')) {
-          toast({
-            title: 'Meta API Error',
-            description: 'Could not fetch targeting data. Please check your connection and try again.',
-            variant: 'destructive',
-          })
+          notifyFailure({
+        title: 'Meta API Error',
+        message: 'Could not fetch targeting data. Please check your connection and try again.',
+      })
         } else {
-          toast({
-            title: 'Error',
-            description: message,
-            variant: 'destructive',
-          })
+          notifyFailure({
+        title: 'Error',
+        message: message,
+      })
         }
       })
       .finally(() => {

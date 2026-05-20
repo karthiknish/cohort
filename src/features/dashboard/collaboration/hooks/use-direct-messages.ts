@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useConvex, useMutation, useQuery } from 'convex/react'
 
@@ -479,11 +480,11 @@ export function useDirectMessages({
 
         return { legacyId: result.legacyId, isNew: result.isNew }
       } catch (error: unknown) {
-        logError(error, 'useDirectMessages:getOrCreateConversation')
-        toast({
-          title: 'Unable to start conversation',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'useDirectMessages:getOrCreateConversation',
+        title: 'Unable to start conversation',
+        fallbackMessage: 'Unable to start conversation',
         })
         throw error
       }
@@ -657,12 +658,12 @@ export function useDirectMessages({
         conversationLegacyId: selectedConversation.legacyId,
       })
     } catch (error: unknown) {
-      logError(error, 'useDirectMessages:markAsRead')
-      toast({
+      reportConvexFailure({
+        error: error,
+        context: 'useDirectMessages:markAsRead',
         title: 'Unable to mark read',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
+        fallbackMessage: 'Unable to mark read',
+        })
     }
   }, [isPreviewMode, markAsReadMutation, selectedConversation, toast, workspaceId])
 
@@ -709,11 +710,11 @@ export function useDirectMessages({
           newContent,
         })
       } catch (error: unknown) {
-        logError(error, 'useDirectMessages:editMessage')
-        toast({
-          title: 'Edit failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'useDirectMessages:editMessage',
+        title: 'Edit failed',
+        fallbackMessage: 'Edit failed',
         })
       }
     },
@@ -763,11 +764,11 @@ export function useDirectMessages({
           messageLegacyId,
         })
       } catch (error: unknown) {
-        logError(error, 'useDirectMessages:deleteMessage')
-        toast({
-          title: 'Delete failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'useDirectMessages:deleteMessage',
+        title: 'Delete failed',
+        fallbackMessage: 'Delete failed',
         })
       }
     },
@@ -845,11 +846,11 @@ export function useDirectMessages({
           emoji,
         })
       } catch (error: unknown) {
-        logError(error, 'useDirectMessages:toggleReaction')
-        toast({
-          title: 'Reaction failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'useDirectMessages:toggleReaction',
+        title: 'Reaction failed',
+        fallbackMessage: 'Reaction failed',
         })
       }
     },
@@ -882,11 +883,11 @@ export function useDirectMessages({
           prev ? { ...prev, isArchived: archived } : null
         )
       } catch (error: unknown) {
-        logError(error, 'useDirectMessages:archiveConversation')
-        toast({
-          title: 'Archive update failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'useDirectMessages:archiveConversation',
+        title: 'Archive update failed',
+        fallbackMessage: 'Archive update failed',
         })
       }
     },
@@ -919,11 +920,11 @@ export function useDirectMessages({
           prev ? { ...prev, isMuted: muted } : null
         )
       } catch (error: unknown) {
-        logError(error, 'useDirectMessages:muteConversation')
-        toast({
-          title: 'Mute update failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'useDirectMessages:muteConversation',
+        title: 'Mute update failed',
+        fallbackMessage: 'Mute update failed',
         })
       }
     },

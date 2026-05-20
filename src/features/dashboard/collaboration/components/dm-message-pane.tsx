@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useMemo, useState } from 'react'
 
 import { asErrorMessage } from '@/lib/convex-errors'
@@ -97,11 +98,12 @@ export function DMMessagePane({
       await onSendMessage(trimmedContent)
     } catch (error) {
       setInputValue(trimmedContent)
-      toast({
+      reportConvexFailure({
+        error: error,
+        context: 'dm-message-pane.tsx:catch',
         title: 'Message not sent',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
+        fallbackMessage: 'Message not sent',
+        })
       throw error
     }
   }, [isSending, onSendMessage, toast])

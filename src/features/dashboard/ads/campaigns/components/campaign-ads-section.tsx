@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { useAction } from 'convex/react'
 import NextImage from 'next/image'
@@ -717,11 +719,11 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
         setHasLoaded(true)
       })
       .catch((error) => {
-        logError(error, 'CampaignAdsSection:fetchAds')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CampaignAdsSection:fetchAds',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
       .finally(() => {
@@ -845,10 +847,9 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
 
     if (!workspaceId) {
       setAds(previousAds)
-      toast({
+      notifyFailure({
         title: 'Error',
-        description: 'Sign in required',
-        variant: 'destructive',
+        message: 'Sign in required',
       })
       return
     }
@@ -871,11 +872,11 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
       .catch((error) => {
         // Revert on error
         setAds(previousAds)
-        logError(error, 'CampaignAdsSection:toggleAdStatus')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CampaignAdsSection:toggleAdStatus',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
   }, [ads, clientId, providerId, updateCreativeStatus, workspaceId])

@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useMemo, useState } from 'react'
 import { LoaderCircle, Lock, Settings2, Trash2, Users } from 'lucide-react'
 
@@ -104,11 +105,11 @@ function ChannelMembersDialogForm({
         onOpenChange(false)
       })
       .catch((error) => {
-        logError(error, 'ChannelMembersDialog:handleSave')
-        toast({
-          title: 'Could not save channel',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'ChannelMembersDialog:handleSave',
+        title: 'Could not save channel',
+        fallbackMessage: 'Could not save channel',
         })
       })
       .finally(() => {
@@ -136,11 +137,11 @@ function ChannelMembersDialogForm({
         onOpenChange(false)
       })
       .catch((error) => {
-        logError(error, 'ChannelMembersDialog:handleDelete')
-        toast({
-          title: 'Could not delete channel',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'ChannelMembersDialog:handleDelete',
+        title: 'Could not delete channel',
+        fallbackMessage: 'Could not delete channel',
         })
       })
       .finally(() => {

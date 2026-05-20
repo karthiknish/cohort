@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent } from 'react'
 
 import { useChat, useParticipants } from '@/shared/ui/livekit'
@@ -148,10 +150,9 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
     const result = validateAttachments(files, pendingAttachments.length, MAX_ATTACHMENTS)
 
     if (result.errors.length > 0) {
-      toast({
-        title: 'Some files couldn\'t be attached',
-        description: result.errors.join('. '),
-        variant: 'destructive',
+      notifyFailure({
+        title: "Some files couldn't be attached",
+        message: result.errors.join('. '),
       })
     }
 
@@ -235,10 +236,11 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
       setPendingAttachments([])
       resetMentionState()
     } catch (error) {
-      toast({
-        variant: 'destructive',
+      reportConvexFailure({
+        error,
+        context: 'InSiteMeetingRoomChat:sendMessage',
         title: 'Message failed',
-        description: error instanceof Error ? error.message : 'Unable to send the room chat message or file share.',
+        fallbackMessage: 'Unable to send message.',
       })
       if (hasAttachments) {
         setUploadingFiles(false)

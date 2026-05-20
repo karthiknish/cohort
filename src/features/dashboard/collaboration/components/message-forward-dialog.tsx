@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useState, useCallback } from 'react'
 import { Forward, LoaderCircle } from 'lucide-react'
 import {
@@ -72,10 +74,9 @@ export function MessageForwardDialog({
     }
 
     if (!message || !workspaceId || !userId || !selectedChannel) {
-      toast({
+      notifyFailure({
         title: 'Cannot forward message',
-        description: 'Please select a channel to forward to.',
-        variant: 'destructive',
+        message: 'Please select a channel to forward to.',
       })
       return
     }
@@ -123,11 +124,11 @@ export function MessageForwardDialog({
         setIncludeAttachments(true)
       })
       .catch((error) => {
-        logError(error, 'MessageForwardDialog:handleForward')
-        toast({
-          title: 'Failed to forward message',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'MessageForwardDialog:handleForward',
+        title: 'Failed to forward message',
+        fallbackMessage: 'Failed to forward message',
         })
       })
       .finally(() => {

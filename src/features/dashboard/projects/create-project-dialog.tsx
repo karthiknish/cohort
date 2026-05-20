@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useReducer, useRef, useState } from 'react'
 import { useMutation } from 'convex/react'
 import { LoaderCircle, Plus } from 'lucide-react'
@@ -167,7 +169,10 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
     event.preventDefault()
 
     if (!user?.id || !workspaceId) {
-      toast({ title: 'Authentication required', description: 'Please sign in to create a project.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Authentication required',
+        message: 'Please sign in to create a project.',
+      })
       return
     }
 
@@ -239,8 +244,12 @@ export function CreateProjectDialog({ onProjectCreated, trigger }: CreateProject
         resetForm()
       })
       .catch((error) => {
-        logError(error, 'CreateProjectDialog:handleSubmit')
-        toast({ title: 'Creation failed', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'CreateProjectDialog:handleSubmit',
+        title: 'Creation failed',
+        fallbackMessage: 'Creation failed',
+        })
       })
       .finally(() => {
         setLoading(false)

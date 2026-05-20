@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useMutation, useQuery } from 'convex/react'
 import { useCallback, useEffect, useMemo, useReducer } from 'react'
 
@@ -334,10 +336,11 @@ export function useTasks({
       } catch (err) {
         logError(err, 'useTasks:handleQuickStatusChange')
         setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: previousStatus } : t)))
-        toast({
-          title: 'Status update failed',
-          description: asErrorMessage(err),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: err,
+        context: 'use-tasks.ts:catch',
+        title: 'Status update failed',
+        fallbackMessage: 'Status update failed',
         })
       } finally {
         setPendingStatusUpdates((prev) => {
@@ -367,11 +370,11 @@ export function useTasks({
         toast({ title: 'Task deleted', description: `"${task.title}" has been removed.` })
         return true
       } catch (err) {
-        logError(err, 'useTasks:handleDeleteTask')
-        toast({
-          title: 'Deletion failed',
-          description: asErrorMessage(err),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: err,
+        context: 'useTasks:handleDeleteTask',
+        title: 'Deletion failed',
+        fallbackMessage: 'Deletion failed',
         })
         return false
       }
@@ -454,11 +457,11 @@ export function useTasks({
           deletedAt: null,
         }
       } catch (err) {
-        logError(err, 'useTasks:handleCreateTask')
-        toast({
-          title: 'Creation failed',
-          description: asErrorMessage(err),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: err,
+        context: 'useTasks:handleCreateTask',
+        title: 'Creation failed',
+        fallbackMessage: 'Creation failed',
         })
         return null
       }
@@ -491,7 +494,10 @@ export function useTasks({
 
       if (!workspaceId) {
         const message = 'Workspace not available.'
-        toast({ title: 'Update failed', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Update failed',
+        message: message,
+      })
         throw new Error(message)
       }
 
@@ -512,11 +518,11 @@ export function useTasks({
         toast({ title: 'Task updated', description: 'Changes saved.' })
         return { id: taskId } as TaskRecord
       } catch (err) {
-        logError(err, 'useTasks:handleUpdateTask')
-        toast({
-          title: 'Update failed',
-          description: asErrorMessage(err),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: err,
+        context: 'useTasks:handleUpdateTask',
+        title: 'Update failed',
+        fallbackMessage: 'Update failed',
         })
         throw err
       }
@@ -561,11 +567,11 @@ export function useTasks({
         toast({ title: 'Bulk update complete' })
         return true
       } catch (err) {
-        logError(err, 'useTasks:handleBulkUpdate')
-        toast({
-          title: 'Bulk update failed',
-          description: asErrorMessage(err),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: err,
+        context: 'useTasks:handleBulkUpdate',
+        title: 'Bulk update failed',
+        fallbackMessage: 'Bulk update failed',
         })
         return false
       }
@@ -590,11 +596,11 @@ export function useTasks({
         toast({ title: 'Bulk deletion complete' })
         return true
       } catch (err) {
-        logError(err, 'useTasks:handleBulkDelete')
-        toast({
-          title: 'Bulk deletion failed',
-          description: asErrorMessage(err),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: err,
+        context: 'useTasks:handleBulkDelete',
+        title: 'Bulk deletion failed',
+        fallbackMessage: 'Bulk deletion failed',
         })
         return false
       }

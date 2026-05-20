@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useRef, useState, useTransition } from 'react'
 import { MessageSquare } from 'lucide-react'
 import { format } from 'date-fns'
@@ -152,11 +153,10 @@ export function TaskCreationModal({
         if (!legacyId) {
           const message = 'Failed to create task'
           setError(message)
-          toast({
-            title: 'Failed to create task',
-            description: message,
-            variant: 'destructive',
-          })
+          notifyFailure({
+        title: 'Failed to create task',
+        message: message,
+      })
           return
         }
 
@@ -201,11 +201,10 @@ export function TaskCreationModal({
         logError(err, 'TaskCreationModal:submit')
         const message = asErrorMessage(err)
         setError(message)
-        toast({
-          title: 'Failed to create task',
-          description: message,
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Failed to create task',
+        message: message,
+      })
       }
     })
   }, [convex, createTask, defaultDueDate, formData, generateUploadUrl, onClose, onTaskCreated, pendingAttachments, selectedClient, selectedClientId, taskDefaults, toast, user])

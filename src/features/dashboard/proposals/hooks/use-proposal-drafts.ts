@@ -1,3 +1,5 @@
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import { useClientContext } from '@/shared/contexts/client-context'
@@ -204,11 +206,10 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         }
 
         if (!hasPersistableData) {
-            toast({
-                title: 'Draft not ready',
-                description: 'Fill in the proposal form before generating.',
-                variant: 'destructive',
-            })
+            notifyFailure({
+        title: 'Draft not ready',
+        message: 'Fill in the proposal form before generating.',
+      })
             return null
         }
 
@@ -244,11 +245,12 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         } catch (error: unknown) {
             logError(error, 'useProposalDrafts:ensureDraftId')
             setAutosaveStatus('error')
-            toast({
-                title: 'Unable to create draft',
-                description: asErrorMessage(error),
-                variant: 'destructive',
-            })
+            reportConvexFailure({
+        error: error,
+        context: 'use-proposal-drafts.ts:catch',
+        title: 'Unable to create draft',
+        fallbackMessage: 'Unable to create draft',
+        })
             return null
         } finally {
             setIsCreatingDraft(false)
@@ -303,18 +305,20 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
 
             const message = asErrorMessage(error)
             if (saveOptions?.showToast) {
-                toast({ title: 'Unable to save draft', description: message, variant: 'destructive' })
+                notifyFailure({
+        title: 'Unable to save draft',
+        message: message,
+      })
             }
         }
     }, [convexUpdateProposal, currentSnapshotKey, currentStep, ensureDraftId, formState, hasPersistableData, isPreviewMode, selectedClient?.name, selectedClientId, toast, workspaceId])
 
     const handleCreateNewProposal = useCallback(async () => {
         if (!selectedClientId) {
-            toast({
-                title: 'Select a client',
-                description: 'Choose a client from the sidebar before starting a proposal.',
-                variant: 'destructive',
-            })
+            notifyFailure({
+        title: 'Select a client',
+        message: 'Choose a client from the sidebar before starting a proposal.',
+      })
             return
         }
 
@@ -374,11 +378,12 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         } catch (error: unknown) {
             logError(error, 'useProposalDrafts:handleCreateNewProposal')
             setAutosaveStatus('error')
-            toast({
-                title: 'Unable to create draft',
-                description: asErrorMessage(error),
-                variant: 'destructive',
-            })
+            reportConvexFailure({
+        error: error,
+        context: 'use-proposal-drafts.ts:catch',
+        title: 'Unable to create draft',
+        fallbackMessage: 'Unable to create draft',
+        })
         } finally {
             setIsCreatingDraft(false)
         }
@@ -448,7 +453,10 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         } catch (err: unknown) {
             logError(err, 'useProposalDrafts:handleDeleteProposal')
             const message = asErrorMessage(err)
-            toast({ title: 'Unable to delete proposal', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Unable to delete proposal',
+        message: message,
+      })
         } finally {
             setDeletingProposalId(null)
             setProposalPendingDelete(null)
@@ -544,8 +552,12 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
                 if (cancelled) {
                     return
                 }
-                logError(err, 'useProposalDrafts:bootstrapDraft')
-                toastRef.current({ title: 'Unable to start proposal wizard', description: asErrorMessage(err), variant: 'destructive' })
+                reportConvexFailure({
+                  error: err,
+                  context: 'useProposalDrafts:bootstrapDraft',
+                  title: 'Unable to start proposal wizard',
+                  fallbackMessage: 'Unable to start proposal wizard.',
+                })
             } finally {
                 if (!cancelled) {
                     hydrationRef.current = true

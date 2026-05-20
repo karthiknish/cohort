@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Check,
@@ -302,7 +303,10 @@ function NotificationsPageContent() {
         .catch((error) => {
           logError(error, 'Notifications:updateStatus')
           const message = asErrorMessage(error)
-          toast({ title: 'Notification error', description: message, variant: 'destructive' })
+          notifyFailure({
+        title: 'Notification error',
+        message: message,
+      })
           setNotificationAnnouncement(`Could not update ${announcementLabel}. ${message}`)
         })
         .finally(() => {

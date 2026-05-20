@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 import { useMutation } from 'convex/react'
 import { CircleAlert, LoaderCircle } from 'lucide-react'
@@ -232,7 +233,10 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
     event.preventDefault()
 
     if (!user?.id || !workspaceId || !project) {
-      toast({ title: 'Authentication required', description: 'Please sign in to update the project.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Authentication required',
+        message: 'Please sign in to update the project.',
+      })
       return
     }
 
@@ -315,7 +319,10 @@ export function EditProjectDialog({ project, open, onOpenChange, onProjectUpdate
       .catch((err) => {
         const message = err instanceof Error ? err.message : 'Failed to update project'
         dispatch({ type: 'setError', value: message })
-        toast({ title: 'Update failed', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Update failed',
+        message: message,
+      })
       })
       .finally(() => {
         dispatch({ type: 'setLoading', value: false })

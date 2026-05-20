@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useMemo, useReducer } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
@@ -140,10 +142,9 @@ export function ProposalVersionHistory({
 
   const handleSaveVersion = useCallback(async () => {
     if (!proposalId) {
-      toast({
+      notifyFailure({
         title: 'Cannot save version',
-        description: 'Please save the proposal first before creating a version.',
-        variant: 'destructive',
+        message: 'Please save the proposal first before creating a version.',
       })
       return
     }
@@ -159,10 +160,9 @@ export function ProposalVersionHistory({
     dispatch({ type: 'setSaving', saving: true })
 
     if (!workspaceId) {
-      toast({
+      notifyFailure({
         title: 'Failed to save version',
-        description: 'Workspace context missing',
-        variant: 'destructive',
+        message: 'Workspace context missing',
       })
       dispatch({ type: 'setSaving', saving: false })
       return
@@ -187,11 +187,11 @@ export function ProposalVersionHistory({
         })
       })
       .catch((error) => {
-        logError(error, 'ProposalVersionHistory:saveVersion')
-        toast({
-          title: 'Failed to save version',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'ProposalVersionHistory:saveVersion',
+        title: 'Failed to save version',
+        fallbackMessage: 'Failed to save version',
         })
       })
       .finally(() => {
@@ -226,10 +226,9 @@ export function ProposalVersionHistory({
     dispatch({ type: 'setRestoring', restoring: true })
 
     if (!workspaceId) {
-      toast({
+      notifyFailure({
         title: 'Failed to restore version',
-        description: 'Workspace context missing',
-        variant: 'destructive',
+        message: 'Workspace context missing',
       })
       dispatch({ type: 'setRestoring', restoring: false })
       return
@@ -253,11 +252,11 @@ export function ProposalVersionHistory({
         setRestoreConfirmVersion(null)
       })
       .catch((error) => {
-        logError(error, 'ProposalVersionHistory:restoreVersion')
-        toast({
-          title: 'Failed to restore version',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'ProposalVersionHistory:restoreVersion',
+        title: 'Failed to restore version',
+        fallbackMessage: 'Failed to restore version',
         })
       })
       .finally(() => {

@@ -1,7 +1,7 @@
 import type { Id } from '/_generated/dataModel'
 import { v } from 'convex/values'
 
-import { Errors, isAppError } from './errors'
+import { Errors, asErrorMessage, isAppError } from './errors'
 import { internalMutation, internalQuery } from './_generated/server'
 
 function nowMs() {
@@ -15,7 +15,7 @@ function throwServerCacheError(operation: string, error: unknown, context?: Reco
     throw error
   }
 
-  throw Errors.base.internal('Server cache operation failed')
+  throw Errors.base.internal(asErrorMessage(error))
 }
 
 /**

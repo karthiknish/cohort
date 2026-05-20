@@ -9,7 +9,12 @@ import { isLoadingPhase } from '@/lib/auth-phase'
 import { Button } from '@/shared/ui/button'
 import { SiteLogo } from '@/shared/components/site-logo'
 import { useAuth } from '@/shared/contexts/auth-context'
-import { toast } from '@/shared/ui/sonner'
+import {
+  dismissToast,
+  notifyFailure,
+  notifySuccess,
+  notifyWarning,
+} from '@/lib/notifications'
 
 const SESSION_DURATION_MS = 2 * 60 * 60 * 1000
 const SESSION_WARNING_WINDOW_MS = SESSION_DURATION_MS / 10
@@ -190,17 +195,18 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
   useEffect(() => {
     return () => {
       clearSessionTimers()
-      toast.dismiss(SESSION_WARNING_TOAST_ID)
-      toast.dismiss(SESSION_EXPIRED_TOAST_ID)
+      dismissToast(SESSION_WARNING_TOAST_ID)
+      dismissToast(SESSION_EXPIRED_TOAST_ID)
     }
   }, [clearSessionTimers])
 
   const handleSessionExpired = useCallback(() => {
     clearSessionTimers()
-    toast.dismiss(SESSION_WARNING_TOAST_ID)
-    toast.error('Session expired', {
+    dismissToast(SESSION_WARNING_TOAST_ID)
+    notifyFailure({
       id: SESSION_EXPIRED_TOAST_ID,
-      description: 'Please sign in again to continue where you left off.',
+      title: 'Session expired',
+      message: 'Please sign in again to continue where you left off.',
       duration: 6000,
     })
 
@@ -223,9 +229,10 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
     }
 
     const showWarning = () => {
-      toast.warning('Session ending soon', {
+      notifyWarning({
         id: SESSION_WARNING_TOAST_ID,
-        description: 'Stay signed in to keep working without interruption.',
+        title: 'Session ending soon',
+        message: 'Stay signed in to keep working without interruption.',
         duration: 0,
         action: {
           label: 'Stay signed in',
@@ -236,17 +243,19 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
                   throw new Error('Session refresh failed')
                 }
 
-                toast.success('Session extended', {
+                notifySuccess({
                   id: SESSION_WARNING_TOAST_ID,
-                  description: 'Your workspace session is active again.',
+                  title: 'Session extended',
+                  message: 'Your workspace session is active again.',
                   duration: 4000,
                 })
                 scheduleSessionPrompts(nextMetadata)
               })
               .catch(() => {
-                toast.error('Could not extend session', {
+                notifyFailure({
                   id: SESSION_WARNING_TOAST_ID,
-                  description: 'Please save your work and sign in again before the session expires.',
+                  title: 'Could not extend session',
+                  message: 'Please save your work and sign in again before the session expires.',
                   duration: 6000,
                 })
               })
@@ -269,7 +278,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
   useEffect(() => {
     if (hasPreviewAccess || authPhase !== 'ready_active' || !user) {
       clearSessionTimers()
-      toast.dismiss(SESSION_WARNING_TOAST_ID)
+      dismissToast(SESSION_WARNING_TOAST_ID)
       return
     }
 

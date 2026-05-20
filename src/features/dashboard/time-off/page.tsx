@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { CalendarDays, CheckCircle2, Plane, ShieldCheck } from 'lucide-react'
@@ -53,7 +55,10 @@ export default function TimeOffPage() {
 
   const handleSeed = useCallback(async () => {
     if (!workspaceId) {
-      toast({ title: 'Workspace required', description: 'Sign in to seed time off data.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Workspace required',
+        message: 'Sign in to seed time off data.',
+      })
       return
     }
     setIsSeeding(true)
@@ -65,8 +70,12 @@ export default function TimeOffPage() {
           result.inserted > 0 ? 'Sample balances and requests were written to Convex.' : 'This workspace already has time off records.',
       })
     } catch (error) {
-      logError(error, 'time-off:seed')
-      toast({ title: 'Unable to seed', description: asErrorMessage(error), variant: 'destructive' })
+      reportConvexFailure({
+        error: error,
+        context: 'time-off:seed',
+        title: 'Unable to seed',
+        fallbackMessage: 'Unable to seed',
+        })
     } finally {
       setIsSeeding(false)
     }
@@ -88,8 +97,12 @@ export default function TimeOffPage() {
         await reviewTimeOffRequest({ workspaceId, requestLegacyId, decision })
         toast({ title: decision === 'approved' ? 'Request approved' : 'Request declined' })
       } catch (error) {
-        logError(error, 'time-off:review')
-        toast({ title: 'Unable to update request', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'time-off:review',
+        title: 'Unable to update request',
+        fallbackMessage: 'Unable to update request',
+        })
       } finally {
         setReviewPendingId(null)
       }

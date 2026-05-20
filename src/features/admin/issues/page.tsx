@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useMemo, useState } from 'react'
 import {
   AlertCircle,
@@ -213,11 +214,11 @@ export default function AdminIssuesPage() {
         toast({ title: 'Status updated', description: `Report marked as ${newStatus}` })
       })
       .catch((error) => {
-        logError(error, 'AdminIssuesPage:updateStatus')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'AdminIssuesPage:updateStatus',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
       .finally(() => {
@@ -243,11 +244,11 @@ export default function AdminIssuesPage() {
         setDeleteTarget(null)
       })
       .catch((error) => {
-        logError(error, 'AdminIssuesPage:deleteReport')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'AdminIssuesPage:deleteReport',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
       .finally(() => {

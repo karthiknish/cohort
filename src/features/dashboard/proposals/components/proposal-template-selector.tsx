@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useMemo, useState } from 'react'
 import { ChevronDown, FileText } from 'lucide-react'
 
@@ -99,10 +101,9 @@ export function ProposalTemplateSelector({
 
   const handleSaveAsTemplate = useCallback(async () => {
     if (!templateName.trim()) {
-      toast({
+      notifyFailure({
         title: 'Name required',
-        description: 'Please enter a name for the template.',
-        variant: 'destructive',
+        message: 'Please enter a name for the template.',
       })
       return
     }
@@ -110,10 +111,9 @@ export function ProposalTemplateSelector({
     setSaving(true)
 
     if (!workspaceId) {
-      toast({
+      notifyFailure({
         title: 'Error',
-        description: 'Workspace context missing',
-        variant: 'destructive',
+        message: 'Workspace context missing',
       })
       setSaving(false)
       return
@@ -142,11 +142,11 @@ export function ProposalTemplateSelector({
         })
       })
       .catch((error) => {
-        logError(error, 'ProposalTemplateSelector:save')
-        toast({
-          title: 'Could not save template',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'ProposalTemplateSelector:save',
+        title: 'Could not save template',
+        fallbackMessage: 'Could not save template',
         })
       })
       .finally(() => {
@@ -158,10 +158,9 @@ export function ProposalTemplateSelector({
     setDeleting(templateId)
 
     if (!workspaceId) {
-      toast({
+      notifyFailure({
         title: 'Error',
-        description: 'Workspace context missing',
-        variant: 'destructive',
+        message: 'Workspace context missing',
       })
       setDeleting(null)
       return
@@ -175,11 +174,11 @@ export function ProposalTemplateSelector({
         })
       })
       .catch((error) => {
-        logError(error, 'ProposalTemplateSelector:delete')
-        toast({
-          title: 'Could not delete template',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'ProposalTemplateSelector:delete',
+        title: 'Could not delete template',
+        fallbackMessage: 'Could not delete template',
         })
       })
       .finally(() => {

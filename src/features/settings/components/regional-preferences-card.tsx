@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState } from 'react'
 import { LoaderCircle, Globe } from 'lucide-react'
 
@@ -41,10 +42,11 @@ export function RegionalPreferencesCard() {
         })
       })
       .catch((err: unknown) => {
-        toast({
-          title: 'Could not update currency',
-          description: asErrorMessage(err),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: err,
+        context: 'regional-preferences-card.tsx:catch',
+        title: 'Could not update currency',
+        fallbackMessage: 'Could not update currency',
         })
       })
       .finally(() => {

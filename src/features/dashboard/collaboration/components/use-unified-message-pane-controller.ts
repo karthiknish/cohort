@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import {
   type ChangeEvent,
   type ClipboardEvent,
@@ -195,10 +196,9 @@ export function useUnifiedMessagePaneController({
     if (!onEditMessage || !editingMessageId) return
     const trimmedValue = editingValue.trim()
     if (!trimmedValue) {
-      toast({
+      notifyFailure({
         title: 'Message required',
-        description: 'Enter a message before saving your changes.',
-        variant: 'destructive',
+        message: 'Enter a message before saving your changes.',
       })
       return
     }
@@ -223,11 +223,10 @@ export function useUnifiedMessagePaneController({
         })
       })
       .catch(() => {
-        toast({
-          title: 'Share failed',
-          description: `Could not send to ${platform === 'email' ? 'Email' : platform}`,
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Share failed',
+        message: 'Share failed',
+      })
       })
     setSharingTo(null)
   }, [onShareToPlatform, toast])

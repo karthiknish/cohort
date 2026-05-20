@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
@@ -254,10 +256,9 @@ export default function CreativeDetailPageClient({
 
     if (!isProviderId(params.providerId)) {
       setLoading(false)
-      toast({
+      notifyFailure({
         title: 'Unsupported provider',
-        description: 'This provider is not supported in the creative detail view.',
-        variant: 'destructive',
+        message: 'This provider is not supported in the creative detail view.',
       })
       return
     }
@@ -297,11 +298,11 @@ export default function CreativeDetailPageClient({
         setCreative(match)
       })
       .catch((error) => {
-        logError(error, 'CreativeDetailPage:fetchCreative')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CreativeDetailPage:fetchCreative',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
       .finally(() => {
@@ -442,11 +443,11 @@ export default function CreativeDetailPageClient({
         setTimeout(() => setCopiedField(null), 2000)
       })
       .catch((err) => {
-        logError(err, 'CreativeDetailPage:copyField')
-        toast({
-          title: "Copy failed",
-          description: asErrorMessage(err),
-          variant: "destructive",
+        reportConvexFailure({
+        error: err,
+        context: 'CreativeDetailPage:copyField',
+        title: 'Copy failed',
+        fallbackMessage: 'Copy failed',
         })
       })
   }, [])
@@ -623,11 +624,11 @@ export default function CreativeDetailPageClient({
         toast({ title: 'Generated captions', description: `Added ${captions.length} new variant(s).` })
       })
       .catch((error) => {
-        logError(error, 'CreativeDetailPage:generateCopy')
-        toast({
-          title: 'AI generation error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CreativeDetailPage:generateCopy',
+        title: 'AI generation error',
+        fallbackMessage: 'AI generation error',
         })
       })
       .finally(() => {
@@ -668,28 +669,25 @@ export default function CreativeDetailPageClient({
     }
 
     if (!workspaceId) {
-      toast({
+      notifyFailure({
         title: 'Sign in required',
-        description: 'You need to be signed in to save creative updates.',
-        variant: 'destructive',
+        message: 'You need to be signed in to save creative updates.',
       })
       return
     }
 
     if (!creative) {
-      toast({
+      notifyFailure({
         title: 'Creative unavailable',
-        description: 'Creative details are not loaded yet.',
-        variant: 'destructive',
+        message: 'Creative details are not loaded yet.',
       })
       return
     }
 
     if (!isProviderId(params.providerId)) {
-      toast({
+      notifyFailure({
         title: 'Unsupported provider',
-        description: 'This provider is not supported for updates.',
-        variant: 'destructive',
+        message: 'This provider is not supported for updates.',
       })
       return
     }
@@ -760,11 +758,11 @@ export default function CreativeDetailPageClient({
         setIsEditing(false)
       })
       .catch((error) => {
-        logError(error, 'CreativeDetailPage:handleSave')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CreativeDetailPage:handleSave',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
       .finally(() => {

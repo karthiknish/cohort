@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useState, useCallback } from 'react'
 import { Link2, Check, Copy, Mail, Share2 } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
@@ -50,19 +51,17 @@ export function TaskShareDialog({ task, onShareUpdate, trigger }: TaskShareDialo
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
-      toast({
+      notifyFailure({
         title: 'Invalid email',
-        description: 'Please enter a valid email address',
-        variant: 'destructive',
+        message: 'Please enter a valid email address',
       })
       return
     }
 
     if (sharedWith.includes(email)) {
-      toast({
+      notifyFailure({
         title: 'Already shared',
-        description: 'This person already has access',
-        variant: 'destructive',
+        message: 'This person already has access',
       })
       return
     }

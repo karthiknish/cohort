@@ -1,7 +1,7 @@
 import { z } from 'zod/v4'
 
 import type { Id } from '/_generated/dataModel'
-import { Errors, isAppError } from './errors'
+import { Errors, asErrorMessage, isAppError } from './errors'
 import { zAdminMutation, zAdminQuery } from './functions'
 
 type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked'
@@ -77,7 +77,7 @@ function throwAdminInvitationsError(operation: string, error: unknown, context?:
     throw error
   }
 
-  throw Errors.base.internal('Admin invitation operation failed')
+  throw Errors.base.internal(asErrorMessage(error))
 }
 
 export const listInvitations = zAdminQuery({

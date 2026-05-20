@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { Bell } from 'lucide-react'
 
@@ -126,7 +127,10 @@ export function NotificationsDropdown() {
         })
         .catch((error) => {
           const message = error instanceof Error ? error.message : 'Notification update failed'
-          toast({ title: 'Update failed', description: message, variant: 'destructive' })
+          notifyFailure({
+        title: 'Update failed',
+        message: message,
+      })
         })
         .finally(() => {
           setAckInFlight(false)

@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useState, useCallback } from 'react'
 import { LoaderCircle, Download } from 'lucide-react'
 import { useAction } from 'convex/react'
@@ -58,7 +59,10 @@ export function DataExportCard() {
       .catch((exportErr) => {
         const message = exportErr instanceof Error ? exportErr.message : 'Failed to export data'
         setExportError(message)
-        toast({ title: 'Export failed', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Export failed',
+        message: message,
+      })
       })
       .finally(() => {
         setExportingData(false)

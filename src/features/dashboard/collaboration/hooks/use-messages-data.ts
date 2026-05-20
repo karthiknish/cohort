@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useConvex, useMutation, useQuery } from 'convex/react'
 import { v4 as uuidv4 } from 'uuid'
@@ -339,10 +341,9 @@ export function useMessagesData({
       }
 
       lastRealtimeErrorToastKeyRef.current = toastKey
-      toast({
+      notifyFailure({
         title: 'Unable to load messages',
-        description: `${channel.name}: ${errorMessage}`,
-        variant: 'destructive',
+        message: '${channel.name}: ${errorMessage}',
       })
     },
     [channelListRetryNonce, toast],
@@ -500,12 +501,12 @@ export function useMessagesData({
         toast({ title: 'Marked as read', description: 'Channel read state updated for you.' })
       }
     } catch (error) {
-      logError(error, 'useMessagesData:markChannelRead')
-      toast({
+      reportConvexFailure({
+        error: error,
+        context: 'useMessagesData:markChannelRead',
         title: 'Could not mark read',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
+        fallbackMessage: 'Could not mark read',
+        })
     } finally {
       setMarkChannelReadPending(false)
     }
@@ -538,11 +539,11 @@ export function useMessagesData({
           beforeMs,
         })
       } catch (error) {
-        logError(error, 'useCollaborationData:handleMarkThreadAsRead')
-        toast({
-          title: 'Could not mark thread read',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'useCollaborationData:handleMarkThreadAsRead',
+        title: 'Could not mark thread read',
+        fallbackMessage: 'Could not mark thread read',
         })
       }
     },
@@ -594,11 +595,10 @@ export function useMessagesData({
           if (!response.ok) {
             const detail =
               typeof response.status === 'number' ? `Server returned ${response.status}.` : 'Request failed.'
-            toast({
-              title: 'Email collaboration copy failed',
-              description: detail,
-              variant: 'destructive',
-            })
+            notifyFailure({
+        title: 'Email collaboration copy failed',
+        message: detail,
+      })
             return
           }
 
@@ -609,27 +609,27 @@ export function useMessagesData({
               sharedTo: ['email'],
             })
           } catch (error) {
-            logError(error, 'useCollaborationData:sendToExternalPlatforms:updateSharedTo')
-            toast({
-              title: 'Could not tag message as emailed',
-              description: asErrorMessage(error),
-              variant: 'destructive',
-            })
+            reportConvexFailure({
+        error: error,
+        context: 'useCollaborationData:sendToExternalPlatforms:updateSharedTo',
+        title: 'Could not tag message as emailed',
+        fallbackMessage: 'Could not tag message as emailed',
+        })
           }
         } catch (error) {
-          logError(error, 'useCollaborationData:sendToExternalPlatforms:email')
-          toast({
-            title: 'Email collaboration copy failed',
-            description: asErrorMessage(error),
-            variant: 'destructive',
-          })
+          reportConvexFailure({
+        error: error,
+        context: 'useCollaborationData:sendToExternalPlatforms:email',
+        title: 'Email collaboration copy failed',
+        fallbackMessage: 'Email collaboration copy failed',
+        })
         }
       } catch (error) {
-        logError(error, 'useCollaborationData:sendToExternalPlatforms')
-        toast({
-          title: 'Collaboration email unavailable',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'useCollaborationData:sendToExternalPlatforms',
+        title: 'Collaboration email unavailable',
+        fallbackMessage: 'Collaboration email unavailable',
         })
       }
     },
@@ -699,12 +699,18 @@ export function useMessagesData({
       const channelId = selectedChannel?.id
 
       if (!trimmedContent && pendingAttachments.length === 0) {
-        toast({ title: 'Message required', description: 'Enter a message before sending.', variant: 'destructive' })
+        notifyFailure({
+        title: 'Message required',
+        message: 'Enter a message before sending.',
+      })
         return
       }
 
       if (!channelId || !channels.some((c) => c.id === channelId)) {
-        toast({ title: 'Channel unavailable', description: 'Select a channel and try again.', variant: 'destructive' })
+        notifyFailure({
+        title: 'Channel unavailable',
+        message: 'Select a channel and try again.',
+      })
         return
       }
 
@@ -893,8 +899,12 @@ export function useMessagesData({
 
         toast({ title: 'Message sent', description: 'Your message is live for the team.' })
       } catch (error) {
-        logError(error, 'useCollaborationData:handleSendMessage')
-        toast({ title: 'Collaboration error', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'useCollaborationData:handleSendMessage',
+        title: 'Collaboration error',
+        fallbackMessage: 'Collaboration error',
+        })
       } finally {
         setSending(false)
       }
@@ -982,8 +992,12 @@ export function useMessagesData({
 
         setNextCursorByChannel((prev) => ({ ...prev, [channelId]: newCursor }))
       } catch (error) {
-        logError(error, 'useCollaborationData:handleLoadMore')
-        toast({ title: 'Load error', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'useCollaborationData:handleLoadMore',
+        title: 'Load error',
+        fallbackMessage: 'Load error',
+        })
       } finally {
         setLoadingMoreChannelId(null)
       }

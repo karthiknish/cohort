@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useRef, useEffect } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { collaborationApi } from '@/lib/convex-api'
@@ -77,10 +78,11 @@ export function useReadReceipts({
       } catch (error) {
         logError(error, 'useReadReceipts:handleMarkAsRead')
         markedAsReadRef.current.delete(messageId)
-        toast({
-          title: 'Read receipt update failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'use-read-receipts.ts:catch',
+        title: 'Read receipt update failed',
+        fallbackMessage: 'Read receipt update failed',
         })
       }
     },
@@ -112,10 +114,11 @@ export function useReadReceipts({
       } catch (error) {
         logError(error, 'useReadReceipts:handleMarkMultipleAsRead')
         messagesToMark.forEach((id) => markedAsReadRef.current.delete(id))
-        toast({
-          title: 'Read receipt update failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'use-read-receipts.ts:catch',
+        title: 'Read receipt update failed',
+        fallbackMessage: 'Read receipt update failed',
         })
       }
     },
@@ -145,11 +148,11 @@ export function useReadReceipts({
           }
         })
       } catch (error) {
-        logError(error, 'useReadReceipts:handleMarkChannelAsRead')
-        toast({
-          title: 'Failed to mark messages as read',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'useReadReceipts:handleMarkChannelAsRead',
+        title: 'Failed to mark messages as read',
+        fallbackMessage: 'Failed to mark messages as read',
         })
       }
     },

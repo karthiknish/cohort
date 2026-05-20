@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { AtSign, ChevronRight, FileText, Paperclip, Search, X } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 
@@ -95,10 +96,11 @@ function useCrossChannelSearchController({
       .catch((error) => {
         logError(error, 'CrossChannelSearch:handleSearch')
         setResults([])
-        toast({
-          title: 'Search failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'cross-channel-search.tsx:catch',
+        title: 'Search failed',
+        fallbackMessage: 'Search failed',
         })
       })
       .finally(() => {

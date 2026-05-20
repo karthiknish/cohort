@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useRef, useState } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import { useConvex, useMutation } from 'convex/react'
@@ -54,12 +56,18 @@ export function useSendMessage({
       const channelId = selectedChannelId
 
       if (!trimmedContent && !options?.attachmentPaths?.length) {
-        toast({ title: 'Message required', description: 'Enter a message before sending.', variant: 'destructive' })
+        notifyFailure({
+        title: 'Message required',
+        message: 'Enter a message before sending.',
+      })
         return
       }
 
       if (!channelId || !channels.some((channel) => channel.id === channelId)) {
-        toast({ title: 'Channel unavailable', description: 'Select a channel and try again.', variant: 'destructive' })
+        notifyFailure({
+        title: 'Channel unavailable',
+        message: 'Select a channel and try again.',
+      })
         return
       }
 
@@ -159,8 +167,12 @@ export function useSendMessage({
 
         toast({ title: 'Message sent', description: 'Your message is live for the team.' })
       } catch (error) {
-        logError(error, 'useSendMessage:handleSendMessage')
-        toast({ title: 'Collaboration error', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'useSendMessage:handleSendMessage',
+        title: 'Collaboration error',
+        fallbackMessage: 'Collaboration error',
+        })
       } finally {
         setSendingMessage(false)
         sendingMessageRef.current = false
@@ -302,8 +314,12 @@ export function useFetchMessages({
         setChannelCursors((prev) => ({ ...prev, [channelId]: nextCursor }))
         setHasMoreByChannel((prev) => ({ ...prev, [channelId]: !!nextCursor }))
       } catch (error) {
-        logError(error, 'useFetchMessages:fetchMessages')
-        toast({ title: 'Fetch error', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'useFetchMessages:fetchMessages',
+        title: 'Fetch error',
+        fallbackMessage: 'Fetch error',
+        })
       } finally {
         setFetchingMessages(false)
       }

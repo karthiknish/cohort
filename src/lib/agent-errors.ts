@@ -129,13 +129,16 @@ export function parseAgentError(error: unknown, response?: Response | null): Age
     const code = data?.code || ''
     const message = data?.message || 'An error occurred'
 
-    if (code.includes('auth')) {
+    const authCodes = new Set(['UNAUTHORIZED', 'FORBIDDEN', 'USER_NOT_FOUND', 'USER_DISABLED', 'ADMIN_REQUIRED', 'WORKSPACE_ACCESS_DENIED', 'INVALID_TOKEN'])
+    const validationCodes = new Set(['INVALID_INPUT', 'INVALID_STATE', 'VALIDATION_ERROR'])
+
+    if (authCodes.has(code) || code.includes('AUTH')) {
       return new AgentAuthError(message, error)
     }
-    if (code.includes('rate_limit') || code.includes('too_many_requests')) {
+    if (code === 'TOO_MANY_REQUESTS' || code.includes('RATE_LIMIT')) {
       return new AgentRateLimitError(60, error)
     }
-    if (code.includes('validation')) {
+    if (validationCodes.has(code) || code.includes('VALIDATION') || code.includes('INVALID')) {
       return new AgentValidationError(message, error)
     }
     return new AgentError({

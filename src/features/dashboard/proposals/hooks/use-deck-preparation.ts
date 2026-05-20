@@ -1,3 +1,4 @@
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useRef, useState } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -200,7 +201,10 @@ export function useDeckPreparation(options: UseDeckPreparationOptions): UseDeckP
                 )
             }
 
-            toast({ title: 'Unable to prepare deck', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Unable to prepare deck',
+        message: message,
+      })
             const pendingWindow = pendingDeckWindowRef.current
             if (pendingWindow && !pendingWindow.closed) {
                 pendingWindow.close()

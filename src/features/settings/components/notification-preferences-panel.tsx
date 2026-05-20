@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Bell, ExternalLink, LoaderCircle, Moon } from 'lucide-react'
@@ -115,7 +116,10 @@ export function NotificationPreferencesPanel() {
           setError(message)
         }
         if (!options?.silent) {
-          toast({ title: 'Could not save preferences', description: message, variant: 'destructive' })
+          notifyFailure({
+        title: 'Could not save preferences',
+        message: message,
+      })
         }
         return null
       } finally {

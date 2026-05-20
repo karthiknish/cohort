@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import type { CellContext, ColumnDef, HeaderContext } from '@tanstack/react-table'
 import { useAction } from 'convex/react'
 import { useRouter } from 'next/navigation'
@@ -457,11 +459,11 @@ export function CampaignManagementCard({
         dispatch({ type: 'setCampaigns', campaigns: Array.isArray(result) ? (result as Campaign[]) : [] })
       })
       .catch((error) => {
-        logError(error, 'CampaignManagementCard:fetchCampaigns')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CampaignManagementCard:fetchCampaigns',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
       .finally(() => {
@@ -487,11 +489,11 @@ export function CampaignManagementCard({
         dispatch({ type: 'setGroups', groups: Array.isArray(result) ? (result as CampaignGroup[]) : [] })
       })
       .catch((error) => {
-        logError(error, 'CampaignManagementCard:fetchGroups')
-        toast({
-          title: 'Could not load campaign groups',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CampaignManagementCard:fetchGroups',
+        title: 'Could not load campaign groups',
+        fallbackMessage: 'Could not load campaign groups',
         })
       })
       .finally(() => {
@@ -546,10 +548,9 @@ export function CampaignManagementCard({
     dispatch({ type: 'setActionLoading', actionLoading: campaignId })
 
     if (!workspaceId) {
-      toast({
+      notifyFailure({
         title: 'Error',
-        description: 'Sign in required',
-        variant: 'destructive',
+        message: 'Sign in required',
       })
       dispatch({ type: 'setActionLoading', actionLoading: null })
       return
@@ -572,11 +573,11 @@ export function CampaignManagementCard({
         onRefresh?.()
       })
       .catch((error) => {
-        logError(error, 'CampaignManagementCard:handleAction')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CampaignManagementCard:handleAction',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
       .finally(() => {
@@ -588,10 +589,9 @@ export function CampaignManagementCard({
     dispatch({ type: 'setActionLoading', actionLoading: groupId })
 
     if (!workspaceId) {
-      toast({
+      notifyFailure({
         title: 'Error',
-        description: 'Sign in required',
-        variant: 'destructive',
+        message: 'Sign in required',
       })
       dispatch({ type: 'setActionLoading', actionLoading: null })
       return
@@ -614,11 +614,11 @@ export function CampaignManagementCard({
         onRefresh?.()
       })
       .catch((error) => {
-        logError(error, 'CampaignManagementCard:handleGroupAction')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CampaignManagementCard:handleGroupAction',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
       .finally(() => {
@@ -636,10 +636,9 @@ export function CampaignManagementCard({
     const parsedBudget = parseFloat(newBudget)
 
     if (!workspaceId) {
-      toast({
+      notifyFailure({
         title: 'Error',
-        description: 'Sign in required',
-        variant: 'destructive',
+        message: 'Sign in required',
       })
       dispatch({ type: 'setActionLoading', actionLoading: null })
       return
@@ -679,11 +678,11 @@ export function CampaignManagementCard({
         onRefresh?.()
       })
       .catch((error) => {
-        logError(error, 'CampaignManagementCard:handleBudgetUpdate')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CampaignManagementCard:handleBudgetUpdate',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
       .finally(() => {
@@ -697,10 +696,9 @@ export function CampaignManagementCard({
     dispatch({ type: 'setActionLoading', actionLoading: selectedCampaign.id })
 
     if (!workspaceId) {
-      toast({
+      notifyFailure({
         title: 'Error',
-        description: 'Sign in required',
-        variant: 'destructive',
+        message: 'Sign in required',
       })
       dispatch({ type: 'setActionLoading', actionLoading: null })
       return
@@ -726,11 +724,11 @@ export function CampaignManagementCard({
         onRefresh?.()
       })
       .catch((error) => {
-        logError(error, 'CampaignManagementCard:handleBiddingUpdate')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'CampaignManagementCard:handleBiddingUpdate',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
       .finally(() => {

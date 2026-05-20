@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { LoaderCircle } from 'lucide-react'
 import { useRouter, redirect } from 'next/navigation'
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
@@ -98,10 +99,9 @@ function HomeAuthPageContent() {
     const oauthError = params.get('error')
     if (!oauthError) return
 
-    toast({
+    notifyFailure({
       title: 'Google sign-in failed',
-      description: getFriendlyAuthErrorMessage(oauthError),
-      variant: 'destructive',
+      message: getFriendlyAuthErrorMessage(oauthError),
     })
 
     params.delete('error')
@@ -177,19 +177,17 @@ function HomeAuthPageContent() {
             }
 
             if (passwordStrength.score < 2) {
-              toast({
-                title: 'Password needs work',
-                description: 'Create a stronger password with at least 8 characters, including letters and numbers.',
-                variant: 'destructive',
-              })
+              notifyFailure({
+        title: 'Password needs work',
+        message: 'Create a stronger password with at least 8 characters, including letters and numbers.',
+      })
               return
             }
 
             if (signUpData.password !== signUpData.confirmPassword) {
-              toast({
-                title: 'Passwords don\'t match',
-                description: 'Please make sure both passwords are identical.',
-                variant: 'destructive',
+              notifyFailure({
+                title: "Passwords don't match",
+                message: 'Please make sure both passwords are identical.',
               })
               return
             }
@@ -237,10 +235,9 @@ function HomeAuthPageContent() {
           push(resolvePostAuthDestination())
         })
         .catch((error) => {
-          toast({
-            title: mode === 'signin' ? 'Sign in failed' : 'Sign up failed',
-            description: getFriendlyAuthErrorMessage(error),
-            variant: 'destructive',
+          notifyFailure({
+            error,
+            fallbackMessage: 'Sign in failed. Please try again.',
           })
         })
         .finally(() => {

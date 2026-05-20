@@ -1,3 +1,4 @@
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useMemo, useState } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import type { ProposalFormData } from '@/lib/proposals'
@@ -230,7 +231,10 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
     const handleNext = useCallback(() => {
         if (!validateProposalStep(stepId, formState)) {
             const message = 'Please complete the required fields before continuing.'
-            toast({ title: 'Complete required fields', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Complete required fields',
+        message: message,
+      })
             const stepErrors = collectStepValidationErrors(stepId, formState)
             setManualErrors((prev) => ({ ...prev, ...stepErrors }))
             return
@@ -262,7 +266,10 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
                     const stepToValidate = proposalSteps[index]?.id
                     if (!stepToValidate || !validateProposalStep(stepToValidate, formState)) {
                         const message = 'Complete required fields on earlier steps before jumping ahead.'
-                        toast({ title: 'Complete required fields', description: message, variant: 'destructive' })
+                        notifyFailure({
+        title: 'Complete required fields',
+        message: message,
+      })
                         setManualErrors((prev) => ({
                             ...prev,
                             ...collectStepValidationErrors(stepToValidate ?? stepId, formState),

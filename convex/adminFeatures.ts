@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 
-import { Errors, isAppError } from './errors'
+import { Errors, asErrorMessage, isAppError } from './errors'
 import { adminMutation, adminQuery, type AuthenticatedMutationCtx, type AuthenticatedQueryCtx } from './functions'
 
 function nowMs() {
@@ -14,7 +14,7 @@ function throwAdminFeaturesError(operation: string, error: unknown, context?: Re
     throw error
   }
 
-  throw Errors.base.internal('Admin feature operation failed')
+  throw Errors.base.internal(asErrorMessage(error))
 }
 
 const referenceValidator = v.object({

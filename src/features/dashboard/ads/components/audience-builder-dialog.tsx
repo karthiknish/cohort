@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useAction } from 'convex/react'
 import { useCallback, useState } from 'react'
 
@@ -124,19 +126,17 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
 
   const handleCreate = useCallback(() => {
     if (!formData.name) {
-      toast({
+      notifyFailure({
         title: 'Missing information',
-        description: 'Please provide an audience name.',
-        variant: 'destructive',
+        message: 'Please provide an audience name.',
       })
       return
     }
 
     if (formData.segments.length === 0 && formData.locations.length === 0 && formData.interests.length === 0) {
-      toast({
+      notifyFailure({
         title: 'Missing targeting',
-        description: 'Please add at least one segment, location, or interest.',
-        variant: 'destructive',
+        message: 'Please add at least one segment, location, or interest.',
       })
       return
     }
@@ -144,10 +144,9 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
     setLoading(true)
     const workspaceId = user?.agencyId ? String(user.agencyId) : null
     if (!workspaceId) {
-      toast({
+      notifyFailure({
         title: 'Error',
-        description: 'Failed to create audience.',
-        variant: 'destructive',
+        message: 'Failed to create audience.',
       })
       setLoading(false)
       return
@@ -179,10 +178,11 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
         resetForm()
       })
       .catch((err: unknown) => {
-        toast({
-          title: 'Could not create audience',
-          description: asErrorMessage(err),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: err,
+        context: 'audience-builder-dialog.tsx:catch',
+        title: 'Could not create audience',
+        fallbackMessage: 'Could not create audience',
         })
       })
       .finally(() => {

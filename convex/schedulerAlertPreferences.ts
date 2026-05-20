@@ -1,7 +1,7 @@
 import { internalMutation, internalQuery } from './_generated/server'
 import { v } from 'convex/values'
 
-import { Errors, isAppError } from './errors'
+import { Errors, asErrorMessage, isAppError } from './errors'
 
 const preferenceValidator = v.object({
   providerId: v.string(),
@@ -15,7 +15,7 @@ function throwSchedulerAlertPreferenceError(operation: string, error: unknown, c
     throw error
   }
 
-  throw Errors.base.internal('Scheduler alert preference operation failed')
+  throw Errors.base.internal(asErrorMessage(error))
 }
 
 /**

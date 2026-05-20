@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useState, useCallback, useEffect, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoaderCircle, Trash2 } from 'lucide-react'
@@ -157,7 +158,10 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       .catch((accountError) => {
         const message = accountError instanceof Error ? accountError.message : 'Failed to delete account'
         setDeleteAccountError(message)
-        toast({ title: 'Account deletion failed', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Account deletion failed',
+        message: message,
+      })
       })
       .finally(() => {
         setDeleteAccountLoading(false)

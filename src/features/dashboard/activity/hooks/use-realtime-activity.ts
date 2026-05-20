@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useReducer } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
@@ -172,10 +173,11 @@ export function useRealtimeActivity(limitCount = 20, preferPreviewData = false) 
       } catch (error) {
         logError(error, 'useRealtimeActivity:markAsRead')
         dispatch({ type: 'setError', error: 'Unable to update activity read status. Please try again.' })
-        toast({
-          title: 'Update failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'use-realtime-activity.ts:catch',
+        title: 'Update failed',
+        fallbackMessage: 'Update failed',
         })
       }
     },

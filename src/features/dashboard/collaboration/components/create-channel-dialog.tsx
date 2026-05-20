@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useMemo, useReducer } from 'react'
 import { Hash, LoaderCircle, Lock, Plus, Users } from 'lucide-react'
 
@@ -209,20 +211,18 @@ export function CreateChannelDialog({
     }
 
     if (!workspaceId || !userId) {
-      toast({
+      notifyFailure({
         title: 'Authentication required',
-        description: 'You must be signed in to create channels.',
-        variant: 'destructive',
+        message: 'You must be signed in to create channels.',
       })
       return
     }
 
     const normalizedName = channelName.replace(/\s+/g, ' ').trim()
     if (normalizedName.length < 2) {
-      toast({
+      notifyFailure({
         title: 'Channel name required',
-        description: 'Use at least 2 characters for the channel name.',
-        variant: 'destructive',
+        message: 'Use at least 2 characters for the channel name.',
       })
       return
     }
@@ -243,12 +243,12 @@ export function CreateChannelDialog({
       resetForm()
       dispatch({ type: 'setOpen', open: false })
     } catch (error) {
-      logError(error, 'CreateChannelDialog:handleCreate')
-      toast({
+      reportConvexFailure({
+        error: error,
+        context: 'CreateChannelDialog:handleCreate',
         title: 'Channel creation failed',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
+        fallbackMessage: 'Channel creation failed',
+        })
     }
     dispatch({ type: 'setIsCreating', isCreating: false })
   }, [channelName, description, isCreating, onCreate, resetForm, selectedMemberIds, toast, userId, visibility, workspaceId])

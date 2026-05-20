@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation } from 'convex/react'
 import { v4 as uuidv4 } from 'uuid'
@@ -119,22 +121,34 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
   const handleSubmit = useCallback((event: React.FormEvent) => {
     event.preventDefault()
     if (!user?.id) {
-      toast({ title: 'Sign in required', description: 'Please sign in to create milestones.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Sign in required',
+        message: 'Please sign in to create milestones.',
+      })
       return
     }
     if (!projectId) {
-      toast({ title: 'Project required', description: 'Choose a project for this milestone.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Project required',
+        message: 'Choose a project for this milestone.',
+      })
       return
     }
     if (!title.trim()) {
-      toast({ title: 'Title required', description: 'Give this milestone a name.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Title required',
+        message: 'Give this milestone a name.',
+      })
       return
     }
 
     setLoading(true)
 
     if (!user?.agencyId) {
-      toast({ title: 'Could not create', description: 'Missing workspace', variant: 'destructive' })
+      notifyFailure({
+        title: 'Could not create',
+        message: 'Missing workspace',
+      })
       setLoading(false)
       return
     }
@@ -173,8 +187,12 @@ export function CreateMilestoneDialog({ projects, trigger, defaultProjectId, onC
         setOpen(false)
       })
       .catch((error) => {
-        logError(error, 'CreateMilestoneDialog:handleSubmit')
-        toast({ title: 'Could not create', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'CreateMilestoneDialog:handleSubmit',
+        title: 'Could not create',
+        fallbackMessage: 'Could not create',
+        })
       })
       .finally(() => {
         setLoading(false)

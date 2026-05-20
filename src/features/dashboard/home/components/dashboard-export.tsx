@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState } from 'react'
 import { Download, FileImage, FileJson, FileSpreadsheet, LoaderCircle } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
@@ -187,12 +188,12 @@ export function DashboardExport({
           setOpen(false)
         })
         .catch((error) => {
-          logError(error, 'DashboardExport:handleExport')
-          toast({
-            title: 'Export failed',
-            description: asErrorMessage(error),
-            variant: 'destructive',
-          })
+          reportConvexFailure({
+        error: error,
+        context: 'DashboardExport:handleExport',
+        title: 'Export failed',
+        fallbackMessage: 'Export failed',
+        })
         })
         .finally(() => {
           setIsExporting(false)
@@ -348,11 +349,11 @@ export function QuickExportButton({
         onComplete?.()
       })
       .catch((error) => {
-        logError(error, 'QuickExportButton:handleExport')
-        toast({
-          title: 'Export failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'QuickExportButton:handleExport',
+        title: 'Export failed',
+        fallbackMessage: 'Export failed',
         })
       })
       .finally(() => {
@@ -431,11 +432,11 @@ export function ScheduledExportDialog({
         setOpen(false)
       })
       .catch((error) => {
-        logError(error, 'ScheduledExportDialog:handleSchedule')
-        toast({
-          title: 'Failed to schedule',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'ScheduledExportDialog:handleSchedule',
+        title: 'Failed to schedule',
+        fallbackMessage: 'Failed to schedule',
         })
       })
       .finally(() => {

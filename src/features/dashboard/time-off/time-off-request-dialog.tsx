@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState } from 'react'
 
 import { asErrorMessage, logError } from '@/lib/convex-errors'
@@ -28,11 +30,17 @@ export function TimeOffRequestDialog({ workspaceId, isPreviewMode, onSubmit }: T
       return
     }
     if (!workspaceId) {
-      toast({ title: 'Workspace required', description: 'Sign in to submit a request.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Workspace required',
+        message: 'Sign in to submit a request.',
+      })
       return
     }
     if (!windowLabel.trim()) {
-      toast({ title: 'Dates required', description: 'Enter when you need leave (e.g. May 5 - May 9).', variant: 'destructive' })
+      notifyFailure({
+        title: 'Dates required',
+        message: 'Enter when you need leave (e.g. May 5 - May 9).',
+      })
       return
     }
     setPending(true)
@@ -41,8 +49,12 @@ export function TimeOffRequestDialog({ workspaceId, isPreviewMode, onSubmit }: T
       setWindowLabel('')
       toast({ title: 'Request submitted' })
     } catch (error) {
-      logError(error, 'time-off:submit-request')
-      toast({ title: 'Request failed', description: asErrorMessage(error), variant: 'destructive' })
+      reportConvexFailure({
+        error: error,
+        context: 'time-off:submit-request',
+        title: 'Request failed',
+        fallbackMessage: 'Request failed',
+        })
     } finally {
       setPending(false)
     }

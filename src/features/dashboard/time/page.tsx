@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { Clock3, ShieldCheck, TimerReset, Users } from 'lucide-react'
@@ -60,7 +62,10 @@ export default function TimePage() {
 
   const handleSeed = useCallback(async () => {
     if (!workspaceId) {
-      toast({ title: 'Workspace required', description: 'Sign in to seed operational time data.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Workspace required',
+        message: 'Sign in to seed operational time data.',
+      })
       return
     }
 
@@ -72,8 +77,12 @@ export default function TimePage() {
         description: result.inserted > 0 ? 'Sample sessions were written to Convex for this workspace.' : 'This workspace already has time sessions.',
       })
     } catch (error) {
-      logError(error, 'time-page:seed')
-      toast({ title: 'Unable to seed time module', description: asErrorMessage(error), variant: 'destructive' })
+      reportConvexFailure({
+        error: error,
+        context: 'time-page:seed',
+        title: 'Unable to seed time module',
+        fallbackMessage: 'Unable to seed time module',
+        })
     } finally {
       setIsSeeding(false)
     }
@@ -81,7 +90,10 @@ export default function TimePage() {
 
   const handleClockAction = useCallback(async (action: 'clockIn' | 'startBreak' | 'clockOut') => {
     if (!workspaceId) {
-      toast({ title: 'Workspace required', description: 'Sign in to update time sessions.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Workspace required',
+        message: 'Sign in to update time sessions.',
+      })
       return
     }
 
@@ -98,8 +110,12 @@ export default function TimePage() {
         description: `Session ${result.legacyId} is now ${result.status}.`,
       })
     } catch (error) {
-      logError(error, `time-page:${action}`)
-      toast({ title: 'Unable to update clock state', description: asErrorMessage(error), variant: 'destructive' })
+      reportConvexFailure({
+        error: error,
+        context: 'time-page:${action}',
+        title: 'Unable to update clock state',
+        fallbackMessage: 'Unable to update clock state',
+        })
     } finally {
       setPendingAction(null)
     }
@@ -127,8 +143,12 @@ export default function TimePage() {
           title: decision === 'approve' ? 'Session approved' : decision === 'reject' ? 'Session rejected' : 'Session flagged',
         })
       } catch (error) {
-        logError(error, 'time-page:review')
-        toast({ title: 'Review failed', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'time-page:review',
+        title: 'Review failed',
+        fallbackMessage: 'Review failed',
+        })
       } finally {
         setPendingReviewId(null)
       }

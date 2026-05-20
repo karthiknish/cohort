@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 
@@ -160,7 +162,10 @@ export function useWorkforceOverview() {
 
   const seedAllModules = async () => {
     if (!workspaceId) {
-      toast({ title: 'Workspace required', description: 'Sign in to seed operations data.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Workspace required',
+        message: 'Sign in to seed operations data.',
+      })
       return
     }
 
@@ -182,8 +187,12 @@ export function useWorkforceOverview() {
           : 'This workspace already has operations data.',
       })
     } catch (error) {
-      logError(error, 'workforce-overview:seed-all')
-      toast({ title: 'Unable to seed operations data', description: asErrorMessage(error), variant: 'destructive' })
+      reportConvexFailure({
+        error: error,
+        context: 'workforce-overview:seed-all',
+        title: 'Unable to seed operations data',
+        fallbackMessage: 'Unable to seed operations data',
+        })
     } finally {
       setIsSeeding(false)
     }
@@ -191,7 +200,10 @@ export function useWorkforceOverview() {
 
   const runClockAction = async (action: 'clockIn' | 'startBreak' | 'clockOut') => {
     if (!workspaceId) {
-      toast({ title: 'Workspace required', description: 'Sign in to update time sessions.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Workspace required',
+        message: 'Sign in to update time sessions.',
+      })
       return
     }
 
@@ -208,8 +220,12 @@ export function useWorkforceOverview() {
         description: `Session ${result.legacyId} is now ${result.status}.`,
       })
     } catch (error) {
-      logError(error, `workforce-overview:${action}`)
-      toast({ title: 'Unable to update clock state', description: asErrorMessage(error), variant: 'destructive' })
+      reportConvexFailure({
+        error: error,
+        context: 'workforce-overview:${action}',
+        title: 'Unable to update clock state',
+        fallbackMessage: 'Unable to update clock state',
+        })
     } finally {
       setPendingClockAction(null)
     }
@@ -217,7 +233,10 @@ export function useWorkforceOverview() {
 
   const addCoverageShift = async () => {
     if (!workspaceId) {
-      toast({ title: 'Workspace required', description: 'Sign in to create a coverage shift.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Workspace required',
+        message: 'Sign in to create a coverage shift.',
+      })
       return
     }
 
@@ -230,8 +249,12 @@ export function useWorkforceOverview() {
       })
       toast({ title: 'Coverage shift created', description: `Shift ${result.legacyId} was added to the live schedule.` })
     } catch (error) {
-      logError(error, 'workforce-overview:create-shift')
-      toast({ title: 'Unable to create shift', description: asErrorMessage(error), variant: 'destructive' })
+      reportConvexFailure({
+        error: error,
+        context: 'workforce-overview:create-shift',
+        title: 'Unable to create shift',
+        fallbackMessage: 'Unable to create shift',
+        })
     } finally {
       setIsCreatingShift(false)
     }
@@ -239,7 +262,10 @@ export function useWorkforceOverview() {
 
   const addChecklistTemplate = async () => {
     if (!workspaceId) {
-      toast({ title: 'Workspace required', description: 'Sign in to create a checklist template.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Workspace required',
+        message: 'Sign in to create a checklist template.',
+      })
       return
     }
 
@@ -253,8 +279,12 @@ export function useWorkforceOverview() {
       })
       toast({ title: 'Checklist template created', description: `Template ${result.legacyId} was saved to Convex.` })
     } catch (error) {
-      logError(error, 'workforce-overview:create-template')
-      toast({ title: 'Unable to create template', description: asErrorMessage(error), variant: 'destructive' })
+      reportConvexFailure({
+        error: error,
+        context: 'workforce-overview:create-template',
+        title: 'Unable to create template',
+        fallbackMessage: 'Unable to create template',
+        })
     } finally {
       setIsCreatingTemplate(false)
     }

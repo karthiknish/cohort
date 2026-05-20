@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useMemo, useState } from 'react'
 import { Lightbulb, LoaderCircle, RefreshCw } from 'lucide-react'
 
@@ -167,11 +168,11 @@ export default function AdminFeaturesPage() {
         })
       })
       .catch((error) => {
-        logError(error, 'AdminFeaturesPage:confirmDelete')
-        toast({
-          title: 'Delete failed',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'AdminFeaturesPage:confirmDelete',
+        title: 'Delete failed',
+        fallbackMessage: 'Delete failed',
         })
       })
       .finally(() => {
@@ -207,11 +208,12 @@ export default function AdminFeaturesPage() {
         .catch((error) => {
           logError(error, 'AdminFeaturesPage:handleMoveFeature')
           // Convex is source of truth; UI will settle automatically.
-          toast({
-            title: 'Move failed',
-            description: asErrorMessage(error),
-            variant: 'destructive',
-          })
+          reportConvexFailure({
+        error: error,
+        context: 'page.tsx:catch',
+        title: 'Move failed',
+        fallbackMessage: 'Move failed',
+        })
         })
     },
     [features, isPreviewMode, toast, updateFeature]
@@ -296,12 +298,12 @@ export default function AdminFeaturesPage() {
           })
         })
         .catch((error) => {
-          logError(error, 'AdminFeaturesPage:handleSubmitFeature')
-          toast({
-            title: 'Save failed',
-            description: asErrorMessage(error),
-            variant: 'destructive',
-          })
+          reportConvexFailure({
+        error: error,
+        context: 'AdminFeaturesPage:handleSubmitFeature',
+        title: 'Save failed',
+        fallbackMessage: 'Save failed',
+        })
         })
     },
     [createFeature, editingFeature, isPreviewMode, toast, updateFeature]

@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { buildAdminUserPage } from './adminUserPage'
-import { Errors, isAppError } from './errors'
+import { Errors, asErrorMessage, isAppError } from './errors'
 import { applyManualPagination, adminMutation, adminPaginatedQuery, adminQuery } from './functions'
 
 const userSummaryValidator = v.object({
@@ -22,7 +22,7 @@ function throwAdminUsersError(operation: string, error: unknown, context?: Recor
     throw error
   }
 
-  throw Errors.base.internal('Admin user operation failed')
+  throw Errors.base.internal(asErrorMessage(error))
 }
 
 function parseGlobalUsersCursor(cursor: string | null | undefined) {

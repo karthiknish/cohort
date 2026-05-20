@@ -1,3 +1,5 @@
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useRef, useState } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import { useClientContext } from '@/shared/contexts/client-context'
@@ -188,11 +190,10 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 const previewSimulation = getPreviewProposalSimulation(selectedClientId ?? null)
 
                 if (!previewSimulation) {
-                    toast({
-                        title: 'Preview result unavailable',
-                        description: 'Sample proposal output is not available right now.',
-                        variant: 'destructive',
-                    })
+                    notifyFailure({
+        title: 'Preview result unavailable',
+        message: 'Sample proposal output is not available right now.',
+      })
                     return
                 }
 
@@ -248,12 +249,12 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                 setAutosaveStatus('saved')
             } catch (updateError: unknown) {
                 setAutosaveStatus('error')
-                logError(updateError, 'useProposalSubmission:submitProposal:saveDraft')
-                toast({
-                    title: 'Unable to save proposal',
-                    description: asErrorMessage(updateError),
-                    variant: 'destructive',
-                })
+                reportConvexFailure({
+        error: updateError,
+        context: 'useProposalSubmission:submitProposal:saveDraft',
+        title: 'Unable to save proposal',
+        fallbackMessage: 'Unable to save proposal',
+        })
                 setIsSubmitting(false)
                 return
             }
@@ -263,12 +264,12 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             // Trigger server-side AI + deck generation.
             if (workspaceId) {
                 generateProposalDeck({ workspaceId, legacyId: activeDraftId }).catch((error: unknown) => {
-                    logError(error, 'useProposalSubmission:submitProposal:generate')
-                    toast({
-                        title: 'Deck generation failed to start',
-                        description: asErrorMessage(error),
-                        variant: 'destructive',
-                    })
+                    reportConvexFailure({
+        error: error,
+        context: 'useProposalSubmission:submitProposal:generate',
+        title: 'Deck generation failed to start',
+        fallbackMessage: 'Deck generation failed to start',
+        })
                 })
             }
 
@@ -409,11 +410,10 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
                     })
                 }
             } else if (isFailed) {
-                toast({
-                    title: 'Generation failed',
-                    description: 'The presentation could not be generated. Please try again or contact support if the issue persists.',
-                    variant: 'destructive',
-                })
+                notifyFailure({
+        title: 'Generation failed',
+        message: 'The presentation could not be generated. Please try again or contact support if the issue persists.',
+      })
             } else {
                 toast({
                     title: 'Presentation still generating',
@@ -451,7 +451,10 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             setPresentationDeck(null)
             setAiSuggestions(null)
             setLastSubmissionSnapshot(null)
-            toast({ title: 'Failed to submit proposal', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Failed to submit proposal',
+        message: message,
+      })
         } finally {
             setIsSubmitting(false)
         }
@@ -463,11 +466,10 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         }
 
         if (lastSubmissionSnapshot.clientId && lastSubmissionSnapshot.clientId !== selectedClientId) {
-            toast({
-                title: 'Switch back to original client',
-                description: 'Return to the client associated with this proposal to continue editing.',
-                variant: 'destructive',
-            })
+            notifyFailure({
+        title: 'Switch back to original client',
+        message: 'Return to the client associated with this proposal to continue editing.',
+      })
             return
         }
 
@@ -508,18 +510,20 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         } catch (error: unknown) {
             logError(error, 'useProposalSubmission:handleContinueEditingFromSnapshot')
             const message = asErrorMessage(error)
-            toast({ title: 'Unable to resume editing', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Unable to resume editing',
+        message: message,
+      })
         }
     }, [convexUpdateProposal, isPreviewMode, lastSubmissionSnapshot, refreshProposals, selectedClientId, setAutosaveStatus, setCurrentStep, setDraftId, setFormState, steps, toast, workspaceId])
 
     const handleRecheckDeck = useCallback(async () => {
         const proposalId = lastSubmissionSnapshot?.draftId ?? draftId
         if (!proposalId) {
-            toast({
-                title: 'No proposal selected',
-                description: 'Cannot check deck status without an active proposal.',
-                variant: 'destructive',
-            })
+            notifyFailure({
+        title: 'No proposal selected',
+        message: 'Cannot check deck status without an active proposal.',
+      })
             return
         }
 
@@ -564,11 +568,10 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
             // Handle failed proposals
             if (proposalStatus === 'failed') {
                 const deckError = getDeckError(activeProposal.presentationDeck)
-                toast({
-                    title: 'Generation failed',
-                    description: deckError || 'The presentation generation failed. Please try again.',
-                    variant: 'destructive',
-                })
+                notifyFailure({
+        title: 'Generation failed',
+        message: deckError,
+      })
                 return
             }
 
@@ -617,11 +620,10 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
 
                 if (newStatus === 'failed') {
                     const deckError = getDeckError(currentProposal.presentationDeck)
-                    toast({
-                        title: 'Generation failed',
-                        description: deckError || 'The presentation generation failed. Please try again.',
-                        variant: 'destructive',
-                    })
+                    notifyFailure({
+        title: 'Generation failed',
+        message: deckError,
+      })
                     return
                 }
 
@@ -639,7 +641,10 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         } catch (error: unknown) {
             logError(error, 'useProposalSubmission:handleRecheckDeck')
             const message = asErrorMessage(error)
-            toast({ title: 'Unable to check status', description: message, variant: 'destructive' })
+            notifyFailure({
+        title: 'Unable to check status',
+        message: message,
+      })
         } finally {
             setIsRecheckingDeck(false)
         }

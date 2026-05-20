@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useMemo, useState } from 'react'
 import { useAction } from 'convex/react'
 import { DollarSign, RefreshCw, Save } from 'lucide-react'
@@ -107,10 +109,9 @@ export function BudgetControlSection({
 
     const parsed = Number.parseFloat(amount)
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      toast({
+      notifyFailure({
         title: 'Invalid budget',
-        description: 'Enter a valid budget amount greater than 0.',
-        variant: 'destructive',
+        message: 'Enter a valid budget amount greater than 0.',
       })
       return
     }
@@ -142,11 +143,11 @@ export function BudgetControlSection({
         return onReloadCampaign?.()
       })
       .catch((error) => {
-        logError(error, 'BudgetControlSection:handleSave')
-        toast({
-          title: 'Error',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'BudgetControlSection:handleSave',
+        title: 'Error',
+        fallbackMessage: 'Error',
         })
       })
       .finally(() => {

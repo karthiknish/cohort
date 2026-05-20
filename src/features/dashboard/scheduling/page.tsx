@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { AlertTriangle, CalendarDays, Clock3, RefreshCw } from 'lucide-react'
@@ -62,7 +64,10 @@ export default function SchedulingPage() {
 
   const handleSeed = useCallback(async () => {
     if (!workspaceId) {
-      toast({ title: 'Workspace required', description: 'Sign in to seed scheduling data.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Workspace required',
+        message: 'Sign in to seed scheduling data.',
+      })
       return
     }
 
@@ -74,8 +79,12 @@ export default function SchedulingPage() {
         description: result.inserted > 0 ? 'Starter shifts and a swap request were written to Convex.' : 'This workspace already has scheduling records.',
       })
     } catch (error) {
-      logError(error, 'scheduling-page:seed')
-      toast({ title: 'Unable to seed scheduling module', description: asErrorMessage(error), variant: 'destructive' })
+      reportConvexFailure({
+        error: error,
+        context: 'scheduling-page:seed',
+        title: 'Unable to seed scheduling module',
+        fallbackMessage: 'Unable to seed scheduling module',
+        })
     } finally {
       setIsSeeding(false)
     }
@@ -84,7 +93,10 @@ export default function SchedulingPage() {
   const handleCreateShift = useCallback(
     async (form: { title: string; team: string; locationLabel: string; notes: string; timeLabel: string }) => {
       if (!workspaceId) {
-        toast({ title: 'Workspace required', description: 'Sign in to create a coverage shift.', variant: 'destructive' })
+        notifyFailure({
+        title: 'Workspace required',
+        message: 'Sign in to create a coverage shift.',
+      })
         return
       }
 
@@ -100,8 +112,12 @@ export default function SchedulingPage() {
         })
         toast({ title: 'Coverage shift created', description: `Shift ${result.legacyId} was added to the live schedule.` })
       } catch (error) {
-        logError(error, 'scheduling-page:create-shift')
-        toast({ title: 'Unable to create shift', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'scheduling-page:create-shift',
+        title: 'Unable to create shift',
+        fallbackMessage: 'Unable to create shift',
+        })
       } finally {
         setIsCreatingShift(false)
       }
@@ -115,7 +131,10 @@ export default function SchedulingPage() {
       return
     }
     if (!workspaceId) {
-      toast({ title: 'Workspace required', description: 'Sign in to set availability.', variant: 'destructive' })
+      notifyFailure({
+        title: 'Workspace required',
+        message: 'Sign in to set availability.',
+      })
       return
     }
     setIsBlocking(true)
@@ -130,8 +149,12 @@ export default function SchedulingPage() {
       })
       toast({ title: 'Availability saved', description: 'Next 8h marked unavailable for you. Check shifts that overlap this window.' })
     } catch (error) {
-      logError(error, 'scheduling-page:availability')
-      toast({ title: 'Unable to save', description: asErrorMessage(error), variant: 'destructive' })
+      reportConvexFailure({
+        error: error,
+        context: 'scheduling-page:availability',
+        title: 'Unable to save',
+        fallbackMessage: 'Unable to save',
+        })
     } finally {
       setIsBlocking(false)
     }
@@ -153,8 +176,12 @@ export default function SchedulingPage() {
           await createShiftSwapRequest({ workspaceId, shiftLegacyId: shiftId, requestedTo: to.trim() })
           toast({ title: 'Swap requested', description: 'Managers can approve or dismiss from the queue below.' })
         } catch (error) {
-          logError(error, 'scheduling-page:request-swap')
-          toast({ title: 'Request failed', description: asErrorMessage(error), variant: 'destructive' })
+          reportConvexFailure({
+        error: error,
+        context: 'scheduling-page:request-swap',
+        title: 'Request failed',
+        fallbackMessage: 'Request failed',
+        })
         }
       })()
     },
@@ -169,8 +196,12 @@ export default function SchedulingPage() {
         await reviewShiftSwapRequest({ workspaceId, swapLegacyId: swapId, decision })
         toast({ title: decision === 'approved' ? 'Swap approved' : 'Swap dismissed' })
       } catch (error) {
-        logError(error, 'scheduling-page:review-swap')
-        toast({ title: 'Review failed', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'scheduling-page:review-swap',
+        title: 'Review failed',
+        fallbackMessage: 'Review failed',
+        })
       } finally {
         setPendingSwapId(null)
       }
@@ -194,7 +225,10 @@ export default function SchedulingPage() {
         return
       }
       if (!workspaceId) {
-        toast({ title: 'Workspace required', description: 'Sign in to claim a shift.', variant: 'destructive' })
+        notifyFailure({
+        title: 'Workspace required',
+        message: 'Sign in to claim a shift.',
+      })
         return
       }
       setClaimingShiftId(shiftId)
@@ -205,8 +239,12 @@ export default function SchedulingPage() {
           description: 'You are now listed on this coverage block.',
         })
       } catch (error) {
-        logError(error, 'scheduling-page:claim-shift')
-        toast({ title: 'Unable to claim shift', description: asErrorMessage(error), variant: 'destructive' })
+        reportConvexFailure({
+        error: error,
+        context: 'scheduling-page:claim-shift',
+        title: 'Unable to claim shift',
+        fallbackMessage: 'Unable to claim shift',
+        })
       } finally {
         setClaimingShiftId(null)
       }

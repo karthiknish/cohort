@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useRef, useState } from 'react'
 import { Camera, LoaderCircle, Trash2 } from 'lucide-react'
 import { useMutation } from 'convex/react'
@@ -71,20 +73,18 @@ export function ChannelInfoDialog({
       if (!file || !isAdmin) return
 
       if (!ALLOWED_AVATAR_TYPES.has(file.type)) {
-        toast({
-          title: 'Unsupported image',
-          description: 'Use a JPEG, PNG, or WebP file.',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Unsupported image',
+        message: 'Use a JPEG, PNG, or WebP file.',
+      })
         return
       }
 
       if (file.size > MAX_AVATAR_BYTES) {
-        toast({
-          title: 'Image too large',
-          description: 'Channel photos must be 2 MB or smaller.',
-          variant: 'destructive',
-        })
+        notifyFailure({
+        title: 'Image too large',
+        message: 'Channel photos must be 2 MB or smaller.',
+      })
         return
       }
 
@@ -119,10 +119,11 @@ export function ChannelInfoDialog({
           description: `${displayName} now has a new photo.`,
         })
       } catch (error) {
-        toast({
-          title: 'Could not update photo',
-          description: asErrorMessage(error),
-          variant: 'destructive',
+        reportConvexFailure({
+        error: error,
+        context: 'channel-info-dialog.tsx:catch',
+        title: 'Could not update photo',
+        fallbackMessage: 'Could not update photo',
         })
       } finally {
         setUploading(false)
@@ -146,11 +147,12 @@ export function ChannelInfoDialog({
         description: `${displayName} is using the default icon again.`,
       })
     } catch (error) {
-      toast({
+      reportConvexFailure({
+        error: error,
+        context: 'channel-info-dialog.tsx:catch',
         title: 'Could not remove photo',
-        description: asErrorMessage(error),
-        variant: 'destructive',
-      })
+        fallbackMessage: 'Could not remove photo',
+        })
     } finally {
       setRemoving(false)
     }

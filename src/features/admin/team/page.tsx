@@ -1,5 +1,6 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
@@ -179,7 +180,10 @@ export default function AdminTeamPage() {
       .catch((err: unknown) => {
         logError(err, 'AdminTeamPage:loadMore')
         const message = asErrorMessage(err)
-        toast({ title: 'Could not load more', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Could not load more',
+        message: message,
+      })
       })
       .finally(() => {
         setLoadingMore(false)
@@ -295,7 +299,10 @@ export default function AdminTeamPage() {
         logError(err, 'AdminTeamPage:handleRoleChange')
         const message = asErrorMessage(err)
         setError(message)
-        toast({ title: 'Role update failed', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Role update failed',
+        message: message,
+      })
       })
       .finally(() => {
         setSavingId(null)
@@ -347,7 +354,10 @@ export default function AdminTeamPage() {
         logError(err, 'AdminTeamPage:handleStatusAction')
         const message = asErrorMessage(err)
         setError(message)
-        toast({ title: 'Status update failed', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Status update failed',
+        message: message,
+      })
       })
       .finally(() => {
         setSavingId(null)
@@ -408,7 +418,10 @@ export default function AdminTeamPage() {
       .catch((err: unknown) => {
         logError(err, 'AdminTeamPage:handleInviteUser')
         const message = asErrorMessage(err)
-        toast({ title: 'Invitation failed', description: message, variant: 'destructive' })
+        notifyFailure({
+        title: 'Invitation failed',
+        message: message,
+      })
       })
       .finally(() => {
         setInviteSending(false)

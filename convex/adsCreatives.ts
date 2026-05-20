@@ -673,7 +673,7 @@ export const createCreative = action({
         })
 
         if (!creativeResult.success) {
-          throw new Error(creativeResult.error || 'Failed to create creative')
+          throw Errors.integration.error(args.providerId, creativeResult.error || 'Failed to create creative')
         }
 
         createdMetaCreativeId = creativeResult.creativeId
@@ -690,7 +690,7 @@ export const createCreative = action({
           })
 
           if (!adResult.success) {
-            throw new Error(adResult.error || 'Failed to create ad')
+            throw Errors.integration.error(args.providerId, adResult.error || 'Failed to create ad')
           }
 
           createdMetaAdId = adResult.adId
@@ -718,7 +718,7 @@ export const createCreative = action({
         return response
       }
 
-      throw new Error(`Create creative not yet implemented for ${args.providerId}`)
+      throw Errors.base.notImplemented(`Create creative for ${args.providerId}`)
     } catch (error) {
       if (args.providerId === 'facebook' && createdMetaCreativeId && !createdMetaAdId && args.adSetId) {
         try {
@@ -847,7 +847,7 @@ export const updateCreative = action({
       })
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to update creative')
+        throw Errors.integration.error(args.providerId, result.error || 'Failed to update creative')
       }
 
       return {
@@ -857,7 +857,7 @@ export const updateCreative = action({
       }
     }
 
-    throw new Error(`Update creative not yet implemented for ${args.providerId}`)
+    throw Errors.base.notImplemented(`Update creative for ${args.providerId}`)
   }, 'adsCreatives:updateCreative'),
 })
 
@@ -909,7 +909,7 @@ export const uploadMedia = action({
       })
 
       if (!result.success) {
-        throw new Error(result.error || 'Failed to upload media')
+        throw Errors.integration.error(args.providerId, result.error || 'Failed to upload media')
       }
 
       return {
@@ -918,6 +918,6 @@ export const uploadMedia = action({
       }
     }
 
-    throw new Error(`Upload media not yet implemented for ${args.providerId}`)
+    throw Errors.base.notImplemented(`Upload media for ${args.providerId}`)
   }, 'adsCreatives:uploadMedia'),
 })

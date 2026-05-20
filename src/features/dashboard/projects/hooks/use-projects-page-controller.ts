@@ -1,5 +1,7 @@
 'use client'
 
+import { notifyFailure } from '@/lib/notifications'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useMutation as useTanstackMutation } from '@tanstack/react-query'
 import { useMutation, useQuery } from 'convex/react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -311,7 +313,10 @@ export function useProjectsPageController() {
     setDeleting(true)
 
     if (!workspaceId) {
-      toast({ title: 'Deletion failed', description: 'Missing workspace', variant: 'destructive' })
+      notifyFailure({
+        title: 'Deletion failed',
+        message: 'Missing workspace',
+      })
       setDeleting(false)
       setDeleteDialogOpen(false)
       setProjectToDelete(null)
@@ -329,8 +334,12 @@ export function useProjectsPageController() {
         toast({ title: 'Project deleted', description: `"${projectToDelete.name}" has been permanently removed.` })
       })
       .catch((mutationError) => {
-        logError(mutationError, 'ProjectsPage:handleDeleteProject')
-        toast({ title: 'Deletion failed', description: asErrorMessage(mutationError), variant: 'destructive' })
+        reportConvexFailure({
+        error: mutationError,
+        context: 'ProjectsPage:handleDeleteProject',
+        title: 'Deletion failed',
+        fallbackMessage: 'Deletion failed',
+        })
       })
       .finally(() => {
         setDeleting(false)
@@ -375,7 +384,12 @@ export function useProjectsPageController() {
         project.id === context.projectId ? { ...project, status: context.previousStatus } : project
       )))
 
-      toast({ title: 'Status update failed', description: asErrorMessage(mutationError), variant: 'destructive' })
+      reportConvexFailure({
+        error: mutationError,
+        context: 'use-projects-page-controller.ts:catch',
+        title: 'Status update failed',
+        fallbackMessage: 'Status update failed',
+        })
     },
     onSuccess: (_data, variables) => {
       emitDashboardRefresh({ reason: 'project-mutated', clientId: variables.project.clientId ?? null })
@@ -518,8 +532,12 @@ export function useProjectsPageController() {
         description: `${count} project${count !== 1 ? 's' : ''} loaded successfully.`,
       })
     } catch (refreshError) {
-      logError(refreshError, 'ProjectsPage:handleRefreshProjects')
-      toast({ title: 'Refresh failed', description: asErrorMessage(refreshError), variant: 'destructive' })
+      reportConvexFailure({
+        error: refreshError,
+        context: 'ProjectsPage:handleRefreshProjects',
+        title: 'Refresh failed',
+        fallbackMessage: 'Refresh failed',
+        })
     }
   }, [loadProjects, toast])
 

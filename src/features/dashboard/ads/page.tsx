@@ -1,5 +1,6 @@
 'use client'
 
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 
 import { extractErrorCode, logError } from '@/lib/convex-errors'
@@ -237,12 +238,10 @@ export default function AdsPage() {
 
     errors.forEach((error) => {
       if (shownErrorsRef.current.has(error)) return
-      logError(error, 'AdsPage:Effect')
-      toast({
-        variant: 'destructive',
-        title: 'Ads error',
-        description: error,
-      })
+      reportConvexFailure({
+        error: error,
+        context: 'AdsPage:Effect',
+        })
       shownErrorsRef.current.add(error)
     })
   }, [connectionErrors, loadMoreError, metricError, suppressMetricsErrors, toast])
