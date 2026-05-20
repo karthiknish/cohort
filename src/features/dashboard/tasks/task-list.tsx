@@ -131,8 +131,6 @@ export function TaskList({
         userName={userName}
         userRole={userRole}
         participants={participants}
-        onEdit={onEdit}
-        onDelete={onDelete}
       />
     </>
   )

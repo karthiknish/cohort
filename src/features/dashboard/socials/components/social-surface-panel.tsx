@@ -197,7 +197,7 @@ export function SocialSurfacePanel({
     if (surface === 'instagram' && !hasInstagramBinding) {
       return {
         title: 'No linked Instagram',
-        description: copy.noIgMessage,
+        description: SURFACE_COPY.instagram.noIgMessage,
         action: undefined,
       }
     }

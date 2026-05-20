@@ -71,7 +71,8 @@ export function useSocialsSetup(status: SocialsConnectionStatus | null): UseSoci
       if (status?.facebookPageId) {
         setSelectedPageId(status.facebookPageId)
       } else if (!selectedPageId && options.length === 1) {
-        setSelectedPageId(options[0].id)
+        const only = options[0]
+        if (only) setSelectedPageId(only.id)
       }
     } catch (error: unknown) {
       logError(error, 'useSocialsSetup:loadPages')
