@@ -19,9 +19,6 @@ interface ProposalDraftPanelProps {
   currentStep: number
   totalSteps: number
   isSubmitting: boolean
-  stepTitle: string
-  stepDescription: string
-  requiredFieldLabels: string[]
   validationMessages: string[]
 }
 
@@ -36,9 +33,6 @@ export function ProposalDraftPanel({
   currentStep,
   totalSteps,
   isSubmitting,
-  stepTitle,
-  stepDescription,
-  requiredFieldLabels,
   validationMessages,
 }: ProposalDraftPanelProps) {
   const autosaveLabel = autosaveStatus === 'saving'
@@ -55,12 +49,7 @@ export function ProposalDraftPanel({
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
         <ProposalDraftContentShell
-          currentStep={currentStep}
-          requiredFieldLabels={requiredFieldLabels}
           stepContent={stepContent}
-          stepDescription={stepDescription}
-          stepTitle={stepTitle}
-          totalSteps={totalSteps}
           validationMessages={validationMessages}
         />
       </div>

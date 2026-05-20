@@ -9,6 +9,7 @@ import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { Input } from '@/shared/ui/input'
+import { FormField } from '@/shared/ui/form-field'
 import { Label } from '@/shared/ui/label'
 import { LocationMap, type LocationMarker } from '@/shared/ui/location-map'
 import { ScrollArea } from '@/shared/ui/scroll-area'
@@ -353,10 +354,14 @@ export function AudienceBuilderDialogTabs({
     <ScrollArea className="max-h-[50vh] flex-1">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsContent value="basics" className="m-0 space-y-4 p-6">
-          <div className="space-y-2">
-            <Label htmlFor="aud-name" className="flex items-center gap-1">
-              Audience Name <span className="text-destructive">*</span>
-            </Label>
+          <FormField
+            id="aud-name"
+            label={
+              <>
+                Audience Name <span className="text-destructive">*</span>
+              </>
+            }
+          >
             <AudienceInput
               id="aud-name"
               placeholder="e.g. Website Visitors - Last 30 Days"
@@ -364,10 +369,13 @@ export function AudienceBuilderDialogTabs({
               onValueChange={onNameChange}
               className="h-11"
             />
-          </div>
+          </FormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="aud-desc">Description</Label>
+          <FormField
+            id="aud-desc"
+            label="Description"
+            description="Describe your target audience and campaign goals."
+          >
             <AudienceTextarea
               id="aud-desc"
               placeholder="Describe your target audience and campaign goals…"
@@ -375,7 +383,7 @@ export function AudienceBuilderDialogTabs({
               onValueChange={onDescriptionChange}
               rows={3}
             />
-          </div>
+          </FormField>
         </TabsContent>
 
         <TabsContent value="locations" className="m-0 space-y-4 p-6">

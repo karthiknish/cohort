@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from '@/shared/ui/card'
 import { cn } from '@/lib/utils'
+import { TruncatedTextPreview } from '@/shared/ui/hover-preview'
 import type { ClientRecord } from '@/types/clients'
 import type { ClientPipelineBoardProps } from '../types'
 
@@ -76,9 +77,13 @@ export function ClientPipelineBoard({ clients, selectedClientId }: ClientPipelin
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary" title={client.name}>
-                            {client.name}
-                          </span>
+                          <TruncatedTextPreview
+                            text={client.name}
+                            className="text-sm font-bold text-foreground transition-colors group-hover:text-primary"
+                            detail={
+                              client.accountManager ? `Account manager: ${client.accountManager}` : undefined
+                            }
+                          />
                           <div className="mt-1 flex items-center gap-2">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
                               {client.accountManager ? client.accountManager : 'Unassigned'}

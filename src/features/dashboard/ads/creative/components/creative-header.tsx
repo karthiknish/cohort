@@ -18,6 +18,7 @@ import {
 import Link from 'next/link'
 
 import { Button } from '@/shared/ui/button'
+import { TruncatedTextPreview } from '@/shared/ui/hover-preview'
 import { Badge } from '@/shared/ui/badge'
 import {
   DropdownMenu,
@@ -110,7 +111,7 @@ export function CreativeHeader(props: {
               ) : null}
             </div>
             <h1 className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
-              <span className="truncate">{displayName}</span>
+              <TruncatedTextPreview text={displayName} className="min-w-0 max-w-[min(100%,20rem)]" />
               <span className="shrink-0 rounded-lg border border-muted-foreground/10 bg-muted-foreground/5 p-1">
                 {getTypeIcon(creative.type)}
               </span>

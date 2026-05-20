@@ -4,6 +4,8 @@ import { useCallback, useId, useMemo, useRef, useState, type ChangeEvent, type K
 import { User, X } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
+import { HoverPreview } from '@/shared/ui/hover-preview'
+import { FieldLabel } from '@/shared/ui/field'
 import { Input } from '@/shared/ui/input'
 import { LiveRegion } from '@/shared/ui/live-region'
 import { interactiveTransitionClass } from '@/lib/motion'
@@ -426,11 +428,7 @@ export function MentionInput(
 
     return (
       <div className={cn('space-y-2', className)}>
-        {label && (
-          <label htmlFor={inputId} className="text-sm font-medium">
-            {label}
-          </label>
-        )}
+        {label ? <FieldLabel htmlFor={inputId}>{label}</FieldLabel> : null}
 
         {selectedMentions.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -523,7 +521,30 @@ export function MentionInput(
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium">{user.name}</p>
+                          <HoverPreview
+                            trigger={<span className="block truncate font-medium">{user.name}</span>}
+                            className="w-56"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-9 w-9 shrink-0">
+                                {user.avatar ? (
+                                  <AvatarImage src={user.avatar} alt="" className="object-cover" />
+                                ) : null}
+                                <AvatarFallback className="bg-muted">
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="min-w-0 space-y-0.5">
+                                <p className="font-medium text-foreground">{user.name}</p>
+                                {user.email ? (
+                                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                                ) : null}
+                                {user.role ? (
+                                  <p className="text-xs text-muted-foreground">{user.role}</p>
+                                ) : null}
+                              </div>
+                            </div>
+                          </HoverPreview>
                           <p className="truncate text-xs text-muted-foreground">
                             {user.role || user.email || 'Team member'}
                           </p>

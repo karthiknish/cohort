@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog'
+import { TruncatedTextPreview } from '@/shared/ui/hover-preview'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 
 type GoogleAnalyticsPropertyOption = {
@@ -88,9 +89,16 @@ export function GoogleAnalyticsSetupDialog({
               <SelectContent className="max-h-[min(24rem,var(--radix-select-content-available-height))] w-[var(--radix-select-trigger-width)]">
                 {properties.map((property) => (
                   <SelectItem key={property.id} value={property.id} className="items-start py-2.5">
-                    <div className="flex min-w-0 flex-col">
-                      <span className="truncate font-medium">{property.name}</span>
-                      <span className="truncate text-xs text-muted-foreground">{property.resourceName}</span>
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <TruncatedTextPreview
+                        text={property.name}
+                        className="font-medium"
+                        detail={property.resourceName}
+                      />
+                      <TruncatedTextPreview
+                        text={property.resourceName}
+                        className="text-xs text-muted-foreground"
+                      />
                     </div>
                   </SelectItem>
                 ))}

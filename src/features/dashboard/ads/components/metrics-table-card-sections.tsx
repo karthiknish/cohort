@@ -4,7 +4,7 @@ import { useCallback } from 'react'
 import type { ChangeEvent } from 'react'
 
 import Link from 'next/link'
-import { Filter, Info, RefreshCw, Search, X } from 'lucide-react'
+import { Filter, RefreshCw, Search, X } from 'lucide-react'
 import type { ColumnDef } from '@tanstack/react-table'
 
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
@@ -22,7 +22,7 @@ import {
 } from '@/shared/ui/dropdown-menu'
 import { Input } from '@/shared/ui/input'
 import { Skeleton } from '@/shared/ui/skeleton'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip'
+import { MetricHint } from '@/shared/ui/hover-preview'
 import { cn, formatCurrency } from '@/lib/utils'
 
 import type { MetricRecord } from './types'
@@ -60,7 +60,12 @@ function ProviderFilterOption({
 type ProviderOption = string
 
 export function HeaderWithTooltip({ title, tooltip }: { title: string; tooltip: string }) {
-  return <div className="flex items-center gap-1">{title}<TooltipProvider><Tooltip><TooltipTrigger><Info className="h-3 w-3 text-muted-foreground/70" /></TooltipTrigger><TooltipContent><p>{tooltip}</p></TooltipContent></Tooltip></TooltipProvider></div>
+  return (
+    <div className="flex items-center gap-1">
+      {title}
+      <MetricHint description={tooltip} label={`About ${title}`} className="text-muted-foreground/70" />
+    </div>
+  )
 }
 
 export function buildMetricsTableColumns(currency = 'USD'): ColumnDef<MetricRecord>[] {

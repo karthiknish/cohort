@@ -47,6 +47,7 @@ export interface UseProposalWizardReturn {
     canRedo: boolean
     handleNext: () => void
     handleBack: () => void
+    goToStep: (index: number) => void
     resetWizard: () => void
 }
 
@@ -248,6 +249,35 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
         }
     }, [isFirstStep])
 
+    const goToStep = useCallback(
+        (targetIndex: number) => {
+            if (targetIndex < 0 || targetIndex >= proposalSteps.length) {
+                return
+            }
+            if (targetIndex === currentStep) {
+                return
+            }
+            if (targetIndex > currentStep) {
+                for (let index = currentStep; index < targetIndex; index += 1) {
+                    const stepToValidate = proposalSteps[index]?.id
+                    if (!stepToValidate || !validateProposalStep(stepToValidate, formState)) {
+                        const message = 'Complete required fields on earlier steps before jumping ahead.'
+                        toast({ title: 'Complete required fields', description: message, variant: 'destructive' })
+                        setManualErrors((prev) => ({
+                            ...prev,
+                            ...collectStepValidationErrors(stepToValidate ?? stepId, formState),
+                        }))
+                        setCurrentStep(index)
+                        return
+                    }
+                    clearErrors(stepErrorPaths[stepToValidate])
+                }
+            }
+            setCurrentStep(targetIndex)
+        },
+        [clearErrors, currentStep, formState, stepId, toast],
+    )
+
     const resetWizard = useCallback(() => {
         setFormState(createInitialProposalFormState(), { resetHistory: true })
         setCurrentStep(0)
@@ -277,6 +307,7 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
         canRedo,
         handleNext,
         handleBack,
+        goToStep,
         resetWizard,
     }
 }

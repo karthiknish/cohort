@@ -24,12 +24,7 @@ describe('proposal draft panel sections', () => {
     const markup = renderToStaticMarkup(
       <>
         <ProposalDraftContentShell
-          currentStep={1}
-          requiredFieldLabels={['Budget']}
           stepContent={STEP_BODY}
-          stepDescription="Describe the current step"
-          stepTitle="Step title"
-          totalSteps={5}
           validationMessages={['Budget is required']}
         />
         <ProposalDraftFooter
@@ -44,7 +39,7 @@ describe('proposal draft panel sections', () => {
       </>,
     )
 
-    expect(markup).toContain('Step title')
+    expect(markup).toContain('Fix these before continuing')
     expect(markup).toContain('Step body')
     expect(markup).toContain('Previous')
     expect(markup).toContain('Generate Strategy')

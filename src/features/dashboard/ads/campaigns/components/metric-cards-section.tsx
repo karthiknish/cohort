@@ -19,12 +19,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/shared/ui/collapsible'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/shared/ui/tooltip'
+import { MetricCardPreview } from '@/shared/ui/hover-preview'
 import { normalizeCurrencyCode } from '@/constants/currencies'
 
 interface CalculatedMetrics {
@@ -142,18 +137,7 @@ function MetricCard({
     return content
   }
 
-  return (
-    <TooltipProvider delayDuration={150}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {content}
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
-          {description}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  )
+  return <MetricCardPreview description={description}>{content}</MetricCardPreview>
 }
 
 export function MetricCardsSection({

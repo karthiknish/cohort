@@ -1,8 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
-import { Bell, Check, ExternalLink, LoaderCircle, Settings2 } from 'lucide-react'
-import Link from 'next/link'
+import { Bell } from 'lucide-react'
 
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useMutation, useQuery as useConvexQuery, useConvex } from 'convex/react'
@@ -16,15 +15,15 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
-import { ScrollArea } from '@/shared/ui/scroll-area'
+import { Drawer, DrawerContent } from '@/shared/ui/drawer'
 
 import { notificationsApi } from '@/lib/convex-api'
 import { parsePageSize } from '@/lib/pagination'
 import { useToast } from '@/shared/ui/use-toast'
-import { NotificationEmptyState } from '@/features/notifications/components/notification-empty-state'
-import { NotificationGroupList } from '@/features/notifications/components/notification-group'
+import { NotificationsInboxPanel } from '@/features/notifications/components/notifications-inbox-panel'
 import { groupNotificationsByDate } from '@/features/notifications/lib/group-notifications'
 import { useNotificationNavigation } from '@/features/notifications/hooks/use-notification-navigation'
+import { useIsMobile } from '@/shared/hooks/use-is-mobile'
 
 const PAGE_SIZE = 20
 
@@ -45,6 +44,7 @@ export function NotificationsDropdown() {
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
   const { toast } = useToast()
+  const isMobile = useIsMobile()
 
   const [open, setOpen] = useState(false)
   const [ackInFlight, setAckInFlight] = useState(false)
@@ -185,96 +185,57 @@ export function NotificationsDropdown() {
   const triggerDisabled = !user
   const isLoadingInitial = notificationsInfiniteQuery.isLoading && notifications.length === 0
 
+  const inboxPanel = (
+    <NotificationsInboxPanel
+      unreadCount={unreadCount}
+      ackInFlight={ackInFlight}
+      isLoadingInitial={isLoadingInitial}
+      notifications={notifications}
+      groupedNotifications={groupedNotifications}
+      hasNextPage={notificationsInfiniteQuery.hasNextPage}
+      isFetchingNextPage={notificationsInfiniteQuery.isFetchingNextPage}
+      onMarkAllRead={handleMarkAllRead}
+      onLoadMore={handleLoadMore}
+      onOpen={handleOpenNotification}
+      onDismiss={handleDismiss}
+      variant={isMobile ? 'drawer' : 'dropdown'}
+    />
+  )
+
+  const triggerButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="relative"
+      disabled={triggerDisabled}
+      aria-label="View notifications"
+      onClick={isMobile ? () => handleOpenChange(true) : undefined}
+    >
+      <Bell className="h-5 w-5" />
+      {unreadCount > 0 ? (
+        <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+          {unreadCount > 9 ? '9+' : unreadCount}
+        </span>
+      ) : null}
+    </Button>
+  )
+
+  if (isMobile) {
+    return (
+      <>
+        {triggerButton}
+        <Drawer open={open} onOpenChange={handleOpenChange} direction="bottom">
+          <DrawerContent className="flex max-h-[85dvh] flex-col p-0">{inboxPanel}</DrawerContent>
+        </Drawer>
+      </>
+    )
+  }
+
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative"
-          disabled={triggerDisabled}
-          aria-label="View notifications"
-        >
-          <Bell className="h-5 w-5" />
-          {unreadCount > 0 ? (
-            <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          ) : null}
-        </Button>
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[400px] p-0" sideOffset={8}>
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border/60 bg-popover px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold text-foreground">Notifications</p>
-            {unreadCount > 0 ? (
-              <p className="text-xs text-muted-foreground">{unreadCount} unread</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">You&apos;re caught up</p>
-            )}
-          </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8 text-xs"
-            onClick={handleMarkAllRead}
-            disabled={unreadCount === 0 || ackInFlight}
-          >
-            <Check className="mr-1 h-3.5 w-3.5" aria-hidden />
-            Mark all read
-          </Button>
-        </div>
-
-        <ScrollArea className="max-h-[min(24rem,70vh)]">
-          {isLoadingInitial ? (
-            <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-muted-foreground">
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
-              Loading…
-            </div>
-          ) : notifications.length === 0 ? (
-            <NotificationEmptyState className="py-12" />
-          ) : (
-            <NotificationGroupList
-              groups={groupedNotifications}
-              compact
-              ackInFlight={ackInFlight}
-              onOpen={handleOpenNotification}
-              onDismiss={handleDismiss}
-            />
-          )}
-        </ScrollArea>
-
-        <div className="flex items-center justify-between gap-2 border-t border-border/60 px-3 py-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={handleLoadMore}
-            disabled={
-              notificationsInfiniteQuery.isFetchingNextPage ||
-              !notificationsInfiniteQuery.hasNextPage
-            }
-          >
-            {notificationsInfiniteQuery.isFetchingNextPage ? (
-              <LoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />
-            ) : null}
-            Load more
-          </Button>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
-              <Link href="/settings?tab=notifications">
-                <Settings2 className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-                Settings
-              </Link>
-            </Button>
-            <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
-              <Link href="/dashboard/notifications">
-                <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-                View all
-              </Link>
-            </Button>
-          </div>
-        </div>
+        {inboxPanel}
       </DropdownMenuContent>
     </DropdownMenu>
   )

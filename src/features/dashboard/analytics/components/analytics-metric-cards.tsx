@@ -1,17 +1,10 @@
 'use client'
 
-import { Info } from 'lucide-react'
-
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { formatCurrency } from '@/lib/utils'
 import { Card, CardContent } from '@/shared/ui/card'
+import { MetricHint } from '@/shared/ui/hover-preview'
 import { Skeleton } from '@/shared/ui/skeleton'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/shared/ui/tooltip'
 
 interface AnalyticsMetricCardsProps {
   avgUsersPerDay: number
@@ -36,16 +29,7 @@ function SecondaryMetric({
     <div className="space-y-1 border-border/60 px-1 sm:border-l sm:px-4 first:sm:border-l-0 first:sm:pl-0">
       <div className="flex items-center gap-1.5">
         <p className={DASHBOARD_THEME.stats.label}>{label}</p>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger>
-              <Info className="h-3 w-3 text-muted-foreground/50 hover:text-primary" />
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <p className="text-xs">{tooltip}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <MetricHint description={tooltip} label={`About ${label}`} />
       </div>
       {isLoading ? (
         <Skeleton className="h-6 w-16 rounded-md" />

@@ -19,8 +19,8 @@ vi.mock('./proposal-metrics', () => ({
   ProposalMetrics: () => <div>ProposalMetrics</div>,
 }))
 
-vi.mock('./proposal-step-indicator', () => ({
-  ProposalStepIndicator: () => <div>ProposalStepIndicator</div>,
+vi.mock('./proposal-step-nav', () => ({
+  ProposalStepNav: () => <div>ProposalStepNav</div>,
 }))
 
 vi.mock('./proposal-submitted-panel', () => ({
@@ -37,6 +37,10 @@ vi.mock('./proposal-version-history', () => ({
 
 vi.mock('./proposal-wizard-header', () => ({
   ProposalWizardHeader: () => <div>ProposalWizardHeader</div>,
+}))
+
+vi.mock('./proposal-builder-journey-bar', () => ({
+  ProposalBuilderJourneyBar: () => <div>ProposalBuilderJourneyBar</div>,
 }))
 
 import {
@@ -56,14 +60,52 @@ const baseForm = {
 
 const proposalStepContent = createElement('div', null, 'Step content')
 
+const overlayBaseProps = {
+  open: true,
+  onClose: vi.fn(),
+  isBootstrapping: false,
+  isPresentationReady: false,
+  summary: baseForm as never,
+  presentationDeck: null,
+  deckDownloadUrl: null,
+  activeProposalIdForDeck: null,
+  canResumeSubmission: false,
+  onResumeSubmission: vi.fn(),
+  isSubmitting: false,
+  onRecheckDeck: vi.fn(),
+  isRecheckingDeck: false,
+  steps: [{ id: 'company', label: 'Company', title: 'Company', description: 'Tell us about the client.' }],
+  currentStep: 0,
+  draftId: null,
+  autosaveStatus: 'saved' as const,
+  stepContent: proposalStepContent,
+  onBack: vi.fn(),
+  onNext: vi.fn(),
+  onGoToStep: vi.fn(),
+  isFirstStep: true,
+  isLastStep: false,
+  validationMessages: [] as string[],
+}
+
 describe('proposal page sections', () => {
-  it('renders the start card affordance', () => {
+  it('renders client blocker when start is not allowed', () => {
     const markup = renderToStaticMarkup(
-      <ProposalStartStateCard canStart={true} isCreatingDraft={false} onStartProposal={vi.fn()} />,
+      <ProposalStartStateCard
+        canStart={false}
+        blockedHint="Pick a client from the workspace switcher."
+      />,
     )
 
-    expect(markup).toContain('Start a new proposal')
-    expect(markup).toContain('Open proposal builder')
+    expect(markup).toContain('Select a client to create proposals')
+    expect(markup).toContain('Pick a client from the workspace switcher.')
+  })
+
+  it('renders nothing when client is selected', () => {
+    const markup = renderToStaticMarkup(
+      <ProposalStartStateCard canStart={true} blockedHint={null} />,
+    )
+
+    expect(markup).toBe('')
   })
 
   it('renders preview mode shell content', () => {
@@ -88,64 +130,19 @@ describe('proposal page sections', () => {
   it('renders submitted and editing states in the builder overlay', () => {
     const submittedMarkup = renderToStaticMarkup(
       <ProposalBuilderOverlay
-        open={true}
-        onClose={vi.fn()}
-        isBootstrapping={false}
+        {...overlayBaseProps}
         submitted={true}
-        summary={baseForm as never}
-        presentationDeck={null}
-        deckDownloadUrl={null}
-        activeProposalIdForDeck={null}
         canResumeSubmission={true}
-        onResumeSubmission={vi.fn()}
-        isSubmitting={false}
-        onRecheckDeck={vi.fn()}
-        isRecheckingDeck={false}
-        steps={[{ id: 'company', label: 'Company', title: 'Company', description: 'Tell us about the client.' }]}
-        currentStep={0}
-        draftId={null}
-        autosaveStatus="saved"
-        stepContent={proposalStepContent}
-        onBack={vi.fn()}
-        onNext={vi.fn()}
-        isFirstStep={true}
-        isLastStep={false}
-        validationMessages={[]}
-        requiredFieldLabels={['Company Name']}
       />,
     )
 
     const editingMarkup = renderToStaticMarkup(
-      <ProposalBuilderOverlay
-        open={true}
-        onClose={vi.fn()}
-        isBootstrapping={false}
-        submitted={false}
-        summary={baseForm as never}
-        presentationDeck={null}
-        deckDownloadUrl={null}
-        activeProposalIdForDeck={null}
-        canResumeSubmission={false}
-        onResumeSubmission={vi.fn()}
-        isSubmitting={false}
-        onRecheckDeck={vi.fn()}
-        isRecheckingDeck={false}
-        steps={[{ id: 'company', label: 'Company', title: 'Company', description: 'Tell us about the client.' }]}
-        currentStep={0}
-        draftId={null}
-        autosaveStatus="saved"
-        stepContent={proposalStepContent}
-        onBack={vi.fn()}
-        onNext={vi.fn()}
-        isFirstStep={true}
-        isLastStep={false}
-        validationMessages={[]}
-        requiredFieldLabels={['Company Name']}
-      />,
+      <ProposalBuilderOverlay {...overlayBaseProps} submitted={false} />,
     )
 
     expect(submittedMarkup).toContain('ProposalSubmittedPanel')
-    expect(editingMarkup).toContain('ProposalStepIndicator')
+    expect(submittedMarkup).toContain('ProposalBuilderJourneyBar')
+    expect(editingMarkup).toContain('ProposalStepNav')
     expect(editingMarkup).toContain('ProposalDraftPanel')
   })
 })

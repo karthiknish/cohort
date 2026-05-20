@@ -1,46 +1,34 @@
 'use client'
 
-import {
-  ProposalStepFeedbackHeader,
-  ProposalStepFeedbackRequiredBadges,
-  ProposalStepFeedbackValidationBody,
-} from './proposal-step-feedback-sections'
+import { CircleAlert } from 'lucide-react'
 
+import { cn } from '@/lib/utils'
+
+import { ProposalStepFeedbackValidationBody } from './proposal-step-feedback-sections'
+
+/** Compact validation strip — step title/progress live in the step nav rail. */
 export function ProposalStepFeedback(props: {
-  currentStep: number
-  totalSteps: number
-  stepTitle: string
-  stepDescription: string
-  requiredFieldLabels: string[]
   validationMessages: string[]
 }) {
-  const {
-    currentStep,
-    totalSteps,
-    stepTitle,
-    stepDescription,
-    requiredFieldLabels,
-    validationMessages,
-  } = props
+  const { validationMessages } = props
   const hasErrors = validationMessages.length > 0
-  const completedRequiredFields = Math.max(requiredFieldLabels.length - validationMessages.length, 0)
+
+  if (!hasErrors) {
+    return null
+  }
 
   return (
-    <div className="space-y-4 rounded-2xl border border-muted/50 bg-muted/10 p-4 sm:p-5">
-      <ProposalStepFeedbackHeader
-        completedRequiredFields={completedRequiredFields}
-        currentStep={currentStep}
-        hasErrors={hasErrors}
-        requiredFieldCount={requiredFieldLabels.length}
-        stepDescription={stepDescription}
-        stepTitle={stepTitle}
-        totalSteps={totalSteps}
-        validationMessageCount={validationMessages.length}
-      />
-
-      <ProposalStepFeedbackRequiredBadges requiredFieldLabels={requiredFieldLabels} />
-
-      <ProposalStepFeedbackValidationBody hasErrors={hasErrors} validationMessages={validationMessages} />
+    <div
+      className={cn(
+        'rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3',
+      )}
+      role="alert"
+    >
+      <div className="mb-2 flex items-center gap-2 text-sm font-medium text-destructive">
+        <CircleAlert className="h-4 w-4 shrink-0" aria-hidden />
+        Fix these before continuing
+      </div>
+      <ProposalStepFeedbackValidationBody hasErrors validationMessages={validationMessages} />
     </div>
   )
 }

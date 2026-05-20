@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select'
+import { TruncatedTextPreview } from '@/shared/ui/hover-preview'
 import { MentionInput, type MentionableUser } from '@/shared/ui/mention-input'
 import { api } from '@convex/_generated/api'
 import { useQuery } from 'convex/react'
@@ -302,7 +303,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
                       <Building2 className="h-3 w-3" />
                     </div>
-                    <span className="truncate">{client.name}</span>
+                    <TruncatedTextPreview text={client.name} />
                   </div>
                 </SelectItem>
               ))}

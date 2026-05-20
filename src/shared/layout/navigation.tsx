@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
+import { TruncatedTextPreview } from '@/shared/ui/hover-preview'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -592,7 +593,11 @@ export function Header() {
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-sm font-semibold text-foreground">{displayedName}</span>
+                        <TruncatedTextPreview
+                          text={displayedName}
+                          className="text-sm font-semibold text-foreground"
+                          detail={displayedEmail}
+                        />
                         {isPreviewMode ? (
                           <Badge
                             variant="secondary"
@@ -616,7 +621,9 @@ export function Header() {
                           </Badge>
                         ) : null}
                       </div>
-                      <p className="truncate text-xs text-muted-foreground">{displayedEmail}</p>
+                      {displayedEmail ? (
+                        <p className="truncate text-xs text-muted-foreground">{displayedEmail}</p>
+                      ) : null}
                     </div>
                   </div>
                 </DropdownMenuLabel>

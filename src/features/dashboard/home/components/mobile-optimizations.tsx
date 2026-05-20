@@ -3,6 +3,15 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { ChevronUp, ChevronDown, X, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { useIsMobile as useIsMobileHook } from '@/shared/hooks/use-is-mobile'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/shared/ui/drawer'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/shared/ui/sheet'
 import { Badge } from '@/shared/ui/badge'
 import { cn } from '@/lib/utils'
@@ -133,42 +142,31 @@ export function MobileFilterSheet({
   }, [onOpenChange])
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      {trigger && (
-        <SheetTrigger asChild>
-          {trigger}
-        </SheetTrigger>
-      )}
-      <SheetContent
-        side="bottom"
-        className="h-[80vh] rounded-t-2xl border-t"
-      >
-        <div className="flex items-center justify-between mb-4">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <SlidersHorizontal className="h-5 w-5" />
+    <Drawer open={open} onOpenChange={onOpenChange} direction="bottom">
+      {trigger ? <DrawerTrigger asChild>{trigger}</DrawerTrigger> : null}
+      <DrawerContent className="h-[80dvh] max-h-[80dvh] rounded-t-2xl">
+        <DrawerHeader className="relative flex-row items-start justify-between gap-4 border-b border-border/60 pb-4 text-left">
+          <div className="min-w-0 space-y-1">
+            <DrawerTitle className="flex items-center gap-2">
+              <SlidersHorizontal className="h-5 w-5" aria-hidden />
               {title}
-              {filterCount && filterCount > 0 && (
+              {filterCount && filterCount > 0 ? (
                 <Badge variant="secondary" className="ml-2">
                   {filterCount} active
                 </Badge>
-              )}
-            </SheetTitle>
-            {description && <SheetDescription>{description}</SheetDescription>}
-          </SheetHeader>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-          >
-            <X className="h-5 w-5" />
+              ) : null}
+            </DrawerTitle>
+            {description ? <DrawerDescription>{description}</DrawerDescription> : null}
+          </div>
+          <Button variant="ghost" size="icon" onClick={handleClose} aria-label="Close filters">
+            <X className="h-5 w-5" aria-hidden />
           </Button>
-        </div>
-        <div className="overflow-y-auto pb-20">
+        </DrawerHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {children}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   )
 }
 
@@ -474,18 +472,9 @@ export function PullToRefresh({
 /**
  * Hook to detect if current viewport is mobile
  */
+/** @deprecated Import from `@/shared/hooks/use-is-mobile` */
 export function useIsMobile(breakpoint: number = 768) {
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
-  )
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < breakpoint)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [breakpoint])
-
-  return isMobile
+  return useIsMobileHook(breakpoint)
 }
 
 /**

@@ -1,7 +1,11 @@
 'use client'
 
 import { useEffect } from 'react'
-import { ArrowRight, FileText, Plus, X } from 'lucide-react'
+import { FileText, Plus, X } from 'lucide-react'
+
+import { useIsMobile } from '@/shared/hooks/use-is-mobile'
+import { Drawer, DrawerContent } from '@/shared/ui/drawer'
+import { Kbd } from '@/shared/ui/kbd'
 
 import { DashboardSkeleton } from '@/features/dashboard/home/components/dashboard-skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
@@ -12,10 +16,11 @@ import type { ProposalFormData } from '@/lib/proposals'
 import { cn } from '@/lib/utils'
 import type { ProposalDraft } from '@/types/proposals'
 
+import { ProposalBuilderJourneyBar } from './proposal-builder-journey-bar'
 import { ProposalDraftPanel } from './proposal-draft-panel'
 import { ProposalHistory } from './proposal-history'
 import { ProposalMetrics } from './proposal-metrics'
-import { ProposalStepIndicator } from './proposal-step-indicator'
+import { ProposalStepNav } from './proposal-step-nav'
 import type { ProposalStep } from './proposal-step-indicator'
 import { ProposalSubmittedPanel } from './proposal-submitted-panel'
 import { ProposalTemplateSelector } from './proposal-template-selector'
@@ -66,47 +71,23 @@ export function ProposalPageActions(props: {
 
 export function ProposalStartStateCard(props: {
   canStart: boolean
-  isCreatingDraft: boolean
-  onStartProposal: () => void
   /** Shown when `canStart` is false (e.g. no client selected). */
   blockedHint?: string | null
 }) {
-  const { canStart, isCreatingDraft, onStartProposal, blockedHint } = props
+  const { canStart, blockedHint } = props
+
+  if (canStart) {
+    return null
+  }
 
   return (
-    <Card className="overflow-hidden border-dashed border-accent/25 bg-linear-to-br from-primary/6 via-background to-background shadow-sm">
-      <CardHeader className="space-y-4 pb-2">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-accent/15 bg-accent/10 text-primary shadow-sm">
-              <FileText className="h-6 w-6" aria-hidden />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold tracking-tight text-foreground">Start a new proposal</h3>
-              <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
-                Opens the full-screen builder with autosave, step-by-step validation, and one-click deck generation when
-                you are done.
-              </p>
-            </div>
-          </div>
-          <Button
-            onClick={onStartProposal}
-            disabled={!canStart || isCreatingDraft}
-            size="lg"
-            className="w-full shrink-0 shadow-md transition-[box-shadow,transform] hover:shadow-lg active:scale-[0.99] sm:w-auto"
-          >
-            {isCreatingDraft ? 'Preparing…' : 'Open proposal builder'}
-            {!isCreatingDraft ? <ArrowRight className="ml-2 h-4 w-4" aria-hidden /> : null}
-          </Button>
-        </div>
-        {!canStart && blockedHint ? (
-          <Alert className="border-muted-foreground/25 bg-muted/30">
-            <AlertTitle>Choose a client first</AlertTitle>
-            <AlertDescription>{blockedHint}</AlertDescription>
-          </Alert>
-        ) : null}
-      </CardHeader>
-    </Card>
+    <Alert className="border-dashed border-muted-foreground/30 bg-muted/20">
+      <AlertTitle className="flex items-center gap-2">
+        <FileText className="h-4 w-4" aria-hidden />
+        Select a client to create proposals
+      </AlertTitle>
+      <AlertDescription>{blockedHint}</AlertDescription>
+    </Alert>
   )
 }
 
@@ -176,6 +157,7 @@ export function ProposalBuilderOverlay(props: {
   onClose: () => void
   isBootstrapping: boolean
   submitted: boolean
+  isPresentationReady: boolean
   summary: ProposalFormData
   presentationDeck: unknown
   deckDownloadUrl: string | null
@@ -192,16 +174,17 @@ export function ProposalBuilderOverlay(props: {
   stepContent: React.ReactNode
   onBack: () => void
   onNext: () => void
+  onGoToStep: (index: number) => void
   isFirstStep: boolean
   isLastStep: boolean
   validationMessages: string[]
-  requiredFieldLabels: string[]
 }) {
   const {
     open,
     onClose,
     isBootstrapping,
     submitted,
+    isPresentationReady,
     summary,
     presentationDeck,
     deckDownloadUrl,
@@ -218,11 +201,13 @@ export function ProposalBuilderOverlay(props: {
     stepContent,
     onBack,
     onNext,
+    onGoToStep,
     isFirstStep,
     isLastStep,
     validationMessages,
-    requiredFieldLabels,
   } = props
+
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     if (!open) {
@@ -239,15 +224,10 @@ export function ProposalBuilderOverlay(props: {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [open, isSubmitting, onClose])
 
-  if (!open) {
-    return null
-  }
-
   const activeStep = steps[currentStep]
 
-  return (
-    <div className="fixed inset-0 z-2000 isolate bg-background supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+  const builderBody = (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-muted/40 bg-background/95 px-4 py-4 backdrop-blur-md sm:items-center sm:px-6">
           <div className="min-w-0 space-y-1">
             <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Proposal builder</p>
@@ -271,12 +251,21 @@ export function ProposalBuilderOverlay(props: {
           >
             <X className="h-4 w-4" aria-hidden />
             <span className="hidden sm:inline">Close</span>
-            <kbd className="hidden rounded border border-muted-foreground/20 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline">
-              Esc
-            </kbd>
+            <Kbd className="hidden sm:inline">Esc</Kbd>
           </Button>
         </header>
-        <div className="min-h-0 flex-1 overflow-hidden px-4 py-4 sm:px-6 sm:py-6">
+        <div className="min-h-0 flex-1 overflow-hidden px-4 py-4 sm:px-6 sm:py-5">
+          <div className="mb-4">
+            <ProposalBuilderJourneyBar
+              isSubmitting={isSubmitting}
+              isRecheckingDeck={isRecheckingDeck}
+              submitted={submitted}
+              isPresentationReady={isPresentationReady}
+              activeProposalIdForDeck={activeProposalIdForDeck}
+              deckDownloadUrl={deckDownloadUrl}
+              autosaveStatus={autosaveStatus}
+            />
+          </div>
           <div className="flex h-full min-h-0 flex-col gap-4">
             {isBootstrapping ? (
               <Card className="border-muted/60 bg-background">
@@ -301,12 +290,23 @@ export function ProposalBuilderOverlay(props: {
                 </CardContent>
               </Card>
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col gap-4">
-                <div className="shrink-0">
-                  <ProposalStepIndicator steps={steps} currentStep={currentStep} submitted={submitted} />
-                </div>
+              <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(220px,260px)_1fr] lg:gap-6">
+                <aside className="hidden min-h-0 shrink-0 overflow-y-auto lg:block">
+                  <ProposalStepNav
+                    steps={steps}
+                    currentStep={currentStep}
+                    submitted={submitted}
+                    onGoToStep={onGoToStep}
+                  />
+                </aside>
                 <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border-muted/60 bg-background shadow-sm">
                   <CardContent className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
+                    <div className="mb-4 lg:hidden">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Step {currentStep + 1} of {steps.length}
+                      </p>
+                      <p className="text-sm font-medium text-foreground">{activeStep?.title}</p>
+                    </div>
                     <ProposalDraftPanel
                       draftId={draftId}
                       autosaveStatus={autosaveStatus}
@@ -318,9 +318,6 @@ export function ProposalBuilderOverlay(props: {
                       currentStep={currentStep}
                       totalSteps={steps.length}
                       isSubmitting={isSubmitting}
-                      stepTitle={activeStep?.title ?? 'Proposal step'}
-                      stepDescription={activeStep?.description ?? 'Complete this proposal step.'}
-                      requiredFieldLabels={requiredFieldLabels}
                       validationMessages={validationMessages}
                     />
                   </CardContent>
@@ -329,7 +326,32 @@ export function ProposalBuilderOverlay(props: {
             )}
           </div>
         </div>
-      </div>
     </div>
+  )
+
+  if (isMobile) {
+    return (
+      <Drawer
+        open={open}
+        onOpenChange={(next) => {
+          if (!next && !isSubmitting) {
+            onClose()
+          }
+        }}
+        direction="right"
+      >
+        <DrawerContent className="inset-y-0 left-auto mt-0 h-full max-h-none w-full max-w-none rounded-none border-0 data-[vaul-drawer-direction=right]:w-full">
+          {builderBody}
+        </DrawerContent>
+      </Drawer>
+    )
+  }
+
+  if (!open) {
+    return null
+  }
+
+  return (
+    <div className="fixed inset-0 z-2000 isolate bg-background">{builderBody}</div>
   )
 }

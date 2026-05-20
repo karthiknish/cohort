@@ -23,7 +23,7 @@ import {
   ProposalPageActions,
   ProposalStartStateCard,
 } from './components/proposal-page-sections'
-import { createInitialProposalFormState, stepRequiredFieldLabels } from './utils/form-steps'
+import { createInitialProposalFormState } from './utils/form-steps'
 import { useKeyboardShortcuts } from '@/shared/hooks/use-keyboard-shortcuts'
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
 
@@ -88,6 +88,7 @@ function ProposalsPageContent() {
     canUndo,
     canRedo,
     handleBack,
+    goToStep,
   } = wizard
 
   // Draft management hook
@@ -338,8 +339,8 @@ function ProposalsPageContent() {
     >
       <div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
         <LiveRegion message={submissionAnnouncement} />
-        <div className={DASHBOARD_THEME.layout.header}>
-          <ProposalWizardHeader />
+        <div className="flex flex-col gap-6 border-b border-border/60 pb-6 lg:flex-row lg:items-start lg:justify-between">
+          <ProposalWizardHeader clientName={selectedClient?.name ?? null} />
           <ProposalPageActions
             currentFormData={formState}
             draftId={draftId}
@@ -354,18 +355,16 @@ function ProposalsPageContent() {
 
         <ProposalMetrics proposals={displayedProposals} isLoading={displayedLoadingState} />
 
-        {!isWizardOpen && (
+        {!isWizardOpen ? (
           <ProposalStartStateCard
             canStart={Boolean(selectedClientId)}
-            isCreatingDraft={isCreatingDraft}
-            onStartProposal={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
             blockedHint={
               selectedClientId
                 ? null
                 : 'Pick a client from the workspace switcher in the header. Proposals are always created for the active client.'
             }
           />
-        )}
+        ) : null}
 
         <ProposalHistory
           proposals={displayedProposals}
@@ -389,7 +388,10 @@ function ProposalsPageContent() {
           onOpenChange={handleDeleteDialogChange}
           onConfirm={handleConfirmDeleteProposal}
         />
-        <ProposalGenerationOverlay isSubmitting={isSubmitting} isPresentationReady={isPresentationReady} />
+        <ProposalGenerationOverlay
+          isSubmitting={isSubmitting && !isWizardOpen}
+          isPresentationReady={isPresentationReady && !isWizardOpen}
+        />
         <DeckProgressOverlay stage={activeDeckStage} isVisible={Boolean(downloadingDeckId && !isSubmitting)} />
 
         <ProposalBuilderOverlay
@@ -397,6 +399,7 @@ function ProposalsPageContent() {
           onClose={handleCloseWizard}
           isBootstrapping={isBootstrapping}
           submitted={submitted}
+          isPresentationReady={isPresentationReady}
           summary={summary}
           presentationDeck={presentationDeck}
           deckDownloadUrl={deckDownloadUrl}
@@ -413,10 +416,10 @@ function ProposalsPageContent() {
           stepContent={stepContent}
           onBack={handleBack}
           onNext={handleNext}
+          onGoToStep={goToStep}
           isFirstStep={isFirstStep}
           isLastStep={isLastStep}
           validationMessages={Object.values(validationErrors)}
-          requiredFieldLabels={stepRequiredFieldLabels[step.id]}
         />
       </div>
     </BoneyardSkeletonBoundary>

@@ -3,7 +3,6 @@
 import { useCallback } from 'react'
 import {
   Building2,
-  CircleAlert,
   CircleCheck,
   Facebook,
   Factory,
@@ -17,8 +16,8 @@ import {
 } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { FormField, FieldSection } from '@/shared/ui/form-field'
 import { Input } from '@/shared/ui/input'
-import { Label } from '@/shared/ui/label'
 import {
   Select,
   SelectContent,
@@ -53,15 +52,6 @@ const engagementOptions = ['One-off project', 'Ongoing monthly support'] as cons
 const animatedStepClassName = ['space-y-6', listItemEnterClass].join(' ')
 const interactiveCardClassName =
   'motion-chromatic hover:shadow-sm active:scale-[0.98]'
-
-function InlineValidationMessage({ message }: { message: string }) {
-  return (
-    <p className="flex items-center gap-1.5 px-1 text-[11px] font-medium text-destructive">
-      <CircleAlert className="h-3 w-3" />
-      {message}
-    </p>
-  )
-}
 
 function SelectionIndicator({ selected }: { selected: boolean }) {
   return (
@@ -121,11 +111,12 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
   return (
     <div className={animatedStepClassName}>
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-primary/70" />
-            <Label htmlFor="companyName" className="text-sm font-semibold">Company Name</Label>
-          </div>
+        <FormField
+          id="companyName"
+          label="Company Name"
+          labelPrefix={<Building2 className="h-4 w-4 text-primary/70" aria-hidden />}
+          error={validationErrors['company.name']}
+        >
           <Input
             id="companyName"
             name="companyName"
@@ -137,13 +128,12 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
               validationErrors['company.name'] && 'border-destructive/50 ring-destructive/20',
             )}
           />
-          {validationErrors['company.name'] ? <InlineValidationMessage message={validationErrors['company.name']} /> : null}
-        </div>
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-2">
-            <Globe className="h-4 w-4 text-primary/70" />
-            <Label htmlFor="website" className="text-sm font-semibold">Website URL</Label>
-          </div>
+        </FormField>
+        <FormField
+          id="website"
+          label="Website URL"
+          labelPrefix={<Globe className="h-4 w-4 text-primary/70" aria-hidden />}
+        >
           <Input
             id="website"
             name="website"
@@ -153,15 +143,16 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
             onChange={onChangeCompanyWebsite}
             className="h-10 border-muted/60 bg-background/50 focus:bg-background motion-chromatic"
           />
-        </div>
+        </FormField>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-2">
-            <Factory className="h-4 w-4 text-primary/70" />
-            <Label htmlFor="industry" className="text-sm font-semibold">Industry / Sector</Label>
-          </div>
+        <FormField
+          id="industry"
+          label="Industry / Sector"
+          labelPrefix={<Factory className="h-4 w-4 text-primary/70" aria-hidden />}
+          error={validationErrors['company.industry']}
+        >
           <Input
             id="industry"
             name="industry"
@@ -173,13 +164,12 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
               validationErrors['company.industry'] && 'border-destructive/50 ring-destructive/20',
             )}
           />
-          {validationErrors['company.industry'] ? <InlineValidationMessage message={validationErrors['company.industry']} /> : null}
-        </div>
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-2">
-            <Users2 className="h-4 w-4 text-primary/70" />
-            <Label htmlFor="companySize" className="text-sm font-semibold">Company Size</Label>
-          </div>
+        </FormField>
+        <FormField
+          id="companySize"
+          label="Company Size"
+          labelPrefix={<Users2 className="h-4 w-4 text-primary/70" aria-hidden />}
+        >
           <Input
             id="companySize"
             name="companySize"
@@ -188,14 +178,14 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
             onChange={onChangeCompanySize}
             className="h-10 border-muted/60 bg-background/50 focus:bg-background motion-chromatic"
           />
-        </div>
+        </FormField>
       </div>
 
-      <div className="space-y-2.5">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-primary/70" />
-          <Label htmlFor="locations" className="text-sm font-semibold">Target Locations</Label>
-        </div>
+      <FormField
+        id="locations"
+        label="Target Locations"
+        labelPrefix={<MapPin className="h-4 w-4 text-primary/70" aria-hidden />}
+      >
         <Textarea
           id="locations"
           name="locations"
@@ -204,7 +194,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
           onChange={onChangeCompanyLocations}
           className="min-h-[100px] resize-none border-muted/60 bg-background/50 motion-chromatic focus:bg-background"
         />
-      </div>
+      </FormField>
     </div>
   )
 }
@@ -254,18 +244,21 @@ function SocialHandleInput({
     [onChangeSocialHandle, handle],
   )
   return (
-    <div className="group space-y-2 rounded-xl border border-muted/50 bg-background/40 p-3 motion-chromatic hover:bg-background/80">
-      <div className="mb-1 flex items-center gap-2">
-        {socialHandleIcon(handle)}
-        <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">{handle}</Label>
-      </div>
-      <Input
-        name={`social-${handle}`}
-        placeholder="@company"
-        value={value}
-        onChange={handleChange}
-        className="h-8 border-muted/40 bg-transparent text-xs motion-chromatic focus:bg-background"
-      />
+    <div className="rounded-xl border border-muted/50 bg-background/40 p-3 motion-chromatic hover:bg-background/80">
+      <FormField
+        label={handle}
+        labelPrefix={socialHandleIcon(handle)}
+        labelVariant="title"
+        className="gap-2"
+      >
+        <Input
+          name={`social-${handle}`}
+          placeholder="@company"
+          value={value}
+          onChange={handleChange}
+          className="h-8 border-muted/40 bg-transparent text-xs motion-chromatic focus:bg-background"
+        />
+      </FormField>
     </div>
   )
 }
@@ -283,8 +276,7 @@ export function ProposalMarketingStepSection({ formState, validationErrors, onUp
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="budget">Monthly marketing budget</Label>
+        <FormField id="budget" label="Monthly marketing budget" error={validationErrors['marketing.budget']}>
           <Input
             id="budget"
             name="budget"
@@ -292,10 +284,8 @@ export function ProposalMarketingStepSection({ formState, validationErrors, onUp
             value={formState.marketing.budget}
             onChange={onChangeBudget}
           />
-          {validationErrors['marketing.budget'] ? <p className="mt-1 text-xs text-destructive">{validationErrors['marketing.budget']}</p> : null}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="adAccounts">Existing ad accounts?</Label>
+        </FormField>
+        <FormField id="adAccounts" label="Existing ad accounts?">
           <Select value={formState.marketing.adAccounts} onValueChange={onChangeAdAccounts}>
             <SelectTrigger id="adAccounts">
               <SelectValue placeholder="Select an option" />
@@ -305,14 +295,13 @@ export function ProposalMarketingStepSection({ formState, validationErrors, onUp
               <SelectItem value="No">No</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </FormField>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex flex-col gap-1">
-          <Label className="text-base font-semibold">Current advertising platforms</Label>
-          <p className="text-xs text-muted-foreground">Which platforms are you already using for ads?</p>
-        </div>
+      <FieldSection
+        title="Current advertising platforms"
+        description="Which platforms are you already using for ads?"
+      >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {marketingPlatforms.map((platform) => (
             <MarketingPlatformButton
@@ -323,10 +312,9 @@ export function ProposalMarketingStepSection({ formState, validationErrors, onUp
             />
           ))}
         </div>
-      </div>
+      </FieldSection>
 
-      <div className="space-y-4">
-        <Label className="text-base font-semibold">Social handles</Label>
+      <FieldSection title="Social handles">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {socialHandles.map((handle) => (
             <SocialHandleInput
@@ -337,7 +325,7 @@ export function ProposalMarketingStepSection({ formState, validationErrors, onUp
             />
           ))}
         </div>
-      </div>
+      </FieldSection>
     </div>
   )
 }
@@ -414,11 +402,11 @@ export function ProposalGoalsStepSection({ formState, validationErrors, onUpdate
 
   return (
     <div className={animatedStepClassName}>
-      <div className="space-y-4">
-        <div className="flex flex-col gap-1">
-          <Label className="text-base font-semibold">Primary Business Goals</Label>
-          <p className="text-xs text-muted-foreground">What are you hoping to achieve in the next 6-12 months?</p>
-        </div>
+      <FieldSection
+        title="Primary Business Goals"
+        description="What are you hoping to achieve in the next 6-12 months?"
+        error={validationErrors['goals.objectives']}
+      >
         <div className="grid gap-3 sm:grid-cols-2">
           {goalOptions.map((goal) => (
             <GoalOptionButton
@@ -428,18 +416,15 @@ export function ProposalGoalsStepSection({ formState, validationErrors, onUpdate
               onToggleArrayValue={onToggleArrayValue}
             />
           ))}
-          {validationErrors['goals.objectives'] ? (
-            <p className="col-span-full mt-1 flex items-center gap-1.5 px-1 text-[11px] font-medium text-destructive">
-              <CircleAlert className="h-3 w-3" />
-              {validationErrors['goals.objectives']}
-            </p>
-          ) : null}
         </div>
-      </div>
+      </FieldSection>
 
-      <div className="space-y-3">
-        <Label htmlFor="audience" className="text-base font-semibold">Target Audience</Label>
-        <p className="mb-2 text-xs text-muted-foreground">Describe your ideal customer persona.</p>
+      <FormField
+        id="audience"
+        label="Target Audience"
+        description="Describe your ideal customer persona."
+        labelVariant="title"
+      >
         <Textarea
           id="audience"
           name="audience"
@@ -448,13 +433,12 @@ export function ProposalGoalsStepSection({ formState, validationErrors, onUpdate
           onChange={onChangeAudience}
           className="min-h-[100px] resize-none border-muted/60 bg-background/50 shadow-inner motion-chromatic focus:bg-background"
         />
-      </div>
+      </FormField>
 
-      <div className="space-y-4">
-        <div className="flex flex-col gap-1">
-          <Label className="text-base font-semibold">Key Challenges</Label>
-          <p className="text-xs text-muted-foreground">What&apos;s currently standing in your way?</p>
-        </div>
+      <FieldSection
+        title="Key Challenges"
+        description="What&apos;s currently standing in your way?"
+      >
         <div className="flex flex-wrap gap-2">
           {challenges.map((challenge) => (
             <ChallengeButton
@@ -465,16 +449,14 @@ export function ProposalGoalsStepSection({ formState, validationErrors, onUpdate
             />
           ))}
         </div>
-        <div className="pt-2">
-          <Input
-            name="customChallenge"
-            placeholder="Other specific challenge…"
-            value={formState.goals.customChallenge}
-            onChange={onChangeCustomChallenge}
-            className="h-10 border-muted/60 bg-background/50 text-sm motion-chromatic focus:bg-background"
-          />
-        </div>
-      </div>
+        <Input
+          name="customChallenge"
+          placeholder="Other specific challenge…"
+          value={formState.goals.customChallenge}
+          onChange={onChangeCustomChallenge}
+          className="mt-2 h-10 border-muted/60 bg-background/50 text-sm motion-chromatic focus:bg-background"
+        />
+      </FieldSection>
     </div>
   )
 }
@@ -520,11 +502,11 @@ export function ProposalScopeStepSection({ formState, validationErrors, onUpdate
 
   return (
     <div className={animatedStepClassName}>
-      <div className="space-y-4">
-        <div className="flex flex-col gap-1">
-          <Label className="text-base font-semibold">Scope of Engagement</Label>
-          <p className="text-xs text-muted-foreground">Select the services where you need our expertise.</p>
-        </div>
+      <FieldSection
+        title="Scope of Engagement"
+        description="Select the services where you need our expertise."
+        error={validationErrors['scope.services']}
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           {scopeOptions.map((service) => (
             <ScopeServiceButton
@@ -535,12 +517,13 @@ export function ProposalScopeStepSection({ formState, validationErrors, onUpdate
             />
           ))}
         </div>
-        {validationErrors['scope.services'] ? <InlineValidationMessage message={validationErrors['scope.services']} /> : null}
-      </div>
+      </FieldSection>
 
-      <div className="space-y-2.5">
-        <Label htmlFor="otherService" className="text-sm font-semibold">Specific Requirements</Label>
-        <p className="mb-2 text-xs text-muted-foreground">Any other service or specific deliverable you need?</p>
+      <FormField
+        id="otherService"
+        label="Specific Requirements"
+        description="Any other service or specific deliverable you need?"
+      >
         <Textarea
           id="otherService"
           name="otherService"
@@ -549,7 +532,7 @@ export function ProposalScopeStepSection({ formState, validationErrors, onUpdate
           onChange={onChangeOtherService}
           className="min-h-[100px] resize-none border-muted/60 bg-background/50 shadow-inner motion-chromatic focus:bg-background"
         />
-      </div>
+      </FormField>
     </div>
   )
 }
@@ -592,8 +575,7 @@ export function ProposalTimelinesStepSection({ formState, onUpdateField }: Propo
 
   return (
     <div className={animatedStepClassName}>
-      <div className="space-y-4">
-        <Label className="text-base font-semibold">Project Timeline</Label>
+      <FieldSection title="Project Timeline">
         <div className="grid gap-3 sm:grid-cols-2">
           {startTimelineOptions.map((option) => (
             <TimelineOptionButton
@@ -604,11 +586,13 @@ export function ProposalTimelinesStepSection({ formState, onUpdateField }: Propo
             />
           ))}
         </div>
-      </div>
+      </FieldSection>
 
-      <div className="space-y-3">
-        <Label htmlFor="upcomingEvents" className="text-sm font-semibold">Upcoming Campaigns or Events</Label>
-        <p className="mb-2 text-xs text-muted-foreground">Share launches or milestones we should plan for.</p>
+      <FormField
+        id="upcomingEvents"
+        label="Upcoming Campaigns or Events"
+        description="Share launches or milestones we should plan for."
+      >
         <Textarea
           id="upcomingEvents"
           name="upcomingEvents"
@@ -617,7 +601,7 @@ export function ProposalTimelinesStepSection({ formState, onUpdateField }: Propo
           onChange={onChangeUpcomingEvents}
           className="min-h-[100px] resize-none border-muted/60 bg-background/50 shadow-inner motion-chromatic focus:bg-background"
         />
-      </div>
+      </FormField>
     </div>
   )
 }
@@ -718,9 +702,11 @@ function PresentationThemeButton({
 export function ProposalValueStepSection({ formState, summary, validationErrors, onUpdateField }: ProposalStepSectionProps) {
   return (
     <div className={animatedStepClassName}>
-      <div className="space-y-4">
-        <Label className="text-base font-semibold">Estimated Project Value</Label>
-        <p className="mb-4 text-xs text-muted-foreground">Choose the budget range that best fits the project.</p>
+      <FieldSection
+        title="Estimated Project Value"
+        description="Choose the budget range that best fits the project."
+        error={validationErrors['value.proposalSize']}
+      >
         <div className="grid gap-4 md:grid-cols-3">
           {proposalValueOptions.map((option) => (
             <ProposalValueButton
@@ -731,11 +717,9 @@ export function ProposalValueStepSection({ formState, summary, validationErrors,
             />
           ))}
         </div>
-        {validationErrors['value.proposalSize'] ? <InlineValidationMessage message={validationErrors['value.proposalSize']} /> : null}
-      </div>
+      </FieldSection>
 
-      <div className="space-y-4">
-        <Label className="text-base font-semibold">Engagement Type</Label>
+      <FieldSection title="Engagement Type">
         <div className="grid gap-3 sm:grid-cols-2">
           {engagementOptions.map((option) => (
             <EngagementTypeButton
@@ -746,13 +730,13 @@ export function ProposalValueStepSection({ formState, summary, validationErrors,
             />
           ))}
         </div>
-      </div>
+      </FieldSection>
 
-      <div className="space-y-4 border-t border-muted/20 pt-4">
-        <div className="flex flex-col gap-1">
-          <Label className="text-base font-semibold">Presentation Theme</Label>
-          <p className="text-xs text-muted-foreground">Select a visual style for your generated proposal deck.</p>
-        </div>
+      <FieldSection
+        title="Presentation Theme"
+        description="Select a visual style for your generated proposal deck."
+        className="border-t border-muted/20 pt-4"
+      >
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {GAMMA_PRESENTATION_THEMES.map((theme) => (
             <PresentationThemeButton
@@ -763,7 +747,7 @@ export function ProposalValueStepSection({ formState, summary, validationErrors,
             />
           ))}
         </div>
-      </div>
+      </FieldSection>
 
       <Card className="border-dashed border-accent/20 bg-accent/5">
         <CardHeader className="space-y-1">

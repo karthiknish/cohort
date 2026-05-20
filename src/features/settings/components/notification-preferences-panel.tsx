@@ -17,7 +17,7 @@ import { getPreviewSettingsNotificationPreferences } from '@/lib/preview-data'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Label } from '@/shared/ui/label'
+import { FormField } from '@/shared/ui/form-field'
 import { Switch } from '@/shared/ui/switch'
 import { Input } from '@/shared/ui/input'
 import { useToast } from '@/shared/ui/use-toast'
@@ -201,48 +201,41 @@ export function NotificationPreferencesPanel() {
             </p>
           ) : null}
 
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
-            <div className="space-y-0.5">
-              <Label htmlFor="pause-all-notifications" className="text-sm font-medium">
-                Pause all notifications
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Temporarily stop in-app and email alerts. Your preferences are kept.
-              </p>
-            </div>
+          <FormField
+            id="pause-all-notifications"
+            label="Pause all notifications"
+            description="Temporarily stop in-app and email alerts. Your preferences are kept."
+            orientation="horizontal"
+            className="items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-4 py-3"
+          >
             <Switch
               id="pause-all-notifications"
               checked={localPrefs.pauseAll}
               disabled={saving}
               onCheckedChange={handlePauseAllChange}
             />
-          </div>
+          </FormField>
 
           <div className="space-y-4 rounded-lg border border-border/60 p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-start gap-2">
-                <Moon className="mt-0.5 h-4 w-4 text-muted-foreground" aria-hidden />
-                <div className="space-y-0.5">
-                  <Label htmlFor="quiet-hours-enabled" className="text-sm font-medium">
-                    Quiet hours
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Pause email notifications during a daily window (in-app still delivers).
-                  </p>
-                </div>
-              </div>
+            <FormField
+              id="quiet-hours-enabled"
+              label="Quiet hours"
+              description="Pause email notifications during a daily window (in-app still delivers)."
+              labelPrefix={<Moon className="h-4 w-4 text-muted-foreground" aria-hidden />}
+              orientation="horizontal"
+              className="items-start justify-between"
+            >
               <Switch
                 id="quiet-hours-enabled"
                 checked={localPrefs.quietHours.enabled}
                 disabled={saving || localPrefs.pauseAll}
                 onCheckedChange={handleQuietHoursEnabledChange}
               />
-            </div>
+            </FormField>
 
             {localPrefs.quietHours.enabled ? (
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="quiet-hours-start">From</Label>
+                <FormField id="quiet-hours-start" label="From">
                   <Input
                     id="quiet-hours-start"
                     type="time"
@@ -250,9 +243,8 @@ export function NotificationPreferencesPanel() {
                     disabled={saving || localPrefs.pauseAll}
                     onChange={(event) => handleQuietHoursTimeChange('start', event.target.value)}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="quiet-hours-end">Until</Label>
+                </FormField>
+                <FormField id="quiet-hours-end" label="Until">
                   <Input
                     id="quiet-hours-end"
                     type="time"
@@ -260,7 +252,7 @@ export function NotificationPreferencesPanel() {
                     disabled={saving || localPrefs.pauseAll}
                     onChange={(event) => handleQuietHoursTimeChange('end', event.target.value)}
                   />
-                </div>
+                </FormField>
               </div>
             ) : null}
           </div>
@@ -272,7 +264,7 @@ export function NotificationPreferencesPanel() {
           />
 
           {error ? (
-            <p className="text-sm text-destructive" role="alert">
+            <p className="text-sm font-medium text-destructive" role="alert">
               {error}
             </p>
           ) : null}

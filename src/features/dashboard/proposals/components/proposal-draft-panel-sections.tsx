@@ -42,33 +42,16 @@ export function ProposalDraftStatusStrip({
 }
 
 export function ProposalDraftContentShell({
-  currentStep,
-  requiredFieldLabels,
   stepContent,
-  stepDescription,
-  stepTitle,
-  totalSteps,
   validationMessages,
 }: {
-  currentStep: number
-  requiredFieldLabels: string[]
   stepContent: ReactNode
-  stepDescription: string
-  stepTitle: string
-  totalSteps: number
   validationMessages: string[]
 }) {
   return (
     <div className="relative min-h-[300px] rounded-xl border border-muted/40 bg-muted/5 p-4 shadow-inner backdrop-blur-sm motion-chromatic-lg sm:p-6">
       <div className="space-y-5">
-        <ProposalStepFeedback
-          currentStep={currentStep}
-          totalSteps={totalSteps}
-          stepTitle={stepTitle}
-          stepDescription={stepDescription}
-          requiredFieldLabels={requiredFieldLabels}
-          validationMessages={validationMessages}
-        />
+        <ProposalStepFeedback validationMessages={validationMessages} />
         {stepContent}
       </div>
     </div>

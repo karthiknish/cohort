@@ -9,7 +9,7 @@ import { AlertCircle, Loader2, Upload } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { Input } from '@/shared/ui/input'
-import { Label } from '@/shared/ui/label'
+import { FormField } from '@/shared/ui/form-field'
 import {
   Select,
   SelectContent,
@@ -173,25 +173,134 @@ export function CreateCreativeDialogForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <div className="space-y-2"><Label htmlFor="name">Creative Name *</Label><Input id="name" placeholder="Summer Sale Ad - Variant A" value={name} onChange={createTextChangeHandler(onNameChange)} disabled={loading} /></div>
-      <div className="space-y-2"><Label htmlFor="objectType">Ad Format</Label><Select value={objectType} onValueChange={createSelectChangeHandler<CreativeObjectType>(onObjectTypeChange)} disabled={loading}><SelectTrigger id="objectType"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="IMAGE">Image Ad</SelectItem><SelectItem value="VIDEO">Video Ad</SelectItem><SelectItem value="CAROUSEL">Carousel Ad</SelectItem><SelectItem value="DYNAMIC">Dynamic Ad</SelectItem></SelectContent></Select></div>
+      <FormField id="name" label="Creative Name *">
+        <Input id="name" placeholder="Summer Sale Ad - Variant A" value={name} onChange={createTextChangeHandler(onNameChange)} disabled={loading} />
+      </FormField>
+      <FormField id="objectType" label="Ad Format">
+        <Select value={objectType} onValueChange={createSelectChangeHandler<CreativeObjectType>(onObjectTypeChange)} disabled={loading}>
+          <SelectTrigger id="objectType"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="IMAGE">Image Ad</SelectItem>
+            <SelectItem value="VIDEO">Video Ad</SelectItem>
+            <SelectItem value="CAROUSEL">Carousel Ad</SelectItem>
+            <SelectItem value="DYNAMIC">Dynamic Ad</SelectItem>
+          </SelectContent>
+        </Select>
+      </FormField>
 
-      {availableAdSets?.length ? <div className="space-y-2"><Label htmlFor="adSet">Ad Set</Label><Select value={selectedAdSetId} onValueChange={onSelectedAdSetIdChange} disabled={loading}><SelectTrigger id="adSet"><SelectValue placeholder="Select an ad set" /></SelectTrigger><SelectContent>{availableAdSets.map((adSet) => <SelectItem key={adSet.id} value={adSet.id}>{adSet.name || adSet.id}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">The ad will be created in the selected ad set.</p></div> : null}
+      {availableAdSets?.length ? (
+        <FormField id="adSet" label="Ad Set" description="The ad will be created in the selected ad set.">
+          <Select value={selectedAdSetId} onValueChange={onSelectedAdSetIdChange} disabled={loading}>
+            <SelectTrigger id="adSet"><SelectValue placeholder="Select an ad set" /></SelectTrigger>
+            <SelectContent>
+              {availableAdSets.map((adSet) => (
+                <SelectItem key={adSet.id} value={adSet.id}>{adSet.name || adSet.id}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+      ) : null}
 
-      {isMeta && !selectedAdSetId && !availableAdSets?.length ? <div className="flex items-start gap-2 rounded-md border border-warning/20 bg-warning/10 p-3"><AlertCircle className="mt-0.5 h-4 w-4 text-warning" /><div className="flex-1"><p className="text-sm font-medium text-warning">No Ad Set Available</p><p className="text-xs text-warning/80">You need to create an ad set before creating ads. Please create an ad set first.</p></div></div> : null}
+      {isMeta && !selectedAdSetId && !availableAdSets?.length ? (
+        <div className="flex items-start gap-2 rounded-md border border-warning/20 bg-warning/10 p-3">
+          <AlertCircle className="mt-0.5 h-4 w-4 text-warning" aria-hidden />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-warning">No Ad Set Available</p>
+            <p className="text-xs text-warning/80">You need to create an ad set before creating ads. Please create an ad set first.</p>
+          </div>
+        </div>
+      ) : null}
 
-      <div className="space-y-2"><Label htmlFor="body">Primary Text</Label><Textarea id="body" placeholder="Enter your main ad copy here…" value={body} onChange={createTextChangeHandler(onBodyChange)} disabled={loading} rows={3} maxLength={2200} /><p className="text-right text-xs text-muted-foreground">{body.length}/2200</p></div>
-      <div className="space-y-2"><Label htmlFor="title">Headline</Label><Input id="title" placeholder="50% Off Everything" value={title} onChange={createTextChangeHandler(onTitleChange)} disabled={loading} maxLength={40} /><p className="text-right text-xs text-muted-foreground">{title.length}/40</p></div>
-      <div className="space-y-2"><Label htmlFor="description">Description</Label><Input id="description" placeholder="Limited time offer" value={description} onChange={createTextChangeHandler(onDescriptionChange)} disabled={loading} maxLength={30} /><p className="text-right text-xs text-muted-foreground">{description.length}/30</p></div>
-      <div className="space-y-2"><Label htmlFor="cta">Call to Action</Label><Select value={callToActionType} onValueChange={onCallToActionTypeChange} disabled={loading}><SelectTrigger id="cta"><SelectValue placeholder="Select a call to action" /></SelectTrigger><SelectContent>{CTA_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>
-      <div className="space-y-2"><Label htmlFor="linkUrl">Destination URL</Label><Input id="linkUrl" type="url" placeholder="https://yourwebsite.com/offer" value={linkUrl} onChange={createTextChangeHandler(onLinkUrlChange)} disabled={loading} /></div>
+      <FormField id="body" label="Primary Text" description={`${body.length}/2200 characters`}>
+        <Textarea id="body" placeholder="Enter your main ad copy here…" value={body} onChange={createTextChangeHandler(onBodyChange)} disabled={loading} rows={3} maxLength={2200} />
+      </FormField>
+      <FormField id="title" label="Headline" description={`${title.length}/40 characters`}>
+        <Input id="title" placeholder="50% Off Everything" value={title} onChange={createTextChangeHandler(onTitleChange)} disabled={loading} maxLength={40} />
+      </FormField>
+      <FormField id="description" label="Description" description={`${description.length}/30 characters`}>
+        <Input id="description" placeholder="Limited time offer" value={description} onChange={createTextChangeHandler(onDescriptionChange)} disabled={loading} maxLength={30} />
+      </FormField>
+      <FormField id="cta" label="Call to Action">
+        <Select value={callToActionType} onValueChange={onCallToActionTypeChange} disabled={loading}>
+          <SelectTrigger id="cta"><SelectValue placeholder="Select a call to action" /></SelectTrigger>
+          <SelectContent>
+            {CTA_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FormField>
+      <FormField id="linkUrl" label="Destination URL">
+        <Input id="linkUrl" type="url" placeholder="https://yourwebsite.com/offer" value={linkUrl} onChange={createTextChangeHandler(onLinkUrlChange)} disabled={loading} />
+      </FormField>
 
-      {objectType === 'IMAGE' ? <div className="space-y-2"><Label htmlFor="image">Creative Image</Label><div className="flex gap-2"><Input id="image" type="url" placeholder="https://example.com/image.jpg" value={imageUrl} onChange={createTextChangeHandler(onImageUrlChange)} disabled={loading} className="flex-1" /><div className="relative"><Input id="imageUpload" type="file" accept="image/*" onChange={onImageUpload} disabled={loading || uploadingImage} className="absolute inset-0 cursor-pointer opacity-0" /><Button type="button" variant="outline" size="icon" disabled={loading || uploadingImage} aria-label="Upload creative image">{uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}</Button></div></div>{imageHash ? <p className="text-xs text-success">Image uploaded successfully</p> : null}</div> : null}
-      {objectType === 'VIDEO' ? <div className="space-y-2"><Label htmlFor="videoId">Video ID</Label><Input id="videoId" placeholder="Enter your Meta video ID" value={videoId} onChange={createTextChangeHandler(onVideoIdChange)} disabled={loading} /></div> : null}
+      {objectType === 'IMAGE' ? (
+        <FormField id="image" label="Creative Image" description={imageHash ? 'Image uploaded successfully' : undefined}>
+          <div className="flex gap-2">
+            <Input id="image" type="url" placeholder="https://example.com/image.jpg" value={imageUrl} onChange={createTextChangeHandler(onImageUrlChange)} disabled={loading} className="flex-1" />
+            <div className="relative">
+              <Input id="imageUpload" type="file" accept="image/*" onChange={onImageUpload} disabled={loading || uploadingImage} className="absolute inset-0 cursor-pointer opacity-0" />
+              <Button type="button" variant="outline" size="icon" disabled={loading || uploadingImage} aria-label="Upload creative image">
+                {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+        </FormField>
+      ) : null}
+      {objectType === 'VIDEO' ? (
+        <FormField id="videoId" label="Video ID">
+          <Input id="videoId" placeholder="Enter your Meta video ID" value={videoId} onChange={createTextChangeHandler(onVideoIdChange)} disabled={loading} />
+        </FormField>
+      ) : null}
 
-      <div className="space-y-2"><Label htmlFor="pageId">Facebook Page *</Label><Select value={pageId || undefined} onValueChange={onPageIdChange} disabled={loading || loadingPageActors}><SelectTrigger id="pageId"><SelectValue placeholder={loadingPageActors ? 'Loading pages...' : 'Select a Facebook Page'} /></SelectTrigger><SelectContent>{metaPageActors.map((actor) => <SelectItem key={actor.id} value={actor.id}>{actor.name}</SelectItem>)}</SelectContent></Select>{!loadingPageActors && metaPageActors.length === 0 ? <p className="text-xs text-warning">No Facebook Pages found for this integration token.</p> : null}</div>
-      <div className="space-y-2"><Label htmlFor="instagramActorId">Instagram Business Account</Label><Select value={instagramActorId || '__none__'} onValueChange={handleInstagramActorIdChange} disabled={loading || loadingPageActors || instagramActorOptions.length === 0}><SelectTrigger id="instagramActorId"><SelectValue placeholder="No linked Instagram account" /></SelectTrigger><SelectContent><SelectItem value="__none__">No Instagram account</SelectItem>{instagramActorOptions.map((actor) => <SelectItem key={actor.id} value={actor.id}>{actor.label}</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">{selectedPage?.instagramBusinessAccountId ? 'Linked Instagram account for selected page is preselected.' : 'Selected page has no linked Instagram business account.'}</p></div>
-      <div className="space-y-2"><Label htmlFor="status">Initial Status</Label><Select value={status} onValueChange={createSelectChangeHandler<CreativeStatus>(onStatusChange)} disabled={loading}><SelectTrigger id="status"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PAUSED">Paused (recommended for review)</SelectItem><SelectItem value="ACTIVE">Active</SelectItem></SelectContent></Select></div>
+      <FormField
+        id="pageId"
+        label="Facebook Page *"
+        description={
+          !loadingPageActors && metaPageActors.length === 0
+            ? 'No Facebook Pages found for this integration token.'
+            : undefined
+        }
+      >
+        <Select value={pageId || undefined} onValueChange={onPageIdChange} disabled={loading || loadingPageActors}>
+          <SelectTrigger id="pageId">
+            <SelectValue placeholder={loadingPageActors ? 'Loading pages...' : 'Select a Facebook Page'} />
+          </SelectTrigger>
+          <SelectContent>
+            {metaPageActors.map((actor) => (
+              <SelectItem key={actor.id} value={actor.id}>{actor.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FormField>
+      <FormField
+        id="instagramActorId"
+        label="Instagram Business Account"
+        description={
+          selectedPage?.instagramBusinessAccountId
+            ? 'Linked Instagram account for selected page is preselected.'
+            : 'Selected page has no linked Instagram business account.'
+        }
+      >
+        <Select value={instagramActorId || '__none__'} onValueChange={handleInstagramActorIdChange} disabled={loading || loadingPageActors || instagramActorOptions.length === 0}>
+          <SelectTrigger id="instagramActorId"><SelectValue placeholder="No linked Instagram account" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">No Instagram account</SelectItem>
+            {instagramActorOptions.map((actor) => (
+              <SelectItem key={actor.id} value={actor.id}>{actor.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FormField>
+      <FormField id="status" label="Initial Status">
+        <Select value={status} onValueChange={createSelectChangeHandler<CreativeStatus>(onStatusChange)} disabled={loading}>
+          <SelectTrigger id="status"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="PAUSED">Paused (recommended for review)</SelectItem>
+            <SelectItem value="ACTIVE">Active</SelectItem>
+          </SelectContent>
+        </Select>
+      </FormField>
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>

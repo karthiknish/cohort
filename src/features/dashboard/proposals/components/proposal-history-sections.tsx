@@ -75,12 +75,12 @@ export function ProposalHistoryEmptyState({
         <FileText className="h-8 w-8 text-info/60" />
       </div>
       <h3 className="mb-2 text-lg font-semibold tracking-tight">No proposals yet</h3>
-      <p className="mb-6 max-w-[280px] text-sm text-muted-foreground">
-        Ready to win your next client? Start by generating a tailored AI proposal strategy.
+      <p className="mb-6 max-w-[320px] text-sm text-muted-foreground">
+        Use <span className="font-medium text-foreground">New Proposal</span> in the header to open the guided builder and generate your first deck.
       </p>
       <Button onClick={onCreateNew} disabled={!canCreate || isCreating || isGenerating} className="shadow-sm motion-chromatic hover:shadow-md">
         {isCreating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-        Create first proposal
+        New proposal
       </Button>
     </div>
   )

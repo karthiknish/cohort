@@ -12,14 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/shared/ui/dialog'
+import { ResponsiveOverlay } from '@/shared/ui/responsive-overlay'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { Badge } from '@/shared/ui/badge'
 import { cn } from '@/lib/utils'
@@ -175,30 +168,63 @@ export function AdvancedFilter({
     })
   }, [currentFilters, filterName, sortBy, sortOrder, onSaveFilter, toast])
 
+  const filterFooter = (
+    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={clearAllFilters}
+        disabled={Object.keys(currentFilters).length === 0}
+      >
+        Clear All
+      </Button>
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {onSaveFilter ? (
+          <div className="flex flex-wrap gap-2">
+            <Input
+              placeholder="Filter name…"
+              value={filterName}
+              onChange={handleFilterNameChange}
+              className="w-40"
+            />
+            <Button type="button" size="sm" onClick={saveCurrentConfig} disabled={!filterName.trim()}>
+              <Save className="mr-1 h-4 w-4" aria-hidden />
+              Save
+            </Button>
+          </div>
+        ) : null}
+
+        <Button type="button" size="sm" onClick={applyFilters}>
+          Apply Filters
+        </Button>
+      </div>
+    </div>
+  )
+
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      {/* Filter button with badge */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2">
-            <Filter className="h-4 w-4" />
-            Filter
-            {activeFilterCount > 0 && (
-              <Badge variant="secondary" className="ml-1">
-                {activeFilterCount}
-              </Badge>
-            )}
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Advanced Filters</DialogTitle>
-            <DialogDescription>
-              Configure multiple filters to find exactly what you need.
-            </DialogDescription>
-          </DialogHeader>
+      <Button variant="outline" size="sm" className="gap-2" onClick={() => setOpen(true)}>
+        <Filter className="h-4 w-4" aria-hidden />
+        Filter
+        {activeFilterCount > 0 ? (
+          <Badge variant="secondary" className="ml-1">
+            {activeFilterCount}
+          </Badge>
+        ) : null}
+      </Button>
 
-          <div className="space-y-4 py-4">
+      <ResponsiveOverlay
+        open={open}
+        onOpenChange={setOpen}
+        title="Advanced Filters"
+        description="Configure multiple filters to find exactly what you need."
+        dialogClassName="sm:max-w-md"
+        mobileClassName="max-h-[88dvh]"
+        footer={filterFooter}
+      >
+          <div className="space-y-4">
             {/* Saved filters */}
             {savedFilters.length > 0 && (
               <div className="space-y-2">
@@ -267,47 +293,7 @@ export function AdvancedFilter({
               </div>
             )}
           </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-4 border-t">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={clearAllFilters}
-              disabled={Object.keys(currentFilters).length === 0}
-            >
-              Clear All
-            </Button>
-
-            <div className="flex gap-2">
-              {onSaveFilter && (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Filter name…"
-                    value={filterName}
-                    onChange={handleFilterNameChange}
-                    className="w-40"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={saveCurrentConfig}
-                    disabled={!filterName.trim()}
-                  >
-                    <Save className="h-4 w-4 mr-1" />
-                    Save
-                  </Button>
-                </div>
-              )}
-
-              <Button type="button" size="sm" onClick={applyFilters}>
-                Apply Filters
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveOverlay>
     </div>
   )
 }

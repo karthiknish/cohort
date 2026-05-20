@@ -17,6 +17,7 @@ import {
   type NotificationChannel,
   type NotificationPreferencesV2,
 } from '@/lib/notifications/preferences'
+import { FieldDescription, FieldTitle } from '@/shared/ui/field'
 import { Badge } from '@/shared/ui/badge'
 import { Switch } from '@/shared/ui/switch'
 import { cn } from '@/lib/utils'
@@ -74,8 +75,8 @@ export function NotificationCategoryMatrix({
                 <Icon className="h-4 w-4" aria-hidden />
               </div>
               <div className="min-w-0 space-y-0.5">
-                <p className="text-sm font-medium text-foreground">{meta.title}</p>
-                <p className="text-xs leading-relaxed text-muted-foreground">{meta.description}</p>
+                <FieldTitle className="text-sm">{meta.title}</FieldTitle>
+                <FieldDescription className="text-xs">{meta.description}</FieldDescription>
               </div>
             </div>
 
