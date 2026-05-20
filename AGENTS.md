@@ -27,6 +27,8 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 - Parse messages with `asErrorMessage` from `@/lib/convex-errors`; log with `logError` before toasts.
 - Brevo/alerts/webhook failures are ops-level (logged / `{ success: false }`); surface `notifyFailure` only when a UI action directly triggers send and the caller handles the result.
 
+**Admin pages:** Use `useAdminActionError` + `AdminActionErrorAlert` for mutation failures; `useConvexQueryError` + `AdminQueryErrorAlert` for load failures. See `src/features/admin/hooks/use-admin-action-error.ts` and `src/features/admin/components/`.
+
 ## Notification preferences
 
 - Use V2 prefs from `@/lib/notifications/preferences` (`normalizePreferences`, `isChannelEnabled`, `kindToCategory`).

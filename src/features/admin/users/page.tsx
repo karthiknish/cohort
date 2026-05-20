@@ -1,6 +1,10 @@
 'use client'
 
 import { notifyFailure } from '@/lib/notifications'
+import { mergeQueryErrors, useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
+import { AdminActionErrorAlert } from '../components/admin-action-error-alert'
+import { AdminQueryErrorAlert } from '../components/admin-query-error-alert'
+import { useAdminActionError } from '../hooks/use-admin-action-error'
 import { useCallback, useMemo, useState } from 'react'
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import {
@@ -44,7 +48,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { DATE_FORMATS, formatDate as formatDateLib, formatRelativeTime } from '@/lib/dates'
 import { getPreviewAdminInvitations, getPreviewAdminUsers } from '@/lib/preview-data'
 import { cn } from '@/lib/utils'
@@ -280,7 +283,7 @@ export default function AdminUsersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [invitationSearchTerm, setInvitationSearchTerm] = useState('')
   const [invitationStatusFilter, setInvitationStatusFilter] = useState<InvitationLifecycleStatus>('pending')
-  const [error] = useState<string | null>(null)
+  const { actionError, clearActionError, reportActionFailure } = useAdminActionError()
   const [savingId, setSavingId] = useState<string | null>(null)
   const [invitationActionKey, setInvitationActionKey] = useState<string | null>(null)
   const workspaceContext = useQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
@@ -359,6 +362,22 @@ export default function AdminUsersPage() {
   }, [users])
 
   const invitationsLoading = isPreviewMode ? false : invitationResponse === undefined
+
+  const workspaceQueryError = useConvexQueryError({
+    data: workspaceContext,
+    skipped: isPreviewMode || !user,
+    loading: !isPreviewMode && Boolean(user) && workspaceContext === undefined,
+    fallbackMessage: 'Unable to load workspace context.',
+  })
+
+  const invitationsQueryError = useConvexQueryError({
+    data: invitationResponse,
+    skipped: isPreviewMode,
+    loading: invitationsLoading,
+    fallbackMessage: 'Unable to load invitations.',
+  })
+
+  const listQueryError = mergeQueryErrors(workspaceQueryError, invitationsQueryError)
 
   const invitations: AdminInvitationRecord[] = useMemo(() => {
     if (isPreviewMode) {
@@ -473,11 +492,11 @@ export default function AdminUsersPage() {
         toast({ title: 'Role updated', description: `${record.name} is now ${nextRole}.` })
       })
       .catch((err: unknown) => {
-        const message = asErrorMessage(err)
-        notifyFailure({
-        title: 'Admin error',
-        message: message,
-      })
+        reportActionFailure({
+          error: err,
+          context: 'AdminUsers:handleRoleChange',
+          title: 'Role update failed',
+        })
       })
       .finally(() => {
         setSavingId(null)
@@ -522,12 +541,11 @@ export default function AdminUsersPage() {
         setRevokeOpen(false)
       })
       .catch((err: unknown) => {
-        logError(err, 'AdminUsers:handleApprovalToggle')
-        const message = asErrorMessage(err)
-        notifyFailure({
-        title: 'Admin error',
-        message: message,
-      })
+        reportActionFailure({
+          error: err,
+          context: 'AdminUsers:handleApprovalToggle',
+          title: 'Approval update failed',
+        })
       })
       .finally(() => {
         setSavingId(null)
@@ -586,12 +604,11 @@ export default function AdminUsersPage() {
         setInviteRole('team')
       })
       .catch((err: unknown) => {
-        logError(err, 'AdminUsers:handleInviteUser')
-        const message = asErrorMessage(err)
-        notifyFailure({
-        title: 'Invitation error',
-        message: message,
-      })
+        reportActionFailure({
+          error: err,
+          context: 'AdminUsers:handleInviteUser',
+          title: 'Invitation failed',
+        })
       })
       .finally(() => {
         setInviteSending(false)
@@ -627,12 +644,11 @@ export default function AdminUsersPage() {
         })
       })
       .catch((err: unknown) => {
-        logError(err, 'AdminUsers:handleResendInvitation')
-        const message = asErrorMessage(err)
-        notifyFailure({
-        title: 'Resend failed',
-        message: message,
-      })
+        reportActionFailure({
+          error: err,
+          context: 'AdminUsers:handleResendInvitation',
+          title: 'Resend failed',
+        })
       })
       .finally(() => {
         setInvitationActionKey((current) => (current === actionKey ? null : current))
@@ -661,12 +677,11 @@ export default function AdminUsersPage() {
         })
       })
       .catch((err: unknown) => {
-        logError(err, 'AdminUsers:handleRevokeInvitation')
-        const message = asErrorMessage(err)
-        notifyFailure({
-        title: 'Revoke failed',
-        message: message,
-      })
+        reportActionFailure({
+          error: err,
+          context: 'AdminUsers:handleRevokeInvitation',
+          title: 'Revoke failed',
+        })
       })
       .finally(() => {
         setInvitationActionKey((current) => (current === actionKey ? null : current))
@@ -681,12 +696,13 @@ export default function AdminUsersPage() {
     setInvitationStatusFilter('pending')
     setInvitationSearchTerm('')
     setUsersOverride(null)
+    clearActionError()
 
     if (isPreviewMode) {
       setPreviewUsers(getPreviewAdminUsers())
       setPreviewInvitations(getPreviewAdminInvitations())
     }
-  }, [isPreviewMode, loading])
+  }, [clearActionError, isPreviewMode, loading])
 
   const handleInviteEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setInviteEmail(e.target.value)
@@ -737,12 +753,16 @@ export default function AdminUsersPage() {
     void Promise.resolve()
       .then(() => loadMore(50))
       .catch((err: unknown) => {
-        logError(err, 'AdminUsers:loadMore')
+        reportActionFailure({
+          error: err,
+          context: 'AdminUsers:loadMore',
+          title: 'Could not load more',
+        })
       })
       .finally(() => {
         setLoadingMore(false)
       })
-  }, [isPreviewMode, loadingMore, loadMore])
+  }, [isPreviewMode, loadingMore, loadMore, reportActionFailure])
 
   const handleRevokeOpen = useCallback(() => {
     setRevokeOpen(true)
@@ -917,7 +937,9 @@ export default function AdminUsersPage() {
               </Select>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <AdminQueryErrorAlert error={listQueryError} title="Unable to load workspace data" />
+            <AdminActionErrorAlert error={actionError} onDismiss={clearActionError} />
             <div className="overflow-x-auto rounded-md border border-muted/40">
               <table className="min-w-full table-fixed text-left text-sm">
                 <caption className="sr-only">Workspace users, roles, and approval status</caption>
@@ -937,9 +959,9 @@ export default function AdminUsersPage() {
                       <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                         {loading
                           ? 'Loading users…'
-                          : error
-                          ? `Unable to load users: ${error}`
-                          : 'No users match the current filters.'}
+                          : listQueryError
+                            ? listQueryError
+                            : 'No users match the current filters.'}
                       </td>
                     </tr>
                   ) : (

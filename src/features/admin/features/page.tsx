@@ -1,6 +1,8 @@
 'use client'
 
 import { reportConvexFailure } from '@/lib/handle-convex-error'
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
+import { AdminQueryErrorAlert } from '../components/admin-query-error-alert'
 import { useCallback, useMemo, useState } from 'react'
 import { Lightbulb, LoaderCircle, RefreshCw } from 'lucide-react'
 
@@ -11,7 +13,6 @@ import { useToast } from '@/shared/ui/use-toast'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '/_generated/api'
 import type { Id } from '/_generated/dataModel'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import { getPreviewAdminFeatures } from '@/lib/preview-data'
 import type { FeatureItem, FeatureStatus, FeaturePriority, FeatureReference } from '@/types/features'
@@ -107,6 +108,13 @@ export default function AdminFeaturesPage() {
   }, [featuresResponse, isPreviewMode, previewFeatures])
 
   const loading = isPreviewMode ? false : featuresResponse === undefined
+
+  const featuresQueryError = useConvexQueryError({
+    data: featuresResponse,
+    skipped: isPreviewMode,
+    loading,
+    fallbackMessage: 'Unable to load the feature backlog.',
+  })
 
   const fetchFeatures = useCallback(
     async (isRefresh = false) => {
@@ -206,14 +214,12 @@ export default function AdminFeaturesPage() {
           })
         })
         .catch((error) => {
-          logError(error, 'AdminFeaturesPage:handleMoveFeature')
-          // Convex is source of truth; UI will settle automatically.
           reportConvexFailure({
-        error: error,
-        context: 'page.tsx:catch',
-        title: 'Move failed',
-        fallbackMessage: 'Move failed',
-        })
+            error,
+            context: 'AdminFeaturesPage:handleMoveFeature',
+            title: 'Move failed',
+            fallbackMessage: 'Unable to update feature status.',
+          })
         })
     },
     [features, isPreviewMode, toast, updateFeature]
@@ -346,6 +352,8 @@ export default function AdminFeaturesPage() {
       isPreviewMode={isPreviewMode}
       actions={featuresToolbarActions}
     >
+      <AdminQueryErrorAlert error={featuresQueryError} title="Unable to load features" />
+
       <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
         <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent/10 text-primary">
           <Lightbulb className="h-4 w-4" />

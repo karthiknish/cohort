@@ -24,6 +24,8 @@ import { usePreview } from '@/shared/contexts/preview-context'
 import { getPreviewAdminUsers } from '@/lib/preview-data'
 
 import { AdminPageShell } from '../components/admin-page-shell'
+import { AdminQueryErrorAlert } from '../components/admin-query-error-alert'
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
 import { UserSearchPicker } from '../components/user-search-picker'
 import {
   buildClientAllocationSummary,
@@ -276,6 +278,13 @@ export default function AdminClientsPage() {
   const workspaceContext = useQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
   const workspaceId = workspaceContext?.workspaceId ?? null
   const includeAllWorkspaces = workspaceContext?.role === 'admin'
+
+  const workspaceQueryError = useConvexQueryError({
+    data: workspaceContext,
+    skipped: isPreviewMode || !user,
+    loading: !isPreviewMode && Boolean(user) && workspaceContext === undefined,
+    fallbackMessage: 'Unable to load workspace context.',
+  })
 
   const {
     // Client list
@@ -607,13 +616,15 @@ export default function AdminClientsPage() {
                   className="w-full sm:w-72"
                 />
               </div>
+              <AdminQueryErrorAlert
+                error={workspaceQueryError ?? clientsError}
+                title="Unable to load clients"
+              />
               {clientsLoading ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <LoaderCircle className="h-4 w-4 animate-spin" /> Loading clients…
                 </div>
-              ) : clientsError ? (
-                <p className="text-sm text-destructive">{clientsError}</p>
-              ) : clients.length === 0 ? (
+              ) : clients.length === 0 && !clientsError && !workspaceQueryError ? (
                 <p className="text-sm text-muted-foreground">No clients yet. Add a workspace to get started.</p>
               ) : filteredClients.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No client workspaces match your search.</p>

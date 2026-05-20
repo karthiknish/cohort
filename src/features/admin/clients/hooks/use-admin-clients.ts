@@ -9,7 +9,8 @@ import { useConvex, useQuery as useConvexQuery } from 'convex/react'
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { asErrorMessage } from '@/lib/convex-errors'
+import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { clientsApi } from '@/lib/convex-api'
 import { getPreviewClients } from '@/lib/preview-data'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
@@ -241,12 +242,11 @@ export function useAdminClients(): UseAdminClientsReturn {
         try {
             await clientsInfiniteQuery.fetchNextPage()
         } catch (err: unknown) {
-            logError(err, 'useAdminClients:handleLoadMore')
-            const message = asErrorMessage(err)
-            notifyFailure({
-        title: 'Could not load more',
-        message: message,
-      })
+            reportConvexFailure({
+                error: err,
+                context: 'useAdminClients:handleLoadMore',
+                title: 'Could not load more',
+            })
         }
     }, [clientsInfiniteQuery, isPreviewMode, toast])
 
@@ -290,12 +290,11 @@ export function useAdminClients(): UseAdminClientsReturn {
             setClientPendingDelete(null)
             setIsDeleteDialogOpen(false)
         } catch (err: unknown) {
-            logError(err, 'useAdminClients:handleDeleteClient')
-            const message = asErrorMessage(err)
-            notifyFailure({
-        title: 'Client delete failed',
-        message: message,
-      })
+            reportConvexFailure({
+                error: err,
+                context: 'useAdminClients:handleDeleteClient',
+                title: 'Client delete failed',
+            })
         } finally {
             setDeletingClientId(null)
         }
@@ -383,12 +382,11 @@ export function useAdminClients(): UseAdminClientsReturn {
             setIsTeamDialogOpen(false)
             setClientPendingMembers(null)
         } catch (err: unknown) {
-            logError(err, 'useAdminClients:handleAddTeamMember')
-            const message = asErrorMessage(err)
-            notifyFailure({
-        title: 'Add teammate failed',
-        message: message,
-      })
+            reportConvexFailure({
+                error: err,
+                context: 'useAdminClients:handleAddTeamMember',
+                title: 'Add teammate failed',
+            })
         } finally {
             setAddingMember(false)
         }
@@ -442,12 +440,11 @@ export function useAdminClients(): UseAdminClientsReturn {
                 description: `${normalizedName} was removed from ${client.name}.`,
             })
         } catch (err: unknown) {
-            logError(err, 'useAdminClients:handleRemoveTeamMember')
-            const message = asErrorMessage(err)
-            notifyFailure({
-        title: 'Remove teammate failed',
-        message: message,
-      })
+            reportConvexFailure({
+                error: err,
+                context: 'useAdminClients:handleRemoveTeamMember',
+                title: 'Remove teammate failed',
+            })
         } finally {
             setRemovingTeamMemberKey(null)
         }
@@ -535,12 +532,11 @@ export function useAdminClients(): UseAdminClientsReturn {
             toast({ title: 'Client created', description: `${name} is ready to use.` })
             resetClientForm()
         } catch (err: unknown) {
-            logError(err, 'useAdminClients:handleCreateClient')
-            const message = asErrorMessage(err)
-            notifyFailure({
-        title: 'Client create failed',
-        message: message,
-      })
+            reportConvexFailure({
+                error: err,
+                context: 'useAdminClients:handleCreateClient',
+                title: 'Client create failed',
+            })
         } finally {
             setClientSaving(false)
         }

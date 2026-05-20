@@ -1,6 +1,8 @@
 'use client'
 
 import { reportConvexFailure } from '@/lib/handle-convex-error'
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
+import { AdminQueryErrorAlert } from '../components/admin-query-error-alert'
 import { useCallback, useMemo, useState } from 'react'
 import {
   AlertCircle,
@@ -13,7 +15,6 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useMutation, useQuery } from 'convex/react'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { api } from '/_generated/api'
 import {
   Card,
@@ -196,6 +197,13 @@ export default function AdminIssuesPage() {
   const resolvedReports = isPreviewMode ? previewReports : (reports ?? [])
   const loading = isPreviewMode ? false : reports === undefined
 
+  const reportsQueryError = useConvexQueryError({
+    data: reports,
+    skipped: isPreviewMode,
+    loading,
+    fallbackMessage: 'Unable to load problem reports.',
+  })
+
   const handleStatusUpdate = useCallback((id: string, newStatus: string) => {
     if (isPreviewMode) {
       setPreviewReports((current) => current.map((report) => (
@@ -215,10 +223,10 @@ export default function AdminIssuesPage() {
       })
       .catch((error) => {
         reportConvexFailure({
-        error: error,
-        context: 'AdminIssuesPage:updateStatus',
-        title: 'Error',
-        fallbackMessage: 'Error',
+          error,
+          context: 'AdminIssuesPage:updateStatus',
+          title: 'Status update failed',
+          fallbackMessage: 'Unable to update report status.',
         })
       })
       .finally(() => {
@@ -245,10 +253,10 @@ export default function AdminIssuesPage() {
       })
       .catch((error) => {
         reportConvexFailure({
-        error: error,
-        context: 'AdminIssuesPage:deleteReport',
-        title: 'Error',
-        fallbackMessage: 'Error',
+          error,
+          context: 'AdminIssuesPage:deleteReport',
+          title: 'Delete failed',
+          fallbackMessage: 'Unable to delete report.',
         })
       })
       .finally(() => {
@@ -326,7 +334,8 @@ export default function AdminIssuesPage() {
             </Select>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <AdminQueryErrorAlert error={reportsQueryError} title="Unable to load reports" />
           {loading && resolvedReports.length === 0 ? (
             <div
               className="flex flex-col items-center justify-center py-12 text-muted-foreground"
@@ -340,7 +349,11 @@ export default function AdminIssuesPage() {
           ) : filteredReports.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border rounded-lg border-dashed">
               <AlertCircle className="mb-4 h-8 w-8 opacity-20" />
-              <p>No issues found matching your criteria.</p>
+              <p>
+                {reportsQueryError
+                  ? reportsQueryError
+                  : 'No issues found matching your criteria.'}
+              </p>
             </div>
           ) : (
             <div className="rounded-md border">

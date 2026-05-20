@@ -4,6 +4,7 @@ import { useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ShieldAlert, RefreshCw, Home, Copy, Code2 } from 'lucide-react'
 
+import { logRouteError } from '@/shared/ui/log-route-error'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Badge } from '@/shared/ui/badge'
@@ -18,7 +19,7 @@ export default function AdminError({
   reset?: () => void
 }) {
   useEffect(() => {
-    console.error('[AdminErrorBoundary]', error)
+    logRouteError(error, 'admin')
   }, [error])
 
   const isDev = process.env.NODE_ENV === 'development'

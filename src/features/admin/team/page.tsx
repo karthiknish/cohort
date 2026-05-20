@@ -1,6 +1,10 @@
 'use client'
 
 import { notifyFailure } from '@/lib/notifications'
+import { useConvexQueryError } from '@/lib/hooks/use-convex-query-error'
+import { AdminActionErrorAlert } from '../components/admin-action-error-alert'
+import { AdminQueryErrorAlert } from '../components/admin-query-error-alert'
+import { useAdminActionError } from '../hooks/use-admin-action-error'
 import { useCallback, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
@@ -17,7 +21,6 @@ import {
 import Link from 'next/link'
 
 import { api } from '/_generated/api'
-import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -37,7 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { asErrorMessage } from '@/lib/convex-errors'
 import { DATE_FORMATS, formatDate as formatDateLib } from '@/lib/dates'
 import { getPreviewAdminClients, getPreviewAdminUsers } from '@/lib/preview-data'
 import { cn } from '@/lib/utils'
@@ -88,7 +91,7 @@ export default function AdminTeamPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const { actionError, clearActionError, reportActionFailure } = useAdminActionError()
   const [savingId, setSavingId] = useState<string | null>(null)
   const workspaceContext = useQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
   const workspaceId = workspaceContext?.workspaceId ?? null
@@ -178,17 +181,16 @@ export default function AdminTeamPage() {
     void Promise.resolve()
       .then(() => loadMore(50))
       .catch((err: unknown) => {
-        logError(err, 'AdminTeamPage:loadMore')
-        const message = asErrorMessage(err)
-        notifyFailure({
-        title: 'Could not load more',
-        message: message,
-      })
+        reportActionFailure({
+          error: err,
+          context: 'AdminTeamPage:loadMore',
+          title: 'Could not load more',
+        })
       })
       .finally(() => {
         setLoadingMore(false)
       })
-  }, [isPreviewMode, loadMore, loadingMore, toast])
+  }, [isPreviewMode, loadMore, loadingMore, reportActionFailure])
 
   const users: AdminUserRecord[] = useMemo(() => {
     if (isPreviewMode) return previewUsers
@@ -211,6 +213,13 @@ export default function AdminTeamPage() {
   }, [isPreviewMode, previewUsers, usersOverride, usersPage])
 
   const loading = isPreviewMode ? false : (user != null && workspaceContext === undefined) || isLoading
+
+  const workspaceQueryError = useConvexQueryError({
+    data: workspaceContext,
+    skipped: isPreviewMode || !user,
+    loading: !isPreviewMode && Boolean(user) && workspaceContext === undefined,
+    fallbackMessage: 'Unable to load workspace context.',
+  })
   const clientItems = isPreviewMode
     ? getPreviewAdminClients().map((client) => ({
         legacyId: client.id,
@@ -285,7 +294,7 @@ export default function AdminTeamPage() {
     }
 
     setSavingId(userId)
-    setError(null)
+    clearActionError()
 
     void updateUserRoleStatus({ legacyId: userId, role })
       .then(() => {
@@ -296,13 +305,11 @@ export default function AdminTeamPage() {
         toast({ title: 'Role updated', description: `Member is now a ${role}.` })
       })
       .catch((err: unknown) => {
-        logError(err, 'AdminTeamPage:handleRoleChange')
-        const message = asErrorMessage(err)
-        setError(message)
-        notifyFailure({
-        title: 'Role update failed',
-        message: message,
-      })
+        reportActionFailure({
+          error: err,
+          context: 'AdminTeamPage:handleRoleChange',
+          title: 'Role update failed',
+        })
       })
       .finally(() => {
         setSavingId(null)
@@ -337,7 +344,7 @@ export default function AdminTeamPage() {
     }
 
     setSavingId(userRecord.id)
-    setError(null)
+    clearActionError()
 
     void updateUserRoleStatus({ legacyId: userRecord.id, status: nextStatus })
       .then(() => {
@@ -351,13 +358,11 @@ export default function AdminTeamPage() {
         })
       })
       .catch((err: unknown) => {
-        logError(err, 'AdminTeamPage:handleStatusAction')
-        const message = asErrorMessage(err)
-        setError(message)
-        notifyFailure({
-        title: 'Status update failed',
-        message: message,
-      })
+        reportActionFailure({
+          error: err,
+          context: 'AdminTeamPage:handleStatusAction',
+          title: 'Status update failed',
+        })
       })
       .finally(() => {
         setSavingId(null)
@@ -416,17 +421,16 @@ export default function AdminTeamPage() {
         setInviteRole('team')
       })
       .catch((err: unknown) => {
-        logError(err, 'AdminTeamPage:handleInviteUser')
-        const message = asErrorMessage(err)
-        notifyFailure({
-        title: 'Invitation failed',
-        message: message,
-      })
+        reportActionFailure({
+          error: err,
+          context: 'AdminTeamPage:handleInviteUser',
+          title: 'Invitation failed',
+        })
       })
       .finally(() => {
         setInviteSending(false)
       })
-  }, [createInvitation, inviteEmail, inviteRole, isPreviewMode, toast, user])
+  }, [createInvitation, inviteEmail, inviteRole, isPreviewMode, reportActionFailure, toast, user])
 
   const handleInviteFormSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
@@ -435,10 +439,6 @@ export default function AdminTeamPage() {
     },
     [handleInviteUser],
   )
-
-  const handleDismissError = useCallback(() => {
-    setError(null)
-  }, [])
 
   const handleOpenInviteDialog = useCallback(() => {
     setInviteOpen(true)
@@ -455,13 +455,13 @@ export default function AdminTeamPage() {
     setStatusFilter('all')
     setRoleFilter('all')
     setSearchTerm('')
-    setError(null)
+    clearActionError()
     setUsersOverride(null)
 
     if (isPreviewMode) {
       setPreviewUsers(getPreviewAdminUsers())
     }
-  }, [isPreviewMode, loading])
+  }, [clearActionError, isPreviewMode, loading])
 
   if (!user && !isPreviewMode) {
     return (
@@ -673,18 +673,8 @@ export default function AdminTeamPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error ? (
-              <Alert variant="destructive">
-                <CircleAlert className="h-4 w-4" />
-                <AlertTitle>Last action failed</AlertTitle>
-                <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <span>{error}</span>
-                  <Button type="button" size="sm" variant="outline" onClick={handleDismissError}>
-                    Dismiss
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            ) : null}
+            <AdminQueryErrorAlert error={workspaceQueryError} title="Unable to load workspace data" />
+            <AdminActionErrorAlert error={actionError} onDismiss={clearActionError} />
             <div className="overflow-x-auto rounded-md border border-muted/40">
               <table className="min-w-full table-fixed text-left text-sm">
                 <caption className="sr-only">Team members, roles, and client allocation</caption>
@@ -706,8 +696,8 @@ export default function AdminTeamPage() {
                       <td colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
                         {loading ? (
                           'Loading team…'
-                        ) : error && internalUsers.length === 0 ? (
-                          `Unable to load teammates: ${error}`
+                        ) : workspaceQueryError && internalUsers.length === 0 ? (
+                          workspaceQueryError
                         ) : !loading && internalUsers.length === 0 ? (
                           <span className="inline-flex flex-col items-center gap-3">
                             <span>No internal teammates in this workspace yet.</span>
