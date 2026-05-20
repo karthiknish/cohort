@@ -1,140 +1,96 @@
 'use client'
 
 import { Info } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import { formatCurrency } from '@/lib/utils'
+import { Card, CardContent } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from '@/shared/ui/tooltip'
-import { formatCurrency } from '@/lib/utils'
 
 interface AnalyticsMetricCardsProps {
-    avgUsersPerDay: number
-    avgSessionsPerDay: number
-    revenuePerSession: number
-    sessionsPerUser: number
-    conversionRate: number
-    isLoading: boolean
+  avgUsersPerDay: number
+  avgSessionsPerDay: number
+  revenuePerSession: number
+  sessionsPerUser: number
+  isLoading: boolean
+}
+
+function SecondaryMetric({
+  label,
+  tooltip,
+  value,
+  isLoading,
+}: {
+  label: string
+  tooltip: string
+  value: string
+  isLoading: boolean
+}) {
+  return (
+    <div className="space-y-1 border-border/60 px-1 sm:border-l sm:px-4 first:sm:border-l-0 first:sm:pl-0">
+      <div className="flex items-center gap-1.5">
+        <p className={DASHBOARD_THEME.stats.label}>{label}</p>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>
+              <Info className="h-3 w-3 text-muted-foreground/50 hover:text-primary" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p className="text-xs">{tooltip}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      {isLoading ? (
+        <Skeleton className="h-6 w-16 rounded-md" />
+      ) : (
+        <p className="text-lg font-semibold tracking-tight text-foreground">{value}</p>
+      )}
+    </div>
+  )
 }
 
 export function AnalyticsMetricCards({
-    avgUsersPerDay,
-    avgSessionsPerDay,
-    revenuePerSession,
-    sessionsPerUser,
-    conversionRate,
-    isLoading,
+  avgUsersPerDay,
+  avgSessionsPerDay,
+  revenuePerSession,
+  sessionsPerUser,
+  isLoading,
 }: AnalyticsMetricCardsProps) {
-    return (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-muted/30 bg-muted/5 shadow-sm motion-chromatic hover:bg-muted/10">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
-                    <div className="flex items-center gap-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Avg users / day</CardTitle>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="text-xs">Average daily users across the selected date range</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <Skeleton className="h-7 w-16 rounded-lg" />
-                    ) : (
-                        <div className="text-xl font-bold tracking-tight text-foreground">{avgUsersPerDay.toFixed(1)}</div>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Card className="border-muted/30 bg-muted/5 shadow-sm motion-chromatic hover:bg-muted/10">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
-                    <div className="flex items-center gap-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Avg sessions / day</CardTitle>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="text-xs">Average daily session volume for the selected range</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <Skeleton className="h-7 w-20 rounded-lg" />
-                    ) : (
-                        <div className="text-xl font-bold tracking-tight text-foreground">{avgSessionsPerDay.toFixed(1)}</div>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Card className="border-muted/30 bg-muted/5 shadow-sm motion-chromatic hover:bg-muted/10">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
-                    <div className="flex items-center gap-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Revenue / session</CardTitle>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="text-xs">Average revenue generated for each session</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <Skeleton className="h-7 w-16 rounded-lg" />
-                    ) : (
-                        <div className="text-xl font-bold tracking-tight text-foreground">{formatCurrency(revenuePerSession)}</div>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Card className="border-muted/30 bg-muted/5 shadow-sm motion-chromatic hover:bg-muted/10">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1.5">
-                    <div className="flex items-center gap-2">
-                        <CardTitle className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Sessions / user</CardTitle>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/40 transition-colors hover:text-primary" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="text-xs">Average number of sessions generated by each user</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <>
-                            <Skeleton className="h-7 w-16 rounded-lg" />
-                            <Skeleton className="mt-2 h-4 w-20 rounded-lg" />
-                        </>
-                    ) : (
-                        <>
-                            <div className="text-xl font-bold tracking-tight text-foreground">{sessionsPerUser.toFixed(2)}x</div>
-                            <div className="mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground/60">Conv rate {conversionRate.toFixed(1)}%</div>
-                        </>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-    )
+  return (
+    <Card className="border border-border/60 bg-muted/20 shadow-sm">
+      <CardContent className="grid grid-cols-2 gap-6 py-5 sm:grid-cols-4">
+        <SecondaryMetric
+          label="Avg users / day"
+          tooltip="Total users divided by the number of days in your selected range."
+          value={avgUsersPerDay.toFixed(1)}
+          isLoading={isLoading}
+        />
+        <SecondaryMetric
+          label="Avg sessions / day"
+          tooltip="Total sessions divided by days in range — useful for spotting steady traffic vs spikes."
+          value={avgSessionsPerDay.toFixed(1)}
+          isLoading={isLoading}
+        />
+        <SecondaryMetric
+          label="Revenue / session"
+          tooltip="Average revenue earned per session across the selected period."
+          value={formatCurrency(revenuePerSession)}
+          isLoading={isLoading}
+        />
+        <SecondaryMetric
+          label="Sessions / user"
+          tooltip="How often each user returned on average. Values above 1 indicate repeat visits."
+          value={`${sessionsPerUser.toFixed(2)}×`}
+          isLoading={isLoading}
+        />
+      </CardContent>
+    </Card>
+  )
 }

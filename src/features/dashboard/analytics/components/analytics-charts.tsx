@@ -1,396 +1,393 @@
 'use client'
 
+import { useMemo } from 'react'
+import { Info } from 'lucide-react'
+
 import { AnalyticsEmptyState } from '@/shared/ui/analytics-empty-state'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/shared/ui/tooltip'
 import { formatCurrency } from '@/lib/utils'
 import {
-    Area,
-    AreaChart,
-    Bar,
-    BarChart,
-    CartesianGrid,
-    ChartContainer,
-    ChartLegend,
-    ChartLegendContent,
-    ChartTooltip,
-    ChartTooltipContent,
-    XAxis,
-    YAxis,
+  ANALYTICS_CHART_CONTAINER_CLASS,
+  ANALYTICS_CHART_TOOLTIP_PROPS,
+  AnalyticsConversionRateTooltip,
+  AnalyticsConversionsTooltip,
+  AnalyticsRevenueTooltip,
+  AnalyticsUsersSessionsTooltip,
+  type AnalyticsChartPoint,
+} from './analytics-chart-tooltips'
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  RechartsTooltip,
+  XAxis,
+  YAxis,
 } from './chart-imports'
 import {
-    conversionRateChartConfig,
-    conversionsChartConfig,
-    revenueChartConfig,
-    usersSessionsChartConfig,
+  conversionRateChartConfig,
+  conversionsChartConfig,
+  revenueChartConfig,
+  usersSessionsChartConfig,
 } from './chart-configs'
-import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 
 const AXIS_TICK_STYLE = {
-    fontSize: '10px',
-    fontWeight: '600',
-    fill: 'var(--muted-foreground)',
-    opacity: 0.8,
+  fontSize: 11,
+  fill: 'var(--muted-foreground)',
 } as const
 
-const CHART_TOOLTIP_CLASS_NAME = 'rounded-xl border-muted/40 shadow-lg backdrop-blur-md'
 const CHART_TOOLTIP_CURSOR = { strokeDasharray: '3 3' } as const
-const CHART_ACTIVE_DOT = { r: 6, strokeWidth: 0 } as const
-const CHART_LEGEND_CONTENT = <ChartLegendContent className="pt-4 text-[10px] font-bold uppercase tracking-widest opacity-80" />
-const CHART_MARGIN = { top: 8, right: 8, left: 0, bottom: 0 } as const
+const CHART_ACTIVE_DOT = { r: 5, strokeWidth: 0 } as const
+const CHART_LEGEND_CONTENT = <ChartLegendContent className="pt-3 text-xs text-muted-foreground" />
+const CHART_MARGIN = { top: 8, right: 12, left: 4, bottom: 4 } as const
+const CHART_CARD_CLASS = 'border border-border/60 bg-card shadow-sm'
+const CHART_HEADER_CLASS = 'border-b border-border/60 bg-muted/30 px-6 py-4'
 
 function formatDateTick(value: string) {
-    const date = new Date(value)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const date = new Date(value)
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function formatNumberTick(value: number | string) {
-    return Number(value).toLocaleString()
+  return Number(value).toLocaleString()
 }
 
 function formatCurrencyTick(value: number | string) {
-    return formatCurrency(Number(value))
+  return formatCurrency(Number(value))
 }
 
 function formatPercentTick(value: number | string) {
-    return `${Number(value).toFixed(1)}%`
-}
-
-function renderUsersSessionsTooltip(value: ValueType, name: NameType) {
-    const displayValue = Array.isArray(value) ? value[0] ?? 0 : value
-
-    return (
-        <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">{String(name)}:</span>
-            <span className="text-sm font-bold text-foreground">{Number(displayValue).toLocaleString()}</span>
-        </div>
-    )
-}
-
-function renderRevenueTooltip(value: unknown) {
-    return (
-        <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Revenue:</span>
-            <span className="text-sm font-bold text-foreground">{formatCurrency(value as number)}</span>
-        </div>
-    )
-}
-
-function renderConversionsTooltip(value: unknown) {
-    return (
-        <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Conversions:</span>
-            <span className="text-sm font-bold text-foreground">{Number(value).toLocaleString()}</span>
-        </div>
-    )
-}
-
-function renderConversionRateTooltip(value: unknown) {
-    return (
-        <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Conv rate:</span>
-            <span className="text-sm font-bold text-foreground">{(value as number).toFixed(2)}%</span>
-        </div>
-    )
-}
-
-const USERS_SESSIONS_TOOLTIP_CONTENT = (
-    <ChartTooltipContent className={CHART_TOOLTIP_CLASS_NAME} formatter={renderUsersSessionsTooltip} />
-)
-
-const REVENUE_TOOLTIP_CONTENT = (
-    <ChartTooltipContent className={CHART_TOOLTIP_CLASS_NAME} formatter={renderRevenueTooltip} />
-)
-
-const CONVERSIONS_TOOLTIP_CONTENT = (
-    <ChartTooltipContent className={CHART_TOOLTIP_CLASS_NAME} formatter={renderConversionsTooltip} />
-)
-
-const CONVERSION_RATE_TOOLTIP_CONTENT = (
-    <ChartTooltipContent className={CHART_TOOLTIP_CLASS_NAME} formatter={renderConversionRateTooltip} />
-)
-
-interface ChartDataPoint {
-    date: string
-    users: number
-    sessions: number
-    revenue: number
-    conversions: number
-    conversionRate: number
+  return `${Number(value).toFixed(1)}%`
 }
 
 interface AnalyticsChartsProps {
-    chartData: ChartDataPoint[]
-    isMetricsLoading: boolean
-    initialMetricsLoading: boolean
+  chartData: AnalyticsChartPoint[]
+  isMetricsLoading: boolean
+  initialMetricsLoading: boolean
+}
+
+function ChartCardHeader({
+  title,
+  description,
+  tip,
+}: {
+  title: string
+  description: string
+  tip: string
+}) {
+  return (
+    <CardHeader className={CHART_HEADER_CLASS}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <CardTitle className="text-sm font-semibold text-foreground">{title}</CardTitle>
+          <CardDescription className="text-xs text-muted-foreground">{description}</CardDescription>
+        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger className="rounded-md p-1 text-muted-foreground hover:text-primary">
+              <Info className="h-4 w-4" aria-hidden />
+              <span className="sr-only">Chart tips</span>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-xs">
+              <p className="text-xs leading-relaxed">{tip}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    </CardHeader>
+  )
 }
 
 export function AnalyticsCharts({
-    chartData,
-    isMetricsLoading,
-    initialMetricsLoading,
+  chartData,
+  isMetricsLoading,
+  initialMetricsLoading,
 }: AnalyticsChartsProps) {
-    return (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Users vs Sessions Chart */}
-            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
-                <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
-                    <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-primary" />
-                        <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Users vs sessions</CardTitle>
-                    </div>
-                    <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Daily audience and visit volume for the selected period</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                    {initialMetricsLoading || (isMetricsLoading && chartData.length === 0) ? (
-                        <Skeleton className="h-[300px] w-full rounded-xl" />
-                    ) : chartData.length === 0 ? (
-                        <AnalyticsEmptyState
-                            variant="no-filters"
-                            title="No Performance Data"
-                            description="There is no performance data available for the selected filters and time period."
-                            className="h-[300px] py-6"
-                        />
-                    ) : (
-                        <ChartContainer config={usersSessionsChartConfig} className="h-[300px] w-full">
-                            <AreaChart data={chartData} margin={CHART_MARGIN} accessibilityLayer>
-                                <defs>
-                                    <linearGradient id="fillUsersAnalytics" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="var(--color-users)" stopOpacity={0.28} />
-                                        <stop offset="95%" stopColor="var(--color-users)" stopOpacity={0.04} />
-                                    </linearGradient>
-                                    <linearGradient id="fillSessionsAnalytics" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="var(--color-sessions)" stopOpacity={0.24} />
-                                        <stop offset="95%" stopColor="var(--color-sessions)" stopOpacity={0.03} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.12} />
-                                <XAxis
-                                    dataKey="date"
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickMargin={12}
-                                    style={AXIS_TICK_STYLE}
-                                    tickFormatter={formatDateTick}
-                                />
-                                <YAxis
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickMargin={12}
-                                    style={AXIS_TICK_STYLE}
-                                    tickFormatter={formatNumberTick}
-                                />
-                                <ChartTooltip
-                                    cursor={CHART_TOOLTIP_CURSOR}
-                                    content={USERS_SESSIONS_TOOLTIP_CONTENT}
-                                />
-                                <ChartLegend content={CHART_LEGEND_CONTENT} />
-                                <Area
-                                    type="monotone"
-                                    dataKey="users"
-                                    stroke="var(--color-users)"
-                                    strokeWidth={2}
-                                    fill="url(#fillUsersAnalytics)"
-                                    dot={false}
-                                    activeDot={CHART_ACTIVE_DOT}
-                                />
-                                <Area
-                                    type="monotone"
-                                    dataKey="sessions"
-                                    stroke="var(--color-sessions)"
-                                    strokeWidth={2}
-                                    fill="url(#fillSessionsAnalytics)"
-                                    dot={false}
-                                    activeDot={CHART_ACTIVE_DOT}
-                                />
-                            </AreaChart>
-                        </ChartContainer>
-                    )}
-                </CardContent>
-            </Card>
+  const showChartSkeleton = initialMetricsLoading || (isMetricsLoading && chartData.length === 0)
 
-            {/* Revenue Trend Chart */}
-            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
-                <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
-                    <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-success" />
-                        <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Revenue trend</CardTitle>
-                    </div>
-                    <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Daily revenue reported by Google Analytics</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                    {initialMetricsLoading || (isMetricsLoading && chartData.length === 0) ? (
-                        <Skeleton className="h-[300px] w-full rounded-xl" />
-                    ) : chartData.length === 0 ? (
-                        <AnalyticsEmptyState
-                            variant="no-filters"
-                            title="No Performance Data"
-                            description="There is no performance data available for the selected filters and time period."
-                            className="h-[300px] py-6"
-                        />
-                    ) : (
-                        <ChartContainer config={revenueChartConfig} className="h-[300px] w-full">
-                            <AreaChart data={chartData} margin={CHART_MARGIN} accessibilityLayer>
-                                <defs>
-                                    <linearGradient id="fillRevenueAnalytics" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.05} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.12} />
-                                <XAxis
-                                    dataKey="date"
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickMargin={12}
-                                    style={AXIS_TICK_STYLE}
-                                    tickFormatter={formatDateTick}
-                                />
-                                <YAxis
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickMargin={12}
-                                    style={AXIS_TICK_STYLE}
-                                    tickFormatter={formatCurrencyTick}
-                                />
-                                <ChartTooltip
-                                    cursor={CHART_TOOLTIP_CURSOR}
-                                    content={REVENUE_TOOLTIP_CONTENT}
-                                />
-                                <ChartLegend content={CHART_LEGEND_CONTENT} />
-                                <Area
-                                    type="monotone"
-                                    dataKey="revenue"
-                                    stroke="var(--color-revenue)"
-                                    strokeWidth={2}
-                                    fill="url(#fillRevenueAnalytics)"
-                                    dot={false}
-                                    activeDot={CHART_ACTIVE_DOT}
-                                />
-                            </AreaChart>
-                        </ChartContainer>
-                    )}
-                </CardContent>
-            </Card>
+  const usersSessionsTooltipContent = useMemo(
+    () => <AnalyticsUsersSessionsTooltip chartData={chartData} />,
+    [chartData],
+  )
+  const revenueTooltipContent = useMemo(
+    () => <AnalyticsRevenueTooltip chartData={chartData} />,
+    [chartData],
+  )
+  const conversionsTooltipContent = useMemo(
+    () => <AnalyticsConversionsTooltip chartData={chartData} />,
+    [chartData],
+  )
+  const conversionRateTooltipContent = useMemo(
+    () => <AnalyticsConversionRateTooltip chartData={chartData} />,
+    [chartData],
+  )
 
-            {/* Conversions Chart */}
-            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
-                <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
-                    <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-info" />
-                        <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Conversions</CardTitle>
-                    </div>
-                    <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Daily conversion volume for the selected period</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                    {initialMetricsLoading || (isMetricsLoading && chartData.length === 0) ? (
-                        <Skeleton className="h-[300px] w-full rounded-xl" />
-                    ) : chartData.length === 0 ? (
-                        <AnalyticsEmptyState
-                            variant="no-filters"
-                            title="No Performance Data"
-                            description="There is no performance data available for the selected filters and time period."
-                            className="h-[300px] py-6"
-                        />
-                    ) : (
-                        <ChartContainer config={conversionsChartConfig} className="h-[300px] w-full">
-                            <BarChart data={chartData} margin={CHART_MARGIN} accessibilityLayer>
-                                <defs>
-                                    <linearGradient id="fillConversionsAnalytics" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="var(--color-conversions)" stopOpacity={0.95} />
-                                        <stop offset="100%" stopColor="var(--color-conversions)" stopOpacity={0.45} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.12} />
-                                <XAxis
-                                    dataKey="date"
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickMargin={12}
-                                    style={AXIS_TICK_STYLE}
-                                    tickFormatter={formatDateTick}
-                                />
-                                <YAxis
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickMargin={12}
-                                    style={AXIS_TICK_STYLE}
-                                    tickFormatter={formatNumberTick}
-                                />
-                                <ChartTooltip
-                                    content={CONVERSIONS_TOOLTIP_CONTENT}
-                                />
-                                <ChartLegend content={CHART_LEGEND_CONTENT} />
-                                <Bar dataKey="conversions" fill="url(#fillConversionsAnalytics)" radius={[6, 6, 0, 0]} barSize={24} />
-                            </BarChart>
-                        </ChartContainer>
-                    )}
-                </CardContent>
-            </Card>
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <Card className={CHART_CARD_CLASS}>
+        <ChartCardHeader
+          title="Users vs sessions"
+          description="Daily audience and visit volume"
+          tip="Hover the chart to see users, sessions, day-over-day change, and visit patterns."
+        />
+        <CardContent className="pt-6">
+          {showChartSkeleton ? (
+            <Skeleton className="h-[280px] w-full rounded-lg" />
+          ) : chartData.length === 0 ? (
+            <AnalyticsEmptyState
+              variant="no-filters"
+              title="No performance data"
+              description="There is no performance data for the selected date range."
+              className="h-[280px] py-6"
+            />
+          ) : (
+            <ChartContainer config={usersSessionsChartConfig} className={ANALYTICS_CHART_CONTAINER_CLASS}>
+              <AreaChart data={chartData} margin={CHART_MARGIN}>
+                <defs>
+                  <linearGradient id="fillUsersAnalytics" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-users)" stopOpacity={0.22} />
+                    <stop offset="95%" stopColor="var(--color-users)" stopOpacity={0.03} />
+                  </linearGradient>
+                  <linearGradient id="fillSessionsAnalytics" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-sessions)" stopOpacity={0.18} />
+                    <stop offset="95%" stopColor="var(--color-sessions)" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.2} />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  style={AXIS_TICK_STYLE}
+                  tickFormatter={formatDateTick}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  style={AXIS_TICK_STYLE}
+                  tickFormatter={formatNumberTick}
+                />
+                <RechartsTooltip
+                  {...ANALYTICS_CHART_TOOLTIP_PROPS}
+                  cursor={CHART_TOOLTIP_CURSOR}
+                  content={usersSessionsTooltipContent}
+                />
+                <ChartLegend content={CHART_LEGEND_CONTENT} />
+                <Area
+                  type="monotone"
+                  dataKey="users"
+                  stroke="var(--color-users)"
+                  strokeWidth={2}
+                  fill="url(#fillUsersAnalytics)"
+                  dot={false}
+                  activeDot={CHART_ACTIVE_DOT}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="sessions"
+                  stroke="var(--color-sessions)"
+                  strokeWidth={2}
+                  strokeDasharray="5 4"
+                  fill="url(#fillSessionsAnalytics)"
+                  dot={false}
+                  activeDot={CHART_ACTIVE_DOT}
+                />
+              </AreaChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
 
-            {/* Conversion Rate Chart */}
-            <Card className="overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
-                <CardHeader className="border-b border-muted/20 bg-muted/5 py-4">
-                    <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-warning" />
-                        <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground/80">Conversion rate</CardTitle>
-                    </div>
-                    <CardDescription className="text-xs font-medium text-muted-foreground/60 leading-tight">Daily conversion rate based on sessions</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                    {initialMetricsLoading || (isMetricsLoading && chartData.length === 0) ? (
-                        <Skeleton className="h-[300px] w-full rounded-xl" />
-                    ) : chartData.length === 0 ? (
-                        <AnalyticsEmptyState
-                            variant="no-filters"
-                            title="No Performance Data"
-                            description="There is no performance data available for the selected filters and time period."
-                            className="h-[300px] py-6"
-                        />
-                    ) : (
-                        <ChartContainer config={conversionRateChartConfig} className="h-[300px] w-full">
-                            <AreaChart data={chartData} margin={CHART_MARGIN} accessibilityLayer>
-                                <defs>
-                                    <linearGradient id="fillConversionRateAnalytics" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="var(--color-conversionRate)" stopOpacity={0.24} />
-                                        <stop offset="95%" stopColor="var(--color-conversionRate)" stopOpacity={0.04} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.12} />
-                                <XAxis
-                                    dataKey="date"
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickMargin={12}
-                                    style={AXIS_TICK_STYLE}
-                                    tickFormatter={formatDateTick}
-                                />
-                                <YAxis
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickMargin={12}
-                                    style={AXIS_TICK_STYLE}
-                                    tickFormatter={formatPercentTick}
-                                />
-                                <ChartTooltip
-                                    cursor={CHART_TOOLTIP_CURSOR}
-                                    content={CONVERSION_RATE_TOOLTIP_CONTENT}
-                                />
-                                <ChartLegend content={CHART_LEGEND_CONTENT} />
-                                <Area
-                                    type="monotone"
-                                    dataKey="conversionRate"
-                                    stroke="var(--color-conversionRate)"
-                                    strokeWidth={2}
-                                    fill="url(#fillConversionRateAnalytics)"
-                                    dot={false}
-                                    activeDot={CHART_ACTIVE_DOT}
-                                />
-                            </AreaChart>
-                        </ChartContainer>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-    )
+      <Card className={CHART_CARD_CLASS}>
+        <ChartCardHeader
+          title="Revenue trend"
+          description="Daily revenue from Google Analytics"
+          tip="Hover to compare revenue, conversions, and revenue per session for each day."
+        />
+        <CardContent className="pt-6">
+          {showChartSkeleton ? (
+            <Skeleton className="h-[280px] w-full rounded-lg" />
+          ) : chartData.length === 0 ? (
+            <AnalyticsEmptyState
+              variant="no-filters"
+              title="No performance data"
+              description="There is no performance data for the selected date range."
+              className="h-[280px] py-6"
+            />
+          ) : (
+            <ChartContainer config={revenueChartConfig} className={ANALYTICS_CHART_CONTAINER_CLASS}>
+              <AreaChart data={chartData} margin={CHART_MARGIN}>
+                <defs>
+                  <linearGradient id="fillRevenueAnalytics" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.24} />
+                    <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.04} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.2} />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  style={AXIS_TICK_STYLE}
+                  tickFormatter={formatDateTick}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  style={AXIS_TICK_STYLE}
+                  tickFormatter={formatCurrencyTick}
+                />
+                <RechartsTooltip
+                  {...ANALYTICS_CHART_TOOLTIP_PROPS}
+                  cursor={CHART_TOOLTIP_CURSOR}
+                  content={revenueTooltipContent}
+                />
+                <ChartLegend content={CHART_LEGEND_CONTENT} />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="var(--color-revenue)"
+                  strokeWidth={2}
+                  fill="url(#fillRevenueAnalytics)"
+                  dot={false}
+                  activeDot={CHART_ACTIVE_DOT}
+                />
+              </AreaChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className={CHART_CARD_CLASS}>
+        <ChartCardHeader
+          title="Conversions"
+          description="Daily conversion volume"
+          tip="Hover bars to see conversions with session context and day-over-day change."
+        />
+        <CardContent className="pt-6">
+          {showChartSkeleton ? (
+            <Skeleton className="h-[280px] w-full rounded-lg" />
+          ) : chartData.length === 0 ? (
+            <AnalyticsEmptyState
+              variant="no-filters"
+              title="No performance data"
+              description="There is no performance data for the selected date range."
+              className="h-[280px] py-6"
+            />
+          ) : (
+            <ChartContainer config={conversionsChartConfig} className={ANALYTICS_CHART_CONTAINER_CLASS}>
+              <BarChart data={chartData} margin={CHART_MARGIN}>
+                <defs>
+                  <linearGradient id="fillConversionsAnalytics" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-conversions)" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="var(--color-conversions)" stopOpacity={0.4} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.2} />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  style={AXIS_TICK_STYLE}
+                  tickFormatter={formatDateTick}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  style={AXIS_TICK_STYLE}
+                  tickFormatter={formatNumberTick}
+                />
+                <RechartsTooltip
+                  {...ANALYTICS_CHART_TOOLTIP_PROPS}
+                  cursor={{ fill: 'hsl(var(--muted))', opacity: 0.2 }}
+                  content={conversionsTooltipContent}
+                />
+                <ChartLegend content={CHART_LEGEND_CONTENT} />
+                <Bar dataKey="conversions" fill="url(#fillConversionsAnalytics)" radius={[4, 4, 0, 0]} barSize={20} />
+              </BarChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className={CHART_CARD_CLASS}>
+        <ChartCardHeader
+          title="Conversion rate"
+          description="Conversions divided by sessions, per day"
+          tip="Hover to inspect rate changes — low session days can exaggerate swings."
+        />
+        <CardContent className="pt-6">
+          {showChartSkeleton ? (
+            <Skeleton className="h-[280px] w-full rounded-lg" />
+          ) : chartData.length === 0 ? (
+            <AnalyticsEmptyState
+              variant="no-filters"
+              title="No performance data"
+              description="There is no performance data for the selected date range."
+              className="h-[280px] py-6"
+            />
+          ) : (
+            <ChartContainer config={conversionRateChartConfig} className={ANALYTICS_CHART_CONTAINER_CLASS}>
+              <AreaChart data={chartData} margin={CHART_MARGIN}>
+                <defs>
+                  <linearGradient id="fillConversionRateAnalytics" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-conversionRate)" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="var(--color-conversionRate)" stopOpacity={0.03} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.2} />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  style={AXIS_TICK_STYLE}
+                  tickFormatter={formatDateTick}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  style={AXIS_TICK_STYLE}
+                  tickFormatter={formatPercentTick}
+                />
+                <RechartsTooltip
+                  {...ANALYTICS_CHART_TOOLTIP_PROPS}
+                  cursor={CHART_TOOLTIP_CURSOR}
+                  content={conversionRateTooltipContent}
+                />
+                <ChartLegend content={CHART_LEGEND_CONTENT} />
+                <Area
+                  type="monotone"
+                  dataKey="conversionRate"
+                  stroke="var(--color-conversionRate)"
+                  strokeWidth={2}
+                  fill="url(#fillConversionRateAnalytics)"
+                  dot={false}
+                  activeDot={CHART_ACTIVE_DOT}
+                />
+              </AreaChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
 }

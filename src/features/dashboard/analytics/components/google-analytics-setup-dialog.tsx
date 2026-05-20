@@ -2,6 +2,8 @@
 
 import { AlertTriangle, BarChart3, Loader2 } from 'lucide-react'
 
+import { getIconContainerClasses } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
 import {
@@ -52,7 +54,7 @@ export function GoogleAnalyticsSetupDialog({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/10 text-warning">
+            <span className={cn(getIconContainerClasses('small'), 'h-10 w-10 rounded-full')}>
               <BarChart3 className="h-5 w-5" />
             </span>
             <div>

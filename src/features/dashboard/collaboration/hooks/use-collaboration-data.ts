@@ -6,7 +6,7 @@ import { useQuery } from 'convex/react'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
-import { collaborationChannelsApi } from '@/lib/convex-api'
+import { collaborationChannelAvatarsApi, collaborationChannelsApi } from '@/lib/convex-api'
 
 import { collectSharedFiles } from '../utils'
 
@@ -74,6 +74,21 @@ export function useCollaborationData(): UseCollaborationDataReturn {
       }>
     | undefined
 
+  const channelAvatarsResult = useQuery(
+    collaborationChannelAvatarsApi.listForWorkspace,
+    !isPreviewMode && workspaceId ? { workspaceId: String(workspaceId) } : 'skip',
+  ) as Array<{ channelKey?: string; avatarUrl?: string | null }> | undefined
+
+  const channelAvatars = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const row of channelAvatarsResult ?? []) {
+      if (typeof row?.channelKey === 'string' && typeof row?.avatarUrl === 'string' && row.avatarUrl.length > 0) {
+        map.set(row.channelKey, row.avatarUrl)
+      }
+    }
+    return map
+  }, [channelAvatarsResult])
+
   const customChannels = useMemo<CustomChannel[]>(
     () =>
       (customChannelsResult ?? [])
@@ -119,6 +134,7 @@ export function useCollaborationData(): UseCollaborationDataReturn {
     fallbackDisplayName,
     fallbackRole,
     visibleClientId: selectedClientId,
+    channelAvatars,
   })
 
   const {

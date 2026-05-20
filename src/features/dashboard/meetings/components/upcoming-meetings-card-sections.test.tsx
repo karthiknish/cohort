@@ -35,7 +35,8 @@ describe('upcoming meetings card sections', () => {
   it('renders the empty state', () => {
     const markup = renderToStaticMarkup(<UpcomingMeetingsEmptyState />)
 
-    expect(markup).toContain('No upcoming meetings yet.')
+    expect(markup).toContain('No upcoming meetings yet')
+    expect(markup).toContain('Schedule a meeting to see it here.')
   })
 
   it('renders an upcoming meeting item with actions and notes', () => {

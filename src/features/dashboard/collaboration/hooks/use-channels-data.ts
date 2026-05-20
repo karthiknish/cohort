@@ -27,6 +27,7 @@ interface UseChannelsDataOptions {
   fallbackDisplayName: string
   fallbackRole: string
   visibleClientId?: string | null
+  channelAvatars?: Map<string, string>
 }
 
 export function useChannelsData({
@@ -36,7 +37,12 @@ export function useChannelsData({
   fallbackDisplayName,
   fallbackRole,
   visibleClientId = null,
+  channelAvatars,
 }: UseChannelsDataOptions) {
+  const avatarForChannel = useCallback(
+    (channelId: string) => channelAvatars?.get(channelId) ?? null,
+    [channelAvatars],
+  )
   const aggregatedTeamMembers = useMemo(
     () => aggregateTeamMembers(clients, fallbackDisplayName, fallbackRole),
     [clients, fallbackDisplayName, fallbackRole]
@@ -55,21 +61,27 @@ export function useChannelsData({
       clientId: null,
       projectId: null,
       teamMembers: aggregatedTeamMembers,
+      avatarUrl: avatarForChannel('team-agency'),
     }
 
-    const clientChannels = visibleClients.map<Channel>((client) => ({
-      id: `client-${client.id}`,
-      name: client.name,
-      type: 'client',
-      clientId: client.id,
-      projectId: null,
-      teamMembers: normalizeTeamMembers(client.teamMembers),
-    }))
+    const clientChannels = visibleClients.map<Channel>((client) => {
+      const id = `client-${client.id}`
+      return {
+        id,
+        name: client.name,
+        type: 'client',
+        clientId: client.id,
+        projectId: null,
+        teamMembers: normalizeTeamMembers(client.teamMembers),
+        avatarUrl: avatarForChannel(id),
+      }
+    })
 
     const projectChannels = projects.map<Channel>((project) => {
       const relatedClient = clients.find((client) => client.id === project.clientId)
+      const id = `project-${project.id}`
       return {
-        id: `project-${project.id}`,
+        id,
         name: project.name,
         type: 'project',
         clientId: project.clientId,
@@ -77,6 +89,7 @@ export function useChannelsData({
         teamMembers: relatedClient
           ? normalizeTeamMembers(relatedClient.teamMembers)
           : aggregatedTeamMembers,
+        avatarUrl: avatarForChannel(id),
       }
     })
 
@@ -97,10 +110,11 @@ export function useChannelsData({
             role: member.role?.trim() || 'Contributor',
           }))
         : aggregatedTeamMembers,
+      avatarUrl: avatarForChannel(channel.legacyId),
     }))
 
     return [teamChannel, ...customTeamChannels, ...clientChannels, ...projectChannels]
-  }, [aggregatedTeamMembers, clients, customChannels, projects, visibleClients])
+  }, [aggregatedTeamMembers, avatarForChannel, clients, customChannels, projects, visibleClients])
 
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')

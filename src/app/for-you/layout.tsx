@@ -21,7 +21,7 @@ export default async function ForYouLayout({ children }: { children: React.React
         <div className="relative min-h-screen bg-gradient-to-b from-primary/[0.04] via-background to-background">
           <NetworkStatusBanner />
           <ForYouShell />
-          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8">
             <PreviewDataBanner />
             <ClientAccessGate>
               <div className="pb-12 pt-6 sm:pt-8">{children}</div>

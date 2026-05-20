@@ -12,4 +12,5 @@ export type Channel = {
   visibility?: 'public' | 'private'
   memberIds?: string[]
   isCustom?: boolean
+  avatarUrl?: string | null
 }

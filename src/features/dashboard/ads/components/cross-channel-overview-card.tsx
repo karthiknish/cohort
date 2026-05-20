@@ -25,6 +25,8 @@ interface CrossChannelOverviewCardProps {
   dateRange: DateRange
   onDateRangeChange: (range: DateRange) => void
   onExport: () => void
+  /** When false, date range and export live in the page header instead of this card. */
+  showDateAndExport?: boolean
 }
 
 export function CrossChannelOverviewCard({
@@ -37,6 +39,7 @@ export function CrossChannelOverviewCard({
   dateRange,
   onDateRangeChange,
   onExport,
+  showDateAndExport = true,
 }: CrossChannelOverviewCardProps) {
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
   const serverSideProviders = serverSideSummary?.providers
@@ -181,10 +184,44 @@ export function CrossChannelOverviewCard({
 
   const hasProviderFilter = selectedProviders.length > 0
 
+  const hasAggregateChartFallback = useMemo(() => {
+    if (filteredMetrics.length > 0) {
+      return false
+    }
+    return (
+      filteredTotals.spend > 0 ||
+      filteredTotals.impressions > 0 ||
+      filteredTotals.clicks > 0
+    )
+  }, [filteredMetrics.length, filteredTotals])
+
   return (
     <Card className="shadow-sm">
-      <CrossChannelOverviewHeader availableProviders={availableProviders} dateRange={dateRange} hasMetricData={hasMetricData} hasProviderFilter={hasProviderFilter} onDateRangeChange={onDateRangeChange} onExport={onExport} onToggleProvider={toggleProvider} selectedProviders={selectedProviders} serverAggregated={Boolean(serverSideSummary)} />
-      {initialMetricsLoading ? <CrossChannelOverviewLoadingState /> : !hasMetricData ? <CrossChannelOverviewEmptyState /> : <CrossChannelOverviewContent currency={currency} metrics={filteredMetrics} metricsLoading={metricsLoading} summaryCards={summaryCards} />}
+      <CrossChannelOverviewHeader
+        availableProviders={availableProviders}
+        dateRange={dateRange}
+        hasMetricData={hasMetricData}
+        hasProviderFilter={hasProviderFilter}
+        onDateRangeChange={onDateRangeChange}
+        onExport={onExport}
+        onToggleProvider={toggleProvider}
+        selectedProviders={selectedProviders}
+        serverAggregated={Boolean(serverSideSummary)}
+        showDateAndExport={showDateAndExport}
+      />
+      {initialMetricsLoading ? (
+        <CrossChannelOverviewLoadingState />
+      ) : !hasMetricData ? (
+        <CrossChannelOverviewEmptyState />
+      ) : (
+        <CrossChannelOverviewContent
+          currency={currency}
+          metrics={filteredMetrics}
+          metricsLoading={metricsLoading}
+          summaryCards={summaryCards}
+          hasAggregateChartFallback={hasAggregateChartFallback}
+        />
+      )}
     </Card>
   )
 }

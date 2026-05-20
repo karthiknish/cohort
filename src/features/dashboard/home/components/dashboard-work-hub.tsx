@@ -181,14 +181,14 @@ export function DashboardWorkHub({ userRole }: DashboardWorkHubProps) {
         </div>
         <CardDescription className="max-w-3xl text-pretty">
           Team operations, shared delivery, and agency growth tools in one place, aligned with how modern ops suites surface
-          time, scheduling, and forms on the home screen.
+          time, scheduling, and operations on the home screen.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-8 pt-6">
         {!isClient ? (
           <HubCluster
             label="Team operations"
-            description="Time, scheduling, forms, and time off."
+            description="Time, scheduling, and time off."
             tiles={teamOpsTiles}
           />
         ) : null}

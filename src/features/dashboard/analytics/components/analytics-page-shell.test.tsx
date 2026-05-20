@@ -43,10 +43,6 @@ vi.mock('./analytics-export-button', () => ({
   AnalyticsExportButton: () => <div>Analytics Export Button</div>,
 }))
 
-vi.mock('@/shared/ui/auto-refresh-controls', () => ({
-  AutoRefreshControls: () => <div>Auto Refresh Controls</div>,
-}))
-
 import { AnalyticsPageShell } from './analytics-page-shell'
 
 describe('AnalyticsPageShell', () => {

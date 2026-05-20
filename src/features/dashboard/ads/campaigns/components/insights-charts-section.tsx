@@ -209,7 +209,12 @@ export function InsightsChartsSection({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* 1. Performance Overview */}
-      <PerformanceChart metrics={chartMetrics} loading={insightsLoading} currency={displayCurrency} />
+      <PerformanceChart
+        metrics={chartMetrics}
+        loading={insightsLoading}
+        currency={displayCurrency}
+        dataSource="ads"
+      />
 
       {/* 2. Engagement Trends */}
       <Card className="border-muted/40 shadow-sm">

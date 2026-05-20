@@ -648,7 +648,7 @@ function CampaignManagementConnectedView({
 }) {
   return (
     <>
-      <Card>
+      <Card className="w-full">
         <CampaignManagementHeader
           isRefreshing={loading || groupsLoading}
           onRefresh={onRefresh}

@@ -304,7 +304,7 @@ export function DashboardOverviewPage() {
             <section className="space-y-4">
               <SectionHeading
                 title="Team operations"
-                description="Shortcuts to time, scheduling, forms, and time off. Agency tools stay in the sidebar."
+                description="Shortcuts to time, scheduling, and time off. Agency tools stay in the sidebar."
               />
               <DashboardWorkHub userRole={userRole} />
             </section>

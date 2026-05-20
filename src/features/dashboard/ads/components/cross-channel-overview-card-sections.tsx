@@ -78,8 +78,95 @@ function SelectedProviderChip({
   )
 }
 
-export function CrossChannelOverviewHeader({ availableProviders, dateRange, hasMetricData, hasProviderFilter, onDateRangeChange, onExport, onToggleProvider, selectedProviders, serverAggregated }: { availableProviders: string[]; dateRange: DateRange; hasMetricData: boolean; hasProviderFilter: boolean; onDateRangeChange: (range: DateRange) => void; onExport: () => void; onToggleProvider: (providerId: string) => void; selectedProviders: string[]; serverAggregated: boolean }) {
-  return <CardHeader className="flex flex-col gap-1"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle className="text-lg">Cross-channel overview</CardTitle><CardDescription>Key performance indicators from the latest successful sync.</CardDescription></div>{serverAggregated ? <Badge variant="secondary" className="self-start">Server aggregated</Badge> : null}<div className="flex flex-wrap items-center gap-2">{availableProviders.length > 0 ? <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="gap-2"><Filter className="h-4 w-4" />Providers{hasProviderFilter ? <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-xs">{selectedProviders.length}</Badge> : null}</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48"><DropdownMenuLabel>Filter by Provider</DropdownMenuLabel><DropdownMenuSeparator />{availableProviders.map((providerId) => <ProviderFilterOption key={providerId} providerId={providerId} selectedProviders={selectedProviders} onToggleProvider={onToggleProvider} />)}</DropdownMenuContent></DropdownMenu> : null}<DateRangePicker value={dateRange} onChange={onDateRangeChange} /><Button variant="outline" size="icon" onClick={onExport} disabled={!hasMetricData} aria-label="Export metrics as CSV"><Download className="h-4 w-4" /></Button></div></div>{hasProviderFilter ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><span>Showing:</span>{selectedProviders.map((providerId) => <SelectedProviderChip key={providerId} providerId={providerId} onToggleProvider={onToggleProvider} />)}</div> : null}</CardHeader>
+export function CrossChannelOverviewHeader({
+  availableProviders,
+  dateRange,
+  hasMetricData,
+  hasProviderFilter,
+  onDateRangeChange,
+  onExport,
+  onToggleProvider,
+  selectedProviders,
+  serverAggregated,
+  showDateAndExport = true,
+}: {
+  availableProviders: string[]
+  dateRange: DateRange
+  hasMetricData: boolean
+  hasProviderFilter: boolean
+  onDateRangeChange: (range: DateRange) => void
+  onExport: () => void
+  onToggleProvider: (providerId: string) => void
+  selectedProviders: string[]
+  serverAggregated: boolean
+  showDateAndExport?: boolean
+}) {
+  return (
+    <CardHeader className="flex flex-col gap-1">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle className="text-lg">Cross-channel overview</CardTitle>
+          <CardDescription>Key performance indicators from the latest successful sync.</CardDescription>
+        </div>
+        {serverAggregated ? <Badge variant="secondary" className="self-start">Server aggregated</Badge> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {availableProviders.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  Providers
+                  {hasProviderFilter ? (
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-xs">
+                      {selectedProviders.length}
+                    </Badge>
+                  ) : null}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Filter by Provider</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {availableProviders.map((providerId) => (
+                  <ProviderFilterOption
+                    key={providerId}
+                    providerId={providerId}
+                    selectedProviders={selectedProviders}
+                    onToggleProvider={onToggleProvider}
+                  />
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+          {showDateAndExport ? (
+            <>
+              <DateRangePicker value={dateRange} onChange={onDateRangeChange} />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={onExport}
+                disabled={!hasMetricData}
+                aria-label="Export metrics as CSV"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </>
+          ) : null}
+        </div>
+      </div>
+      {hasProviderFilter ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <span>Showing:</span>
+          {selectedProviders.map((providerId) => (
+            <SelectedProviderChip
+              key={providerId}
+              providerId={providerId}
+              onToggleProvider={onToggleProvider}
+            />
+          ))}
+        </div>
+      ) : null}
+    </CardHeader>
+  )
 }
 
 export function CrossChannelOverviewLoadingState() {
@@ -94,6 +181,35 @@ function SummaryCardTile({ card }: { card: SummaryCard }) {
   return <FadeInItem><Card className="border-muted/70 bg-background shadow-sm"><CardContent className="space-y-2 p-5"><div className="flex items-center justify-between"><p className="text-xs font-medium uppercase text-muted-foreground">{card.label}</p><TooltipProvider><Tooltip><TooltipTrigger aria-label={`Metric information: ${card.helper}`}><Info className="h-3 w-3 text-muted-foreground/70" /></TooltipTrigger><TooltipContent><p>{card.helper}</p></TooltipContent></Tooltip></TooltipProvider></div><p className="text-2xl font-semibold text-foreground">{card.value}</p><p className="text-xs text-muted-foreground">{card.helper}</p></CardContent></Card></FadeInItem>
 }
 
-export function CrossChannelOverviewContent({ currency, metrics, metricsLoading, summaryCards }: { currency?: string; metrics: MetricRecord[]; metricsLoading: boolean; summaryCards: SummaryCard[] }) {
-  return <CardContent className="space-y-6"><FadeInStagger className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">{summaryCards.map((card) => <SummaryCardTile key={card.id} card={card} />)}</FadeInStagger><div className="h-[300px] w-full"><PerformanceChart metrics={metrics} loading={metricsLoading} currency={currency} /></div></CardContent>
+export function CrossChannelOverviewContent({
+  currency,
+  metrics,
+  metricsLoading,
+  summaryCards,
+  hasAggregateChartFallback = false,
+}: {
+  currency?: string
+  metrics: MetricRecord[]
+  metricsLoading: boolean
+  summaryCards: SummaryCard[]
+  hasAggregateChartFallback?: boolean
+}) {
+  return (
+    <CardContent className="space-y-6">
+      <FadeInStagger className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {summaryCards.map((card) => (
+          <SummaryCardTile key={card.id} card={card} />
+        ))}
+      </FadeInStagger>
+      <div className="h-[300px] w-full min-w-0">
+        <PerformanceChart
+          metrics={metrics}
+          loading={metricsLoading}
+          currency={currency}
+          dataSource="ads"
+          hasAggregateData={hasAggregateChartFallback}
+        />
+      </div>
+    </CardContent>
+  )
 }

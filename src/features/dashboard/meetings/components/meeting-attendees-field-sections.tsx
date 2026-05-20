@@ -80,12 +80,35 @@ export function MeetingAttendeesInputRow({
   )
 }
 
+function attendeeInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  const first = parts[0] ?? ''
+  if (parts.length === 1) return first.slice(0, 2).toUpperCase()
+  const second = parts[1] ?? ''
+  return `${first.charAt(0)}${second.charAt(0)}`.toUpperCase()
+}
+
+function attendeeAvatarColor(email: string): string {
+  const palette = [
+    'bg-blue-100 text-blue-700',
+    'bg-emerald-100 text-emerald-700',
+    'bg-violet-100 text-violet-700',
+    'bg-amber-100 text-amber-700',
+    'bg-rose-100 text-rose-700',
+  ] as const
+  const index = email.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) % palette.length
+  return palette[index] ?? palette[0]
+}
+
 export function MeetingAttendeesSuggestions({
   disabled,
+  label = 'Suggested participants',
   onAddSuggestedEmail,
   suggestions,
 }: {
   disabled: boolean
+  label?: string
   onAddSuggestedEmail: (email: string) => void
   suggestions: MeetingAttendeeSuggestion[]
 }) {
@@ -99,11 +122,9 @@ export function MeetingAttendeesSuggestions({
   }
 
   return (
-    <div className="rounded-md border border-muted/60 bg-muted/20 p-2">
-      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Suggested Platform Users
-      </p>
-      <div className="flex flex-wrap gap-2">
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {suggestions.map((member) => (
           <SuggestedEmailButton
             key={member.id}
@@ -160,18 +181,21 @@ function SuggestedEmailButton({
   }, [member.email, onAddSuggestedEmail])
 
   return (
-    <Button
+    <button
       type="button"
-      variant="outline"
-      size="sm"
       onClick={handleAdd}
       disabled={disabled}
-      className="h-auto py-1.5 text-left"
+      className="flex min-w-[9.5rem] shrink-0 items-center gap-2.5 rounded-lg border border-muted/60 bg-background px-3 py-2 text-left transition-colors hover:border-primary/30 hover:bg-muted/30 disabled:cursor-not-allowed disabled:opacity-50"
     >
-      <span className="flex flex-col items-start leading-tight">
-        <span className="text-xs font-medium">{member.name}</span>
-        <span className="text-[11px] text-muted-foreground">{member.email}</span>
+      <span
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${attendeeAvatarColor(member.email)}`}
+      >
+        {attendeeInitials(member.name)}
       </span>
-    </Button>
+      <span className="min-w-0 leading-tight">
+        <span className="block truncate text-sm font-medium text-foreground">{member.name}</span>
+        <span className="block truncate text-xs text-muted-foreground">{member.email}</span>
+      </span>
+    </button>
   )
 }

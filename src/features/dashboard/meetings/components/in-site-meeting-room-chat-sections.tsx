@@ -267,11 +267,22 @@ export function MeetingChatFloatingDock({
   unreadCount: number
 }) {
   if (compact) {
-    return null
+    return (
+      <div className="pointer-events-none fixed inset-x-4 bottom-[max(5.5rem,env(safe-area-inset-bottom))] z-40 flex justify-end md:hidden">
+        <div className="pointer-events-auto">
+          {!isOpen ? <MeetingChatLauncherButton unreadCount={unreadCount} onOpen={onOpen} /> : null}
+          {isOpen ? (
+            <div className="fixed inset-x-3 bottom-[max(5rem,env(safe-area-inset-bottom))] z-50 max-h-[min(70dvh,24rem)]">
+              <MeetingChatPanel {...panelProps} />
+            </div>
+          ) : null}
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="pointer-events-none absolute inset-x-3 bottom-3 z-30 flex justify-end">
+    <div className="pointer-events-none absolute inset-x-3 bottom-3 z-30 flex justify-end max-md:bottom-[max(0.75rem,env(safe-area-inset-bottom))]">
       <div className="pointer-events-auto flex w-full max-w-[22rem] flex-col items-end gap-2">
         {!isOpen ? <MeetingChatLauncherButton unreadCount={unreadCount} onOpen={onOpen} /> : null}
         {isOpen ? <MeetingChatPanel {...panelProps} /> : null}

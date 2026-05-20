@@ -45,7 +45,12 @@ export function deriveAuthPhase(input: {
     return 'syncing'
   }
 
-  // Bootstrap API already returned role/status — do not block on Convex profile query.
+  // Authenticated Convex queries require a JWT on the client. Bootstrap can finish
+  // before ConvexBetterAuthProvider applies the token — stay in syncing until then.
+  if (!input.isAuthenticated || input.convexAuthLoading) {
+    return 'syncing'
+  }
+
   if (input.syncState === 'success') {
     if (input.user.status === 'active') {
       return 'ready_active'
@@ -53,7 +58,7 @@ export function deriveAuthPhase(input: {
     return 'ready_pending'
   }
 
-  if (input.isAuthenticated && !input.convexAuthLoading && input.profilePending) {
+  if (input.profilePending) {
     return 'profile_loading'
   }
 

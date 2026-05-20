@@ -62,16 +62,6 @@ export const WORKFORCE_ROUTES: WorkforceRouteDefinition[] = [
     roles: ['admin', 'team'],
   },
   {
-    id: 'forms',
-    href: '/dashboard/forms',
-    name: 'Forms',
-    title: 'Forms and checklists',
-    description: 'Checklist templates, submissions, and follow-ups for recurring work.',
-    section: 'operations',
-    icon: FileText,
-    roles: ['admin', 'team'],
-  },
-  {
     id: 'time-off',
     href: '/dashboard/time-off',
     name: 'Time off',

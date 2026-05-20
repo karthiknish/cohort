@@ -20,6 +20,7 @@ type MeetingAttendeesFieldProps = {
   emptyStateText: string
   helperText: string
   suggestions: MeetingAttendeeSuggestion[]
+  suggestionsLabel?: string
   onInputChange: (value: string) => void
   onInputKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void
   onCommitInput: () => void
@@ -36,6 +37,7 @@ export function MeetingAttendeesField({
   emptyStateText,
   helperText,
   suggestions,
+  suggestionsLabel,
   onInputChange,
   onInputKeyDown,
   onCommitInput,
@@ -43,7 +45,7 @@ export function MeetingAttendeesField({
   onAddSuggestedEmail,
 }: MeetingAttendeesFieldProps) {
   return (
-    <div className="space-y-2 md:col-span-2">
+    <div className="space-y-3">
       <label htmlFor={inputId} className="text-sm font-medium">{label}</label>
       <div className="rounded-md border border-input bg-background p-2">
         <MeetingAttendeesSelectedList
@@ -63,7 +65,12 @@ export function MeetingAttendeesField({
         />
       </div>
 
-      <MeetingAttendeesSuggestions disabled={disabled} onAddSuggestedEmail={onAddSuggestedEmail} suggestions={suggestions} />
+      <MeetingAttendeesSuggestions
+        disabled={disabled}
+        label={suggestionsLabel}
+        onAddSuggestedEmail={onAddSuggestedEmail}
+        suggestions={suggestions}
+      />
 
       <p className="text-xs text-muted-foreground">{helperText}</p>
     </div>

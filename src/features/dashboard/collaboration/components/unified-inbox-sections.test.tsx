@@ -236,6 +236,8 @@ describe('unified inbox sections', () => {
           channelUnreadCount={0}
           onMarkChannelRead={noopMarkChannelRead}
           markChannelReadPending={false}
+          workspaceId="ws-1"
+          isAdmin
         />
         <DirectMessageConversationPane
           currentUserId="user-1"
@@ -329,6 +331,8 @@ describe('unified inbox sections', () => {
         channelUnreadCount={0}
         onMarkChannelRead={noopMarkChannelRead}
         markChannelReadPending={false}
+        workspaceId="ws-1"
+        isAdmin
       />,
     )
 

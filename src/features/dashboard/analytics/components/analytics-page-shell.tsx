@@ -1,26 +1,31 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { CheckCircle2, Link2, LoaderCircle, RotateCw, TrendingUp, Unlink } from 'lucide-react'
+import { BarChart3, CheckCircle2, Link2, LoaderCircle, RotateCw, Unlink } from 'lucide-react'
 
+import { DisconnectDialog } from '../../ads/components/connection-dialog'
+import { asErrorMessage } from '@/lib/convex-errors'
+import {
+  DASHBOARD_THEME,
+  PAGE_TITLES,
+  getBadgeClasses,
+  getButtonClasses,
+  getIconContainerClasses,
+} from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
-import { AutoRefreshControls } from '@/shared/ui/auto-refresh-controls'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { asErrorMessage } from '@/lib/convex-errors'
-import { DASHBOARD_THEME, PAGE_TITLES, getIconContainerClasses } from '@/lib/dashboard-theme'
-import { cn } from '@/lib/utils'
 
-import { DisconnectDialog } from '../../ads/components/connection-dialog'
 import { AnalyticsCharts } from './analytics-charts'
 import { AnalyticsDateRangePicker } from './analytics-date-range-picker'
 import { AnalyticsDeepDiveSection } from './analytics-deep-dive-section'
 import { AnalyticsExportButton } from './analytics-export-button'
 import { AnalyticsInsightsSection } from './analytics-insights-section'
 import { AnalyticsMetricCards } from './analytics-metric-cards'
-import { AnalyticsPageSkeleton } from './analytics-page-skeleton'
 import { useAnalyticsPageContext } from './analytics-page-provider'
+import { AnalyticsPageSkeleton } from './analytics-page-skeleton'
 import { AnalyticsSummaryCards } from './analytics-summary-cards'
 import { GoogleAnalyticsSetupDialog } from './google-analytics-setup-dialog'
 
@@ -47,30 +52,24 @@ export function AnalyticsPageShell() {
   )
 }
 
-const PREVIEW_CONNECTED_BADGE_CLASS = 'bg-success/10 text-success'
-const PREVIEW_SAMPLE_BADGE_CLASS = 'rounded-full border border-success/20 bg-success/10 px-3 py-1.5 text-xs font-medium text-success'
-const PREVIEW_SAMPLE_ICON_CLASS = 'flex h-5 w-5 items-center justify-center rounded-full bg-success/10 text-success'
-
 function AnalyticsHeaderSection() {
   const { dateRange, handleDateRangeChange } = useAnalyticsPageContext()
 
   return (
     <div className={DASHBOARD_THEME.layout.header}>
       <div>
-        <div className="mb-2 flex items-center gap-2">
+        <div className="mb-2 flex items-center gap-3">
           <div className={getIconContainerClasses('medium')}>
-            <TrendingUp className="h-6 w-6" />
+            <BarChart3 className="h-6 w-6" />
           </div>
           <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.analytics?.title ?? 'Analytics'}</h1>
         </div>
-        <p className={cn(DASHBOARD_THEME.layout.subtitle, 'max-w-xl text-sm font-medium')}>
-          {PAGE_TITLES.analytics?.description ?? 'Real-time performance metrics and cross-platform creative insights for your active campaigns.'}
+        <p className={cn(DASHBOARD_THEME.layout.subtitle, 'max-w-2xl text-sm')}>
+          {PAGE_TITLES.analytics?.description ??
+            'Performance insights and data visualization for your connected properties.'}
         </p>
       </div>
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <AnalyticsDateRangePicker value={dateRange} onChange={handleDateRangeChange} />
-      </div>
+      <AnalyticsDateRangePicker value={dateRange} onChange={handleDateRangeChange} />
     </div>
   )
 }
@@ -108,59 +107,58 @@ function GoogleAnalyticsConnectionSection() {
     void handleSyncGoogleAnalytics()
   }, [handleSyncGoogleAnalytics])
 
+  const statusBadgeClass = gaConnected
+    ? gaLastSyncStatus === 'error'
+      ? getBadgeClasses('destructive')
+      : gaNeedsPropertySelection
+        ? getBadgeClasses('warning')
+        : isPreviewMode
+          ? getBadgeClasses('success')
+          : getBadgeClasses('primary')
+    : getBadgeClasses('destructive')
+
   return (
-    <Card className="overflow-hidden border border-border/60 bg-card shadow-sm motion-chromatic hover:shadow-md">
-      <CardHeader className="flex flex-col gap-4 border-b border-border/60 bg-card py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
+    <Card className={DASHBOARD_THEME.cards.base}>
+      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
           <GoogleAnalyticsIcon />
           <div>
-            <CardTitle className="text-sm font-medium tracking-normal text-foreground">Google Analytics</CardTitle>
-            <CardDescription className="mt-0.5 text-xs leading-tight text-muted-foreground">
-              Import users, sessions, and conversions into your dashboard
+            <CardTitle className="text-base font-semibold text-foreground">Google Analytics</CardTitle>
+            <CardDescription className="mt-1 text-sm text-muted-foreground">
+              Import users, sessions, and conversions into your dashboard.
             </CardDescription>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          {gaConnected ? (
-            <div
-              className={cn(
-                'inline-flex animate-in fade-in slide-in-from-right-2 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium duration-300',
-                isPreviewMode
-                  ? PREVIEW_CONNECTED_BADGE_CLASS
-                  : gaLastSyncStatus === 'error'
-                  ? 'bg-destructive/10 text-destructive'
-                  : gaNeedsPropertySelection
-                    ? 'bg-accent text-accent-foreground'
-                    : 'bg-accent/10 text-primary'
-              )}
-            >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              {gaStatusLabel}{gaAccountLabel ? ` · ${gaAccountLabel}` : ''}
-            </div>
-          ) : (
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive">
-              <Link2 className="h-3.5 w-3.5" />
-              Not connected
-            </div>
-          )}
-
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={cn('inline-flex items-center', statusBadgeClass)}>
+            {gaConnected ? (
+              <>
+                <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
+                {gaStatusLabel}
+                {gaAccountLabel ? ` · ${gaAccountLabel}` : ''}
+              </>
+            ) : (
+              <>
+                <Link2 className="mr-1 inline h-3.5 w-3.5" />
+                Not connected
+              </>
+            )}
+          </span>
           {isPreviewMode ? (
-            <div className={PREVIEW_SAMPLE_BADGE_CLASS}>
-              Read-only sample data
-            </div>
+            <span className={getBadgeClasses('success')}>Read-only sample data</span>
           ) : (
-            <div className="flex items-center gap-2">
+            <>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={handleConnectClick}
                 disabled={gaLoading}
-                className="h-9 rounded-md border-border/60 bg-background text-primary text-sm font-medium transition-colors hover:bg-muted/40"
+                className={getButtonClasses('outline')}
               >
                 {gaLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
-                {gaConnected ? 'Reconnect account' : 'Connect Google'}
+                {gaConnected ? 'Reconnect' : 'Connect Google'}
               </Button>
               {gaConnected ? (
                 <Button
@@ -169,7 +167,7 @@ function GoogleAnalyticsConnectionSection() {
                   size="sm"
                   onClick={handleOpenGoogleAnalyticsSetup}
                   disabled={gaLoadingProperties || gaInitializingProperty}
-                  className="h-9 rounded-md border-border/60 bg-background text-muted-foreground text-sm font-medium transition-colors hover:bg-muted/40"
+                  className={getButtonClasses('outline')}
                 >
                   {gaNeedsPropertySelection ? 'Select property' : 'Change property'}
                 </Button>
@@ -180,7 +178,7 @@ function GoogleAnalyticsConnectionSection() {
                   variant="outline"
                   size="sm"
                   onClick={handleDisconnectClick}
-                  className="h-9 rounded-md border-border/60 bg-background text-destructive text-sm font-medium transition-colors hover:bg-destructive/10"
+                  className={cn(getButtonClasses('outline'), 'text-destructive hover:text-destructive')}
                 >
                   <Unlink className="mr-2 h-4 w-4" />
                   Disconnect
@@ -191,43 +189,33 @@ function GoogleAnalyticsConnectionSection() {
                 size="sm"
                 onClick={handleSyncClick}
                 disabled={isSyncPending || gaLoading || !gaConnected || gaNeedsPropertySelection}
-                className="h-9 rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-none transition-colors hover:bg-accent/90"
+                className={getButtonClasses('primary')}
               >
                 {isSyncPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
                 Sync data
               </Button>
-            </div>
+            </>
           )}
         </div>
       </CardHeader>
 
-      <CardContent className="bg-muted/20 px-4 py-3">
+      <CardContent className="border-t border-border/60 bg-muted/20 pt-4">
         {isPreviewMode ? (
-          <div className="flex items-center gap-2">
-            <div className={PREVIEW_SAMPLE_ICON_CLASS}>
-              <TrendingUp className="h-3 w-3" />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Showing read-only Google Analytics preview metrics and insights for demos and screen recordings.
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Showing read-only Google Analytics preview metrics and insights for demos and screen recordings.
+          </p>
         ) : (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/10">
-                <TrendingUp className="h-3 w-3 text-primary" />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Last successful sync: <span className="font-medium text-foreground">{gaLastSyncedLabel}</span>
-                {' · '}
-                Last sync request: <span className="font-medium text-foreground">{gaLastRequestedLabel}</span>
-              </p>
-            </div>
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <p>
+              Last successful sync: <span className="font-medium text-foreground">{gaLastSyncedLabel}</span>
+              {' · '}
+              Last sync request: <span className="font-medium text-foreground">{gaLastRequestedLabel}</span>
+            </p>
             {gaNeedsPropertySelection ? (
-              <p className="pl-7 text-xs text-accent-foreground">Property selection is required before sync can run.</p>
+              <p className="text-accent-foreground">Property selection is required before sync can run.</p>
             ) : null}
             {gaLastSyncStatus === 'error' && gaLastSyncMessage ? (
-              <p className="pl-7 text-xs text-destructive">{gaLastSyncMessage}</p>
+              <p className="text-destructive">{gaLastSyncMessage}</p>
             ) : null}
           </div>
         )}
@@ -291,9 +279,7 @@ function AnalyticsDialogs() {
 function AnalyticsErrorAlert() {
   const { metricsError } = useAnalyticsPageContext()
 
-  if (!metricsError) {
-    return null
-  }
+  if (!metricsError) return null
 
   return (
     <Alert variant="destructive">
@@ -306,18 +292,8 @@ function AnalyticsErrorAlert() {
 function AnalyticsBodySection() {
   const { gaConnected, isGaSelectedWithoutData, isSyncPending } = useAnalyticsPageContext()
 
-  if (isSyncPending) {
-    return <AnalyticsSyncingState />
-  }
-
-  if (isGaSelectedWithoutData) {
-    return <AnalyticsEmptyState />
-  }
-
-  if (!gaConnected) {
-    return <AnalyticsEmptyState />
-  }
-
+  if (isSyncPending) return <AnalyticsSyncingState />
+  if (isGaSelectedWithoutData || !gaConnected) return <AnalyticsEmptyState />
   return <AnalyticsPerformanceSection />
 }
 
@@ -341,12 +317,12 @@ function AnalyticsEmptyState() {
   }, [handleSyncGoogleAnalytics])
 
   return (
-    <Card className="overflow-hidden border border-border/60 bg-card shadow-sm">
-      <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
-        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-muted/20">
-          <GoogleAnalyticsIcon className="h-12 w-12" />
+    <Card className={DASHBOARD_THEME.cards.base}>
+      <CardContent className="flex flex-col items-center px-6 py-16 text-center">
+        <div className={cn(getIconContainerClasses('large'), 'mb-6 h-20 w-20 rounded-full')}>
+          <GoogleAnalyticsIcon className="h-10 w-10" />
         </div>
-        <h3 className="mb-2 text-base font-medium text-foreground">No analytics data yet</h3>
+        <h3 className="mb-2 text-base font-semibold text-foreground">No analytics data yet</h3>
         <p className="mb-6 max-w-md text-sm text-muted-foreground">
           Connect your Google Analytics property and sync your data to view users, sessions, conversions, and revenue trends.
         </p>
@@ -358,13 +334,13 @@ function AnalyticsEmptyState() {
               size="sm"
               onClick={handleConnectClick}
               disabled={gaLoading}
-              className="rounded-md border-border/60 bg-background text-primary hover:bg-muted/40"
+              className={getButtonClasses('outline')}
             >
               {gaLoading ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
               Link Google Analytics
             </Button>
           ) : gaNeedsPropertySelection ? (
-            <Button type="button" size="sm" onClick={handleOpenGoogleAnalyticsSetup} className="rounded-md bg-primary text-primary-foreground shadow-none hover:bg-accent/90">
+            <Button type="button" size="sm" onClick={handleOpenGoogleAnalyticsSetup} className={getButtonClasses('primary')}>
               Select property
             </Button>
           ) : (
@@ -373,7 +349,7 @@ function AnalyticsEmptyState() {
               size="sm"
               onClick={handleSyncClick}
               disabled={isSyncPending || gaLoading || !gaConnected}
-              className="rounded-md bg-primary text-primary-foreground shadow-none hover:bg-accent/90"
+              className={getButtonClasses('primary')}
             >
               {isSyncPending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <RotateCw className="mr-2 h-4 w-4" />}
               Sync data now
@@ -387,13 +363,15 @@ function AnalyticsEmptyState() {
 
 function AnalyticsSyncingState() {
   return (
-    <Card className="overflow-hidden border border-border/60 bg-card shadow-sm">
-      <CardContent className="flex flex-col items-center justify-center px-6 py-16 text-center">
-        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-accent/10">
-          <LoaderCircle className="h-10 w-10 animate-spin text-primary" />
+    <Card className={DASHBOARD_THEME.cards.base}>
+      <CardContent className="flex flex-col items-center px-6 py-16 text-center">
+        <div className={cn(getIconContainerClasses('large'), 'mb-6 h-20 w-20 rounded-full')}>
+          <LoaderCircle className="h-10 w-10 animate-spin" />
         </div>
-        <h3 className="mb-2 text-base font-medium text-foreground">Syncing analytics data</h3>
-        <p className="max-w-md text-sm text-muted-foreground">Importing your Google Analytics data. This may take a moment…</p>
+        <h3 className="mb-2 text-base font-semibold text-foreground">Syncing analytics data</h3>
+        <p className="max-w-md text-sm text-muted-foreground">
+          Importing your Google Analytics data. This may take a moment…
+        </p>
       </CardContent>
     </Card>
   )
@@ -428,50 +406,54 @@ function AnalyticsPerformanceSection() {
   } = useAnalyticsPageContext()
 
   return (
-    <>
-      <div className="flex items-center justify-between border-b border-muted/10 pb-2">
-        <div className="flex items-center gap-2">
-          <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-          <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70">Property performance</h2>
-        </div>
-        <div className="flex items-center gap-1.5">
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4">
+        <h2 className="text-sm font-semibold text-foreground">Property performance</h2>
+        <div className="flex flex-wrap items-center gap-2">
           {metricsNextCursor ? (
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={handleLoadMoreMetrics}
               disabled={metricsLoadingMore}
-              className="group inline-flex items-center gap-2 rounded-xl border border-muted/30 bg-background px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 shadow-sm motion-chromatic hover:bg-muted/5 hover:text-foreground active:scale-[0.98] disabled:opacity-50"
+              className={getButtonClasses('outline')}
             >
               {metricsLoadingMore ? (
                 <>
-                  <LoaderCircle className="h-3 w-3 animate-spin" />
+                  <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" />
                   Loading
                 </>
               ) : (
                 <>
-                  <RotateCw className="h-3 w-3 transition-transform duration-500 group-hover:rotate-180" />
+                  <RotateCw className="mr-2 h-3.5 w-3.5" />
                   Load older data
                 </>
               )}
-            </button>
+            </Button>
           ) : null}
-          <AutoRefreshControls
-            onRefresh={handleRefreshMetrics}
-            disabled={isPreviewMode || metricsLoading}
-            isRefreshing={metricsRefreshing}
-            defaultInterval="off"
-          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshMetrics}
+            disabled={isPreviewMode || metricsLoading || metricsRefreshing}
+            className={getButtonClasses('outline')}
+            aria-label="Refresh metrics"
+          >
+            <RotateCw className={cn('mr-2 h-3.5 w-3.5', metricsRefreshing && 'animate-spin')} />
+            Refresh
+          </Button>
           <AnalyticsExportButton metrics={filteredMetrics} disabled={isPreviewMode} />
         </div>
       </div>
 
-      <AnalyticsSummaryCards totals={totals} conversionRate={conversionRate} isLoading={initialMetricsLoading} />
+      <AnalyticsSummaryCards totals={totals} deltas={story.deltas} isLoading={initialMetricsLoading} />
       <AnalyticsMetricCards
         avgUsersPerDay={avgUsersPerDay}
         avgSessionsPerDay={avgSessionsPerDay}
         revenuePerSession={revenuePerSession}
         sessionsPerUser={sessionsPerUser}
-        conversionRate={conversionRate}
         isLoading={initialMetricsLoading}
       />
       <AnalyticsDeepDiveSection story={story} />
@@ -485,13 +467,13 @@ function AnalyticsPerformanceSection() {
         initialInsightsLoading={initialInsightsLoading}
         onRefreshInsights={handleRefreshInsights}
       />
-    </>
+    </div>
   )
 }
 
 function GoogleAnalyticsIcon({ className = 'h-8 w-8' }: { className?: string }) {
   return (
-    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-primary">
+    <div className={cn(getIconContainerClasses('small'), 'h-10 w-10 shrink-0 rounded-full')}>
       <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
         <path
           d="M21.805 10.023H12v4.042h5.615c-.242 1.304-.967 2.409-2.056 3.147v2.617h3.33c1.948-1.793 3.076-4.434 3.076-7.564 0-.739-.067-1.449-.16-2.242Z"

@@ -108,7 +108,7 @@ export function MessageSearchBar({
   )
 
   return (
-    <div className="border-b border-muted/40 bg-muted/5 px-4 py-2">
+    <div className="border-b border-muted/40 bg-muted/5 px-3 py-2 sm:px-4">
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input

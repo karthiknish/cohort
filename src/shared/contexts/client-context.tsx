@@ -149,7 +149,7 @@ function clientProviderReducer(
 }
 
 export function ClientProvider({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading, isSyncing } = useAuth()
+  const { user, loading: authLoading, isSyncing, authPhase } = useAuth()
 
   const [{ selectedClientId, loading, error }, dispatch] = useReducer(
     clientProviderReducer,
@@ -169,8 +169,8 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
   // Use utility to get workspaceId - handles empty string and fallback to user.id
   const workspaceId = getWorkspaceId(user)
 
-  // Don't query until auth is fully loaded and synced
-  const canQuery = !authLoading && !isSyncing && !!workspaceId
+  // Don't query until session sync finished and Convex has an active JWT
+  const canQuery = authPhase === 'ready_active' && !authLoading && !isSyncing && !!workspaceId
 
   // Admin users can see all clients across workspaces
   const isAdmin = user?.role === 'admin'

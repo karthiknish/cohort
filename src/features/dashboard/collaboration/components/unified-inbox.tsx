@@ -1,13 +1,13 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
+import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
 import type { ChannelSummary, PendingAttachment, ReactionPendingState, SendMessageOptions, ThreadCursorsState, ThreadErrorsState, ThreadLoadingState, ThreadMessagesState, TypingParticipant } from '../hooks/types'
 import type { Channel } from '../types'
-import { CollaborationSidebar } from './sidebar'
 import {
   ChannelConversationPane,
   type ChannelParticipant,
@@ -25,9 +25,10 @@ type UnifiedInboxSidebarProps = {
   dmConversations: DirectConversation[]
   selectedChannel: Channel | null
   selectedDM: DirectConversation | null
-  onSelectChannel: (channelId: string) => void
-  onSelectDM: (conversation: DirectConversation) => void
+  onSelectChannel: (channelId: string | null) => void
+  onSelectDM: (conversation: DirectConversation | null) => void
   onNewDM: () => void
+  onBackToInbox?: () => void
   isLoadingChannels: boolean
   isLoadingDMs: boolean
 }
@@ -81,6 +82,8 @@ type UnifiedInboxChannelPaneProps = {
   channelUnreadCount: number
   onMarkChannelRead: () => Promise<void>
   markChannelReadPending: boolean
+  workspaceId: string | null
+  isAdmin: boolean
 }
 
 type UnifiedInboxDirectMessagePaneProps = {
@@ -143,6 +146,7 @@ export function UnifiedInbox({
     onSelectChannel,
     onSelectDM,
     onNewDM,
+    onBackToInbox,
     isLoadingChannels,
     isLoadingDMs,
   } = sidebar
@@ -194,6 +198,8 @@ export function UnifiedInbox({
     channelUnreadCount,
     onMarkChannelRead,
     markChannelReadPending,
+    workspaceId,
+    isAdmin,
   } = channelPane
   const {
     messages: dmMessages,
@@ -255,7 +261,6 @@ export function UnifiedInbox({
       if (hasPendingAttachments) {
         uploadedAttachments = await uploadPendingAttachments(pendingAttachments)
 
-        // If attachment-only send fails to upload, do not send an empty message.
         if (!trimmed && uploadedAttachments.length === 0) {
           return
         }
@@ -288,7 +293,7 @@ export function UnifiedInbox({
         lastMessageAtMs: summary?.lastTimestamp ? new Date(summary.lastTimestamp).getTime() : null,
         isRead: unreadCount <= 0,
         unreadCount,
-        metadata: { channelType: channel.type },
+        metadata: { channelType: channel.type, channelAvatarUrl: channel.avatarUrl ?? null },
         originalData: channel,
       })
     }
@@ -319,7 +324,7 @@ export function UnifiedInbox({
       return (
         item.name?.toLowerCase().includes(query) ||
         item.lastMessageSnippet?.toLowerCase().includes(query) ||
-        (item.type === 'direct_message' && 
+        (item.type === 'direct_message' &&
           (item.originalData as DirectConversation).otherParticipantName?.toLowerCase().includes(query))
       )
     })
@@ -378,9 +383,16 @@ export function UnifiedInbox({
     [selectedChannel?.id, selectedDM?.legacyId]
   )
 
+  const hasActiveConversation = Boolean(selectedChannel || selectedDM)
+
+  const handleBackToInbox = useCallback(() => {
+    onBackToInbox?.()
+  }, [onBackToInbox])
+
   return (
-    <div className="flex min-h-[500px] min-h-0 flex-1 flex-col overflow-hidden lg:h-[640px] lg:flex-row">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden max-lg:min-h-[min(72dvh,640px)] lg:h-[640px] lg:flex-row">
       <ConversationListPane
+        className={cn(hasActiveConversation && 'max-lg:hidden')}
         channelCount={channelCount}
         dmCount={dmCount}
         filteredItems={filteredItems}
@@ -395,102 +407,106 @@ export function UnifiedInbox({
         totalUnread={totalUnread}
       />
 
-      {selectedChannel ? (
-        <ChannelConversationPane
-          canLoadMore={canLoadMore}
-          channelMessages={channelMessages}
-          channelMessagesForPane={channelMessagesForPane}
-          channelParticipants={channelParticipants}
-          mentionParticipants={mentionParticipants}
-          currentUserId={currentUserId}
-          currentUserRole={currentUserRole}
-          deepLinkMessageId={deepLinkMessageId ?? null}
-          deepLinkThreadId={deepLinkThreadId ?? null}
-          isChannelSearchActive={isChannelSearchActive}
-          isCurrentChannelLoading={isCurrentChannelLoading}
-          loadingMore={loadingMore}
-          messageDeletingId={messageDeletingId}
-          messageInput={messageInput}
-          messageSearchQuery={messageSearchQuery}
-          messageUpdatingId={messageUpdatingId}
-          onAddAttachments={onAddAttachments}
-          onComposerBlur={onComposerBlur}
-          onComposerFocus={onComposerFocus}
-          onDeleteMessage={onDeleteMessage}
-          onEditMessage={onEditMessage}
-          onLoadMore={onLoadMore}
-          onLoadMoreThreadReplies={onLoadMoreThreadReplies}
-          onLoadThreadReplies={onLoadThreadReplies}
-          onMarkThreadAsRead={onMarkThreadAsRead}
-          onMessageInputChange={onMessageInputChange}
-          onMessageSearchChange={onMessageSearchChange}
-          onRemoveAttachment={onRemoveAttachment}
-          onSendMessage={onSendMessage}
-          onToggleReaction={onToggleReaction}
-          pendingAttachments={pendingAttachments}
-          reactionPendingByMessage={reactionPendingByMessage}
-          searchHighlights={searchHighlights}
-          searchingMessages={searchingMessages}
-          onClearDeepLink={onClearDeepLink}
-          messagesError={messagesError}
-          onRetryMessages={onRetryMessages}
-          selectedChannel={selectedChannel}
-          sending={sending}
-          threadErrorsByRootId={threadErrorsByRootId}
-          threadLoadingByRootId={threadLoadingByRootId}
-          threadMessagesByRootId={threadMessagesByRootId}
-          threadNextCursorByRootId={threadNextCursorByRootId}
-          threadUnreadCountsByRootId={threadUnreadCountsByRootId}
-          typingIndicatorText={typingIndicatorText}
-          uploading={uploading}
-          channelUnreadCount={channelUnreadCount}
-          onMarkChannelRead={onMarkChannelRead}
-          markChannelReadPending={markChannelReadPending}
-        />
-      ) : selectedDM ? (
-        <DirectMessageConversationPane
-          currentUserId={currentUserId}
-          dmDeleteMessage={dmDeleteMessage}
-          dmEditMessage={dmEditMessage}
-          dmHasMoreMessages={dmHasMoreMessages}
-          dmIsLoadingMessages={dmIsLoadingMessages}
-          dmIsLoadingMore={dmIsLoadingMore}
-          dmIsSending={dmIsSending}
-          dmLoadMoreMessages={dmLoadMoreMessages}
-          dmMessageInput={dmMessageInput}
-          dmMessageSearchQuery={dmMessageSearchQuery}
-          dmMessagesForPane={dmMessagesForPane}
-          dmMuteConversation={dmMuteConversation}
-          dmSearchHighlights={dmSearchHighlights}
-          dmSearchingMessages={dmSearchingMessages}
-          dmToggleReaction={dmToggleReaction}
-          handleSendDirectMessage={handleSendDirectMessage}
-          isDmSearchActive={isDmSearchActive}
-          onAddAttachments={onAddAttachments}
-          onArchiveConversation={dmArchiveConversation}
-          onDmMessageSearchChange={onDmMessageSearchChange}
-          onRemoveAttachment={onRemoveAttachment}
-          pendingAttachments={pendingAttachments}
-          selectedDM={selectedDM}
-          setActiveDmMessageInput={setActiveDmMessageInput}
-          uploading={uploading}
-          onStartNewDM={onStartNewDM}
-          messagesError={dmMessagesError}
-          onRetryMessages={onDmRetryMessages}
-        />
-      ) : (
-        <EmptyConversationPane channelCount={channelCount} dmCount={dmCount} onNewDM={onNewDM} />
-      )}
-
-      {selectedChannel && (
-        <CollaborationSidebar
-          channel={selectedChannel}
-          channelParticipants={channelParticipants}
-          sharedFiles={sharedFiles}
-          canManageMembers={canManageSelectedChannel}
-          onManageMembers={onManageSelectedChannel}
-        />
-      )}
+      <div
+        className={cn(
+          'flex min-h-0 min-w-0 flex-1 flex-col border-muted/40 max-lg:border-t lg:border-t-0',
+          !hasActiveConversation && 'max-lg:hidden',
+        )}
+      >
+        {selectedChannel ? (
+          <ChannelConversationPane
+            canLoadMore={canLoadMore}
+            channelMessages={channelMessages}
+            channelMessagesForPane={channelMessagesForPane}
+            channelParticipants={channelParticipants}
+            mentionParticipants={mentionParticipants}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+            deepLinkMessageId={deepLinkMessageId ?? null}
+            deepLinkThreadId={deepLinkThreadId ?? null}
+            isChannelSearchActive={isChannelSearchActive}
+            isCurrentChannelLoading={isCurrentChannelLoading}
+            loadingMore={loadingMore}
+            messageDeletingId={messageDeletingId}
+            messageInput={messageInput}
+            messageSearchQuery={messageSearchQuery}
+            messageUpdatingId={messageUpdatingId}
+            onAddAttachments={onAddAttachments}
+            onBackToInbox={handleBackToInbox}
+            onComposerBlur={onComposerBlur}
+            onComposerFocus={onComposerFocus}
+            onDeleteMessage={onDeleteMessage}
+            onEditMessage={onEditMessage}
+            onLoadMore={onLoadMore}
+            onLoadMoreThreadReplies={onLoadMoreThreadReplies}
+            onLoadThreadReplies={onLoadThreadReplies}
+            onMarkThreadAsRead={onMarkThreadAsRead}
+            onMessageInputChange={onMessageInputChange}
+            onMessageSearchChange={onMessageSearchChange}
+            onRemoveAttachment={onRemoveAttachment}
+            onSendMessage={onSendMessage}
+            onToggleReaction={onToggleReaction}
+            pendingAttachments={pendingAttachments}
+            reactionPendingByMessage={reactionPendingByMessage}
+            searchHighlights={searchHighlights}
+            searchingMessages={searchingMessages}
+            onClearDeepLink={onClearDeepLink}
+            messagesError={messagesError}
+            onRetryMessages={onRetryMessages}
+            selectedChannel={selectedChannel}
+            sending={sending}
+            sharedFiles={sharedFiles}
+            canManageMembers={canManageSelectedChannel}
+            onManageMembers={onManageSelectedChannel}
+            threadErrorsByRootId={threadErrorsByRootId}
+            threadLoadingByRootId={threadLoadingByRootId}
+            threadMessagesByRootId={threadMessagesByRootId}
+            threadNextCursorByRootId={threadNextCursorByRootId}
+            threadUnreadCountsByRootId={threadUnreadCountsByRootId}
+            typingIndicatorText={typingIndicatorText}
+            uploading={uploading}
+            channelUnreadCount={channelUnreadCount}
+            onMarkChannelRead={onMarkChannelRead}
+            markChannelReadPending={markChannelReadPending}
+            workspaceId={workspaceId}
+            isAdmin={isAdmin}
+          />
+        ) : selectedDM ? (
+          <DirectMessageConversationPane
+            currentUserId={currentUserId}
+            dmDeleteMessage={dmDeleteMessage}
+            dmEditMessage={dmEditMessage}
+            dmHasMoreMessages={dmHasMoreMessages}
+            dmIsLoadingMessages={dmIsLoadingMessages}
+            dmIsLoadingMore={dmIsLoadingMore}
+            dmIsSending={dmIsSending}
+            dmLoadMoreMessages={dmLoadMoreMessages}
+            dmMessageInput={dmMessageInput}
+            dmMessageSearchQuery={dmMessageSearchQuery}
+            dmMessagesForPane={dmMessagesForPane}
+            dmMuteConversation={dmMuteConversation}
+            dmSearchHighlights={dmSearchHighlights}
+            dmSearchingMessages={dmSearchingMessages}
+            dmToggleReaction={dmToggleReaction}
+            handleSendDirectMessage={handleSendDirectMessage}
+            isDmSearchActive={isDmSearchActive}
+            onAddAttachments={onAddAttachments}
+            onArchiveConversation={dmArchiveConversation}
+            onBackToInbox={handleBackToInbox}
+            onDmMessageSearchChange={onDmMessageSearchChange}
+            onRemoveAttachment={onRemoveAttachment}
+            pendingAttachments={pendingAttachments}
+            selectedDM={selectedDM}
+            setActiveDmMessageInput={setActiveDmMessageInput}
+            uploading={uploading}
+            onStartNewDM={onStartNewDM}
+            messagesError={dmMessagesError}
+            onRetryMessages={onDmRetryMessages}
+          />
+        ) : (
+          <EmptyConversationPane channelCount={channelCount} dmCount={dmCount} onNewDM={onNewDM} />
+        )}
+      </div>
     </div>
   )
 }

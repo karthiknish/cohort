@@ -1,31 +1,44 @@
 'use client'
 
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/shared/ui/chart'
-import { AreaChart, Area, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid } from '@/shared/ui/recharts-dynamic'
-
-// Re-export chart components
-export {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-  AreaChart,
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltipContent } from '@/shared/ui/chart'
+import {
   Area,
-  LineChart,
-  Line,
-  BarChart,
+  AreaChart,
   Bar,
-  PieChart,
-  Pie,
+  BarChart,
+  CartesianGrid,
   Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
+} from '@/shared/ui/recharts-dynamic'
+
+export {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
+  Cell,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltipContent,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  RechartsTooltip,
+  XAxis,
+  YAxis,
 }
 
 const ChartPlaceholder = () => (
-    <div className="h-[320px] w-full animate-pulse rounded-lg bg-muted/40" />
+  <div className="h-[320px] w-full animate-pulse rounded-lg bg-muted/40" />
 )
 
 export { ChartPlaceholder }

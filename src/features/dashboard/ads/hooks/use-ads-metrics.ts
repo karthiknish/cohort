@@ -18,8 +18,11 @@ import { exportMetricsToCsv, METRICS_PAGE_SIZE } from '../components/utils'
 
 import {
   buildProviderSummariesFromServer,
+  dedupeAndFilterMetrics,
+  hasAdsMetricActivity,
   isAdsProviderId,
   mapRealtimeMetricRow,
+  metricsSummaryFromV2Insights,
   type RealtimeMetricRow,
 } from './use-ads-metrics.helpers'
 
@@ -43,9 +46,13 @@ export interface UseAdsMetricsReturn {
   processedMetrics: MetricRecord[]
   providerSummaries: Record<string, ProviderSummary>
   serverSideSummary: MetricsSummary | null
+  /** V1 summary merged with V2 insights when legacy summary is absent. */
+  effectiveServerSummary: MetricsSummary | null
   /** V2 currency-aware insights summary. Use this for financial display. */
   adsInsightsSummary: AdsInsightsSummary | null
   hasMetricData: boolean
+  /** Full filtered metric rows for charts (not the paged table slice). */
+  chartMetrics: MetricRecord[]
   
   // Loading states
   metricsLoading: boolean
@@ -102,67 +109,8 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     end: endOfDay(new Date()),
   }))
 
-  // Derived state
-  const hasMetricData = metrics.length > 0
-  const initialMetricsLoading = metricsLoading && !hasMetricData
-
   // Combine internal and external refresh triggers
   const refreshTick = internalRefreshTick + externalRefreshTick
-
-  // Process and filter metrics based on date range
-  const processedMetrics = useMemo(() => {
-    const uniqueMap = new Map<string, MetricRecord>()
-    metrics.forEach((m) => {
-      // Key must include publisherPlatform because Meta returns one row per
-      // platform breakdown per day, and campaignId because each provider can
-      // return multiple campaign rows per day.  Without campaignId, multiple
-      // campaign rows collapse into one and spend appears as zero.
-      const accountId = m.accountId ?? ''
-      const platform = m.publisherPlatform ?? ''
-      const campaign = (m as MetricRecord & { campaignId?: string | null }).campaignId ?? ''
-      const key = `${m.providerId}|${accountId}|${platform}|${campaign}|${m.date}`
-      const existing = uniqueMap.get(key)
-      if (!existing || (m.createdAt && existing.createdAt && m.createdAt > existing.createdAt)) {
-        uniqueMap.set(key, m)
-      } else if (!existing?.createdAt && m.createdAt) {
-        uniqueMap.set(key, m)
-      }
-    })
-    return Array.from(uniqueMap.values())
-      .filter((m) => {
-        const d = new Date(m.date)
-        if (Number.isNaN(d.getTime())) return false
-        return d >= dateRange.start && d <= dateRange.end
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [metrics, dateRange])
-
-  // Calculate per-provider summaries
-  // Use server-side summary as primary if available for the specific date range, 
-  // otherwise fallback to client-side calculation from loaded metrics.
-  const providerSummaries = useMemo(() => {
-    if (serverSideSummary?.providers && metrics.length <= METRICS_PAGE_SIZE) {
-      return buildProviderSummariesFromServer(serverSideSummary.providers)
-    }
-
-    const summary: Record<string, ProviderSummary> = {}
-    processedMetrics.forEach((metric) => {
-      const providerSummary = summary[metric.providerId] ?? {
-        spend: 0,
-        impressions: 0,
-        clicks: 0,
-        conversions: 0,
-        revenue: 0,
-      }
-      providerSummary.spend += metric.spend
-      providerSummary.impressions += metric.impressions
-      providerSummary.clicks += metric.clicks
-      providerSummary.conversions += metric.conversions
-      providerSummary.revenue += metric.revenue ?? 0
-      summary[metric.providerId] = providerSummary
-    })
-    return summary
-  }, [processedMetrics, serverSideSummary, metrics.length])
 
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const canQueryConvex = isAuthenticated && !convexAuthLoading && Boolean(user?.id)
@@ -218,6 +166,46 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     const rows = (v2Rows ?? v1Rows) as RealtimeMetricRow[]
     return rows.filter((row: RealtimeMetricRow) => isAdsProviderId(row.providerId)).map((row: RealtimeMetricRow) => mapRealtimeMetricRow(row))
   }, [isPreviewMode, metricsRealtime, metricsRealtimeV2, canQueryConvex, workspaceId])
+
+  const processedMetrics = useMemo(
+    () => dedupeAndFilterMetrics(metricsSource, dateRange),
+    [dateRange, metricsSource],
+  )
+
+  const effectiveServerSummary = useMemo(
+    () => serverSideSummary ?? metricsSummaryFromV2Insights(adsInsightsSummary),
+    [adsInsightsSummary, serverSideSummary],
+  )
+
+  const hasMetricData = useMemo(
+    () => hasAdsMetricActivity(processedMetrics, effectiveServerSummary, adsInsightsSummary),
+    [adsInsightsSummary, effectiveServerSummary, processedMetrics],
+  )
+  const initialMetricsLoading = metricsLoading && !hasMetricData
+
+  const providerSummaries = useMemo(() => {
+    if (effectiveServerSummary?.providers && metricsSource.length <= METRICS_PAGE_SIZE) {
+      return buildProviderSummariesFromServer(effectiveServerSummary.providers)
+    }
+
+    const summary: Record<string, ProviderSummary> = {}
+    processedMetrics.forEach((metric) => {
+      const providerSummary = summary[metric.providerId] ?? {
+        spend: 0,
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+        revenue: 0,
+      }
+      providerSummary.spend += metric.spend
+      providerSummary.impressions += metric.impressions
+      providerSummary.clicks += metric.clicks
+      providerSummary.conversions += metric.conversions
+      providerSummary.revenue += metric.revenue ?? 0
+      summary[metric.providerId] = providerSummary
+    })
+    return summary
+  }, [effectiveServerSummary, metricsSource.length, processedMetrics])
 
   const isConvexLoading =
     !isPreviewMode && Boolean(workspaceId && canQueryConvex) && metricsRealtime === undefined
@@ -313,8 +301,10 @@ export function useAdsMetrics(options: UseAdsMetricsOptions = {}): UseAdsMetrics
     processedMetrics,
     providerSummaries,
     serverSideSummary,
+    effectiveServerSummary,
     adsInsightsSummary,
     hasMetricData,
+    chartMetrics: processedMetrics,
     
     // Loading states
     metricsLoading,

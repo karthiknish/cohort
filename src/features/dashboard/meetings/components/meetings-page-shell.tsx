@@ -171,42 +171,30 @@ export function MeetingsPageShell() {
     ]
   )
 
-  const googleWorkspaceCardProps = useMemo(
+  const meetingsHeaderProps = useMemo(
     () => ({
-      connected: Boolean(resolvedGoogleWorkspaceStatus?.connected),
+      googleWorkspaceConnected: Boolean(resolvedGoogleWorkspaceStatus?.connected),
+      googleWorkspaceStatusLoading,
       canSchedule: canSchedule && !isPreviewMode,
-      loading: googleWorkspaceStatusLoading,
-      onConnect: handleConnectGoogleWorkspaceAction,
-      onDisconnect: handleDisconnectGoogleWorkspaceAction,
+      quickStarting,
+      quickMeetDisabled: isPreviewMode || googleWorkspaceStatusLoading || !resolvedGoogleWorkspaceStatus?.connected,
+      onStartQuickMeet: handleStartQuickMeet,
+      onConnectGoogleWorkspace: handleConnectGoogleWorkspaceAction,
+      onManageGoogleWorkspace: handleDisconnectGoogleWorkspaceAction,
     }),
     [
       canSchedule,
       googleWorkspaceStatusLoading,
       handleConnectGoogleWorkspaceAction,
       handleDisconnectGoogleWorkspaceAction,
-      isPreviewMode,
-      resolvedGoogleWorkspaceStatus?.connected,
-    ]
-  )
-
-  const meetingsHeaderProps = useMemo(
-    () => ({
-      googleWorkspaceConnected: Boolean(resolvedGoogleWorkspaceStatus?.connected),
-      googleWorkspaceStatusLoading,
-      canSchedule,
-      quickStarting,
-      quickMeetDisabled: isPreviewMode || googleWorkspaceStatusLoading || !resolvedGoogleWorkspaceStatus?.connected,
-      onStartQuickMeet: handleStartQuickMeet,
-    }),
-    [
-      canSchedule,
-      googleWorkspaceStatusLoading,
       handleStartQuickMeet,
       isPreviewMode,
       quickStarting,
       resolvedGoogleWorkspaceStatus?.connected,
     ]
   )
+
+  const createMeetingCardProps = useMemo(() => scheduleCardSharedProps, [scheduleCardSharedProps])
 
   const meetingCancelDialogProps = useMemo(
     () => ({
@@ -279,6 +267,7 @@ export function MeetingsPageShell() {
       meetings: upcomingMeetings,
       loading: upcomingMeetingsLoading,
       canSchedule: canSchedule && !isPreviewMode,
+      googleWorkspaceConnected: Boolean(resolvedGoogleWorkspaceStatus?.connected),
       cancellingMeetingId,
       onOpenInSiteMeeting: openInSiteMeeting,
       onRescheduleMeeting: handleRescheduleMeeting,
@@ -293,6 +282,7 @@ export function MeetingsPageShell() {
       handleRescheduleMeeting,
       isPreviewMode,
       openInSiteMeeting,
+      resolvedGoogleWorkspaceStatus?.connected,
       upcomingMeetings,
       upcomingMeetingsLoading,
     ]
@@ -323,16 +313,16 @@ export function MeetingsPageShell() {
     <SharedRoomLoadingSection sharedRoomName={sharedRoomName} onBack={closeMeetingRoom} />
   ) : (
     <MeetingsDefaultView
-      createMeetingCardProps={scheduleCardSharedProps}
       editingMeeting={Boolean(editingMeeting)}
-      googleWorkspaceCardProps={googleWorkspaceCardProps}
       meetingsHeaderProps={meetingsHeaderProps}
       meetingCancelDialogProps={meetingCancelDialogProps}
       quickMeetDialogProps={quickMeetDialogProps}
+      createMeetingCardProps={createMeetingCardProps}
       rescheduleMeetingCardProps={rescheduleMeetingCardProps}
       showPreviewMode={isPreviewMode}
       showReadOnlyAccessAlert={!canSchedule}
       upcomingMeetingsCardProps={upcomingMeetingsCardProps}
+      timezone={timezone}
     />
   )
 

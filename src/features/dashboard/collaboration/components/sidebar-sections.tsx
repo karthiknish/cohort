@@ -165,10 +165,19 @@ export function CollaborationSidebarContent({
   sharedFiles,
   canManageMembers = false,
   onManageMembers,
-}: CollaborationSidebarContentProps) {
+  compact = false,
+  skipChannelCard = false,
+}: CollaborationSidebarContentProps & { compact?: boolean; skipChannelCard?: boolean }) {
   return (
-    <div className="flex h-full w-full flex-col gap-8 overflow-y-auto bg-muted/5 p-6 text-sm text-muted-foreground">
-      <CollaborationSidebarChannelCard channel={channel} canManageMembers={canManageMembers} onManageMembers={onManageMembers} />
+    <div
+      className={cn(
+        'flex w-full flex-col text-sm text-muted-foreground',
+        compact ? 'gap-5 p-4' : 'h-full gap-8 overflow-y-auto bg-muted/5 p-6',
+      )}
+    >
+      {skipChannelCard ? null : (
+        <CollaborationSidebarChannelCard channel={channel} canManageMembers={canManageMembers} onManageMembers={onManageMembers} />
+      )}
       <CollaborationSidebarRosterSection channel={channel} channelParticipants={channelParticipants} />
       <CollaborationSidebarAssetLibrarySection sharedFiles={sharedFiles} />
     </div>

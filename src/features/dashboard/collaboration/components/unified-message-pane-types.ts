@@ -1,5 +1,20 @@
 'use client'
 
+import type { CollaborationAttachment } from '@/types/collaboration'
+import type { ClientTeamMember } from '@/types/clients'
+
+import type { Channel } from '../types'
+
+export type ChannelInfoHeaderConfig = {
+  channel: Channel
+  channelParticipants: ClientTeamMember[]
+  sharedFiles: CollaborationAttachment[]
+  workspaceId: string
+  isAdmin: boolean
+  canManageMembers?: boolean
+  onManageMembers?: () => void
+}
+
 export interface MessagePaneHeaderInfo {
   name: string
   type: 'channel' | 'dm'
@@ -21,4 +36,7 @@ export interface MessagePaneHeaderInfo {
   channelUnreadCount?: number
   onMarkChannelRead?: () => void | Promise<void>
   markChannelReadPending?: boolean
+  onBack?: () => void
+  /** Opens channel info modal with roster and asset library (channels only). */
+  channelInfo?: ChannelInfoHeaderConfig
 }

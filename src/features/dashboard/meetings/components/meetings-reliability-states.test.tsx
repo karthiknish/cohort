@@ -41,27 +41,40 @@ describe('meetings reliability states', () => {
         quickStarting={false}
         quickMeetDisabled={true}
         onStartQuickMeet={vi.fn()}
+        onConnectGoogleWorkspace={vi.fn()}
+        onManageGoogleWorkspace={vi.fn()}
       />,
     )
     const cardMarkup = renderToStaticMarkup(
       <GoogleWorkspaceCard connected={false} canSchedule={true} loading={true} onConnect={vi.fn()} onDisconnect={vi.fn()} />,
     )
 
-    expect(headerMarkup).toContain('Checking Google Workspace…')
     expect(headerMarkup).toContain('Checking Workspace…')
-    expect(cardMarkup).toContain('Checking connection')
+    expect(cardMarkup).toContain('Checking…')
     expect(cardMarkup).toContain('Checking whether this workspace already has Google Calendar invite support enabled.')
     expect(cardMarkup).toContain('skeleton-shimmer')
   })
 
   it('renders the disconnected guidance state', () => {
-    const markup = renderToStaticMarkup(
+    const headerMarkup = renderToStaticMarkup(
+      <MeetingsHeader
+        googleWorkspaceConnected={false}
+        googleWorkspaceStatusLoading={false}
+        canSchedule={true}
+        quickStarting={false}
+        quickMeetDisabled={true}
+        onStartQuickMeet={vi.fn()}
+        onConnectGoogleWorkspace={vi.fn()}
+        onManageGoogleWorkspace={vi.fn()}
+      />,
+    )
+    const cardMarkup = renderToStaticMarkup(
       <GoogleWorkspaceCard connected={false} canSchedule={true} onConnect={vi.fn()} onDisconnect={vi.fn()} />,
     )
 
-    expect(markup).toContain('Setup required')
-    expect(markup).toContain('Connect Google Workspace')
-    expect(markup).toContain('Required before scheduled Cohorts rooms can send Calendar invites.')
+    expect(headerMarkup).toContain('Connect Google Workspace')
+    expect(cardMarkup).toContain('Setup required')
+    expect(cardMarkup).toContain('Connect')
   })
 
   it('renders loading before empty for upcoming meetings', () => {
@@ -90,7 +103,7 @@ describe('meetings reliability states', () => {
     )
 
     expect(loadingMarkup).toContain('skeleton-shimmer')
-    expect(loadingMarkup).not.toContain('No upcoming meetings yet.')
+    expect(loadingMarkup).not.toContain('No upcoming meetings yet')
     expect(readyMarkup).toContain('Weekly Sync')
     expect(readyMarkup).toContain('Transcript not saved')
   })

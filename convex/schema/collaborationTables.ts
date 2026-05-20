@@ -28,6 +28,14 @@ export const collaborationTables = {
     .index('by_workspace_channelType_updatedAtMs_legacyId', ['workspaceId', 'channelType', 'updatedAtMs', 'legacyId'])
     .index('by_workspace_nameLower_legacyId', ['workspaceId', 'nameLower', 'legacyId']),
 
+  collaborationChannelAvatars: defineTable({
+    workspaceId: v.string(),
+    channelKey: v.string(),
+    avatarStorageId: v.string(),
+    updatedAtMs: v.number(),
+    updatedBy: v.string(),
+  }).index('by_workspace_channelKey', ['workspaceId', 'channelKey']),
+
   collaborationMessages: defineTable({
     workspaceId: v.string(),
     legacyId: v.string(),

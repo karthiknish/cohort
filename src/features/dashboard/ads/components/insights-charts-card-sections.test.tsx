@@ -11,12 +11,6 @@ vi.mock('@/shared/ui/select', () => ({
   SelectValue: ({ placeholder }: { placeholder?: string }) => <div>{placeholder}</div>,
 }))
 
-const benchmarkChart = <div>Benchmark chart</div>
-const comparisonChart = <div>Comparison chart</div>
-const efficiencyChart = <div>Efficiency chart</div>
-const funnelChart = <div>Funnel chart</div>
-const trendsChart = <div>Trends chart</div>
-
 import {
   InsightsChartsEmptyState,
   InsightsChartsHeader,
@@ -24,21 +18,34 @@ import {
   InsightsChartsTabs,
 } from './insights-charts-card-sections'
 
+const tabAvailability = {
+  comparison: true,
+  efficiency: true,
+  trends: false,
+  funnel: true,
+  benchmarks: false,
+}
+
 describe('insights charts card sections', () => {
   it('renders the loading and empty shells', () => {
     const loadingMarkup = renderToStaticMarkup(<InsightsChartsLoadingState />)
     const emptyMarkup = renderToStaticMarkup(<InsightsChartsEmptyState />)
+    const connectedEmpty = renderToStaticMarkup(<InsightsChartsEmptyState hasConnections />)
 
     expect(loadingMarkup).toContain('skeleton-shimmer')
     expect(emptyMarkup).toContain('Performance Insights')
-    expect(emptyMarkup).toContain('Connect ad platforms and sync data')
+    expect(emptyMarkup).toContain('Connect ad platforms first')
+    expect(connectedEmpty).toContain('Waiting for synced metrics')
   })
 
-  it('renders the header and tab shells', () => {
+  it('renders the header and controlled tabs', () => {
     const headerMarkup = renderToStaticMarkup(
       <InsightsChartsHeader
         onSelectedProviderChange={vi.fn()}
-        providers={[{ id: 'google', name: 'Google Ads' }, { id: 'meta', name: 'Meta Ads' }]}
+        providers={[
+          { id: 'google', name: 'Google Ads' },
+          { id: 'meta', name: 'Meta Ads' },
+        ]}
         providersCount={2}
         selectedProvider="all"
       />,
@@ -46,20 +53,17 @@ describe('insights charts card sections', () => {
 
     const tabsMarkup = renderToStaticMarkup(
       <InsightsChartsTabs
-        benchmarkChart={benchmarkChart}
-        comparisonChart={comparisonChart}
-        efficiencyChart={efficiencyChart}
-        funnelChart={funnelChart}
-        trendsChart={trendsChart}
-      />,
+        activeTab="funnel"
+        onTabChange={vi.fn()}
+        tabAvailability={tabAvailability}
+      >
+        <div>Funnel panel</div>
+      </InsightsChartsTabs>,
     )
 
     expect(headerMarkup).toContain('Visual analysis across 2 platforms')
-    expect(headerMarkup).toContain('Select provider')
-    expect(headerMarkup).toContain('All Platforms')
-    expect(tabsMarkup).toContain('Comparison')
-    expect(tabsMarkup).toContain('Efficiency')
+    expect(headerMarkup).toContain('All platforms')
     expect(tabsMarkup).toContain('Funnel')
-    expect(tabsMarkup).toContain('Benchmarks')
+    expect(tabsMarkup).toContain('Funnel panel')
   })
 })

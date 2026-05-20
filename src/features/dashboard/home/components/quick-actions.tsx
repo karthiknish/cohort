@@ -36,9 +36,9 @@ const adminQuickLinks: QuickLink[] = [
     roles: ['admin', 'team'],
   },
   {
-    title: 'Forms & checklists',
-    description: 'Recurring ops templates and completion tracking.',
-    href: '/dashboard/forms',
+    title: 'Scheduling',
+    description: 'Shifts, coverage gaps, and swap requests for the team.',
+    href: '/dashboard/scheduling',
     icon: ClipboardList,
     badge: null,
     roles: ['admin', 'team'],

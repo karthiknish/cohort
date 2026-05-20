@@ -10,10 +10,6 @@ vi.mock('./quick-meet-dialog', () => ({
   QuickMeetDialog: () => <div>Quick Meet Dialog</div>,
 }))
 
-vi.mock('./google-workspace-card', () => ({
-  GoogleWorkspaceCard: () => <div>Google Workspace Card</div>,
-}))
-
 vi.mock('./meeting-cancel-dialog', () => ({
   MeetingCancelDialog: () => <div>Meeting Cancel Dialog</div>,
 }))
@@ -50,16 +46,16 @@ describe('meetings page shell sections', () => {
   it('renders the default meetings layout sections', () => {
     const markup = renderToStaticMarkup(
       <MeetingsDefaultView
-        createMeetingCardProps={emptyProps}
         editingMeeting={false}
-        googleWorkspaceCardProps={emptyProps}
         meetingsHeaderProps={emptyProps}
         meetingCancelDialogProps={emptyProps}
         quickMeetDialogProps={emptyProps}
+        createMeetingCardProps={emptyProps}
         rescheduleMeetingCardProps={rescheduleMeetingCardProps}
         showPreviewMode={true}
         showReadOnlyAccessAlert={true}
         upcomingMeetingsCardProps={emptyProps}
+        timezone="Asia/Calcutta"
       />,
     )
 
@@ -67,9 +63,11 @@ describe('meetings page shell sections', () => {
     expect(markup).toContain('Preview mode')
     expect(markup).toContain('Quick Meet Dialog')
     expect(markup).toContain('Read-only access')
-    expect(markup).toContain('Google Workspace Card')
+    expect(markup).not.toContain('Google Workspace Card')
+    expect(markup).not.toContain('Schedule Meeting Nav Card')
     expect(markup).toContain('Create Meeting Card')
     expect(markup).toContain('Upcoming Meetings Card')
+    expect(markup).toContain('All times are shown in Asia/Calcutta')
   })
 
   it('renders the room branches', () => {

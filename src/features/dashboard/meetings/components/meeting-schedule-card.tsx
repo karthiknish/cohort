@@ -21,9 +21,9 @@ export function CreateMeetingCard(props: CreateMeetingCardProps) {
     <MeetingScheduleCardFrame
       {...props}
       cardTitle="Schedule Meeting"
-      cardDescription="Creates a Cohorts room, sends Google Calendar invites, and keeps transcript-ready meeting records."
+      cardDescription="Pick a date, add attendees, and send calendar invites from one form."
       submittingLabel="Scheduling..."
-      submitLabel="Schedule room"
+      submitLabel="Schedule Room"
     />
   )
 }

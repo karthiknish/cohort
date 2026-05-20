@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 import { AlertCircle, Hash, Inbox, MessageCircle, Plus, Search, Sparkles } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
-import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -17,7 +17,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { chromaticTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import type { ClientTeamMember } from '@/types/clients'
-import type { CollaborationMessage } from '@/types/collaboration'
+import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
 import type { PendingAttachment, ReactionPendingState, SendMessageOptions, ThreadCursorsState, ThreadErrorsState, ThreadLoadingState, ThreadMessagesState } from '../hooks/types'
@@ -41,6 +41,7 @@ export type UnifiedItem = {
   unreadCount: number
   metadata: {
     channelType?: 'team' | 'client' | 'project'
+    channelAvatarUrl?: string | null
     otherParticipantRole?: string | null
   }
   originalData: Channel | DirectConversation
@@ -89,7 +90,8 @@ export function ConversationListPane({
   searchQuery,
   sourceFilter,
   totalUnread,
-}: ConversationListPaneProps) {
+  className,
+}: ConversationListPaneProps & { className?: string }) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const previousUnreadRef = useRef(totalUnread)
   const [unreadAnnouncement, setUnreadAnnouncement] = useState('')
@@ -153,7 +155,12 @@ export function ConversationListPane({
   const showRecentLabel = sourceFilter === 'all' && !searchQuery.trim()
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden border-b border-muted/40 bg-muted/15 lg:w-[min(100%,20rem)] lg:border-b-0 lg:border-r">
+    <div
+      className={cn(
+        'flex h-full min-h-0 w-full flex-col overflow-hidden border-b border-muted/40 bg-muted/15 max-lg:min-h-[min(72dvh,640px)] lg:w-[min(100%,20rem)] lg:border-b-0 lg:border-r',
+        className,
+      )}
+    >
       <LiveRegion message={unreadAnnouncement} />
       <div className="space-y-3 border-b border-muted/30 p-4">
         <div className="flex items-center justify-between gap-2">
@@ -267,6 +274,9 @@ export function ConversationListPane({
                   )}
                 >
                   <Avatar className="h-10 w-10 shrink-0">
+                    {item.type === 'channel' && item.metadata.channelAvatarUrl ? (
+                      <AvatarImage src={item.metadata.channelAvatarUrl} alt={item.name} className="object-cover" />
+                    ) : null}
                     <AvatarFallback className={cn('text-xs font-medium', hasUnread && 'bg-accent/10 text-primary', item.type === 'channel' && 'bg-muted')}>
                       {item.type === 'channel' ? SOURCE_ICONS.channel : getInitials(item.name)}
                     </AvatarFallback>
@@ -330,6 +340,7 @@ export type ChannelConversationPaneProps = {
   messageSearchQuery: string
   messageUpdatingId: string | null
   onAddAttachments: (files: FileList | File[]) => void
+  onBackToInbox?: () => void
   onClearDeepLink?: () => void
   onComposerBlur: () => void
   onComposerFocus: () => void
@@ -342,6 +353,11 @@ export type ChannelConversationPaneProps = {
   onMessageInputChange: (value: string) => void
   onMessageSearchChange: (value: string) => void
   onRemoveAttachment: (attachmentId: string) => void
+  sharedFiles: CollaborationAttachment[]
+  canManageMembers?: boolean
+  onManageMembers?: () => void
+  workspaceId: string | null
+  isAdmin: boolean
   onSendMessage: (options?: SendMessageOptions) => Promise<void>
   onToggleReaction: (channelId: string, messageId: string, emoji: string) => void
   pendingAttachments: PendingAttachment[]
@@ -414,6 +430,7 @@ export function ChannelConversationPane({
   messageSearchQuery,
   messageUpdatingId,
   onAddAttachments,
+  onBackToInbox,
   onClearDeepLink,
   onComposerBlur,
   onComposerFocus,
@@ -434,6 +451,11 @@ export function ChannelConversationPane({
   searchingMessages,
   selectedChannel,
   sending,
+  sharedFiles,
+  canManageMembers,
+  onManageMembers,
+  workspaceId,
+  isAdmin,
   threadErrorsByRootId,
   threadLoadingByRootId,
   threadMessagesByRootId,
@@ -464,14 +486,33 @@ export function ChannelConversationPane({
       channelUnreadCount,
       onMarkChannelRead,
       markChannelReadPending,
+      onBack: onBackToInbox,
+      channelInfo:
+        workspaceId != null
+          ? {
+              channel: selectedChannel,
+              channelParticipants,
+              sharedFiles,
+              workspaceId,
+              isAdmin,
+              canManageMembers,
+              onManageMembers,
+            }
+          : undefined,
     }),
     [
-      channelParticipants.length,
+      canManageMembers,
+      channelParticipants,
       channelMessages.length,
-      selectedChannel,
       channelUnreadCount,
-      onMarkChannelRead,
+      isAdmin,
       markChannelReadPending,
+      onBackToInbox,
+      onManageMembers,
+      onMarkChannelRead,
+      selectedChannel,
+      sharedFiles,
+      workspaceId,
     ],
   )
 
@@ -604,6 +645,7 @@ export type DirectMessageConversationPaneProps = {
   isDmSearchActive: boolean
   onAddAttachments: (files: FileList | File[]) => void
   onArchiveConversation: (archived: boolean) => Promise<void>
+  onBackToInbox?: () => void
   onDmMessageSearchChange: (value: string) => void
   onRemoveAttachment: (attachmentId: string) => void
   pendingAttachments: PendingAttachment[]
@@ -635,6 +677,7 @@ export function DirectMessageConversationPane({
   isDmSearchActive,
   onAddAttachments,
   onArchiveConversation,
+  onBackToInbox,
   onDmMessageSearchChange,
   onRemoveAttachment,
   pendingAttachments,
@@ -657,8 +700,9 @@ export function DirectMessageConversationPane({
       primaryActionLabel: 'New chat',
       onPrimaryAction: onStartNewDM,
       buildShareableUrl: () => (typeof window !== 'undefined' ? window.location.href : ''),
+      onBack: onBackToInbox,
     }),
-    [dmMuteConversation, onArchiveConversation, onStartNewDM, selectedDM],
+    [dmMuteConversation, onArchiveConversation, onBackToInbox, onStartNewDM, selectedDM],
   )
 
   const dmStatusBanner = useMemo(() => {
@@ -716,7 +760,7 @@ export function EmptyConversationPane({
   onNewDM?: () => void
 }) {
   return (
-    <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-muted/20 via-background to-background px-6 py-12">
+    <div className="relative flex min-h-[min(60dvh,480px)] flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-muted/20 via-background to-background px-4 py-10 sm:px-6 sm:py-12">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
       <div className="relative max-w-md text-center">
         <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 text-primary ring-1 ring-primary/15">

@@ -68,7 +68,7 @@ describe('meeting schedule card variants', () => {
       />,
     )
 
-    expect(markup).toContain('Add at least one participant before scheduling.')
-    expect(markup).toMatch(/<button[^>]*type="submit"[^>]*disabled=""[^>]*>Schedule room<\/button>/)
+    expect(markup).toContain('Add a date, time, title, and at least one attendee to schedule.')
+    expect(markup).toMatch(/<button[^>]*type="submit"[^>]*disabled=""[^>]*>Schedule Room<\/button>/)
   })
 })

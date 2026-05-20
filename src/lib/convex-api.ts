@@ -188,6 +188,11 @@ export const collaborationChannelsApi = {
   remove: looseApi.collaborationChannels.remove,
 }
 
+export const collaborationChannelAvatarsApi = {
+  listForWorkspace: looseApi.collaborationChannelAvatars.listForWorkspace,
+  setAvatar: looseApi.collaborationChannelAvatars.setAvatar,
+}
+
 export const directMessagesApi = {
   searchMessages: looseApi.directMessages.searchMessages,
 }

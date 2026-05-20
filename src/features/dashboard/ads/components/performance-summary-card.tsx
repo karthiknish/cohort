@@ -35,6 +35,7 @@ interface PerformanceSummaryCardProps {
   emptyMessage?: string
   emptyCtaLabel?: string
   emptyCtaHref?: string
+  showActions?: boolean
 }
 
 export function PerformanceSummaryCard({
@@ -52,6 +53,7 @@ export function PerformanceSummaryCard({
   emptyMessage = 'No synced performance data yet. Connect an ad platform and run a sync to populate these insights.',
   emptyCtaLabel = 'Run first sync',
   emptyCtaHref = '#connect-ad-platforms',
+  showActions = true,
 }: PerformanceSummaryCardProps) {
   const formatNumber = (value: number): string => new Intl.NumberFormat('en-US').format(value)
 
@@ -69,29 +71,31 @@ export function PerformanceSummaryCard({
             {description}
           </CardDescription>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onRefresh}
-            disabled={metricsLoading}
-            className="h-10 px-4 inline-flex items-center gap-2 motion-chromatic hover:shadow-md"
-          >
-            <RefreshCw className={cn('h-4 w-4', metricsLoading && 'animate-spin')} />
-            Refresh
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onExport}
-            className="h-10 px-4 inline-flex items-center gap-2 motion-chromatic hover:shadow-md"
-          >
-            <Download className="h-4 w-4" />
-            Export CSV
-          </Button>
-        </div>
+        {showActions ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              disabled={metricsLoading}
+              className="h-10 px-4 inline-flex items-center gap-2 motion-chromatic hover:shadow-md"
+            >
+              <RefreshCw className={cn('h-4 w-4', metricsLoading && 'animate-spin')} />
+              Refresh
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onExport}
+              className="h-10 px-4 inline-flex items-center gap-2 motion-chromatic hover:shadow-md"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
+        ) : null}
       </CardHeader>
       <CardContent className="pt-2">
         {initialMetricsLoading ? (

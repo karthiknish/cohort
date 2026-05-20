@@ -15,6 +15,7 @@ import { NewDMDialog } from './new-dm-dialog'
 import { CollaborationSkeleton } from './collaboration-skeleton'
 import { isFeatureEnabled } from '@/lib/features'
 
+import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
 import { CreateChannelDialog } from './create-channel-dialog'
 import { ChannelMembersDialog } from './channel-members-dialog'
@@ -34,6 +35,10 @@ function createUnifiedInboxSidebarProps(context: CollaborationDashboardContext) 
     onSelectChannel: handleSelectChannel,
     onSelectDM: handleSelectDM,
     onNewDM: openNewDMDialog,
+    onBackToInbox: () => {
+      handleSelectChannel(null)
+      handleSelectDM(null)
+    },
     isLoadingChannels: collab.isBootstrapping,
     isLoadingDMs: dm.isLoadingConversations,
   }
@@ -95,6 +100,8 @@ function createUnifiedInboxChannelPaneProps(
       collab.selectedChannel != null ? (collab.channelUnreadCounts[collab.selectedChannel.id] ?? 0) : 0,
     onMarkChannelRead: collab.markChannelRead,
     markChannelReadPending: collab.markChannelReadPending,
+    workspaceId: context.workspaceId,
+    isAdmin: context.isAdmin,
   }
 }
 
@@ -178,15 +185,15 @@ function CollaborationHeaderSection() {
     useCollaborationDashboardContext()
 
   return (
-    <div className={DASHBOARD_THEME.layout.header}>
-      <div>
+    <div className="flex flex-col gap-4 border-b border-border/60 pb-6 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
         <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.collaboration?.title ?? 'Team Collaboration'}</h1>
-        <p className={DASHBOARD_THEME.layout.subtitle}>
+        <p className={cn(DASHBOARD_THEME.layout.subtitle, 'max-w-2xl text-pretty')}>
           {PAGE_TITLES.collaboration?.description ?? 'Coordinate with teammates and clients in dedicated workspaces.'}
         </p>
       </div>
       {currentUserRole !== 'client' ? (
-        <div className="flex items-center gap-3">
+        <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto">
           {isAdmin ? (
             <CreateChannelDialog
               workspaceId={workspaceId}
@@ -278,7 +285,7 @@ function CollaborationInboxSection() {
 
   return (
     <Card className={DASHBOARD_THEME.cards.base}>
-      <CardContent className="flex min-h-0 flex-col overflow-hidden p-0 lg:flex-row">
+      <CardContent className="flex min-h-0 flex-col overflow-hidden p-0 max-lg:min-h-[min(72dvh,640px)] lg:flex-row">
         <UnifiedInbox
           currentUserId={currentUserId}
           sidebar={sidebar}

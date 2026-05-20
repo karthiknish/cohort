@@ -1,6 +1,6 @@
 'use client'
 
-import { createElement, useCallback, useEffect, useRef } from 'react'
+import { createElement, useCallback, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, ClipboardEvent, DragEvent, ReactNode, RefObject } from 'react'
 import { Send } from 'lucide-react'
 
@@ -144,34 +144,37 @@ export function UnifiedMessagePaneConversationLayout({
   }, [onMessageSearchChange])
 
   const messageSearchInputRef = useRef<HTMLInputElement>(null)
+  const [messageSearchOpen, setMessageSearchOpen] = useState(false)
+
+  const handleToggleMessageSearch = useCallback(() => {
+    setMessageSearchOpen((open) => {
+      const next = !open
+      if (!next) {
+        onMessageSearchChange?.('')
+      }
+      return next
+    })
+  }, [onMessageSearchChange])
 
   useEffect(() => {
-    if (!canSearchMessages || !onMessageSearchChange) {
+    if (!messageSearchOpen) return
+    messageSearchInputRef.current?.focus()
+  }, [messageSearchOpen])
+
+  useEffect(() => {
+    if (!canSearchMessages || !onMessageSearchChange || !messageSearchOpen) {
       return
     }
 
     const onGlobalKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== '/' && event.code !== 'Slash') {
-        return
-      }
-      if (event.metaKey || event.ctrlKey || event.altKey) {
-        return
-      }
-
-      const target = event.target as HTMLElement | null
-      const tag = target?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target?.isContentEditable) {
-        return
-      }
-
-      event.preventDefault()
-      messageSearchInputRef.current?.focus()
-      messageSearchInputRef.current?.select()
+      if (event.key !== 'Escape') return
+      setMessageSearchOpen(false)
+      onMessageSearchChange('')
     }
 
     window.addEventListener('keydown', onGlobalKeyDown)
     return () => window.removeEventListener('keydown', onGlobalKeyDown)
-  }, [canSearchMessages, onMessageSearchChange])
+  }, [canSearchMessages, messageSearchOpen, onMessageSearchChange])
 
   const handleAttachClick = useCallback(() => {
     fileInputRef.current?.click()
@@ -189,15 +192,20 @@ export function UnifiedMessagePaneConversationLayout({
   const resolvedEmptyState = isMessageSearchActive ? createElement(NoSearchResultsState) : emptyState
 
   return (
-    <div className="flex min-h-[480px] flex-1 flex-col bg-background/50 lg:h-[640px] relative overflow-hidden">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background/50 max-lg:min-h-[min(72dvh,640px)] lg:h-[640px]">
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute -top-[100%] -left-[100%] w-[300%] h-[300%] animate-shimmer bg-gradient-to-br from-transparent via-muted/30 to-transparent opacity-50" />
       </div>
-      <UnifiedConversationHeader header={header} />
+      <UnifiedConversationHeader
+        header={header}
+        canSearchMessages={canSearchMessages}
+        messageSearchOpen={messageSearchOpen}
+        onToggleMessageSearch={canSearchMessages && onMessageSearchChange ? handleToggleMessageSearch : undefined}
+      />
 
       {statusBanner}
 
-      {canSearchMessages && onMessageSearchChange ? (
+      {canSearchMessages && onMessageSearchChange && messageSearchOpen ? (
         <MessageSearchBar
           inputRef={messageSearchInputRef}
           value={messageSearchQuery}

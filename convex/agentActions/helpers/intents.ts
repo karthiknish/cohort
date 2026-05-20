@@ -658,8 +658,8 @@ function resolveDeterministicNavigationIntent(message: string, context?: AgentRe
     return { route: '/dashboard/proposals/analytics', message: 'Opening Proposal analytics.' }
   }
 
-  if (includesAnyPhrase(normalized, ['intake forms', 'client forms', 'form submissions', 'workspace forms', 'lead form', 'open forms'])) {
-    return { route: '/dashboard/forms', message: 'Opening Forms and intake.' }
+  if (includesAnyPhrase(normalized, ['intake forms', 'client forms', 'form submissions', 'workspace forms', 'lead form', 'open forms', 'checklist'])) {
+    return { route: '/dashboard/projects', message: 'Opening Projects for delivery and checklists.' }
   }
 
   if (includesAnyPhrase(normalized, ['resource scheduling', 'capacity planning', 'scheduling grid', 'team availability', 'capacity calendar'])) {

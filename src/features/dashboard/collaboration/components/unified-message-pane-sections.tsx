@@ -7,10 +7,14 @@ import {
   ArchiveRestore,
   Bell,
   BellOff,
+  ArrowLeft,
   Check,
   CheckCheck,
   Hash,
+  Info,
   Link2,
+  Search,
+  X,
   LoaderCircle,
   Mail,
   MoreVertical,
@@ -53,6 +57,8 @@ import { collaborationToUnifiedMessage, type UnifiedMessage } from './message-li
 import { useMessageListRenderContext } from './message-list-render-context'
 import { MessageReactions } from './message-reactions'
 import { RichComposer } from './rich-composer'
+import { ChannelAvatar } from './channel-avatar'
+import { ChannelInfoDialog } from './channel-info-dialog'
 import type { MessagePaneHeaderInfo } from './unified-message-pane-types'
 
 function getInitials(name: string): string {
@@ -381,9 +387,22 @@ export function UnifiedThreadReplyCard({
   )
 }
 
-export function UnifiedConversationHeader({ header }: { header: MessagePaneHeaderInfo }) {
+type UnifiedConversationHeaderProps = {
+  header: MessagePaneHeaderInfo
+  canSearchMessages?: boolean
+  messageSearchOpen?: boolean
+  onToggleMessageSearch?: () => void
+}
+
+export function UnifiedConversationHeader({
+  header,
+  canSearchMessages = false,
+  messageSearchOpen = false,
+  onToggleMessageSearch,
+}: UnifiedConversationHeaderProps) {
   const { toast } = useToast()
   const [linkCopied, setLinkCopied] = useState(false)
+  const [channelInfoOpen, setChannelInfoOpen] = useState(false)
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleArchiveToggle = useCallback(() => {
@@ -443,14 +462,30 @@ export function UnifiedConversationHeader({ header }: { header: MessagePaneHeade
   }
 
   return (
-    <div className="shrink-0 border-b border-muted/40 bg-background/80 p-4 backdrop-blur-md supports-backdrop-filter:bg-background/70">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <Avatar className="mt-0.5 ring-1 ring-border/60">
-            <AvatarFallback className={cn(header.type === 'channel' ? 'bg-muted' : 'bg-accent/10 text-primary')}>
-              {header.type === 'channel' ? <Hash className="h-4 w-4" /> : getInitials(header.name)}
-            </AvatarFallback>
-          </Avatar>
+    <div className="shrink-0 border-b border-muted/40 bg-background/80 p-3 backdrop-blur-md supports-backdrop-filter:bg-background/70 sm:p-4">
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-2 sm:gap-3">
+          {header.onBack ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="mt-0.5 h-9 w-9 shrink-0 lg:hidden"
+              onClick={header.onBack}
+              aria-label="Back to inbox"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          ) : null}
+          {header.type === 'channel' && header.channelInfo ? (
+            <ChannelAvatar channel={header.channelInfo.channel} className="mt-0.5 h-9 w-9 ring-1 ring-border/60" />
+          ) : (
+            <Avatar className="mt-0.5 ring-1 ring-border/60">
+              <AvatarFallback className={cn(header.type === 'channel' ? 'bg-muted' : 'bg-accent/10 text-primary')}>
+                {header.type === 'channel' ? <Hash className="h-4 w-4" /> : getInitials(header.name)}
+              </AvatarFallback>
+            </Avatar>
+          )}
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="truncate text-base font-semibold tracking-tight text-foreground">
@@ -483,6 +518,44 @@ export function UnifiedConversationHeader({ header }: { header: MessagePaneHeade
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+          {canSearchMessages && onToggleMessageSearch ? (
+            <Button
+              type="button"
+              variant={messageSearchOpen ? 'secondary' : 'outline'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={onToggleMessageSearch}
+              aria-label={messageSearchOpen ? 'Hide message search' : 'Search messages'}
+              aria-pressed={messageSearchOpen}
+            >
+              {messageSearchOpen ? <X className="h-3.5 w-3.5" /> : <Search className="h-3.5 w-3.5" />}
+            </Button>
+          ) : null}
+          {header.channelInfo ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Channel details"
+                onClick={() => setChannelInfoOpen(true)}
+              >
+                <Info className="h-3.5 w-3.5" />
+              </Button>
+              <ChannelInfoDialog
+                open={channelInfoOpen}
+                onOpenChange={setChannelInfoOpen}
+                channel={header.channelInfo.channel}
+                channelParticipants={header.channelInfo.channelParticipants}
+                sharedFiles={header.channelInfo.sharedFiles}
+                workspaceId={header.channelInfo.workspaceId}
+                isAdmin={header.channelInfo.isAdmin}
+                canManageMembers={header.channelInfo.canManageMembers}
+                onManageMembers={header.channelInfo.onManageMembers}
+              />
+            </>
+          ) : null}
           {header.buildShareableUrl ? (
             <TooltipProvider delayDuration={200}>
               <Tooltip>
@@ -663,7 +736,7 @@ export function UnifiedComposerSection({
   }, [onSend])
 
   return (
-    <div className="shrink-0 border-t border-muted/40 p-4">
+    <div className="shrink-0 border-t border-muted/40 bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:p-4">
       <PendingAttachmentsList
         attachments={pendingAttachments}
         uploading={uploadingAttachments}

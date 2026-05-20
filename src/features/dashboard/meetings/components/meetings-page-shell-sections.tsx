@@ -1,12 +1,12 @@
 'use client'
 
-import type { ComponentProps } from 'react'
-import { Info, ShieldAlert } from 'lucide-react'
+import { useState, type ComponentProps } from 'react'
+import { CalendarDays, Globe, Info, ShieldAlert, Video } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
-import { GoogleWorkspaceCard } from './google-workspace-card'
 import { MeetingRoomPage } from './in-site-meeting-card'
 import { MeetingCancelDialog } from './meeting-cancel-dialog'
 import { MeetingRoomLoadingState } from './meeting-room-loading-state'
@@ -17,7 +17,6 @@ import { UpcomingMeetingsCard } from './upcoming-meetings-card'
 
 type MeetingsHeaderProps = ComponentProps<typeof MeetingsHeader>
 type QuickMeetDialogProps = ComponentProps<typeof QuickMeetDialog>
-type GoogleWorkspaceCardProps = ComponentProps<typeof GoogleWorkspaceCard>
 type MeetingCancelDialogProps = ComponentProps<typeof MeetingCancelDialog>
 type CreateMeetingCardProps = ComponentProps<typeof CreateMeetingCard>
 type RescheduleMeetingCardProps = ComponentProps<typeof RescheduleMeetingCard>
@@ -44,28 +43,68 @@ export function SharedRoomLoadingSection(props: MeetingRoomLoadingStateProps) {
   )
 }
 
-export function MeetingsDefaultView({
+export function MeetingsTimezoneFooter({ timezone }: { timezone: string }) {
+  return (
+    <p className="flex items-center justify-center gap-2 border-t border-border/60 pt-6 text-center text-sm text-muted-foreground">
+      <Globe className="h-4 w-4 shrink-0" aria-hidden />
+      All times are shown in {timezone}
+    </p>
+  )
+}
+
+function MeetingsMobileWorkspace({
   createMeetingCardProps,
+  upcomingMeetingsCardProps,
+}: {
+  createMeetingCardProps: CreateMeetingCardProps
+  upcomingMeetingsCardProps: UpcomingMeetingsCardProps
+}) {
+  const [tab, setTab] = useState('upcoming')
+
+  return (
+    <Tabs value={tab} onValueChange={setTab} className="w-full lg:hidden">
+      <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1">
+        <TabsTrigger value="upcoming" className="gap-1.5 text-xs sm:text-sm">
+          <Video className="h-3.5 w-3.5 shrink-0" />
+          Upcoming
+        </TabsTrigger>
+        <TabsTrigger value="schedule" className="gap-1.5 text-xs sm:text-sm">
+          <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+          Schedule
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="upcoming" className="mt-4 focus-visible:outline-none">
+        <UpcomingMeetingsCard {...upcomingMeetingsCardProps} />
+      </TabsContent>
+      <TabsContent value="schedule" className="mt-4 focus-visible:outline-none">
+        <CreateMeetingCard {...createMeetingCardProps} />
+      </TabsContent>
+    </Tabs>
+  )
+}
+
+export function MeetingsDefaultView({
   editingMeeting,
-  googleWorkspaceCardProps,
   meetingsHeaderProps,
   meetingCancelDialogProps,
   quickMeetDialogProps,
+  createMeetingCardProps,
   rescheduleMeetingCardProps,
   showPreviewMode,
   showReadOnlyAccessAlert,
   upcomingMeetingsCardProps,
+  timezone,
 }: {
-  createMeetingCardProps: CreateMeetingCardProps
   editingMeeting: boolean
-  googleWorkspaceCardProps: GoogleWorkspaceCardProps
   meetingsHeaderProps: MeetingsHeaderProps
   meetingCancelDialogProps: MeetingCancelDialogProps
   quickMeetDialogProps: QuickMeetDialogProps
+  createMeetingCardProps: CreateMeetingCardProps
   rescheduleMeetingCardProps: RescheduleMeetingCardProps
   showPreviewMode: boolean
   showReadOnlyAccessAlert: boolean
   upcomingMeetingsCardProps: UpcomingMeetingsCardProps
+  timezone: string
 }) {
   return (
     <div className={DASHBOARD_THEME.layout.container}>
@@ -95,19 +134,29 @@ export function MeetingsDefaultView({
 
       <QuickMeetDialog {...quickMeetDialogProps} />
 
-      <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
-        <aside className="min-w-0 space-y-6 lg:col-span-5 xl:col-span-4">
-          <GoogleWorkspaceCard {...googleWorkspaceCardProps} />
-        </aside>
-        <div className="min-w-0 space-y-6 lg:col-span-7 xl:col-span-8">
-          <MeetingCancelDialog {...meetingCancelDialogProps} />
-          {editingMeeting ? (
-            <RescheduleMeetingCard {...rescheduleMeetingCardProps} />
-          ) : (
-            <CreateMeetingCard {...createMeetingCardProps} />
-          )}
-          <UpcomingMeetingsCard {...upcomingMeetingsCardProps} />
-        </div>
+      <div className="space-y-6">
+        <MeetingCancelDialog {...meetingCancelDialogProps} />
+
+        {editingMeeting ? (
+          <RescheduleMeetingCard {...rescheduleMeetingCardProps} />
+        ) : (
+          <>
+            <MeetingsMobileWorkspace
+              createMeetingCardProps={createMeetingCardProps}
+              upcomingMeetingsCardProps={upcomingMeetingsCardProps}
+            />
+            <div className="hidden gap-6 lg:grid lg:grid-cols-12 lg:items-start">
+              <div className="lg:col-span-7">
+                <CreateMeetingCard {...createMeetingCardProps} />
+              </div>
+              <div className="lg:col-span-5">
+                <UpcomingMeetingsCard {...upcomingMeetingsCardProps} />
+              </div>
+            </div>
+          </>
+        )}
+
+        <MeetingsTimezoneFooter timezone={timezone} />
       </div>
     </div>
   )

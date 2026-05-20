@@ -132,9 +132,10 @@ describe('MeetingsPageShell', () => {
 
     expect(markup).toContain('Meetings Header')
     expect(markup).toContain('Quick Meet Dialog')
-    expect(markup).toContain('Google Workspace Card')
+    expect(markup).not.toContain('Google Workspace Card')
     expect(markup).toContain('Create Meeting Card')
     expect(markup).toContain('Upcoming Meetings Card')
+    expect(markup).toContain('All times are shown in UTC')
   })
 
   it('renders the active room branch when an in-site meeting is open', () => {

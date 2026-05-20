@@ -23,12 +23,11 @@ describe('workforce-routes (hybrid team ops nav)', () => {
     expect(hrefs).toEqual([
       '/dashboard/time',
       '/dashboard/scheduling',
-      '/dashboard/forms',
       '/dashboard/time-off',
     ])
   })
 
-  it('includes Team operations group with the same four links for admin/team', () => {
+  it('includes Team operations group with the same links for admin/team', () => {
     const teamOps = DASHBOARD_NAVIGATION_GROUPS.find((g) => g.id === 'team-ops')
     expect(teamOps?.label).toBe('Team operations')
     expect(teamOps?.items.map((i) => i.href)).toEqual(WORKFORCE_ROUTES.map((r) => r.href))
@@ -46,7 +45,7 @@ describe('workforce-routes (hybrid team ops nav)', () => {
     expect(clientNav.some((g) => g.id === 'team-ops')).toBe(false)
   })
 
-  it('shows full Team operations (4 links) for admin and team', () => {
+  it('shows full Team operations links for admin and team', () => {
     for (const role of ['admin', 'team'] as const) {
       const nav = filterNavForRole(role)
       const teamOps = nav.find((g) => g.id === 'team-ops')

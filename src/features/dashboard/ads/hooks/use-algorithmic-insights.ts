@@ -10,6 +10,7 @@ import {
 } from '@/lib/ad-algorithms'
 import { normalizeProviderId } from '@/lib/themes'
 
+import { providerSummariesToSyntheticMetrics } from '../components/insights-chart-utils'
 import type { MetricRecord, ProviderSummary } from '../components/types'
 
 // =============================================================================
@@ -79,15 +80,20 @@ function convertToDataPoints(metrics: MetricRecord[]): MetricDataPoint[] {
 export function useAlgorithmicInsights(
   options: UseAlgorithmicInsightsOptions
 ): UseAlgorithmicInsightsReturn {
-  const { metrics, loading } = options
+  const { metrics, providerSummaries, loading } = options
+
+  const metricsForAnalysis = useMemo(() => {
+    if (metrics.length > 0) return metrics
+    return providerSummariesToSyntheticMetrics(providerSummaries)
+  }, [metrics, providerSummaries])
 
   // Run the full performance analysis
   const analysis = useMemo<PerformanceAnalysis | null>(() => {
-    if (loading || metrics.length === 0) return null
-    
-    const dataPoints = convertToDataPoints(metrics)
+    if (loading || metricsForAnalysis.length === 0) return null
+
+    const dataPoints = convertToDataPoints(metricsForAnalysis)
     return analyzeAdPerformance(dataPoints)
-  }, [metrics, loading])
+  }, [metricsForAnalysis, loading])
 
   // Extract insights
   const insights = useMemo<AlgorithmicInsight[]>(() => {

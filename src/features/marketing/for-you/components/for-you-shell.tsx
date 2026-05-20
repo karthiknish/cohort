@@ -10,26 +10,23 @@ import { Button } from '@/shared/ui/button'
 
 export function ForYouShell() {
   return (
-    <header className="sticky top-0 z-30 border-b border-border/50 bg-background/90 backdrop-blur-md">
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 border-b border-border/40 bg-background/95 backdrop-blur-sm">
+      <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-4 px-4 sm:h-20 sm:px-6">
         <Link
           href="/for-you"
-          className="flex min-w-0 items-center gap-2.5 text-foreground transition-opacity hover:opacity-80"
+          className="flex shrink-0 items-center transition-opacity hover:opacity-80"
+          aria-label="Cohorts home"
         >
-          <Image src="/logo.svg" alt="" width={36} height={36} className="h-9 w-9 shrink-0" priority />
-          <div className="min-w-0 leading-tight">
-            <p className="truncate text-sm font-semibold tracking-tight">Cohorts</p>
-            <p className="truncate text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-              For you
-            </p>
-          </div>
+          <Image
+            src="/logo.svg"
+            alt=""
+            width={80}
+            height={80}
+            className="h-14 w-14 sm:h-16 sm:w-16"
+            priority
+          />
         </Link>
-
-        <Button
-          asChild
-          size="sm"
-          className={cn('shrink-0 shadow-sm', getButtonClasses('primary'))}
-        >
+        <Button asChild size="sm" variant="outline" className={cn('shadow-sm', getButtonClasses('outline'))}>
           <Link href="/dashboard">
             <LayoutDashboard aria-hidden="true" className="mr-2 h-4 w-4" />
             Go to Dashboard

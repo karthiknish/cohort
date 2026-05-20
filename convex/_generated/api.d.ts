@@ -81,6 +81,7 @@ import type * as auditLogs from "../auditLogs.js";
 import type * as auth from "../auth.js";
 import type * as authActions from "../authActions.js";
 import type * as clients from "../clients.js";
+import type * as collaborationChannelAvatars from "../collaborationChannelAvatars.js";
 import type * as collaborationChannels from "../collaborationChannels.js";
 import type * as collaborationMessages from "../collaborationMessages.js";
 import type * as collaborationMessages_listing from "../collaborationMessages/listing.js";
@@ -215,6 +216,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   authActions: typeof authActions;
   clients: typeof clients;
+  collaborationChannelAvatars: typeof collaborationChannelAvatars;
   collaborationChannels: typeof collaborationChannels;
   collaborationMessages: typeof collaborationMessages;
   "collaborationMessages/listing": typeof collaborationMessages_listing;

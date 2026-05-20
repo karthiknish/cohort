@@ -21,11 +21,48 @@ interface MetricRecord {
   revenue?: number | null
 }
 
+type PerformanceChartDataSource = 'ads' | 'analytics'
+
 interface PerformanceChartProps {
   metrics: MetricRecord[]
   loading: boolean
   currency?: string
+  /** Ads hub uses synced ad metrics; home dashboard defaults to analytics copy and links. */
+  dataSource?: PerformanceChartDataSource
+  /** When true, ads totals exist but there are no per-day rows to plot — show sync copy, not connect. */
+  hasAggregateData?: boolean
 }
+
+const EMPTY_STATE_COPY: Record<
+  PerformanceChartDataSource,
+  { message: string; primaryHref: string; primaryLabel: string; detailHref: string; detailLabel: string }
+> = {
+  ads: {
+    message:
+      'Charts appear once your connected ad platforms are synced. Connect an account above, run a sync, and spend and revenue trends will populate here.',
+    primaryHref: '#connect-ad-platforms',
+    primaryLabel: 'Connect ad account',
+    detailHref: '#connect-ad-platforms',
+    detailLabel: 'Manage connections',
+  },
+  analytics: {
+    message:
+      'Charts appear once analytics data is connected. Until then, you can explore channel-level insights in the analytics workspace.',
+    primaryHref: '/dashboard/analytics',
+    primaryLabel: 'Open analytics workspace',
+    detailHref: '/dashboard/analytics',
+    detailLabel: 'View details',
+  },
+}
+
+const ADS_SYNCED_NO_DAILY_COPY = {
+  message:
+    'Totals above reflect your latest sync. Daily spend and revenue trends need per-day metrics in this date range — widen the range or run sync again.',
+  primaryHref: '#connect-ad-platforms',
+  primaryLabel: 'Run sync',
+  detailHref: '#connect-ad-platforms',
+  detailLabel: 'Manage connections',
+} as const
 
 function formatCurrencyValue(value: number, currency: string = 'USD'): string {
   try {
@@ -88,7 +125,18 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export const PerformanceChart = memo(function PerformanceChart({ metrics, loading, currency = 'USD' }: PerformanceChartProps) {
+export const PerformanceChart = memo(function PerformanceChart({
+  metrics,
+  loading,
+  currency = 'USD',
+  dataSource = 'analytics',
+  hasAggregateData = false,
+}: PerformanceChartProps) {
+  const copy =
+    dataSource === 'ads' && hasAggregateData
+      ? ADS_SYNCED_NO_DAILY_COPY
+      : EMPTY_STATE_COPY[dataSource]
+  const detailLinkIsHash = copy.detailHref.startsWith('#')
   const chartData = useMemo(() => {
     if (!metrics || !metrics.length) return []
 
@@ -150,18 +198,16 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
   if (chartData.length === 0) {
     return (
       <div className="flex h-full flex-col gap-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-medium">Performance Overview</span>
           <Button asChild variant="outline" size="sm">
-            <Link href="/dashboard/analytics">Open analytics workspace</Link>
+            <Link href={copy.primaryHref}>{copy.primaryLabel}</Link>
           </Button>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-muted/70 p-10 text-center">
-          <p className="max-w-md text-sm text-muted-foreground">
-            Charts appear once analytics data is connected. Until then, you can explore channel-level insights in the analytics workspace.
-          </p>
-          <Button asChild size="sm">
-            <Link href="/dashboard/analytics">Review analytics</Link>
+          <p className="max-w-md text-sm text-muted-foreground">{copy.message}</p>
+          <Button asChild size="sm" variant="outline">
+            <Link href={copy.primaryHref}>{copy.primaryLabel}</Link>
           </Button>
         </div>
       </div>
@@ -185,9 +231,15 @@ export const PerformanceChart = memo(function PerformanceChart({ metrics, loadin
             </Tooltip>
           </TooltipProvider>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/dashboard/analytics">View details</Link>
-        </Button>
+        {detailLinkIsHash ? (
+          <Button asChild variant="outline" size="sm">
+            <a href={copy.detailHref}>{copy.detailLabel}</a>
+          </Button>
+        ) : (
+          <Button asChild variant="outline" size="sm">
+            <Link href={copy.detailHref}>{copy.detailLabel}</Link>
+          </Button>
+        )}
       </div>
       <div className="min-h-0 flex-1">
         <ChartContainer config={chartConfig} className="h-full w-full">

@@ -2,11 +2,8 @@
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 
-import { Target } from 'lucide-react'
-
 import { extractErrorCode, logError } from '@/lib/convex-errors'
-import { cn } from '@/lib/utils'
-import { DASHBOARD_THEME, PAGE_TITLES } from '@/lib/dashboard-theme'
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
 function isAuthError(error: unknown): boolean {
   const code = extractErrorCode(error)
@@ -18,11 +15,9 @@ import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary
 import { AdConnectionsCard } from '@/features/dashboard/home/components/ad-connections-card'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { useToast } from '@/shared/ui/use-toast'
-import { DateRangePicker } from './components/date-range-picker'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 
-// Static imports for critical components
 import {
   AdsSkeleton,
   CrossChannelOverviewCard,
@@ -31,15 +26,28 @@ import {
   WorkflowCard,
   SetupAlerts,
 } from './components'
+import { AdsPageHeader } from './components/ads-page-header'
+import { AdsPageLayout } from './components/ads-page-shell-sections'
 import { GoogleSetupDialog } from './components/google-setup-dialog'
 
-// Lazy imports for heavy components
-const CampaignManagementCard = lazy(() => import('./components/campaign-management-card').then(m => ({ default: m.CampaignManagementCard })))
-const CustomInsightsCard = lazy(() => import('./components/custom-insights-card').then(m => ({ default: m.CustomInsightsCard })))
-const ComparisonViewCard = lazy(() => import('./components/comparison-view-card').then(m => ({ default: m.ComparisonViewCard })))
-const FormulaBuilderCard = lazy(() => import('./components/formula-builder-card').then(m => ({ default: m.FormulaBuilderCard })))
-const AlgorithmicInsightsCard = lazy(() => import('./components/algorithmic-insights-card').then(m => ({ default: m.AlgorithmicInsightsCard })))
-const InsightsChartsCard = lazy(() => import('./components/insights-charts-card').then(m => ({ default: m.InsightsChartsCard })))
+const CampaignManagementCard = lazy(() =>
+  import('./components/campaign-management-card').then((m) => ({ default: m.CampaignManagementCard })),
+)
+const CustomInsightsCard = lazy(() =>
+  import('./components/custom-insights-card').then((m) => ({ default: m.CustomInsightsCard })),
+)
+const ComparisonViewCard = lazy(() =>
+  import('./components/comparison-view-card').then((m) => ({ default: m.ComparisonViewCard })),
+)
+const FormulaBuilderCard = lazy(() =>
+  import('./components/formula-builder-card').then((m) => ({ default: m.FormulaBuilderCard })),
+)
+const AlgorithmicInsightsCard = lazy(() =>
+  import('./components/algorithmic-insights-card').then((m) => ({ default: m.AlgorithmicInsightsCard })),
+)
+const InsightsChartsCard = lazy(() =>
+  import('./components/insights-charts-card').then((m) => ({ default: m.InsightsChartsCard })),
+)
 
 import {
   useAdsMetrics,
@@ -67,26 +75,15 @@ function AdsSuspenseReveal({ children, fallback }: { children: ReactNode; fallba
   )
 }
 
-/**
- * Ads Hub Page
- * 
- * Provides a unified dashboard for managing multiple ad platforms (Google, Meta, LinkedIn, TikTok).
- * Features include:
- * - Cross-channel performance overview
- * - Per-provider metric breakdown
- * - Automated sync configuration
- * - Manual data refresh and CSV export
- */
 export default function AdsPage() {
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
   const shownErrorsRef = useRef<Set<string>>(new Set())
 
-  // 1. Manage metrics, filters, and data loading
   const {
     processedMetrics,
     providerSummaries,
-    serverSideSummary,
+    effectiveServerSummary,
     adsInsightsSummary,
     hasMetricData,
     metricsLoading,
@@ -115,7 +112,6 @@ export default function AdsPage() {
     loading: metricsLoading,
   })
 
-  // 2. Manage provider connections and integration statuses
   const {
     connectedProviders,
     connectingProvider,
@@ -158,16 +154,12 @@ export default function AdsPage() {
   })
 
   const { displayCurrency, providerCurrencyMap } = useMemo(() => {
-    // Derive display currency from the V2 currency-aware summary.
-    // Only expose a single currency total when all rows are on the same currency.
-    // For mixed-currency selections, consumers receive null and show "Mixed currencies".
     const financialTotals = adsInsightsSummary?.financialTotals
     const primaryCurrency =
       financialTotals?.comparability === 'single_currency'
         ? (financialTotals.primaryCurrency ?? null)
         : null
 
-    // Build per-provider currency map from the V2 provider summaries.
     const map: Record<string, string> = {}
     if (adsInsightsSummary?.providers) {
       for (const p of adsInsightsSummary.providers) {
@@ -184,8 +176,8 @@ export default function AdsPage() {
     !isPreviewMode &&
     Boolean(
       integrationStatuses?.statuses?.some(
-        (s) => s.status === 'success' || Boolean(s.linkedAt)
-      )
+        (s) => s.status === 'success' || Boolean(s.linkedAt),
+      ),
     )
 
   const suppressMetricsErrors =
@@ -193,6 +185,11 @@ export default function AdsPage() {
     !hasAnyAdIntegration &&
     !isAuthError(metricError) &&
     !isAuthError(loadMoreError)
+
+  const connectedAccountCount = useMemo(
+    () => adPlatforms.filter((p) => connectedProviders[p.id]).length,
+    [adPlatforms, connectedProviders],
+  )
 
   const scrollToSetupAlerts = useCallback(() => {
     document.getElementById('ads-setup-alerts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -232,7 +229,6 @@ export default function AdsPage() {
     void reloadGoogleAccountOptions()
   }, [googleAccountOptions.length, loadingGoogleAccountOptions, reloadGoogleAccountOptions, setGoogleSetupDialogOpen])
 
-  // Surface notable errors as toasts once
   useEffect(() => {
     const errors: string[] = [
       ...(suppressMetricsErrors ? [] : [metricError ?? '', loadMoreError ?? '']),
@@ -251,7 +247,6 @@ export default function AdsPage() {
     })
   }, [connectionErrors, loadMoreError, metricError, suppressMetricsErrors, toast])
 
-  // Loading state - let the loading.tsx handle the skeleton UI
   const isInitialLoading = initialMetricsLoading && !integrationStatuses
   const loadingContent = useMemo(
     () => (
@@ -259,11 +254,9 @@ export default function AdsPage() {
         <AdsSkeleton />
       </div>
     ),
-    []
+    [],
   )
 
-  // Components expect currency?: string (undefined = not yet known / mixed).
-  // null from the V2 summary means mixed or unknown — pass undefined so components show fallback.
   const activeCurrency = displayCurrency ?? undefined
 
   const showWorkflow =
@@ -272,6 +265,223 @@ export default function AdsPage() {
       automationStatuses.length === 0 ||
       automationStatuses.every((s) => s.status !== 'success'))
 
+  const renderSetup = () => (
+    <>
+      {showWorkflow ? (
+        <FadeIn>
+          <WorkflowCard />
+        </FadeIn>
+      ) : null}
+
+      <FadeIn>
+        <div id="ads-setup-alerts">
+          <SetupAlerts
+            metaSetupMessage={metaSetupMessage}
+            metaNeedsAccountSelection={metaNeedsAccountSelection}
+            initializingMeta={initializingMeta}
+            onInitializeMeta={handleInitializeMeta}
+            metaAccountOptions={metaAccountOptions}
+            selectedMetaAccountId={selectedMetaAccountId}
+            onMetaAccountSelectionChange={setSelectedMetaAccountId}
+            loadingMetaAccountOptions={loadingMetaAccountOptions}
+            onReloadMetaAccountOptions={handleReloadMetaAccountOptions}
+            tiktokSetupMessage={tiktokSetupMessage}
+            tiktokNeedsAccountSelection={tiktokNeedsAccountSelection}
+            initializingTikTok={initializingTikTok}
+            onInitializeTikTok={handleInitializeTikTok}
+          />
+        </div>
+      </FadeIn>
+
+      <FadeIn>
+        <div id="connect-ad-platforms">
+          <AdConnectionsCard
+            providers={adPlatforms}
+            connectedProviders={connectedProviders}
+            connectingProvider={connectingProvider}
+            connectionErrors={connectionErrors}
+            integrationStatuses={integrationStatusMap}
+            onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
+            onOauthRedirect={handleOauthRedirect}
+            onSyncNow={handleSyncNow}
+            syncingProviders={syncingProviders}
+            onRefresh={handleManualRefresh}
+            refreshing={metricsLoading}
+          />
+        </div>
+      </FadeIn>
+
+      {connectedAccountCount > 0 ? (
+        <FadeIn>
+          <div className="space-y-4 border-t border-muted/40 pt-6">
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold text-foreground">Campaigns</h3>
+              <p className="text-sm text-muted-foreground">
+                Per-provider lists for the date range selected above.
+              </p>
+            </div>
+            <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
+              <div className="flex w-full flex-col gap-4">
+                {adPlatforms
+                  .filter((p) => connectedProviders[p.id])
+                  .map((platform) => (
+                    <CampaignManagementCard
+                      key={platform.id}
+                      providerId={platform.id}
+                      providerName={platform.name}
+                      isConnected={Boolean(connectedProviders[platform.id])}
+                      dateRange={dateRange}
+                      onRefresh={handleManualRefresh}
+                      setupRequired={
+                        (platform.id === 'google' && googleNeedsAccountSelection) ||
+                        (platform.id === 'facebook' && metaNeedsAccountSelection) ||
+                        (platform.id === 'tiktok' && tiktokNeedsAccountSelection)
+                      }
+                      setupTitle={
+                        platform.id === 'google'
+                          ? 'Select a Google Ads account'
+                          : platform.id === 'facebook'
+                            ? 'Select a Meta ad account'
+                            : platform.id === 'tiktok'
+                              ? 'Finish TikTok account setup'
+                              : undefined
+                      }
+                      setupDescription={
+                        platform.id === 'google'
+                          ? 'Choose the Google Ads account you want to manage before loading campaign data.'
+                          : platform.id === 'facebook'
+                            ? 'Choose the Meta ad account you want to manage before loading campaign data.'
+                            : platform.id === 'tiktok'
+                              ? 'Complete TikTok setup so the default ad account is assigned before loading campaign data.'
+                              : undefined
+                      }
+                      setupActionLabel={platform.id === 'google' ? 'Select account' : 'Finish setup'}
+                      onSetupAction={
+                        platform.id === 'google'
+                          ? openGoogleCampaignSetup
+                          : platform.id === 'facebook' || platform.id === 'tiktok'
+                            ? scrollToSetupAlerts
+                            : undefined
+                      }
+                    />
+                  ))}
+              </div>
+            </AdsSuspenseReveal>
+          </div>
+        </FadeIn>
+      ) : null}
+    </>
+  )
+
+  const renderAnalytics = () => (
+    <>
+      <FadeIn>
+        <CrossChannelOverviewCard
+          processedMetrics={processedMetrics}
+          serverSideSummary={effectiveServerSummary}
+          currency={activeCurrency}
+          hasMetricData={hasMetricData}
+          initialMetricsLoading={initialMetricsLoading}
+          metricsLoading={metricsLoading}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          onExport={handleExport}
+          showDateAndExport={false}
+        />
+      </FadeIn>
+
+      <FadeIn>
+        <PerformanceSummaryCard
+          providerSummaries={providerSummaries}
+          currency={activeCurrency}
+          providerCurrencies={providerCurrencyMap}
+          hasMetrics={hasMetricData}
+          initialMetricsLoading={initialMetricsLoading}
+          metricsLoading={metricsLoading}
+          metricError={suppressMetricsErrors ? null : metricError}
+          onRefresh={handleManualRefresh}
+          onExport={handleExport}
+          showActions={false}
+        />
+      </FadeIn>
+
+      <FadeIn>
+        <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
+          <AlgorithmicInsightsCard
+            insights={algorithmicInsights.insights}
+            globalEfficiencyScore={algorithmicInsights.globalEfficiencyScore}
+            providerEfficiencyScores={algorithmicInsights.providerEfficiencyScores}
+            loading={metricsLoading || initialMetricsLoading}
+          />
+        </AdsSuspenseReveal>
+      </FadeIn>
+
+      <FadeIn>
+        <AdsSuspenseReveal fallback={ADS_SKELETON_300}>
+          <InsightsChartsCard
+            analysis={algorithmicInsights.analysis}
+            currency={activeCurrency}
+            loading={metricsLoading || initialMetricsLoading}
+            hasConnections={connectedAccountCount > 0}
+          />
+        </AdsSuspenseReveal>
+      </FadeIn>
+    </>
+  )
+
+  const renderAdvancedAnalytics = () => (
+    <>
+      <FadeIn>
+        <AdsSuspenseReveal fallback={ADS_SKELETON_250}>
+          <ComparisonViewCard
+            periodComparison={periodComparison}
+            providerComparison={providerComparison}
+            currency={activeCurrency}
+            loading={metricsLoading || initialMetricsLoading}
+          />
+        </AdsSuspenseReveal>
+      </FadeIn>
+
+      <FadeIn>
+        <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
+          <CustomInsightsCard
+            derivedMetrics={hasMetricData ? derivedMetrics : null}
+            processedMetrics={processedMetrics}
+            currency={activeCurrency}
+            loading={metricsLoading || initialMetricsLoading}
+          />
+        </AdsSuspenseReveal>
+      </FadeIn>
+
+      <FadeIn>
+        <AdsSuspenseReveal fallback={ADS_SKELETON_300}>
+          <FormulaBuilderCard
+            formulaEditor={formulaEditor}
+            metricTotals={hasMetricData ? derivedMetrics.totals : undefined}
+            loading={metricsLoading || initialMetricsLoading}
+          />
+        </AdsSuspenseReveal>
+      </FadeIn>
+
+      <FadeIn>
+        <MetricsTableCard
+          processedMetrics={processedMetrics}
+          currency={activeCurrency}
+          hasMetrics={hasMetricData}
+          initialMetricsLoading={initialMetricsLoading}
+          metricsLoading={metricsLoading}
+          metricError={suppressMetricsErrors ? null : metricError}
+          nextCursor={nextCursor}
+          loadingMore={loadingMore}
+          loadMoreError={suppressMetricsErrors ? null : loadMoreError}
+          onRefresh={handleManualRefresh}
+          onLoadMore={handleLoadMoreMetrics}
+        />
+      </FadeIn>
+    </>
+  )
+
   return (
     <BoneyardSkeletonBoundary
       name="dashboard-ads-page"
@@ -279,257 +489,43 @@ export default function AdsPage() {
       loadingContent={loadingContent}
     >
       <div className={DASHBOARD_THEME.layout.container}>
-        <FadeIn>
-          <header className={cn(DASHBOARD_THEME.layout.header, 'border-b border-muted/40 pb-6')}>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-              <div className={cn(DASHBOARD_THEME.icons.container, 'h-11 w-11 shrink-0 rounded-xl')}>
-                <Target className="h-6 w-6" aria-hidden />
-              </div>
-              <div className="min-w-0 flex-1 space-y-2">
-                <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.ads?.title ?? 'Ad Platforms'}</h1>
-                <p className={cn(DASHBOARD_THEME.layout.subtitle, 'max-w-2xl text-pretty')}>
-                  {PAGE_TITLES.ads?.description ??
-                    'Connect paid media accounts, trigger data syncs, and review cross-channel performance in one place.'}
-                </p>
-              </div>
-            </div>
-          </header>
-        </FadeIn>
-
-        {!isPreviewMode && (
-          <section
-            aria-label="Ad platform setup and connections"
-            className="space-y-6 rounded-xl border border-muted/50 bg-muted/10 p-4 sm:p-6"
-          >
-            {showWorkflow ? (
-              <FadeIn>
-                <WorkflowCard />
-              </FadeIn>
-            ) : null}
-
-            <FadeIn>
-              <div id="ads-setup-alerts">
-                <SetupAlerts
-                  metaSetupMessage={metaSetupMessage}
-                  metaNeedsAccountSelection={metaNeedsAccountSelection}
-                  initializingMeta={initializingMeta}
-                  onInitializeMeta={handleInitializeMeta}
-                  metaAccountOptions={metaAccountOptions}
-                  selectedMetaAccountId={selectedMetaAccountId}
-                  onMetaAccountSelectionChange={setSelectedMetaAccountId}
-                  loadingMetaAccountOptions={loadingMetaAccountOptions}
-                  onReloadMetaAccountOptions={handleReloadMetaAccountOptions}
-                  tiktokSetupMessage={tiktokSetupMessage}
-                  tiktokNeedsAccountSelection={tiktokNeedsAccountSelection}
-                  initializingTikTok={initializingTikTok}
-                  onInitializeTikTok={handleInitializeTikTok}
-                />
-              </div>
-            </FadeIn>
-
-            <FadeIn>
-              <div id="connect-ad-platforms">
-                <AdConnectionsCard
-                  providers={adPlatforms}
-                  connectedProviders={connectedProviders}
-                  connectingProvider={connectingProvider}
-                  connectionErrors={connectionErrors}
-                  integrationStatuses={integrationStatusMap}
-                  onConnect={handleConnect}
-                  onDisconnect={handleDisconnect}
-                  onOauthRedirect={handleOauthRedirect}
-                  onSyncNow={handleSyncNow}
-                  syncingProviders={syncingProviders}
-                  onRefresh={handleManualRefresh}
-                  refreshing={metricsLoading}
-                />
-              </div>
-            </FadeIn>
-
-            <GoogleSetupDialog
-              open={googleSetupDialogOpen}
-              onOpenChange={setGoogleSetupDialogOpen}
-              setupMessage={googleSetupMessage}
-              accountOptions={googleAccountOptions}
-              selectedAccountId={selectedGoogleAccountId}
-              onAccountSelectionChange={setSelectedGoogleAccountId}
-              loadingAccounts={loadingGoogleAccountOptions}
-              initializing={initializingGoogle}
-              onReloadAccounts={handleReloadGoogleAccountOptions}
-              onInitialize={handleInitializeGoogle}
+        <div className="space-y-6 pb-10">
+          <FadeIn>
+            <AdsPageHeader
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              onRefresh={handleManualRefresh}
+              onExport={handleExport}
+              refreshing={metricsLoading}
+              canExport={hasMetricData}
             />
+          </FadeIn>
 
-            {adPlatforms.filter((p) => connectedProviders[p.id]).length > 0 ? (
-              <FadeIn>
-                <div className="border-t border-muted/40 pt-6">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="space-y-1">
-                      <p className={DASHBOARD_THEME.stats.label}>Campaigns</p>
-                      <h2 className="text-lg font-semibold tracking-tight text-foreground">Campaign management</h2>
-                      <p className="text-sm text-muted-foreground">Per-provider lists and actions for the selected date range.</p>
-                    </div>
-                    <DateRangePicker value={dateRange} onChange={setDateRange} />
-                  </div>
-                  <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
-                    <div className="mt-4 grid gap-4">
-                      {adPlatforms
-                        .filter((p) => connectedProviders[p.id])
-                        .map((platform) => (
-                          <CampaignManagementCard
-                            key={platform.id}
-                            providerId={platform.id}
-                            providerName={platform.name}
-                            isConnected={Boolean(connectedProviders[platform.id])}
-                            dateRange={dateRange}
-                            onRefresh={handleManualRefresh}
-                            setupRequired={
-                              (platform.id === 'google' && googleNeedsAccountSelection) ||
-                              (platform.id === 'facebook' && metaNeedsAccountSelection) ||
-                              (platform.id === 'tiktok' && tiktokNeedsAccountSelection)
-                            }
-                            setupTitle={
-                              platform.id === 'google'
-                                ? 'Select a Google Ads account'
-                                : platform.id === 'facebook'
-                                  ? 'Select a Meta ad account'
-                                  : platform.id === 'tiktok'
-                                    ? 'Finish TikTok account setup'
-                                    : undefined
-                            }
-                            setupDescription={
-                              platform.id === 'google'
-                                ? 'Choose the Google Ads account you want to manage before loading campaign data.'
-                                : platform.id === 'facebook'
-                                  ? 'Choose the Meta ad account you want to manage before loading campaign data.'
-                                  : platform.id === 'tiktok'
-                                    ? 'Complete TikTok setup so the default ad account is assigned before loading campaign data.'
-                                    : undefined
-                            }
-                            setupActionLabel={platform.id === 'google' ? 'Select account' : 'Finish setup'}
-                            onSetupAction={
-                              platform.id === 'google'
-                                ? openGoogleCampaignSetup
-                                : platform.id === 'facebook' || platform.id === 'tiktok'
-                                  ? scrollToSetupAlerts
-                                  : undefined
-                            }
-                          />
-                        ))}
-                    </div>
-                  </AdsSuspenseReveal>
-                </div>
-              </FadeIn>
-            ) : null}
-          </section>
-        )}
-
-        <section aria-label="Performance and analytics" className="space-y-6">
-          <div className="flex flex-col gap-1 border-b border-muted/40 pb-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className={DASHBOARD_THEME.stats.label}>Analytics</p>
-              <h2 className="text-lg font-semibold tracking-tight text-foreground">Performance overview</h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">Cross-channel metrics, insights, and exports.</p>
-            </div>
-          </div>
-
-        <FadeIn>
-          <CrossChannelOverviewCard
-            processedMetrics={processedMetrics}
-            serverSideSummary={serverSideSummary}
-            currency={activeCurrency}
+          <AdsPageLayout
+            renderSetup={renderSetup}
+            renderAnalytics={renderAnalytics}
+            renderAdvancedAnalytics={renderAdvancedAnalytics}
+            showSetup={!isPreviewMode}
+            connectedAccountCount={connectedAccountCount}
             hasMetricData={hasMetricData}
-            initialMetricsLoading={initialMetricsLoading}
-            metricsLoading={metricsLoading}
-            dateRange={dateRange}
-            onDateRangeChange={setDateRange}
-            onExport={handleExport}
           />
-        </FadeIn>
-
-        <FadeIn>
-          <PerformanceSummaryCard
-            providerSummaries={providerSummaries}
-            currency={activeCurrency}
-            providerCurrencies={providerCurrencyMap}
-            hasMetrics={hasMetricData}
-            initialMetricsLoading={initialMetricsLoading}
-            metricsLoading={metricsLoading}
-            metricError={suppressMetricsErrors ? null : metricError}
-            onRefresh={handleManualRefresh}
-            onExport={handleExport}
-          />
-        </FadeIn>
-
-        <FadeIn>
-          <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
-            <AlgorithmicInsightsCard
-              insights={algorithmicInsights.insights}
-              globalEfficiencyScore={algorithmicInsights.globalEfficiencyScore}
-              providerEfficiencyScores={algorithmicInsights.providerEfficiencyScores}
-              loading={metricsLoading || initialMetricsLoading}
-            />
-          </AdsSuspenseReveal>
-        </FadeIn>
-
-        <FadeIn>
-          <AdsSuspenseReveal fallback={ADS_SKELETON_300}>
-            <InsightsChartsCard
-              analysis={algorithmicInsights.analysis}
-              currency={activeCurrency}
-              loading={metricsLoading || initialMetricsLoading}
-            />
-          </AdsSuspenseReveal>
-        </FadeIn>
-
-        <FadeIn>
-          <AdsSuspenseReveal fallback={ADS_SKELETON_250}>
-            <ComparisonViewCard
-              periodComparison={periodComparison}
-              providerComparison={providerComparison}
-              currency={activeCurrency}
-              loading={metricsLoading || initialMetricsLoading}
-            />
-          </AdsSuspenseReveal>
-        </FadeIn>
-
-        <FadeIn>
-          <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
-            <CustomInsightsCard
-              derivedMetrics={hasMetricData ? derivedMetrics : null}
-              processedMetrics={processedMetrics}
-              currency={activeCurrency}
-              loading={metricsLoading || initialMetricsLoading}
-            />
-          </AdsSuspenseReveal>
-        </FadeIn>
-
-        <FadeIn>
-          <AdsSuspenseReveal fallback={ADS_SKELETON_300}>
-            <FormulaBuilderCard
-              formulaEditor={formulaEditor}
-              metricTotals={hasMetricData ? derivedMetrics.totals : undefined}
-              loading={metricsLoading || initialMetricsLoading}
-            />
-          </AdsSuspenseReveal>
-        </FadeIn>
-
-        <FadeIn>
-          <MetricsTableCard
-            processedMetrics={processedMetrics}
-            currency={activeCurrency}
-            hasMetrics={hasMetricData}
-            initialMetricsLoading={initialMetricsLoading}
-            metricsLoading={metricsLoading}
-            metricError={suppressMetricsErrors ? null : metricError}
-            nextCursor={nextCursor}
-            loadingMore={loadingMore}
-            loadMoreError={suppressMetricsErrors ? null : loadMoreError}
-            onRefresh={handleManualRefresh}
-            onLoadMore={handleLoadMoreMetrics}
-          />
-        </FadeIn>
-        </section>
+        </div>
       </div>
+
+      {!isPreviewMode ? (
+        <GoogleSetupDialog
+          open={googleSetupDialogOpen}
+          onOpenChange={setGoogleSetupDialogOpen}
+          setupMessage={googleSetupMessage}
+          accountOptions={googleAccountOptions}
+          selectedAccountId={selectedGoogleAccountId}
+          onAccountSelectionChange={setSelectedGoogleAccountId}
+          loadingAccounts={loadingGoogleAccountOptions}
+          initializing={initializingGoogle}
+          onReloadAccounts={handleReloadGoogleAccountOptions}
+          onInitialize={handleInitializeGoogle}
+        />
+      ) : null}
     </BoneyardSkeletonBoundary>
   )
 }

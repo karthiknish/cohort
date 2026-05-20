@@ -176,16 +176,6 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
     actions: ['log hours', 'review time entries', 'export timesheet'],
   },
 
-  // Forms (intake — redirects into Projects)
-  {
-    route: '/dashboard/forms',
-    name: 'Forms',
-    description: 'Client intake forms and structured submissions',
-    keywords: ['forms', 'intake', 'questionnaire', 'survey', 'form submissions', 'lead form'],
-    aliases: ['intake forms', 'client forms', 'submission forms'],
-    actions: ['open forms', 'review submissions', 'configure intake'],
-  },
-
   // Scheduling (projects operations tab)
   {
     route: '/dashboard/scheduling',

@@ -98,7 +98,7 @@ Use **navigate** with an exact \`route\` when the user only wants a screen opene
 - **Time off / PTO** → \`/dashboard/time-off\`
 - **Time tracking / timesheet** → \`/dashboard/tasks?operations=time\`
 - **Proposal analytics** (funnel / win rate) → \`/dashboard/proposals/analytics\`
-- **Forms / intake** → \`/dashboard/forms\`
+- **Checklists / intake** → \`/dashboard/projects\`
 - **Resource scheduling** → \`/dashboard/scheduling\`
 - **Team management** (workspace staff, invites) → \`/admin/team\`
 `
@@ -191,7 +191,7 @@ If the request is vague, underspecified, or refers to "this/that/it" without eno
 - "time off", "pto", "vacation request" → navigate to /dashboard/time-off
 - "timesheet", "log time", "billable hours" → navigate to /dashboard/tasks?operations=time
 - "proposal analytics", "proposal win rate" → navigate to /dashboard/proposals/analytics
-- "intake forms", "client forms" → navigate to /dashboard/forms
+- "intake forms", "client forms", "checklists" → navigate to /dashboard/projects
 - "resource scheduling", "capacity planning" → navigate to /dashboard/scheduling
 - "team management", "invite teammate", "workspace staff" (admin) → navigate to /admin/team
 - vague requests like "do that", "handle this", "check metrics", or "create task" without enough detail → CLARIFY first

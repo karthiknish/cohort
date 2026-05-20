@@ -201,7 +201,7 @@ export function getQuickActionsForUserRole(userRole: string | null) {
 export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
   const [open, setOpen] = useState(false)
   const { push } = useRouter()
-  const { user } = useAuth()
+  const { user, authPhase } = useAuth()
   const { selectedClientId } = useClientContext()
   const workspaceId = user?.agencyId ?? null
 
@@ -210,11 +210,13 @@ export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
 
   const [query, setQuery] = useState('')
 
+  const canQueryWorkspace = authPhase === 'ready_active' && Boolean(workspaceId)
+
   const clientRows = useQuery(
     clientsApi.list,
-    workspaceId
+    canQueryWorkspace
       ? {
-          workspaceId,
+          workspaceId: workspaceId!,
           limit: 100,
           includeAllWorkspaces: user?.role === 'admin',
         }
@@ -223,20 +225,20 @@ export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
 
   const taskRows = useQuery(
     selectedClientId ? tasksApi.listByClient : tasksApi.listForUser,
-    workspaceId
+    canQueryWorkspace
       ? selectedClientId
-        ? { workspaceId, clientId: selectedClientId, limit: 100 }
+        ? { workspaceId: workspaceId!, clientId: selectedClientId, limit: 100 }
         : user?.id
-          ? { workspaceId, userId: user.id }
+          ? { workspaceId: workspaceId!, userId: user.id }
           : 'skip'
       : 'skip'
   ) as Array<SearchableTask> | undefined
 
   const projectRows = useQuery(
     projectsApi.list,
-    workspaceId
+    canQueryWorkspace
       ? {
-          workspaceId,
+          workspaceId: workspaceId!,
           clientId: selectedClientId ?? undefined,
           limit: 100,
         }
@@ -245,9 +247,9 @@ export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
 
   const proposalRows = useQuery(
     proposalsApi.list,
-    workspaceId && selectedClientId
+    canQueryWorkspace && selectedClientId
       ? {
-          workspaceId,
+          workspaceId: workspaceId!,
           clientId: selectedClientId,
           limit: 100,
         }

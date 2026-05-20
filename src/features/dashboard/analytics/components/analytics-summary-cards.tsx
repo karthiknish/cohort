@@ -1,155 +1,154 @@
 'use client'
 
-import { Activity, DollarSign, Info, TrendingUp, Users } from 'lucide-react'
+import { Activity, DollarSign, Info, Minus, TrendingDown, TrendingUp, Users, type LucideIcon } from 'lucide-react'
+
+import { DASHBOARD_THEME, getIconContainerClasses } from '@/lib/dashboard-theme'
+import { cn, formatCurrency } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from '@/shared/ui/tooltip'
-import { formatCurrency } from '@/lib/utils'
+import type { MetricDelta } from '../lib/google-analytics-story'
 
 interface AnalyticsSummaryCardsProps {
-    totals: {
-        users: number
-        sessions: number
-        revenue: number
-        conversions: number
-    }
-    conversionRate: number
-    isLoading: boolean
+  totals: {
+    users: number
+    sessions: number
+    revenue: number
+    conversions: number
+  }
+  deltas: {
+    users: MetricDelta
+    sessions: MetricDelta
+    conversions: MetricDelta
+    revenue: MetricDelta
+  }
+  isLoading: boolean
 }
 
-export function AnalyticsSummaryCards({
-    totals,
-    conversionRate,
-    isLoading,
-}: AnalyticsSummaryCardsProps) {
-    return (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-accent/80" />
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className="flex items-center gap-2">
-                        <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Total users</CardTitle>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/50 transition-colors hover:text-primary" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="text-xs">Total users captured in Google Analytics for the selected period</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/5 text-primary">
-                        <Users className="h-4 w-4" />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <Skeleton className="h-9 w-24 rounded-lg" />
-                    ) : (
-                        <div className="text-2xl font-bold tracking-tight text-foreground">{totals.users.toLocaleString()}</div>
-                    )}
-                </CardContent>
-            </Card>
+function formatDeltaLabel(delta: MetricDelta): string | null {
+  if (delta.direction === 'new') return 'New in period'
+  if (delta.deltaPercent == null) return null
+  return `${delta.deltaPercent > 0 ? '+' : ''}${delta.deltaPercent.toFixed(1)}%`
+}
 
-            <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-success/80" />
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className="flex items-center gap-2">
-                        <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Sessions</CardTitle>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/50 transition-colors hover:text-success" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="text-xs">Total sessions recorded for the selected date range</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/5 text-success">
-                        <Activity className="h-4 w-4" />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <Skeleton className="h-9 w-24 rounded-lg" />
-                    ) : (
-                        <div className="text-2xl font-bold tracking-tight text-foreground">{totals.sessions.toLocaleString()}</div>
-                    )}
-                </CardContent>
-            </Card>
+function DeltaBadge({ delta }: { delta: MetricDelta }) {
+  const label = formatDeltaLabel(delta)
+  if (!label) {
+    return <span className="text-xs text-muted-foreground">vs previous period</span>
+  }
 
-            <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-info/80" />
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className="flex items-center gap-2">
-                        <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Conversions</CardTitle>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/50 transition-colors hover:text-info" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="text-xs">Completed conversions imported from Google Analytics</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-info/5 text-info">
-                        <TrendingUp className="h-4 w-4" />
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <Skeleton className="h-9 w-20 rounded-lg" />
-                    ) : (
-                        <div className="text-2xl font-bold tracking-tight text-foreground">{totals.conversions.toLocaleString()}</div>
-                    )}
-                </CardContent>
-            </Card>
+  const isUp = delta.direction === 'up' || delta.direction === 'new'
+  const isDown = delta.direction === 'down'
+  const Icon = isUp ? TrendingUp : isDown ? TrendingDown : Minus
 
-            <Card className="relative overflow-hidden border-muted/40 bg-background shadow-sm motion-chromatic hover:shadow-md">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-warning/80" />
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <div className="flex items-center gap-2">
-                        <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">Revenue</CardTitle>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <Info className="h-3 w-3 text-muted-foreground/50 transition-colors hover:text-warning" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="text-xs">Revenue reported by Google Analytics for the selected period</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/5 text-warning">
-                        <DollarSign className="h-4 w-4" />
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                    {isLoading ? (
-                        <>
-                            <Skeleton className="h-9 w-20 rounded-lg" />
-                            <Skeleton className="h-4 w-28 rounded-lg" />
-                        </>
-                    ) : (
-                        <>
-                            <div className="text-2xl font-bold tracking-tight text-foreground">{formatCurrency(totals.revenue)}</div>
-                            <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground/60">Conv rate {conversionRate.toFixed(1)}%</div>
-                        </>
-                    )}
-                </CardContent>
-            </Card>
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 text-xs font-semibold',
+        isUp && 'text-success',
+        isDown && 'text-destructive',
+        !isUp && !isDown && 'text-muted-foreground',
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" aria-hidden />
+      {label}
+      <span className="font-normal text-muted-foreground">vs previous period</span>
+    </span>
+  )
+}
+
+function SummaryStatCard({
+  label,
+  tooltip,
+  value,
+  delta,
+  icon: Icon,
+  isLoading,
+}: {
+  label: string
+  tooltip: string
+  value: string
+  delta: MetricDelta
+  icon: LucideIcon
+  isLoading: boolean
+}) {
+  return (
+    <Card className={DASHBOARD_THEME.stats.card}>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <div className="flex items-center gap-2">
+          <CardTitle className={DASHBOARD_THEME.stats.label}>{label}</CardTitle>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <Info className="h-3.5 w-3.5 text-muted-foreground/60 transition-colors hover:text-primary" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p className="text-xs">{tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
-    )
+        <div className={cn(getIconContainerClasses('small'), 'h-9 w-9 rounded-lg')}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {isLoading ? (
+          <>
+            <Skeleton className="h-8 w-24 rounded-md" />
+            <Skeleton className="h-3 w-32 rounded-md" />
+          </>
+        ) : (
+          <>
+            <div className={DASHBOARD_THEME.stats.value}>{value}</div>
+            <DeltaBadge delta={delta} />
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+export function AnalyticsSummaryCards({ totals, deltas, isLoading }: AnalyticsSummaryCardsProps) {
+  return (
+    <div className={DASHBOARD_THEME.stats.container}>
+      <SummaryStatCard
+        label="Total users"
+        tooltip="Unique users in Google Analytics for the selected period, compared with the prior period of equal length."
+        value={totals.users.toLocaleString()}
+        delta={deltas.users}
+        icon={Users}
+        isLoading={isLoading}
+      />
+      <SummaryStatCard
+        label="Sessions"
+        tooltip="Total sessions in the selected range. Sessions can exceed users when people return multiple times."
+        value={totals.sessions.toLocaleString()}
+        delta={deltas.sessions}
+        icon={Activity}
+        isLoading={isLoading}
+      />
+      <SummaryStatCard
+        label="Conversions"
+        tooltip="Completed conversion events imported from your connected Google Analytics property."
+        value={totals.conversions.toLocaleString()}
+        delta={deltas.conversions}
+        icon={TrendingUp}
+        isLoading={isLoading}
+      />
+      <SummaryStatCard
+        label="Revenue"
+        tooltip="Revenue attributed in Google Analytics for the selected period."
+        value={formatCurrency(totals.revenue)}
+        delta={deltas.revenue}
+        icon={DollarSign}
+        isLoading={isLoading}
+      />
+    </div>
+  )
 }

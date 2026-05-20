@@ -2,7 +2,7 @@
 
 import type { FormEvent, KeyboardEvent, ReactNode } from 'react'
 
-import { CalendarPlus } from 'lucide-react'
+import { CalendarPlus, LoaderCircle } from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Button } from '@/shared/ui/button'
@@ -14,8 +14,7 @@ import type { MeetingAttendeeSuggestion } from './meeting-attendees-field'
 import {
   MeetingAttendeesSection,
   MeetingDetailsSection,
-  MeetingScheduleDateSection,
-  MeetingTimingSection,
+  MeetingScheduleWhenSection,
 } from './meeting-form-sections'
 
 export type SharedMeetingScheduleCardProps = {
@@ -55,6 +54,28 @@ export type MeetingScheduleCardFrameProps = SharedMeetingScheduleCardProps & {
   submitLabel: string
 }
 
+function ScheduleFormSection({
+  title,
+  description,
+  children,
+  className,
+}: {
+  title: string
+  description?: string
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <section className={cn('rounded-lg border border-muted/50 bg-muted/15 p-4', className)}>
+      <div className="mb-4 space-y-0.5">
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        {description ? <p className="text-xs text-muted-foreground text-pretty">{description}</p> : null}
+      </div>
+      {children}
+    </section>
+  )
+}
+
 export function MeetingScheduleCardFrame({
   attendeeEmails,
   attendeeInput,
@@ -89,8 +110,8 @@ export function MeetingScheduleCardFrame({
   title,
 }: MeetingScheduleCardFrameProps) {
   return (
-    <Card className={cn(DASHBOARD_THEME.cards.base)}>
-      <CardHeader className="space-y-3">
+    <Card className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden')}>
+      <CardHeader className="space-y-3 border-b border-muted/40 bg-muted/10 pb-4">
         <div className="flex items-start gap-3">
           <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 shrink-0 rounded-lg')}>
             <CalendarPlus className="h-5 w-5" aria-hidden />
@@ -101,72 +122,86 @@ export function MeetingScheduleCardFrame({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="border-t border-muted/40 pt-4">
+
+      <CardContent className="pt-5">
         {scheduleRequiresGoogleWorkspace && !googleWorkspaceConnected ? (
-          <Alert className="mb-4">
+          <Alert className="mb-5">
             <AlertTitle>Google Workspace required</AlertTitle>
             <AlertDescription>
-              Connect Google Workspace to create or update calendar-backed meeting invites.
+              Connect Google Workspace from the header to send calendar invites when you schedule a room.
             </AlertDescription>
           </Alert>
         ) : null}
 
-        <form className="grid gap-4 md:grid-cols-2" onSubmit={onSubmit}>
-          <MeetingDetailsSection
-            disabled={scheduleDisabled}
-            title={title}
-            titleId="schedule-title"
-            titlePlaceholder="Weekly client strategy sync"
-            description={description}
-            descriptionId="schedule-description"
-            descriptionPlaceholder="Agenda, links, and expected outcomes"
-            onTitleChange={onTitleChange}
-            onDescriptionChange={onDescriptionChange}
-          />
+        <form className="space-y-5" onSubmit={onSubmit}>
+          <ScheduleFormSection title="When" description="Pick the date, start time, and length of the meeting.">
+            <MeetingScheduleWhenSection
+              disabled={scheduleDisabled}
+              dateId="schedule-date"
+              meetingDate={meetingDate}
+              timeId="schedule-start-time"
+              meetingTime={meetingTime}
+              durationId="schedule-duration"
+              durationMinutes={durationMinutes}
+              timezone={timezone}
+              timezoneId="schedule-timezone"
+              onMeetingDateChange={onMeetingDateChange}
+              onMeetingTimeChange={onMeetingTimeChange}
+              onDurationMinutesChange={onDurationMinutesChange}
+              onTimezoneChange={onTimezoneChange}
+            />
+          </ScheduleFormSection>
 
-          <MeetingScheduleDateSection
-            dateId="schedule-date"
-            disabled={scheduleDisabled}
-            meetingDate={meetingDate}
-            onMeetingDateChange={onMeetingDateChange}
-          />
-
-          <MeetingTimingSection
-            disabled={scheduleDisabled}
-            meetingTime={meetingTime}
-            timeId="schedule-start-time"
-            durationId="schedule-duration"
-            durationMinutes={durationMinutes}
-            timezone={timezone}
-            timezoneId="schedule-timezone"
-            onMeetingTimeChange={onMeetingTimeChange}
-            onDurationMinutesChange={onDurationMinutesChange}
-            onTimezoneChange={onTimezoneChange}
-          />
-
-          <MeetingAttendeesSection
-            label="Attendees"
-            inputId="schedule-attendees-input"
-            inputValue={attendeeInput}
-            selectedEmails={attendeeEmails}
-            disabled={scheduleDisabled}
-            emptyStateText="Add people by selecting users below or typing email addresses."
-            helperText="Use Enter, Tab, comma, or semicolon to add typed emails. Add at least one participant before scheduling."
-            suggestions={attendeeSuggestions}
-            onInputChange={onAttendeeInputChange}
-            onInputKeyDown={onAttendeeKeyDown}
-            onCommitInput={onCommitAttendeeInput}
-            onRemoveEmail={onRemoveAttendee}
-            onAddSuggestedEmail={onAddSuggestedAttendee}
-          />
-
-          <div className="md:col-span-2">
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit" className={getButtonClasses('primary')} disabled={submitDisabled}>
-                {scheduling ? submittingLabel : submitLabel}
-              </Button>
-              {footerAction}
+          <ScheduleFormSection title="Details" description="Give attendees context before they join.">
+            <div className="grid gap-4 md:grid-cols-1">
+              <MeetingDetailsSection
+                disabled={scheduleDisabled}
+                title={title}
+                titleId="schedule-title"
+                titlePlaceholder="Weekly client strategy sync"
+                description={description}
+                descriptionId="schedule-description"
+                descriptionPlaceholder="Agenda, links, and expected outcomes"
+                onTitleChange={onTitleChange}
+                onDescriptionChange={onDescriptionChange}
+              />
             </div>
+          </ScheduleFormSection>
+
+          <ScheduleFormSection title="Participants" description="Invite at least one person to create the room and calendar event.">
+            <MeetingAttendeesSection
+              label="Add attendees"
+              inputId="schedule-attendees-input"
+              inputValue={attendeeInput}
+              selectedEmails={attendeeEmails}
+              disabled={scheduleDisabled}
+              emptyStateText="No attendees added yet."
+              helperText="Press Enter or click Add after typing an email. Suggested teammates appear below."
+              suggestionsLabel="Suggested participants"
+              suggestions={attendeeSuggestions}
+              onInputChange={onAttendeeInputChange}
+              onInputKeyDown={onAttendeeKeyDown}
+              onCommitInput={onCommitAttendeeInput}
+              onRemoveEmail={onRemoveAttendee}
+              onAddSuggestedEmail={onAddSuggestedAttendee}
+            />
+          </ScheduleFormSection>
+
+          <div className="flex flex-wrap items-center gap-3 border-t border-muted/40 pt-5">
+            <Button type="submit" className={cn(getButtonClasses('primary'), 'min-w-40')} disabled={submitDisabled}>
+              {scheduling ? (
+                <>
+                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  {submittingLabel}
+                </>
+              ) : (
+                submitLabel
+              )}
+            </Button>
+            {footerAction}
+            {submitDisabled && !scheduling ? (
+              <p className="text-xs text-muted-foreground">Add a date, time, title, and at least one attendee to schedule.</p>
+            ) : null}
           </div>
         </form>
       </CardContent>

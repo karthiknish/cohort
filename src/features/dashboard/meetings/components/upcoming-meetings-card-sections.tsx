@@ -1,16 +1,25 @@
 import { useCallback } from 'react'
-import { Link2, LoaderCircle, Video } from 'lucide-react'
+import { CalendarDays, Link2, LoaderCircle, Video } from 'lucide-react'
 
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { EmptyState } from '@/shared/ui/empty-state'
 import { getButtonClasses } from '@/lib/dashboard-theme'
 
 import type { MeetingRecord } from '../types'
 import { formatLocalDateTime, normalizeMeetingProcessingState, statusVariant } from '../utils'
 
 export function UpcomingMeetingsEmptyState() {
-  return <p className="text-sm text-muted-foreground">No upcoming meetings yet.</p>
+  return (
+    <EmptyState
+      variant="card"
+      icon={CalendarDays}
+      title="No upcoming meetings yet"
+      description="Schedule a meeting to see it here."
+      className="border-muted/40 bg-muted/10"
+    />
+  )
 }
 
 export function UpcomingMeetingsLoadingState() {

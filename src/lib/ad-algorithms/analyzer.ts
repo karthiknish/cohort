@@ -230,6 +230,18 @@ export function analyzeAdPerformance(
     chartData.benchmarkCharts[providerId] = getBenchmarkChartData(comparison)
   }
 
+  if (globalSummary) {
+    const globalFunnel = analyzeFunnel(globalSummary)
+    funnels.all = globalFunnel
+    chartData.funnelCharts.all = getFunnelChartData(globalFunnel)
+    chartData.efficiencyBreakdown.all = getEfficiencyBreakdown(globalSummary)
+    chartData.trendCharts.all = getTrendChartData(dataPoints, 'spend')
+    chartData.benchmarkCharts.all = getBenchmarkChartData(runBenchmarkAnalysis(globalSummary))
+    benchmarks.all = runBenchmarkAnalysis(globalSummary)
+    benchmarkScores.all = calculateBenchmarkScore(benchmarks.all)
+    trends.all = analyzeAllTrends(dataPoints)
+  }
+
   return {
     summaries,
     globalSummary,
