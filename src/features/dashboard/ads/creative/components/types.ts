@@ -34,6 +34,12 @@ export type Creative = {
     url?: string
     fallback_url?: string
     additional_urls?: string[]
+    website?: {
+      optimization?: {
+        status?: string
+        type?: string
+      }
+    }
   }
   metrics?: {
     impressions?: number

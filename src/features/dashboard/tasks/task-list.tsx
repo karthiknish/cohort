@@ -3,7 +3,6 @@
 
 import { useCallback, useState } from 'react'
 
-import { ScrollArea } from '@/shared/ui/scroll-area'
 import type { TaskRecord, TaskStatus } from '@/types/tasks'
 import {
   TaskListEmptyState,
@@ -84,34 +83,14 @@ export function TaskList({
     }
   }, [])
 
+  const isGrid = viewMode === 'grid'
+
   return (
-    <ScrollArea className="max-h-[min(72vh,680px)]">
-      <div
-        className={
-          viewMode === 'grid'
-            ? 'grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3'
-            : 'divide-y divide-muted/30'
-        }
-      >
+    <>
+      <div className={isGrid ? 'grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3' : 'min-h-[12rem]'}>
         {initialLoading ? <TaskListLoadingState viewMode={viewMode} /> : null}
-        {!loading && error ? <TaskListErrorState error={error} loading={loading} onRefresh={onRefresh} viewMode={viewMode} /> : null}
-
-        {!loading &&
-          !error &&
-          <TaskListItems
-            onDelete={onDelete}
-            onEdit={onEdit}
-            onOpen={openTask}
-            onQuickStatusChange={onQuickStatusChange}
-            onSelectToggle={onToggleTaskSelection}
-            pendingStatusUpdates={pendingStatusUpdates}
-            selectedTaskIds={selectedTaskIds}
-            tasks={tasks}
-            viewMode={viewMode}
-          />}
-
-        {!loading && !error && tasks.length > 0 && hasMore ? (
-          <TaskListLoadMore loadingMore={loadingMore} onLoadMore={onLoadMore} viewMode={viewMode} />
+        {!loading && error ? (
+          <TaskListErrorState error={error} loading={loading} onRefresh={onRefresh} viewMode={viewMode} />
         ) : null}
 
         {!loading && !error && tasks.length === 0 ? (
@@ -123,18 +102,38 @@ export function TaskList({
             onCreateTask={onEmptyCreateTask}
           />
         ) : null}
+
+        {!loading && !error && tasks.length > 0 ? (
+          <TaskListItems
+            tasks={tasks}
+            viewMode={viewMode}
+            pendingStatusUpdates={pendingStatusUpdates}
+            onOpen={openTask}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onQuickStatusChange={onQuickStatusChange}
+            selectedTaskIds={selectedTaskIds}
+            onSelectToggle={onToggleTaskSelection}
+          />
+        ) : null}
       </div>
 
+      {!initialLoading && !error && hasMore ? (
+        <TaskListLoadMore loadingMore={loadingMore} onLoadMore={onLoadMore} viewMode={viewMode} />
+      ) : null}
+
       <TaskViewDialog
+        open={Boolean(viewingTask)}
+        onOpenChange={handleTaskViewDialogOpenChange}
         task={viewingTask}
-        open={!!viewingTask}
         workspaceId={workspaceId}
         userId={userId}
         userName={userName}
         userRole={userRole}
         participants={participants}
-        onOpenChange={handleTaskViewDialogOpenChange}
+        onEdit={onEdit}
+        onDelete={onDelete}
       />
-    </ScrollArea>
+    </>
   )
 }

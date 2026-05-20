@@ -1,0 +1,68 @@
+'use client'
+
+import { RefreshCw, Save, X } from 'lucide-react'
+import { Button } from '@/shared/ui/button'
+import { cn } from '@/lib/utils'
+
+export function CreativeSaveBar(props: {
+  isDirty: boolean
+  isSaving: boolean
+  onSave: () => void
+  onDiscard: () => void
+  className?: string
+}) {
+  const { isDirty, isSaving, onSave, onDiscard, className } = props
+
+  if (!isDirty && !isSaving) return null
+
+  return (
+    <div
+      className={cn(
+        'sticky bottom-0 z-30 -mx-1 mt-4 border-t bg-background/95 px-4 py-3 backdrop-blur-md supports-[backdrop-filter]:bg-background/80',
+        className,
+      )}
+      role="region"
+      aria-label="Save creative changes"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">
+            {isSaving ? 'Saving to Meta…' : 'Unsaved changes'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {isSaving
+              ? 'Publishing your copy updates to the ad platform.'
+              : 'Press ⌘S to save, or use the buttons below.'}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onDiscard}
+            disabled={isSaving}
+            className="h-9"
+          >
+            <X className="mr-1.5 h-3.5 w-3.5" />
+            Discard
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={onSave}
+            disabled={isSaving || !isDirty}
+            className="h-9 min-w-[140px] shadow-md shadow-primary/15"
+          >
+            {isSaving ? (
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Save className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            {isSaving ? 'Saving…' : 'Save to Meta'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}

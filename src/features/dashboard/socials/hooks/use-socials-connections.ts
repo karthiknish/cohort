@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useConvexAuth, useQuery } from 'convex/react'
+import { useConvexAuth, useMutation, useQuery } from 'convex/react'
 
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
@@ -16,6 +16,11 @@ export type SocialsConnectionStatus = {
   connected: boolean
   accountId: string | null
   accountName: string | null
+  facebookPageId: string | null
+  facebookPageName: string | null
+  instagramBusinessId: string | null
+  instagramBusinessName: string | null
+  setupComplete: boolean
   lastSyncStatus: 'never' | 'pending' | 'success' | 'error' | null
   lastSyncedAtMs: number | null
   linkedAtMs: number | null
@@ -24,8 +29,8 @@ export type SocialsConnectionStatus = {
 export type UseSocialsConnectionsReturn = {
   status: SocialsConnectionStatus | null
   statusLoading: boolean
-  /** True while redirecting to Meta OAuth. */
   oauthPending: boolean
+  syncPending: boolean
   connectionError: string | null
   handleConnectMeta: () => Promise<void>
   handleDisconnect: () => Promise<void>
@@ -33,15 +38,19 @@ export type UseSocialsConnectionsReturn = {
 }
 
 export function useSocialsConnections(): UseSocialsConnectionsReturn {
-  const { user, startMetaOauth, disconnectProvider } = useAuth()
+  const { user, startMetaOauth } = useAuth()
   const router = useRouter()
   const { selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
   const { toast } = useToast()
 
+  const requestManualSync = useMutation(socialsIntegrationsApi.requestManualSync)
+  const disconnectIntegration = useMutation(socialsIntegrationsApi.disconnectIntegration)
+
   const [oauthPending, setOauthPending] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
+  const [syncPending, setSyncPending] = useState(false)
 
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const canQuery = !isPreviewMode && isAuthenticated && !convexAuthLoading && Boolean(workspaceId)
@@ -50,30 +59,89 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
     socialsIntegrationsApi.getStatus,
     canQuery && workspaceId
       ? { workspaceId, clientId: selectedClientId ?? null }
-      : 'skip'
+      : 'skip',
   )
 
   const statusLoading = canQuery && rawStatus === undefined
 
   const status: SocialsConnectionStatus | null = isPreviewMode
-    ? getPreviewSocialConnectionStatus()
+    ? {
+        ...getPreviewSocialConnectionStatus(),
+        facebookPageId: 'preview-page',
+        facebookPageName: 'Preview Page',
+        instagramBusinessId: 'preview-ig',
+        instagramBusinessName: 'preview_brand',
+        setupComplete: true,
+      }
     : rawStatus
       ? {
           connected: rawStatus.connected,
           accountId: rawStatus.accountId,
           accountName: rawStatus.accountName,
+          facebookPageId: rawStatus.facebookPageId ?? null,
+          facebookPageName: rawStatus.facebookPageName ?? null,
+          instagramBusinessId: rawStatus.instagramBusinessId ?? null,
+          instagramBusinessName: rawStatus.instagramBusinessName ?? null,
+          setupComplete: rawStatus.setupComplete ?? Boolean(rawStatus.facebookPageId),
           lastSyncStatus: rawStatus.lastSyncStatus as SocialsConnectionStatus['lastSyncStatus'],
           lastSyncedAtMs: rawStatus.lastSyncedAtMs,
           linkedAtMs: rawStatus.linkedAtMs,
         }
       : null
 
-  const showPreviewModeToast = useCallback((description: string) => {
-    toast({
-      title: 'Preview mode',
-      description,
-    })
-  }, [toast])
+  useEffect(() => {
+    setSyncPending(status?.lastSyncStatus === 'pending')
+  }, [status?.lastSyncStatus])
+
+  const oauthProcessedRef = useRef(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || isPreviewMode) return
+
+    const searchParams = new URLSearchParams(window.location.search)
+    const oauthSuccess = searchParams.get('oauth_success') === 'true'
+    const oauthError = searchParams.get('oauth_error')
+    const message = searchParams.get('message')
+
+    if (!oauthSuccess && !oauthError) return
+    if (oauthProcessedRef.current) return
+    oauthProcessedRef.current = true
+
+    const newUrl = new URL(window.location.href)
+    newUrl.searchParams.delete('oauth_success')
+    newUrl.searchParams.delete('oauth_error')
+    newUrl.searchParams.delete('provider')
+    newUrl.searchParams.delete('message')
+    newUrl.searchParams.delete('clientId')
+    newUrl.searchParams.delete('surface')
+    window.history.replaceState({}, '', newUrl.toString())
+
+    if (oauthSuccess) {
+      toast({
+        title: 'Meta connected',
+        description: 'Select a Facebook Page to finish organic social setup.',
+      })
+      setConnectionError(null)
+    } else if (oauthError) {
+      const errorMessage = message ?? 'Meta authorization failed'
+      setConnectionError(errorMessage)
+      toast({
+        variant: 'destructive',
+        title: 'Connection failed',
+        description: errorMessage,
+      })
+    }
+  }, [isPreviewMode, toast])
+
+  const showPreviewModeToast = useCallback(
+    (description: string) => {
+      toast({
+        title: 'Preview mode',
+        description,
+      })
+    },
+    [toast],
+  )
 
   const handleConnectMeta = useCallback(async () => {
     if (typeof window === 'undefined') return
@@ -118,7 +186,17 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
       })
       setOauthPending(false)
     }
-  }, [convexAuthLoading, isAuthenticated, isPreviewMode, user, startMetaOauth, selectedClientId, toast, router, showPreviewModeToast])
+  }, [
+    convexAuthLoading,
+    isAuthenticated,
+    isPreviewMode,
+    user,
+    startMetaOauth,
+    selectedClientId,
+    toast,
+    router,
+    showPreviewModeToast,
+  ])
 
   const handleDisconnect = useCallback(async () => {
     if (isPreviewMode) {
@@ -126,10 +204,14 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
       return
     }
 
-    if (!user) return
+    if (!workspaceId) return
+
     try {
-      await disconnectProvider('facebook', selectedClientId ?? null)
-      toast({ title: 'Disconnected', description: 'Meta social connection removed.' })
+      await disconnectIntegration({
+        workspaceId,
+        clientId: selectedClientId ?? null,
+      })
+      toast({ title: 'Disconnected', description: 'Organic Meta social connection removed (Ads unchanged).' })
     } catch (error: unknown) {
       logError(error, 'useSocialsConnections:handleDisconnect')
       toast({
@@ -138,27 +220,64 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
         description: asErrorMessage(error),
       })
     }
-  }, [disconnectProvider, isPreviewMode, selectedClientId, showPreviewModeToast, toast, user])
+  }, [
+    disconnectIntegration,
+    isPreviewMode,
+    selectedClientId,
+    showPreviewModeToast,
+    toast,
+    workspaceId,
+  ])
 
-  const handleRequestSync = useCallback(
-    async () => {
-      if (isPreviewMode) {
-        showPreviewModeToast('Social sync is disabled while sample social data is active.')
-        return
-      }
+  const handleRequestSync = useCallback(async () => {
+    if (isPreviewMode) {
+      showPreviewModeToast('Social sync is disabled while sample social data is active.')
+      return
+    }
 
-      // Sync requests are handled server-side — this is a fire-and-forget trigger
-      // that inserts a socialSyncJobs row. Full action-based sync is wired
-      // separately via the admin/worker layer.
-      toast({ title: 'Sync requested', description: 'Your data will refresh shortly.' })
-    },
-    [isPreviewMode, showPreviewModeToast, toast],
-  )
+    if (!workspaceId) return
+
+    if (!status?.setupComplete) {
+      toast({
+        variant: 'destructive',
+        title: 'Setup required',
+        description: 'Select a Facebook Page before syncing organic metrics.',
+      })
+      return
+    }
+
+    setSyncPending(true)
+    try {
+      await requestManualSync({
+        workspaceId,
+        clientId: selectedClientId ?? null,
+        timeframeDays: 30,
+      })
+      toast({ title: 'Sync requested', description: 'Organic metrics will refresh shortly.' })
+    } catch (error: unknown) {
+      logError(error, 'useSocialsConnections:handleRequestSync')
+      setSyncPending(false)
+      toast({
+        variant: 'destructive',
+        title: 'Sync failed',
+        description: asErrorMessage(error),
+      })
+    }
+  }, [
+    isPreviewMode,
+    requestManualSync,
+    selectedClientId,
+    showPreviewModeToast,
+    status?.setupComplete,
+    toast,
+    workspaceId,
+  ])
 
   return {
     status,
     statusLoading,
     oauthPending,
+    syncPending,
     connectionError,
     handleConnectMeta,
     handleDisconnect,

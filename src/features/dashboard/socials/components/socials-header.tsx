@@ -31,8 +31,7 @@ export function SocialsHeader({
                 {PAGE_TITLES.socials?.title ?? 'Socials'}
               </h1>
               <p className="text-pretty text-sm leading-relaxed text-muted-foreground md:text-[15px]">
-                {PAGE_TITLES.socials?.description ??
-                  'Organic reach, engagement, and follower trends from Meta—use the date range to compare periods.'}
+                Organic reach and engagement from Meta Pages and Instagram — not paid ads. Use the date range to compare periods.
               </p>
             </div>
           </div>

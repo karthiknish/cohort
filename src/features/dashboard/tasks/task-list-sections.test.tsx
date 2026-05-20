@@ -44,7 +44,7 @@ describe('task list sections', () => {
 
     expect(markup).toContain('skeleton-shimmer')
     expect(markup).toContain('Failed to load')
-    expect(markup).toContain('No tasks found')
+    expect(markup).toContain('No tasks')
     expect(markup).toContain('Loading…')
   })
 

@@ -10,6 +10,19 @@ vi.mock('./hooks/use-socials-page-controller', () => ({
   useSocialsPageController: vi.fn(),
 }))
 
+vi.mock('@/shared/hooks/use-persisted-tab', () => ({
+  usePersistedTab: () => ({
+    value: 'facebook',
+    setValue: vi.fn(),
+  }),
+}))
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  usePathname: () => '/dashboard/socials',
+  useSearchParams: () => new URLSearchParams(),
+}))
+
 vi.mock('@/features/dashboard/ads/components/date-range-picker', () => ({
   DateRangePicker: () => <div data-testid="date-range-picker" />,
 }))
@@ -22,17 +35,54 @@ import SocialsPage from './page'
 const mockedUsePreview = vi.mocked(usePreview)
 const mockedUseSocialsPageController = vi.mocked(useSocialsPageController)
 
+const baseSetup = {
+  setupState: {
+    stage: 'ready' as const,
+    title: 'Ready',
+    description: 'Configured',
+    switchSourceRecommended: false,
+    switchSourceMessage: null,
+  },
+  pages: [],
+  pagesLoading: false,
+  pagesError: null,
+  selectedPageId: '',
+  setSelectedPageId: vi.fn(),
+  confirmingPage: false,
+  facebookStatus: 'ready' as const,
+  instagramStatus: 'ready' as const,
+  facebookCount: 1,
+  instagramCount: 1,
+  selectedPageLabel: 'Demo Page',
+  loadPages: vi.fn(async () => undefined),
+  confirmSelectedPage: vi.fn(async () => undefined),
+}
+
 const baseControllerValue = {
   selectedClient: { name: 'Tech Corp' },
   connections: {
-    status: { connected: true, accountName: 'Demo Meta', lastSyncedAtMs: 1 },
+    status: {
+      connected: true,
+      accountName: 'Demo Meta',
+      accountId: 'page1',
+      facebookPageId: 'page1',
+      facebookPageName: 'Demo Page',
+      instagramBusinessId: 'ig1',
+      instagramBusinessName: 'demo',
+      setupComplete: true,
+      lastSyncStatus: 'success' as const,
+      lastSyncedAtMs: 1,
+      linkedAtMs: 1,
+    },
     oauthPending: false,
+    syncPending: false,
     connectionError: null,
     handleConnectMeta: vi.fn(async () => undefined),
     handleDisconnect: vi.fn(async () => undefined),
     handleRequestSync: vi.fn(async () => undefined),
     statusLoading: false,
   },
+  setup: baseSetup,
   metrics: {
     overviewLoading: false,
     facebookOverview: {
@@ -81,7 +131,7 @@ describe('SocialsPage', () => {
 
     const markup = renderToStaticMarkup(<SocialsPage />)
 
-    expect(markup).not.toContain('Meta connection')
+    expect(markup).not.toContain('Organic social (Meta)')
     expect(markup).not.toContain('Connect with Meta')
     expect(markup).toContain('Facebook organic performance')
     expect(markup).toContain('Facebook')
@@ -98,6 +148,6 @@ describe('SocialsPage', () => {
 
     const markup = renderToStaticMarkup(<SocialsPage />)
 
-    expect(markup).toContain('Meta connection')
+    expect(markup).toContain('Organic social (Meta)')
   })
 })

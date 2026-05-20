@@ -215,6 +215,41 @@ export const marketingTables = {
     .index('by_workspace_date', ['workspaceId', 'date']),
 
   // ==========================================================================
+  // SOCIAL ORGANIC INTEGRATIONS (separate from adIntegrations / paid Meta Ads)
+  // ==========================================================================
+
+  socialIntegrations: defineTable({
+    workspaceId: v.string(),
+    clientId: v.union(v.string(), v.null()),
+    accessToken: v.union(v.string(), v.null()),
+    refreshToken: v.union(v.string(), v.null()),
+    scopes: v.array(v.string()),
+    metaUserId: v.union(v.string(), v.null()),
+    metaUserName: v.union(v.string(), v.null()),
+    facebookPageId: v.union(v.string(), v.null()),
+    facebookPageName: v.union(v.string(), v.null()),
+    instagramBusinessId: v.union(v.string(), v.null()),
+    instagramBusinessName: v.union(v.string(), v.null()),
+    accessTokenExpiresAtMs: v.union(v.number(), v.null()),
+    refreshTokenExpiresAtMs: v.union(v.number(), v.null()),
+    lastSyncStatus: v.union(
+      v.literal('never'),
+      v.literal('pending'),
+      v.literal('success'),
+      v.literal('error'),
+    ),
+    lastSyncMessage: v.union(v.string(), v.null()),
+    lastSyncedAtMs: v.union(v.number(), v.null()),
+    lastSyncRequestedAtMs: v.union(v.number(), v.null()),
+    linkedAtMs: v.union(v.number(), v.null()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_workspace_client', ['workspaceId', 'clientId'])
+    .index('by_workspace', ['workspaceId'])
+    .index('by_updatedAt', ['updatedAt']),
+
+  // ==========================================================================
   // SOCIAL ORGANIC METRICS
   // Separate from adMetrics — these rows come from Page/Profile Insights APIs,
   // not from ad-account reporting. No spend/ROAS/CPA fields.

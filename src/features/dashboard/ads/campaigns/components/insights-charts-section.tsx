@@ -209,12 +209,39 @@ export function InsightsChartsSection({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* 1. Performance Overview */}
-      <PerformanceChart
-        metrics={chartMetrics}
-        loading={insightsLoading}
-        currency={displayCurrency}
-        dataSource="ads"
-      />
+      <Card className="border-muted/40 bg-card shadow-sm">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg">Performance Overview</CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 cursor-help text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>
+                    <strong>Revenue:</strong> Total income generated from campaign conversions.
+                  </p>
+                  <p className="mt-1">
+                    <strong>Ad Spend:</strong> Total amount invested in advertising for this campaign.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <CardDescription>Spend and revenue over time</CardDescription>
+        </CardHeader>
+        <CardContent className="h-[300px]">
+          <PerformanceChart
+            metrics={chartMetrics}
+            loading={insightsLoading}
+            currency={displayCurrency}
+            dataSource="ads"
+            showDetailLink={false}
+            hideHeader
+          />
+        </CardContent>
+      </Card>
 
       {/* 2. Engagement Trends */}
       <Card className="border-muted/40 shadow-sm">

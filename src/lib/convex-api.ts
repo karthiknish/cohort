@@ -301,6 +301,9 @@ export const creativesCopyApi = {
 export const socialsIntegrationsApi = {
   getStatus: looseApi.socialIntegrations.getStatus,
   requestManualSync: looseApi.socialIntegrations.requestManualSync,
+  discoverPages: looseApi.socialIntegrations.discoverPages,
+  confirmSurfaceBinding: looseApi.socialIntegrations.confirmSurfaceBinding,
+  disconnectIntegration: looseApi.socialIntegrations.disconnectIntegration,
 }
 
 export const socialMetricsApi = {

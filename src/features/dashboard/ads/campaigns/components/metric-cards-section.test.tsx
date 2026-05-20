@@ -25,6 +25,7 @@ describe('MetricCardsSection', () => {
         currency="GBP"
         efficiencyScore={87}
         metrics={metrics}
+        defaultMoreMetricsOpen
       />,
     )
 

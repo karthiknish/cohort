@@ -1,16 +1,24 @@
 'use client'
 
+import { useState } from 'react'
 import {
+  ChevronDown,
   CreditCard,
   Target,
   MousePointerClick,
   Eye,
   TrendingUp,
-  Users
+  Users,
 } from 'lucide-react'
 import { Card, CardContent } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/shared/ui/collapsible'
 import {
   Tooltip,
   TooltipContent,
@@ -38,6 +46,8 @@ interface MetricCardsSectionProps {
   loading: boolean
   currency?: string
   efficiencyScore?: number | null
+  /** Expand secondary metrics on first paint (e.g. tests). */
+  defaultMoreMetricsOpen?: boolean
 }
 
 function formatCurrency(value: number, currency: string = 'USD'): string {
@@ -73,6 +83,7 @@ function MetricCard({
   trend,
   loading,
   description,
+  featured = false,
 }: {
   label: string
   value: string
@@ -81,10 +92,16 @@ function MetricCard({
   trend?: 'up' | 'down' | 'neutral'
   loading?: boolean
   description?: string
+  featured?: boolean
 }) {
   const content = (
-    <Card className="group overflow-hidden border-muted/40 shadow-sm motion-chromatic hover:shadow-md">
-      <CardContent className="p-4">
+    <Card
+      className={cn(
+        'group overflow-hidden border-muted/40 shadow-sm transition-shadow hover:shadow-md',
+        featured && 'border-primary/15 bg-linear-to-br from-card to-muted/20',
+      )}
+    >
+      <CardContent className={cn('p-4', featured && 'p-5')}>
         {loading ? (
           <div className="space-y-2">
             <Skeleton className="h-4 w-20" />
@@ -96,7 +113,9 @@ function MetricCard({
               <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
                 {label}
               </p>
-              <p className="text-2xl font-black tracking-tight">{value}</p>
+              <p className={cn('font-black tracking-tight', featured ? 'text-3xl' : 'text-2xl')}>
+                {value}
+              </p>
               {subValue && (
                 <p className="text-xs font-medium text-muted-foreground/60">{subValue}</p>
               )}
@@ -137,46 +156,22 @@ function MetricCard({
   )
 }
 
-export function MetricCardsSection({ metrics, loading, currency, efficiencyScore }: MetricCardsSectionProps) {
+export function MetricCardsSection({
+  metrics,
+  loading,
+  currency,
+  efficiencyScore,
+  defaultMoreMetricsOpen = false,
+}: MetricCardsSectionProps) {
+  const [moreOpen, setMoreOpen] = useState(defaultMoreMetricsOpen)
   const displayCurrency = normalizeCurrencyCode(currency)
   const displayEfficiencyScore =
     typeof efficiencyScore === 'number' && Number.isFinite(efficiencyScore)
       ? Math.max(0, Math.min(100, Math.round(efficiencyScore)))
       : null
 
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <MetricCard
-        label="Total Spend"
-        value={metrics ? formatCurrency(metrics.spend, displayCurrency) : '—'}
-        icon={CreditCard}
-        loading={loading}
-        description="Total amount spent on advertising during the selected time period"
-      />
-      <MetricCard
-        label="ROAS"
-        value={metrics ? `${metrics.roas.toFixed(2)}x` : '—'}
-        trend={metrics && metrics.roas > 2 ? 'up' : 'neutral'}
-        icon={TrendingUp}
-        loading={loading}
-        description="Return on Ad Spend - revenue generated per dollar spent. Higher is better."
-      />
-      <MetricCard
-        label="CTR"
-        value={metrics ? formatPercent(metrics.ctr) : '—'}
-        subValue={metrics ? `${formatNumber(metrics.clicks)} clicks` : undefined}
-        icon={MousePointerClick}
-        loading={loading}
-        description="Click-Through Rate - percentage of people who clicked after seeing your ad"
-      />
-      <MetricCard
-        label="CPA"
-        value={metrics ? formatCurrency(metrics.cpa, displayCurrency) : '—'}
-        trend={metrics && metrics.cpa < 20 ? 'up' : 'down'}
-        icon={Target}
-        loading={loading}
-        description="Cost Per Acquisition - average cost to get one conversion. Lower is better."
-      />
+  const secondaryMetrics = (
+    <>
       <MetricCard
         label="Impressions"
         value={metrics ? formatNumber(metrics.impressions) : '—'}
@@ -199,16 +194,20 @@ export function MetricCardsSection({ metrics, loading, currency, efficiencyScore
         loading={loading}
         description="Average Cost Per Click - average cost each time someone clicks your ad"
       />
-      {metrics?.reach !== undefined && (
+      {metrics?.reach !== undefined ? (
         <MetricCard
           label="Total Reach"
           value={formatNumber(metrics.reach)}
           icon={Users}
           loading={loading}
-          subValue={metrics ? `${((metrics.reach / metrics.impressions) * 100).toFixed(1)}% of impressions` : undefined}
+          subValue={
+            metrics
+              ? `${((metrics.reach / metrics.impressions) * 100).toFixed(1)}% of impressions`
+              : undefined
+          }
           description="Number of unique people who saw your ad at least once"
         />
-      )}
+      ) : null}
       <MetricCard
         label="Efficiency Score"
         value={displayEfficiencyScore !== null ? `${displayEfficiencyScore}%` : '—'}
@@ -216,6 +215,70 @@ export function MetricCardsSection({ metrics, loading, currency, efficiencyScore
         loading={loading}
         description="Overall performance health rating combining spend, revenue, conversions, and other metrics"
       />
+    </>
+  )
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Total Spend"
+          value={metrics ? formatCurrency(metrics.spend, displayCurrency) : '—'}
+          icon={CreditCard}
+          loading={loading}
+          featured
+          description="Total amount spent on advertising during the selected time period"
+        />
+        <MetricCard
+          label="ROAS"
+          value={metrics ? `${metrics.roas.toFixed(2)}x` : '—'}
+          trend={metrics && metrics.roas > 2 ? 'up' : 'neutral'}
+          icon={TrendingUp}
+          loading={loading}
+          featured
+          description="Return on Ad Spend - revenue generated per dollar spent. Higher is better."
+        />
+        <MetricCard
+          label="CTR"
+          value={metrics ? formatPercent(metrics.ctr) : '—'}
+          subValue={metrics ? `${formatNumber(metrics.clicks)} clicks` : undefined}
+          icon={MousePointerClick}
+          loading={loading}
+          featured
+          description="Click-Through Rate - percentage of people who clicked after seeing your ad"
+        />
+        <MetricCard
+          label="CPA"
+          value={metrics ? formatCurrency(metrics.cpa, displayCurrency) : '—'}
+          trend={metrics && metrics.cpa < 20 ? 'up' : 'down'}
+          icon={Target}
+          loading={loading}
+          featured
+          description="Cost Per Acquisition - average cost to get one conversion. Lower is better."
+        />
+      </div>
+
+      <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
+        <CollapsibleTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="w-full gap-1.5 text-muted-foreground hover:text-foreground"
+          >
+            <ChevronDown
+              className={cn('h-4 w-4 transition-transform', moreOpen && 'rotate-180')}
+              aria-hidden
+            />
+            {moreOpen ? 'Hide additional metrics' : 'Show additional metrics'}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {secondaryMetrics}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   )
 }

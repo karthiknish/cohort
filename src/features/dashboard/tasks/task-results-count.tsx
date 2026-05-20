@@ -12,7 +12,7 @@ export function TaskResultsCount({ sortedCount, totalCount, loading }: TaskResul
   if (totalCount === 0) return null
 
   return (
-    <div className="border-t p-4 text-xs text-muted-foreground flex items-center justify-between">
+    <div className="flex items-center justify-between border-t border-border/80 px-4 py-2 text-xs text-muted-foreground">
       <span>
         Showing {sortedCount} of {totalCount} task
         {totalCount !== 1 ? 's' : ''}

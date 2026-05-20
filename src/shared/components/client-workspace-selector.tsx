@@ -255,8 +255,8 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
   const selectedLabel = selectedClient?.name ?? placeholder
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <div className="relative w-full min-w-[220px]">
+    <div className={cn('flex min-w-0 items-center gap-2', className)}>
+      <div className="relative min-w-0 flex-1 sm:max-w-[12.5rem] lg:max-w-[14rem]">
         <Select
           value={selectValue}
           onValueChange={handleValueChange}
@@ -284,7 +284,7 @@ export function ClientWorkspaceSelector({ className }: ClientWorkspaceSelectorPr
           </SelectTrigger>
           <SelectContent
             position="popper"
-            className="w-[var(--radix-select-trigger-width)] min-w-[220px] z-[3000]"
+            className="z-[3000] min-w-[var(--radix-select-trigger-width)] w-[var(--radix-select-trigger-width)]"
             sideOffset={4}
           >
             <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-muted-foreground border-b border-border/50 mb-1">

@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 
 import { type DateRange } from '@/features/dashboard/ads/components/date-range-picker'
 import { normalizeCurrencyCode } from '@/constants/currencies'
+import { Button } from '@/shared/ui/button'
 import { Card, CardContent } from '@/shared/ui/card'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -23,6 +24,8 @@ import { AlgorithmicInsightsSection } from '../../components/algorithmic-insight
 import { AudienceControlSection } from '../../components/audience-control-section'
 import { BudgetControlSection } from '../../components/budget-control-section'
 import { CampaignAdsSection } from '../../components/campaign-ads-section'
+import { CampaignPageLayout, CampaignSection } from '../../components/campaign-page-shell'
+import { CampaignInsightsError } from '../../components/campaign-insights-error'
 import { FormulaBuilderCard } from '@/features/dashboard/ads/components/formula-builder-card'
 import { useFormulaEditor } from '@/features/dashboard/ads/hooks/use-formula-editor'
 import { DirectionalPageTransition, RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
@@ -491,9 +494,12 @@ function CampaignInsightsPageContent() {
     void loadCampaign()
   }, [loadCampaign])
 
+  const handleRetryInsights = useCallback(() => {
+    void loadInsights()
+  }, [loadInsights])
+
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-10 p-6 pb-20">
-      {/* 1. Header & Controls */}
+    <div className="mx-auto flex max-w-7xl flex-col gap-6 p-6 pb-20">
       <CampaignHeader
         campaign={campaign}
         loading={campaignLoading}
@@ -503,88 +509,103 @@ function CampaignInsightsPageContent() {
         refreshing={insightsLoading}
       />
 
-      {campaignError && !isPreviewMode && (
+      {campaignError && !isPreviewMode ? (
         <Card className="border-destructive/20 bg-destructive/5">
-          <CardContent className="flex items-center gap-3 p-4 text-sm font-bold text-destructive">
-            <span>{campaignError}</span>
-            <button type="button" onClick={handleRetryCampaign} className="underline">
+          <CardContent className="flex flex-wrap items-center gap-3 p-4 text-sm text-destructive">
+            <span className="font-medium">{campaignError}</span>
+            <Button type="button" variant="outline" size="sm" onClick={handleRetryCampaign}>
               Retry
-            </button>
+            </Button>
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
-      {/* 2. Key Metrics Grid */}
-      <MetricCardsSection
-        metrics={calculatedMetrics}
-        loading={insightsLoading}
-        currency={displayCurrency}
-        efficiencyScore={efficiencyScore}
+      <CampaignPageLayout
+        renderPerformance={() => (
+          <>
+            <CampaignSection
+              title="Key metrics"
+              description="Totals for the selected date range. Expand for reach, efficiency, and cost breakdowns."
+            >
+              <MetricCardsSection
+                metrics={calculatedMetrics}
+                loading={insightsLoading}
+                currency={displayCurrency}
+                efficiencyScore={efficiencyScore}
+              />
+            </CampaignSection>
+
+            <CampaignSection
+              title="Trends"
+              description="Spend, engagement, conversions, and reach over time."
+            >
+              {insightsError ? (
+                <CampaignInsightsError
+                  message={insightsError}
+                  onRetry={handleRetryInsights}
+                  retrying={insightsLoading}
+                />
+              ) : (
+                <InsightsChartsSection
+                  chartMetrics={chartMetrics}
+                  engagementChartData={engagementChartData}
+                  conversionsChartData={conversionsChartData}
+                  reachChartData={reachChartData}
+                  insightsLoading={insightsLoading}
+                  currency={displayCurrency}
+                />
+              )}
+            </CampaignSection>
+
+            {!insightsLoading && !insightsError ? (
+              <AlgorithmicInsightsSection
+                insights={algorithmicInsightsList}
+                loading={insightsLoading}
+                efficiencyScore={efficiencyScore ?? 0}
+              />
+            ) : null}
+          </>
+        )}
+        renderControls={() => (
+          <>
+            <BudgetControlSection
+              key={`budget-${providerId}-${campaignId}-${campaign?.budgetType ?? 'none'}-${campaign?.budget ?? 'none'}`}
+              providerId={providerId}
+              campaignId={campaignId}
+              clientId={selectedClientId}
+              isPreviewMode={isPreviewMode}
+              currency={displayCurrency}
+              budget={campaign?.budget}
+              budgetType={campaign?.budgetType}
+              onReloadCampaign={loadCampaign}
+            />
+            <AudienceControlSection
+              providerId={providerId}
+              campaignId={campaignId}
+              clientId={selectedClientId}
+              isPreviewMode={isPreviewMode}
+            />
+          </>
+        )}
+        renderCreatives={() => (
+          <CampaignAdsSection
+            providerId={providerId}
+            campaignId={campaignId}
+            clientId={selectedClientId}
+            isPreviewMode={isPreviewMode}
+            currency={displayCurrency}
+          />
+        )}
+        renderAdvanced={() => (
+          <div className="grid grid-cols-1 gap-6">
+            <FormulaBuilderCard
+              formulaEditor={formulaEditor}
+              metricTotals={calculatedMetrics ?? undefined}
+              loading={insightsLoading}
+            />
+          </div>
+        )}
       />
-
-      {/* 3. Budget Control */}
-      <BudgetControlSection
-        key={`budget-${providerId}-${campaignId}-${campaign?.budgetType ?? 'none'}-${campaign?.budget ?? 'none'}`}
-        providerId={providerId}
-        campaignId={campaignId}
-        clientId={selectedClientId}
-        isPreviewMode={isPreviewMode}
-        currency={displayCurrency}
-        budget={campaign?.budget}
-        budgetType={campaign?.budgetType}
-        onReloadCampaign={loadCampaign}
-      />
-
-      {/* 4. Audience Control */}
-      <AudienceControlSection
-        providerId={providerId}
-        campaignId={campaignId}
-        clientId={selectedClientId}
-        isPreviewMode={isPreviewMode}
-      />
-
-      {/* 5. Visualization Charts */}
-      {insightsError ? (
-        <Card className="border-muted/40 bg-muted/5 p-10 text-center">
-          <p className="text-sm font-bold text-muted-foreground">{insightsError}</p>
-        </Card>
-      ) : (
-        <InsightsChartsSection
-          chartMetrics={chartMetrics}
-          engagementChartData={engagementChartData}
-          conversionsChartData={conversionsChartData}
-          reachChartData={reachChartData}
-          insightsLoading={insightsLoading}
-          currency={displayCurrency}
-        />
-      )}
-
-      {/* 6. Ads used in this campaign */}
-      <CampaignAdsSection
-        providerId={providerId}
-        campaignId={campaignId}
-        clientId={selectedClientId}
-        isPreviewMode={isPreviewMode}
-        currency={displayCurrency}
-      />
-
-      {/* 7. Formula Builder */}
-      <div className="grid grid-cols-1 gap-6">
-        <FormulaBuilderCard
-          formulaEditor={formulaEditor}
-          metricTotals={calculatedMetrics ?? undefined}
-          loading={insightsLoading}
-        />
-      </div>
-
-      {/* 8. Algorithmic Insights */}
-      {!insightsLoading && !insightsError && (
-        <AlgorithmicInsightsSection
-          insights={algorithmicInsightsList}
-          loading={insightsLoading}
-          efficiencyScore={efficiencyScore ?? 0}
-        />
-      )}
     </div>
   )
 }

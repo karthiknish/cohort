@@ -1,6 +1,9 @@
 import type { ActionCtx } from './_generated/server'
-import { api } from '/_generated/api'
+import { internalMutation } from './_generated/server'
+import { internal } from '/_generated/api'
+import { v } from 'convex/values'
 import { Errors } from './errors'
+import { rateLimiter } from './rateLimit'
 import {
   buildGeminiRateLimitKey,
   formatGeminiRateLimitMessage,
@@ -9,6 +12,41 @@ import {
 } from '../src/lib/geminiRateLimits'
 
 type GeminiActionRateLimitContext = Pick<ActionCtx, 'runMutation'>
+
+const limitConfigValidator = v.object({
+  kind: v.literal('fixed window'),
+  rate: v.number(),
+  period: v.number(),
+  capacity: v.optional(v.number()),
+  shards: v.optional(v.number()),
+  start: v.optional(v.number()),
+})
+
+/** Internal mutation keeps action callers off the large public `api` type (TS2589). */
+export const applyGeminiRateLimitInternal = internalMutation({
+  args: {
+    name: v.string(),
+    key: v.string(),
+    count: v.optional(v.number()),
+    config: limitConfigValidator,
+  },
+  returns: v.object({
+    ok: v.boolean(),
+    retryAfterMs: v.union(v.number(), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    const status = await rateLimiter.limit(ctx, args.name, {
+      key: args.key,
+      count: args.count,
+      config: args.config,
+    })
+
+    return {
+      ok: status.ok,
+      retryAfterMs: status.retryAfter ?? null,
+    }
+  },
+})
 
 export async function enforceGeminiActionRateLimit(
   ctx: GeminiActionRateLimitContext,
@@ -26,16 +64,20 @@ export async function enforceGeminiActionRateLimit(
   }
 
   const config = GEMINI_RATE_LIMITS[args.name]
-  const result = await ctx.runMutation(api.rateLimitApi.limit, {
-    name: `gemini.${args.name}`,
-    key: buildGeminiRateLimitKey(args),
-    count: args.count,
-    config: {
-      kind: 'fixed window',
-      rate: config.maxRequests,
-      period: config.windowMs,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = (await ctx.runMutation(
+    internal.geminiRateLimit.applyGeminiRateLimitInternal as any,
+    {
+      name: `gemini.${args.name}`,
+      key: buildGeminiRateLimitKey(args),
+      count: args.count,
+      config: {
+        kind: 'fixed window' as const,
+        rate: config.maxRequests,
+        period: config.windowMs,
+      },
     },
-  })
+  )) as { ok: boolean; retryAfterMs: number | null }
 
   if (!result.ok) {
     throw Errors.rateLimit.tooManyRequests(

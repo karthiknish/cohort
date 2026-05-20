@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef } from 'react'
 
 import { isLoadingPhase } from '@/lib/auth-phase'
 import { Button } from '@/shared/ui/button'
+import { SiteLogo } from '@/shared/components/site-logo'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { toast } from '@/shared/ui/sonner'
 
@@ -107,6 +108,7 @@ interface AccessOverlayProps {
   secondaryActionOnClick?: () => void
   actionVariant?: 'default' | 'outline'
   showSpinner?: boolean
+  showLogo?: boolean
 }
 
 function AccessOverlay({
@@ -119,16 +121,22 @@ function AccessOverlay({
   secondaryActionOnClick,
   actionVariant = 'default',
   showSpinner,
+  showLogo,
 }: AccessOverlayProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-16">
       <div className="w-full max-w-md rounded-lg border border-border bg-background p-8 text-center shadow-sm">
-        {showSpinner && (
+        {showLogo ? (
+          <div className="mb-8 flex justify-center">
+            <SiteLogo size="wordmarkXl" />
+          </div>
+        ) : null}
+        {showSpinner ? (
           <div className="mb-4 flex justify-center">
             <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
           </div>
-        )}
-        <h2 className="text-lg font-semibold text-foreground mb-2">{title}</h2>
+        ) : null}
+        <h2 className="mb-2 text-lg font-semibold text-foreground">{title}</h2>
         <p className="text-sm text-muted-foreground">{message}</p>
         {actionLabel || secondaryActionLabel ? (
           <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
@@ -313,6 +321,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
       <AccessOverlay
         title="Loading your workspace"
         message="Just a moment while we secure your account and verify your permissions."
+        showLogo
         showSpinner
       />
     )
@@ -353,6 +362,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
       <AccessOverlay
         title="Checking account access"
         message="Taking you to your account status page so you can review the next steps."
+        showLogo
         showSpinner
       />
     )
@@ -363,6 +373,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
       <AccessOverlay
         title="Loading your workspace"
         message="Just a moment while we secure your account and verify your permissions."
+        showLogo
         showSpinner
       />
     )

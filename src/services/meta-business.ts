@@ -1,5 +1,7 @@
 import { decrypt, encrypt } from '@/lib/crypto'
 import { persistIntegrationTokens } from '@/lib/ads-admin'
+import { persistSocialIntegrationTokens } from '@/lib/social-admin'
+import { SOCIAL_META_SCOPES } from '@/services/facebook-oauth'
 import { exchangeMetaCodeForToken } from '@/services/facebook-oauth'
 import { calculateBackoffDelay as calculateBackoffDelayLib, sleep } from '@/lib/retry-utils'
 import { logger } from '@/lib/logger'
@@ -85,8 +87,9 @@ export async function completeMetaOAuthFlow(options: {
   userId: string
   clientId?: string | null
   redirectUri: string
+  entryPoint?: 'socials' | 'ads'
 }): Promise<void> {
-  const { code, userId, clientId, redirectUri } = options
+  const { code, userId, clientId, redirectUri, entryPoint = 'ads' } = options
   const appId = process.env.META_APP_ID
   const appSecret = process.env.META_APP_SECRET
 
@@ -212,8 +215,26 @@ export async function completeMetaOAuthFlow(options: {
     throw finalExchangeError ?? new MetaOAuthError('Failed to exchange long-lived Meta token')
   }
 
-  // Persist tokens only. Account selection happens explicitly in setup UI.
+  const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000) : null
 
+  if (entryPoint === 'socials') {
+    await persistSocialIntegrationTokens({
+      userId,
+      clientId: clientId ?? null,
+      accessToken: longLivedToken,
+      scopes: SOCIAL_META_SCOPES,
+      status: 'pending',
+      accessTokenExpiresAt: expiresAt,
+    })
+
+    logger.info('[Meta OAuth Flow] Social integration persisted; awaiting Page selection', {
+      userId,
+      clientId,
+    })
+    return
+  }
+
+  // Ads: persist tokens only. Ad account selection happens in setup UI.
   await persistIntegrationTokens({
     userId,
     providerId: 'facebook',
@@ -223,10 +244,10 @@ export async function completeMetaOAuthFlow(options: {
     accountId: null,
     accountName: null,
     status: 'pending',
-    accessTokenExpiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
+    accessTokenExpiresAt: expiresAt,
   })
 
-  logger.info('[Meta OAuth Flow] Integration persisted successfully; awaiting account selection', {
+  logger.info('[Meta OAuth Flow] Ads integration persisted successfully; awaiting account selection', {
     userId,
     clientId,
   })

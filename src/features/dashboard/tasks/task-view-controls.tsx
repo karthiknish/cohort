@@ -3,7 +3,6 @@
 import { useCallback } from 'react'
 import { Columns3, Download, List, LayoutGrid } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 export type TaskViewControlsProps = {
@@ -32,82 +31,68 @@ export function TaskViewControls({
   }, [onViewModeChange])
 
   return (
-    <div className="flex items-center gap-2">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-9 w-9 rounded-full border-border/70 bg-background text-foreground shadow-sm hover:bg-muted/40"
-            onClick={onExport}
-            disabled={!canExport}
-            aria-label="Export to CSV"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Export to CSV</TooltipContent>
-      </Tooltip>
-      <div className="flex items-center rounded-full border border-border/70 bg-muted/40 p-1 shadow-sm">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                'h-8 w-8 rounded-full',
-                viewMode === 'list'
-                  ? 'bg-background text-foreground shadow-sm hover:bg-background'
-                  : 'text-muted-foreground hover:bg-background/80 hover:text-foreground'
-              )}
-              onClick={handleListView}
-              aria-label="List view"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>List view</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                'h-8 w-8 rounded-full',
-                viewMode === 'grid'
-                  ? 'bg-background text-foreground shadow-sm hover:bg-background'
-                  : 'text-muted-foreground hover:bg-background/80 hover:text-foreground'
-              )}
-              onClick={handleGridView}
-              aria-label="Grid view"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Grid view</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'h-8 rounded-full gap-1.5 px-3',
-                viewMode === 'board'
-                  ? 'bg-background text-foreground shadow-sm hover:bg-background'
-                  : 'text-muted-foreground hover:bg-background/80 hover:text-foreground'
-              )}
-              onClick={handleBoardView}
-              aria-label="Kanban view"
-            >
-              <Columns3 className="h-4 w-4" />
-              <span className="hidden lg:inline">Kanban</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Kanban view (drag and drop)</TooltipContent>
-        </Tooltip>
-      </div>
+    <div className="flex items-center gap-1">
+      <ViewToggleButton
+        active={viewMode === 'list'}
+        label="List"
+        onClick={handleListView}
+        icon={List}
+      />
+      <ViewToggleButton
+        active={viewMode === 'grid'}
+        label="Grid"
+        onClick={handleGridView}
+        icon={LayoutGrid}
+      />
+      <ViewToggleButton
+        active={viewMode === 'board'}
+        label="Board"
+        onClick={handleBoardView}
+        icon={Columns3}
+      />
+      <span className="mx-1 h-4 w-px bg-border" aria-hidden />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+        onClick={onExport}
+        disabled={!canExport}
+        aria-label="Export to CSV"
+      >
+        <Download className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Export</span>
+      </Button>
     </div>
+  )
+}
+
+function ViewToggleButton({
+  active,
+  label,
+  onClick,
+  icon: Icon,
+}: {
+  active: boolean
+  label: string
+  onClick: () => void
+  icon: typeof List
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className={cn(
+        'h-7 gap-1 px-2 text-xs font-normal',
+        active ? 'bg-muted text-foreground' : 'text-muted-foreground',
+      )}
+      onClick={onClick}
+      aria-label={`${label} view`}
+      aria-pressed={active}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      <span className="hidden sm:inline">{label}</span>
+    </Button>
   )
 }

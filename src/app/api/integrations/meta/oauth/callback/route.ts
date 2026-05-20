@@ -76,6 +76,7 @@ export const GET = createApiHandler(
         userId: context.state,
         clientId: context.clientId ?? null,
         redirectUri,
+        entryPoint: context.entryPoint,
       })
 
       console.log(`[meta.oauth.callback] Successfully completed OAuth for user ${context.state}`)
@@ -129,7 +130,15 @@ export const GET = createApiHandler(
       })
 
       // Redirect to dashboard with error signaling
-      const errorUrl = new URL('/dashboard/ads', appUrl)
+      let errorPath = '/dashboard/ads'
+      try {
+        const ctx = validateMetaOAuthState(query.state ?? '')
+        if (ctx.entryPoint === 'socials') errorPath = '/dashboard/socials'
+      } catch {
+        // keep ads default
+      }
+
+      const errorUrl = new URL(errorPath, appUrl)
       errorUrl.searchParams.set('oauth_error', 'oauth_failed')
       errorUrl.searchParams.set('provider', 'facebook')
       errorUrl.searchParams.set('message', userFacingMessage)

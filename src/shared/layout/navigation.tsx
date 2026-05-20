@@ -40,6 +40,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/sh
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Badge } from '@/shared/ui/badge'
 import { ClientWorkspaceSelector } from '@/shared/components/client-workspace-selector'
+import { SiteLogo } from '@/shared/components/site-logo'
 import { useDashboardRoleAccent } from '@/shared/hooks/use-dashboard-role-accent'
 import { NotificationsDropdownDynamic } from '@/shared/components/notifications-dropdown-dynamic'
 import { CommandMenuDynamic } from '@/shared/layout/navigation/command-menu-dynamic'
@@ -462,7 +463,7 @@ export function Header() {
         data-dashboard-role={accent.key}
         style={DASHBOARD_HEADER_TRANSITION_STYLE}
       >
-        <div className="flex h-14 items-center justify-between gap-2 px-3 sm:h-16 sm:gap-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between gap-2 px-3 sm:h-[4.25rem] sm:gap-3 sm:px-6 lg:px-8">
           {/* Mobile menu button */}
           <div className="lg:hidden">
             <Sheet open={open} onOpenChange={setOpen}>
@@ -491,13 +492,14 @@ export function Header() {
             </Sheet>
           </div>
 
-          {/* Workspace selector */}
-          <div className="min-w-0 flex-1 sm:flex-none sm:max-w-65">
-            <ClientWorkspaceSelector className="w-full" />
+          {/* Logo + workspace selector */}
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:flex-none sm:overflow-visible sm:gap-3">
+            <SiteLogo size="wordmarkLg" href="/for-you" className="h-12 sm:h-14 lg:h-16" />
+            <ClientWorkspaceSelector className="min-w-0 w-[9rem] sm:w-auto" />
           </div>
 
           {/* Search / Command menu (takes remaining space on desktop) */}
-          <div className="hidden sm:flex flex-1 sm:max-w-md">
+          <div className="hidden min-w-0 flex-1 basis-0 pl-2 sm:flex sm:max-w-md sm:pl-4">
             <CommandMenuDynamic onOpenHelp={handleOpenHelp} onOpenShortcuts={handleOpenShortcuts} />
           </div>
 

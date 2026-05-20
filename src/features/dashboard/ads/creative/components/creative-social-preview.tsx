@@ -25,7 +25,8 @@ import {
   RectangleVertical,
   Square,
   Play,
-  Pause
+  Pause,
+  ThumbsUp,
 } from 'lucide-react'
 
 import type { AdMetricsSummary } from '@/lib/ad-algorithms'
@@ -54,14 +55,74 @@ export type CreativePerformanceSummary = AdMetricsSummary & {
 
 type Platform = 'facebook' | 'instagram' | 'linkedin' | 'tiktok'
 
+function safeHostname(url: string | undefined, fallback: string): string {
+  if (!url) return fallback
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return fallback
+  }
+}
+
+function PreviewAvatar(props: {
+  pageName: string
+  profileImageUrl?: string
+  profileImageError: boolean
+  onProfileImageError: () => void
+  className?: string
+  ringClassName?: string
+}) {
+  const { pageName, profileImageUrl, profileImageError, onProfileImageError, className, ringClassName } = props
+  const initial = pageName.slice(0, 1).toUpperCase()
+
+  return (
+    <div className={cn('shrink-0 overflow-hidden rounded-full', ringClassName, className)}>
+      {profileImageUrl && !profileImageError ? (
+        <NextImage
+          src={profileImageUrl}
+          alt=""
+          width={40}
+          height={40}
+          unoptimized
+          className="h-full w-full object-cover"
+          onError={onProfileImageError}
+          style={crispEdgesStyle}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-[#e4e6eb] text-sm font-semibold text-[#050505]">
+          {initial}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function CreativeSocialPreview(props: {
   creative: Creative
   campaignName: string
   displayName: string
   performanceSummary: CreativePerformanceSummary | null
   efficiencyScore: number | null
+  headlineVariantCount?: number
+  descriptionVariantCount?: number
+  previewHeadlineIndex?: number
+  previewDescriptionIndex?: number
+  onPreviewHeadlineIndexChange?: (index: number) => void
+  onPreviewDescriptionIndexChange?: (index: number) => void
 }) {
-  const { creative, campaignName, displayName, performanceSummary, efficiencyScore } = props
+  const {
+    creative,
+    campaignName,
+    displayName,
+    performanceSummary,
+    efficiencyScore,
+    headlineVariantCount = 0,
+    descriptionVariantCount = 0,
+    previewHeadlineIndex = 0,
+    previewDescriptionIndex = 0,
+    onPreviewHeadlineIndexChange,
+    onPreviewDescriptionIndexChange,
+  } = props
 
   const [imageLoadFailed, setImageLoadFailed] = useState(false)
   const [profileImageError, setProfileImageError] = useState(false)
@@ -91,6 +152,18 @@ export function CreativeSocialPreview(props: {
 
   const scoreCardTransition = useMemo(() => ({ ...transitions.slow, delay: 0.2 }), [])
   const progressBarAnimate = useMemo(() => ({ width: `${efficiencyScore}%` }), [efficiencyScore])
+
+  const pageDisplayName = useMemo(
+    () => creative.pageName || creative.campaignName || creative.name || campaignName,
+    [campaignName, creative.campaignName, creative.name, creative.pageName],
+  )
+
+  const primaryText = creative.descriptions?.[0] || ''
+  const headlineText = creative.headlines?.[0] || displayName
+  const landingHostname = useMemo(
+    () => safeHostname(creative.landingPageUrl, pageDisplayName.replace(/\s+/g, '').toLowerCase() + '.com'),
+    [creative.landingPageUrl, pageDisplayName],
+  )
 
   const renderMedia = () => {
     if (creative.videoUrl && isDirectVideoUrl(creative.videoUrl)) {
@@ -206,61 +279,69 @@ export function CreativeSocialPreview(props: {
           className="w-full"
         >
           {activePlatform === 'instagram' && (
-            <div className="bg-background rounded-tr-[2.5rem] rounded-tl-[2.5rem] overflow-hidden">
-              <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-warning via-destructive to-primary p-[2px] overflow-hidden shrink-0">
-                    <div className="h-full w-full rounded-full bg-background flex items-center justify-center text-[10px] font-black overflow-hidden border border-background">
-                      {creative.pageProfileImageUrl && !profileImageError ? (
-                        <NextImage
-                          src={creative.pageProfileImageUrl}
-                          alt=""
-                          width={36}
-                          height={36}
-                          unoptimized
-                          className="h-full w-full object-cover"
-                          onError={handleProfileImageError}
-                          style={crispEdgesStyle}
-                        />
-                      ) : (
-                        (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()
-                      )}
-                    </div>
-                  </div>
+            <div className="overflow-hidden bg-white text-[#262626]">
+              {/* IG feed: header */}
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <PreviewAvatar
+                    pageName={pageDisplayName}
+                    profileImageUrl={creative.pageProfileImageUrl}
+                    profileImageError={profileImageError}
+                    onProfileImageError={handleProfileImageError}
+                    className="h-8 w-8"
+                    ringClassName="p-[2px] bg-gradient-to-tr from-[#feda75] via-[#fa7e1e] to-[#d62976]"
+                  />
                   <div className="min-w-0">
-                    <p className="text-xs font-bold leading-none mb-0.5 truncate">{creative.pageName || creative.campaignName || creative.name || campaignName}</p>
-                    <p className="text-[9px] font-medium opacity-60 leading-none">Sponsored</p>
+                    <p className="truncate text-[13px] font-semibold leading-tight">{pageDisplayName}</p>
+                    <p className="text-[11px] leading-tight text-[#8e8e8e]">Sponsored</p>
                   </div>
                 </div>
-                <MoreHorizontal className="h-4 w-4 opacity-40" />
+                <MoreHorizontal className="h-5 w-5 shrink-0 text-[#262626]" strokeWidth={1.75} />
               </div>
 
-              {renderMedia()}
-
-              <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Heart className="h-6 w-6" />
-                    <MessageCircle className="h-6 w-6" />
-                    <Share2 className="h-6 w-6" />
-                  </div>
-                  <Bookmark className="h-6 w-6" />
+              {/* Primary text above media (common for IG link ads) */}
+              {primaryText ? (
+                <div className="px-3 pb-3 pt-0.5">
+                  <p className="whitespace-pre-wrap text-[14px] leading-[1.4] text-[#262626]">{primaryText}</p>
                 </div>
+              ) : null}
 
-                <div className="space-y-1.5">
-                  <p className="text-xs font-bold">11,492 likes</p>
-                  <div className="text-xs leading-snug line-clamp-2">
-                    <span className="font-bold mr-1.5">{campaignName}</span>
-                    <span className="opacity-80">{creative.descriptions?.[0] || 'No primary text available.'}</span>
-                  </div>
+              {/* Media — full bleed */}
+              <div className="w-full">{renderMedia()}</div>
+
+              {/* Action row */}
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <div className="flex items-center gap-4">
+                  <Heart className="h-6 w-6" strokeWidth={1.75} />
+                  <MessageCircle className="h-6 w-6" strokeWidth={1.75} />
+                  <Share2 className="h-6 w-6" strokeWidth={1.75} />
                 </div>
+                <Bookmark className="h-6 w-6" strokeWidth={1.75} />
+              </div>
 
-                {creative.callToAction && (
-                  <Button className="w-full h-10 text-[11px] font-black tracking-widest uppercase bg-primary hover:bg-accent/90 text-primary-foreground rounded-xl">
+              <div className="space-y-1 px-3 pb-2">
+                <p className="text-[13px] font-semibold">11,492 likes</p>
+                {!primaryText ? (
+                  <p className="text-[14px] leading-[1.4]">
+                    <span className="font-semibold">{pageDisplayName}</span>{' '}
+                    <span className="font-normal text-[#262626]">See more</span>
+                  </p>
+                ) : null}
+                {headlineText ? (
+                  <p className="text-[13px] font-medium text-[#00376b]">{headlineText}</p>
+                ) : null}
+              </div>
+
+              {creative.callToAction ? (
+                <div className="border-t border-[#efefef] px-3 py-2.5">
+                  <button
+                    type="button"
+                    className="w-full rounded-lg bg-[#0095f6] py-2 text-center text-[14px] font-semibold text-white"
+                  >
                     {formatCTALabel(creative.callToAction)}
-                  </Button>
-                )}
-              </div>
+                  </button>
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -371,69 +452,79 @@ export function CreativeSocialPreview(props: {
           )}
 
           {activePlatform === 'facebook' && (
-            <div className="bg-background flex flex-col relative">
-              {/* Account Header */}
-              <div className="p-4 flex items-center gap-3 bg-background z-10">
-                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-lg shadow-inner overflow-hidden shrink-0 border border-border/20">
-                  {creative.pageProfileImageUrl && !profileImageError ? (
-                    <NextImage
-                      src={creative.pageProfileImageUrl}
-                      alt=""
-                      width={40}
-                      height={40}
-                      unoptimized
-                      className="h-full w-full object-cover"
-                      onError={handleProfileImageError}
-                      style={crispEdgesStyle}
-                    />
-                  ) : (
-                    (creative.pageName || creative.campaignName || campaignName || 'A').slice(0, 1).toUpperCase()
-                  )}
+            <div className="relative flex flex-col bg-[#f0f2f5] font-[system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,Helvetica,Arial,sans-serif]">
+              <div className="flex flex-col bg-white text-[#050505]">
+                {/* Page row */}
+                <div className="flex items-center gap-2 px-3 pb-1 pt-3">
+                  <PreviewAvatar
+                    pageName={pageDisplayName}
+                    profileImageUrl={creative.pageProfileImageUrl}
+                    profileImageError={profileImageError}
+                    onProfileImageError={handleProfileImageError}
+                    className="h-10 w-10"
+                  />
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="truncate text-[15px] font-semibold leading-[1.2]">{pageDisplayName}</p>
+                    <p className="flex items-center gap-1 text-[13px] leading-[1.2] text-[#65676b]">
+                      <span>Sponsored</span>
+                      <span aria-hidden>·</span>
+                      <Globe className="h-3 w-3" aria-hidden />
+                    </p>
+                  </div>
+                  <MoreHorizontal className="h-5 w-5 shrink-0 text-[#65676b]" strokeWidth={1.75} />
                 </div>
-                <div className="min-w-0 flex-1 text-left">
-                  <p className="text-[13px] font-bold leading-tight truncate text-foreground">{creative.pageName || creative.campaignName || campaignName}</p>
-                  <p className="text-[11px] opacity-60 flex items-center gap-1 font-medium text-muted-foreground">
-                    Sponsored · <Globe className="h-2.5 w-2.5" />
+
+                {/* Primary text — spaced clearly above media */}
+                <div className="px-3 pb-3 pt-1">
+                  <p className="whitespace-pre-wrap text-[15px] font-normal leading-[1.3333] text-[#050505]">
+                    {primaryText || 'No primary text available.'}
                   </p>
                 </div>
-                <MoreHorizontal className="h-5 w-5 opacity-40 shrink-0 text-foreground" />
-              </div>
 
-              {/* Caption */}
-              <div className="px-4 pb-4 text-[13px] leading-relaxed line-clamp-2 text-foreground/80 z-10 text-left">
-                {creative.descriptions?.[0] || 'No primary text available.'}
-              </div>
+                {/* Creative asset — edge-to-edge, separated from copy */}
+                <div className="w-full border-y border-[#dadde1]/80">{renderMedia()}</div>
 
-              {/* Gap and Media */}
-              <div className="w-full pt-1">
-                {renderMedia()}
-              </div>
-
-              {/* CTA Section */}
-              <div className="p-4 bg-muted/40 border-t border-border/20 flex items-center justify-between z-10">
-                <div className="min-w-0 pr-4 space-y-0.5">
-                  <p className="text-[9px] uppercase opacity-40 font-black tracking-widest">{new URL(creative.landingPageUrl || `https://${(creative.pageName || campaignName).replace(/\s+/g, '').toLowerCase()}.com`).hostname}</p>
-                  <p className="text-sm font-bold truncate tracking-tight">{creative.headlines?.[0] || displayName}</p>
+                {/* Link preview card (native FB ad footer) */}
+                <div className="flex items-stretch gap-3 border-b border-[#dadde1] bg-[#f0f2f5] px-3 py-2.5">
+                  <div className="min-w-0 flex-1 py-0.5">
+                    <p className="truncate text-[12px] uppercase text-[#65676b]">{landingHostname}</p>
+                    <p className="mt-0.5 line-clamp-2 text-[16px] font-semibold leading-[1.2] text-[#050505]">
+                      {headlineText}
+                    </p>
+                  </div>
+                  {creative.callToAction ? (
+                    <button
+                      type="button"
+                      className="shrink-0 self-center rounded-md bg-[#e4e6eb] px-4 py-2 text-[15px] font-semibold text-[#050505]"
+                    >
+                      {formatCTALabel(creative.callToAction)}
+                    </button>
+                  ) : null}
                 </div>
-                {creative.callToAction && (
-                  <Button className="h-9 px-5 text-xs font-black uppercase tracking-widest bg-secondary text-secondary-foreground hover:bg-secondary/80 shrink-0 border-none shadow-none rounded-lg">
-                    {formatCTALabel(creative.callToAction)}
-                  </Button>
-                )}
-              </div>
 
-              <div className="px-6 py-2.5 flex items-center justify-between opacity-50">
-                <div className="flex items-center gap-2 hover:opacity-100 transition-opacity cursor-pointer">
-                  <Heart className="h-4 w-4" />
-                  <span className="text-[11px] font-black uppercase tracking-widest mt-0.5">Like</span>
-                </div>
-                <div className="flex items-center gap-2 hover:opacity-100 transition-opacity cursor-pointer">
-                  <MessageCircle className="h-4 w-4" />
-                  <span className="text-[11px] font-black uppercase tracking-widest mt-0.5">Comment</span>
-                </div>
-                <div className="flex items-center gap-2 hover:opacity-100 transition-opacity cursor-pointer">
-                  <Share2 className="h-4 w-4" />
-                  <span className="text-[11px] font-black uppercase tracking-widest mt-0.5">Share</span>
+                {/* Reactions */}
+                <div className="flex items-center justify-around border-b border-[#dadde1] px-1 py-1">
+                  <button
+                    type="button"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[15px] font-semibold text-[#65676b] hover:bg-[#f0f2f5]"
+                  >
+                    <ThumbsUp className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                    Like
+                  </button>
+                  <button
+                    type="button"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[15px] font-semibold text-[#65676b] hover:bg-[#f0f2f5]"
+                  >
+                    <MessageCircle className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                    Comment
+                  </button>
+                  <button
+                    type="button"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-[15px] font-semibold text-[#65676b] hover:bg-[#f0f2f5]"
+                  >
+                    <Share2 className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                    Share
+                  </button>
                 </div>
               </div>
             </div>
@@ -515,17 +606,63 @@ export function CreativeSocialPreview(props: {
           </div>
         </div>
 
-        {/* Preview Card */}
-        <div className="rounded-2xl bg-muted/20 border border-muted-foreground/10 p-4 overflow-hidden">
-          <div className="rounded-xl overflow-hidden bg-background shadow-lg border border-muted-foreground/5">
+        {/* Preview Card — light feed chrome so FB/IG colors read as native */}
+        <div className="overflow-hidden rounded-2xl border border-border/60 bg-[#f0f2f5] p-3 shadow-sm">
+          <div className="overflow-hidden rounded-lg border border-[#dadde1] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
             {renderPlatformMock()}
           </div>
 
           {/* Preview Info */}
-          <div className="mt-3 flex items-center justify-between text-[10px] text-muted-foreground">
-            <span className="font-medium uppercase tracking-wider">
-              {aspectRatio === 'reel' ? '9:16 Reel/Story' : '1:1 Feed Post'}
-            </span>
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span className="font-medium uppercase tracking-wider">
+                {aspectRatio === 'reel' ? '9:16 Reel/Story' : '1:1 Feed Post'}
+              </span>
+            </div>
+            {(headlineVariantCount > 1 || descriptionVariantCount > 1) && (
+              <div className="flex flex-wrap gap-2">
+                {headlineVariantCount > 1 && onPreviewHeadlineIndexChange ? (
+                  <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2 py-1">
+                    <span className="text-[10px] font-semibold text-muted-foreground">Headline</span>
+                    {Array.from({ length: headlineVariantCount }, (_, index) => (
+                      <button
+                        key={`headline-preview-${index}`}
+                        type="button"
+                        onClick={() => onPreviewHeadlineIndexChange(index)}
+                        className={cn(
+                          'h-6 min-w-6 rounded-md px-1.5 text-[10px] font-bold transition-colors',
+                          previewHeadlineIndex === index
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted/50 text-muted-foreground hover:bg-muted',
+                        )}
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {descriptionVariantCount > 1 && onPreviewDescriptionIndexChange ? (
+                  <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2 py-1">
+                    <span className="text-[10px] font-semibold text-muted-foreground">Copy</span>
+                    {Array.from({ length: descriptionVariantCount }, (_, index) => (
+                      <button
+                        key={`description-preview-${index}`}
+                        type="button"
+                        onClick={() => onPreviewDescriptionIndexChange(index)}
+                        className={cn(
+                          'h-6 min-w-6 rounded-md px-1.5 text-[10px] font-bold transition-colors',
+                          previewDescriptionIndex === index
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted/50 text-muted-foreground hover:bg-muted',
+                        )}
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
       </div>

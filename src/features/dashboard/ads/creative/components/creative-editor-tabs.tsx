@@ -5,25 +5,26 @@ import type { ChangeEvent, CSSProperties } from 'react'
 import {
   Check,
   Copy,
-  RefreshCw,
   Trash2,
   Plus,
   Sparkles,
   Edit3,
-  Info,
-  TrendingUp,
   Zap,
   Layout,
   Type,
   Link as LinkIcon,
   MousePointer2,
   FileText,
-  AlertCircle, Image as ImageIcon, Video
+  Image as ImageIcon,
+  Video,
+  Eye,
+  Pin,
 } from 'lucide-react'
 
 import type { AlgorithmicInsight } from '@/lib/ad-algorithms'
-import { formatCurrency, cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { formatCTALabel } from './helpers'
+import { META_CTA_OPTIONS } from './creative-editing-utils'
 
 import type { Creative } from './types'
 import type { CreativePerformanceSummary } from './creative-social-preview'
@@ -32,13 +33,10 @@ import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
-import { Label } from '@/shared/ui/label'
 import { Separator } from '@/shared/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { Textarea } from '@/shared/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-
-const METRIC_SKELETON_KEYS = ['metric-1', 'metric-2', 'metric-3', 'metric-4', 'metric-5', 'metric-6'] as const
 
 function toStableStringItems(items: string[]) {
   const counts = new Map<string, number>()
@@ -77,10 +75,12 @@ function getWidthStyle(width: number): CSSProperties {
 function HeadlineEditRow(props: {
   value: string
   index: number
+  isPreviewing: boolean
   onUpdate: (index: number, value: string) => void
   onRemove: (index: number) => void
+  onSelectPreview: (index: number) => void
 }) {
-  const { value, index, onUpdate, onRemove } = props
+  const { value, index, isPreviewing, onUpdate, onRemove, onSelectPreview } = props
 
   const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     onUpdate(index, event.target.value)
@@ -90,26 +90,50 @@ function HeadlineEditRow(props: {
     onRemove(index)
   }, [index, onRemove])
 
+  const handleSelectPreview = useCallback(() => {
+    onSelectPreview(index)
+  }, [index, onSelectPreview])
+
   return (
-    <div className="group relative flex items-center gap-2">
-      <Input
-        value={value}
-        onChange={handleChange}
-        placeholder="Enter headline…"
-        className="flex-1 bg-background border-muted focus-visible:ring-primary/20"
-      />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-9 w-9 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-        onClick={handleRemove}
-        aria-label={`Remove headline ${index + 1}`}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-      {index === 0 && (
-        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-full" />
+    <div
+      className={cn(
+        'group flex items-start gap-2 rounded-xl border p-2 transition-colors',
+        isPreviewing ? 'border-primary/40 bg-primary/5' : 'border-border/60 bg-background hover:border-border',
       )}
+    >
+      <span className="mt-2 w-5 shrink-0 text-center text-[10px] font-bold text-muted-foreground">{index + 1}</span>
+      <div className="min-w-0 flex-1 space-y-1">
+        <Input
+          value={value}
+          onChange={handleChange}
+          placeholder="Headline variant…"
+          className="h-9 border-muted bg-background text-sm focus-visible:ring-primary/20"
+        />
+        <p className="text-[10px] text-muted-foreground">{value.trim().length} characters</p>
+      </div>
+      <div className="flex shrink-0 flex-col gap-1">
+        <Button
+          type="button"
+          variant={isPreviewing ? 'default' : 'ghost'}
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleSelectPreview}
+          title="Show in preview"
+          aria-label={`Preview headline ${index + 1}`}
+        >
+          {isPreviewing ? <Eye className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={handleRemove}
+          aria-label={`Remove headline ${index + 1}`}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   )
 }
@@ -148,10 +172,12 @@ function HeadlineDisplayRow(props: {
 function DescriptionEditRow(props: {
   value: string
   index: number
+  isPreviewing: boolean
   onUpdate: (index: number, value: string) => void
   onRemove: (index: number) => void
+  onSelectPreview: (index: number) => void
 }) {
-  const { value, index, onUpdate, onRemove } = props
+  const { value, index, isPreviewing, onUpdate, onRemove, onSelectPreview } = props
 
   const handleChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
     onUpdate(index, event.target.value)
@@ -161,24 +187,50 @@ function DescriptionEditRow(props: {
     onRemove(index)
   }, [index, onRemove])
 
+  const handleSelectPreview = useCallback(() => {
+    onSelectPreview(index)
+  }, [index, onSelectPreview])
+
   return (
-    <div className="group relative flex items-start gap-2">
-      <Textarea
-        value={value}
-        onChange={handleChange}
-        placeholder="Enter primary text…"
-        className="flex-1 min-h-[100px] bg-background border-muted focus-visible:ring-primary/20 resize-none"
-      />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-9 w-9 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive mt-1"
-        onClick={handleRemove}
-        aria-label={`Remove primary text ${index + 1}`}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-      <div className="absolute bottom-2 right-12 text-[10px] text-muted-foreground">{value.length} chars</div>
+    <div
+      className={cn(
+        'group flex items-start gap-2 rounded-xl border p-2 transition-colors',
+        isPreviewing ? 'border-primary/40 bg-primary/5' : 'border-border/60 bg-background hover:border-border',
+      )}
+    >
+      <span className="mt-2 w-5 shrink-0 text-center text-[10px] font-bold text-muted-foreground">{index + 1}</span>
+      <div className="min-w-0 flex-1 space-y-1">
+        <Textarea
+          value={value}
+          onChange={handleChange}
+          placeholder="Primary text variant…"
+          className="min-h-[88px] resize-y border-muted bg-background text-sm leading-relaxed focus-visible:ring-primary/20"
+        />
+        <p className="text-[10px] text-muted-foreground">{value.trim().length} characters</p>
+      </div>
+      <div className="flex shrink-0 flex-col gap-1">
+        <Button
+          type="button"
+          variant={isPreviewing ? 'default' : 'ghost'}
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleSelectPreview}
+          title="Show in preview"
+          aria-label={`Preview primary text ${index + 1}`}
+        >
+          {isPreviewing ? <Eye className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={handleRemove}
+          aria-label={`Remove primary text ${index + 1}`}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   )
 }
@@ -244,16 +296,20 @@ function InsightScoreBar(props: { score: number }) {
 }
 
 export function CreativeEditorTabs(props: {
-  providerId: string
   creative: Creative
   copiedField: string | null
   onCopy: (text: string, field: string) => void
 
   isEditing: boolean
+  isDirty?: boolean
   editedHeadlines: string[]
   editedDescriptions: string[]
   editedCta: string
   editedLandingPage: string
+  previewHeadlineIndex?: number
+  previewDescriptionIndex?: number
+  onPreviewHeadlineIndexChange?: (index: number) => void
+  onPreviewDescriptionIndexChange?: (index: number) => void
   onAddHeadline: () => void
   onRemoveHeadline: (index: number) => void
   onUpdateHeadline: (index: number, value: string) => void
@@ -268,27 +324,24 @@ export function CreativeEditorTabs(props: {
   onGenerateHeadlines?: () => void
   onGenerateDescriptions?: () => void
 
-  days: string
-  onChangeDays: (value: string) => void
-  metricsLoading: boolean
-  metricsError: string | null
-  currency?: string
-  performanceSummary: CreativePerformanceSummary | null
-  efficiencyScore: number | null
-  onRefreshPerformance: () => void
-
+  performanceSummary?: CreativePerformanceSummary | null
+  onRefreshPerformance?: () => void
   algorithmicInsights: AlgorithmicInsight[]
 }) {
   const {
-    providerId,
     creative,
     copiedField,
     onCopy,
     isEditing,
+    isDirty = false,
     editedHeadlines,
     editedDescriptions,
     editedCta,
     editedLandingPage,
+    previewHeadlineIndex = 0,
+    previewDescriptionIndex = 0,
+    onPreviewHeadlineIndexChange,
+    onPreviewDescriptionIndexChange,
     onAddHeadline,
     onRemoveHeadline,
     onUpdateHeadline,
@@ -301,12 +354,7 @@ export function CreativeEditorTabs(props: {
     generatingDescriptions,
     onGenerateHeadlines,
     onGenerateDescriptions,
-    days,
-    onChangeDays,
-    metricsLoading,
-    metricsError,
-    currency = 'USD',
-    performanceSummary,
+    performanceSummary = null,
     onRefreshPerformance,
     algorithmicInsights,
   } = props
@@ -319,18 +367,16 @@ export function CreativeEditorTabs(props: {
   const editableDescriptionItems = useMemo(() => toStableStringItems(editedDescriptions), [editedDescriptions])
   const descriptionItems = useMemo(() => toStableStringItems(creative.descriptions ?? []), [creative.descriptions])
 
+  const showEditableContent = isEditing
+
   return (
-    <div className="lg:col-span-7 flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <Tabs defaultValue="edit" className="w-full">
-        <div className="flex items-center justify-between mb-2">
-          <TabsList className="bg-muted/40 p-1">
-            <TabsTrigger value="edit" className="gap-2">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <TabsList className="h-10 bg-muted/40 p-1">
+            <TabsTrigger value="edit" className="gap-2 px-3 text-xs">
               <Edit3 className="h-3.5 w-3.5" />
               Content
-            </TabsTrigger>
-            <TabsTrigger value="performance" className="gap-2">
-              <TrendingUp className="h-3.5 w-3.5" />
-              Performance
             </TabsTrigger>
             <TabsTrigger value="insights" className="gap-2">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -342,17 +388,83 @@ export function CreativeEditorTabs(props: {
             </TabsTrigger>
           </TabsList>
 
-          {isEditing && (
-            <Badge variant="secondary" className="gap-1 animate-pulse">
-              <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Live Editing
-            </Badge>
-          )}
+          <p className="text-xs text-muted-foreground">
+            {isDirty ? 'You have unsaved edits.' : 'Edit copy below — preview updates live on the left.'}
+          </p>
         </div>
 
-        <TabsContent value="edit" className="mt-0 space-y-6">
-          {/* Headlines Section */}
-          <Card className="border-none shadow-sm bg-background/50 backdrop-blur-sm">
+        <TabsContent value="edit" className="mt-0 space-y-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Card className="border border-border/60 shadow-none">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <MousePointer2 className="h-4 w-4 text-primary" />
+                  Call to action
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {showEditableContent ? (
+                  <Select value={editedCta || undefined} onValueChange={onChangeCta}>
+                    <SelectTrigger className="h-9 bg-background">
+                      <SelectValue placeholder="Select CTA" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {META_CTA_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : creative.callToAction ? (
+                  <Badge variant="secondary" className="border-none bg-accent/10 px-3 py-1 text-primary hover:bg-accent/20">
+                    {formatCTALabel(creative.callToAction)}
+                  </Badge>
+                ) : (
+                  <p className="text-sm italic text-muted-foreground">Not specified</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/60 shadow-none">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4 text-primary" />
+                  Landing page
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {showEditableContent ? (
+                  <Input
+                    value={editedLandingPage}
+                    onChange={handleLandingPageChange}
+                    placeholder="https://example.com/landing"
+                    type="url"
+                    className="h-9 bg-background"
+                  />
+                ) : creative.landingPageUrl ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-xs font-medium text-primary underline underline-offset-4">
+                      {creative.landingPageUrl}
+                    </p>
+                    <CopyValueButton
+                      value={creative.landingPageUrl ?? ''}
+                      field="landing"
+                      copiedField={copiedField}
+                      onCopy={onCopy}
+                      className="h-7 w-7 shrink-0"
+                      ariaLabel="Copy landing page URL"
+                      iconClassName="h-3 w-3"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-sm italic text-muted-foreground">No link configured</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border border-border/60 shadow-none">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -364,35 +476,40 @@ export function CreativeEditorTabs(props: {
                     Catch attention with short, punchy titles.
                   </CardDescription>
                 </div>
-                {isEditing ? (
-                  <Button variant="outline" size="sm" onClick={onAddHeadline} className="h-8 gap-1 border-accent/20 hover:bg-accent/5">
-                    <Plus className="h-3.5 w-3.5 text-primary" />
-                    New Variant
-                  </Button>
-                ) : (
+                <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-[10px] font-bold">
-                    {creative.headlines?.length || 0} VARIANTS
+                    {editedHeadlines.filter((h) => h.trim()).length || creative.headlines?.length || 0} variants
                   </Badge>
-                )}
+                  {showEditableContent ? (
+                    <Button variant="outline" size="sm" onClick={onAddHeadline} className="h-8 gap-1">
+                      <Plus className="h-3.5 w-3.5" />
+                      Add
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {isEditing ? (
+            <CardContent className="space-y-2">
+              {showEditableContent ? (
                 editedHeadlines.length > 0 ? (
-                  editableHeadlineItems.map((headlineItem) => (
-                    <HeadlineEditRow
-                      key={headlineItem.key}
-                      value={headlineItem.value}
-                      index={headlineItem.index}
-                      onUpdate={onUpdateHeadline}
-                      onRemove={onRemoveHeadline}
-                    />
-                  ))
+                  <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
+                    {editableHeadlineItems.map((headlineItem) => (
+                      <HeadlineEditRow
+                        key={headlineItem.key}
+                        value={headlineItem.value}
+                        index={headlineItem.index}
+                        isPreviewing={headlineItem.index === previewHeadlineIndex}
+                        onUpdate={onUpdateHeadline}
+                        onRemove={onRemoveHeadline}
+                        onSelectPreview={onPreviewHeadlineIndexChange ?? (() => undefined)}
+                      />
+                    ))}
+                  </div>
                 ) : (
-                  <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                    <p className="text-sm text-muted-foreground mb-3">No headlines configured for this creative.</p>
+                  <div className="rounded-lg border-2 border-dashed p-6 text-center">
+                    <p className="mb-3 text-sm text-muted-foreground">No headlines yet.</p>
                     <Button variant="outline" size="sm" onClick={onAddHeadline}>
-                      <Plus className="h-4 w-4 mr-1" /> Add Headline
+                      <Plus className="mr-1 h-4 w-4" /> Add headline
                     </Button>
                   </div>
                 )
@@ -407,23 +524,22 @@ export function CreativeEditorTabs(props: {
                   />
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground py-4 text-center">No headlines available</p>
+                <p className="py-4 text-center text-sm text-muted-foreground">No headlines available</p>
               )}
 
-              {isEditing && (
-                <div className="flex items-center gap-2 pt-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onGenerateHeadlines}
-                    disabled={!onGenerateHeadlines || generatingHeadlines}
-                    className="h-7 text-[10px] font-bold gap-1 text-primary hover:text-primary hover:bg-accent/5"
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    {generatingHeadlines ? 'GENERATING…' : 'GENERATE AI ALTERNATIVES'}
-                  </Button>
-                </div>
-              )}
+              {showEditableContent ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onGenerateHeadlines}
+                  disabled={!onGenerateHeadlines || generatingHeadlines}
+                  className="mt-2 h-8 gap-1.5 text-xs"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  {generatingHeadlines ? 'Generating…' : 'Generate AI headlines'}
+                </Button>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -440,35 +556,40 @@ export function CreativeEditorTabs(props: {
                     The main copy that appears above or below your media.
                   </CardDescription>
                 </div>
-                {isEditing ? (
-                  <Button variant="outline" size="sm" onClick={onAddDescription} className="h-8 gap-1 border-accent/20 hover:bg-accent/5">
-                    <Plus className="h-3.5 w-3.5 text-primary" />
-                    New Variant
-                  </Button>
-                ) : (
+                <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-[10px] font-bold">
-                    {creative.descriptions?.length || 0} VARIANTS
+                    {editedDescriptions.filter((d) => d.trim()).length || creative.descriptions?.length || 0} variants
                   </Badge>
-                )}
+                  {showEditableContent ? (
+                    <Button variant="outline" size="sm" onClick={onAddDescription} className="h-8 gap-1">
+                      <Plus className="h-3.5 w-3.5" />
+                      Add
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {isEditing ? (
+            <CardContent className="space-y-2">
+              {showEditableContent ? (
                 editedDescriptions.length > 0 ? (
-                  editableDescriptionItems.map((descriptionItem) => (
-                    <DescriptionEditRow
-                      key={descriptionItem.key}
-                      value={descriptionItem.value}
-                      index={descriptionItem.index}
-                      onUpdate={onUpdateDescription}
-                      onRemove={onRemoveDescription}
-                    />
-                  ))
+                  <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+                    {editableDescriptionItems.map((descriptionItem) => (
+                      <DescriptionEditRow
+                        key={descriptionItem.key}
+                        value={descriptionItem.value}
+                        index={descriptionItem.index}
+                        isPreviewing={descriptionItem.index === previewDescriptionIndex}
+                        onUpdate={onUpdateDescription}
+                        onRemove={onRemoveDescription}
+                        onSelectPreview={onPreviewDescriptionIndexChange ?? (() => undefined)}
+                      />
+                    ))}
+                  </div>
                 ) : (
-                  <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                    <p className="text-sm text-muted-foreground mb-3">No primary text variants yet.</p>
+                  <div className="rounded-lg border-2 border-dashed p-6 text-center">
+                    <p className="mb-3 text-sm text-muted-foreground">No primary text yet.</p>
                     <Button variant="outline" size="sm" onClick={onAddDescription}>
-                      <Plus className="h-4 w-4 mr-1" /> Add Primary Text
+                      <Plus className="mr-1 h-4 w-4" /> Add primary text
                     </Button>
                   </div>
                 )
@@ -483,194 +604,22 @@ export function CreativeEditorTabs(props: {
                   />
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground py-4 text-center">No primary text available</p>
+                <p className="py-4 text-center text-sm text-muted-foreground">No primary text available</p>
               )}
 
-              {isEditing && (
-                <div className="flex items-center gap-2 pt-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onGenerateDescriptions}
-                    disabled={!onGenerateDescriptions || generatingDescriptions}
-                    className="h-7 text-[10px] font-bold gap-1 text-primary hover:text-primary hover:bg-accent/5"
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    {generatingDescriptions ? 'GENERATING…' : 'GENERATE AI ALTERNATIVES'}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Destination Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card className="border-none shadow-sm bg-background/50 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <MousePointer2 className="h-4 w-4 text-primary" />
-                  Action
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Call to action</Label>
-                  {isEditing ? (
-                    <Select value={editedCta} onValueChange={onChangeCta}>
-                      <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="Select CTA" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="LEARN_MORE">Learn More</SelectItem>
-                        <SelectItem value="SHOP_NOW">Shop Now</SelectItem>
-                        <SelectItem value="SIGN_UP">Sign Up</SelectItem>
-                        <SelectItem value="BOOK_NOW">Book Now</SelectItem>
-                        <SelectItem value="DOWNLOAD">Download</SelectItem>
-                        <SelectItem value="GET_OFFER">Get Offer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : creative.callToAction ? (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-accent/10 text-primary hover:bg-accent/20 border-none px-3 py-1">
-                        {formatCTALabel(creative.callToAction)}
-                      </Badge>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">Not specified</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-sm bg-background/50 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <LinkIcon className="h-4 w-4 text-primary" />
-                  Destination
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Landing page URL</Label>
-                  {isEditing ? (
-                    <Input
-                      value={editedLandingPage}
-                      onChange={handleLandingPageChange}
-                      placeholder="https://example.com/landing"
-                      type="url"
-                      className="bg-background"
-                    />
-                  ) : creative.landingPageUrl ? (
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs truncate text-primary font-medium underline underline-offset-4">{creative.landingPageUrl}</p>
-                      <CopyValueButton
-                        value={creative.landingPageUrl ?? ''}
-                        field="landing"
-                        copiedField={copiedField}
-                        onCopy={onCopy}
-                        className="h-7 w-7 shrink-0"
-                        ariaLabel="Copy landing page URL"
-                        iconClassName="h-3 w-3"
-                      />
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">No link configured</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="performance" className="mt-0 space-y-6">
-          <Card className="border-none shadow-sm">
-            <CardHeader className="pb-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary" />
-                    Detailed Performance
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Metrics for the selected period across all ad instances.
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Select value={days} onValueChange={onChangeDays}>
-                    <SelectTrigger className="h-8 w-[140px] text-xs">
-                      <SelectValue placeholder="Timeframe" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="7">Last 7 days</SelectItem>
-                      <SelectItem value="14">Last 14 days</SelectItem>
-                      <SelectItem value="30">Last 30 days</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRefreshPerformance} disabled={metricsLoading} aria-label="Refresh performance metrics">
-                    <RefreshCw className={cn("h-4 w-4", metricsLoading && "animate-spin")} />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {providerId === 'facebook' ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center space-y-3">
-                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                    <Info className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <div className="max-w-[300px]">
-                    <p className="text-sm font-medium">Meta Creative Reporting</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Meta reports performance at the ad level. We aggregate these insights to give you a creative-centric view.
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" className="mt-4">
-                    View Ad Breakdown
-                  </Button>
-                </div>
-              ) : metricsError ? (
-                <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  {metricsError}
-                </div>
-              ) : metricsLoading && !performanceSummary ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {METRIC_SKELETON_KEYS.map((metricKey) => <div key={metricKey} className="h-20 rounded-xl bg-muted animate-pulse" />)}
-                </div>
-              ) : performanceSummary ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  <div className="p-4 rounded-xl bg-muted/30 border border-muted/20">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Spend</p>
-                    <p className="text-xl font-bold mt-1">
-                      {formatCurrency(performanceSummary.totalSpend, currency, { maximumFractionDigits: 0 })}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-muted/30 border border-muted/20">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Revenue</p>
-                    <p className="text-xl font-bold mt-1">
-                      {formatCurrency(performanceSummary.totalRevenue, currency, { maximumFractionDigits: 0 })}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-accent/10 border border-accent/20">
-                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider">ROAS</p>
-                    <p className="text-xl font-bold mt-1 text-primary">{performanceSummary.roas.toFixed(2)}x</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-muted/30 border border-muted/20">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Impressions</p>
-                    <p className="text-xl font-bold mt-1">{performanceSummary.totalImpressions.toLocaleString()}</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-muted/30 border border-muted/20">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Clicks</p>
-                    <p className="text-xl font-bold mt-1">{performanceSummary.totalClicks.toLocaleString()}</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-muted/30 border border-muted/20">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">CTR</p>
-                    <p className="text-xl font-bold mt-1">{performanceSummary.ctr.toFixed(2)}%</p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground py-10 text-center">No metrics found for this timeframe.</p>
-              )}
+              {showEditableContent ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onGenerateDescriptions}
+                  disabled={!onGenerateDescriptions || generatingDescriptions}
+                  className="mt-2 h-8 gap-1.5 text-xs"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  {generatingDescriptions ? 'Generating…' : 'Generate AI primary text'}
+                </Button>
+              ) : null}
             </CardContent>
           </Card>
         </TabsContent>
@@ -691,9 +640,11 @@ export function CreativeEditorTabs(props: {
                 <div className="p-8 text-center border-2 border-dashed rounded-2xl">
                   <Zap className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
                   <p className="text-sm text-muted-foreground">Load performance metrics to generate AI insights.</p>
-                  <Button variant="outline" size="sm" className="mt-4" onClick={onRefreshPerformance}>
-                    Fetch Data
-                  </Button>
+                  {onRefreshPerformance ? (
+                    <Button variant="outline" size="sm" className="mt-4" onClick={onRefreshPerformance}>
+                      Fetch Data
+                    </Button>
+                  ) : null}
                 </div>
               ) : algorithmicInsights.length === 0 ? (
                 <div className="p-8 text-center border-2 border-dashed rounded-2xl">

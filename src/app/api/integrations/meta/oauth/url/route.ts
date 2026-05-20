@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { createMetaOAuthState } from '@/services/meta-business'
-import { buildMetaBusinessLoginUrl } from '@/services/facebook-oauth'
+import { buildMetaBusinessLoginUrl, SOCIAL_META_SCOPES } from '@/services/facebook-oauth'
 import { createApiHandler } from '@/lib/api-handler'
 import { ServiceUnavailableError, UnauthorizedError, BadRequestError } from '@/lib/api-errors'
 import { isValidRedirectUrl } from '@/lib/utils'
@@ -59,6 +59,7 @@ export const POST = createApiHandler(
       appId,
       redirectUri,
       state: statePayload,
+      scopes: query.entryPoint === 'socials' ? SOCIAL_META_SCOPES : undefined,
     })
 
     // Debug logging for OAuth configuration

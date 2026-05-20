@@ -21,13 +21,7 @@ import {
   useTaskForm,
   useTasks,
 } from '@/features/dashboard/tasks'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/ui/card'
+import { Card, CardContent } from '@/shared/ui/card'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/shared/ui/tabs'
@@ -479,8 +473,10 @@ function TasksPageContent({
   const initialLoading = loading && tasks.length === 0
   const loadingContent = useMemo(() => <TasksPageSkeleton />, [])
 
-  const scopeLabel = selectedClient?.name ?? (selectedClientId ? 'Selected client' : 'All clients')
-  const scopeHelper = selectedClient ? 'Scoped to the selected client' : 'Showing tasks across all clients'
+  const scopeLabel = selectedClient?.name ?? (selectedClientId ? 'Selected client' : null)
+  const scopeHelper = selectedClient
+    ? `Tasks for ${selectedClient.name}`
+    : 'All clients in this workspace'
   const emptyStateMessage = filters.activeTab === 'my-tasks'
     ? 'No tasks are assigned to you yet. Switch to All Tasks to see team-owned work.'
     : 'Get started by creating your first task.'
@@ -516,8 +512,7 @@ function TasksPageContent({
         loading={initialLoading}
         loadingContent={loadingContent}
       >
-      <div className={cn(DASHBOARD_THEME.layout.container, 'sm:space-y-8')}>
-        {/* Header */}
+      <div className={cn(DASHBOARD_THEME.layout.container, 'mx-auto max-w-7xl space-y-4 pb-10')}>
         <TasksHeader
           loading={loading}
           retryCount={retryCount}
@@ -528,21 +523,8 @@ function TasksPageContent({
           newTaskDisabledReason={newTaskDisabledReason}
         />
 
-        {/* Summary Cards */}
         {initialLoading ? (
-          <div className={DASHBOARD_THEME.stats.container}>
-            {['task-stats-1', 'task-stats-2', 'task-stats-3', 'task-stats-4'].map((key) => (
-              <Card key={key} className={DASHBOARD_THEME.cards.base}>
-                <CardContent className="flex items-center gap-3 p-4">
-                  <Skeleton className={DASHBOARD_THEME.skeletons.avatar} />
-                  <div className="space-y-2">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-6 w-14" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Skeleton className="h-8 w-full max-w-md" />
         ) : (
           <TaskSummaryCards
             taskCounts={filters.taskCounts}
@@ -551,38 +533,42 @@ function TasksPageContent({
           />
         )}
 
-        {/* Main Content */}
         <Tabs
           defaultValue="all-tasks"
           value={filters.activeTab}
           onValueChange={filters.setActiveTab}
-          className="space-y-4"
+          className="space-y-0"
         >
-          <div className={DASHBOARD_THEME.layout.header}>
-            <TabsList className={DASHBOARD_THEME.tabs.list}>
-              <TabsTrigger className={DASHBOARD_THEME.tabs.trigger} value="all-tasks">All Tasks</TabsTrigger>
-              <TabsTrigger className={DASHBOARD_THEME.tabs.trigger} value="my-tasks">My Tasks</TabsTrigger>
-            </TabsList>
-            <TaskViewControls
-              viewMode={filters.viewMode}
-              onViewModeChange={filters.setViewMode}
-              onExport={handleExport}
-              canExport={filters.sortedTasks.length > 0}
-            />
-          </div>
+          <div className="overflow-hidden rounded-lg border border-border/80 bg-card">
+            <div className="sticky top-0 z-10 flex flex-col gap-2 border-b border-border/80 bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                  {filters.viewMode === 'board' ? 'Board' : filters.viewMode === 'grid' ? 'Grid' : 'List'}
+                </h2>
+                <TabsList className="h-8 w-fit gap-0 rounded-md border border-border/60 bg-transparent p-0">
+                  <TabsTrigger
+                    value="all-tasks"
+                    className="h-8 rounded-none rounded-l-md border-0 px-3 text-xs data-[state=active]:bg-muted data-[state=active]:shadow-none"
+                  >
+                    All tasks
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="my-tasks"
+                    className="h-8 rounded-none rounded-r-md border-0 border-l border-border/60 px-3 text-xs data-[state=active]:bg-muted data-[state=active]:shadow-none"
+                  >
+                    My tasks
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              <TaskViewControls
+                viewMode={filters.viewMode}
+                onViewModeChange={filters.setViewMode}
+                onExport={handleExport}
+                canExport={filters.sortedTasks.length > 0}
+              />
+            </div>
 
-          <Card className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden rounded-xl border-border/80 shadow-sm')}>
-            <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'space-y-1')}>
-              <CardTitle className="text-xl font-semibold tracking-tight">
-                {filters.activeTab === 'my-tasks' ? 'My assignments' : 'Task list'}
-              </CardTitle>
-              <CardDescription className="max-w-2xl text-pretty text-sm leading-relaxed">
-                {filters.activeTab === 'my-tasks'
-                  ? 'Work assigned to you in this workspace. Use filters to narrow by status.'
-                  : 'Search, filter by assignee, and sort. Select rows for bulk updates in list or grid view.'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
+            <div>
               {/* Filters */}
               <TaskFilters
                 searchQuery={rawSearchQuery}
@@ -689,8 +675,8 @@ function TasksPageContent({
                   loading={loading}
                 />
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </Tabs>
 
         {/* Create Task Sheet */}

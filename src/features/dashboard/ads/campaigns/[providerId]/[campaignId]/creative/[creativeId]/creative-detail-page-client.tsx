@@ -12,6 +12,7 @@ import { useClientContext } from '@/shared/contexts/client-context'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { calculateAlgorithmicInsights, calculateEfficiencyScore } from '@/lib/ad-algorithms'
+import { mergeMetaDestinationSpec } from '@/services/integrations/meta-ads'
 import { useAction } from 'convex/react'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsAdMetricsApi, adsCreativesApi, creativesCopyApi } from '@/lib/convex-api'
@@ -20,6 +21,12 @@ import { isoDaysAgo } from '@/lib/preview-data'
 import { CreativeHeader } from '@/features/dashboard/ads/creative/components/creative-header'
 import { CreativeSocialPreview } from '@/features/dashboard/ads/creative/components/creative-social-preview'
 import { CreativeEditorTabs } from '@/features/dashboard/ads/creative/components/creative-editor-tabs'
+import { CreativeSaveBar } from '@/features/dashboard/ads/creative/components/creative-save-bar'
+import {
+  creativeCopyIsDirty,
+  mergeMetaAssetFeedSpecForSave,
+  normalizeStringList,
+} from '@/features/dashboard/ads/creative/components/creative-editing-utils'
 import type { Creative } from '@/features/dashboard/ads/creative/components/types'
 
 type NormalizedAdMetric = {
@@ -222,11 +229,13 @@ export default function CreativeDetailPageClient({
   const [creative, setCreative] = useState<Creative | null>(null)
   const [loading, setLoading] = useState(true)
   const [copiedField, setCopiedField] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(true)
   const [editedHeadlines, setEditedHeadlines] = useState<string[]>([])
   const [editedDescriptions, setEditedDescriptions] = useState<string[]>([])
   const [editedCta, setEditedCta] = useState('')
   const [editedLandingPage, setEditedLandingPage] = useState('')
+  const [previewHeadlineIndex, setPreviewHeadlineIndex] = useState(0)
+  const [previewDescriptionIndex, setPreviewDescriptionIndex] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
 
   const [generatingHeadlines, setGeneratingHeadlines] = useState(false)
@@ -368,6 +377,18 @@ export default function CreativeDetailPageClient({
     }
   }, [fetchCreative])
 
+  useEffect(() => {
+    if (!creative) return
+
+    setEditedHeadlines(creative.headlines ?? [])
+    setEditedDescriptions(creative.descriptions ?? [])
+    setEditedCta(creative.callToAction ?? '')
+    setEditedLandingPage(creative.landingPageUrl ?? '')
+    setPreviewHeadlineIndex(0)
+    setPreviewDescriptionIndex(0)
+    setIsEditing(true)
+  }, [creative?.creativeId, creative?.platformCreativeId])
+
   const runMetricsFetch = useEffectEvent(() => {
     void fetchMetrics()
   })
@@ -430,32 +451,69 @@ export default function CreativeDetailPageClient({
       })
   }, [])
 
-  const startEditing = useCallback(() => {
+  const isDirty = useMemo(() => {
+    if (!creative) return false
+    return creativeCopyIsDirty(creative, {
+      headlines: editedHeadlines,
+      descriptions: editedDescriptions,
+      cta: editedCta,
+      landingPage: editedLandingPage,
+    })
+  }, [creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage])
+
+  const previewCreative = useMemo((): Creative | null => {
+    if (!creative) return null
+
+    const headlines = normalizeStringList(editedHeadlines)
+    const descriptions = normalizeStringList(editedDescriptions)
+    const safeHeadlineIndex = Math.min(
+      Math.max(0, previewHeadlineIndex),
+      Math.max(0, headlines.length - 1),
+    )
+    const safeDescriptionIndex = Math.min(
+      Math.max(0, previewDescriptionIndex),
+      Math.max(0, descriptions.length - 1),
+    )
+
+    const orderedHeadlines =
+      headlines.length > 0
+        ? [headlines[safeHeadlineIndex]!, ...headlines.filter((_, i) => i !== safeHeadlineIndex)]
+        : creative.headlines
+    const orderedDescriptions =
+      descriptions.length > 0
+        ? [descriptions[safeDescriptionIndex]!, ...descriptions.filter((_, i) => i !== safeDescriptionIndex)]
+        : creative.descriptions
+
+    return {
+      ...creative,
+      headlines: orderedHeadlines,
+      descriptions: orderedDescriptions,
+      callToAction: editedCta.trim() || creative.callToAction,
+      landingPageUrl: editedLandingPage.trim() || creative.landingPageUrl,
+    }
+  }, [
+    creative,
+    editedCta,
+    editedDescriptions,
+    editedHeadlines,
+    editedLandingPage,
+    previewDescriptionIndex,
+    previewHeadlineIndex,
+  ])
+
+  const cancelEditing = useCallback(() => {
     if (!creative) return
-    setEditedHeadlines(creative.headlines || [])
-    setEditedDescriptions(creative.descriptions || [])
-    setEditedCta(creative.callToAction || '')
-    setEditedLandingPage(creative.landingPageUrl || '')
+    setEditedHeadlines(creative.headlines ?? [])
+    setEditedDescriptions(creative.descriptions ?? [])
+    setEditedCta(creative.callToAction ?? '')
+    setEditedLandingPage(creative.landingPageUrl ?? '')
+    setPreviewHeadlineIndex(0)
+    setPreviewDescriptionIndex(0)
     setIsEditing(true)
   }, [creative])
 
-  const cancelEditing = useCallback(() => {
-    setIsEditing(false)
-    setEditedHeadlines([])
-    setEditedDescriptions([])
-    setEditedCta('')
-    setEditedLandingPage('')
-  }, [])
-
   const generateCopy = useCallback(async (kind: 'headlines' | 'captions') => {
     if (!creative) return
-    if (!isEditing) {
-      toast({
-        title: 'Start editing to use AI',
-        description: 'Click Edit to enable AI-assisted generation.',
-      })
-      return
-    }
 
     const setLoading = kind === 'headlines' ? setGeneratingHeadlines : setGeneratingDescriptions
 
@@ -575,7 +633,7 @@ export default function CreativeDetailPageClient({
       .finally(() => {
         setLoading(false)
       })
-  }, [campaignName, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isEditing, isPreviewMode, params.campaignId, params.creativeId, params.providerId, selectedClientId, generateCopyAction])
+  }, [campaignName, creative, editedCta, editedDescriptions, editedHeadlines, editedLandingPage, isPreviewMode, params.campaignId, params.creativeId, params.providerId, selectedClientId, generateCopyAction])
 
   const handleSave = useCallback(async () => {
     if (isPreviewMode) {
@@ -638,10 +696,19 @@ export default function CreativeDetailPageClient({
 
     setIsSaving(true)
 
-    const normalizedHeadlines = editedHeadlines.flatMap((headline) => { const h = headline.trim(); return h ? [h] : [] })
-    const normalizedDescriptions = editedDescriptions.flatMap((description) => { const d = description.trim(); return d ? [d] : [] })
+    const normalizedHeadlines = normalizeStringList(editedHeadlines)
+    const normalizedDescriptions = normalizeStringList(editedDescriptions)
     const normalizedCta = editedCta.trim()
     const normalizedLandingPage = editedLandingPage.trim()
+    const mergedAssetFeedSpec =
+      params.providerId === 'facebook'
+        ? mergeMetaAssetFeedSpecForSave(
+            creative.assetFeedSpec,
+            normalizedHeadlines,
+            normalizedDescriptions,
+            normalizedLandingPage,
+          ) ?? creative.assetFeedSpec
+        : creative.assetFeedSpec
 
     await updateCreative({
       workspaceId,
@@ -652,16 +719,19 @@ export default function CreativeDetailPageClient({
       name: creative.name,
       title: normalizedHeadlines[0],
       body: normalizedDescriptions[0],
+      description:
+        creative.objectType?.toUpperCase() === 'VIDEO' || creative.videoId
+          ? undefined
+          : normalizedDescriptions[1],
       callToActionType: normalizedCta || undefined,
       linkUrl: normalizedLandingPage || undefined,
       objectType: creative.objectType,
-      imageUrl: creative.imageUrl,
+      imageUrl: creative.imageUrl || creative.thumbnailUrl,
       imageHash: creative.imageHash,
       videoId: creative.videoId,
       pageId: creative.pageId,
-      instagramActorId: creative.instagramActorId,
-      assetFeedSpec: creative.assetFeedSpec,
-      destinationSpec: creative.destinationSpec,
+      assetFeedSpec: mergedAssetFeedSpec,
+      destinationSpec: mergeMetaDestinationSpec(creative.destinationSpec, normalizedLandingPage || undefined),
     })
       .then((result) => {
         if (creative) {
@@ -708,6 +778,11 @@ export default function CreativeDetailPageClient({
 
   const removeHeadline = useCallback((index: number) => {
     setEditedHeadlines((current) => current.filter((_, currentIndex) => currentIndex !== index))
+    setPreviewHeadlineIndex((current) => {
+      if (index < current) return current - 1
+      if (index === current) return Math.max(0, current - 1)
+      return current
+    })
   }, [])
 
   const updateHeadline = useCallback((index: number, value: string) => {
@@ -724,6 +799,11 @@ export default function CreativeDetailPageClient({
 
   const removeDescription = useCallback((index: number) => {
     setEditedDescriptions((current) => current.filter((_, currentIndex) => currentIndex !== index))
+    setPreviewDescriptionIndex((current) => {
+      if (index < current) return current - 1
+      if (index === current) return Math.max(0, current - 1)
+      return current
+    })
   }, [])
 
   const updateDescription = useCallback((index: number, value: string) => {
@@ -741,6 +821,20 @@ export default function CreativeDetailPageClient({
   const handleGenerateDescriptions = useCallback(() => {
     void generateCopy('captions')
   }, [generateCopy])
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 's') {
+        event.preventDefault()
+        if (isDirty && !isSaving) {
+          void handleSave()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [handleSave, isDirty, isSaving])
 
   const backUrl = `/dashboard/ads/campaigns/${params.providerId}/${params.campaignId}${searchParamsString ? `?${searchParamsString}` : ''}`
 
@@ -834,57 +928,67 @@ export default function CreativeDetailPageClient({
         creative={creative}
         backUrl={backUrl}
         displayName={displayName}
-        isEditing={isEditing}
+        isDirty={isDirty}
         isSaving={isSaving}
-        onStartEditing={startEditing}
         onCancelEditing={cancelEditing}
         onSave={handleSave}
         onRefreshCreative={fetchCreative}
         onRefreshPerformance={fetchMetrics}
       />
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 items-start">
+      <div className="grid grid-cols-1 gap-8 px-1 pb-8 lg:grid-cols-12 lg:items-start">
         <CreativeSocialPreview
-          creative={creative}
+          creative={previewCreative ?? creative}
           campaignName={campaignName}
           displayName={displayName}
           performanceSummary={performanceSummary}
           efficiencyScore={efficiencyScore}
+          headlineVariantCount={normalizeStringList(editedHeadlines).length}
+          descriptionVariantCount={normalizeStringList(editedDescriptions).length}
+          previewHeadlineIndex={previewHeadlineIndex}
+          previewDescriptionIndex={previewDescriptionIndex}
+          onPreviewHeadlineIndexChange={setPreviewHeadlineIndex}
+          onPreviewDescriptionIndexChange={setPreviewDescriptionIndex}
         />
 
-        <CreativeEditorTabs
-          providerId={params.providerId}
-          creative={creative}
-          copiedField={copiedField}
-          onCopy={handleCopy}
-          isEditing={isEditing}
-          editedHeadlines={editedHeadlines}
-          editedDescriptions={editedDescriptions}
-          editedCta={editedCta}
-          editedLandingPage={editedLandingPage}
-          onAddHeadline={addHeadline}
-          onRemoveHeadline={removeHeadline}
-          onUpdateHeadline={updateHeadline}
-          onAddDescription={addDescription}
-          onRemoveDescription={removeDescription}
-          onUpdateDescription={updateDescription}
-          onChangeCta={setEditedCta}
-          onChangeLandingPage={setEditedLandingPage}
-
-          generatingHeadlines={generatingHeadlines}
-          generatingDescriptions={generatingDescriptions}
-          onGenerateHeadlines={handleGenerateHeadlines}
-          onGenerateDescriptions={handleGenerateDescriptions}
-          days={days}
-          onChangeDays={setDays}
-          metricsLoading={metricsLoading}
-          metricsError={metricsError}
-          currency={displayCurrency}
-          performanceSummary={performanceSummary}
-          efficiencyScore={efficiencyScore}
-          onRefreshPerformance={fetchMetrics}
-          algorithmicInsights={algorithmicInsights}
-        />
+        <div className="lg:col-span-7 flex flex-col">
+          <CreativeEditorTabs
+            creative={creative}
+            copiedField={copiedField}
+            onCopy={handleCopy}
+            isEditing={isEditing}
+            isDirty={isDirty}
+            editedHeadlines={editedHeadlines}
+            editedDescriptions={editedDescriptions}
+            editedCta={editedCta}
+            editedLandingPage={editedLandingPage}
+            previewHeadlineIndex={previewHeadlineIndex}
+            previewDescriptionIndex={previewDescriptionIndex}
+            onPreviewHeadlineIndexChange={setPreviewHeadlineIndex}
+            onPreviewDescriptionIndexChange={setPreviewDescriptionIndex}
+            onAddHeadline={addHeadline}
+            onRemoveHeadline={removeHeadline}
+            onUpdateHeadline={updateHeadline}
+            onAddDescription={addDescription}
+            onRemoveDescription={removeDescription}
+            onUpdateDescription={updateDescription}
+            onChangeCta={setEditedCta}
+            onChangeLandingPage={setEditedLandingPage}
+            generatingHeadlines={generatingHeadlines}
+            generatingDescriptions={generatingDescriptions}
+            onGenerateHeadlines={handleGenerateHeadlines}
+            onGenerateDescriptions={handleGenerateDescriptions}
+            performanceSummary={performanceSummary}
+            onRefreshPerformance={fetchMetrics}
+            algorithmicInsights={algorithmicInsights}
+          />
+          <CreativeSaveBar
+            isDirty={isDirty}
+            isSaving={isSaving}
+            onSave={handleSave}
+            onDiscard={cancelEditing}
+          />
+        </div>
       </div>
 
     </div>

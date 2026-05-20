@@ -11,6 +11,7 @@ import { optimizeMetaImageUrl, isSignedMetaThumbnail, metaPageIdFromObjectStoryI
 import { metaAdsClient } from '@/services/integrations/shared/base-client'
 import type { MetaCreative, MetaAdsListResponse, MetaAdData, MetaAdCreative } from '../types'
 import { extractLeadGenFormId } from './objectives/leads'
+import { sanitizeMetaDestinationSpec } from '../creatives'
 
 function collectUniqueStrings(values: Array<string | null | undefined>): string[] {
   const seen = new Set<string>()
@@ -516,7 +517,9 @@ export async function fetchMetaCreatives(options: {
         pageId: resolvedPageId,
         instagramActorId: storySpec?.instagram_actor_id,
         assetFeedSpec: serializedAssetFeedSpec,
-        destinationSpec: creative?.destination_spec,
+        destinationSpec: sanitizeMetaDestinationSpec(
+          creative?.destination_spec as Record<string, unknown> | undefined,
+        ),
         headlines: content.headlines,
         // Lead gen specific fields
         isLeadGen: isLeadGenFlag,

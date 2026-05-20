@@ -13,9 +13,12 @@ type SocialsConnectionPanelProps = {
   panelId?: string
   selectedClientName: string | null
   connected: boolean
+  setupComplete: boolean
   accountName: string | null | undefined
   lastSyncedAtMs: number | null | undefined
+  lastSyncStatus: 'never' | 'pending' | 'success' | 'error' | null | undefined
   oauthPending: boolean
+  syncPending: boolean
   connectionError: string | null
   onConnectMeta: () => Promise<void>
   onDisconnect: () => Promise<void>
@@ -34,9 +37,12 @@ export function SocialsConnectionPanel({
   panelId,
   selectedClientName,
   connected,
+  setupComplete,
   accountName,
   lastSyncedAtMs,
+  lastSyncStatus,
   oauthPending,
+  syncPending,
   connectionError,
   onConnectMeta,
   onDisconnect,
@@ -66,15 +72,14 @@ export function SocialsConnectionPanel({
               </div>
               <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <CardTitle className="text-lg">Meta connection</CardTitle>
+                  <CardTitle className="text-lg">Organic social (Meta)</CardTitle>
                   <Badge className={connected ? getBadgeClasses('success') : getBadgeClasses('secondary')}>
                     {connected ? 'Connected' : 'Not connected'}
                   </Badge>
                 </div>
                 <CardDescription className="text-pretty text-sm leading-relaxed">
-                  One Meta Business login covers <span className="font-medium text-foreground">Facebook Pages</span> and{' '}
-                  <span className="font-medium text-foreground">Instagram business</span> organic metrics for this workspace, no
-                  separate sign-ins.
+                  Connect → pick a Page → sync organic reach and engagement. Separate from{' '}
+                  <span className="font-medium text-foreground">Meta Ads</span> / Ad Manager.
                 </CardDescription>
               </div>
             </div>
@@ -95,7 +100,9 @@ export function SocialsConnectionPanel({
               <Badge className={getBadgeClasses('primary')}>Workspace: {selectedClientName}</Badge>
             ) : null}
             {accountName ? <Badge className={getBadgeClasses('primary')}>Authorized as: {accountName}</Badge> : null}
-            <Badge className={getBadgeClasses('secondary')}>{formatLastSync(lastSyncedAtMs)}</Badge>
+            <Badge className={getBadgeClasses('secondary')}>
+              {syncPending || lastSyncStatus === 'pending' ? 'Sync in progress…' : formatLastSync(lastSyncedAtMs)}
+            </Badge>
           </div>
 
           {connectionError ? <p className="text-sm text-destructive">{connectionError}</p> : null}
@@ -106,11 +113,11 @@ export function SocialsConnectionPanel({
               variant="outline"
               size="sm"
               onClick={onRequestSync}
-              disabled={!connected || oauthPending}
+              disabled={!connected || !setupComplete || oauthPending || syncPending}
               className={getButtonClasses('outline')}
             >
-              <RefreshCw className="mr-2 h-4 w-4" aria-hidden />
-              Request sync
+              <RefreshCw className={cn('mr-2 h-4 w-4', syncPending && 'animate-spin')} aria-hidden />
+              Sync now
             </Button>
             <Button
               type="button"
@@ -121,7 +128,7 @@ export function SocialsConnectionPanel({
               className={cn(getButtonClasses('outline'), 'text-destructive hover:text-destructive')}
             >
               <Unplug className="mr-2 h-4 w-4" aria-hidden />
-              Disconnect
+              Disconnect social
             </Button>
           </div>
         </CardContent>

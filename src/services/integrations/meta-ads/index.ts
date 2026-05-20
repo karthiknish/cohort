@@ -92,10 +92,14 @@ export {
   updateMetaAdCreative,
   fetchMetaPageActors,
   mergeMetaDestinationSpec,
+  sanitizeMetaDestinationSpec,
+  toMetaApiDestinationSpec,
   normalizeMetaObjectTypeForCreate,
   uploadMediaToMeta,
 } from './creatives'
 export type {
+  MetaApiDestinationSpec,
+  MetaStoredDestinationSpec,
   CreateAdCreativeOptions,
   CreateAdOptions,
   DeleteAdCreativeOptions,

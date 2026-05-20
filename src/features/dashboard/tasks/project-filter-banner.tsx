@@ -1,9 +1,7 @@
 'use client'
 
-import Link from 'next/link'
-import { X } from 'lucide-react'
+import { BriefcaseBusiness, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { isFeatureEnabled } from '@/lib/features'
 
 export type ProjectFilterBannerProps = {
   projectId: string | null
@@ -19,31 +17,23 @@ export function ProjectFilterBanner({
   if (!projectId && !projectName) return null
 
   return (
-    <div className="mx-4 mb-3 mt-2 flex items-center justify-between rounded-md border border-accent/40 bg-accent/5 px-3 py-2 text-xs text-primary">
-      <span className="font-medium">
-        Showing tasks for {projectName ?? 'selected project'}
+    <div className="mx-4 flex items-center justify-between gap-2 border-b border-border/60 bg-muted/20 px-3 py-2 text-sm">
+      <span className="inline-flex min-w-0 items-center gap-2 text-muted-foreground">
+        <BriefcaseBusiness className="h-4 w-4 shrink-0" aria-hidden />
+        <span className="truncate">
+          Project: <span className="font-medium text-foreground">{projectName ?? 'Selected'}</span>
+        </span>
       </span>
-      <div className="flex items-center gap-2">
-        {isFeatureEnabled('BIDIRECTIONAL_NAV') && projectId && (
-          <Button asChild variant="outline" size="sm" className="h-6 text-xs">
-            <Link
-              href={`/dashboard/projects?projectId=${projectId}&projectName=${encodeURIComponent(projectName || '')}`}
-            >
-              View Project
-            </Link>
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 text-primary hover:text-primary"
-          onClick={onClear}
-        >
-          <X className="h-3.5 w-3.5" />
-          <span className="sr-only">Clear project filter</span>
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-7 shrink-0 gap-1 px-2 text-xs"
+        onClick={onClear}
+      >
+        <X className="h-3.5 w-3.5" aria-hidden />
+        Clear
+      </Button>
     </div>
   )
 }

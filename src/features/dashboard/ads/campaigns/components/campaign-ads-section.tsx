@@ -898,7 +898,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   }, [])
 
   return (
-    <Card>
+    <Card className="border-muted/40 shadow-sm">
       <CampaignAdsHeader
         availableAdSets={availableAdSets}
         campaignId={campaignId}

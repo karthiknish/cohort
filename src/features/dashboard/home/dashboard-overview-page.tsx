@@ -1,25 +1,16 @@
 'use client'
 
-import Link from 'next/link'
 import { formatDistanceToNowStrict } from 'date-fns'
 import { useConvexAuth, useQuery } from 'convex/react'
-import {
-  ArrowUpRight,
-  CheckSquare,
-  FileText,
-  LayoutDashboard,
-  LoaderCircle,
-  MessageSquare,
-  Users,
-  type LucideIcon,
-} from 'lucide-react'
+import { Info, LoaderCircle, Users } from 'lucide-react'
 import { useMemo } from 'react'
 
-import { AnalyticsSummaryCards } from '@/features/dashboard/analytics/components/analytics-summary-cards'
-import { ProposalMetrics } from '@/features/dashboard/proposals/components/proposal-metrics'
-import { TaskSummaryCards } from '@/features/dashboard/tasks/task-summary-cards'
-import { DashboardWorkHub } from '@/features/dashboard/home/components/dashboard-work-hub'
-import { OperationsPulseCard } from '@/features/dashboard/workforce/operations-pulse-card'
+import { buildChartData } from '@/features/dashboard/home/lib/dashboard-calculations'
+import { PerformanceChart } from '@/features/dashboard/home/components/performance-chart'
+import { DashboardDailySnapshotCard } from '@/features/dashboard/home/components/dashboard-daily-snapshot-card'
+import { DashboardSkeleton } from '@/features/dashboard/home/components/dashboard-skeleton'
+import { StatsCards } from '@/features/dashboard/home/components/stats-cards'
+import { useDashboardData, useDashboardStats } from '@/features/dashboard/home/hooks'
 import { analyticsIntegrationsApi, projectsApi } from '@/lib/convex-api'
 import { getPreviewProjects } from '@/lib/preview-data'
 import { formatCurrency, getWorkspaceId } from '@/lib/utils'
@@ -30,18 +21,23 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/shared/ui/tooltip'
 import type { MetricRecord } from '@/types/dashboard'
-import { TASK_STATUSES, type TaskRecord, type TaskStatus } from '@/types/tasks'
+import { TASK_STATUSES, type TaskStatus } from '@/types/tasks'
 import { PROJECT_STATUSES, type ProjectStatus } from '@/types/projects'
-
-import { DashboardDailySnapshotCard } from './components/dashboard-daily-snapshot-card'
-import { DashboardPageHeader } from './components/dashboard-page-header'
-import { DashboardRoleBanner } from './components/dashboard-role-banner'
-import { DashboardSkeleton } from './components/dashboard-skeleton'
-import { StatsCards } from './components/stats-cards'
-import { useDashboardData, useDashboardStats } from './hooks'
 
 type AnalyticsStatusRow = {
   accountName: string | null
@@ -53,6 +49,12 @@ type ProjectRow = {
   status?: unknown
 }
 
+type SnapshotMetric = {
+  label: string
+  value: string
+  helper: string
+}
+
 function isProjectStatus(value: unknown): value is ProjectStatus {
   return typeof value === 'string' && (PROJECT_STATUSES as readonly string[]).includes(value)
 }
@@ -60,20 +62,6 @@ function isProjectStatus(value: unknown): value is ProjectStatus {
 function normalizeTaskStatus(value: string | undefined): TaskStatus | null {
   if (typeof value !== 'string') return null
   return (TASK_STATUSES as readonly string[]).includes(value) ? (value as TaskStatus) : null
-}
-
-type SnapshotMetric = {
-  label: string
-  value: string
-  helper: string
-}
-
-const EMPTY_TASK_COUNTS: Record<TaskStatus, number> = {
-  todo: 0,
-  'in-progress': 0,
-  review: 0,
-  completed: 0,
-  archived: 0,
 }
 
 export function DashboardOverviewPage() {
@@ -84,7 +72,6 @@ export function DashboardOverviewPage() {
 
   const workspaceId = getWorkspaceId(user)
   const canQueryConvex = Boolean(workspaceId) && Boolean(user?.id) && isAuthenticated && !convexAuthLoading
-  const userRole = user?.role ?? null
 
   const {
     metrics,
@@ -104,7 +91,7 @@ export function DashboardOverviewPage() {
   const { orderedStats } = useDashboardStats({
     metrics,
     taskSummary,
-    userRole,
+    userRole: user?.role ?? null,
   })
 
   const analyticsStatus = useQuery(
@@ -129,9 +116,11 @@ export function DashboardOverviewPage() {
     (value): value is string => typeof value === 'string' && value.trim().length > 0,
   )
 
-  const selectedClientLabel = selectedClient?.name ?? 'current workspace'
+  const clientName = selectedClient?.name ?? 'Workspace'
   const teamMembersCount = selectedClient?.teamMembers.length ?? 0
-  const managersCount = selectedClient?.accountManager ? 1 : 0
+  const accountManager = selectedClient?.accountManager?.trim() || null
+
+  const chartMetrics = useMemo(() => buildChartData(metrics), [metrics])
 
   const analyticsMetrics = useMemo(
     () => metrics.filter((metric) => metric.providerId === 'google-analytics'),
@@ -153,9 +142,8 @@ export function DashboardOverviewPage() {
     [analyticsMetrics],
   )
 
-  const analyticsConversionRate = analyticsTotals.sessions > 0
-    ? (analyticsTotals.conversions / analyticsTotals.sessions) * 100
-    : 0
+  const analyticsConversionRate =
+    analyticsTotals.sessions > 0 ? (analyticsTotals.conversions / analyticsTotals.sessions) * 100 : 0
 
   const adMetrics = useMemo(
     () => metrics.filter((metric) => metric.providerId !== 'google-analytics'),
@@ -163,16 +151,6 @@ export function DashboardOverviewPage() {
   )
 
   const adsSummary = useMemo(() => buildAdsSummary(adMetrics), [adMetrics])
-
-  const taskCounts = useMemo(() => buildTaskCounts(rawTasks), [rawTasks])
-  const taskCompletionRate = useMemo(() => {
-    const pipeline: TaskStatus[] = ['todo', 'in-progress', 'review', 'completed']
-    const trackedTotal = pipeline.reduce((sum, key) => sum + taskCounts[key], 0)
-    if (trackedTotal === 0) {
-      return 0
-    }
-    return Math.round((taskCounts.completed / trackedTotal) * 100)
-  }, [taskCounts])
 
   const projects = useMemo(() => {
     if (isPreviewMode) {
@@ -182,147 +160,156 @@ export function DashboardOverviewPage() {
   }, [isPreviewMode, projectRows, selectedClientId])
 
   const clientStats = useMemo(() => {
-    const totalProjects = projects.length
-    const activeProjects = projects.filter((project) => isProjectStatus(project.status) && project.status === 'active').length
-    const planningProjects = projects.filter((project) => isProjectStatus(project.status) && project.status === 'planning').length
-    const onHoldProjects = projects.filter((project) => isProjectStatus(project.status) && project.status === 'on_hold').length
+    const activeProjects = projects.filter(
+      (project) => isProjectStatus(project.status) && project.status === 'active',
+    ).length
     const openTasks = rawTasks.filter((task) => {
       if (task.deletedAt) return false
-      const s = normalizeTaskStatus(task.status)
-      return s === 'todo' || s === 'in-progress' || s === 'review'
+      const status = normalizeTaskStatus(task.status)
+      return status === 'todo' || status === 'in-progress' || status === 'review'
     }).length
-    const completedTasks = rawTasks.filter((task) => {
-      if (task.deletedAt) return false
-      return normalizeTaskStatus(task.status) === 'completed'
-    }).length
-    const pendingProposals = proposals.filter((proposal) => (
-      proposal.status === 'draft' ||
-      proposal.status === 'in_progress' ||
-      proposal.status === 'ready' ||
-      proposal.status === 'sent'
-    )).length
+    const pendingProposals = proposals.filter(
+      (proposal) =>
+        proposal.status === 'draft' ||
+        proposal.status === 'in_progress' ||
+        proposal.status === 'ready' ||
+        proposal.status === 'sent',
+    ).length
 
-    return {
-      activeProjects,
-      totalProjects,
-      planningProjects,
-      onHoldProjects,
-      openTasks,
-      completedTasks,
-      pendingProposals,
-    }
+    return { activeProjects, openTasks, pendingProposals }
   }, [projects, rawTasks, proposals])
 
-  const analyticsStatusLabel = useMemo(() => {
-    if (isPreviewMode) return 'Preview sample'
-    if (!analyticsStatus) return 'Setup required'
-    switch (analyticsStatus.lastSyncStatus) {
-      case 'success':
-        return 'Synced'
-      case 'pending':
-        return 'Sync queued'
-      case 'error':
-        return 'Sync issue'
-      default:
-        return 'Connected'
-    }
-  }, [analyticsStatus, isPreviewMode])
-
-  const adsMetricsList = useMemo<SnapshotMetric[]>(() => [
-    {
-      label: 'Ad spend',
-      value: formatCurrency(adsSummary.spend),
-      helper: adsSummary.providers.size > 0 ? `${adsSummary.providers.size} active channels` : 'Connect ad platforms to import spend',
-    },
-    {
-      label: 'Clicks',
-      value: formatCompactNumber(adsSummary.clicks),
-      helper: `${formatCompactNumber(adsSummary.impressions)} impressions across ads`,
-    },
-    {
-      label: 'Conversions',
-      value: formatCompactNumber(adsSummary.conversions),
-      helper: adsSummary.revenue > 0 ? `${formatCurrency(adsSummary.revenue)} revenue attributed` : 'Revenue attribution not available yet',
-    },
-  ], [adsSummary.clicks, adsSummary.conversions, adsSummary.impressions, adsSummary.providers, adsSummary.revenue, adsSummary.spend])
-
   const analyticsStatusDetail = useMemo(() => {
-    if (isPreviewMode) return 'Using preview dashboard metrics.'
-    if (!analyticsStatus) return 'Connect Google Analytics to unlock traffic and revenue totals.'
+    if (isPreviewMode) return 'Preview metrics'
+    if (!analyticsStatus) return 'Analytics not connected'
     if (analyticsStatus.lastSyncedAtMs) {
-      return `Last sync ${formatDistanceToNowStrict(analyticsStatus.lastSyncedAtMs, { addSuffix: true })}`
+      return `Synced ${formatDistanceToNowStrict(analyticsStatus.lastSyncedAtMs, { addSuffix: true })}`
     }
-    return analyticsStatus.accountName ? `Connected to ${analyticsStatus.accountName}` : 'Google Analytics is connected.'
+    return analyticsStatus.accountName
+      ? `Connected to ${analyticsStatus.accountName}`
+      : 'Google Analytics connected'
   }, [analyticsStatus, isPreviewMode])
+
+  const adsMetricsList = useMemo<SnapshotMetric[]>(
+    () => [
+      {
+        label: 'Ad spend',
+        value: formatCurrency(adsSummary.spend),
+        helper:
+          adsSummary.providers.size > 0
+            ? `${adsSummary.providers.size} active channels`
+            : 'No ad spend in this period',
+      },
+      {
+        label: 'Clicks',
+        value: formatCompactNumber(adsSummary.clicks),
+        helper: `${formatCompactNumber(adsSummary.impressions)} impressions`,
+      },
+      {
+        label: 'Conversions',
+        value: formatCompactNumber(adsSummary.conversions),
+        helper:
+          adsSummary.revenue > 0
+            ? `${formatCurrency(adsSummary.revenue)} revenue`
+            : 'No attributed revenue',
+      },
+    ],
+    [adsSummary],
+  )
+
+  const analyticsMetricsList = useMemo<SnapshotMetric[]>(
+    () => [
+      {
+        label: 'Users',
+        value: formatCompactNumber(analyticsTotals.users),
+        helper: analyticsStatusDetail,
+      },
+      {
+        label: 'Sessions',
+        value: formatCompactNumber(analyticsTotals.sessions),
+        helper: 'Site visits in range',
+      },
+      {
+        label: 'Conv. rate',
+        value: `${analyticsConversionRate.toFixed(2)}%`,
+        helper: `${formatCompactNumber(analyticsTotals.conversions)} conversions`,
+      },
+    ],
+    [analyticsConversionRate, analyticsStatusDetail, analyticsTotals],
+  )
 
   const statsLoading = metricsLoading || tasksLoading
-  const clientStatsLoading = tasksLoading || proposalsLoading || (!isPreviewMode && canQueryConvex && projectRows === undefined)
+  const clientStatsLoading =
+    tasksLoading || proposalsLoading || (!isPreviewMode && canQueryConvex && projectRows === undefined)
   const analyticsLoading = metricsLoading && analyticsMetrics.length === 0
   const adsLoading = metricsLoading && adMetrics.length === 0
-  const headerBadge = useMemo(() => ({
-    label: selectedClient ? 'Selected client' : 'Workspace overview',
-    variant: 'secondary' as const,
-  }), [selectedClient])
-  const isInternalTeamRole = userRole === 'admin' || userRole === 'team'
+  const hasChartData = chartMetrics.length > 0
+  const hasAdsData = adMetrics.length > 0 || adsSummary.spend > 0
+  const hasAnalyticsData = analyticsMetrics.length > 0 || analyticsTotals.sessions > 0
+
   const isInitialLoading =
     !isPreviewMode &&
     metrics.length === 0 &&
     rawTasks.length === 0 &&
     proposals.length === 0 &&
     statsLoading &&
-    analyticsLoading &&
-    adsLoading &&
-    proposalsLoading &&
     clientStatsLoading
-  const loadingContent = useMemo(() => <DashboardSkeleton />, [])
+
+  const displayStats = useMemo(
+    () =>
+      orderedStats.map((stat) => ({
+        ...stat,
+        href: undefined,
+        featureLabel: undefined,
+      })),
+    [orderedStats],
+  )
 
   return (
     <BoneyardSkeletonBoundary
       name="dashboard-overview-page"
       loading={isInitialLoading}
-      loadingContent={loadingContent}
+      loadingContent={<DashboardSkeleton />}
     >
-      <div className="space-y-8 pb-10">
-        <DashboardPageHeader
-          title="Dashboard"
-          description={`Team operations and ${selectedClientLabel} work in one place—tasks, projects, and agency tools at a glance.`}
-          icon={LayoutDashboard}
-          badge={headerBadge}
-        />
+      <div className="mx-auto max-w-7xl space-y-8 pb-10">
+        <header className="space-y-3 border-b border-muted/40 pb-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              {clientName}
+            </h1>
+            {selectedClient ? (
+              <Badge variant="secondary" className="font-normal">
+                Client
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="font-normal">
+                All clients
+              </Badge>
+            )}
+          </div>
+          <p className="max-w-2xl text-sm text-muted-foreground text-pretty">
+            {selectedClient
+              ? 'Summary of delivery, paid media, and site performance for the selected client.'
+              : 'Workspace-wide summary. Select a client in the sidebar for a focused view.'}
+          </p>
+          {selectedClient ? (
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+              {teamMembersCount > 0 ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Users className="h-4 w-4" aria-hidden />
+                  {teamMembersCount} team {teamMembersCount === 1 ? 'member' : 'members'}
+                </span>
+              ) : null}
+              {accountManager ? <span>Account manager: {accountManager}</span> : null}
+            </div>
+          ) : null}
+        </header>
 
-        <DashboardRoleBanner userRole={userRole} userDisplayName={user?.name ?? null} />
-
-        <DashboardDailySnapshotCard
-          openTasks={clientStats.openTasks}
-          pendingProposals={clientStats.pendingProposals}
-          activeProjects={clientStats.activeProjects}
-          loading={clientStatsLoading}
-        />
-
-        {isInternalTeamRole ? (
-          <>
-            <section className="space-y-4">
-              <SectionHeading
-                title="Team operations"
-                description="Shortcuts to time, scheduling, and time off. Agency tools stay in the sidebar."
-              />
-              <DashboardWorkHub userRole={userRole} />
-            </section>
-            <section className="space-y-4">
-              <SectionHeading
-                title="Operations pulse"
-                description="Live attendance, coverage, checklist health, and time off at a glance."
-              />
-              <OperationsPulseCard />
-            </section>
-          </>
-        ) : null}
-
-        {dashboardErrors.length > 0 && (
+        {dashboardErrors.length > 0 ? (
           <Alert variant="destructive">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 space-y-1">
-                <AlertTitle>Some dashboard data is unavailable</AlertTitle>
+                <AlertTitle>Some data could not be loaded</AlertTitle>
                 <AlertDescription>{dashboardErrors.join(' ')}</AlertDescription>
               </div>
               <Button
@@ -338,67 +325,80 @@ export function DashboardOverviewPage() {
               </Button>
             </div>
           </Alert>
-        )}
+        ) : null}
 
-        <section className="space-y-4">
-          <SectionHeading
-            title="Top summary"
-            description={
-              isInternalTeamRole
-                ? 'Agency and delivery KPIs—after team ops shortcuts above.'
-                : 'Primary KPI cards from analytics, ads, and your task flow.'
-            }
-          />
-          <StatsCards stats={orderedStats} loading={statsLoading} primaryCount={4} />
-        </section>
+        <DashboardDailySnapshotCard
+          openTasks={clientStats.openTasks}
+          pendingProposals={clientStats.pendingProposals}
+          activeProjects={clientStats.activeProjects}
+          loading={clientStatsLoading}
+        />
+
+        {hasChartData ? (
+          <Card className="border-muted/40 bg-card shadow-sm">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg">Spend & revenue</CardTitle>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 cursor-help text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      Daily ad spend and revenue from synced platforms for the current client.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <CardDescription>Trend over the synced reporting window</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <PerformanceChart
+                metrics={chartMetrics}
+                loading={metricsLoading}
+                dataSource="ads"
+                showDetailLink={false}
+                hideHeader
+              />
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {(hasAdsData || hasAnalyticsData) && !hasChartData ? (
+          <div className="grid gap-6 lg:grid-cols-2">
+            {hasAdsData ? (
+              <section className="space-y-3">
+                <h2 className="text-sm font-semibold text-foreground">Paid media</h2>
+                <SnapshotMetricGrid metrics={adsMetricsList} loading={adsLoading} />
+              </section>
+            ) : null}
+            {hasAnalyticsData ? (
+              <section className="space-y-3">
+                <h2 className="text-sm font-semibold text-foreground">Site analytics</h2>
+                <SnapshotMetricGrid metrics={analyticsMetricsList} loading={analyticsLoading} />
+              </section>
+            ) : null}
+          </div>
+        ) : null}
+
+        {!hasChartData && !hasAdsData && !hasAnalyticsData && !metricsLoading ? (
+          <Card className="border-dashed border-muted/60 bg-muted/5">
+            <CardContent className="py-12 text-center text-sm text-muted-foreground">
+              No performance data yet for this view. Connect ad or analytics integrations to see
+              metrics and charts here.
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {displayStats.length > 0 ? (
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold text-foreground">Summary</h2>
+            <StatsCards stats={displayStats} loading={statsLoading} primaryCount={4} linkless />
+          </section>
+        ) : null}
       </div>
     </BoneyardSkeletonBoundary>
   )
-}
-
-type SectionHeadingProps = {
-  title: string
-  description: string
-  href?: string
-  hrefLabel?: string
-  badgeLabel?: string
-}
-
-function SectionHeading({ title, description, href, hrefLabel, badgeLabel }: SectionHeadingProps) {
-  return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="space-y-1">
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
-          {badgeLabel ? <Badge variant="outline">{badgeLabel}</Badge> : null}
-        </div>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-
-      {href && hrefLabel ? (
-        <Link
-          href={href}
-          className="inline-flex items-center gap-1 text-sm font-medium text-primary transition hover:text-primary/80"
-        >
-          {hrefLabel}
-          <ArrowUpRight className="h-4 w-4" />
-        </Link>
-      ) : null}
-    </div>
-  )
-}
-
-function buildTaskCounts(tasks: TaskRecord[]): Record<TaskStatus, number> {
-  return tasks.reduce((counts, task) => {
-    if (task.deletedAt) {
-      return counts
-    }
-    const status = normalizeTaskStatus(task.status)
-    if (status) {
-      counts[status] += 1
-    }
-    return counts
-  }, { ...EMPTY_TASK_COUNTS })
 }
 
 function buildAdsSummary(metrics: MetricRecord[]) {
@@ -432,9 +432,9 @@ function formatCompactNumber(value: number): string {
 
 function SnapshotMetricGrid({ metrics, loading }: { metrics: SnapshotMetric[]; loading: boolean }) {
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-3">
       {metrics.map((metric) => (
-        <Card key={metric.label} className="border-muted/60 bg-background shadow-sm">
+        <Card key={metric.label} className="border-muted/60 bg-card shadow-sm">
           <CardHeader className="pb-3">
             <CardDescription className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
               {metric.label}

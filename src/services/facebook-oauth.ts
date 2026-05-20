@@ -17,6 +17,15 @@ interface BuildMetaAuthUrlOptions {
 
 const DEFAULT_SCOPES = ['ads_management', 'ads_read', 'business_management']
 
+/** Organic social (Pages + IG insights) — separate from Ads scopes. */
+export const SOCIAL_META_SCOPES = [
+  'pages_show_list',
+  'pages_read_engagement',
+  'read_insights',
+  'instagram_basic',
+  'instagram_manage_insights',
+]
+
 export function buildMetaBusinessLoginUrl(options: BuildMetaAuthUrlOptions): string {
   const { businessConfigId, appId, redirectUri, state, scopes = DEFAULT_SCOPES } = options
 

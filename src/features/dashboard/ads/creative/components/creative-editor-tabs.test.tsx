@@ -4,32 +4,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { CreativeEditorTabs } from './creative-editor-tabs'
 
 const creative = {
-  providerId: 'google',
+  providerId: 'facebook',
   creativeId: 'creative-1',
   campaignId: 'campaign-1',
   name: 'Creative 1',
-  type: 'IMAGE',
+  type: 'VIDEO',
   status: 'ACTIVE',
   headlines: ['Headline'],
   descriptions: ['Description'],
-}
-
-const performanceSummary = {
-  totalSpend: 1234,
-  totalRevenue: 2468,
-  totalImpressions: 10000,
-  totalClicks: 420,
-  totalConversions: 24,
-  averageRoaS: 2,
-  averageCpc: 3,
-  averageCtr: 4,
-  averageConvRate: 5,
-  providerId: 'facebook',
-  period: 'current',
-  dayCount: 7,
-  ctr: 4.2,
-  roas: 2,
-  cpc: 3,
 }
 
 vi.mock('@/shared/ui/tabs', () => ({
@@ -48,14 +30,13 @@ vi.mock('@/shared/ui/select', () => ({
 }))
 
 describe('CreativeEditorTabs', () => {
-  it('formats performance summary spend and revenue using the provided currency', () => {
+  it('renders content editing without a performance tab', () => {
     const markup = renderToStaticMarkup(
       <CreativeEditorTabs
-        providerId="google"
         creative={creative}
         copiedField={null}
         onCopy={vi.fn()}
-        isEditing={false}
+        isEditing
         editedHeadlines={['Headline']}
         editedDescriptions={['Description']}
         editedCta="LEARN_MORE"
@@ -68,20 +49,13 @@ describe('CreativeEditorTabs', () => {
         onUpdateDescription={vi.fn()}
         onChangeCta={vi.fn()}
         onChangeLandingPage={vi.fn()}
-        days="7"
-        onChangeDays={vi.fn()}
-        metricsLoading={false}
-        metricsError={null}
-        currency="GBP"
-        performanceSummary={performanceSummary}
-        efficiencyScore={82}
-        onRefreshPerformance={vi.fn()}
         algorithmicInsights={[]}
       />,
     )
 
-    expect(markup).toContain('£1,234')
-    expect(markup).toContain('£2,468')
-    expect(markup).not.toContain('$1,234')
+    expect(markup).toContain('Headlines')
+    expect(markup).toContain('Primary Text')
+    expect(markup).not.toContain('Detailed Performance')
+    expect(markup).not.toContain('Performance')
   })
 })

@@ -79,6 +79,12 @@ export type NormalizedCreative = {
     url?: string
     fallback_url?: string
     additional_urls?: string[]
+    website?: {
+      optimization?: {
+        status?: string
+        type?: string
+      }
+    }
   }
   // Lead gen and additional fields
   isLeadGen?: boolean
@@ -777,6 +783,12 @@ export const updateCreative = action({
       url: v.optional(v.string()),
       fallback_url: v.optional(v.string()),
       additional_urls: v.optional(v.array(v.string())),
+      website: v.optional(v.object({
+        optimization: v.optional(v.object({
+          status: v.optional(v.string()),
+          type: v.optional(v.string()),
+        })),
+      })),
     })),
   },
   handler: async (ctx, args) => withErrorHandling(async () => {
@@ -811,6 +823,8 @@ export const updateCreative = action({
         throw Errors.validation.invalidInput('adId is required for Meta creative updates')
       }
 
+      const { mergeMetaDestinationSpec } = await import('@/services/integrations/meta-ads')
+
       const result = await recreateMetaAdCreativeForEdit({
         accessToken: integration.accessToken,
         adAccountId,
@@ -829,7 +843,7 @@ export const updateCreative = action({
         pageId: args.pageId,
         instagramActorId: args.instagramActorId,
         assetFeedSpec: args.assetFeedSpec,
-        destinationSpec: args.destinationSpec,
+        destinationSpec: mergeMetaDestinationSpec(args.destinationSpec, args.linkUrl),
       })
 
       if (!result.success) {

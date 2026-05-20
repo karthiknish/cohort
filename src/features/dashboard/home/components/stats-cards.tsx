@@ -13,9 +13,11 @@ interface StatsCardsProps {
   stats: SummaryStat[]
   loading: boolean
   primaryCount?: number
+  /** When true, stats render as plain cards without navigation links. */
+  linkless?: boolean
 }
 
-export function StatsCards({ stats, loading, primaryCount = 4 }: StatsCardsProps) {
+export function StatsCards({ stats, loading, primaryCount = 4, linkless = false }: StatsCardsProps) {
   const [expanded, setExpanded] = useState(false)
 
   const handleToggleExpanded = useCallback(() => {
@@ -44,7 +46,7 @@ export function StatsCards({ stats, loading, primaryCount = 4 }: StatsCardsProps
         {visibleStats.map((stat) => (
           <FadeInItem key={stat.id}>
             <ViewTransition>
-              <StatsCard stat={stat} loading={loading} />
+              <StatsCard stat={stat} loading={loading} linkless={linkless} />
             </ViewTransition>
           </FadeInItem>
         ))}
@@ -67,7 +69,15 @@ export function StatsCards({ stats, loading, primaryCount = 4 }: StatsCardsProps
   )
 }
 
-const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat; loading: boolean }) {
+const StatsCard = memo(function StatsCard({
+  stat,
+  loading,
+  linkless = false,
+}: {
+  stat: SummaryStat
+  loading: boolean
+  linkless?: boolean
+}) {
   const Icon = stat.icon
   const valueClasses = cn(
     'text-3xl font-bold tracking-tight',
@@ -76,7 +86,12 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
   )
 
   const cardBody = (
-    <Card className={cn('shadow-sm transition-colors', stat.href && 'group-hover:border-accent/60 group-hover:shadow-md')}>
+    <Card
+      className={cn(
+        'shadow-sm transition-colors',
+        !linkless && stat.href && 'group-hover:border-accent/60 group-hover:shadow-md',
+      )}
+    >
       <CardContent className="flex items-center justify-between p-6">
         <div className="space-y-2">
           <CardDescription className="text-xs font-medium uppercase text-muted-foreground">
@@ -95,7 +110,7 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
           <div className="text-xs text-muted-foreground">
             {loading ? <Skeleton className="h-4 w-32" /> : stat.helper}
           </div>
-          {!loading && stat.href && stat.featureLabel ? (
+          {!loading && !linkless && stat.href && stat.featureLabel ? (
             <div className="inline-flex items-center gap-1 text-xs font-medium text-primary">
               {stat.featureLabel}
               <ArrowRight className="h-3.5 w-3.5" />
@@ -109,7 +124,7 @@ const StatsCard = memo(function StatsCard({ stat, loading }: { stat: SummaryStat
     </Card>
   )
 
-  if (stat.href) {
+  if (!linkless && stat.href) {
     return (
       <Link href={stat.href} transitionTypes={['nav-forward']} className="group block h-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
         {cardBody}

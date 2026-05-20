@@ -31,6 +31,10 @@ interface PerformanceChartProps {
   dataSource?: PerformanceChartDataSource
   /** When true, ads totals exist but there are no per-day rows to plot — show sync copy, not connect. */
   hasAggregateData?: boolean
+  /** Header action (e.g. Manage connections). Off for embedded campaign charts. */
+  showDetailLink?: boolean
+  /** Hide built-in title row when a parent Card supplies the header. */
+  hideHeader?: boolean
 }
 
 const EMPTY_STATE_COPY: Record<
@@ -131,6 +135,8 @@ export const PerformanceChart = memo(function PerformanceChart({
   currency = 'USD',
   dataSource = 'analytics',
   hasAggregateData = false,
+  showDetailLink = true,
+  hideHeader = false,
 }: PerformanceChartProps) {
   const copy =
     dataSource === 'ads' && hasAggregateData
@@ -187,9 +193,11 @@ export const PerformanceChart = memo(function PerformanceChart({
   if (loading) {
     return (
       <div className="flex h-full flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">Performance Overview</span>
-        </div>
+        {!hideHeader ? (
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-muted-foreground">Performance Overview</span>
+          </div>
+        ) : null}
         <Skeleton className="h-full w-full" />
       </div>
     )
@@ -198,12 +206,14 @@ export const PerformanceChart = memo(function PerformanceChart({
   if (chartData.length === 0) {
     return (
       <div className="flex h-full flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium">Performance Overview</span>
-          <Button asChild variant="outline" size="sm">
-            <Link href={copy.primaryHref}>{copy.primaryLabel}</Link>
-          </Button>
-        </div>
+        {!hideHeader ? (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-medium">Performance Overview</span>
+            <Button asChild variant="outline" size="sm">
+              <Link href={copy.primaryHref}>{copy.primaryLabel}</Link>
+            </Button>
+          </div>
+        ) : null}
         <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-muted/70 p-10 text-center">
           <p className="max-w-md text-sm text-muted-foreground">{copy.message}</p>
           <Button asChild size="sm" variant="outline">
@@ -216,31 +226,35 @@ export const PerformanceChart = memo(function PerformanceChart({
 
   return (
     <div className="flex h-full flex-col gap-1">
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Performance Overview</span>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <p><strong>Revenue:</strong> Total income generated from campaign conversions.</p>
-                <p className="mt-1"><strong>Ad Spend:</strong> Total amount invested in advertising. Compare with revenue to assess campaign profitability.</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+      {!hideHeader ? (
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Performance Overview</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p><strong>Revenue:</strong> Total income generated from campaign conversions.</p>
+                  <p className="mt-1"><strong>Ad Spend:</strong> Total amount invested in advertising. Compare with revenue to assess campaign profitability.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          {showDetailLink ? (
+            detailLinkIsHash ? (
+              <Button asChild variant="outline" size="sm">
+                <a href={copy.detailHref}>{copy.detailLabel}</a>
+              </Button>
+            ) : (
+              <Button asChild variant="outline" size="sm">
+                <Link href={copy.detailHref}>{copy.detailLabel}</Link>
+              </Button>
+            )
+          ) : null}
         </div>
-        {detailLinkIsHash ? (
-          <Button asChild variant="outline" size="sm">
-            <a href={copy.detailHref}>{copy.detailLabel}</a>
-          </Button>
-        ) : (
-          <Button asChild variant="outline" size="sm">
-            <Link href={copy.detailHref}>{copy.detailLabel}</Link>
-          </Button>
-        )}
-      </div>
+      ) : null}
       <div className="min-h-0 flex-1">
         <ChartContainer config={chartConfig} className="h-full w-full">
           <AreaChart data={chartData} margin={chartMargin}>

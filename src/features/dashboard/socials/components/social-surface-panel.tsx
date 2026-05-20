@@ -20,6 +20,10 @@ type SocialSurfacePanelProps = {
   overview: SocialOverview | null
   overviewLoading: boolean
   connected: boolean
+  setupComplete: boolean
+  hasInstagramBinding?: boolean
+  hasData: boolean
+  onRequestSync: () => void
 }
 
 type GraphMetric = {
@@ -43,16 +47,23 @@ const SURFACE_COPY = {
     icon: Facebook,
     summaryTitle: 'Facebook organic performance',
     summaryDescription: 'Organic reach, engagement, and follower growth for Facebook Pages in this workspace.',
-    emptyMessage: 'Connect Facebook to start syncing organic metrics for this workspace.',
-    emptyCtaLabel: 'Connect Facebook',
+    emptyMessage: 'Connect Meta and select a Facebook Page to sync organic metrics.',
+    emptyCtaLabel: 'Set up connection',
+    setupMessage: 'Select a Facebook Page in the connection card above.',
+    noDataMessage: 'Page is configured but no metrics yet. Run a sync to pull organic insights.',
+    noDataCtaLabel: 'Sync now',
   },
   instagram: {
     title: 'Instagram',
     icon: Instagram,
     summaryTitle: 'Instagram organic performance',
     summaryDescription: 'Organic reach, engagement, and follower growth for Instagram business profiles in this workspace.',
-    emptyMessage: 'Connect Instagram to start syncing organic metrics for this workspace.',
-    emptyCtaLabel: 'Connect Instagram',
+    emptyMessage: 'Connect Meta and link an Instagram business account to this Page in Meta.',
+    emptyCtaLabel: 'Set up connection',
+    setupMessage: 'Select a Facebook Page with a linked Instagram business account.',
+    noIgMessage: 'This Page has no linked Instagram business account. Metrics stay empty until you link one in Meta Business settings.',
+    noDataMessage: 'Instagram is configured but no metrics yet. Run a sync to pull organic insights.',
+    noDataCtaLabel: 'Sync now',
   },
 } as const
 
@@ -155,16 +166,59 @@ export function SocialSurfacePanel({
   overview,
   overviewLoading,
   connected,
+  setupComplete,
+  hasInstagramBinding = true,
+  hasData,
+  onRequestSync,
 }: SocialSurfacePanelProps) {
   const copy = SURFACE_COPY[surface]
   const SurfaceIcon = copy.icon
   const handleScrollToConnections = useCallback(() => {
     document.getElementById('social-connections-panel')?.scrollIntoView({ behavior: 'smooth' })
   }, [])
-  const connectionAction = useMemo(() => ({
-    label: copy.emptyCtaLabel,
-    onClick: handleScrollToConnections,
-  }), [copy.emptyCtaLabel, handleScrollToConnections])
+
+  const showMetrics = connected && setupComplete && hasData && (surface !== 'instagram' || hasInstagramBinding)
+
+  const emptyState = useMemo(() => {
+    if (!connected) {
+      return {
+        title: `${copy.title} not connected`,
+        description: copy.emptyMessage,
+        action: { label: copy.emptyCtaLabel, onClick: handleScrollToConnections },
+      }
+    }
+    if (!setupComplete) {
+      return {
+        title: 'Finish setup',
+        description: copy.setupMessage,
+        action: { label: 'Go to setup', onClick: handleScrollToConnections },
+      }
+    }
+    if (surface === 'instagram' && !hasInstagramBinding) {
+      return {
+        title: 'No linked Instagram',
+        description: copy.noIgMessage,
+        action: undefined,
+      }
+    }
+    if (!hasData) {
+      return {
+        title: 'No organic data yet',
+        description: copy.noDataMessage,
+        action: { label: copy.noDataCtaLabel, onClick: onRequestSync },
+      }
+    }
+    return null
+  }, [
+    connected,
+    copy,
+    handleScrollToConnections,
+    hasData,
+    hasInstagramBinding,
+    onRequestSync,
+    setupComplete,
+    surface,
+  ])
   const performanceGraph = useMemo<GraphMetric[]>(() => {
     if (!overview) return []
 
@@ -288,7 +342,7 @@ export function SocialSurfacePanel({
                 <Skeleton key={slot} className="h-28 w-full rounded-2xl" />
               ))}
             </div>
-          ) : connected ? (
+          ) : showMetrics ? (
             <div className="space-y-6">
               <SocialsKpiGrid items={kpis} />
 
@@ -330,15 +384,15 @@ export function SocialSurfacePanel({
                 <SocialInsightCards insights={insightCards} />
               </div>
             </div>
-          ) : (
+          ) : emptyState ? (
             <EmptyState
-              title={`${copy.title} not connected`}
-              description={copy.emptyMessage}
-              action={connectionAction}
+              title={emptyState.title}
+              description={emptyState.description}
+              action={emptyState.action}
               variant="card"
               className="rounded-2xl"
             />
-          )}
+          ) : null}
         </CardContent>
       </Card>
     </div>

@@ -82,8 +82,14 @@ function extractMetaPayload(payload: unknown): ParsedPayload {
     // Check for standard Meta error format
     const error = asRecord(data.error)
     if (error) {
+        // Prefer Meta's user-facing fields over generic `message` (often "Invalid parameter").
+        const message =
+            asString(error.error_user_msg)
+            || asString(error.error_user_title)
+            || asString(error.message)
+            || 'Meta API error'
         return {
-            message: String(asString(error.message) || asString(error.error_user_msg) || 'Meta API error'),
+            message,
             code: asCode(error.code),
             subcode: asNumber(error.error_subcode),
             type: asString(error.type),
