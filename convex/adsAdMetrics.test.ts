@@ -48,7 +48,7 @@ describe('convex/adsAdMetrics listAdMetrics support matrix', () => {
         code: 'NOT_IMPLEMENTED',
         message: 'google creative metrics is not implemented',
       },
-    } satisfies Partial<ConvexError<unknown>>)
+    })
 
     expect(ctx.runQuery).not.toHaveBeenCalled()
   })
@@ -69,7 +69,7 @@ describe('convex/adsAdMetrics listAdMetrics support matrix', () => {
         code: 'NOT_IMPLEMENTED',
         message: 'facebook adGroup metrics is not implemented',
       },
-    } satisfies Partial<ConvexError<unknown>>)
+    })
 
     expect(ctx.runQuery).not.toHaveBeenCalled()
   })

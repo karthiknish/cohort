@@ -2,12 +2,12 @@
 
 import { LoaderCircle } from 'lucide-react'
 import { useRouter, redirect } from 'next/navigation'
-import { Suspense, useCallback, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 
 import { AuthCard } from '@/features/auth/components/auth-card'
 import { AuthPageSkeleton } from '@/features/auth/components/auth-page-skeleton'
-import { bootstrapAndSyncSession, calculatePasswordStrength } from '@/features/auth/auth-utils'
+import { calculatePasswordStrength, startGoogleOAuthSignIn } from '@/features/auth/auth-utils'
 import { authClient } from '@/lib/auth-client'
 import { logError } from '@/lib/convex-errors'
 import { getSafeRedirectPath } from '@/lib/utils'
@@ -15,6 +15,7 @@ import { getFriendlyAuthErrorMessage } from '@/services/auth/error-utils'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 import { useToast } from '@/shared/ui/use-toast'
+import { useAuth } from '@/shared/contexts/auth-context'
 
 const TAB_STORAGE_KEY = 'cohorts.auth.activeTab'
 const REMEMBER_ME_KEY = 'cohorts.auth.rememberMe'
@@ -48,38 +49,25 @@ function getInitialTab(): 'signin' | 'signup' {
 function resolveDashboardDestination(): string {
   if (typeof window !== 'undefined') {
     const lastTab = window.localStorage.getItem('cohorts_last_tab')
-    if (lastTab === '/for-you') {
-      return '/dashboard/for-you'
+    if (lastTab === '/for-you' || lastTab?.startsWith('/for-you')) {
+      return '/for-you'
     }
     if (lastTab?.startsWith('/dashboard')) {
       return lastTab
     }
   }
 
-  return '/dashboard'
+  return '/for-you'
 }
 
 function HomeAuthPageContent() {
-  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(getInitialTab)
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [rememberMe, setRememberMe] = useState(() => {
-    if (typeof window === 'undefined') {
-      return false
-    }
-
-    return Boolean(window.localStorage.getItem(REMEMBER_ME_KEY))
-  })
+  const [rememberMe, setRememberMe] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [emailError, setEmailError] = useState<string | null>(null)
-  const [signInData, setSignInData] = useState(() => {
-    if (typeof window === 'undefined') {
-      return { email: '', password: '' }
-    }
-
-    const rememberedEmail = window.localStorage.getItem(REMEMBER_ME_KEY) ?? ''
-    return { email: rememberedEmail, password: '' }
-  })
+  const [signInData, setSignInData] = useState({ email: '', password: '' })
   const [signUpData, setSignUpData] = useState(() => ({
     email: '',
     password: '',
@@ -90,8 +78,38 @@ function HomeAuthPageContent() {
   const { data: session, isPending: sessionPending } = authClient.useSession()
   const user = session?.user ?? null
   const loading = sessionPending
-  const router = useRouter()
+  const { push } = useRouter()
   const { toast } = useToast()
+  const { signIn, signUp } = useAuth()
+
+  useEffect(() => {
+    setActiveTab(getInitialTab())
+    setRememberMe(Boolean(window.localStorage.getItem(REMEMBER_ME_KEY)))
+    setSignInData({
+      email: window.localStorage.getItem(REMEMBER_ME_KEY) ?? '',
+      password: '',
+    })
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const params = new URLSearchParams(window.location.search)
+    const oauthError = params.get('error')
+    if (!oauthError) return
+
+    toast({
+      title: 'Google sign-in failed',
+      description: getFriendlyAuthErrorMessage(oauthError),
+      variant: 'destructive',
+    })
+
+    params.delete('error')
+    params.delete('error_description')
+    const nextQuery = params.toString()
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`
+    window.history.replaceState(null, '', nextUrl)
+  }, [toast])
 
   const getRedirectParam = useCallback(() => {
     if (typeof window === 'undefined') {
@@ -176,36 +194,28 @@ function HomeAuthPageContent() {
               return
             }
 
-            await authClient.signUp.email({
+            const signedUpUser = await signUp({
               email: signUpData.email,
               password: signUpData.password,
-              name: signUpData.displayName.trim() || signUpData.email,
+              displayName: signUpData.displayName.trim() || signUpData.email,
             })
-
-            await Promise.all([
-              authClient.getSession().catch(() => null),
-              bootstrapAndSyncSession(),
-            ])
 
             toast({
               title: 'Welcome to Cohorts!',
-              description: 'Your account has been created. Taking you to your dashboard...',
+              description: 'Your account has been created. Taking you to your workspace...',
             })
+
+            if (signedUpUser.status === 'pending' || signedUpUser.status === 'invited') {
+              push('/pending-approval')
+              return
+            }
           } else {
             if (!validateEmail(signInData.email)) {
               setEmailError('Please enter a valid email address')
               return
             }
 
-            await authClient.signIn.email({
-              email: signInData.email,
-              password: signInData.password,
-            })
-
-            await Promise.all([
-              authClient.getSession().catch(() => null),
-              bootstrapAndSyncSession(),
-            ])
+            const signedInUser = await signIn(signInData.email, signInData.password)
 
             if (rememberMe && typeof window !== 'undefined') {
               window.localStorage.setItem(REMEMBER_ME_KEY, signInData.email)
@@ -217,9 +227,14 @@ function HomeAuthPageContent() {
               title: 'Welcome back!',
               description: 'Signed in successfully. Loading your workspace...',
             })
+
+            if (signedInUser.status === 'pending' || signedInUser.status === 'invited') {
+              push('/pending-approval')
+              return
+            }
           }
 
-          router.push(resolvePostAuthDestination())
+          push(resolvePostAuthDestination())
         })
         .catch((error) => {
           toast({
@@ -232,26 +247,23 @@ function HomeAuthPageContent() {
           setIsSubmitting(false)
         })
     },
-    [passwordStrength.score, rememberMe, resolvePostAuthDestination, router, signInData, signUpData, toast],
+    [passwordStrength.score, rememberMe, resolvePostAuthDestination, push, signIn, signInData, signUp, signUpData, toast],
   )
 
   const handleGoogleSignIn = useCallback(async () => {
     setIsSubmitting(true)
 
-    await authClient.signIn.social({
-      provider: 'google',
-      callbackURL: '/dashboard',
-    })
-      .catch((error) => {
-        toast({
-          title: 'Google sign-in failed',
-          description: getFriendlyAuthErrorMessage(error),
-        })
+    try {
+      await startGoogleOAuthSignIn(resolvePostAuthDestination())
+      // Browser redirects to Google on success; do not clear loading state here.
+    } catch (error) {
+      toast({
+        title: 'Google sign-in failed',
+        description: getFriendlyAuthErrorMessage(error),
       })
-      .finally(() => {
-        setIsSubmitting(false)
-      })
-  }, [toast])
+      setIsSubmitting(false)
+    }
+  }, [resolvePostAuthDestination, toast])
 
   const handleSignInChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target

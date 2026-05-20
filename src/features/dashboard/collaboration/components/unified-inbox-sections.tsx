@@ -479,7 +479,7 @@ export function ChannelConversationPane({
     if (!showMissingDeepLinkNotice) return null
 
     return (
-      <Alert className="mx-4 mt-4 border-warning/20 bg-warning/10 text-warning-foreground
+      <Alert className="mx-4 mt-4 border-warning/20 bg-warning/10 text-warning-foreground">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Linked message unavailable</AlertTitle>
         <AlertDescription className="space-y-2">

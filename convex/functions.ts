@@ -21,6 +21,7 @@ import type { Doc } from '/_generated/dataModel'
 import { api } from '/_generated/api'
 import { v } from 'convex/values'
 import { Errors } from './errors'
+import { rateLimiter } from './rateLimit'
  
 /**
  * Helper to wrap a Zod schema in the standard { ok: true, data: T } response format
@@ -188,6 +189,28 @@ async function getAuthenticatedContext(ctx: QueryCtx | MutationCtx) {
     user,
     legacyId: user.legacyId as string,
     agencyId: (user.agencyId ?? user.legacyId) as string,
+  }
+}
+
+/**
+ * Identity-only auth: valid JWT, optional `users` row (any status). Use for sign-in bootstrap.
+ */
+async function getIdentityContext(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity()
+  if (!identity) {
+    throw Errors.auth.unauthorized()
+  }
+
+  const legacyId = identity.subject
+  const user = await ctx.db
+    .query('users')
+    .withIndex('by_legacyId', (q) => q.eq('legacyId', legacyId))
+    .unique()
+
+  return {
+    legacyId,
+    identity,
+    user: user ?? null,
   }
 }
 
@@ -776,7 +799,6 @@ async function checkRateLimit(
   key: string,
   preset: RateLimitPreset = 'standard'
 ): Promise<void> {
-  const { rateLimiter } = await import('./rateLimit')
   const status = await rateLimiter.limit(ctx, preset, { key })
 
   if (!status.ok) {
@@ -923,6 +945,34 @@ export const zRateLimitedAuthenticatedMutation = ((opts: { handler: (ctx: any, a
     ...opts,
     handler: withIdempotencyReplay(opts.handler),
   })) as unknown as typeof _zRateLimitedAuthenticatedMutationBase
+
+const _zRateLimitedIdentityMutationBase = zCustomMutation(mutation, {
+  args: { idempotencyKey: v.optional(v.string()) },
+  input: async (ctx, args, config: RateLimitedConfig) => {
+    const identity = await getIdentityContext(ctx)
+
+    if (config.rateLimit) {
+      await checkRateLimit(ctx, identity.legacyId, config.rateLimit)
+    }
+
+    const { cachedResponse, commitIdempotency } = await checkIdempotency(ctx, args.idempotencyKey)
+    return {
+      ctx: { ...ctx, ...identity, now: Date.now(), cachedResponse },
+      args,
+      onSuccess: commitIdempotency
+        ? async ({ result }: { result: unknown }) => {
+            await commitIdempotency(result as IdempotencyResponse)
+          }
+        : undefined,
+    }
+  },
+})
+
+export const zRateLimitedIdentityMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any; rateLimit?: RateLimitPreset }) =>
+  _zRateLimitedIdentityMutationBase({
+    ...opts,
+    handler: withIdempotencyReplay(opts.handler),
+  })) as unknown as typeof _zRateLimitedIdentityMutationBase
 
 const _zRateLimitedWorkspaceMutationBase = zCustomMutation(mutation, {
   args: { workspaceId: v.string(), idempotencyKey: v.optional(v.string()) },

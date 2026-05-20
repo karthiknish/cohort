@@ -1,5 +1,6 @@
-import { query, internalQuery } from './_generated/server'
+import { mutation, query, internalQuery, type MutationCtx } from './_generated/server'
 import { v } from 'convex/values'
+import { assertAppProxySecret } from './appProxy'
 import {
   authenticatedQuery,
   optionalAuthenticatedQuery,
@@ -7,6 +8,7 @@ import {
   zAdminQuery,
   zAuthenticatedQuery,
   zRateLimitedAuthenticatedMutation,
+  zRateLimitedIdentityMutation,
   zWorkspaceQuery,
 } from './functions'
 import * as z from 'zod'
@@ -499,6 +501,116 @@ export const getByLegacyIdSafe = optionalAuthenticatedQuery({
   },
 })
 
+type EnsureProfileOnSignInArgs = {
+  legacyId: string
+  email?: string
+  name?: string
+}
+
+async function ensureProfileOnSignInCore(ctx: Pick<MutationCtx, 'db'>, args: EnsureProfileOnSignInArgs) {
+  const existing = await ctx.db
+    .query('users')
+    .withIndex('by_legacyId', (q) => q.eq('legacyId', args.legacyId))
+    .unique()
+
+  const normalized = normalizeEmail(args.email ?? existing?.email ?? null)
+  const timestamp = nowMs()
+  const name = args.name ?? existing?.name ?? null
+
+  if (existing) {
+    const emailChanged = normalized.email !== existing.email
+    const emailLowerChanged = normalized.emailLower !== existing.emailLower
+    const nameChanged = name !== existing.name
+
+    if (emailChanged || emailLowerChanged || nameChanged) {
+      await ctx.db.patch(existing._id, {
+        email: normalized.email,
+        emailLower: normalized.emailLower,
+        name,
+        updatedAtMs: timestamp,
+      })
+    }
+
+    return {
+      ok: true as const,
+      created: false,
+      legacyId: args.legacyId,
+      role: existing.role,
+      status: existing.status,
+      agencyId: existing.agencyId ?? args.legacyId,
+    }
+  }
+
+  const isFirstUser = (await ctx.db.query('users').first()) === null
+  const role = isFirstUser ? 'admin' : DEFAULT_USER_ROLE
+  const status = isFirstUser ? 'active' : DEFAULT_USER_STATUS
+  const agencyId = args.legacyId
+
+  await ctx.db.insert('users', {
+    legacyId: args.legacyId,
+    email: normalized.email,
+    emailLower: normalized.emailLower,
+    name,
+    role,
+    status,
+    agencyId,
+    phoneNumber: null,
+    photoUrl: null,
+    notificationPreferences: undefined,
+    regionalPreferences: undefined,
+    createdAtMs: timestamp,
+    updatedAtMs: timestamp,
+  })
+
+  return {
+    ok: true as const,
+    created: true,
+    legacyId: args.legacyId,
+    role,
+    status,
+    agencyId,
+  }
+}
+
+/** Sign-in bootstrap: creates/updates profile without requiring an active users row. */
+export const ensureProfileOnSignIn = zRateLimitedIdentityMutation({
+  rateLimit: 'sensitive',
+  args: {
+    legacyId: z.string(),
+    email: z.string().optional(),
+    name: z.string().optional(),
+  },
+  handler: async (ctx, args) => {
+    if (ctx.legacyId !== args.legacyId) {
+      throw Errors.auth.unauthorized()
+    }
+
+    return ensureProfileOnSignInCore(ctx, args)
+  },
+})
+
+/**
+ * Trusted bootstrap from POST /api/auth/bootstrap after Better Auth session is verified.
+ * Does not require a Convex JWT (avoids token timing issues right after sign-in).
+ */
+export const ensureProfileOnSignInFromApp = mutation({
+  args: {
+    serverSecret: v.string(),
+    legacyId: v.string(),
+    email: v.string(),
+    name: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    assertAppProxySecret(args.serverSecret)
+    return ensureProfileOnSignInCore(ctx, {
+      legacyId: args.legacyId,
+      email: args.email,
+      name: args.name,
+    })
+  },
+})
+
+/** Admin / post-active bootstrap. Not for first sign-in (requires active users row). */
 export const bootstrapUpsert = zRateLimitedAuthenticatedMutation({
   rateLimit: 'sensitive',
   args: {

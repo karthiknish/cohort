@@ -46,12 +46,12 @@ export const SEMANTIC_COLOR_TOKENS = {
 
 export const COLORS = {
   primary: {
-    DEFAULT: '#ffffff',
-    foreground: '#0f172a',
+    DEFAULT: '#2563eb',
+    foreground: '#ffffff',
   },
   secondary: {
-    DEFAULT: '#1e293b',
-    foreground: '#f9fafb',
+    DEFAULT: '#0ea5e9',
+    foreground: '#ffffff',
   },
   accent: {
     DEFAULT: '#3b82f6',
@@ -66,11 +66,11 @@ export const COLORS = {
   warning: SEMANTIC_SWATCHES.warning,
   info: SEMANTIC_SWATCHES.info,
   background: {
-    DEFAULT: '#f9fafb',
+    DEFAULT: '#ffffff',
     card: '#ffffff',
     popover: '#ffffff',
-    sidebar: '#1e293b',
-    muted: '#f3f4f6',
+    sidebar: '#ffffff',
+    muted: '#f1f5f9',
   },
   foreground: {
     DEFAULT: '#0f172a',
@@ -86,21 +86,21 @@ export const COLORS = {
     sidebar: '#243041',
   },
   chart: {
-    1: '#16a34a',
-    2: '#15803d',
-    3: '#1e293b',
-    4: '#3b82f6',
-    5: '#0ea5e9',
+    1: '#2563eb',
+    2: '#0ea5e9',
+    3: '#3b82f6',
+    4: '#16a34a',
+    5: '#8b5cf6',
   },
   sidebar: {
-    DEFAULT: '#1e293b',
-    foreground: '#f9fafb',
-    primary: '#ffffff',
-    'primary-foreground': '#0f172a',
-    accent: '#3b82f6',
-    'accent-foreground': '#ffffff',
-    border: '#243041',
-    ring: '#3b82f6',
+    DEFAULT: '#ffffff',
+    foreground: '#0f172a',
+    primary: '#2563eb',
+    'primary-foreground': '#ffffff',
+    accent: '#eff6ff',
+    'accent-foreground': '#2563eb',
+    border: '#e2e8f0',
+    ring: '#2563eb',
   },
 } as const
 
@@ -238,15 +238,15 @@ export const EMAIL_COLORS = {
   border: '#e2e8f0',
   lightBorder: '#edf2f7',
   brand: {
-    primary: '#ffffff',
-    secondary: '#0f172a',
-    foreground: '#f8fafc',
+    primary: '#2563eb',
+    secondary: '#0ea5e9',
+    foreground: '#ffffff',
     accent: '#3b82f6',
     accentSoft: '#dbeafe',
   },
   button: {
-    primary: '#ffffff',
-    dark: '#0f172a',
+    primary: '#2563eb',
+    dark: '#1d4ed8',
   },
   success: {
     bg: SEMANTIC_SWATCHES.success.bg,

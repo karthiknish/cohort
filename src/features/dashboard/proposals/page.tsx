@@ -36,7 +36,7 @@ import {
 } from './hooks'
 
 function ProposalsPageContent() {
-  const router = useRouter()
+  const { push } = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const { selectedClient, selectedClientId, selectClient } = useClientContext()
@@ -275,7 +275,7 @@ function ProposalsPageContent() {
     handlePreviewDownloadDeck,
   } = useProposalPageInteractions({
     toast,
-    routerPush: router.push,
+    routerPush: push,
     setIsWizardOpen,
     setFormState,
     setCurrentStep,

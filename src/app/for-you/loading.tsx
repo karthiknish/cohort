@@ -1,0 +1,5 @@
+import { ForYouPageSkeleton } from '@/features/marketing/for-you/components/for-you-page-skeleton'
+
+export default function ForYouLoading() {
+  return <ForYouPageSkeleton />
+}

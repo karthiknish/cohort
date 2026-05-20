@@ -941,29 +941,29 @@ export function useMessagesData({
         if (!workspaceId) throw new Error('Workspace unavailable')
 
         const decoded = decodeTimestampIdCursor(nextCursor)
-        const afterCreatedAtMs = decoded ? decoded.time.getTime() : undefined
-        const afterLegacyId = decoded ? decoded.id : undefined
 
-        const rows = (await convex.query(collaborationApi.listChannel, {
+        const listResult = await convex.query(collaborationApi.listChannel, {
           workspaceId: String(workspaceId),
           channelId: channel.isCustom ? channel.id : null,
           channelType: channel.type,
           clientId: channel.type === 'client' ? (channel.clientId ?? null) : null,
           projectId: channel.type === 'project' ? (channel.projectId ?? null) : null,
           limit: 50 + 1,
-          afterCreatedAtMs,
-          afterLegacyId,
-        })) as Array<Record<string, unknown>>
+          cursor: decoded
+            ? { legacyId: decoded.id, fieldValue: decoded.time.getTime() }
+            : undefined,
+        })
 
-        const hasMore = rows.length > 50
-        const pageRows = hasMore ? rows.slice(0, 50) : rows
+        const pageRows = listResult.items as Array<Record<string, unknown>>
+        const hasMore = pageRows.length > 50
+        const trimmedRows = hasMore ? pageRows.slice(0, 50) : pageRows
 
-        const mapped: CollaborationMessage[] = pageRows
+        const mapped: CollaborationMessage[] = trimmedRows
           .map((row) => mapCollaborationMessageRow(row, { fallbackChannelType: channel.type }))
           .filter((message): message is CollaborationMessage => Boolean(message))
           .sort((a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime())
 
-        const oldestRow = pageRows.length ? pageRows[pageRows.length - 1] : null
+        const oldestRow = trimmedRows.length ? trimmedRows[trimmedRows.length - 1] : null
         const oldestCreatedAtMs = oldestRow && typeof oldestRow.createdAtMs === 'number' ? oldestRow.createdAtMs : null
         const oldestLegacyId = oldestRow && typeof oldestRow.legacyId === 'string' ? oldestRow.legacyId : ''
         const newCursor =

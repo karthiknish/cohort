@@ -4,7 +4,6 @@ import { useConvexAuth, useQuery } from 'convex/react'
 import {
   ArrowUpRight,
   Calendar,
-  LayoutDashboard,
   ListTodo,
   RefreshCw,
   Zap,
@@ -20,6 +19,7 @@ import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { FadeIn } from '@/shared/ui/animate-in'
 import { Separator } from '@/shared/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -88,6 +88,125 @@ function mapProjectRows(rows: unknown[] | undefined): ProjectRecord[] {
       deletedAt: typeof record?.deletedAtMs === 'number' ? new Date(record.deletedAtMs).toISOString() : null,
     }
   })
+}
+
+function WorkspaceAreaCard({
+  title,
+  subtitle,
+  href,
+  metric,
+  secondary,
+  hint,
+  badge,
+  tone,
+}: {
+  title: string
+  subtitle: string
+  href: string
+  metric: string
+  secondary: string
+  hint: string
+  badge: string
+  tone: HubTone
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'group flex h-full flex-col rounded-xl border border-border/70 bg-card p-4 shadow-sm outline-none transition-[box-shadow,transform,border-color]',
+        'hover:border-accent/30 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2',
+        'active:scale-[0.995]',
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/90">{subtitle}</p>
+          <p className="mt-1 text-base font-semibold text-foreground">{title}</p>
+        </div>
+        <Badge variant={toneToVariant[tone]} className="shrink-0 rounded-full text-[11px]">
+          {badge}
+        </Badge>
+      </div>
+      <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{metric}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{secondary}</p>
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{hint}</p>
+      <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-primary">
+        Open
+        <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+      </span>
+    </Link>
+  )
+}
+
+function PriorityAlert({
+  title,
+  detail,
+  href,
+  badge,
+  tone,
+}: {
+  title: string
+  detail: string
+  href: string
+  badge: string
+  tone: HubTone
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'group flex flex-col gap-2 rounded-xl border border-border/70 bg-card px-4 py-3.5 shadow-sm outline-none transition-[box-shadow,transform]',
+        'hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2',
+        toneAccent[tone],
+        'border-l-[3px]',
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant={toneToVariant[tone]} className="rounded-full text-[11px]">
+          {badge}
+        </Badge>
+      </div>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <p className="text-xs leading-relaxed text-muted-foreground">{detail}</p>
+    </Link>
+  )
+}
+
+function SpotlightList({ items, emptyMessage }: { items: SpotlightItem[]; emptyMessage: string }) {
+  if (items.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border/60 bg-muted/15 px-4 py-10 text-center">
+        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+      </div>
+    )
+  }
+
+  return (
+    <ul className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-muted/5" role="list">
+      {items.map((item) => (
+        <li key={item.id}>
+          <Link
+            href={item.href}
+            className={cn(
+              'group flex items-start gap-3 border-l-[3px] px-3.5 py-3.5 outline-none transition-[background-color] sm:px-4',
+              'hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/60',
+              toneAccent[item.tone],
+            )}
+          >
+            <div className="min-w-0 flex-1">
+              <Badge variant={toneToVariant[item.tone]} className="rounded-full text-[11px]">
+                {item.badge}
+              </Badge>
+              <p className="mt-2 text-sm font-semibold text-foreground">{item.title}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
+              <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/90">{item.meta}</p>
+            </div>
+            <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground/70 group-hover:text-foreground" />
+          </Link>
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 function PinnedSectionCard({
@@ -328,7 +447,7 @@ export default function ForYouPage() {
       loading={isInitialLoading}
       loadingContent={loadingContent}
     >
-    <main id="for-you-page" aria-labelledby="for-you-heading" className={cn(DASHBOARD_THEME.layout.container, 'w-full')}>
+    <main id="for-you-page" aria-labelledby="for-you-heading" className={cn(DASHBOARD_THEME.layout.container, 'w-full max-w-none')}>
       {dashboardErrors.length > 0 ? (
         <Alert variant="destructive" className="mb-6">
           <AlertTitle>Workspace data is partially unavailable</AlertTitle>
@@ -359,11 +478,11 @@ export default function ForYouPage() {
           </p>
         </div>
         <div className="flex w-full shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end md:w-auto">
-          {unreadCount > 0 && (
+          {unreadCount > 0 ? (
             <Badge variant="default" className="w-fit text-xs">
               {unreadCount} unread
             </Badge>
-          )}
+          ) : null}
           <Button
             variant="outline"
             size="sm"
@@ -375,16 +494,62 @@ export default function ForYouPage() {
             <RefreshCw className={cn('mr-2 h-4 w-4', loading && DASHBOARD_THEME.animations.spin)} />
             Refresh
           </Button>
-          <Button asChild variant="default" size="sm" className={cn('w-full sm:w-auto', getButtonClasses('primary'))}>
-            <Link href="/dashboard">
-              <LayoutDashboard aria-hidden="true" className="mr-2 h-4 w-4" />
-              Go to Dashboard
-            </Link>
-          </Button>
         </div>
       </div>
 
       <FadeIn as="div" className="space-y-10" delay={0.06}>
+        {activityHub.priorityItems.length > 0 ? (
+          <section aria-labelledby="for-you-attention-heading" className="space-y-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">Attention</p>
+              <h2 id="for-you-attention-heading" className="mt-1 text-xl font-semibold tracking-tight text-foreground">
+                Needs action now
+              </h2>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {activityHub.priorityItems.map((item) => (
+                <PriorityAlert
+                  key={item.id}
+                  title={item.title}
+                  detail={item.detail}
+                  href={item.href}
+                  badge={item.badge}
+                  tone={item.tone}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <section aria-labelledby="for-you-areas-heading" className="space-y-4">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">Overview</p>
+            <h2 id="for-you-areas-heading" className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+              Workspace at a glance
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Jump into projects, tasks, meetings, and performance tools from one summary row.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {activityHub.featureSpaces.map((space) => (
+              <WorkspaceAreaCard
+                key={space.id}
+                title={space.title}
+                subtitle={space.subtitle}
+                href={space.href}
+                metric={space.metric}
+                secondary={space.secondary}
+                hint={space.hint}
+                badge={space.badge}
+                tone={space.tone}
+              />
+            ))}
+          </div>
+        </section>
+
+        <Separator className="bg-border/80" />
+
         <section aria-labelledby="for-you-priorities-heading" className="space-y-5">
           <div className="max-w-2xl">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">Focus</p>
@@ -439,6 +604,37 @@ export default function ForYouPage() {
             <ClientsSummarySection />
             <MyTasksSection />
           </div>
+        </section>
+
+        <Separator className="bg-border/80" />
+
+        <section aria-labelledby="for-you-activity-heading" className="space-y-4">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">Activity</p>
+            <h2 id="for-you-activity-heading" className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+              Recent movement
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              What you worked on, what is unread, and upcoming deadlines across the workspace.
+            </p>
+          </div>
+          <Tabs defaultValue={activityHub.spotlightTabs[0]?.id ?? 'worked-on'} className="w-full">
+            <TabsList className="h-auto w-full flex-wrap justify-start gap-1 bg-muted/50 p-1">
+              {activityHub.spotlightTabs.map((tab) => (
+                <TabsTrigger key={tab.id} value={tab.id} className="gap-1.5 px-3 py-1.5 text-xs sm:text-sm">
+                  {tab.label}
+                  <Badge variant="secondary" className="h-5 min-w-5 rounded-full px-1.5 text-[10px]">
+                    {tab.count}
+                  </Badge>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {activityHub.spotlightTabs.map((tab) => (
+              <TabsContent key={tab.id} value={tab.id} className="mt-4 focus-visible:outline-none">
+                <SpotlightList items={tab.items} emptyMessage={`Nothing in ${tab.label.toLowerCase()} right now.`} />
+              </TabsContent>
+            ))}
+          </Tabs>
         </section>
       </FadeIn>
     </main>

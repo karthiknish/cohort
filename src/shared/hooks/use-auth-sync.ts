@@ -1,0 +1,378 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useConvexAuth, useQuery } from 'convex/react'
+
+import {
+  bootstrapAndSyncSessionOnce,
+  resetBootstrapSessionCache,
+  type BootstrapProfile,
+} from '@/features/auth/auth-utils'
+import { authClient } from '@/lib/auth-client'
+import { decodeJwtSubject } from '@/lib/jwt-utils'
+import {
+  deriveAuthPhase,
+  isLoadingPhase,
+  mergeConvexProfile,
+  type AuthPhase,
+  type AuthSyncState,
+} from '@/lib/auth-phase'
+import { authService } from '@/services/auth'
+import type { AuthUser } from '@/services/auth'
+import { api } from '@convex/_generated/api'
+
+export type AuthErrorCode =
+  | 'SESSION_SYNC_FAILED'
+  | 'NETWORK_ERROR'
+  | 'UNAUTHORIZED'
+  | 'RATE_LIMITED'
+  | 'SERVER_ERROR'
+  | 'UNKNOWN'
+
+export interface AuthError {
+  code: AuthErrorCode
+  message: string
+  details?: Record<string, unknown>
+  retryable: boolean
+}
+
+function createAuthError(
+  code: AuthErrorCode,
+  message: string,
+  details?: Record<string, unknown>,
+  retryable = false
+): AuthError {
+  return { code, message, details, retryable }
+}
+
+class StaleSyncError extends Error {
+  constructor() {
+    super('Auth sync superseded by a newer run')
+    this.name = 'StaleSyncError'
+  }
+}
+
+const SYNC_TIMEOUT_MS = 8_000
+const TOKEN_RETRY_DELAYS_MS = [0, 400, 900, 1800]
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+function extractConvexToken(result: unknown): string | null {
+  if (typeof result === 'string') {
+    const trimmed = result.trim()
+    return trimmed.length > 0 ? trimmed : null
+  }
+
+  if (typeof result !== 'object' || result === null) {
+    return null
+  }
+
+  if ('token' in result) {
+    const direct = (result as { token?: unknown }).token
+    if (typeof direct === 'string' && direct.trim().length > 0) {
+      return direct.trim()
+    }
+  }
+
+  if ('data' in result) {
+    return extractConvexToken((result as { data?: unknown }).data)
+  }
+
+  return null
+}
+
+async function fetchConvexTokenOnce(): Promise<string | null> {
+  const result = await authClient.convex.token({ fetchOptions: { throw: false } }).catch(() => null)
+  return extractConvexToken(result)
+}
+
+async function fetchConvexTokenWithRetry(assertActive: () => void): Promise<string | null> {
+  let token = await fetchConvexTokenOnce()
+  if (token) {
+    return token
+  }
+
+  for (const delay of TOKEN_RETRY_DELAYS_MS) {
+    if (delay > 0) {
+      await sleep(delay)
+    }
+    assertActive()
+    token = await fetchConvexTokenOnce()
+    if (token) {
+      return token
+    }
+  }
+
+  return null
+}
+
+async function runAuthSyncPipeline(assertActive: () => void): Promise<{
+  subject: string
+  profile: BootstrapProfile
+}> {
+  assertActive()
+
+  const profile = await Promise.race([
+    bootstrapAndSyncSessionOnce(),
+    sleep(SYNC_TIMEOUT_MS).then(() => {
+      throw new Error('Timed out while setting up your workspace. Please retry.')
+    }),
+  ])
+
+  assertActive()
+
+  let resolvedToken = await fetchConvexTokenWithRetry(assertActive)
+  if (!resolvedToken) {
+    resolvedToken = await fetchConvexTokenOnce()
+  }
+
+  const subject =
+    (resolvedToken ? decodeJwtSubject(resolvedToken) : null)
+    ?? profile.legacyId
+
+  if (!subject) {
+    throw new Error('We could not finish securing your session. Try again or sign in once more.')
+  }
+
+  return { subject, profile }
+}
+
+function applyBootstrapProfile(baseUser: AuthUser, profile: BootstrapProfile | null): AuthUser {
+  if (!profile) {
+    return baseUser
+  }
+
+  return {
+    ...baseUser,
+    role: profile.role,
+    status: profile.status,
+    agencyId: profile.agencyId,
+  }
+}
+
+export function useAuthSync() {
+  const [syncGeneration, setSyncGeneration] = useState(0)
+  const syncGenerationRef = useRef(syncGeneration)
+  syncGenerationRef.current = syncGeneration
+
+  const [syncState, setSyncState] = useState<AuthSyncState>('idle')
+  const [authError, setAuthError] = useState<AuthError | null>(null)
+  const [sessionUser, setSessionUser] = useState<AuthUser | null>(null)
+  const [convexLegacyId, setConvexLegacyId] = useState<string | null>(null)
+  const [bootstrapProfile, setBootstrapProfile] = useState<BootstrapProfile | null>(null)
+
+  const { data: betterAuthSession, isPending: sessionPending } = authClient.useSession()
+  const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
+
+  const profileLegacyId = convexLegacyId ?? sessionUser?.id ?? null
+  const convexUser = useQuery(
+    api.users.getByLegacyIdSafe,
+    profileLegacyId && isAuthenticated ? { legacyId: profileLegacyId } : 'skip'
+  )
+
+  const profilePending = false
+
+  const profileMissing =
+    Boolean(profileLegacyId)
+    && isAuthenticated
+    && !convexAuthLoading
+    && convexUser === null
+    && syncState === 'success'
+    && !bootstrapProfile
+
+  const user = useMemo(() => {
+    if (!sessionUser) {
+      return null
+    }
+
+    let merged = applyBootstrapProfile(sessionUser, bootstrapProfile)
+
+    if (convexUser) {
+      merged = mergeConvexProfile(merged, convexUser)
+    }
+
+    if (convexLegacyId && merged.id !== convexLegacyId) {
+      merged = { ...merged, id: convexLegacyId }
+    }
+
+    return merged
+  }, [bootstrapProfile, convexLegacyId, convexUser, sessionUser])
+
+  const hasSession = Boolean(betterAuthSession?.user ?? sessionUser)
+  const awaitingSession = sessionPending && !betterAuthSession?.user && !sessionUser
+
+  useEffect(() => {
+    if (!profileMissing) {
+      return
+    }
+
+    setSyncState('failed')
+    setAuthError(
+      createAuthError(
+        'SESSION_SYNC_FAILED',
+        'Workspace profile not found. Your sign-in succeeded but the profile could not be loaded.',
+        undefined,
+        true
+      )
+    )
+  }, [profileMissing])
+
+  useEffect(() => {
+    const rawUser = betterAuthSession?.user
+    if (rawUser) {
+      setSessionUser(authService.mapBetterAuthUser(rawUser as Record<string, unknown>))
+      return
+    }
+
+    if (!awaitingSession) {
+      setSessionUser(null)
+      setConvexLegacyId(null)
+      setBootstrapProfile(null)
+      setSyncState('idle')
+      setAuthError(null)
+    }
+  }, [awaitingSession, betterAuthSession])
+
+  useEffect(() => {
+    if (!hasSession) {
+      return
+    }
+
+    void authService.waitForInitialAuth().then(() => {
+      const cachedUser = authService.getCurrentUser()
+      if (cachedUser) {
+        setSessionUser((prev) => prev ?? cachedUser)
+      }
+    })
+  }, [hasSession])
+
+  useEffect(() => {
+    if (awaitingSession || !hasSession) {
+      return
+    }
+
+    if (syncState === 'failed') {
+      return
+    }
+
+    if (syncState === 'running') {
+      return
+    }
+
+    if (syncState === 'success' && bootstrapProfile && convexLegacyId) {
+      return
+    }
+
+    const runId = syncGeneration
+
+    setSyncState('running')
+    setAuthError(null)
+
+    void (async () => {
+      const assertActive = () => {
+        if (syncGenerationRef.current !== runId) {
+          throw new StaleSyncError()
+        }
+      }
+
+      try {
+        const result = await runAuthSyncPipeline(assertActive)
+
+        if (syncGenerationRef.current !== runId) {
+          return
+        }
+
+        setConvexLegacyId(result.subject)
+        setBootstrapProfile(result.profile)
+        setSyncState('success')
+      } catch (error) {
+        if (error instanceof StaleSyncError) {
+          return
+        }
+
+        if (syncGenerationRef.current !== runId) {
+          return
+        }
+
+        const message = error instanceof Error ? error.message : 'Failed to sync your session'
+        setSyncState('failed')
+        setAuthError(createAuthError('SESSION_SYNC_FAILED', message, undefined, true))
+      }
+    })()
+  }, [awaitingSession, bootstrapProfile, convexLegacyId, hasSession, syncGeneration, syncState])
+
+  const phase = useMemo<AuthPhase>(() => deriveAuthPhase({
+    sessionPending: awaitingSession,
+    hasSession,
+    syncState,
+    convexAuthLoading,
+    isAuthenticated,
+    profilePending,
+    user,
+  }), [
+    awaitingSession,
+    convexAuthLoading,
+    hasSession,
+    isAuthenticated,
+    profilePending,
+    syncState,
+    user,
+  ])
+
+  const retrySync = useCallback(async () => {
+    setAuthError(null)
+    setSyncState('idle')
+    setSyncGeneration((value) => value + 1)
+  }, [])
+
+  const clearAuthError = useCallback(() => {
+    setAuthError(null)
+  }, [])
+
+  const resetSession = useCallback(() => {
+    resetBootstrapSessionCache()
+    setSessionUser(null)
+    setConvexLegacyId(null)
+    setBootstrapProfile(null)
+    setSyncState('idle')
+    setAuthError(null)
+  }, [])
+
+  const applySessionUser = useCallback((nextUser: AuthUser | null) => {
+    setSessionUser(nextUser)
+    if (nextUser) {
+      if (nextUser.agencyId && nextUser.role && nextUser.status) {
+        setBootstrapProfile({
+          legacyId: nextUser.id,
+          role: nextUser.role,
+          status: nextUser.status,
+          agencyId: nextUser.agencyId,
+        })
+        setConvexLegacyId(nextUser.id)
+        setSyncState('success')
+        setAuthError(null)
+        return
+      }
+
+      setSyncGeneration((value) => value + 1)
+    } else {
+      resetSession()
+    }
+  }, [resetSession])
+
+  return {
+    phase,
+    user,
+    authError,
+    clearAuthError,
+    retrySync,
+    resetSession,
+    applySessionUser,
+    loading: isLoadingPhase(phase),
+    isSyncing: syncState === 'running',
+  }
+}

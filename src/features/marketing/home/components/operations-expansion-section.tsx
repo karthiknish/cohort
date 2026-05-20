@@ -48,8 +48,8 @@ const ROLLOUT_STEPS = [
 
 export function OperationsExpansionSection() {
   return (
-    <section className="relative border-y border-border/50 bg-gradient-to-b from-background via-muted/15 to-background px-6 py-20 sm:py-28">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" aria-hidden />
+    <section className="relative overflow-hidden border-y border-border/50 bg-gradient-to-b from-background via-secondary/[0.04] to-primary/[0.03] px-6 py-20 sm:py-28">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" aria-hidden />
       <div className="mx-auto max-w-6xl space-y-12">
         <FadeIn className="max-w-3xl space-y-4">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Expanded surface area</p>

@@ -480,7 +480,7 @@ function TeamIllustration() {
 
 export function FeaturesSection() {
   return (
-    <section className="bg-muted/20 py-16 sm:py-24">
+    <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.04] via-background to-secondary/[0.03] py-16 sm:py-24">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mb-12 space-y-4 text-center sm:mb-16 lg:mb-20">
           <FadeIn>

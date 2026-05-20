@@ -1,9 +1,7 @@
 import { decrypt, encrypt } from '@/lib/crypto'
 
-// Public OAuth endpoint URL (not a secret)
-const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
-// Public OAuth endpoint URL (not a secret)
-const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
+const GOOGLE_AUTH_ENDPOINT = process.env.GOOGLE_AUTH_ENDPOINT ?? 'https://accounts.google.com/o/oauth2/v2/auth'
+const GOOGLE_TOKEN_ENDPOINT = process.env.GOOGLE_TOKEN_ENDPOINT ?? 'https://oauth2.googleapis.com/token'
 const GOOGLE_CALENDAR_EVENTS_ENDPOINT = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
 const GOOGLE_MEET_SPACES_ENDPOINT = 'https://meet.googleapis.com/v2/spaces'
 export const GOOGLE_MEET_SPACE_SETTINGS_SCOPE = 'https://www.googleapis.com/auth/meetings.space.settings'

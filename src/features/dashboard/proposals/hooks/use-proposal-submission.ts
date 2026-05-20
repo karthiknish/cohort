@@ -152,8 +152,8 @@ export function useProposalSubmission(options: UseProposalSubmissionOptions): Us
         !canQuery
             ? 'skip'
             : {
-                workspaceId,
-                legacyId: draftId,
+                workspaceId: workspaceId!,
+                legacyId: draftId!,
             }
     )
 

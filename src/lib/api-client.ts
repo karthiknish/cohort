@@ -150,9 +150,20 @@ export async function apiFetch<T = unknown>(input: RequestInfo | URL, init: ApiF
     return inFlightRequests.get(cacheKey) as Promise<T>
   }
 
+  const requestPath = (() => {
+    try {
+      return url.startsWith('http') ? new URL(url).pathname : url
+    } catch {
+      return url
+    }
+  })()
+  const isAuthSessionRequest =
+    requestPath.startsWith('/api/auth/bootstrap')
+    || requestPath.startsWith('/api/auth/session')
+
   const executeRequest = async (attempt = 0): Promise<T> => {
     try {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== 'undefined' && !isAuthSessionRequest) {
         await authService.waitForInitialAuth().catch(() => {})
       }
 

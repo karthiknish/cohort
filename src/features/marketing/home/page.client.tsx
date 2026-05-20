@@ -6,6 +6,8 @@ import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 import { FeaturesBento } from "@/features/marketing/home/components/features-bento"
+import { HeroBackground } from "@/features/marketing/home/components/hero-background"
+import { SectionGlow } from "@/features/marketing/home/components/section-glow"
 import { HOME_HERO_BRAND_ORDER, PlatformLogoStrip } from "@/features/marketing/home/components/platform-brand-logos"
 import { FeaturesSection } from "@/features/marketing/home/components/features-section"
 import { HERO_HEADLINE, HERO_SUBHEAD } from "@/features/marketing/home/components/home-content"
@@ -28,15 +30,15 @@ const HOME_PAGE_FALLBACK = (
 function resolveDashboardDestination(): string {
   if (typeof window !== 'undefined') {
     const lastTab = window.localStorage.getItem('cohorts_last_tab')
-    if (lastTab === '/for-you') {
-      return '/dashboard/for-you'
+    if (lastTab === '/for-you' || lastTab?.startsWith('/for-you')) {
+      return '/for-you'
     }
     if (lastTab?.startsWith('/dashboard')) {
       return lastTab
     }
   }
 
-  return '/dashboard'
+  return '/for-you'
 }
 
 function HomePageContent() {
@@ -57,11 +59,13 @@ function HomePageContent() {
       >
       <div className="w-full bg-background">
       {/* ── Hero section ── */}
-      <section className="relative overflow-hidden border-b border-border/40 bg-background px-6 pb-16 pt-24 text-center">
+      <section className="relative overflow-hidden border-b border-border/40 bg-gradient-to-b from-primary/[0.06] via-background to-background px-6 pb-16 pt-24 text-center">
+        <HeroBackground />
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent" aria-hidden />
         <div className="relative z-10 mx-auto max-w-6xl">
           <div className="mx-auto max-w-4xl">
-            <div className="mb-8 inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-4 py-1.5 text-sm font-medium text-foreground backdrop-blur-sm">
-              <span className="mr-2 h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
+            <div className="mb-8 inline-flex items-center rounded-full border border-primary/15 bg-primary/[0.06] px-4 py-1.5 text-sm font-medium text-foreground backdrop-blur-sm">
+              <span className="mr-2 h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
               Now in public beta
             </div>
 
@@ -98,7 +102,8 @@ function HomePageContent() {
         </div>
       </section>
 
-      <section className="border-t border-border/40 bg-muted/20 px-6 py-14 sm:py-16">
+      <section className="relative overflow-hidden border-t border-border/40 bg-gradient-to-b from-background via-primary/[0.03] to-background px-6 py-14 sm:py-16">
+        <SectionGlow variant="features" />
         <div className="mx-auto max-w-6xl space-y-4">
           <p className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Interactive preview · sample data
@@ -111,7 +116,8 @@ function HomePageContent() {
       <FeaturesSection />
 
       {/* ── Features bento ── */}
-      <section className="bg-muted/25 py-16 sm:py-24">
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.04] via-muted/30 to-background py-16 sm:py-24">
+        <SectionGlow variant="integrations" />
         <div className="mx-auto max-w-6xl px-6">
           <FadeIn className="mb-16 text-center">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Features</p>
@@ -130,8 +136,9 @@ function HomePageContent() {
       <SupportProofSection />
 
       {/* ── CTA ── */}
-      <section className="border-t border-border/40 bg-muted/15 px-6 py-24">
-        <div className="mx-auto max-w-4xl rounded-3xl border border-border/60 bg-card p-8 shadow-xl shadow-black/[0.04] sm:p-12">
+      <section className="relative overflow-hidden border-t border-border/40 bg-gradient-to-b from-background via-secondary/[0.04] to-primary/[0.06] px-6 py-24">
+        <SectionGlow variant="contact" />
+        <div className="relative mx-auto max-w-4xl rounded-3xl border border-primary/15 bg-card p-8 shadow-xl shadow-primary/[0.08] sm:p-12">
           <FadeIn className="text-center">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Get Started</p>
             <h2 className="mt-3 text-3xl font-bold text-foreground sm:text-4xl">

@@ -1,12 +1,6 @@
-import type { Metadata } from 'next'
+import { permanentRedirect } from 'next/navigation'
 
-import ForYouPageClient from '@/features/marketing/for-you/page.client'
-
-export const metadata: Metadata = {
-  title: 'For You | Cohorts',
-  description: 'Review your activity feed, client work, meeting momentum, and dashboard priorities in one place.',
-}
-
-export default function DashboardForYouPage() {
-  return <ForYouPageClient />
+/** For You lives at /for-you (workspace home), not under /dashboard. */
+export default function DashboardForYouLegacyRedirect() {
+  permanentRedirect('/for-you')
 }

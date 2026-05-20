@@ -47,6 +47,8 @@ function createDbStub(users: UserRow[]) {
       query: (table: string) => {
         if (table === 'users') {
           return {
+            collect: async () => [...users],
+            first: async () => users[0] ?? null,
             withIndex: (
               indexName: string,
               selector: (builder: { eq: (field: string, value: string) => { field: string; value: string } }) => {
@@ -102,6 +104,9 @@ function createDbStub(users: UserRow[]) {
 
 function createContext(options: { currentUserId?: string | null; users: UserRow[] }) {
   const { db, patch, insert } = createDbStub(options.users)
+  const currentUser = options.currentUserId
+    ? options.users.find((user) => user.legacyId === options.currentUserId) ?? null
+    : null
 
   return {
     ctx: {
@@ -113,6 +118,13 @@ function createContext(options: { currentUserId?: string | null; users: UserRow[
         ),
       },
       db,
+      runMutation: vi.fn(async () => ({ ok: true, retryAfter: 0 })),
+      runQuery: vi.fn(async () => null),
+      legacyId: options.currentUserId ?? undefined,
+      user: currentUser,
+      agencyId: currentUser?.agencyId ?? options.currentUserId ?? undefined,
+      now: Date.now(),
+      cachedResponse: undefined,
     },
     patch,
     insert,
@@ -246,28 +258,32 @@ describe('convex/users authorization hardening', () => {
     expect(patch).not.toHaveBeenCalled()
   })
 
-  it('ignores privileged role, status, and agency fields when self-bootstrapping a new user', async () => {
-    const { bootstrapUpsert } = await loadUsersModule()
+  it('creates the first sign-in user as admin and active via ensureProfileOnSignIn', async () => {
+    const { ensureProfileOnSignIn } = await loadUsersModule()
     const { ctx, insert } = createContext({
       currentUserId: 'new_user',
       users: [],
     })
 
-    await expect(callRegisteredHandler(bootstrapUpsert, ctx, {
+    await expect(callRegisteredHandler(ensureProfileOnSignIn, ctx, {
       legacyId: 'new_user',
       email: 'new_user@example.com',
       name: 'New User',
+    })).resolves.toEqual({
+      ok: true,
+      created: true,
+      legacyId: 'new_user',
       role: 'admin',
       status: 'active',
-      agencyId: 'evil_workspace',
-    })).resolves.toEqual({ ok: true, created: true })
+      agencyId: 'new_user',
+    })
 
     expect(insert).toHaveBeenCalledWith('users', expect.objectContaining({
       legacyId: 'new_user',
       email: 'new_user@example.com',
       emailLower: 'new_user@example.com',
-      role: 'client',
-      status: 'pending',
+      role: 'admin',
+      status: 'active',
       agencyId: 'new_user',
     }))
   })
@@ -285,6 +301,7 @@ describe('convex/users authorization hardening', () => {
       currentUserId: 'existing_user',
       users: [existingUser],
     })
+    // bootstrapUpsert requires an active profile row before the handler runs
 
     await expect(callRegisteredHandler(bootstrapUpsert, ctx, {
       legacyId: 'existing_user',
@@ -301,6 +318,106 @@ describe('convex/users authorization hardening', () => {
       role: 'team',
       status: 'active',
       agencyId: 'ws_1',
+    }))
+  })
+})
+
+describe('convex/users ensureProfileOnSignInFromApp', () => {
+  it('bootstraps profile when app proxy secret is valid', async () => {
+    const previous = process.env.COHORTS_API_IDEMPOTENCY_SECRET
+    process.env.COHORTS_API_IDEMPOTENCY_SECRET = 'test-proxy-secret'
+
+    try {
+      const { ensureProfileOnSignInFromApp } = await loadUsersModule()
+      const { ctx, insert } = createContext({
+        currentUserId: 'app_user',
+        users: [],
+      })
+
+      await expect(callRegisteredHandler(ensureProfileOnSignInFromApp, ctx, {
+        serverSecret: 'test-proxy-secret',
+        legacyId: 'app_user',
+        email: 'app_user@example.com',
+        name: 'App User',
+      })).resolves.toEqual({
+        ok: true,
+        created: true,
+        legacyId: 'app_user',
+        role: 'admin',
+        status: 'active',
+        agencyId: 'app_user',
+      })
+
+      expect(insert).toHaveBeenCalled()
+    } finally {
+      process.env.COHORTS_API_IDEMPOTENCY_SECRET = previous
+    }
+  })
+})
+
+describe('convex/users ensureProfileOnSignIn', () => {
+  it('creates subsequent users as client pending', async () => {
+    const { ensureProfileOnSignIn } = await loadUsersModule()
+    const { ctx, insert } = createContext({
+      currentUserId: 'second_user',
+      users: [createUserRow({ legacyId: 'first_user', role: 'admin', status: 'active' })],
+    })
+
+    await expect(callRegisteredHandler(ensureProfileOnSignIn, ctx, {
+      legacyId: 'second_user',
+      email: 'second@example.com',
+      name: 'Second User',
+    })).resolves.toEqual({
+      ok: true,
+      created: true,
+      legacyId: 'second_user',
+      role: 'client',
+      status: 'pending',
+      agencyId: 'second_user',
+    })
+
+    expect(insert).toHaveBeenCalledWith('users', expect.objectContaining({
+      legacyId: 'second_user',
+      role: 'client',
+      status: 'pending',
+    }))
+  })
+
+  it('does not downgrade an existing admin when patching profile', async () => {
+    const { ensureProfileOnSignIn } = await loadUsersModule()
+    const existingUser = createUserRow({
+      legacyId: 'admin_user',
+      role: 'admin',
+      status: 'active',
+      agencyId: 'ws_1',
+      name: 'Admin',
+    })
+    const { ctx, patch, insert } = createContext({
+      currentUserId: 'admin_user',
+      users: [existingUser],
+    })
+
+    await expect(callRegisteredHandler(ensureProfileOnSignIn, ctx, {
+      legacyId: 'admin_user',
+      email: 'admin@example.com',
+      name: 'Admin Updated',
+    })).resolves.toEqual({
+      ok: true,
+      created: false,
+      legacyId: 'admin_user',
+      role: 'admin',
+      status: 'active',
+      agencyId: 'ws_1',
+    })
+
+    expect(insert).not.toHaveBeenCalled()
+    expect(patch).toHaveBeenCalledWith(existingUser._id, expect.objectContaining({
+      name: 'Admin Updated',
+      email: 'admin@example.com',
+    }))
+    expect(patch).toHaveBeenCalledWith(existingUser._id, expect.not.objectContaining({
+      role: 'client',
+      status: 'pending',
     }))
   })
 })

@@ -487,7 +487,7 @@ export function useAgentMode(): UseAgentModeReturn {
       let status: 'success' | 'error' | 'info' | 'warning' = 'info'
       const metadata: AgentMessageMetadata = {
         action: responseData?.action as AgentMessageMetadata['action'],
-        operation: responseData?.operation,
+        operation: responseData?.operation ?? undefined,
       }
 
       // Handle different action types

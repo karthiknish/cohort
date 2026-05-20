@@ -152,7 +152,7 @@ const navigationItemDefs: Array<{
     description: 'Manage client workspaces',
     roles: ['admin'] as const,
   },
-  { name: 'For You', href: '/dashboard/for-you', icon: Activity, description: 'Personalized activity feed' },
+  { name: 'For You', href: '/for-you', icon: Activity, description: 'Personalized activity feed' },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, description: 'Performance insights' },
   { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad platform integrations', roles: ['admin', 'team'] as const },
   { name: 'Socials', href: '/dashboard/socials', icon: Share2, description: 'Meta social insights & AI suggestions', roles: ['admin', 'team'] as const },
@@ -200,7 +200,7 @@ export function getQuickActionsForUserRole(userRole: string | null) {
 
 export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
   const [open, setOpen] = useState(false)
-  const router = useRouter()
+  const { push } = useRouter()
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
   const workspaceId = user?.agencyId ?? null
@@ -226,7 +226,9 @@ export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
     workspaceId
       ? selectedClientId
         ? { workspaceId, clientId: selectedClientId, limit: 100 }
-        : { workspaceId, limit: 100 }
+        : user?.id
+          ? { workspaceId, userId: user.id }
+          : 'skip'
       : 'skip'
   ) as Array<SearchableTask> | undefined
 
@@ -380,9 +382,9 @@ export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
     (href: string) => {
       setOpen(false)
       setQuery('')
-      router.push(href)
+      push(href)
     },
-    [router]
+    [push]
   )
 
   const handleSettingsSelect = useCallback(() => {

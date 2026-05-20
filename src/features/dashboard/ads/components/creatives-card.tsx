@@ -8,6 +8,7 @@ import { toast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { adsCreativesApi } from '@/lib/convex-api'
+import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
 
 import {
   CreativeComparisonDialog,
@@ -68,7 +69,7 @@ export function CreativesCard({ providerId, providerName, isConnected, maxMetaCr
 
     void listCreatives({
         workspaceId,
-        providerId,
+        providerId: toAdsProviderId(providerId),
         clientId: null,
         ...(providerId === 'facebook'
           ? { maxMetaCreativePages: maxMetaCreativePages ?? 40 }

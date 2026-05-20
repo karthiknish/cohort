@@ -37,7 +37,7 @@ export function DashboardAgencyRoutesGate({ children }: { children: React.ReactN
           your admin for access.
         </p>
         <Button asChild variant="default">
-          <Link href="/dashboard">Back to dashboard</Link>
+          <Link href="/for-you">Back to For You</Link>
         </Button>
       </div>
     )

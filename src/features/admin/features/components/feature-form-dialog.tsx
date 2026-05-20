@@ -179,7 +179,7 @@ export function FeatureFormDialog({
       return URL.createObjectURL(file)
     }
 
-    const { url: uploadUrl } = await generateUploadUrl()
+    const { url: uploadUrl } = await generateUploadUrl({})
 
     const uploadResponse = await fetch(uploadUrl, {
       method: 'POST',

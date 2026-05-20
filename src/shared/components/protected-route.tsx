@@ -1,11 +1,11 @@
 'use client'
 
-import { useConvexAuth } from 'convex/react'
 import { LoaderCircle } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef } from 'react'
 
+import { isLoadingPhase } from '@/lib/auth-phase'
 import { Button } from '@/shared/ui/button'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { toast } from '@/shared/ui/sonner'
@@ -97,42 +97,14 @@ function hasRequiredRole(userRole: string, requiredRole?: string): boolean {
   return userRoleLevel >= requiredRoleLevel
 }
 
-function getStatusCopy(status: string): { title: string; message: string } {
-  switch (status) {
-    case 'pending':
-      return {
-        title: 'Awaiting approval',
-        message: 'Your account request is pending admin approval. We will notify you once access is granted.',
-      }
-    case 'invited':
-      return {
-        title: 'Finish your setup',
-        message: 'Complete your invitation email to activate your access. Contact your admin if you need a new invite.',
-      }
-    case 'disabled':
-      return {
-        title: 'Account disabled',
-        message: 'Access to this workspace has been disabled. Contact your administrator.',
-      }
-    case 'suspended':
-      return {
-        title: 'Account suspended',
-        message: 'Your account has been suspended. Contact your administrator.',
-      }
-    default:
-      return {
-        title: 'Account unavailable',
-        message: 'We are unable to load your workspace right now. Try signing in again or contact support.',
-      }
-  }
-}
-
 interface AccessOverlayProps {
   title: string
   message: string
   actionLabel?: string
   actionHref?: string
   actionOnClick?: () => void
+  secondaryActionLabel?: string
+  secondaryActionOnClick?: () => void
   actionVariant?: 'default' | 'outline'
   showSpinner?: boolean
 }
@@ -143,6 +115,8 @@ function AccessOverlay({
   actionHref,
   actionLabel,
   actionOnClick,
+  secondaryActionLabel,
+  secondaryActionOnClick,
   actionVariant = 'default',
   showSpinner,
 }: AccessOverlayProps) {
@@ -156,17 +130,24 @@ function AccessOverlay({
         )}
         <h2 className="text-lg font-semibold text-foreground mb-2">{title}</h2>
         <p className="text-sm text-muted-foreground">{message}</p>
-        {actionLabel ? (
-          <div className="mt-4">
-            {actionHref ? (
-              <Button asChild variant={actionVariant}>
-                <Link href={actionHref}>{actionLabel}</Link>
+        {actionLabel || secondaryActionLabel ? (
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
+            {actionLabel ? (
+              actionHref ? (
+                <Button asChild variant={actionVariant}>
+                  <Link href={actionHref}>{actionLabel}</Link>
+                </Button>
+              ) : (
+                <Button variant={actionVariant} onClick={actionOnClick}>
+                  {actionLabel}
+                </Button>
+              )
+            ) : null}
+            {secondaryActionLabel ? (
+              <Button variant="outline" onClick={secondaryActionOnClick}>
+                {secondaryActionLabel}
               </Button>
-            ) : (
-              <Button variant={actionVariant} onClick={actionOnClick}>
-                {actionLabel}
-              </Button>
-            )}
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -175,9 +156,8 @@ function AccessOverlay({
 }
 
 export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = false }: ProtectedRouteProps) {
-  const { user, loading, signOut } = useAuth()
-  const { isAuthenticated, isLoading: convexAuthLoading } = useConvexAuth()
-  const router = useRouter()
+  const { user, authPhase, authError, retrySync, signOut } = useAuth()
+  const { replace } = useRouter()
   const pathname = usePathname()
   const hasPreviewAccess = allowPreviewAccess
   const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -196,8 +176,8 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
 
   const redirectToAuth = useCallback(() => {
     const redirectParam = pathname ? `?redirect=${encodeURIComponent(pathname)}` : ''
-    router.replace(`/auth${redirectParam}`)
-  }, [pathname, router])
+    replace(`/auth${redirectParam}`)
+  }, [pathname, replace])
 
   useEffect(() => {
     return () => {
@@ -206,14 +186,6 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
       toast.dismiss(SESSION_EXPIRED_TOAST_ID)
     }
   }, [clearSessionTimers])
-
-  // Handle blocked user with retry mechanism
-  const handleBlockedSignOut = useCallback(() => {
-    void signOut()
-      .finally(() => {
-        router.push('/')
-      })
-  }, [signOut, router])
 
   const handleSessionExpired = useCallback(() => {
     clearSessionTimers()
@@ -287,7 +259,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
   }, [clearSessionTimers, handleSessionExpired])
 
   useEffect(() => {
-    if (hasPreviewAccess || loading || convexAuthLoading || !user || !isAuthenticated || user.status !== 'active') {
+    if (hasPreviewAccess || authPhase !== 'ready_active' || !user) {
       clearSessionTimers()
       toast.dismiss(SESSION_WARNING_TOAST_ID)
       return
@@ -323,21 +295,20 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
       window.removeEventListener('focus', handleFocus)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [clearSessionTimers, convexAuthLoading, hasPreviewAccess, isAuthenticated, loading, scheduleSessionPrompts, user])
+  }, [authPhase, clearSessionTimers, hasPreviewAccess, scheduleSessionPrompts, user])
 
   useEffect(() => {
-    if (!hasPreviewAccess && user && user.status !== 'active' && pathname !== '/pending-approval') {
-      const nextUrl = `/pending-approval?status=${encodeURIComponent(user.status)}`
-      // Intentional client-side redirect: auth state only available in browser
-      router.replace(nextUrl)
+    if (!hasPreviewAccess && authPhase === 'ready_pending' && pathname !== '/pending-approval') {
+      const status = user?.status ?? 'pending'
+      window.location.href = `/pending-approval?status=${encodeURIComponent(status)}`
     }
-  }, [hasPreviewAccess, pathname, router, user])
+  }, [authPhase, hasPreviewAccess, pathname, user?.status])
 
   if (hasPreviewAccess) {
     return <>{children}</>
   }
 
-  if (loading || convexAuthLoading) {
+  if (isLoadingPhase(authPhase)) {
     return (
       <AccessOverlay
         title="Loading your workspace"
@@ -347,8 +318,26 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
     )
   }
 
-  // Handle unauthenticated user
-  if (!user || !isAuthenticated) {
+  if (authPhase === 'sync_failed') {
+    return (
+      <AccessOverlay
+        title="Could not connect your workspace"
+        message={authError?.message ?? 'We could not finish securing your session. Try again or sign in once more.'}
+        actionLabel="Retry"
+        actionOnClick={() => {
+          void retrySync()
+        }}
+        secondaryActionLabel="Sign out"
+        secondaryActionOnClick={() => {
+          void signOut().finally(() => {
+            redirectToAuth()
+          })
+        }}
+      />
+    )
+  }
+
+  if (authPhase === 'unauthenticated') {
     return (
       <AccessOverlay
         title="Sign in required"
@@ -359,8 +348,7 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
     )
   }
 
-  // Handle non-active user status
-  if (user.status !== 'active') {
+  if (authPhase === 'ready_pending') {
     return (
       <AccessOverlay
         title="Checking account access"
@@ -370,14 +358,23 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
     )
   }
 
-  // Handle insufficient permissions
+  if (authPhase !== 'ready_active' || !user) {
+    return (
+      <AccessOverlay
+        title="Loading your workspace"
+        message="Just a moment while we secure your account and verify your permissions."
+        showSpinner
+      />
+    )
+  }
+
   if (requiredRole && !hasRequiredRole(user.role, requiredRole)) {
     return (
       <AccessOverlay
         title="Insufficient permissions"
         message="You do not have the required role to access this area."
         actionLabel="Back to dashboard"
-        actionHref="/dashboard"
+        actionHref="/for-you"
       />
     )
   }

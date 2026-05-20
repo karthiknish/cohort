@@ -1,46 +1,29 @@
 'use client'
 
-import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useQuery } from 'convex/react'
+import { createContext, use, useCallback, useMemo, type ReactNode } from 'react'
 
-import { authClient } from '@/lib/auth-client'
+import type { AuthPhase } from '@/lib/auth-phase'
 import { authService } from '@/services/auth'
 import type { AuthUser, SignUpData } from '@/services/auth'
-import { api } from '@convex/_generated/api'
+import {
+  useAuthSync,
+  type AuthError,
+  type AuthErrorCode,
+} from '@/shared/hooks/use-auth-sync'
+import { authClient } from '@/lib/auth-client'
 
-export type AuthErrorCode =
-  | 'SESSION_SYNC_FAILED'
-  | 'NETWORK_ERROR'
-  | 'UNAUTHORIZED'
-  | 'RATE_LIMITED'
-  | 'SERVER_ERROR'
-  | 'UNKNOWN'
-
-export interface AuthError {
-  code: AuthErrorCode
-  message: string
-  details?: Record<string, unknown>
-  retryable: boolean
-}
-
-function createAuthError(
-  code: AuthErrorCode,
-  message: string,
-  details?: Record<string, unknown>,
-  retryable = false
-): AuthError {
-  return { code, message, details, retryable }
-}
+export type { AuthError, AuthErrorCode }
 
 interface AuthContextType {
   user: AuthUser | null
+  authPhase: AuthPhase
   loading: boolean
   isSyncing: boolean
   authError: AuthError | null
   clearAuthError: () => void
   retrySync: () => Promise<void>
   signIn: (email: string, password: string) => Promise<AuthUser>
-  signInWithGoogle: () => Promise<AuthUser>
+  signInWithGoogle: (callbackURL?: string) => Promise<void>
   connectGoogleAdsAccount: () => Promise<void>
   connectGoogleAnalyticsAccount: () => Promise<void>
   connectFacebookAdsAccount: () => Promise<void>
@@ -76,204 +59,51 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [authError, setAuthError] = useState<AuthError | null>(null)
-  const [betterAuthUserId, setBetterAuthUserId] = useState<string | null>(null)
-
-  // Query Convex for additional user data when we have a Better Auth user
-  const convexUser = useQuery(
-    api.users.getByLegacyIdSafe,
-    betterAuthUserId ? { legacyId: betterAuthUserId } : 'skip'
-  )
-  const profileLoading = betterAuthUserId !== null && typeof convexUser === 'undefined'
-
-  const lastAppliedUserKeyRef = useRef<string | null>(null)
-  const currentUserRef = useRef<AuthUser | null>(null)
-
-  const clearAuthError = useCallback(() => {
-    setAuthError(null)
-  }, [])
-
-  // Apply user from Better Auth session
-  const applyUser = useCallback(async (authUser: AuthUser | null, isIntentionalSignOut = false) => {
-    const userKey = authUser
-      ? `${authUser.id}|${authUser.email}|${authUser.role}|${authUser.status}|${authUser.agencyId}`
-      : 'anonymous'
-
-    if (lastAppliedUserKeyRef.current === userKey && !isIntentionalSignOut) {
-      return
-    }
-    lastAppliedUserKeyRef.current = userKey
-    currentUserRef.current = authUser
-
-    setUser(authUser)
-    setAuthError(null)
-    setIsSyncing(false)
-
-    // Set the Better Auth user ID for Convex query
-    if (authUser) {
-      setBetterAuthUserId(authUser.id)
-    } else {
-      setBetterAuthUserId(null)
-    }
-  }, [])
-
-  // Update user when Convex data changes
-  useEffect(() => {
-    if (!convexUser) return
-
-    const activeUser = currentUserRef.current
-    if (!activeUser || !betterAuthUserId) {
-      return
-    }
-
-    if (convexUser.legacyId !== betterAuthUserId || activeUser.id !== betterAuthUserId) {
-      return
-    }
-
-    // Merge Convex user data (role, status, agencyId) with Better Auth user
-    setUser((prev) => {
-      if (!prev || prev.id !== convexUser.legacyId) return prev
-      const updated = {
-        ...prev,
-        role: (convexUser.role as AuthUser['role']) || prev.role || 'client',
-        status: (convexUser.status as AuthUser['status']) || prev.status || 'pending',
-        agencyId: convexUser.agencyId || prev.agencyId || prev.id,
-      }
-      currentUserRef.current = updated
-      return updated
-    })
-  }, [betterAuthUserId, convexUser])
-
-  // Listen to Better Auth session changes
-  useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged(async (authUser) => {
-      await applyUser(authUser)
-        .catch((error) => {
-          console.error('[AuthContext] Error in onAuthStateChanged:', error)
-          setAuthError(createAuthError('UNKNOWN', error instanceof Error ? error.message : 'Auth state change failed'))
-        })
-        .finally(() => {
-          setLoading(false)
-        })
-    })
-
-    return unsubscribe
-  }, [applyUser])
-
-  // Timeout safeguard: Force loading to false after 10 seconds
-  useEffect(() => {
-    if (!loading) return
-
-    const timeoutId = setTimeout(() => {
-      console.warn('[AuthContext] Loading timeout reached - forcing loading to false')
-      setLoading(false)
-    }, 10000)
-
-    return () => clearTimeout(timeoutId)
-  }, [loading])
-
-  const retrySync = useCallback(async () => {
-    const currentUser = currentUserRef.current
-    if (!currentUser) return
-
-    setAuthError(null)
-    setIsSyncing(true)
-    lastAppliedUserKeyRef.current = null
-    await applyUser(currentUser).finally(() => {
-      setIsSyncing(false)
-    })
-  }, [applyUser])
+  const {
+    phase: authPhase,
+    user,
+    authError,
+    clearAuthError,
+    retrySync,
+    resetSession,
+    applySessionUser,
+    loading,
+    isSyncing,
+  } = useAuthSync()
 
   const signIn = useCallback((email: string, password: string): Promise<AuthUser> => {
-    setLoading(true)
-    setAuthError(null)
-
     return authService
       .signIn(email, password)
-      .then(async (authUser) => {
-        await applyUser(authUser)
+      .then((authUser) => {
+        applySessionUser(authUser)
         return authUser
       })
-      .catch((error) => {
-        console.error('[AuthContext] Sign in error:', error)
-        throw error
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [applyUser])
+  }, [applySessionUser])
 
   const signUp = useCallback((data: SignUpData): Promise<AuthUser> => {
-    setLoading(true)
-    setAuthError(null)
-
     return authService
       .signUp(data)
-      .then(async (authUser) => {
-        await applyUser(authUser)
+      .then((authUser) => {
+        applySessionUser(authUser)
         return authUser
       })
-      .catch((error) => {
-        console.error('[AuthContext] Sign up error:', error)
-        throw error
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [applyUser])
+  }, [applySessionUser])
 
-  const signInWithGoogle = useCallback((): Promise<AuthUser> => {
-    setLoading(true)
-    setAuthError(null)
-
-    return authService
-      .signInWithGoogle()
-      .then(async (authUser) => {
-        await applyUser(authUser)
-        return authUser
-      })
-      .catch((error) => {
-        console.error('[AuthContext] Google sign in error:', error)
-        throw error
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [applyUser])
+  const signInWithGoogle = useCallback((callbackURL?: string): Promise<void> => {
+    return authService.signInWithGoogle(callbackURL)
+  }, [])
 
   const signOut = useCallback((): Promise<void> => {
-    setLoading(true)
-    setAuthError(null)
-
     return authService
       .signOut()
-      .then(async () => {
-        await applyUser(null, true)
-        setBetterAuthUserId(null)
+      .then(() => {
+        resetSession()
       })
       .catch((error) => {
-        console.error('[AuthContext] Sign out error:', error)
-        setUser(null)
-        currentUserRef.current = null
-        lastAppliedUserKeyRef.current = null
-        setBetterAuthUserId(null)
-        setAuthError(
-          createAuthError(
-            'SERVER_ERROR',
-            error instanceof Error ? error.message : 'Sign out did not complete on the server.',
-            undefined,
-            true
-          )
-        )
+        resetSession()
         throw error
       })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [applyUser])
+  }, [resetSession])
 
   const resetPassword = useCallback(async (email: string): Promise<void> => {
     void email
@@ -292,15 +122,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const updateProfile = useCallback(async (data: Partial<AuthUser>): Promise<AuthUser> => {
-    try {
-      const authUser = await authService.updateProfile(data)
-      await applyUser(authUser)
-      return authUser
-    } catch (error) {
-      console.error('[AuthContext] Update profile error:', error)
-      throw error
-    }
-  }, [applyUser])
+    const authUser = await authService.updateProfile(data)
+    applySessionUser(authUser)
+    return authUser
+  }, [applySessionUser])
 
   const changePassword = useCallback(async (currentPassword: string, newPassword: string): Promise<void> => {
     void currentPassword
@@ -309,23 +134,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const deleteAccount = useCallback((): Promise<void> => {
-    setLoading(true)
-    setAuthError(null)
-
     return authService
       .deleteAccount()
-      .then(async () => {
-        await applyUser(null, true)
-        setBetterAuthUserId(null)
+      .then(() => {
+        resetSession()
       })
-      .catch((error) => {
-        console.error('[AuthContext] Delete account error:', error)
-        throw error
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [applyUser])
+  }, [resetSession])
 
   const connectGoogleAdsAccount = useCallback(async () => {
     await authService.connectGoogleAdsAccount()
@@ -368,16 +182,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const getIdToken = useCallback(async () => {
     if (typeof window === 'undefined') return null
 
-    const result = await authClient.convex.token().catch((error) => {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn('[AuthContext] Failed to fetch Convex token', error)
-      }
-      return null
-    })
-
-    if (!result) {
-      return null
-    }
+    const result = await authClient.convex.token().catch(() => null)
+    if (!result) return null
 
     let payload: unknown = result
     if (typeof result === 'object' && result !== null && 'data' in result) {
@@ -389,17 +195,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     const token = (payload as { token?: unknown }).token
-    if (typeof token !== 'string') {
-      return null
-    }
-
-    return token.trim().length > 0 ? token : null
+    return typeof token === 'string' && token.trim().length > 0 ? token.trim() : null
   }, [])
 
   const value = useMemo<AuthContextType>(
     () => ({
       user,
-      loading: loading || profileLoading,
+      authPhase,
+      loading,
       isSyncing,
       authError,
       clearAuthError,
@@ -427,8 +230,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }),
     [
       user,
+      authPhase,
       loading,
-      profileLoading,
       isSyncing,
       authError,
       clearAuthError,

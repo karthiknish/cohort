@@ -1,6 +1,13 @@
-import { permanentRedirect } from 'next/navigation'
+import type { Metadata } from 'next'
 
-/** Legacy URL; For You now lives under the dashboard shell. */
-export default function ForYouLegacyRedirect() {
-  permanentRedirect('/dashboard/for-you')
+import ForYouPageClient from '@/features/marketing/for-you/page.client'
+
+export const metadata: Metadata = {
+  title: 'For You | Cohorts',
+  description: 'Your workspace summary — meetings, tasks, clients, and what needs attention first.',
+  robots: { index: false, follow: false },
+}
+
+export default function ForYouPage() {
+  return <ForYouPageClient />
 }

@@ -114,8 +114,13 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/dashboard/activity',
-        destination: '/dashboard/for-you',
+        destination: '/for-you',
         permanent: false,
+      },
+      {
+        source: '/dashboard/for-you',
+        destination: '/for-you',
+        permanent: true,
       },
     ]
   },

@@ -22,6 +22,22 @@ export {
   PROVIDER_IDS,
   type ProviderId,
 } from '@/lib/themes'
+
+export type AdsConvexProviderId = 'google' | 'facebook' | 'linkedin' | 'tiktok'
+
+const ADS_CONVEX_PROVIDER_IDS = new Set<string>(['google', 'facebook', 'linkedin', 'tiktok', 'meta'])
+
+export function toAdsProviderId(providerId: string): AdsConvexProviderId {
+  if (providerId === 'meta') {
+    return 'facebook'
+  }
+
+  if (ADS_CONVEX_PROVIDER_IDS.has(providerId)) {
+    return providerId as AdsConvexProviderId
+  }
+
+  throw new Error(`Unsupported ads provider: ${providerId}`)
+}
 export { PROVIDER_ICON_MAP } from '@/features/dashboard/ads/constants'
 
 // Constants

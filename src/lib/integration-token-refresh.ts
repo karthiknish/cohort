@@ -17,11 +17,9 @@ interface RefreshParams {
 }
 
 // Token refresh endpoints - updated to latest API versions
-// Public OAuth endpoint URL (not a secret)
-const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
+const GOOGLE_TOKEN_ENDPOINT = process.env.GOOGLE_TOKEN_ENDPOINT ?? 'https://oauth2.googleapis.com/token'
 const TIKTOK_REFRESH_ENDPOINT = 'https://business-api.tiktok.com/open_api/v1.3/oauth2/refresh_token/'
-// Public OAuth endpoint URL (not a secret)
-const LINKEDIN_TOKEN_ENDPOINT = 'https://www.linkedin.com/oauth/v2/accessToken'
+const LINKEDIN_TOKEN_ENDPOINT = process.env.LINKEDIN_TOKEN_ENDPOINT ?? 'https://www.linkedin.com/oauth/v2/accessToken'
 
 // Promise deduplication map
 const refreshPromises = new Map<string, Promise<string>>()

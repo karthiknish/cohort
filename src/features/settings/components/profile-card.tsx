@@ -195,7 +195,7 @@ export function ProfileCard({
   }, [])
 
   const uploadAvatarImage = useCallback(async (file: File): Promise<string> => {
-    const { url: uploadUrl } = await generateUploadUrl()
+    const { url: uploadUrl } = await generateUploadUrl({})
 
     const uploadResponse = await fetch(uploadUrl, {
       method: 'POST',

@@ -155,16 +155,17 @@ export function useThreads({ workspaceId, currentUserId }: UseThreadsOptions) {
       }
 
       const decoded = decodeTimestampIdCursor(cursor)
-      const afterCreatedAtMs = decoded ? decoded.time.getTime() : undefined
-      const afterLegacyId = decoded ? decoded.id : undefined
 
-      const rows = (await convex.query(collaborationApi.listThreadReplies, {
+      const listResult = await convex.query(collaborationApi.listThreadReplies, {
         workspaceId: String(workspaceId),
         threadRootId,
         limit: THREAD_PAGE_SIZE + 1,
-        afterCreatedAtMs,
-        afterLegacyId,
-      })) as ConvexThreadRow[]
+        cursor: decoded
+          ? { legacyId: decoded.id, fieldValue: decoded.time.getTime() }
+          : undefined,
+      })
+
+      const rows = listResult.items as ConvexThreadRow[]
 
       const mapped = rows
         .slice(0, THREAD_PAGE_SIZE)

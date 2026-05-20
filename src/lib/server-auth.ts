@@ -11,6 +11,7 @@ export interface AuthResult {
 }
 
 import { ApiError } from './api-errors'
+import { decodeJwtSubject } from './jwt-utils'
 import { ConvexHttpClient } from 'convex/browser'
 import { convexSiteUrl, getToken as getNextJsToken } from './auth-server'
 import { api } from '/_generated/api'
@@ -274,26 +275,11 @@ async function buildAuthResultFromConvexToken(token: string): Promise<AuthResult
       // ignore and fall back
     }
 
-    if (!resolvedUid && betterAuthUserId) {
-      // Ensure the user exists in the Convex `users` table so role/status lookups
-      // and legacy-id bridging are stable going forward.
-      try {
-        await convex.mutation(api.users.bootstrapUpsert, {
-          legacyId: betterAuthUserId,
-          email: normalizedEmail,
-          name: name ?? undefined,
-        })
-
-        const convexUser = await fetchUserByEmail(convex, normalizedEmail)
-
-        if (convexUser?.legacyId) {
-          resolvedUid = String(convexUser.legacyId)
-          role = typeof convexUser.role === 'string' ? convexUser.role : role
-          status = typeof convexUser.status === 'string' ? convexUser.status : status
-          agencyId = typeof convexUser.agencyId === 'string' ? convexUser.agencyId : agencyId
-        }
-      } catch {
-        // If we can't upsert, still allow auth with Better Auth user id.
+    if (!resolvedUid) {
+      const legacyId = decodeJwtSubject(token) ?? betterAuthUserId
+      if (legacyId) {
+        // Profile creation runs in POST /api/auth/bootstrap after sign-in — avoid duplicate writes here.
+        resolvedUid = legacyId
       }
     }
 

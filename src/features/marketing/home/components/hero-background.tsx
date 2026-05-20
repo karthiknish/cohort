@@ -28,7 +28,7 @@ const orbs = [
     id: 'hero-orb-warm-right',
     size: 200,
     blur: 'blur-3xl',
-    gradient: 'from-warning/20 via-primary/10 to-transparent',
+    gradient: 'from-secondary/25 via-primary/10 to-transparent',
     initial: { x: 140, y: 160, scale: 0.8 },
     animate: { x: 120, y: 130, scale: 0.94 },
     delay: 3,

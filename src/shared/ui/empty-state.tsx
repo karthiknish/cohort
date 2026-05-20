@@ -218,11 +218,11 @@ export function NoAnalyticsEmptyState(props: Partial<EmptyStateProps>) {
 }
 
 export function NetworkErrorEmptyState(props: Partial<EmptyStateProps>) {
-  const router = useRouter()
+  const { refresh } = useRouter()
 
   const handleRetry = React.useCallback(() => {
-    router.refresh()
-  }, [router])
+    refresh()
+  }, [refresh])
 
   return (
     <EmptyState

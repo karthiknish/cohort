@@ -22,7 +22,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const { selectedClient } = useClientContext()
   const { user } = useAuth()
   const searchParams = useUrlSearchParams()
-  const router = useRouter()
+  const { push } = useRouter()
   const pathname = usePathname()
 
   const [manualProjectId, setManualProjectId] = useState<string | null>(null)
@@ -67,9 +67,9 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     if (projectId && !searchParams.get('projectId')) {
       const newParams = new URLSearchParams(searchParams.toString())
       newParams.set('projectId', projectId)
-      router.push(`${pathname}?${newParams.toString()}`)
+      push(`${pathname}?${newParams.toString()}`)
     }
-  }, [searchParams, router, pathname])
+  }, [searchParams, pathname, push])
 
   const clearProject = useCallback(() => {
     setManualProjectId(null)
@@ -78,8 +78,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     const newParams = new URLSearchParams(searchParams.toString())
     newParams.delete('projectId')
     newParams.delete('projectName')
-    router.push(`${pathname}?${newParams.toString()}`)
-  }, [searchParams, router, pathname])
+    push(`${pathname}?${newParams.toString()}`)
+  }, [searchParams, pathname, push])
 
   const value = useMemo<ProjectContextValue>(
     () => ({

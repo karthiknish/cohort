@@ -6,7 +6,7 @@ describe('getNavigationItemsForUserRole', () => {
   it('uses For You route instead of legacy activity redirect', () => {
     const forAdmin = getNavigationItemsForUserRole('admin')
     const forYou = forAdmin.find((i) => i.name === 'For You')
-    expect(forYou?.href).toBe('/dashboard/for-you')
+    expect(forYou?.href).toBe('/for-you')
   })
 
   it('hides admin Clients for non-admins', () => {

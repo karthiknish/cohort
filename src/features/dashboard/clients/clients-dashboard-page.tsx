@@ -66,7 +66,7 @@ export default function ClientsDashboardPageClient({ initialClientId = null }: C
 }
 
 function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClientProps) {
-  const router = useRouter()
+  const { push } = useRouter()
   const { selectedClient, refreshClients, clients, selectClient, loading } = useClientContext()
   const { isPreviewMode } = usePreview()
   const { toast } = useToast()
@@ -153,8 +153,8 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
 
   const handleBackToClients = useCallback(() => {
     selectClient(null)
-    router.push('/dashboard/clients')
-  }, [router, selectClient])
+    push('/dashboard/clients')
+  }, [push, selectClient])
 
   const handleExport = useCallback(() => {
     if (!selectedClient) return

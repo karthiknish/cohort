@@ -83,7 +83,7 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
   return (
     <ViewTransition>
       <div className={cn(
-        "group relative flex flex-col justify-between rounded-xl border border-muted/40 bg-background p-5 shadow-sm motion-chromatic hover:border-accent/40 hover:shadow-md
+        "group relative flex flex-col justify-between rounded-xl border border-muted/40 bg-background p-5 shadow-sm motion-chromatic hover:border-accent/40 hover:shadow-md",
         isPendingUpdate && "opacity-75 pointer-events-none"
       )}>
       {/* Status accent bar */}

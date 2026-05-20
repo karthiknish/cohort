@@ -13,6 +13,7 @@ import { toast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { adsAudiencesApi } from '@/lib/convex-api'
+import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
 
 import {
   AudienceBuilderDialogFooter,
@@ -154,7 +155,7 @@ export function AudienceBuilderDialog({ isOpen, onOpenChange, providerId }: Prop
 
     void createAudience({
         workspaceId,
-      providerId,
+      providerId: toAdsProviderId(providerId),
         clientId: selectedClientId ?? null,
         name: formData.name,
         description: formData.description,

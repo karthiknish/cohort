@@ -50,7 +50,7 @@ const API_RATE_LIMIT_WINDOW_MS = parseInteger(
   RATE_LIMITS.standard.windowMs,
 )
 
-const PROTECTED_ROUTE_MATCHER = ['/dashboard', '/admin']
+const PROTECTED_ROUTE_MATCHER = ['/dashboard', '/for-you', '/admin']
 const AUTH_ROUTE_PREFIX = '/auth'
 const CONTENT_SECURITY_POLICY = [
   "base-uri 'self'",
@@ -96,9 +96,39 @@ async function hasValidSession(request: NextRequest): Promise<boolean> {
   }
 }
 
+function redirectForAccountStatus(request: NextRequest, pathname: string): NextResponse | null {
+  const status = request.cookies.get('cohorts_status')?.value
+  if (!status) {
+    return null
+  }
+
+  if (status === 'pending' || status === 'invited') {
+    if (pathname.startsWith('/pending-approval') || pathname.startsWith('/auth')) {
+      return null
+    }
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/pending-approval'
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  if (status === 'disabled' || status === 'suspended') {
+    if (pathname.startsWith('/auth')) {
+      return null
+    }
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/auth'
+    redirectUrl.searchParams.set('error', status === 'disabled' ? 'account_disabled' : 'account_suspended')
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  return null
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const screenRecordingAuthBypassEnabled = isScreenRecordingAuthBypassEnabled()
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-pathname', pathname)
 
   if (pathname.startsWith('/api/')) {
     // Block common monitoring/crawling user-agents from API routes
@@ -149,7 +179,6 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isPreviewRouteRequest(pathname, request.nextUrl.searchParams)) {
-    const requestHeaders = new Headers(request.headers)
     requestHeaders.set(PREVIEW_ROUTE_REQUEST_HEADER, '1')
 
     return applySecurityHeaders(
@@ -162,14 +191,24 @@ export async function proxy(request: NextRequest) {
     )
   }
 
+  const passThrough = () =>
+    applySecurityHeaders(
+      request,
+      NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      }),
+    )
+
   if (screenRecordingAuthBypassEnabled && pathname === '/dashboard') {
     const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/dashboard/for-you'
+    redirectUrl.pathname = '/for-you'
     return applySecurityHeaders(request, NextResponse.redirect(redirectUrl))
   }
 
-  if (screenRecordingAuthBypassEnabled && pathname.startsWith('/dashboard/')) {
-    return applySecurityHeaders(request, NextResponse.next())
+  if (screenRecordingAuthBypassEnabled && (pathname.startsWith('/dashboard/') || pathname.startsWith('/for-you'))) {
+    return passThrough()
   }
 
   const hasSession = await hasValidSession(request)
@@ -180,7 +219,7 @@ export async function proxy(request: NextRequest) {
 
   // Public auth pages should always be reachable without redirection.
   if (pathname.startsWith(AUTH_ROUTE_PREFIX)) {
-    return applySecurityHeaders(request, NextResponse.next())
+    return passThrough()
   }
 
   // For the home page (/), redirect authenticated users directly to their
@@ -188,15 +227,15 @@ export async function proxy(request: NextRequest) {
   if (pathname === '/') {
     if (hasSession) {
       const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/dashboard/for-you'
+      redirectUrl.pathname = '/for-you'
       return applySecurityHeaders(request, NextResponse.redirect(redirectUrl))
     }
     // No valid session - allow access to home/login page
-    return applySecurityHeaders(request, NextResponse.next())
+    return passThrough()
   }
 
   if (!isProtectedPath(pathname)) {
-    return applySecurityHeaders(request, NextResponse.next())
+    return passThrough()
   }
 
   // Check if session is missing or expired
@@ -208,22 +247,16 @@ export async function proxy(request: NextRequest) {
     return applySecurityHeaders(request, NextResponse.redirect(redirectUrl))
   }
 
-  // Preserve the legacy /dashboard entrypoint, but redirect it before the page
-  // tree renders so dev profilers do not mount the redirect-only page.
-  if (pathname === '/dashboard') {
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/dashboard/for-you'
-    return applySecurityHeaders(request, NextResponse.redirect(redirectUrl))
+  const statusRedirect = redirectForAccountStatus(request, pathname)
+  if (statusRedirect) {
+    return applySecurityHeaders(request, statusRedirect)
   }
 
-  // Admin route protection is now enforced server-side in API routes and page loaders,
-  // not via a forgeable cookie. Middleware only checks authentication.
-
-  return applySecurityHeaders(request, NextResponse.next())
+  return passThrough()
 }
 
 export const config = {
-  matcher: ['/', '/dashboard/:path*', '/admin/:path*', '/auth/:path*', '/api/:path*'],
+  matcher: ['/', '/for-you', '/for-you/:path*', '/dashboard/:path*', '/admin/:path*', '/auth/:path*', '/api/:path*'],
 }
 
 function parseInteger(value: string | undefined, fallback: number): number {

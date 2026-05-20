@@ -15,6 +15,7 @@ import { adsCampaignsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { cn } from '@/lib/utils'
 import { formatMoney, normalizeCurrencyCode } from '@/constants/currencies'
+import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
 
 type BudgetUiMode = 'daily' | 'lifetime' | 'total'
 
@@ -124,7 +125,7 @@ export function BudgetControlSection({
 
     void updateCampaign({
         workspaceId,
-      providerId,
+      providerId: toAdsProviderId(providerId),
         clientId: clientId ?? null,
         campaignId,
         action: 'updateBudget',

@@ -389,7 +389,7 @@ export function CampaignManagementCard({
   const { selectedClientId } = useClientContext()
   const { user } = useAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
-  const router = useRouter()
+  const { push } = useRouter()
   const listCampaigns = useAction(adsCampaignsApi.listCampaigns)
   const updateCampaign = useAction(adsCampaignsApi.updateCampaign)
   const listCampaignGroups = useAction(adsCampaignGroupsApi.listCampaignGroups)
@@ -534,12 +534,12 @@ export function CampaignManagementCard({
       if (selectedClientId) params.set('clientId', selectedClientId)
       params.set('campaignName', name)
 
-      router.push(withPreviewModeSearchParamIfEnabled(
+      push(withPreviewModeSearchParamIfEnabled(
         `/dashboard/ads/campaigns/${providerId}/${campaignOrGroupId}?${params.toString()}`,
         isPreviewModeEnabled(),
       ), { transitionTypes: ['nav-forward'] })
     },
-    [endDate, providerId, router, selectedClientId, startDate]
+    [endDate, providerId, push, selectedClientId, startDate]
   )
 
   const handleAction = useCallback(async (campaignId: string, action: 'enable' | 'pause' | 'remove') => {

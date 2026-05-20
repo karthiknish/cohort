@@ -228,7 +228,7 @@ function CampaignInsightsPageContent() {
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [campaign?.startTime, campaign?.stopTime, dateRangeTouched])
+  }, [campaign?.startTime, campaign?.stopTime])
 
   const loadCampaign = useCallback(async () => {
     setCampaignLoading(true)

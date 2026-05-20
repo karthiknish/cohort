@@ -84,6 +84,10 @@ export function MentionInput(
 
       while (match !== null) {
         const name = match[1]
+        if (!name) {
+          match = mentionRegex.exec(nextValue)
+          continue
+        }
         const user = usersByName.get(name)
         if (user && !seenIds.has(user.id)) {
           seenIds.add(user.id)

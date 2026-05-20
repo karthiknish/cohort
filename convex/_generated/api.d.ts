@@ -76,6 +76,7 @@ import type * as analyticsIntegrations_queries from "../analyticsIntegrations/qu
 import type * as analyticsIntegrations_settings from "../analyticsIntegrations/settings.js";
 import type * as analyticsIntegrations_shared from "../analyticsIntegrations/shared.js";
 import type * as apiIdempotency from "../apiIdempotency.js";
+import type * as appProxy from "../appProxy.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as auth from "../auth.js";
 import type * as authActions from "../authActions.js";
@@ -209,6 +210,7 @@ declare const fullApi: ApiFromModules<{
   "analyticsIntegrations/settings": typeof analyticsIntegrations_settings;
   "analyticsIntegrations/shared": typeof analyticsIntegrations_shared;
   apiIdempotency: typeof apiIdempotency;
+  appProxy: typeof appProxy;
   auditLogs: typeof auditLogs;
   auth: typeof auth;
   authActions: typeof authActions;

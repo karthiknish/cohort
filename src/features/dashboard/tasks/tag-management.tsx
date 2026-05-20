@@ -28,8 +28,8 @@ type TagStyle = {
 
 // Semantic shadcn token assignments for tags.
 const TAG_STYLES: TagStyle[] = [
-  { chip: 'border-transparent bg-destructive/10 text-destructive dot: 'bg-destructive' },
-  { chip: 'border-transparent bg-accent/10 text-primary dot: 'bg-primary' },
+  { chip: 'border-transparent bg-destructive/10 text-destructive', dot: 'bg-destructive' },
+  { chip: 'border-transparent bg-accent/10 text-primary', dot: 'bg-primary' },
   { chip: 'border-transparent bg-secondary text-secondary-foreground', dot: 'bg-secondary-foreground' },
   { chip: 'border-transparent bg-accent text-accent-foreground', dot: 'bg-accent-foreground' },
   { chip: 'border-border bg-background text-foreground', dot: 'bg-foreground' },

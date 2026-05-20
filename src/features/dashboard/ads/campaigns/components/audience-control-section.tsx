@@ -26,6 +26,7 @@ import { DemographicSection } from './demographic-section'
 import { LocationTargetingSection } from './location-targeting-section'
 import type { TargetingData } from './audience-control-types'
 import { findLocationCoordinates, LOCATION_COORDINATES } from './audience-control-utils'
+import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
 
 type Insights = {
   totalEntities: number
@@ -116,7 +117,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
 
     void getTargeting({
         workspaceId,
-        providerId,
+        providerId: toAdsProviderId(providerId),
         clientId: clientId ?? null,
         campaignId,
       })
@@ -397,7 +398,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
       <CardContent className="space-y-6">
         {geocodeFailedNames.length > 0 ? (
           <Alert variant="default" className="border-amber-500/40 bg-amber-500/10">
-            <AlertTriangle className="h-4 w-4 text-amber-800 />
+            <AlertTriangle className="h-4 w-4 text-warning" />
             <AlertTitle>Some locations could not be placed on the map</AlertTitle>
             <AlertDescription>
               The map may be incomplete for: {geocodeFailedNames.join(', ')}. Check spelling or try a broader place

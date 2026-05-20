@@ -123,7 +123,7 @@ export function TaskCreationModal({
                 uploadTaskAttachment({
                   userId: user.id,
                   file: attachment.file,
-                  generateUploadUrl,
+                  generateUploadUrl: () => generateUploadUrl({}),
                   getPublicUrl: (args) => convex.query(filesApi.getPublicUrl, args),
                 })
               )
@@ -147,7 +147,7 @@ export function TaskCreationModal({
           attachments,
         })
 
-        const legacyId = typeof result === 'string' ? result : result?.legacyId
+        const legacyId = result
 
         if (!legacyId) {
           const message = 'Failed to create task'

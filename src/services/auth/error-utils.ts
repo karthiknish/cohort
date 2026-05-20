@@ -120,6 +120,11 @@ const errorMap: Record<string, string> = {
   'OAUTH_CANCELLED': 'Sign-in was cancelled.',
   'OAUTH_POPUP_BLOCKED': 'Sign-in popup was blocked by your browser. Please allow popups for this site.',
   'OAUTH_ERROR': 'OAuth authentication failed. Please try again.',
+  'invalid_code': 'Google sign-in could not be completed. Try again, or confirm redirect URI http://localhost:3000/api/auth/callback/google is registered in Google Cloud Console.',
+  'state_mismatch': 'Sign-in session expired. Please try Google sign-in again.',
+  'state_not_found': 'Sign-in session expired. Please try Google sign-in again.',
+  'unable_to_get_user_info': 'Could not read your Google profile. Try again or use email sign-in.',
+  'UNKNOWN': 'Google sign-in failed. Please try again.',
 
   // Generic codes
   'UNAUTHORIZED': 'Authentication required. Please sign in.',
@@ -134,8 +139,10 @@ const errorMap: Record<string, string> = {
 export function getFriendlyAuthErrorMessage(error: unknown): string {
   if (!error) return 'An unexpected error occurred. Please try again.'
 
-  // If it's already a string, return it as is (assuming it's already been sanitized)
-  if (typeof error === 'string') return error
+  if (typeof error === 'string') {
+    if (errorMap[error]) return errorMap[error]
+    return error
+  }
 
   // Default fallback
   const fallbackMessage = 'Authentication failed. Please try again.'
@@ -164,6 +171,10 @@ export function getFriendlyAuthErrorMessage(error: unknown): string {
 
   // If we have a message from the error object, attempt to clean it
   if (errorMessage && typeof errorMessage === 'string') {
+    if (errorMessage.includes('redirect_uri_mismatch')) {
+      return 'Google OAuth redirect URI mismatch. In Google Cloud Console, add http://localhost:3000/api/auth/callback/google (dev) or https://your-domain.com/api/auth/callback/google (prod), and set SITE_URL / BETTER_AUTH_URL to that same origin on your Convex deployment.'
+    }
+
     // Firebase messages usually look like "Firebase: Error (auth/invalid-email)."
     // Better Auth might have similar patterns
     const clean = errorMessage

@@ -113,7 +113,7 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
   
   // For You (activity feed and personalized highlights; canonical route)
   {
-    route: '/dashboard/for-you',
+    route: '/for-you',
     name: 'For You',
     description: 'Activity feed, personalized recommendations, digest, and workspace highlights',
     keywords: [

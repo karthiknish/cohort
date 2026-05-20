@@ -92,7 +92,7 @@ export const DASHBOARD_NAVIGATION_GROUPS: NavigationGroup[] = [
     id: 'core',
     label: 'Workspace',
     items: [
-      { name: 'For You', href: '/dashboard/for-you', icon: Home, description: 'Your day and priorities' },
+      { name: 'For You', href: '/for-you', icon: Home, description: 'Your day and priorities' },
       { name: 'Projects', href: '/dashboard/projects', icon: BriefcaseBusiness, description: 'Client delivery and milestones' },
       { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare, description: 'Assignments and work tracking' },
       { name: 'Collaboration', href: '/dashboard/collaboration', icon: MessageSquare, description: 'Chat and shared context' },

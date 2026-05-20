@@ -1,5 +1,11 @@
 import type { AuthRole, AuthStatus, AuthUser, SignUpData } from './types'
 import { authClient } from '@/lib/auth-client'
+import {
+  bootstrapAndSyncSessionOnce,
+  resetBootstrapSessionCache,
+  startGoogleOAuthSignIn,
+  type BootstrapProfile,
+} from '@/features/auth/auth-utils'
 import { isValidRedirectUrl } from '@/lib/utils'
 import {
   UnauthorizedError,
@@ -252,8 +258,9 @@ export class AuthService {
   }
 
   private async initSession() {
+    let nextUser: AuthUser | null = null
     try {
-      const nextUser = await this.resolveSessionUser({ disableCookieCache: true })
+      nextUser = await this.resolveSessionUser({ disableCookieCache: true })
       this.setResolvedUser(nextUser)
     } finally {
       if (!this.initialAuthResolved) {
@@ -261,6 +268,8 @@ export class AuthService {
         this.resolveInitialAuth()
       }
     }
+
+    // Bootstrap is owned by useAuthSync (or signIn/signUp completeSignInProfile).
   }
 
   mapBetterAuthUser(user: Record<string, unknown>): AuthUser {
@@ -330,16 +339,32 @@ export class AuthService {
     }
   }
 
-  private checkUserStatus(user: AuthUser): void {
+  private mergeBootstrapProfile(baseUser: AuthUser, profile: BootstrapProfile): AuthUser {
+    return {
+      ...baseUser,
+      role: profile.role,
+      status: profile.status,
+      agencyId: profile.agencyId,
+    }
+  }
+
+  /** Blocks disabled/suspended only — pending users are routed after sign-in. */
+  private assertSignInAllowed(user: AuthUser): void {
     if (user.status === 'disabled') {
       throw new AccountDisabledError()
     }
     if (user.status === 'suspended') {
       throw new AccountSuspendedError()
     }
-    if (user.status === 'pending' || user.status === 'invited') {
-      throw new AccountPendingError('Your account is awaiting admin approval.')
-    }
+  }
+
+  private async completeSignInProfile(baseUser: AuthUser): Promise<AuthUser> {
+    resetBootstrapSessionCache()
+    const profile = await bootstrapAndSyncSessionOnce()
+    const merged = this.mergeBootstrapProfile(baseUser, profile)
+    this.assertSignInAllowed(merged)
+    this.setResolvedUser(merged)
+    return merged
   }
 
   async signIn(email: string, password: string): Promise<AuthUser> {
@@ -364,8 +389,7 @@ export class AuthService {
       }
 
       const user = this.mapBetterAuthUser(data.user as unknown as Record<string, unknown>)
-      this.checkUserStatus(user)
-      return user
+      return await this.completeSignInProfile(user)
     } catch (error: unknown) {
       if (
         error instanceof InvalidCredentialsError ||
@@ -415,7 +439,8 @@ export class AuthService {
         throw new BadRequestError('Sign-up failed. Please try again.')
       }
 
-      return this.mapBetterAuthUser(payload.user as unknown as Record<string, unknown>)
+      const user = this.mapBetterAuthUser(payload.user as unknown as Record<string, unknown>)
+      return await this.completeSignInProfile(user)
     } catch (error: unknown) {
       if (
         error instanceof InvalidCredentialsError ||
@@ -439,6 +464,7 @@ export class AuthService {
   }
 
   async signOut(): Promise<void> {
+    resetBootstrapSessionCache()
     try {
       // First, clear custom session cookies via API
       await this.clearSessionCookies()
@@ -478,10 +504,8 @@ export class AuthService {
     }
   }
 
-  async signInWithGoogle(): Promise<AuthUser> {
-    // If Better Auth is configured with Google OAuth, this triggers the flow.
-    // Depending on your Better Auth setup, you may want to use redirect-based auth.
-    throw new ServiceUnavailableError('Google sign-in not configured in Better Auth')
+  async signInWithGoogle(callbackURL = '/dashboard'): Promise<void> {
+    await startGoogleOAuthSignIn(callbackURL)
   }
 
   async connectGoogleAdsAccount(): Promise<void> {

@@ -136,7 +136,7 @@ function NotificationsPageFallback() {
 }
 
 function NotificationsPageContent() {
-  const router = useRouter()
+  const { push } = useRouter()
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
@@ -371,14 +371,14 @@ function NotificationsPageContent() {
     if (!target) return
 
     if (target.startsWith('/')) {
-      router.push(target)
+      push(target)
       return
     }
 
     if (typeof window !== 'undefined') {
       window.location.assign(target)
     }
-  }, [router])
+  }, [push])
 
   const handleMarkAllRead = useCallback(() => {
     const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id)
@@ -664,9 +664,8 @@ function NotificationRow({
   ackInFlight: boolean
   getNotificationCategory: (kind: WorkspaceNotification['kind']) => string
   getNotificationIcon: (kind: WorkspaceNotification['kind']) => React.ReactNode
-  handleDismiss: (id: string) => void
-  handleMarkAsRead: (id: string, title?: string) => void
   handleDismiss: (id: string, title?: string) => void
+  handleMarkAsRead: (id: string, title?: string) => void
   handleOpenNotification: (notification: WorkspaceNotification) => void
   notification: WorkspaceNotification
   renderTimestamp: (input: string | null) => string

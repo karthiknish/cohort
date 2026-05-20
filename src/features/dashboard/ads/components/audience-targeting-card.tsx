@@ -10,6 +10,7 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { Card } from '@/shared/ui/card'
 import { toast } from '@/shared/ui/use-toast'
 import { useClientContext } from '@/shared/contexts/client-context'
+import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
 
 import { AudienceBuilderDialog } from './audience-builder-dialog'
 import {
@@ -114,7 +115,7 @@ export function AudienceTargetingCard({ providerId, providerName, isConnected }:
 
     void getTargeting({
         workspaceId,
-        providerId,
+        providerId: toAdsProviderId(providerId),
         clientId: selectedClientId ?? null,
       })
 

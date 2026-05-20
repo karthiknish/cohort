@@ -33,7 +33,6 @@ function SchedulingStat({
 function ProjectsSchedulingPanelInner() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
-  const router = useRouter()
   const {
     isLoading,
     isPreviewMode,
@@ -45,6 +44,7 @@ function ProjectsSchedulingPanelInner() {
     addCoverageShift,
   } = useWorkforceOverview()
 
+  const { replace } = useRouter()
   const isOpen = searchParams.get('operations') === 'scheduling'
   const hasSchedulingData = snapshot.schedulingShifts.length > 0
 
@@ -60,8 +60,8 @@ function ProjectsSchedulingPanelInner() {
     const params = new URLSearchParams(searchParams.toString())
     params.delete('operations')
     const next = params.toString()
-    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
-  }, [pathname, router, searchParams])
+    replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
+  }, [pathname, replace, searchParams])
 
   if (!isOpen) {
     return null

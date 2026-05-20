@@ -212,7 +212,7 @@ function verificationReducer(state: VerificationState, action: VerificationActio
 }
 
 function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
-  const router = useRouter()
+  const { push } = useRouter()
   const { toast } = useToast()
   const { verifyPasswordResetCode, confirmPasswordReset } = useAuth()
   const [verificationState, dispatchVerification] = useReducer(verificationReducer, initialVerificationState)
@@ -256,8 +256,8 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
   }, [oobCode, verifyPasswordResetCode])
 
   const handleReturnToSignIn = useCallback(() => {
-    router.push('/auth')
-  }, [router])
+    push('/auth')
+  }, [push])
 
   const handleNewPasswordChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setNewPassword(event.target.value)

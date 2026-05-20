@@ -1,7 +1,12 @@
 import { Suspense } from 'react'
 import { LoaderCircle } from 'lucide-react'
+import type { Metadata } from 'next'
 
 import { PendingApprovalContent } from './pending-approval-content'
+
+export const metadata: Metadata = {
+  title: 'Account Status',
+}
 
 export default function PendingApprovalPage() {
   return (

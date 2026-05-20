@@ -8,7 +8,7 @@ import { useMemo, ViewTransition } from 'react'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Badge } from '@/shared/ui/badge'
-import type { ProposalDraft } from '@/types/proposals'
+import type { ProposalDraft, ProposalPresentationDeck } from '@/types/proposals'
 import { mergeProposalForm } from '@/lib/proposals'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
@@ -52,7 +52,7 @@ export default function ProposalDeckPage() {
 
     return {
       id: proposalRow.legacyId,
-      status: proposalRow.status,
+      status: proposalRow.status as ProposalDraft['status'],
       stepProgress: proposalRow.stepProgress,
       formData: mergeProposalForm(proposalRow.formData),
       aiInsights: proposalRow.aiInsights ?? null,
@@ -64,8 +64,8 @@ export default function ProposalDeckPage() {
       lastAutosaveAt: proposalRow.lastAutosaveAtMs ? new Date(proposalRow.lastAutosaveAtMs).toISOString() : null,
       clientId: proposalRow.clientId ?? null,
       clientName: proposalRow.clientName ?? null,
-      presentationDeck: proposalRow.presentationDeck ?? null,
-      gammaDeck: proposalRow.presentationDeck ?? null,
+      presentationDeck: (proposalRow.presentationDeck ?? null) as ProposalPresentationDeck | null,
+      gammaDeck: (proposalRow.presentationDeck ?? null) as ProposalPresentationDeck | null,
     }
   }, [isPreviewMode, previewProposal, proposalRow])
 

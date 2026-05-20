@@ -97,7 +97,7 @@ export function ActivityWidget() {
   const { selectedClient } = useClientContext()
   const { activities, loading, error, retry, isRealTime } = useRealtimeActivity()
   useActivityNotifications(activities)
-  const router = useRouter()
+  const { push } = useRouter()
   const pathname = usePathname()
 
   const readFilterFromUrl = useCallback((key: 'activityType' | 'dateRange') => {
@@ -166,8 +166,8 @@ export function ActivityWidget() {
 
     const queryString = newParams.toString()
     const newUrl = queryString ? `${pathname}?${queryString}` : pathname
-    router.push(newUrl)
-  }, [pathname, router])
+    push(newUrl)
+  }, [pathname, push])
 
   const handleRefresh = useCallback(() => {
     retry()

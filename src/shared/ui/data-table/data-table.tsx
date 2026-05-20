@@ -196,9 +196,9 @@ function DataTableUrlSync({
   pagination: PaginationState
   setPagination: React.Dispatch<React.SetStateAction<PaginationState>>
 }) {
-  const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const { get } = searchParams
 
   const isValidUrlPageSize = React.useCallback(
     (n: number) => urlPageSizeOptions.includes(n),
@@ -211,8 +211,8 @@ function DataTableUrlSync({
       return
     }
 
-    const pageRaw = searchParams.get(urlPageParam)
-    const sizeRaw = searchParams.get(urlPageSizeParam)
+    const pageRaw = get(urlPageParam)
+    const sizeRaw = get(urlPageSizeParam)
 
     let nextIndex = 0
     if (pageRaw) {
@@ -269,7 +269,8 @@ function DataTableUrlSync({
     }
 
     const queryString = params.toString()
-    router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
+    const nextUrl = queryString ? `${pathname}?${queryString}` : pathname
+    window.history.replaceState(null, '', nextUrl)
   }, [
     isValidUrlPageSize,
     manualPagination,
@@ -277,7 +278,6 @@ function DataTableUrlSync({
     pagination.pageIndex,
     pagination.pageSize,
     pathname,
-    router,
     searchParams,
     showPagination,
     syncPaginationToUrl,

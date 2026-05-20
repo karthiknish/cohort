@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
-import { useMutation } from 'convex/react'
+import { useConvex, useMutation } from 'convex/react'
 import { collaborationApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import type {
@@ -114,7 +114,11 @@ export function useSendMessage({
           content: trimmedContent,
           attachments: uploadedAttachments,
           format: 'markdown',
-          mentions: mentionMetadata,
+          mentions: mentionMetadata.map((mention) => ({
+            slug: mention.slug,
+            name: mention.name,
+            role: mention.role ?? null,
+          })),
           parentMessageId: options?.parentMessageId ?? null,
           threadRootId: options?.threadRootId ?? null,
           isThreadRoot: options?.parentMessageId ? false : true,
@@ -197,7 +201,7 @@ export function useFetchMessages({
 }: UseFetchMessagesOptions) {
   const { toast } = useToast()
 
-  const listChannel = useMutation(collaborationApi.listChannel)
+  const convex = useConvex()
 
   const [fetchingMessages, setFetchingMessages] = useState(false)
   const [channelCursors, setChannelCursors] = useState<Record<string, string | null>>({})
@@ -223,7 +227,7 @@ export function useFetchMessages({
 
         // Convex expects channelType/clientId/projectId; REST used channelId only.
         const fetchLimit = MESSAGE_PAGE_SIZE + 1
-        const listResult = await listChannel({
+        const listResult = await convex.query(collaborationApi.listChannel, {
           workspaceId: String(workspaceId),
           channelType: channel.type,
           clientId: channel.type === 'client' ? (channel.clientId ?? null) : null,
@@ -304,7 +308,7 @@ export function useFetchMessages({
         setFetchingMessages(false)
       }
     },
-     [channels, listChannel, setMessagesByChannel, toast, workspaceId]
+     [channels, convex, setMessagesByChannel, toast, workspaceId]
    )
 
 

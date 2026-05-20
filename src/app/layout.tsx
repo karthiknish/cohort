@@ -1,8 +1,8 @@
 import { Suspense } from 'react'
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { Geist, Geist_Mono, Anybody } from 'next/font/google'
 import { Agentation } from 'agentation'
-export const dynamic = 'force-dynamic'
 import './globals.css'
 import '@/bones/registry.js'
 import { cn } from '@/lib/utils'
@@ -11,6 +11,7 @@ import { SiteHeader } from '@/shared/layout/site/site-header'
 import { SiteFooter } from '@/shared/layout/site/site-footer'
 import { MarketingThemeScope } from '@/shared/layout/marketing-theme-scope'
 import { PWAProvider } from '@/shared/providers/pwa-provider'
+import { getToken } from '@/lib/auth-server'
 import { AppProviders } from '@/shared/providers/app-providers'
 import { MotionProvider } from '@/shared/providers/motion-provider'
 import { GoogleAnalyticsScript } from '@/shared/providers/google-analytics-script'
@@ -40,17 +41,26 @@ export const metadata: Metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#ffffff',
+  themeColor: '#2563eb',
 }
 
 const showAgentation = process.env.NODE_ENV === 'development'
   && process.env.NEXT_PUBLIC_ENABLE_AGENTATION === 'true'
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const pathname = (await headers()).get('x-pathname') ?? ''
+  const needsConvexToken =
+    pathname.startsWith('/dashboard')
+    || pathname.startsWith('/for-you')
+    || pathname.startsWith('/admin')
+    || pathname.startsWith('/settings')
+
+  const initialToken = needsConvexToken ? await getToken() : null
+
   return (
     <html lang="en">
       <body
@@ -58,13 +68,13 @@ export default function RootLayout({
           geistSans.variable,
           geistMono.variable,
           anybody.variable,
-          'min-h-screen bg-white font-sans antialiased text-foreground'
+          'min-h-screen bg-background font-sans antialiased text-foreground'
         )}
       >
         <Suspense fallback={null}>
           <GoogleAnalyticsScript />
         </Suspense>
-        <AppProviders>
+        <AppProviders initialToken={initialToken}>
           <a
             href="#main-content"
             className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[1200] focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-md"

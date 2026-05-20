@@ -10,7 +10,8 @@ import { cn } from '@/lib/utils'
 
 type ToastPropsVariables = React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root>
 type ToastViewportProps = React.ComponentPropsWithRef<typeof ToastPrimitives.Viewport>
-type ToastPrimitiveProps = ToastPropsVariables & VariantProps<typeof toastVariants>
+type ToastPrimitiveProps = React.ComponentPropsWithRef<typeof ToastPrimitives.Root> &
+  VariantProps<typeof toastVariants>
 type ToastActionProps = React.ComponentPropsWithRef<typeof ToastPrimitives.Action>
 type ToastCloseProps = React.ComponentPropsWithRef<typeof ToastPrimitives.Close>
 type ToastTitleProps = React.ComponentPropsWithRef<typeof ToastPrimitives.Title>

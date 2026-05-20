@@ -186,7 +186,7 @@ export function useTaskForm({
             uploadTaskAttachment({
               userId,
               file: attachment.file,
-              generateUploadUrl,
+              generateUploadUrl: () => generateUploadUrl({}),
               getPublicUrl,
             })
           )

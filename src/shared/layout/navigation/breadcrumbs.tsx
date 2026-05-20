@@ -65,7 +65,10 @@ export function NavigationBreadcrumbs() {
   )
 
   // Don't render if feature flag is disabled or not on dashboard pages
-  if (!isFeatureEnabled('BREADCRUMBS') || !pathname.startsWith('/dashboard')) {
+  if (
+    !isFeatureEnabled('BREADCRUMBS') ||
+    (!pathname.startsWith('/dashboard') && !pathname.startsWith('/for-you'))
+  ) {
     return null
   }
 
@@ -188,6 +191,16 @@ function generateBreadcrumbItems(
   dynamicLabels: { proposalTitle: string | null }
 ): NavBreadcrumbItem[] {
   const items: NavBreadcrumbItem[] = []
+
+  if (pathname === '/for-you' || pathname.startsWith('/for-you/')) {
+    items.push({
+      label: 'For You',
+      href: '/for-you',
+      icon: Activity,
+      isCurrent: pathname === '/for-you',
+    })
+    return items
+  }
 
   // Dashboard root
   items.push({
@@ -359,7 +372,7 @@ function generateBreadcrumbItems(
     case 'for-you':
       items.push({
         label: 'For You',
-        href: '/dashboard/for-you',
+        href: '/for-you',
         icon: Activity,
       })
       break
@@ -367,7 +380,7 @@ function generateBreadcrumbItems(
     case 'activity':
       items.push({
         label: 'For You',
-        href: '/dashboard/for-you',
+        href: '/for-you',
         icon: Activity,
       })
       break

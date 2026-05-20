@@ -668,7 +668,7 @@ function CampaignAdsList({
 }
 
 export function CampaignAdsSection({ providerId, campaignId, clientId, isPreviewMode, currency }: Props) {
-  const router = useRouter()
+  const { push } = useRouter()
   const { user } = useAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const displayCurrency = normalizeCurrencyCode(currency)
@@ -830,11 +830,11 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     const cName = creative.name || creative.headlines?.[0] || creative.creativeId
     params.set('creativeName', cName)
     params.set('currency', displayCurrency)
-    router.push(withPreviewModeSearchParamIfEnabled(
+    push(withPreviewModeSearchParamIfEnabled(
       `/dashboard/ads/campaigns/${providerId}/${campaignId}/creative/${creative.creativeId}?${params.toString()}`,
       isPreviewModeEnabled(),
     ))
-  }, [campaignId, displayCurrency, providerId, router])
+  }, [campaignId, displayCurrency, providerId, push])
 
   const toggleAdStatus = useCallback((ad: CampaignAd, newStatus: string) => {
     // Optimistic update

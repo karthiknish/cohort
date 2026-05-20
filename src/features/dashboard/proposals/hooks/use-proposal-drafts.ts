@@ -107,8 +107,8 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         isPreviewMode || !canQuery
             ? 'skip'
             : {
-                workspaceId,
-                clientId: selectedClientId,
+                workspaceId: workspaceId!,
+                clientId: selectedClientId ?? undefined,
                 limit: 100,
             }
     )

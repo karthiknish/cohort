@@ -4,24 +4,14 @@ import * as z from 'zod'
 
 import { createApiHandler } from '@/lib/api-handler'
 import { ForbiddenError, UnauthorizedError } from '@/lib/api-errors'
-
-// CSRF token header must match a cookie value (double-submit pattern)
-const CSRF_COOKIE = 'cohorts_csrf'
-const CSRF_HEADER = 'x-csrf-token'
-
-const COOKIE_OPTIONS = {
-  maxAge: 2 * 60 * 60, // 2 hours in seconds
-  path: '/',
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
-}
-
-function generateCsrfToken(): string {
-  const array = new Uint8Array(32)
-  crypto.getRandomValues(array)
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
-}
+import {
+  CSRF_COOKIE,
+  CSRF_HEADER,
+  SESSION_COOKIE_MAX_AGE_SEC,
+  appendSessionCookies,
+  clearSessionCookies,
+  generateCsrfToken,
+} from '@/lib/session-cookies'
 
 function validateCsrfToken(
   request: Request,
@@ -30,16 +20,7 @@ function validateCsrfToken(
   const headerToken = request.headers.get(CSRF_HEADER)
   const cookieToken = cookieStore.get(CSRF_COOKIE)?.value
 
-  // Header must match cookie (double-submit pattern)
   return Boolean(headerToken && cookieToken && headerToken === cookieToken)
-}
-
-function clearSessionCookies(response: NextResponse) {
-  response.cookies.delete('cohorts_role')
-  response.cookies.delete('cohorts_status')
-  response.cookies.delete('cohorts_agency_id')
-  response.cookies.delete('cohorts_session_expires')
-  response.cookies.delete(CSRF_COOKIE)
 }
 
 /**
@@ -75,9 +56,8 @@ export const GET = createApiHandler(
       { headers: { 'Cache-Control': 'no-store, max-age=0' } }
     )
 
-    // Set CSRF cookie (httpOnly: false so JS can read it)
     response.cookies.set(CSRF_COOKIE, csrfToken, {
-      maxAge: 2 * 60 * 60,
+      maxAge: SESSION_COOKIE_MAX_AGE_SEC,
       path: '/',
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
@@ -92,7 +72,7 @@ const postBodySchema = z.object({}).strict()
 
 /**
  * POST /api/auth/session
- * Syncs session data with Better Auth and sets cookies
+ * Syncs session cookies from authenticated profile (prefer bootstrap for sign-in).
  */
 export const POST = createApiHandler(
   {
@@ -104,7 +84,6 @@ export const POST = createApiHandler(
   async (req, { auth }) => {
     const cookieStore = await cookies()
 
-    // Validate CSRF token (double-submit cookie pattern)
     if (!validateCsrfToken(req, cookieStore)) {
       throw new ForbiddenError('Security validation failed. Please refresh and try again.')
     }
@@ -119,32 +98,20 @@ export const POST = createApiHandler(
       throw new UnauthorizedError('No active session')
     }
 
-    const resolvedRole = typeof auth.claims?.role === 'string' ? auth.claims.role : 'client'
-    const resolvedStatus = typeof auth.claims?.status === 'string' ? auth.claims.status : 'pending'
-    const resolvedAgencyId = typeof auth.claims?.agencyId === 'string' && auth.claims.agencyId.length > 0
-      ? auth.claims.agencyId
-      : auth.uid
+    const role = typeof auth.claims?.role === 'string' ? auth.claims.role : null
+    const status = typeof auth.claims?.status === 'string' ? auth.claims.status : null
+    const agencyId =
+      typeof auth.claims?.agencyId === 'string' && auth.claims.agencyId.length > 0
+        ? auth.claims.agencyId
+        : auth.uid
 
-    // Set the role/status/agencyId cookies
-    response.cookies.set('cohorts_role', resolvedRole, COOKIE_OPTIONS)
-    response.cookies.set('cohorts_status', resolvedStatus, COOKIE_OPTIONS)
-    if (resolvedAgencyId) {
-      response.cookies.set('cohorts_agency_id', resolvedAgencyId, COOKIE_OPTIONS)
+    if (!role || !status) {
+      throw new UnauthorizedError(
+        'Profile not synced. Complete sign-in bootstrap before syncing the session.'
+      )
     }
 
-    const expiresAt = Date.now() + COOKIE_OPTIONS.maxAge * 1000
-    response.cookies.set('cohorts_session_expires', expiresAt.toString(), {
-      ...COOKIE_OPTIONS,
-    })
-
-    const csrfToken = generateCsrfToken()
-    response.cookies.set(CSRF_COOKIE, csrfToken, {
-      maxAge: COOKIE_OPTIONS.maxAge,
-      path: '/',
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-    })
+    appendSessionCookies(response, { role, status, agencyId })
 
     return response
   }

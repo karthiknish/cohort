@@ -25,58 +25,58 @@ describe('bootstrapAndSyncSession', () => {
     vi.clearAllMocks()
   })
 
-  it('bootstraps first, fetches a CSRF token, and syncs the session with the token header', async () => {
-    apiFetchMock
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce({ csrfToken: 'csrf-token-123' })
-      .mockResolvedValueOnce(undefined)
+  it('calls bootstrap once and sets session via Set-Cookie on that response', async () => {
+    apiFetchMock.mockResolvedValueOnce({
+      legacyId: 'user_1',
+      role: 'admin',
+      status: 'active',
+      agencyId: 'user_1',
+    })
 
     const { bootstrapAndSyncSession } = await import('./auth-utils')
 
-    await expect(bootstrapAndSyncSession()).resolves.toBeUndefined()
+    await expect(bootstrapAndSyncSession()).resolves.toEqual({
+      legacyId: 'user_1',
+      role: 'admin',
+      status: 'active',
+      agencyId: 'user_1',
+    })
 
-    expect(apiFetchMock).toHaveBeenNthCalledWith(1, '/api/auth/bootstrap', {
+    expect(apiFetchMock).toHaveBeenCalledTimes(1)
+    expect(apiFetchMock).toHaveBeenCalledWith('/api/auth/bootstrap', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
       credentials: 'include',
     })
+  })
 
-    expect(apiFetchMock).toHaveBeenNthCalledWith(2, '/api/auth/session', {
-      method: 'GET',
-      credentials: 'include',
-    })
-
-    expect(apiFetchMock).toHaveBeenNthCalledWith(3, '/api/auth/session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-csrf-token': 'csrf-token-123',
+  it('unwraps success envelope payloads from bootstrap', async () => {
+    apiFetchMock.mockResolvedValueOnce({
+      success: true,
+      data: {
+        legacyId: 'user_2',
+        role: 'client',
+        status: 'pending',
+        agencyId: 'user_2',
       },
-      body: JSON.stringify({}),
-      credentials: 'include',
+    })
+
+    const { bootstrapAndSyncSession } = await import('./auth-utils')
+
+    await expect(bootstrapAndSyncSession()).resolves.toEqual({
+      legacyId: 'user_2',
+      role: 'client',
+      status: 'pending',
+      agencyId: 'user_2',
     })
   })
 
-  it('stops before the POST sync when the CSRF token is missing', async () => {
-    apiFetchMock
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce({ csrfToken: null })
+  it('surfaces bootstrap failures', async () => {
+    apiFetchMock.mockRejectedValueOnce(new MockApiClientError('bootstrap failed', { status: 503 }))
 
     const { bootstrapAndSyncSession } = await import('./auth-utils')
 
-    await expect(bootstrapAndSyncSession()).rejects.toThrow('Failed to sync session')
-
-    expect(apiFetchMock).toHaveBeenCalledTimes(2)
-  })
-
-  it('surfaces bootstrap API failures directly', async () => {
-    apiFetchMock.mockRejectedValueOnce(new MockApiClientError('Bootstrap failed', { status: 500 }))
-
-    const { bootstrapAndSyncSession } = await import('./auth-utils')
-
-    await expect(bootstrapAndSyncSession()).rejects.toThrow('Bootstrap failed')
-
-    expect(apiFetchMock).toHaveBeenCalledTimes(1)
+    await expect(bootstrapAndSyncSession()).rejects.toThrow('bootstrap failed')
   })
 })

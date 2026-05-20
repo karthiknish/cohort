@@ -198,7 +198,6 @@ export function useAdsAutomation(options: UseAdsAutomationOptions): UseAdsAutoma
           workspaceId: String(user.agencyId),
           providerId,
           clientId: null,
-          force: true,
         })
 
         const providerName = formatProviderName(providerId)

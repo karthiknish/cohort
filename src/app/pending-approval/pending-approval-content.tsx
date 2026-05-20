@@ -4,6 +4,7 @@ import { LoaderCircle } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo } from 'react'
 
+import { isLoadingPhase } from '@/lib/auth-phase'
 import { Button } from '@/shared/ui/button'
 import { useAuth } from '@/shared/contexts/auth-context'
 
@@ -38,41 +39,41 @@ function getStatusCopy(status: string): { title: string; message: string } {
 }
 
 export function PendingApprovalContent() {
-  const { user, loading, signOut } = useAuth()
-  const router = useRouter()
+  const { user, authPhase, authError, retrySync, signOut } = useAuth()
+  const { replace } = useRouter()
   const searchParams = useSearchParams()
   const requestedStatus = searchParams.get('status') ?? ''
 
   useEffect(() => {
-    if (loading) return
-
-    if (!user) {
-      // Intentional client-side redirect: auth state only available in browser
-      router.replace('/auth')
+    if (isLoadingPhase(authPhase)) {
       return
     }
 
-    if (user.status === 'active') {
-      // Intentional client-side redirect: auth state only available in browser
-      router.replace('/dashboard')
+    if (authPhase === 'unauthenticated') {
+      window.location.href = '/auth'
+      return
     }
-  }, [loading, router, user])
+
+    if (authPhase === 'ready_active') {
+      window.location.href = '/for-you'
+    }
+  }, [authPhase])
 
   const statusCopy = useMemo(() => {
     return getStatusCopy(user?.status ?? requestedStatus)
   }, [requestedStatus, user?.status])
 
   const handleRefreshStatus = useCallback(() => {
-    router.refresh()
-  }, [router])
+    void retrySync()
+  }, [retrySync])
 
   const handleSignOut = useCallback(() => {
     void signOut().finally(() => {
-      router.replace('/auth')
+      replace('/auth')
     })
-  }, [router, signOut])
+  }, [replace, signOut])
 
-  if (loading) {
+  if (isLoadingPhase(authPhase)) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-muted/30 px-4 py-16">
         <div className="flex items-center gap-3 rounded-lg border border-border bg-background px-5 py-4 shadow-sm">
@@ -81,6 +82,27 @@ export function PendingApprovalContent() {
         </div>
       </div>
     )
+  }
+
+  if (authPhase === 'sync_failed') {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-muted/30 px-4 py-16">
+        <div className="w-full max-w-lg rounded-2xl border border-border bg-background p-8 shadow-sm text-center">
+          <h1 className="text-2xl font-semibold text-foreground">Could not verify your account</h1>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            {authError?.message ?? 'We could not finish loading your workspace profile. Try again or sign in once more.'}
+          </p>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            <Button onClick={handleRefreshStatus}>Retry</Button>
+            <Button variant="outline" onClick={handleSignOut}>Sign out</Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (authPhase === 'unauthenticated') {
+    return null
   }
 
   return (

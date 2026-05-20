@@ -11,7 +11,7 @@ type DashboardErrorProps = {
 }
 
 export default function DashboardError({ error, unstable_retry, reset }: DashboardErrorProps) {
-  const router = useRouter()
+  const { replace, refresh } = useRouter()
 
   useEffect(() => {
     console.error('[DashboardErrorBoundary]', error)
@@ -32,9 +32,9 @@ export default function DashboardError({ error, unstable_retry, reset }: Dashboa
       return
     }
 
-    router.replace('/dashboard')
-    router.refresh()
-  }, [reset, router, unstable_retry])
+    replace('/dashboard')
+    refresh()
+  }, [reset, replace, refresh, unstable_retry])
 
   const isDevelopment = process.env.NODE_ENV === 'development'
 

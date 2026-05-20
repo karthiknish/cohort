@@ -108,7 +108,7 @@ type AckOptions = {
 }
 
 export function NotificationsDropdown() {
-  const router = useRouter()
+  const { push } = useRouter()
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
   const { toast } = useToast()
@@ -259,14 +259,14 @@ export function NotificationsDropdown() {
     setOpen(false)
 
     if (target.startsWith('/')) {
-      router.push(target)
+      push(target)
       return
     }
 
     if (typeof window !== 'undefined') {
       window.location.assign(target)
     }
-  }, [router])
+  }, [push])
 
   const handleMarkAllRead = useCallback(() => {
     const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id)

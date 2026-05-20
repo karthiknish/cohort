@@ -18,20 +18,88 @@ export const convexSiteUrl = requireEnv(
   process.env.NEXT_PUBLIC_CONVEX_HTTP_URL
 )
 
-const SESSION_EXPIRES_COOKIE = 'cohorts_session_expires'
+/** Next.js app origin — OAuth callbacks and redirects must use this, not *.convex.site. */
+const appOrigin = (
+  process.env.NEXT_PUBLIC_SITE_URL
+  ?? process.env.NEXT_PUBLIC_APP_URL
+  ?? 'http://localhost:3000'
+).replace(/\/$/, '')
+
+const convexOrigin = new URL(convexSiteUrl).origin
 
 const authUtilities = convexBetterAuthNextJs({
   convexUrl,
   convexSiteUrl,
-  basePath: '/api/auth',
 });
 
+function rewriteConvexAuthUrls(value: string): string {
+  return value.split(convexOrigin).join(appOrigin)
+}
+
+/**
+ * Convex Better Auth runs on *.convex.site but OAuth must use the Next.js app URL.
+ * Rewrite Location headers and JSON bodies so the browser never navigates to Convex for auth.
+ */
+async function rewriteConvexAuthResponse(response: Response): Promise<Response> {
+  const headers = new Headers(response.headers)
+  const location = headers.get('location')
+  if (location) {
+    headers.set('location', rewriteConvexAuthUrls(location))
+  }
+
+  const contentType = headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    })
+  }
+
+  const body = await response.text()
+  return new Response(rewriteConvexAuthUrls(body), {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  })
+}
+
+/**
+ * Proxy /api/auth to Convex but preserve the Next.js app origin for OAuth.
+ * @see https://labs.convex.dev/better-auth/framework-guides/next
+ */
+async function proxyAuthToConvex(request: Request): Promise<Response> {
+  const requestUrl = new URL(request.url)
+  const targetUrl = `${convexSiteUrl}${requestUrl.pathname}${requestUrl.search}`
+  const headers = new Headers(request.headers)
+  headers.set('accept-encoding', 'application/json')
+  headers.set('host', new URL(convexSiteUrl).host)
+  headers.set('x-forwarded-host', requestUrl.host)
+  headers.set('x-forwarded-proto', requestUrl.protocol.replace(':', ''))
+
+  const init: RequestInit = {
+    method: request.method,
+    headers,
+    redirect: 'manual',
+  }
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    init.body = request.body
+  }
+
+  const response = await fetch(targetUrl, init)
+  return rewriteConvexAuthResponse(response)
+}
+
+export const handler = {
+  GET: proxyAuthToConvex,
+  POST: proxyAuthToConvex,
+}
+
 export const {
-  handler,
   preloadAuthQuery,
   isAuthenticated,
   getToken,
   fetchAuthQuery,
   fetchAuthMutation,
   fetchAuthAction,
-} = authUtilities;
+} = authUtilities

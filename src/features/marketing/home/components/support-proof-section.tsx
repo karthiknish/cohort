@@ -38,8 +38,8 @@ const PROOF_POINTS = [
 
 export function SupportProofSection() {
   return (
-    <section className="relative overflow-hidden bg-muted/25 px-6 py-20 sm:py-28">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgb(from_var(--foreground)_r_g_b_/_0.06),transparent)]" aria-hidden />
+    <section className="relative overflow-hidden bg-gradient-to-b from-background via-primary/[0.03] to-secondary/[0.05] px-6 py-20 sm:py-28">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgb(from_var(--primary)_r_g_b_/_0.12),transparent)]" aria-hidden />
       <div className="relative mx-auto max-w-6xl">
         <FadeIn className="mb-8 max-w-3xl space-y-4">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Support and rollout</p>

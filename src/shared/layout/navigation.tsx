@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { CSSProperties } from 'react'
-import { useState, useMemo, useEffect, useCallback, useRef, forwardRef } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { chromaticTransitionClass, chromaticTransitionNormalClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { getPreviewSettingsProfile } from '@/lib/preview-data'
@@ -20,6 +20,7 @@ import {
   Rocket,
   AlertCircle,
   Keyboard,
+  HelpCircle,
 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -70,22 +71,21 @@ type NavItemLinkProps = {
   prefetchRoute: (href: string) => void
   collapsed: boolean
   isActive?: boolean
+  ref?: React.Ref<HTMLAnchorElement | null>
 } & Omit<React.ComponentPropsWithoutRef<typeof Link>, 'href' | 'className' | 'children'>
 
-const NavItemLink = forwardRef<HTMLAnchorElement, NavItemLinkProps>(function NavItemLink(
-  {
-    item,
-    linkClasses,
-    onNavigate,
-    prefetchRoute,
-    collapsed,
-    isActive = false,
-    onClick,
-    onMouseEnter,
-    ...linkProps
-  },
+function NavItemLink({
+  item,
+  linkClasses,
+  onNavigate,
+  prefetchRoute,
+  collapsed,
+  isActive = false,
   ref,
-) {
+  onClick,
+  onMouseEnter,
+  ...linkProps
+}: NavItemLinkProps) {
   const handleMouseEnter = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
     onMouseEnter?.(event)
     prefetchRoute(item.href)
@@ -121,11 +121,11 @@ const NavItemLink = forwardRef<HTMLAnchorElement, NavItemLinkProps>(function Nav
       {!collapsed && <span className="truncate">{item.name}</span>}
     </Link>
   )
-})
+}
 
 function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname()
-  const router = useRouter()
+  const { prefetch } = useRouter()
   const { user } = useAuth()
   const prefetchedRef = useRef<Set<string>>(new Set())
 
@@ -135,19 +135,19 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
     if (target && target !== pathname && !prefetchedRef.current.has(target)) {
       prefetchedRef.current.add(target)
       try {
-        router.prefetch(href)
+        prefetch(href)
       } catch {
         // ignore prefetch failures
       }
     }
-  }, [pathname, router])
+  }, [pathname, prefetch])
 
   const prefetchAdmin = useCallback(() => prefetchRoute('/admin'), [prefetchRoute])
   const prefetchSettings = useCallback(() => prefetchRoute('/settings'), [prefetchRoute])
 
   // Persist last visited dashboard tab
   useEffect(() => {
-    if (pathname.startsWith('/dashboard')) {
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/for-you')) {
       localStorage.setItem('cohorts_last_tab', pathname)
     }
   }, [pathname])
@@ -357,7 +357,7 @@ export function Sidebar() {
 }
 
 export function Header() {
-  const router = useRouter()
+  const { push } = useRouter()
   const { user, signOut } = useAuth()
   const { isPreviewMode } = usePreview()
   const accent = useDashboardRoleAccent()
@@ -420,28 +420,28 @@ export function Header() {
           accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: handleOpenShortcuts })
           break
         case 'g d':
-          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard') })
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => push('/dashboard') })
           break
         case 'g t':
-          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard/tasks') })
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => push('/dashboard/tasks') })
           break
         case 'g m':
-          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard/meetings') })
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => push('/dashboard/meetings') })
           break
         case 'g a':
-          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard/ads') })
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => push('/dashboard/ads') })
           break
         case 'g p':
-          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard/proposals') })
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => push('/dashboard/proposals') })
           break
         case 'g s':
-          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/settings') })
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => push('/settings') })
           break
         case 'n t':
-          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard/tasks?action=create') })
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => push('/dashboard/tasks?action=create') })
           break
         case 'n p':
-          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => router.push('/dashboard/proposals') })
+          accumulator.push({ combo: shortcut.combo, description: shortcut.description, callback: () => push('/dashboard/proposals') })
           break
         default:
           break
@@ -449,7 +449,7 @@ export function Header() {
 
       return accumulator
     }, [])
-  }, [handleOpenShortcuts, router, user?.role])
+  }, [handleOpenShortcuts, push, user?.role])
 
   useKeyboardShortcuts(dashboardShortcuts, {
     enabled: !helpOpen && !shortcutsOpen,
@@ -571,76 +571,79 @@ export function Header() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="sm:h-auto sm:w-auto sm:px-2 sm:py-1.5" aria-label="Open account menu">
-                  <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
-                    <AvatarFallback className="text-xs sm:text-sm">{initials}</AvatarFallback>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-full"
+                  aria-label={`Open account menu for ${displayedName}`}
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-xs font-medium">{initials}</AvatarFallback>
                   </Avatar>
-                  <span className="hidden text-sm font-medium sm:ml-2 sm:inline">
-                    {displayedName}
-                  </span>
-                  {isPreviewMode ? (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        'hidden sm:ml-1.5 sm:inline-flex text-[10px] px-1.5 py-0 uppercase tracking-wide',
-                        accent.accountBadgeClass,
-                      )}
-                    >
-                      Preview
-                    </Badge>
-                  ) : null}
-                  {!isPreviewMode && roleLabel ? (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        'hidden sm:ml-1.5 sm:inline-flex text-[10px] px-1.5 py-0 uppercase tracking-wide',
-                        accent.accountBadgeClass,
-                      )}
-                    >
-                      {roleLabel}
-                    </Badge>
-                  ) : null}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">{displayedName}</span>
-                      {isPreviewMode ? (
-                        <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 uppercase tracking-wide', accent.accountBadgeClass)}>
-                          Preview
-                        </Badge>
-                      ) : null}
-                      {!isPreviewMode && roleLabel ? (
-                        <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 uppercase tracking-wide', accent.accountBadgeClass)}>
-                          {roleLabel}
-                        </Badge>
-                      ) : null}
+              <DropdownMenuContent align="end" className="w-64 p-1.5">
+                <DropdownMenuLabel className="p-0 font-normal">
+                  <div className="flex items-center gap-3 rounded-md px-2 py-2">
+                    <Avatar className="h-9 w-9 shrink-0">
+                      <AvatarFallback className="text-xs font-medium">{initials}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate text-sm font-semibold text-foreground">{displayedName}</span>
+                        {isPreviewMode ? (
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              'h-5 shrink-0 px-1.5 text-[10px] font-medium uppercase tracking-wide',
+                              accent.accountBadgeClass,
+                            )}
+                          >
+                            Preview
+                          </Badge>
+                        ) : null}
+                        {!isPreviewMode && roleLabel ? (
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              'h-5 shrink-0 px-1.5 text-[10px] font-medium uppercase tracking-wide',
+                              accent.accountBadgeClass,
+                            )}
+                          >
+                            {roleLabel}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">{displayedEmail}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground">{displayedEmail}</span>
                   </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {user?.role === 'admin' && (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        Admin Panel
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                <DropdownMenuItem asChild>
-                  <Link href="/settings" onClick={handleNavigate}>Settings</Link>
+                <DropdownMenuSeparator className="my-1" />
+                {user?.role === 'admin' ? (
+                  <DropdownMenuItem asChild className="cursor-pointer gap-2">
+                    <Link href="/admin" onClick={handleNavigate} className="flex w-full items-center gap-2">
+                      <Shield className="h-4 w-4 text-muted-foreground" />
+                      Admin panel
+                    </Link>
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem asChild className="cursor-pointer gap-2">
+                  <Link href="/settings" onClick={handleNavigate} className="flex w-full items-center gap-2">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    Settings
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleOpenHelp}>
-                  Help & Navigation
+                <DropdownMenuItem onSelect={handleOpenHelp} className="cursor-pointer gap-2">
+                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                  Help & navigation
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={handleSignOut} className="text-destructive focus:text-destructive">
+                <DropdownMenuSeparator className="my-1" />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={handleSignOut}
+                  className="cursor-pointer gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>

@@ -22,6 +22,24 @@ import {
   type MetaPageActorOption,
 } from './create-creative-dialog-sections'
 
+type MetaCreativeObjectType =
+  | 'IMAGE'
+  | 'VIDEO'
+  | 'CAROUSEL_IMAGE'
+  | 'CAROUSEL_VIDEO'
+  | 'DYNAMIC_CAROUSEL'
+
+function toMetaCreativeObjectType(objectType: CreativeObjectType): MetaCreativeObjectType {
+  switch (objectType) {
+    case 'CAROUSEL':
+      return 'CAROUSEL_IMAGE'
+    case 'DYNAMIC':
+      return 'DYNAMIC_CAROUSEL'
+    default:
+      return objectType
+  }
+}
+
 type Props = {
   workspaceId: string | null
   providerId: string
@@ -256,20 +274,18 @@ export function CreateCreativeDialog({
         return
       }
 
-      // Convert file to bytes
-      const arrayBuffer = await file.arrayBuffer()
-      const fileData = new Uint8Array(arrayBuffer)
+      const fileData = await file.arrayBuffer()
 
       await uploadMedia({
         workspaceId,
         providerId: 'facebook',
         clientId: clientId ?? null,
         fileName: file.name,
-        fileData: Array.from(fileData),
+        fileData,
       })
         .then((result) => {
           if (!result.success) {
-            throw new Error(result.error || 'Failed to upload media')
+            throw new Error('Failed to upload media')
           }
 
           // Extract creative spec which contains the image_hash
@@ -377,7 +393,7 @@ export function CreateCreativeDialog({
         campaignId,
         adSetId: selectedAdSetId,
         name: name.trim(),
-        objectType,
+        objectType: toMetaCreativeObjectType(objectType),
         title: title.trim() || undefined,
         body: body.trim() || undefined,
         description: description.trim() || undefined,
