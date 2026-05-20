@@ -15,6 +15,7 @@ import {
 import { Skeleton } from '@/shared/ui/skeleton'
 import { formatProviderName } from '@/lib/themes'
 import { normalizeAdsProviderId } from '@/domain/ads/provider'
+import { listItemEnterClass } from '@/lib/motion'
 import { cn, formatCurrency } from '@/lib/utils'
 
 import type { ProviderSummary } from './types'
@@ -145,7 +146,7 @@ export function PerformanceSummaryCard({
               return (
                 <div
                   key={providerId}
-                  className="animate-in fade-in slide-in-from-bottom-2"
+                  className={listItemEnterClass}
                 >
                   <Card
                     className={cn(

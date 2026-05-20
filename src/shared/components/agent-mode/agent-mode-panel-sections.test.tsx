@@ -146,11 +146,11 @@ describe('agent mode panel sections', () => {
     )
 
     expect(markup).toContain('Agent Mode')
-    expect(markup).toContain('Reconnecting...')
+    expect(markup).toContain('Reconnecting')
     expect(markup).toContain('Previous chats')
     expect(markup).toContain('Launch plan')
     expect(markup).toContain('Hello')
-    expect(markup).toContain('Thinking...')
+    expect(markup).toContain('Thinking')
   })
 
   it('renders the empty-state composer and banners', () => {

@@ -6,6 +6,7 @@ import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
 import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
 import { usePreview } from '@/shared/contexts/preview-context'
+import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { FadeIn } from '@/shared/ui/animate-in'
 import { Badge } from '@/shared/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
@@ -72,7 +73,7 @@ export default function SocialsPage() {
   const instagramHasData = (metrics.instagramOverview?.rowCount ?? 0) > 0
 
   return (
-    <div className={DASHBOARD_THEME.layout.container}>
+    <PageMotionShell reveal={false} className={DASHBOARD_THEME.layout.container}>
       <SocialsHeader
         selectedClientName={selectedClient?.name ?? null}
         dateRange={dateRange}
@@ -181,6 +182,6 @@ export default function SocialsPage() {
           </TabsContent>
         </Tabs>
       </FadeIn>
-    </div>
+    </PageMotionShell>
   )
 }

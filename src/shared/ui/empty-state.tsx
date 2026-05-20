@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
+import { emptyStateEnterClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { Button } from './button'
 import { Inbox, FileSearch, Users, FolderOpen, CircleAlert, Plus, Calendar, MessageSquare, BarChart3, RefreshCw, WifiOff } from 'lucide-react'
@@ -85,6 +86,7 @@ export function EmptyState({
     <div
       className={cn(
         'flex flex-col items-center justify-center text-center',
+        emptyStateEnterClass,
         variant === 'card' && 'rounded-lg border border-dashed border-muted-foreground/30 bg-muted/10',
         variant === 'default' ? 'py-12 px-4' : 'p-8',
         className

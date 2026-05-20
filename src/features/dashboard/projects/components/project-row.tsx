@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { buildProjectTasksRoute } from '@/lib/project-routes'
+import { clickableCardClass, listItemEnterClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '../../collaboration/utils'
 import { STATUS_CLASSES, STATUS_ICONS, formatStatusLabel, formatTaskSummary, formatDateRange, formatDate, STATUS_ACCENT_COLORS } from './utils'
@@ -79,7 +80,10 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
   return (
     <ViewTransition>
       <div className={cn(
-        "group relative rounded-xl border border-muted/30 bg-background p-5 shadow-sm motion-chromatic hover:bg-muted/30 sm:p-6",
+        "group relative rounded-xl border border-muted/30 bg-background p-5 shadow-sm sm:p-6",
+        listItemEnterClass,
+        clickableCardClass,
+        "hover:bg-muted/30",
         isPendingUpdate && "opacity-75 pointer-events-none"
       )}>
       {/* Status accent bar */}

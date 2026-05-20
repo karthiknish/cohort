@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
 import { buildProjectTasksRoute } from '@/lib/project-routes'
+import { clickableCardClass, listItemEnterClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '../../collaboration/utils'
 import { STATUS_CLASSES, STATUS_ICONS, formatStatusLabel, STATUS_ACCENT_COLORS } from './utils'
@@ -83,7 +84,9 @@ function ProjectCardComponent({ project, onDelete, onEdit, onUpdateStatus, isPen
   return (
     <ViewTransition>
       <div className={cn(
-        "group relative flex flex-col justify-between rounded-xl border border-muted/40 bg-background p-5 shadow-sm motion-chromatic hover:border-accent/40 hover:shadow-md",
+        "group relative flex flex-col justify-between rounded-xl border border-muted/40 bg-background p-5 shadow-sm hover:border-accent/40",
+        listItemEnterClass,
+        clickableCardClass,
         isPendingUpdate && "opacity-75 pointer-events-none"
       )}>
       {/* Status accent bar */}

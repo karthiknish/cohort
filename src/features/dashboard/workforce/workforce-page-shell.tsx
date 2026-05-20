@@ -12,6 +12,7 @@ import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent } from '@/shared/ui/card'
 import { DashboardPageHeader, StatsGrid, StatCard } from '@/features/dashboard/home/components/dashboard-page-header'
+import { PageMotionShell } from '@/shared/components/page-motion-shell'
 
 type WorkforcePageShellProps = {
   routeId: WorkforceRouteId
@@ -101,7 +102,9 @@ export function WorkforcePageShell({
         ))}
       </StatsGrid>
 
-      {children}
+      <PageMotionShell reveal={false} className="space-y-6">
+        {children}
+      </PageMotionShell>
 
       {relatedRoutes.length > 0 ? (
         <Card>

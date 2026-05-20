@@ -3,7 +3,7 @@
 import * as React from "react"
 import * as ProgressPrimitive from "@radix-ui/react-progress"
 
-import { interactiveTransitionClass } from "@/lib/animation-system"
+import { interactiveTransitionClass } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 function getProgressTransformStyle(value: number | null | undefined) {

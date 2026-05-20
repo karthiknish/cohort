@@ -28,7 +28,7 @@ import {
   slideInRightVariants,
   subtlePulseVariants,
   transitions,
-} from '@/lib/dashboard-animations'
+} from '@/lib/motion'
 import type { ProposalFormData } from '@/lib/proposals'
 import { cn } from '@/lib/utils'
 import type { ProposalPresentationDeck } from '@/types/proposals'

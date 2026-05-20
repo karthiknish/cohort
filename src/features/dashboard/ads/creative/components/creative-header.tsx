@@ -2,7 +2,7 @@ import { LazyMotion, domAnimation, m } from '@/shared/ui/motion'
 import {
   fadeInDownVariants,
   transitions,
-} from '@/lib/dashboard-animations'
+} from '@/lib/motion'
 import {
   ArrowLeft,
   RefreshCw,

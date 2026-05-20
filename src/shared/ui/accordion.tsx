@@ -4,7 +4,7 @@ import type * as React from "react"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { ChevronDownIcon } from "lucide-react"
 
-import { interactiveTransitionClass } from "@/lib/animation-system"
+import { interactiveTransitionClass } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 function Accordion({

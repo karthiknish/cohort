@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 
 import { ClientAccessGate } from '@/features/dashboard/home/components/client-access-gate'
+import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
@@ -57,11 +58,13 @@ type ClientsDashboardPageClientProps = {
 
 export default function ClientsDashboardPageClient({ initialClientId = null }: ClientsDashboardPageClientProps) {
   return (
-    <ClientAccessGate>
-      <Suspense fallback={createElement(ClientsDashboardSkeleton)}>
-        <ClientsDashboardContent initialClientId={initialClientId} />
-      </Suspense>
-    </ClientAccessGate>
+    <PageMotionShell reveal={false}>
+      <ClientAccessGate>
+        <Suspense fallback={createElement(ClientsDashboardSkeleton)}>
+          <ClientsDashboardContent initialClientId={initialClientId} />
+        </Suspense>
+      </ClientAccessGate>
+    </PageMotionShell>
   )
 }
 

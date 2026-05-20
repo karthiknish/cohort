@@ -1,12 +1,16 @@
 'use client'
 
+import { PageMotionShell } from '@/shared/components/page-motion-shell'
+
 import { MeetingsPageProvider } from './components/meetings-page-provider'
 import { MeetingsPageShell } from './components/meetings-page-shell'
 
 export default function MeetingsPage() {
   return (
-    <MeetingsPageProvider>
-      <MeetingsPageShell />
-    </MeetingsPageProvider>
+    <PageMotionShell reveal={false}>
+      <MeetingsPageProvider>
+        <MeetingsPageShell />
+      </MeetingsPageProvider>
+    </PageMotionShell>
   )
 }

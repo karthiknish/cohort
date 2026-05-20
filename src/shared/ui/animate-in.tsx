@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 import { LazyMotion, domAnimation, m, type HTMLMotionProps, useReducedMotion } from '@/shared/ui/motion'
 
-import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
+import { motionDurationSeconds, motionEasing } from '@/lib/motion'
 
 const tagMap = {
   div: m.div,

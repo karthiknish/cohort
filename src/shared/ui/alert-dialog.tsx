@@ -3,7 +3,7 @@
 import * as React from 'react'
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog'
 
-import { surfaceMotionClasses } from '@/lib/animation-system'
+import { surfaceMotionClasses } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/shared/ui/button'
 

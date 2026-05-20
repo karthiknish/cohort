@@ -1,6 +1,30 @@
+/**
+ * Central micro-interactions: CSS class compositions + Framer variants.
+ * Import from `@/lib/motion` in app code.
+ */
 import type { Transition, Variants } from '@/shared/ui/motion'
 
-import { motionDurationSeconds, motionEasing, motionLoopSeconds } from '@/lib/animation-system'
+import {
+  interactiveTransitionClass,
+  listRowEnterAnimationClass,
+  motionDurationSeconds,
+  motionEasing,
+  motionLoopSeconds,
+  pressableScaleClass,
+  hoverLiftClass,
+} from '@/lib/animation-system'
+
+// --- CSS micro-interaction classes ---
+
+export const clickableCardClass = [
+  interactiveTransitionClass,
+  pressableScaleClass,
+  hoverLiftClass,
+].join(' ')
+
+export const listItemEnterClass = listRowEnterAnimationClass
+
+// --- Framer tokens ---
 
 export const easings = {
   easeOut: motionEasing.out,
@@ -9,7 +33,6 @@ export const easings = {
   spring: { type: 'spring', stiffness: 300, damping: 30 } as const,
 }
 
-// Standard durations (in seconds)
 export const durations = {
   fast: motionDurationSeconds.fast,
   normal: motionDurationSeconds.normal,
@@ -18,63 +41,54 @@ export const durations = {
   page: motionDurationSeconds.page,
 } as const
 
-// Common transitions
 export const transitions = {
   fast: { duration: durations.fast, ease: easings.easeOut } as Transition,
   normal: { duration: durations.normal, ease: easings.easeOut } as Transition,
   slow: { duration: durations.slow, ease: easings.easeOut } as Transition,
   slower: { duration: durations.slower, ease: easings.easeOut } as Transition,
   spring: easings.spring,
-  // Infinite transitions
   pulse: { duration: motionLoopSeconds.pulseSlow, repeat: Infinity, ease: easings.easeInOut } as Transition,
   blob: { duration: motionLoopSeconds.blob, repeat: Infinity, ease: motionEasing.linear } as Transition,
   blobSlow: { duration: motionLoopSeconds.blobSlow, repeat: Infinity, ease: motionEasing.linear } as Transition,
   shimmer: { duration: motionLoopSeconds.shimmer, repeat: Infinity, ease: easings.easeInOut } as Transition,
 }
 
-// Fade animations
 export const fadeVariants: Variants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: transitions.normal },
   exit: { opacity: 0, transition: transitions.fast },
 }
 
-// Fade in from below (most common pattern)
 export const fadeInUpVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: transitions.slower },
   exit: { opacity: 0, y: -10, transition: transitions.fast },
 }
 
-// Fade in from above
 export const fadeInDownVariants: Variants = {
   hidden: { opacity: 0, y: -20 },
   visible: { opacity: 1, y: 0, transition: transitions.slow },
   exit: { opacity: 0, y: 10, transition: transitions.fast },
 }
 
-// Slide in from left
 export const slideInLeftVariants: Variants = {
   hidden: { opacity: 0, x: -20 },
   visible: { opacity: 1, x: 0, transition: transitions.slow },
   exit: { opacity: 0, x: 10, transition: transitions.fast },
 }
 
-// Slide in from right
 export const slideInRightVariants: Variants = {
   hidden: { opacity: 0, x: 20 },
   visible: { opacity: 1, x: 0, transition: transitions.slow },
   exit: { opacity: 0, x: -10, transition: transitions.fast },
 }
 
-// Scale animations
 export const scaleVariants: Variants = {
   hidden: { opacity: 0, scale: 0.95 },
   visible: { opacity: 1, scale: 1, transition: transitions.normal },
   exit: { opacity: 0, scale: 0.95, transition: transitions.fast },
 }
 
-// Pulse animation (for loading states, attention)
 export const pulseVariants: Variants = {
   initial: { scale: 1, opacity: 0.1 },
   animate: {
@@ -84,17 +98,15 @@ export const pulseVariants: Variants = {
   },
 }
 
-// Subtle pulse for icons/badges
 export const subtlePulseVariants: Variants = {
   initial: { scale: 1, opacity: 0.2 },
   animate: {
-    scale: [1, 1.2, 1],
-    opacity: [0.2, 0.5, 0.2],
+    scale: [1, 1.1, 1],
+    opacity: [0.2, 0.4, 0.2],
     transition: { duration: motionLoopSeconds.pulse, repeat: Infinity, ease: easings.easeInOut },
   },
 }
 
-// Blob floating animation (for background decorative elements)
 export const blobVariants: Variants = {
   animate: {
     x: [0, 100, 0],
@@ -113,7 +125,6 @@ export const blobVariantsSlow: Variants = {
   },
 }
 
-// Progress bar animation
 export const progressVariants: Variants = {
   hidden: { width: 0 },
   visible: (progress: number) => ({
@@ -122,7 +133,6 @@ export const progressVariants: Variants = {
   }),
 }
 
-// Shimmer effect (for loading states)
 export const shimmerVariants: Variants = {
   animate: {
     x: ['-100%', '100%'],
@@ -130,7 +140,6 @@ export const shimmerVariants: Variants = {
   },
 }
 
-// Stagger container for list animations
 export const staggerContainerVariants: Variants = {
   hidden: {},
   visible: {
@@ -141,9 +150,8 @@ export const staggerContainerVariants: Variants = {
   },
 }
 
-// Stagger item (pairs with staggerContainer)
 export const staggerItemVariants: Variants = {
-  hidden: { opacity: 0, y: 18 },
+  hidden: { opacity: 0, y: 12 },
   visible: {
     opacity: 1,
     y: 0,
@@ -151,7 +159,6 @@ export const staggerItemVariants: Variants = {
   },
 }
 
-// Page transition variants
 export const pageTransitionVariants: Variants = {
   hidden: { opacity: 0, y: 10 },
   visible: {
@@ -166,16 +173,15 @@ export const pageTransitionVariants: Variants = {
   },
 }
 
-// Card hover effect
+/** Subtle card hover — small lift, minimal scale. */
 export const cardHoverVariants: Variants = {
   rest: { scale: 1, y: 0 },
-  hover: { scale: 1.02, y: -4, transition: { duration: durations.fast, ease: easings.easeOut } },
+  hover: { scale: 1.01, y: -2, transition: { duration: durations.fast, ease: easings.easeOut } },
 }
 
-// Button press effect
 export const buttonPressVariants: Variants = {
   rest: { scale: 1 },
-  tap: { scale: 0.95, transition: { duration: motionDurationSeconds.fast / 2, ease: easings.standard } },
+  tap: { scale: 0.98, transition: { duration: motionDurationSeconds.fast / 2, ease: easings.standard } },
 }
 
 export const animationProps = {

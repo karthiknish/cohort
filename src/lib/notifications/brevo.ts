@@ -23,6 +23,7 @@ import {
   meetingRescheduledTemplate,
   meetingCancelledTemplate,
 } from './email-templates'
+import { isEmailPrefEnabled } from './preferences'
 import type {
   IntegrationAlertTemplateParams,
   WorkspaceInviteTemplateParams,
@@ -123,29 +124,21 @@ const fetchNotificationPreferences = cache(async (convex: ConvexHttpClient, emai
  * Check if a user has enabled a specific email notification type.
  * Returns true if enabled or if no preference is set (defaults to true).
  */
-async function isEmailNotificationEnabled(recipientEmail: string, prefKey: 'adAlerts' | 'performanceDigest' | 'taskActivity'): Promise<boolean> {
+async function isEmailNotificationEnabled(
+  recipientEmail: string,
+  prefKey: 'adAlerts' | 'performanceDigest' | 'taskActivity' | 'meetings',
+): Promise<boolean> {
   try {
     const convex = getConvexClient()
-    if (!convex) return true // Default to true if Convex unavailable
+    if (!convex) return true
 
     const result = await fetchNotificationPreferences(convex, recipientEmail)
-    
-    if (!result || !result.notificationPreferences) return true
+    if (!result?.notificationPreferences) return true
 
-    // Map prefKey to notification preference field names
-    const keyMap: Record<string, keyof typeof result.notificationPreferences> = {
-      'adAlerts': 'emailAdAlerts',
-      'performanceDigest': 'emailPerformanceDigest',
-      'taskActivity': 'emailTaskActivity',
-    }
-    
-    const actualKey = keyMap[prefKey]
-    if (!actualKey) return true
-    
-    return result.notificationPreferences[actualKey] !== false
+    return isEmailPrefEnabled(result.notificationPreferences, prefKey)
   } catch (error) {
     console.error('[brevo] error checking preferences', error)
-    return true // Default to true on error to ensure critical emails are sent
+    return true
   }
 }
 
@@ -446,6 +439,10 @@ export async function notifyMeetingScheduledEmail(options: {
 } & MeetingScheduledTemplateParams): Promise<BrevoEmailResult> {
   const { recipientEmail, recipientName, ...params } = options
 
+  if (!(await isEmailNotificationEnabled(recipientEmail, 'meetings'))) {
+    return { success: true }
+  }
+
   const subject = `📅 Meeting scheduled: ${params.meetingTitle}`
   const htmlContent = meetingScheduledTemplate(params)
 
@@ -476,6 +473,10 @@ export async function notifyMeetingRescheduledEmail(options: {
 } & MeetingRescheduledTemplateParams): Promise<BrevoEmailResult> {
   const { recipientEmail, recipientName, ...params } = options
 
+  if (!(await isEmailNotificationEnabled(recipientEmail, 'meetings'))) {
+    return { success: true }
+  }
+
   const subject = `🔄 Meeting rescheduled: ${params.meetingTitle}`
   const htmlContent = meetingRescheduledTemplate(params)
 
@@ -505,6 +506,10 @@ export async function notifyMeetingCancelledEmail(options: {
   recipientName?: string
 } & MeetingCancelledTemplateParams): Promise<BrevoEmailResult> {
   const { recipientEmail, recipientName, ...params } = options
+
+  if (!(await isEmailNotificationEnabled(recipientEmail, 'meetings'))) {
+    return { success: true }
+  }
 
   const subject = `❌ Meeting cancelled: ${params.meetingTitle}`
   const htmlContent = meetingCancelledTemplate(params)

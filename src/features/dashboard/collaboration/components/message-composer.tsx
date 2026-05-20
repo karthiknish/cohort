@@ -3,6 +3,8 @@
 import { useCallback } from 'react'
 import type { ChangeEvent, RefObject, ClipboardEvent } from 'react'
 import { FileText, Image as ImageIcon, LoaderCircle, Reply, Send, X } from 'lucide-react'
+import { listItemEnterClass } from '@/lib/motion'
+import { cn } from '@/lib/utils'
 import { Button } from '@/shared/ui/button'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationMessage } from '@/types/collaboration'
@@ -27,7 +29,10 @@ function PendingAttachmentRow({
 
   return (
     <div
-      className="flex items-center justify-between gap-3 rounded-md border border-muted/50 bg-background p-2 text-sm animate-in fade-in-50 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
+      className={cn(
+        'flex items-center justify-between gap-3 rounded-md border border-muted/50 bg-background p-2 text-sm',
+        listItemEnterClass,
+      )}
       key={attachment.id}
     >
       <div className="flex min-w-0 items-center gap-2">
@@ -72,7 +77,7 @@ export function PendingAttachmentsList({
   if (attachments.length === 0) return null
 
   return (
-    <div className="space-y-2 rounded-md border border-dashed border-muted/60 bg-muted/20 p-3 animate-in fade-in slide-in-from-bottom-2 duration-200 motion-reduce:animate-none">
+    <div className="space-y-2 rounded-md border border-dashed border-muted/60 bg-muted/20 p-3 listItemEnterClass">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>{attachments.length} attachment{attachments.length === 1 ? '' : 's'} ready to send</span>
         {uploading && (
@@ -102,7 +107,7 @@ export interface ReplyIndicatorProps {
 
 export function ReplyIndicator({ message, onCancel }: ReplyIndicatorProps) {
   return (
-    <div className="flex items-center justify-between rounded-t-lg border-b border-muted/40 bg-muted/20 px-3 py-2 text-xs animate-in fade-in slide-in-from-bottom-2 duration-200">
+    <div className={cn('flex items-center justify-between rounded-t-lg border-b border-muted/40 bg-muted/20 px-3 py-2 text-xs', listItemEnterClass)}>
       <div className="flex items-center gap-2">
         <div className="flex h-5 w-5 items-center justify-center rounded-full bg-accent/10">
           <Reply className="h-3 w-3 text-primary" />

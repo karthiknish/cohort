@@ -6,6 +6,7 @@ import { User, X } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import { Input } from '@/shared/ui/input'
 import { LiveRegion } from '@/shared/ui/live-region'
+import { interactiveTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 export interface MentionableUser {

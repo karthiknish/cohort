@@ -63,7 +63,7 @@ describe('proposal page sections', () => {
     )
 
     expect(markup).toContain('Start a new proposal')
-    expect(markup).toContain('Start Proposal')
+    expect(markup).toContain('Open proposal builder')
   })
 
   it('renders preview mode shell content', () => {

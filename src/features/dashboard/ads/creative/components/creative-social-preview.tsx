@@ -7,7 +7,7 @@ import {
   scaleVariants,
   transitions,
   easings,
-} from '@/lib/dashboard-animations'
+} from '@/lib/motion'
 import {
   FileText,
   Image as ImageIcon,

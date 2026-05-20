@@ -2,6 +2,10 @@ import { renderToStaticMarkup } from 'react-dom/server'
 
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
+}))
+
 import {
   SocialsMetaSetupCard,
   SocialsMetaSourceSwitcherCard,

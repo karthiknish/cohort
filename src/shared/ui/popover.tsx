@@ -3,7 +3,7 @@
 import * as React from "react"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
 
-import { surfaceMotionClasses } from "@/lib/animation-system"
+import { surfaceMotionClasses } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 function Popover({

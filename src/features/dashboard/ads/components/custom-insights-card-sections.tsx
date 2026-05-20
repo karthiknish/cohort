@@ -7,6 +7,7 @@ import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui
 import { Skeleton } from '@/shared/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip'
 import type { KpiTheme } from '@/lib/themes'
+import { listItemEnterClass } from '@/lib/motion'
 import { cn, formatCurrency } from '@/lib/utils'
 
 export type KpiTileData = {
@@ -58,5 +59,5 @@ export function CustomInsightsEmptyState() {
 }
 
 export function CustomInsightsGrid({ currency = 'USD', items }: { currency?: string; items: KpiTileData[] }) {
-  return <CardContent className="pt-2"><div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">{items.map((item) => <div key={item.label} className="animate-in fade-in slide-in-from-bottom-2"><KpiTile currency={currency} {...item} /></div>)}</div></CardContent>
+  return <CardContent className="pt-2"><div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">{items.map((item) => <div key={item.label} className={listItemEnterClass}><KpiTile currency={currency} {...item} /></div>)}</div></CardContent>
 }

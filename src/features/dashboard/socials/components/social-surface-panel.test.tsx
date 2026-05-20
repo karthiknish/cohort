@@ -34,6 +34,9 @@ describe('SocialSurfacePanel', () => {
         overview={null}
         overviewLoading={true}
         connected={true}
+        setupComplete={true}
+        hasData={false}
+        onRequestSync={() => {}}
       />,
     )
     expect(markup).not.toContain('Facebook not connected')
@@ -47,6 +50,9 @@ describe('SocialSurfacePanel', () => {
         overview={overview}
         overviewLoading={false}
         connected={true}
+        setupComplete={true}
+        hasData={true}
+        onRequestSync={() => {}}
       />,
     )
     expect(markup).toContain('Facebook organic performance')
@@ -66,9 +72,12 @@ describe('SocialSurfacePanel', () => {
         overview={null}
         overviewLoading={false}
         connected={false}
+        setupComplete={false}
+        hasData={false}
+        onRequestSync={() => {}}
       />,
     )
     expect(markup).toContain('Instagram not connected')
-    expect(markup).toContain('Connect Instagram')
+    expect(markup).toContain('Set up connection')
   })
 })

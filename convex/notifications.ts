@@ -8,6 +8,12 @@ import {
 } from './functions'
 import { z } from 'zod/v4'
 import type { WorkspaceNotification, WorkspaceNotificationKind, WorkspaceNotificationRole, WorkspaceNotificationResource } from '../src/types/notifications'
+import {
+  isChannelEnabled,
+  kindToCategory,
+  normalizePreferences,
+  type StoredNotificationPreferences,
+} from '../src/lib/notifications/preferences'
 import { matchesNotificationRecipient } from './notificationTargeting'
 
 const RESOURCE_TO_URL: Record<string, string> = {
@@ -56,9 +62,20 @@ function toNotificationKind(input: string): WorkspaceNotificationKind {
     'collaboration.message',
     'collaboration.mention',
     'proposal.deck.ready',
+    'report.generated',
   ]
 
   return (allowed as readonly string[]).includes(input) ? (input as WorkspaceNotificationKind) : 'task.created'
+}
+
+function passesInAppPreferenceFilter(
+  row: { kind?: unknown },
+  userNotificationPreferences: unknown,
+): boolean {
+  const kind = typeof row.kind === 'string' ? row.kind : 'task.created'
+  const prefs = normalizePreferences(userNotificationPreferences as StoredNotificationPreferences)
+  const category = kindToCategory(kind)
+  return isChannelEnabled(prefs, category, 'inApp')
 }
 
 function toResource(type: string, id: string): WorkspaceNotificationResource {
@@ -251,6 +268,7 @@ export const list = zWorkspaceQuery({
         ) {
           continue
         }
+        if (!passesInAppPreferenceFilter(row, ctx.user.notificationPreferences)) continue
         if (userPivot && !isStrictlyOlderThanPivot(row, userPivot)) continue
         collected.push(row)
       }
@@ -280,6 +298,7 @@ export const list = zWorkspaceQuery({
         ) {
           continue
         }
+        if (!passesInAppPreferenceFilter(row, ctx.user.notificationPreferences)) continue
         if (userPivot && !isStrictlyOlderThanPivot(row, userPivot)) {
           continue
         }
@@ -403,7 +422,8 @@ export const getUnreadCount = zWorkspaceQuery({
             clientId: args.clientId,
             unreadOnly: true,
             excludeActor: true,
-          })
+          }) &&
+          passesInAppPreferenceFilter(row, ctx.user.notificationPreferences)
         ) {
           count += 1
         }

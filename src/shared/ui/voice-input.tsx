@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, useEffect } from 'react'
 import { Mic, MicOff } from 'lucide-react'
-import { interactiveTransitionClass } from '@/lib/animation-system'
+import { interactiveTransitionClass } from '@/lib/motion'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
 import { useVoiceInput } from '@/shared/hooks/use-voice-input'

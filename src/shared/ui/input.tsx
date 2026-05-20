@@ -1,4 +1,4 @@
-import { interactiveTransitionClass } from "@/lib/animation-system"
+import { interactiveTransitionClass } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {

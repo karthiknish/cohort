@@ -13,6 +13,7 @@ import { ForYouGreeting } from './components/for-you-greeting'
 import { ForYouPageSkeleton } from './components/for-you-page-skeleton'
 import { ForYouQuickLinks } from './components/for-you-quick-links'
 import { ForYouWhatsNext } from './components/for-you-whats-next'
+import { PageMotionShell } from '@/shared/components/page-motion-shell'
 
 export default function ForYouPage() {
   const { user } = useAuth()
@@ -29,12 +30,14 @@ export default function ForYouPage() {
       loading={isInitialLoading}
       loadingContent={loadingContent}
     >
-      <main id="for-you-page" className="w-full">
-        <ForYouGreeting />
-        <ForYouClients />
-        <ForYouQuickLinks />
-        <ForYouWhatsNext />
-      </main>
+      <PageMotionShell reveal={false} className="w-full">
+        <main id="for-you-page" className="w-full">
+          <ForYouGreeting />
+          <ForYouClients />
+          <ForYouQuickLinks />
+          <ForYouWhatsNext />
+        </main>
+      </PageMotionShell>
     </BoneyardSkeletonBoundary>
   )
 }

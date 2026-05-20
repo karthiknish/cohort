@@ -3,6 +3,7 @@
 import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 
+import { interactiveTransitionClass } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 function Avatar({
@@ -14,6 +15,7 @@ function Avatar({
       data-slot="avatar"
       className={cn(
         "relative flex size-8 shrink-0 overflow-hidden rounded-full",
+        interactiveTransitionClass,
         className
       )}
       {...props}

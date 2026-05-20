@@ -28,6 +28,7 @@ import {
 } from '@/shared/ui/select'
 import { Textarea } from '@/shared/ui/textarea'
 import { GAMMA_PRESENTATION_THEMES } from '@/lib/gamma-themes'
+import { listItemEnterClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 import type { ProposalStepSectionProps } from './proposal-step-types'
@@ -49,7 +50,7 @@ const startTimelineOptions = ['ASAP', 'Within 1 month', 'Within 3 months', 'Flex
 const proposalValueOptions = ['£2,000 – £5,000', '£5,000 – £10,000', '£10,000+'] as const
 const engagementOptions = ['One-off project', 'Ongoing monthly support'] as const
 
-const animatedStepClassName = 'space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500'
+const animatedStepClassName = ['space-y-6', listItemEnterClass].join(' ')
 const interactiveCardClassName =
   'motion-chromatic hover:shadow-sm active:scale-[0.98]'
 

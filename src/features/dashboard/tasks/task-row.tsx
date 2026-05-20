@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
-import { chromaticTransitionClass } from '@/lib/motion'
+import { chromaticTransitionClass, listItemEnterClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import {
   formatDate,
@@ -138,7 +138,8 @@ function TaskRowComponent({
         role="row"
         className={cn(
           TASK_TABLE_GRID,
-          'group px-4 py-2.5 text-sm transition-colors hover:bg-muted/40',
+          'group px-4 py-2.5 text-sm hover:bg-muted/40',
+          listItemEnterClass,
           chromaticTransitionClass,
           isPendingUpdate && 'pointer-events-none opacity-60',
           selected && 'bg-primary/4',

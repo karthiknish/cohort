@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo } from 'react'
 
 import { isLoadingPhase } from '@/lib/auth-phase'
+import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { Button } from '@/shared/ui/button'
 import { useAuth } from '@/shared/contexts/auth-context'
 
@@ -106,19 +107,21 @@ export function PendingApprovalContent() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-muted/30 px-4 py-16">
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-background p-8 shadow-sm">
-        <div className="space-y-3 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Account status</p>
-          <h1 className="text-2xl font-semibold text-foreground">{statusCopy.title}</h1>
-          <p className="text-sm leading-6 text-muted-foreground">{statusCopy.message}</p>
-        </div>
+    <PageMotionShell reveal={false}>
+      <div className="flex min-h-dvh items-center justify-center bg-muted/30 px-4 py-16">
+        <div className="w-full max-w-lg rounded-2xl border border-border bg-background p-8 shadow-sm">
+          <div className="space-y-3 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Account status</p>
+            <h1 className="text-2xl font-semibold text-foreground">{statusCopy.title}</h1>
+            <p className="text-sm leading-6 text-muted-foreground">{statusCopy.message}</p>
+          </div>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2">
-          <Button onClick={handleRefreshStatus}>Check status</Button>
-          <Button variant="outline" onClick={handleSignOut}>Sign out</Button>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2">
+            <Button onClick={handleRefreshStatus}>Check status</Button>
+            <Button variant="outline" onClick={handleSignOut}>Sign out</Button>
+          </div>
         </div>
       </div>
-    </div>
+    </PageMotionShell>
   )
 }

@@ -4,6 +4,7 @@ import * as React from "react"
 import * as ToggleGroupPrimitive from "@radix-ui/react-toggle-group"
 import { type VariantProps } from "class-variance-authority"
 
+import { interactiveTransitionClass } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { toggleVariants } from "@/shared/ui/toggle"
 
@@ -40,6 +41,7 @@ function ToggleGroup({
       style={style}
       className={cn(
         "group/toggle-group flex w-fit items-center gap-[--spacing(var(--gap))] rounded-md data-[spacing=default]:data-[variant=outline]:shadow-xs",
+        interactiveTransitionClass,
         className
       )}
       {...props}

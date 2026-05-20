@@ -3,7 +3,7 @@
 import { LazyMotion, domAnimation, m } from '@/shared/ui/motion'
 import { useMemo } from 'react'
 
-import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
+import { motionDurationSeconds, motionEasing } from '@/lib/motion'
 import { useAudioAnalyzer } from '@/shared/hooks/use-audio-analyzer'
 
 interface VoiceWaveformProps {

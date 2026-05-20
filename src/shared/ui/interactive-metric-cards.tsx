@@ -3,7 +3,7 @@
 import { ChevronRight, Minus, TrendingDown, TrendingUp } from "lucide-react";
 import { useCallback, useState, type KeyboardEvent } from "react";
 
-import { interactiveTransitionClass } from "@/lib/animation-system";
+import { clickableCardClass } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent } from "@/shared/ui/card";
@@ -89,9 +89,10 @@ function InteractiveMetricCard({
 			aria-label={isClickable ? cardLabel : undefined}
 			className={cn(
 				"group",
-				interactiveTransitionClass,
-				isClickable &&
-					"cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] motion-reduce:hover:scale-100 motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+				isClickable && [
+					clickableCardClass,
+					"cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+				],
 				isHovered && "ring-2 ring-primary/20",
 			)}
 			onClick={isClickable ? handleClick : undefined}

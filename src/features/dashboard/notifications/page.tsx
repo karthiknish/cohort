@@ -1,22 +1,16 @@
 'use client'
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { formatDistanceToNow } from 'date-fns'
 import {
-  BellOff,
   Check,
   CheckCheck,
   LoaderCircle,
+  Settings2,
   Trash2,
-  Filter,
   MessageSquare,
-  BarChart,
-  CircleCheck,
-  Mail,
-  ExternalLink,
+  Filter,
 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-
+import Link from 'next/link'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useConvex, useMutation } from 'convex/react'
@@ -50,11 +44,14 @@ import { parsePageSize } from '@/lib/pagination'
 import { getPreviewNotifications } from '@/lib/preview-data'
 import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
 import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
+import { NotificationItem } from '@/features/notifications/components/notification-item'
+import { NotificationEmptyState } from '@/features/notifications/components/notification-empty-state'
+import { useNotificationNavigation } from '@/features/notifications/hooks/use-notification-navigation'
 
 const PAGE_SIZE = 25
 const MAX_NOTIFICATION_PAGES = 10
 const VIRTUAL_NOTIFICATIONS_THRESHOLD = 24
-const FILTER_VALUES = ['all', 'unread', 'mentions', 'system'] as const
+const FILTER_VALUES = ['all', 'unread', 'mentions', 'tasks', 'collaboration', 'system'] as const
 const NOTIFICATIONS_PAGE_FALLBACK = (
   <RevealTransitionFallback>
     <NotificationsPageFallback />
@@ -64,30 +61,14 @@ const NOTIFICATIONS_PAGE_FALLBACK = (
 
 type AckAction = 'read' | 'dismiss'
 
-type FilterType = 'all' | 'unread' | 'mentions' | 'system'
+type FilterType = (typeof FILTER_VALUES)[number]
 
-function getNotificationIcon(kind: WorkspaceNotification['kind']) {
-  switch (kind) {
-    case 'collaboration.mention':
-    case 'task.mention':
-      return <MessageSquare className="h-6 w-6" />
-    case 'task.comment':
-      return <MessageSquare className="h-6 w-6" />
-    case 'proposal.deck.ready':
-      return <BarChart className="h-6 w-6" />
-    case 'task.created':
-    case 'task.updated':
-      return <CircleCheck className="h-6 w-6" />
-    default:
-      return <Mail className="h-6 w-6" />
-  }
-}
-
-function getNotificationCategory(kind: WorkspaceNotification['kind']) {
-  if (kind === 'collaboration.mention' || kind === 'task.mention') return 'Mention'
-  if (kind === 'proposal.deck.ready') return 'System'
-  if (kind === 'task.created' || kind === 'task.updated' || kind === 'task.comment') return 'Task'
-  return 'General'
+const FILTER_EMPTY_LABELS: Partial<Record<FilterType, string>> = {
+  unread: 'unread',
+  mentions: 'mention',
+  tasks: 'task',
+  collaboration: 'collaboration',
+  system: 'system',
 }
 
 export default function NotificationsPage() {
@@ -136,7 +117,6 @@ function NotificationsPageFallback() {
 }
 
 function NotificationsPageContent() {
-  const { push } = useRouter()
   const { user } = useAuth()
   const { selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
@@ -153,7 +133,9 @@ function NotificationsPageContent() {
   const activeFilter = filterTabs.value
   const setActiveFilter = filterTabs.setValue
   const [ackInFlight, setAckInFlight] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
   const [notificationAnnouncement, setNotificationAnnouncement] = useState('')
+  const handleOpenNotification = useNotificationNavigation()
   const [previewNotificationState, setPreviewNotificationState] = useState<{
     sourceKey: string
     notifications: WorkspaceNotification[]
@@ -209,8 +191,15 @@ function NotificationsPageContent() {
 
     if (activeFilter === 'mentions') {
       items = items.filter((n: WorkspaceNotification) => n.kind === 'collaboration.mention' || n.kind === 'task.mention')
+    } else if (activeFilter === 'tasks') {
+      items = items.filter((n: WorkspaceNotification) => n.kind.startsWith('task.'))
+    } else if (activeFilter === 'collaboration') {
+      items = items.filter((n: WorkspaceNotification) => n.kind.startsWith('collaboration.'))
     } else if (activeFilter === 'system') {
-      items = items.filter((n: WorkspaceNotification) => n.kind === 'proposal.deck.ready')
+      items = items.filter(
+        (n: WorkspaceNotification) =>
+          n.kind === 'proposal.deck.ready' || n.kind === 'report.generated' || n.kind === 'project.created',
+      )
     }
 
     return items
@@ -366,20 +355,6 @@ function NotificationsPageContent() {
     [updateNotificationStatus]
   )
 
-  const handleOpenNotification = useCallback((notification: WorkspaceNotification) => {
-    const target = typeof notification.navigationUrl === 'string' ? notification.navigationUrl : null
-    if (!target) return
-
-    if (target.startsWith('/')) {
-      push(target)
-      return
-    }
-
-    if (typeof window !== 'undefined') {
-      window.location.assign(target)
-    }
-  }, [push])
-
   const handleMarkAllRead = useCallback(() => {
     const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id)
     if (unreadIds.length === 0) {
@@ -404,17 +379,29 @@ function NotificationsPageContent() {
 
   const unreadCount = notifications.filter((item) => !item.read).length
 
-  const renderTimestamp = useCallback((input: string | null) => {
-    if (!input) {
-      return 'Just now'
-    }
-
-    const date = new Date(input)
-    if (Number.isNaN(date.getTime())) {
-      return 'Just now'
-    }
-    return formatDistanceToNow(date, { addSuffix: true })
+  const handleSelectToggle = useCallback((id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
   }, [])
+
+  const handleBulkMarkRead = useCallback(() => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    void updateNotificationStatus(ids, 'read').then(() => setSelectedIds(new Set()))
+  }, [selectedIds, updateNotificationStatus])
+
+  const handleBulkDismiss = useCallback(() => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    void updateNotificationStatus(ids, 'dismiss').then(() => setSelectedIds(new Set()))
+  }, [selectedIds, updateNotificationStatus])
 
   const notificationScrollRef = useRef<HTMLDivElement | null>(null)
   const shouldVirtualizeNotifications = notifications.length > VIRTUAL_NOTIFICATIONS_THRESHOLD
@@ -440,7 +427,13 @@ function NotificationsPageContent() {
           <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.notifications?.title ?? 'Notifications'}</h1>
           <p className={DASHBOARD_THEME.layout.subtitle}>{PAGE_TITLES.notifications?.description ?? 'Stay updated on what matters most'}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" asChild className={getButtonClasses('outline')}>
+            <Link href="/settings?tab=notifications">
+              <Settings2 className="mr-2 h-4 w-4" aria-hidden />
+              Settings
+            </Link>
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -498,7 +491,7 @@ function NotificationsPageContent() {
       )}
 
       <Tabs value={activeFilter} onValueChange={handleActiveFilterChange}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-6">
           <TabsTrigger value="all" className="relative">
             All
             {activeFilter === 'all' && notifications.length > 0 && (
@@ -519,8 +512,10 @@ function NotificationsPageContent() {
             <MessageSquare className="mr-2 h-4 w-4" />
             Mentions
           </TabsTrigger>
+          <TabsTrigger value="tasks">Tasks</TabsTrigger>
+          <TabsTrigger value="collaboration">Chat</TabsTrigger>
           <TabsTrigger value="system">
-            <Filter className="mr-2 h-4 w-4" />
+            <Filter className="mr-1 h-4 w-4" aria-hidden />
             System
           </TabsTrigger>
         </TabsList>
@@ -549,23 +544,26 @@ function NotificationsPageContent() {
               </div>
             </CardHeader>
             <CardContent>
+              {selectedIds.size > 0 ? (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                  <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={handleBulkMarkRead} disabled={ackInFlight}>
+                      Mark read
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleBulkDismiss} disabled={ackInFlight}>
+                      Dismiss
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
               {loading ? (
                 <NotificationsLoadingSkeleton />
               ) : notifications.length === 0 && !error ? (
-                <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-                  <div className="rounded-full bg-muted p-4">
-                    <BellOff className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">No notifications yet</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {activeFilter === 'unread' && 'You\'re all caught up! No unread notifications.'}
-                      {activeFilter === 'mentions' && 'No one has mentioned you recently.'}
-                      {activeFilter === 'system' && 'No system notifications at this time.'}
-                      {activeFilter === 'all' && 'When something happens, you\'ll see it here.'}
-                    </p>
-                  </div>
-                </div>
+                <NotificationEmptyState filterLabel={FILTER_EMPTY_LABELS[activeFilter]} />
               ) : notifications.length > 0 ? (
                 shouldVirtualizeNotifications ? (
                   <div
@@ -589,15 +587,14 @@ function NotificationsPageContent() {
                             className="absolute left-0 top-0 w-full pb-2"
                             style={{ transform: `translateY(${vi.start}px)` }}
                           >
-                            <NotificationRow
-                              ackInFlight={ackInFlight}
-                              getNotificationCategory={getNotificationCategory}
-                              getNotificationIcon={getNotificationIcon}
-                              handleDismiss={handleDismiss}
-                              handleMarkAsRead={handleMarkAsRead}
-                              handleOpenNotification={handleOpenNotification}
+                            <NotificationItem
                               notification={notification}
-                              renderTimestamp={renderTimestamp}
+                              ackInFlight={ackInFlight}
+                              selected={selectedIds.has(notification.id)}
+                              onOpen={handleOpenNotification}
+                              onDismiss={handleDismiss}
+                              onMarkRead={handleMarkAsRead}
+                              onSelectToggle={handleSelectToggle}
                             />
                           </div>
                         )
@@ -608,16 +605,15 @@ function NotificationsPageContent() {
                   <ScrollArea className="h-[calc(100vh-24rem)]">
                     <div className="space-y-2">
                       {notifications.map((notification) => (
-                        <NotificationRow
+                        <NotificationItem
                           key={notification.id}
-                          ackInFlight={ackInFlight}
-                          getNotificationCategory={getNotificationCategory}
-                          getNotificationIcon={getNotificationIcon}
-                          handleDismiss={handleDismiss}
-                          handleMarkAsRead={handleMarkAsRead}
-                          handleOpenNotification={handleOpenNotification}
                           notification={notification}
-                          renderTimestamp={renderTimestamp}
+                          ackInFlight={ackInFlight}
+                          selected={selectedIds.has(notification.id)}
+                          onOpen={handleOpenNotification}
+                          onDismiss={handleDismiss}
+                          onMarkRead={handleMarkAsRead}
+                          onSelectToggle={handleSelectToggle}
                         />
                       ))}
                     </div>
@@ -647,122 +643,6 @@ function NotificationsPageContent() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  )
-}
-
-function NotificationRow({
-  ackInFlight,
-  getNotificationCategory,
-  getNotificationIcon,
-  handleDismiss,
-  handleMarkAsRead,
-  handleOpenNotification,
-  notification,
-  renderTimestamp,
-}: {
-  ackInFlight: boolean
-  getNotificationCategory: (kind: WorkspaceNotification['kind']) => string
-  getNotificationIcon: (kind: WorkspaceNotification['kind']) => React.ReactNode
-  handleDismiss: (id: string, title?: string) => void
-  handleMarkAsRead: (id: string, title?: string) => void
-  handleOpenNotification: (notification: WorkspaceNotification) => void
-  notification: WorkspaceNotification
-  renderTimestamp: (input: string | null) => string
-}) {
-  const handleOpen = useCallback(() => {
-    handleOpenNotification(notification)
-  }, [handleOpenNotification, notification])
-
-  const handleRead = useCallback(() => {
-    handleMarkAsRead(notification.id, notification.title)
-  }, [handleMarkAsRead, notification.id, notification.title])
-
-  const handleRemove = useCallback(() => {
-    handleDismiss(notification.id, notification.title)
-  }, [handleDismiss, notification.id, notification.title])
-
-  return (
-    <div
-      className={cn(
-        'cv-scroll-item group flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50',
-        !notification.read && 'border-accent/30 bg-accent/5'
-      )}
-    >
-      <div className="text-2xl">{getNotificationIcon(notification.kind)}</div>
-      <div className="flex-1 space-y-1">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <p className="font-semibold text-foreground">{notification.title}</p>
-              {!notification.read ? (
-                <Badge variant="default" className="h-5 text-[10px]">
-                  NEW
-                </Badge>
-              ) : null}
-              <Badge variant="outline" className="h-5 text-[10px]">
-                {getNotificationCategory(notification.kind)}
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">{notification.body}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{renderTimestamp(notification.createdAt)}</span>
-          {notification.actor.name ? (
-            <>
-              <span>•</span>
-              <span>by {notification.actor.name}</span>
-            </>
-          ) : null}
-          {notification.recipients.clientId ? (
-            <>
-              <span>•</span>
-              <Badge variant="secondary" className="h-4 text-[10px]">
-                Client
-              </Badge>
-            </>
-          ) : null}
-        </div>
-      </div>
-      <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        {notification.navigationUrl ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleOpen}
-            title="Open"
-            aria-label="Open linked destination"
-          >
-            <ExternalLink className="h-4 w-4" aria-hidden />
-          </Button>
-        ) : null}
-        {!notification.read ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleRead}
-            disabled={ackInFlight}
-            title="Mark as read"
-            aria-label="Mark notification as read"
-          >
-            <Check className="h-4 w-4" aria-hidden />
-          </Button>
-        ) : null}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-          onClick={handleRemove}
-          disabled={ackInFlight}
-          title="Dismiss"
-          aria-label="Dismiss notification"
-        >
-          <Trash2 className="h-4 w-4" aria-hidden />
-        </Button>
-      </div>
     </div>
   )
 }

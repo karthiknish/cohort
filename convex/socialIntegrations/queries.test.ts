@@ -7,6 +7,6 @@ import { describe, expect, it } from 'vitest'
 describe('socialIntegrations queries module', () => {
   it('exports getStatus from socialIntegrations table module', async () => {
     const mod = await import('./queries')
-    expect(typeof mod.getStatus).toBe('object')
+    expect(typeof mod.getStatus).toBe('function')
   })
 })

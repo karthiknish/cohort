@@ -21,6 +21,7 @@ import {
   useTaskForm,
   useTasks,
 } from '@/features/dashboard/tasks'
+import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { Card, CardContent } from '@/shared/ui/card'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -87,8 +88,9 @@ export default function TasksPageClient({
   initialSearchParamsString = '',
 }: TasksPageClientProps) {
   return (
-    <Suspense fallback={TASKS_PAGE_FALLBACK}>
-      <TasksPageContent
+    <PageMotionShell reveal={false}>
+      <Suspense fallback={TASKS_PAGE_FALLBACK}>
+        <TasksPageContent
         initialAction={initialAction}
         initialClientId={initialClientId}
         initialClientName={initialClientName}
@@ -96,7 +98,8 @@ export default function TasksPageClient({
         initialProjectName={initialProjectName}
         initialSearchParamsString={initialSearchParamsString}
       />
-    </Suspense>
+      </Suspense>
+    </PageMotionShell>
   )
 }
 

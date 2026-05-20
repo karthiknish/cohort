@@ -5,6 +5,7 @@ import { type DialogProps } from "@radix-ui/react-dialog"
 import { Command as CommandPrimitive } from "cmdk"
 import { Search } from "lucide-react"
 
+import { interactiveTransitionClass } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/ui/dialog"
 
@@ -21,6 +22,7 @@ const Command = ({ className, ref, ...props }: CommandProps) => (
     ref={ref}
     className={cn(
       "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
+      interactiveTransitionClass,
       className
     )}
     {...props}

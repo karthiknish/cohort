@@ -13,6 +13,11 @@ import {
 } from './functions'
 import * as z from 'zod'
 import { Errors } from './errors'
+import { notificationPreferencesV2Z } from './settings'
+import {
+  normalizePreferences,
+  type StoredNotificationPreferences,
+} from '../src/lib/notifications/preferences'
 
 
 function nowMs() {
@@ -56,12 +61,7 @@ function serializeUserRow(row: {
   agencyId: string | null
   phoneNumber?: string | null
   photoUrl?: string | null
-  notificationPreferences?: {
-    emailAdAlerts: boolean
-    emailPerformanceDigest: boolean
-    emailTaskActivity: boolean
-    emailCollaboration: boolean
-  } | null
+  notificationPreferences?: StoredNotificationPreferences
   regionalPreferences?: {
     currency?: string | null
     timezone?: string | null
@@ -79,7 +79,10 @@ function serializeUserRow(row: {
     agencyId: row.agencyId,
     phoneNumber: row.phoneNumber ?? null,
     photoUrl: row.photoUrl ?? null,
-    notificationPreferences: row.notificationPreferences ?? null,
+    notificationPreferences:
+      row.notificationPreferences != null
+        ? normalizePreferences(row.notificationPreferences)
+        : null,
     regionalPreferences: row.regionalPreferences ?? null,
     createdAtMs: row.createdAtMs,
     updatedAtMs: row.updatedAtMs,
@@ -109,14 +112,7 @@ const userZ = z.object({
   agencyId: z.string().nullable(),
   phoneNumber: z.string().nullable(),
   photoUrl: z.string().nullable(),
-  notificationPreferences: z
-    .object({
-      emailAdAlerts: z.boolean(),
-      emailPerformanceDigest: z.boolean(),
-      emailTaskActivity: z.boolean(),
-      emailCollaboration: z.boolean(),
-    })
-    .nullable(),
+  notificationPreferences: notificationPreferencesV2Z.nullable(),
   regionalPreferences: z
     .object({
       currency: z.string().nullable().optional(),
@@ -346,7 +342,7 @@ export const getNotificationPreferencesByEmail = internalQuery({
     if (!best) throw Errors.auth.userNotFound()
 
     return {
-      notificationPreferences: best.notificationPreferences ?? null,
+      notificationPreferences: normalizePreferences(best.notificationPreferences),
     }
   },
 })
@@ -455,14 +451,7 @@ export const getByLegacyIdSafe = optionalAuthenticatedQuery({
     agencyId: string | null
     phoneNumber: string | null
     photoUrl: string | null
-    notificationPreferences:
-      | {
-          emailAdAlerts: boolean
-          emailPerformanceDigest: boolean
-          emailTaskActivity: boolean
-          emailCollaboration: boolean
-        }
-      | null
+    notificationPreferences: ReturnType<typeof normalizePreferences> | null
     regionalPreferences:
       | {
           currency?: string | null
@@ -493,7 +482,10 @@ export const getByLegacyIdSafe = optionalAuthenticatedQuery({
       agencyId: row.agencyId,
       phoneNumber: row.phoneNumber ?? null,
       photoUrl: row.photoUrl ?? null,
-      notificationPreferences: row.notificationPreferences ?? null,
+      notificationPreferences:
+        row.notificationPreferences != null
+          ? normalizePreferences(row.notificationPreferences)
+          : null,
       regionalPreferences: row.regionalPreferences ?? null,
       createdAtMs: row.createdAtMs,
       updatedAtMs: row.updatedAtMs,

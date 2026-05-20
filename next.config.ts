@@ -4,22 +4,27 @@ const isProduction = process.env.NODE_ENV === 'production'
 
 function buildContentSecurityPolicy() {
   const directives = [
-    ["default-src", ["'self'"]],
-    ["base-uri", ["'self'"]],
-    ["form-action", ["'self'"]],
-    ["frame-ancestors", ["'none'"]],
-    ["object-src", ["'none'"]],
+    ['default-src', ["'self'"]],
+    ['base-uri', ["'self'"]],
+    ['form-action', ["'self'"]],
+    ['frame-ancestors', ["'none'"]],
+    ['object-src', ["'none'"]],
     [
-      "script-src",
-      ["'self'", "'unsafe-inline'", ...(isProduction ? [] : ["'unsafe-eval'"]), 'https://us.i.posthog.com'],
+      'script-src',
+      [
+        "'self'",
+        "'unsafe-inline'",
+        ...(isProduction ? [] : ["'unsafe-eval'"]),
+        'https://us.i.posthog.com',
+      ],
     ],
-    ["style-src", ["'self'", "'unsafe-inline'", 'https:']],
-    ["img-src", ["'self'", 'data:', 'blob:', 'https:']],
-    ["font-src", ["'self'", 'data:', 'https:']],
-    ["connect-src", ["'self'", 'https:', 'wss:', 'blob:']],
-    ["media-src", ["'self'", 'blob:', 'data:', 'https:']],
+    ['style-src', ["'self'", "'unsafe-inline'", 'https:']],
+    ['img-src', ["'self'", 'data:', 'blob:', 'https:']],
+    ['font-src', ["'self'", 'data:', 'https:']],
+    ['connect-src', ["'self'", 'https:', 'wss:', 'blob:']],
+    ['media-src', ["'self'", 'blob:', 'data:', 'https:']],
     [
-      "frame-src",
+      'frame-src',
       [
         "'self'",
         'https://accounts.google.com',
@@ -30,7 +35,7 @@ function buildContentSecurityPolicy() {
         'https://*.tiktok.com',
       ],
     ],
-    ["worker-src", ["'self'", 'blob:']],
+    ['worker-src', ["'self'", 'blob:']],
   ]
 
   return directives.map(([name, values]) => `${name} ${values.join(' ')}`).join('; ')

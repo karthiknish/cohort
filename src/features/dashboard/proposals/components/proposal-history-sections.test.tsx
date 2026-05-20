@@ -53,7 +53,7 @@ describe('proposal history sections', () => {
       </>,
     )
 
-    expect(markup).toContain('2 total proposals')
+    expect(markup).toContain('2 proposals')
     expect(markup).toContain('Refresh')
     expect(markup).toContain('No proposals yet')
     expect(markup).toContain('Create first proposal')

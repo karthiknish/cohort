@@ -1,5 +1,6 @@
 import * as React from 'react'
 
+import { tableRowHoverClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 type TableProps = React.HTMLAttributes<HTMLTableElement> & {
@@ -68,7 +69,8 @@ const TableRow = ({ className, ref, ...props }: TableRowProps) => (
   <tr
     ref={ref}
     className={cn(
-      'border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
+      'border-b hover:bg-muted/50 data-[state=selected]:bg-muted',
+      tableRowHoverClass,
       className
     )}
     {...props}

@@ -7,6 +7,7 @@ import { ConvexHttpClient } from 'convex/browser'
 import { api, internal } from '/_generated/api'
 import { evaluateAlerts, formatAlertsForEmail } from './evaluator'
 import { sendTransactionalEmail } from '../notifications'
+import { isEmailPrefEnabled } from '../notifications/preferences'
 import type { AlertRule, AlertEvaluationInput, DailyMetricData } from './types'
 
 // -----------------------------------------------------------------------------
@@ -134,7 +135,7 @@ export async function processWorkspaceAlerts(options: {
             const prefResult = await fetchNotificationPreferences(convex, recipientEmail)
 
             const prefs = prefResult?.notificationPreferences
-            const emailPref = prefs?.emailAdAlerts !== false
+            const emailPref = isEmailPrefEnabled(prefs, 'adAlerts')
 
             if (emailPref) {
                 const { subject, htmlContent } = formatAlertsForEmail(triggeredAlerts, workspaceId)

@@ -3,6 +3,7 @@
 import Image, { type ImageProps } from 'next/image'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { interactiveTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 type LazyImageProps = Omit<ImageProps, 'alt' | 'src' | 'fill' | 'loading'> & {
@@ -61,7 +62,7 @@ export function LazyImage({ src, alt = '', className, onLoad, onError, ...rest }
       sizes={rest.sizes ?? '100vw'}
       loading="lazy"
       className={cn(
-        'transition-opacity duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-out)] motion-reduce:transition-none',
+        interactiveTransitionClass,
         isLoaded ? 'opacity-100' : 'opacity-0',
         className
       )}

@@ -67,12 +67,15 @@ function applySecurityHeaders(request: NextRequest, response: NextResponse): Nex
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   response.headers.set(
     'Permissions-Policy',
-    'camera=(), geolocation=(), microphone=(), payment=(), usb=()'
+    'camera=(), geolocation=(), microphone=(), payment=(), usb=()',
   )
 
   const forwardedProto = request.headers.get('x-forwarded-proto')
   if (request.nextUrl.protocol === 'https:' || forwardedProto === 'https') {
-    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
+    response.headers.set(
+      'Strict-Transport-Security',
+      'max-age=31536000; includeSubDomains; preload',
+    )
   }
 
   return response
@@ -117,7 +120,10 @@ function redirectForAccountStatus(request: NextRequest, pathname: string): NextR
     }
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/auth'
-    redirectUrl.searchParams.set('error', status === 'disabled' ? 'account_disabled' : 'account_suspended')
+    redirectUrl.searchParams.set(
+      'error',
+      status === 'disabled' ? 'account_disabled' : 'account_suspended',
+    )
     return NextResponse.redirect(redirectUrl)
   }
 
@@ -139,7 +145,7 @@ export async function proxy(request: NextRequest) {
       }
       return applySecurityHeaders(
         request,
-        NextResponse.json({ success: false, error: 'Not allowed' }, { status: 403 })
+        NextResponse.json({ success: false, error: 'Not allowed' }, { status: 403 }),
       )
     }
     const identifier = getClientIdentifier(request)
@@ -187,7 +193,7 @@ export async function proxy(request: NextRequest) {
         request: {
           headers: requestHeaders,
         },
-      })
+      }),
     )
   }
 
@@ -207,7 +213,10 @@ export async function proxy(request: NextRequest) {
     return applySecurityHeaders(request, NextResponse.redirect(redirectUrl))
   }
 
-  if (screenRecordingAuthBypassEnabled && (pathname.startsWith('/dashboard/') || pathname.startsWith('/for-you'))) {
+  if (
+    screenRecordingAuthBypassEnabled &&
+    (pathname.startsWith('/dashboard/') || pathname.startsWith('/for-you'))
+  ) {
     return passThrough()
   }
 
@@ -256,7 +265,15 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/for-you', '/for-you/:path*', '/dashboard/:path*', '/admin/:path*', '/auth/:path*', '/api/:path*'],
+  matcher: [
+    '/',
+    '/for-you',
+    '/for-you/:path*',
+    '/dashboard/:path*',
+    '/admin/:path*',
+    '/auth/:path*',
+    '/api/:path*',
+  ],
 }
 
 function parseInteger(value: string | undefined, fallback: number): number {

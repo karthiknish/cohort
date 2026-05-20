@@ -9,6 +9,7 @@ export type WorkspaceNotificationKind =
   | 'collaboration.message'
   | 'collaboration.mention'
   | 'proposal.deck.ready'
+  | 'report.generated'
 
 export type WorkspaceNotificationResource =
   | { type: 'task'; id: string }

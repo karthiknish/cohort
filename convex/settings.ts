@@ -3,21 +3,58 @@ import {
   zAuthenticatedQuery,
 } from './functions'
 import { z } from 'zod/v4'
- 
-const notificationPreferencesZ = z.object({
-  // Email
-  emailAdAlerts: z.boolean(),
-  emailPerformanceDigest: z.boolean(),
-  emailTaskActivity: z.boolean(),
-  emailCollaboration: z.boolean(),
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES_V2,
+  applyPreferencesPatch,
+  normalizePreferences,
+  type NotificationPreferencesPatch,
+  type NotificationPreferencesV2,
+} from '../src/lib/notifications/preferences'
+
+const channelPrefsZ = z.object({
+  inApp: z.boolean().optional(),
+  email: z.boolean().optional(),
 })
- 
+
+const quietHoursZ = z.object({
+  enabled: z.boolean().optional(),
+  start: z.string().optional(),
+  end: z.string().optional(),
+})
+
+const categoriesPatchZ = z.object({
+  tasks: channelPrefsZ.optional(),
+  collaboration: channelPrefsZ.optional(),
+  ads: channelPrefsZ.optional(),
+  digest: channelPrefsZ.optional(),
+  projects: channelPrefsZ.optional(),
+  meetings: channelPrefsZ.optional(),
+})
+
+export const notificationPreferencesV2Z = z.object({
+  version: z.literal(2),
+  pauseAll: z.boolean(),
+  quietHours: z.object({
+    enabled: z.boolean(),
+    start: z.string(),
+    end: z.string(),
+  }),
+  categories: z.object({
+    tasks: z.object({ inApp: z.boolean(), email: z.boolean() }),
+    collaboration: z.object({ inApp: z.boolean(), email: z.boolean() }),
+    ads: z.object({ inApp: z.boolean(), email: z.boolean() }),
+    digest: z.object({ inApp: z.boolean(), email: z.boolean() }),
+    projects: z.object({ inApp: z.boolean(), email: z.boolean() }),
+    meetings: z.object({ inApp: z.boolean(), email: z.boolean() }),
+  }),
+})
+
 const regionalPreferencesZ = z.object({
   currency: z.string().nullable().optional(),
   timezone: z.string().nullable().optional(),
   locale: z.string().nullable().optional(),
 }).nullable()
- 
+
 const profileZ = z.object({
   legacyId: z.string(),
   email: z.string().nullable(),
@@ -27,21 +64,19 @@ const profileZ = z.object({
   agencyId: z.string().nullable(),
   phoneNumber: z.string().nullable().optional(),
   photoUrl: z.string().nullable().optional(),
-  notificationPreferences: notificationPreferencesZ,
+  notificationPreferences: notificationPreferencesV2Z,
   regionalPreferences: regionalPreferencesZ,
   updatedAtMs: z.number().nullable(),
 })
-
 
 function nowMs() {
   return Date.now()
 }
 
-const defaultNotificationPreferences = {
-  emailAdAlerts: true,
-  emailPerformanceDigest: true,
-  emailTaskActivity: true,
-  emailCollaboration: false,
+function serializeNotificationPreferences(
+  stored: unknown,
+): NotificationPreferencesV2 {
+  return normalizePreferences(stored as NotificationPreferencesV2 | null)
 }
 
 export const getMyProfile = zAuthenticatedQuery({
@@ -59,7 +94,7 @@ export const getMyProfile = zAuthenticatedQuery({
       agencyId: row.agencyId,
       phoneNumber: row.phoneNumber ?? null,
       photoUrl: row.photoUrl ?? null,
-      notificationPreferences: row.notificationPreferences ?? defaultNotificationPreferences,
+      notificationPreferences: serializeNotificationPreferences(row.notificationPreferences),
       regionalPreferences: row.regionalPreferences ?? null,
       updatedAtMs: row.updatedAtMs,
     }
@@ -89,51 +124,35 @@ export const updateMyProfile = zAuthenticatedMutation({
 
 export const getMyNotificationPreferences = zAuthenticatedQuery({
   args: {},
-  returns: notificationPreferencesZ.extend({ phoneNumber: z.string().nullable() }),
+  returns: notificationPreferencesV2Z,
   handler: async (ctx) => {
-    const row = ctx.user
-
-    const prefs = row.notificationPreferences ?? defaultNotificationPreferences
-
-    return {
-      ...prefs,
-      phoneNumber: row.phoneNumber ?? null,
-    }
+    return serializeNotificationPreferences(ctx.user.notificationPreferences)
   },
 })
 
 export const updateMyNotificationPreferences = zAuthenticatedMutation({
   args: {
-    // Email — omit field to leave stored value unchanged (never default to “all on”).
-    emailAdAlerts: z.boolean().optional(),
-    emailPerformanceDigest: z.boolean().optional(),
-    emailTaskActivity: z.boolean().optional(),
-    emailCollaboration: z.boolean().optional(),
-    // Phone
-    phoneNumber: z.string().nullable().optional(),
+    pauseAll: z.boolean().optional(),
+    quietHours: quietHoursZ.optional(),
+    categories: categoriesPatchZ.optional(),
   },
-  returns: notificationPreferencesZ.extend({ phoneNumber: z.string().nullable() }),
+  returns: notificationPreferencesV2Z,
   handler: async (ctx, args) => {
     const row = ctx.user
-    const current = row.notificationPreferences ?? defaultNotificationPreferences
-
-    const next = {
-      emailAdAlerts: args.emailAdAlerts ?? current.emailAdAlerts,
-      emailPerformanceDigest: args.emailPerformanceDigest ?? current.emailPerformanceDigest,
-      emailTaskActivity: args.emailTaskActivity ?? current.emailTaskActivity,
-      emailCollaboration: args.emailCollaboration ?? current.emailCollaboration,
+    const patch: NotificationPreferencesPatch = {
+      ...(args.pauseAll !== undefined ? { pauseAll: args.pauseAll } : {}),
+      ...(args.quietHours !== undefined ? { quietHours: args.quietHours } : {}),
+      ...(args.categories !== undefined ? { categories: args.categories } : {}),
     }
+
+    const next = applyPreferencesPatch(row.notificationPreferences, patch)
 
     await ctx.db.patch(row._id, {
       notificationPreferences: next,
-      ...(args.phoneNumber !== undefined ? { phoneNumber: args.phoneNumber } : {}),
       updatedAtMs: nowMs(),
     })
 
-    return {
-      ...next,
-      phoneNumber: (args.phoneNumber !== undefined ? args.phoneNumber : row.phoneNumber) ?? null,
-    }
+    return next
   },
 })
 
@@ -172,3 +191,5 @@ export const updateMyRegionalPreferences = zAuthenticatedMutation({
     return next
   },
 })
+
+export { DEFAULT_NOTIFICATION_PREFERENCES_V2 }

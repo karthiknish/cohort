@@ -38,7 +38,7 @@ describe('meeting schedule card variants', () => {
     const markup = renderToStaticMarkup(<CreateMeetingCard {...baseProps} />)
 
     expect(markup).toContain('Schedule Meeting')
-    expect(markup).toContain('Schedule room')
+    expect(markup).toContain('Schedule Room')
     expect(markup).not.toContain('Cancel Edit')
   })
 

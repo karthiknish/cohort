@@ -90,6 +90,46 @@ export const listRowEnterAnimationClass = [
 
 export const pressableScaleClass = 'active:scale-[0.98] motion-reduce:active:scale-100'
 
+/** Subtle lift on hover for clickable cards. */
+export const hoverLiftClass = [
+  'hover:-translate-y-0.5 hover:shadow-md',
+  'motion-reduce:hover:translate-y-0 motion-reduce:hover:shadow-sm',
+].join(' ')
+
+/** Toggle / switch thumb and track transitions. */
+export const toggleMotionClass = [
+  'transition-[background-color,box-shadow,transform]',
+  motionDurationClasses.fast,
+  motionEasingClasses.standard,
+  'motion-reduce:transition-none',
+].join(' ')
+
+export const switchMotionClass = toggleMotionClass
+
+/** Table row hover background. */
+export const tableRowHoverClass = [
+  'transition-colors',
+  motionDurationClasses.fast,
+  motionEasingClasses.standard,
+  'motion-reduce:transition-none',
+].join(' ')
+
+/** Link underline / opacity. */
+export const linkMotionClass = [
+  'transition-[color,opacity,text-decoration-color]',
+  motionDurationClasses.fast,
+  motionEasingClasses.standard,
+  'motion-reduce:transition-none',
+].join(' ')
+
+/** Empty state / panel entrance (tailwind `animate-in`). */
+export const emptyStateEnterClass = [
+  'animate-in fade-in-0 slide-in-from-bottom-2',
+  motionDurationClasses.normal,
+  motionEasingClasses.out,
+  'motion-reduce:animate-none',
+].join(' ')
+
 export const surfaceMotionClasses = {
   overlay: [
     'data-[state=open]:animate-in',

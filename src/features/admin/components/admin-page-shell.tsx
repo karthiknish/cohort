@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 
 import { cn } from '@/lib/utils'
+import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { Badge } from '@/shared/ui/badge'
 
 export type AdminPageShellProps = {
@@ -64,7 +65,9 @@ export function AdminPageShell({
           <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">{actions}</div>
         ) : null}
       </header>
-      <div className="space-y-8">{children}</div>
+      <PageMotionShell reveal={false} className="space-y-8">
+        {children}
+      </PageMotionShell>
     </div>
   )
 }

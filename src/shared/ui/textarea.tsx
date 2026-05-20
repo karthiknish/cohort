@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-import { interactiveTransitionClass } from '@/lib/animation-system'
+import { interactiveTransitionClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {

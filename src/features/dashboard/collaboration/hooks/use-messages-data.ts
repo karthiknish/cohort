@@ -573,7 +573,7 @@ export function useMessagesData({
         if (!prefs) return
 
         // Send to Email if enabled
-        if (!prefs.emailCollaboration) {
+        if (!prefs.categories?.collaboration?.email) {
           return
         }
 

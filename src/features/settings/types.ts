@@ -1,7 +1,1 @@
-export interface NotificationPreferencesResponse {
-    emailAdAlerts: boolean
-    emailPerformanceDigest: boolean
-    emailTaskActivity: boolean
-    emailCollaboration: boolean
-    phoneNumber: string | null
-}
+export type { NotificationPreferencesV2 as NotificationPreferencesResponse } from '@/lib/notifications/preferences'

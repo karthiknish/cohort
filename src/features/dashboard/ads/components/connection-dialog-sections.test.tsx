@@ -118,6 +118,6 @@ describe('connection dialog sections', () => {
 
     expect(connectMarkup).toContain('Continue to Meta')
     expect(retryMarkup).toContain('Try again')
-    expect(doneMarkup).toContain('Done')
+    expect(doneMarkup).toContain('Finish setup')
   })
 })

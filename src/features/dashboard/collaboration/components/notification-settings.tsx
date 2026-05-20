@@ -1,20 +1,13 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
-import {
-  Bell,
-  BellOff,
-  Mail,
-  AtSign,
-  Hash,
-  Volume2,
-  VolumeX,
-  Save,
-  LoaderCircle,
-} from 'lucide-react'
+/**
+ * @deprecated Use global notification settings at /settings?tab=notifications.
+ * This entry opens the workspace notification preferences panel.
+ */
+import Link from 'next/link'
+import { Bell } from 'lucide-react'
+
 import { Button } from '@/shared/ui/button'
-import { Label } from '@/shared/ui/label'
-import { Switch } from '@/shared/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -24,466 +17,39 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/shared/ui/dialog'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
-import { useToast } from '@/shared/ui/use-toast'
 
-export type NotificationPreference = {
-  enabled: boolean
-  mentions: boolean
-  allMessages: boolean
-  sound: boolean
-  desktop: boolean
-  email: boolean
-  mobile: boolean
-  quietHours: {
-    enabled: boolean
-    start: string // HH:mm format
-    end: string // HH:mm format
-  }
-  keywords: string[] // Custom keywords to notify for
-  muteUntil?: Date | null
-}
-
-interface NotificationSettingsProps {
-  preferences: NotificationPreference
-  onSave: (preferences: NotificationPreference) => Promise<void>
+type NotificationSettingsProps = {
   trigger?: React.ReactNode
 }
 
-const DEFAULT_PREFERENCES: NotificationPreference = {
-  enabled: true,
-  mentions: true,
-  allMessages: false,
-  sound: true,
-  desktop: true,
-  email: false,
-  mobile: true,
-  quietHours: {
-    enabled: false,
-    start: '22:00',
-    end: '08:00',
-  },
-  keywords: [],
-  muteUntil: null,
-}
-
-/**
- * Notification settings dialog for collaboration channels
- */
-export function NotificationSettings({
-  preferences: initialPreferences,
-  onSave,
-  trigger,
-}: NotificationSettingsProps) {
-  const { toast } = useToast()
-  const [open, setOpen] = useState(false)
-  const [preferences, setPreferences] = useState<NotificationPreference>(
-    initialPreferences ?? DEFAULT_PREFERENCES
-  )
-  const [isSaving, setIsSaving] = useState(false)
-  const [keywordInput, setKeywordInput] = useState('')
-
-  const handleSave = useCallback(async () => {
-    setIsSaving(true)
-    await onSave(preferences)
-      .then(() => {
-        toast({
-          title: 'Notification settings saved',
-          description: 'Your preferences have been updated.',
-        })
-        setOpen(false)
-      })
-      .catch((error) => {
-        logError(error, 'NotificationSettings:handleSave')
-        toast({
-          title: 'Failed to save settings',
-          description: asErrorMessage(error),
-          variant: 'destructive',
-        })
-      })
-      .finally(() => {
-        setIsSaving(false)
-      })
-  }, [preferences, onSave, toast])
-
-  const handleAddKeyword = useCallback(() => {
-    const keyword = keywordInput.trim().toLowerCase()
-    if (keyword && !preferences.keywords.includes(keyword)) {
-      setPreferences((prev) => ({
-        ...prev,
-        keywords: [...prev.keywords, keyword],
-      }))
-      setKeywordInput('')
-    }
-  }, [keywordInput, preferences.keywords])
-
-  const handleRemoveKeyword = useCallback((keyword: string) => {
-    setPreferences((prev) => ({
-      ...prev,
-      keywords: prev.keywords.filter((k) => k !== keyword),
-    }))
-  }, [])
-
-  const handleMuteFor = useCallback((duration: number) => {
-    const until = new Date(Date.now() + duration * 60 * 1000)
-    setPreferences((prev) => ({
-      ...prev,
-      muteUntil: until,
-    }))
-  }, [])
-
-  const handleUnmute = useCallback(() => {
-    setPreferences((prev) => ({
-      ...prev,
-      muteUntil: null,
-    }))
-  }, [])
-
-  const handleMuteFor15 = useCallback(() => handleMuteFor(15), [handleMuteFor])
-  const handleMuteFor60 = useCallback(() => handleMuteFor(60), [handleMuteFor])
-  const handleMuteFor480 = useCallback(() => handleMuteFor(480), [handleMuteFor])
-  const handleMuteFor1440 = useCallback(() => handleMuteFor(1440), [handleMuteFor])
-
-  const handleAllMessagesChange = useCallback((checked: boolean) => {
-    setPreferences((prev) => ({ ...prev, allMessages: checked }))
-  }, [])
-
-  const handleMentionsChange = useCallback((checked: boolean) => {
-    setPreferences((prev) => ({ ...prev, mentions: checked }))
-  }, [])
-
-  const handleKeywordInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setKeywordInput(e.target.value)
-  }, [])
-
-  const handleKeywordKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        e.preventDefault()
-        handleAddKeyword()
-      }
-    },
-    [handleAddKeyword]
-  )
-
-  const handleSoundChange = useCallback((checked: boolean) => {
-    setPreferences((prev) => ({ ...prev, sound: checked }))
-  }, [])
-
-  const handleDesktopChange = useCallback((checked: boolean) => {
-    setPreferences((prev) => ({ ...prev, desktop: checked }))
-  }, [])
-
-  const handleEmailChange = useCallback((checked: boolean) => {
-    setPreferences((prev) => ({ ...prev, email: checked }))
-  }, [])
-
-  const handleQuietHoursEnabledChange = useCallback((checked: boolean) => {
-    setPreferences((prev) => ({
-      ...prev,
-      quietHours: { ...prev.quietHours, enabled: checked },
-    }))
-  }, [])
-
-  const handleQuietHoursStartChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setPreferences((prev) => ({
-      ...prev,
-      quietHours: { ...prev.quietHours, start: e.target.value },
-    }))
-  }, [])
-
-  const handleQuietHoursEndChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setPreferences((prev) => ({
-      ...prev,
-      quietHours: { ...prev.quietHours, end: e.target.value },
-    }))
-  }, [])
-
-  const handleCancel = useCallback(() => setOpen(false), [])
-
-  const isMuted = preferences.muteUntil ? new Date() < preferences.muteUntil : false
-
-  const keywordItems = useMemo(
-    () =>
-      preferences.keywords.map((keyword) => (
-        <KeywordTag key={keyword} keyword={keyword} onRemove={handleRemoveKeyword} />
-      )),
-    [preferences.keywords, handleRemoveKeyword]
-  )
-
-  const defaultTrigger = (
-    <DialogTrigger asChild>
-      <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Open notification settings">
-        {isMuted ? (
-          <BellOff className="h-4 w-4" />
-        ) : (
-          <Bell className="h-4 w-4" />
-        )}
-        <span className="sr-only">Notification settings</span>
-      </Button>
-    </DialogTrigger>
-  )
-
+export function NotificationSettings({ trigger }: NotificationSettingsProps) {
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      {trigger || defaultTrigger}
-      <DialogContent className="sm:max-w-md">
+    <Dialog>
+      <DialogTrigger asChild>
+        {trigger ?? (
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs">
+            <Bell className="h-3.5 w-3.5" aria-hidden />
+            Notifications
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notification Settings
-          </DialogTitle>
+          <DialogTitle>Notification preferences</DialogTitle>
           <DialogDescription>
-            Configure how and when you receive notifications for this channel.
+            Collaboration alerts are managed in your workspace notification settings alongside
+            tasks, ads, and meetings.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-6 py-4">
-          {/* Mute status */}
-          {isMuted && (
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
-              <div className="flex items-center gap-2 text-sm">
-                <BellOff className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  Muted until {preferences.muteUntil?.toLocaleTimeString()}
-                </span>
-              </div>
-              <Button variant="outline" size="sm" onClick={handleUnmute}>
-                Unmute
-              </Button>
-            </div>
-          )}
-
-          {/* Quick mute options */}
-          {!isMuted && (
-            <div className="space-y-2">
-              <Label>Quick mute</Label>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleMuteFor15}
-                >
-                  15 min
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleMuteFor60}
-                >
-                  1 hour
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleMuteFor480}
-                >
-                  8 hours
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleMuteFor1440}
-                >
-                  24 hours
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Notification preferences */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium">What to notify</h3>
-
-            {/* All messages */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Hash className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <Label htmlFor="all-messages">All messages</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Get notified for every message
-                  </p>
-                </div>
-              </div>
-              <Switch
-                id="all-messages"
-                checked={preferences.allMessages}
-                onCheckedChange={handleAllMessagesChange}
-              />
-            </div>
-
-            {/* Mentions */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AtSign className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <Label htmlFor="mentions">Mentions</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Get notified when mentioned
-                  </p>
-                </div>
-              </div>
-              <Switch
-                id="mentions"
-                checked={preferences.mentions}
-                onCheckedChange={handleMentionsChange}
-              />
-            </div>
-
-            {/* Custom keywords */}
-            <div className="space-y-2">
-              <Label>Custom keywords</Label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Add keyword…"
-                  value={keywordInput}
-                  onChange={handleKeywordInputChange}
-                  onKeyDown={handleKeywordKeyDown}
-                  className="flex-1 px-3 py-2 text-sm rounded-md border bg-background"
-                />
-                <Button type="button" size="sm" onClick={handleAddKeyword}>
-                  Add
-                </Button>
-              </div>
-              {preferences.keywords.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {keywordItems}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* How to notify */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium">How to notify</h3>
-
-            {/* Sound */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {preferences.sound ? (
-                  <Volume2 className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <VolumeX className="h-4 w-4 text-muted-foreground" />
-                )}
-                <Label htmlFor="sound">Sound</Label>
-              </div>
-              <Switch
-                id="sound"
-                checked={preferences.sound}
-                onCheckedChange={handleSoundChange}
-              />
-            </div>
-
-            {/* Desktop notifications */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Bell className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="desktop">Desktop</Label>
-              </div>
-              <Switch
-                id="desktop"
-                checked={preferences.desktop}
-                onCheckedChange={handleDesktopChange}
-              />
-            </div>
-
-            {/* Email */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <Label htmlFor="email">Email</Label>
-              </div>
-              <Switch
-                id="email"
-                checked={preferences.email}
-                onCheckedChange={handleEmailChange}
-              />
-            </div>
-          </div>
-
-          {/* Quiet hours */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Quiet hours</Label>
-              <Switch
-                checked={preferences.quietHours.enabled}
-                onCheckedChange={handleQuietHoursEnabledChange}
-              />
-            </div>
-            {preferences.quietHours.enabled && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="time"
-                  value={preferences.quietHours.start}
-                  onChange={handleQuietHoursStartChange}
-                  className="px-3 py-2 text-sm rounded-md border bg-background"
-                />
-                <span className="text-muted-foreground">to</span>
-                <input
-                  type="time"
-                  value={preferences.quietHours.end}
-                  onChange={handleQuietHoursEndChange}
-                  className="px-3 py-2 text-sm rounded-md border bg-background"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isSaving}
-          >
-            Cancel
+        <DialogFooter className="flex-col gap-2 sm:flex-col">
+          <Button asChild className="w-full">
+            <Link href="/settings?tab=notifications">Open notification settings</Link>
           </Button>
-          <Button type="button" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? (
-              <>
-                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                Saving…
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Settings
-              </>
-            )}
+          <Button variant="outline" asChild className="w-full">
+            <Link href="/dashboard/notifications">Open notification center</Link>
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-interface KeywordTagProps {
-  keyword: string
-  onRemove: (keyword: string) => void
-}
-
-function KeywordTag({ keyword, onRemove }: KeywordTagProps) {
-  const handleClick = useCallback(() => {
-    onRemove(keyword)
-  }, [keyword, onRemove])
-
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-accent/10 text-primary text-xs">
-      {keyword}
-      <button
-        type="button"
-        onClick={handleClick}
-        className="hover:text-destructive"
-      >
-        ×
-      </button>
-    </span>
   )
 }

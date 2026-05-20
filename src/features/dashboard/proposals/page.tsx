@@ -25,6 +25,7 @@ import {
 } from './components/proposal-page-sections'
 import { createInitialProposalFormState, stepRequiredFieldLabels } from './utils/form-steps'
 import { useKeyboardShortcuts } from '@/shared/hooks/use-keyboard-shortcuts'
+import { PageMotionShell } from '@/shared/components/page-motion-shell'
 
 // Extracted hooks
 import {
@@ -426,8 +427,10 @@ export default function ProposalsPage() {
   const dashboardSkeleton = useMemo(() => <DashboardSkeleton />, [])
 
   return (
-    <Suspense fallback={dashboardSkeleton}>
-      <ProposalsPageContent />
-    </Suspense>
+    <PageMotionShell reveal={false}>
+      <Suspense fallback={dashboardSkeleton}>
+        <ProposalsPageContent />
+      </Suspense>
+    </PageMotionShell>
   )
 }

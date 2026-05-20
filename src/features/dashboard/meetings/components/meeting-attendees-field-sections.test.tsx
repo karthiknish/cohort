@@ -52,7 +52,7 @@ describe('meeting attendees field sections', () => {
     )
 
     expect(markup).toContain('Add')
-    expect(markup).toContain('Suggested Platform Users')
+    expect(markup).toContain('Suggested participants')
     expect(markup).toContain('Alex')
   })
 })

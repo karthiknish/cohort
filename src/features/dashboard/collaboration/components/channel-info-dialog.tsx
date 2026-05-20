@@ -22,6 +22,7 @@ import type { CollaborationAttachment } from '@/types/collaboration'
 import type { Channel } from '../types'
 import { ChannelAvatar } from './channel-avatar'
 import { CollaborationSidebarContent } from './sidebar-sections'
+import { NotificationSettings } from './notification-settings'
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024
 const ALLOWED_AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -215,6 +216,9 @@ export function ChannelInfoDialog({
               onChange={(event) => void handleFileChange(event)}
             />
           ) : null}
+          <div className="flex justify-end border-t border-border/60 pt-3">
+            <NotificationSettings />
+          </div>
         </DialogHeader>
 
         <ScrollArea className="min-h-0 flex-1">

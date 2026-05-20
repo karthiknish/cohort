@@ -20,7 +20,12 @@ import {
   DialogClose,
 } from '@/shared/ui/dialog'
 
-export function DeleteAccountCard() {
+type DeleteAccountCardProps = {
+  /** Renders inside a parent danger-zone shell without an extra card frame. */
+  embedded?: boolean
+}
+
+export function DeleteAccountCard({ embedded = false }: DeleteAccountCardProps) {
   const { isPreviewMode } = usePreview()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
@@ -28,35 +33,45 @@ export function DeleteAccountCard() {
     setDeleteDialogOpen(true)
   }, [])
 
+  const body = (
+    <>
+      <CardHeader className={embedded ? 'px-0 pt-0' : undefined}>
+        <CardTitle className="flex items-center gap-2 text-destructive">
+          <Trash2 className="h-5 w-5" aria-hidden />
+          Delete account
+        </CardTitle>
+        <CardDescription>
+          Permanently remove your account and all associated data (GDPR Article 17 — Right to Erasure).
+        </CardDescription>
+      </CardHeader>
+      <CardContent className={embedded ? 'px-0' : undefined}>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Deleting your account will revoke access across all connected workspaces, stop integrations, and
+          permanently erase stored reports, messages, and personal information. This action cannot be undone.
+          We recommend exporting your data before proceeding.
+        </p>
+        {isPreviewMode ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Preview mode keeps this action local-only and does not remove any real account data.
+          </p>
+        ) : null}
+      </CardContent>
+      <CardFooter className={embedded ? 'flex justify-end px-0 pb-0' : 'flex justify-end'}>
+        <Button variant="destructive" onClick={handleOpenDeleteDialog}>
+          <Trash2 className="mr-2 h-4 w-4" aria-hidden />
+          Delete account
+        </Button>
+      </CardFooter>
+    </>
+  )
+
   return (
     <>
-      <Card className="border-destructive/40">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <Trash2 className="h-5 w-5" />
-            Delete account
-          </CardTitle>
-          <CardDescription>
-            Permanently remove your account and all associated data (GDPR Article 17 - Right to Erasure).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Deleting your account will revoke access across all connected workspaces, stop integrations, and permanently erase stored reports, messages, and personal information. This action cannot be undone. We recommend exporting your data before proceeding.
-          </p>
-          {isPreviewMode ? (
-            <p className="mt-3 text-sm text-muted-foreground">
-              Preview mode keeps this action local-only and does not remove any real account data.
-            </p>
-          ) : null}
-        </CardContent>
-        <CardFooter className="flex justify-end">
-          <Button variant="destructive" onClick={handleOpenDeleteDialog}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete account
-          </Button>
-        </CardFooter>
-      </Card>
+      {embedded ? (
+        <div className="space-y-0">{body}</div>
+      ) : (
+        <Card className="border-destructive/40">{body}</Card>
+      )}
 
       <DeleteAccountDialog
         open={deleteDialogOpen}

@@ -1,4 +1,8 @@
 import { DEFAULT_CURRENCY, type CurrencyCode } from '@/constants/currencies'
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES_V2,
+  type NotificationPreferencesV2,
+} from '@/lib/notifications/preferences'
 
 export type PreviewSettingsProfile = {
     id: string
@@ -9,13 +13,7 @@ export type PreviewSettingsProfile = {
     photoUrl: string | null
 }
 
-export type PreviewSettingsNotificationPreferences = {
-    emailAdAlerts: boolean
-    emailPerformanceDigest: boolean
-    emailTaskActivity: boolean
-    emailCollaboration: boolean
-    phoneNumber: string | null
-}
+export type PreviewSettingsNotificationPreferences = NotificationPreferencesV2
 
 export type PreviewSettingsRegionalPreferences = {
     currency: CurrencyCode
@@ -33,11 +31,7 @@ const PREVIEW_SETTINGS_PROFILE: PreviewSettingsProfile = {
 }
 
 const PREVIEW_NOTIFICATION_PREFERENCES: PreviewSettingsNotificationPreferences = {
-    emailAdAlerts: true,
-    emailPerformanceDigest: true,
-    emailTaskActivity: true,
-    emailCollaboration: false,
-    phoneNumber: PREVIEW_SETTINGS_PROFILE.phoneNumber,
+    ...DEFAULT_NOTIFICATION_PREFERENCES_V2,
 }
 
 const PREVIEW_REGIONAL_PREFERENCES: PreviewSettingsRegionalPreferences = {
@@ -51,7 +45,7 @@ export function getPreviewSettingsProfile(): PreviewSettingsProfile {
 }
 
 export function getPreviewSettingsNotificationPreferences(): PreviewSettingsNotificationPreferences {
-    return { ...PREVIEW_NOTIFICATION_PREFERENCES }
+    return structuredClone(PREVIEW_NOTIFICATION_PREFERENCES)
 }
 
 export function getPreviewSettingsRegionalPreferences(): PreviewSettingsRegionalPreferences {

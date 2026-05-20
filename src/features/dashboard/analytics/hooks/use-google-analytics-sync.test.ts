@@ -23,11 +23,12 @@ describe('syncGoogleAnalytics', () => {
 
     expect(apiFetchMock).toHaveBeenCalledWith(
       '/api/analytics/google-analytics/sync?days=30&clientId=client_123',
-      {
+      expect.objectContaining({
         method: 'POST',
         credentials: 'same-origin',
         body: JSON.stringify({}),
-      }
+        timeoutMs: 180_000,
+      }),
     )
   })
 })

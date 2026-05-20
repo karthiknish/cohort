@@ -52,7 +52,7 @@ describe('meeting schedule card sections', () => {
     expect(markup).toContain('Google Workspace required')
     expect(markup).toContain('When')
     expect(markup).toContain('Participants')
-    expect(markup).toContain('Schedule Room')
+    expect(markup).toContain('Schedule room')
   })
 
   it('renders footer actions when provided', () => {

@@ -15,11 +15,30 @@ export const workspaceTables = {
     photoUrl: v.optional(v.union(v.string(), v.null())),
     notificationPreferences: v.optional(
       v.object({
-        emailAdAlerts: v.boolean(),
-        emailPerformanceDigest: v.boolean(),
-        emailTaskActivity: v.boolean(),
-        emailCollaboration: v.boolean(),
-      })
+        version: v.optional(v.literal(2)),
+        pauseAll: v.optional(v.boolean()),
+        quietHours: v.optional(
+          v.object({
+            enabled: v.boolean(),
+            start: v.string(),
+            end: v.string(),
+          }),
+        ),
+        categories: v.optional(
+          v.object({
+            tasks: v.optional(v.object({ inApp: v.boolean(), email: v.boolean() })),
+            collaboration: v.optional(v.object({ inApp: v.boolean(), email: v.boolean() })),
+            ads: v.optional(v.object({ inApp: v.boolean(), email: v.boolean() })),
+            digest: v.optional(v.object({ inApp: v.boolean(), email: v.boolean() })),
+            projects: v.optional(v.object({ inApp: v.boolean(), email: v.boolean() })),
+            meetings: v.optional(v.object({ inApp: v.boolean(), email: v.boolean() })),
+          }),
+        ),
+        emailAdAlerts: v.optional(v.boolean()),
+        emailPerformanceDigest: v.optional(v.boolean()),
+        emailTaskActivity: v.optional(v.boolean()),
+        emailCollaboration: v.optional(v.boolean()),
+      }),
     ),
     regionalPreferences: v.optional(
       v.object({
