@@ -31,6 +31,8 @@ interface PerformanceChartProps {
   dataSource?: PerformanceChartDataSource
   /** When true, ads totals exist but there are no per-day rows to plot — show sync copy, not connect. */
   hasAggregateData?: boolean
+  /** When true, at least one ads platform is linked — empty chart should prompt sync, not connect. */
+  adsAccountConnected?: boolean
   /** Header action (e.g. Manage connections). Off for embedded campaign charts. */
   showDetailLink?: boolean
   /** Hide built-in title row when a parent Card supplies the header. */
@@ -62,6 +64,15 @@ const EMPTY_STATE_COPY: Record<
 const ADS_SYNCED_NO_DAILY_COPY = {
   message:
     'Totals above reflect your latest sync. Daily spend and revenue trends need per-day metrics in this date range — widen the range or run sync again.',
+  primaryHref: '#connect-ad-platforms',
+  primaryLabel: 'Run sync',
+  detailHref: '#connect-ad-platforms',
+  detailLabel: 'Manage connections',
+} as const
+
+const ADS_CONNECTED_NO_METRICS_COPY = {
+  message:
+    'Your ad account is connected. Run a sync to pull spend, impressions, and clicks into this date range.',
   primaryHref: '#connect-ad-platforms',
   primaryLabel: 'Run sync',
   detailHref: '#connect-ad-platforms',
@@ -135,12 +146,17 @@ export const PerformanceChart = memo(function PerformanceChart({
   currency = 'USD',
   dataSource = 'analytics',
   hasAggregateData = false,
+  adsAccountConnected = false,
   showDetailLink = true,
   hideHeader = false,
 }: PerformanceChartProps) {
   const copy =
-    dataSource === 'ads' && hasAggregateData
-      ? ADS_SYNCED_NO_DAILY_COPY
+    dataSource === 'ads'
+      ? hasAggregateData
+        ? ADS_SYNCED_NO_DAILY_COPY
+        : adsAccountConnected
+          ? ADS_CONNECTED_NO_METRICS_COPY
+          : EMPTY_STATE_COPY.ads
       : EMPTY_STATE_COPY[dataSource]
   const detailLinkIsHash = copy.detailHref.startsWith('#')
   const chartData = useMemo(() => {

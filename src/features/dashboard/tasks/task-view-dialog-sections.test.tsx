@@ -22,6 +22,14 @@ vi.mock('@/shared/ui/tabs', () => ({
   TabsTrigger: ({ children }: { children: ReactNode }) => <button type="button">{children}</button>,
 }))
 
+vi.mock('@/shared/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuItem: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuSeparator: () => <hr />,
+}))
+
 vi.mock('./task-comments', () => ({
   TaskCommentsPanel: () => <div>TaskCommentsPanel</div>,
 }))
@@ -31,6 +39,7 @@ import {
   TaskViewDetailsTab,
   TaskViewDialogFooter,
   TaskViewDialogHeader,
+  TaskViewDialogSidebar,
   TaskViewDialogTabsList,
   type TaskDetailItem,
 } from './task-view-dialog-sections'
@@ -57,17 +66,20 @@ const detailItems: TaskDetailItem[] = [
 ]
 
 describe('task view dialog sections', () => {
-  it('renders the header, tabs list, and footer', () => {
+  it('renders the header, tabs list, sidebar, and footer', () => {
     const markup = renderToStaticMarkup(
       <>
         <TaskViewDialogHeader
           title="Review launch brief"
-          summary="Assigned to Alex Kim"
           status="todo"
           priority="high"
           client="Acme Corp"
+          assignedTo={['Alex Kim']}
+          dueDate="2026-03-20"
+          timeSpentMinutes={0}
         />
         <TaskViewDialogTabsList commentCount={3} />
+        <TaskViewDialogSidebar task={task} onEdit={vi.fn()} onMarkComplete={vi.fn()} />
         <TaskViewDialogFooter onClose={vi.fn()} onEdit={vi.fn()} />
       </>,
     )
@@ -76,8 +88,13 @@ describe('task view dialog sections', () => {
     expect(markup).toContain('To Do')
     expect(markup).toContain('High priority')
     expect(markup).toContain('Acme Corp')
+    expect(markup).toContain('Assigned to Alex Kim')
     expect(markup).toContain('Comments')
     expect(markup).toContain('3')
+    expect(markup).toContain('Task summary')
+    expect(markup).toContain('Quick actions')
+    expect(markup).toContain('Mark as complete')
+    expect(markup).toContain('Esc')
     expect(markup).toContain('Close')
     expect(markup).toContain('Edit task')
   })
@@ -104,5 +121,16 @@ describe('task view dialog sections', () => {
     expect(markup).toContain('Brief.pdf')
     expect(markup).toContain('Download')
     expect(markup).toContain('TaskCommentsPanel')
+  })
+
+  it('renders the empty attachments drop zone', () => {
+    const Icon = () => <span>Icon</span>
+    const taskWithoutAttachments = { ...task, attachments: [] }
+    const markup = renderToStaticMarkup(
+      <TaskViewDetailsTab detailItems={[{ ...detailItems[0], icon: Icon }]} task={taskWithoutAttachments} />,
+    )
+
+    expect(markup).toContain('Drag and drop files here')
+    expect(markup).toContain('No attachments on this task.')
   })
 })

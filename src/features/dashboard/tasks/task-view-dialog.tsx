@@ -3,14 +3,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Calendar, Clock4, User } from 'lucide-react'
 
-import type { TaskRecord } from '@/types/tasks'
+import type { TaskRecord, TaskStatus } from '@/types/tasks'
+import { cn } from '@/lib/utils'
 import { Dialog, DialogContent } from '@/shared/ui/dialog'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Tabs } from '@/shared/ui/tabs'
 import {
   formatDate,
-  formatPriorityLabel,
-  formatStatusLabel,
   formatTimeSpent,
   type TaskParticipant,
 } from './task-types'
@@ -20,6 +19,7 @@ import {
   TaskViewDetailsTab,
   TaskViewDialogFooter,
   TaskViewDialogHeader,
+  TaskViewDialogSidebar,
   TaskViewDialogTabsList,
 } from './task-view-dialog-sections'
 
@@ -28,6 +28,8 @@ type TaskViewDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onEdit?: (task: TaskRecord) => void
+  onDelete?: (task: TaskRecord) => void
+  onQuickStatusChange?: (task: TaskRecord, newStatus: TaskStatus) => void
   initialTab?: 'details' | 'comments'
   workspaceId?: string | null
   userId?: string | null
@@ -43,6 +45,8 @@ export function TaskViewDialog({
   open,
   onOpenChange,
   onEdit,
+  onDelete,
+  onQuickStatusChange,
   initialTab = 'details',
   workspaceId = null,
   userId = null,
@@ -102,13 +106,26 @@ export function TaskViewDialog({
     onEdit(task)
   }, [onEdit, onOpenChange, task])
 
-  if (!task) return null
+  const handleDelete = useCallback(() => {
+    if (!task || !onDelete) return
+    onOpenChange(false)
+    onDelete(task)
+  }, [onDelete, onOpenChange, task])
 
-  const summaryParts = [
-    task.assignedTo.length > 0 ? `Assigned to ${task.assignedTo.join(', ')}` : 'Unassigned',
-    `Due ${formatDate(task.dueDate)}`,
-    formatTimeSpent(task.timeSpentMinutes),
-  ].filter(Boolean)
+  const handleQuickStatusChange = useCallback(
+    (newStatus: TaskStatus) => {
+      if (!task || !onQuickStatusChange) return
+      onQuickStatusChange(task, newStatus)
+    },
+    [onQuickStatusChange, task],
+  )
+
+  const handleMarkComplete = useCallback(() => {
+    if (!task || !onQuickStatusChange) return
+    onQuickStatusChange(task, 'completed')
+  }, [onQuickStatusChange, task])
+
+  if (!task) return null
 
   const detailItems: TaskDetailItem[] = [
     {
@@ -120,39 +137,54 @@ export function TaskViewDialog({
     { label: 'Time spent', value: formatTimeSpent(task.timeSpentMinutes), icon: Clock4 },
   ]
 
-  const summary =
-    summaryParts.length > 0
-      ? summaryParts.join(' · ')
-      : `${formatStatusLabel(task.status)} · ${formatPriorityLabel(task.priority)} priority`
+  const showSidebar = activeTab === 'details'
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
+      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
         <TaskViewDialogHeader
           title={task.title}
-          summary={summary}
           status={task.status}
           priority={task.priority}
           client={task.client}
+          assignedTo={task.assignedTo}
+          dueDate={task.dueDate}
+          timeSpentMinutes={task.timeSpentMinutes}
+          onEdit={onEdit ? handleEdit : undefined}
+          onDelete={onDelete ? handleDelete : undefined}
+          onQuickStatusChange={onQuickStatusChange ? handleQuickStatusChange : undefined}
         />
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'details' | 'comments')} className="flex min-h-0 flex-1 flex-col">
-          <div className="border-b border-border/60 px-6 py-3">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as 'details' | 'comments')}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <div className="border-b border-border/60 px-6">
             <TaskViewDialogTabsList commentCount={liveCommentCount} />
           </div>
 
           <ScrollArea className="min-h-0 flex-1">
-            <div className="px-6 py-5">
-              <TaskViewDetailsTab detailItems={detailItems} task={task} />
-              <TaskViewCommentsTab
-                onCommentCountChange={handleCommentCountChange}
-                participants={participants}
-                taskId={task.id}
-                userId={userId}
-                userName={userName}
-                userRole={userRole}
-                workspaceId={workspaceId}
-              />
+            <div className={cn(showSidebar && 'flex min-h-0 flex-col lg:flex-row', !showSidebar && 'px-6 py-5')}>
+              <div className={cn(showSidebar && 'min-w-0 flex-1 px-6 py-5')}>
+                <TaskViewDetailsTab detailItems={detailItems} task={task} />
+                <TaskViewCommentsTab
+                  onCommentCountChange={handleCommentCountChange}
+                  participants={participants}
+                  taskId={task.id}
+                  userId={userId}
+                  userName={userName}
+                  userRole={userRole}
+                  workspaceId={workspaceId}
+                />
+              </div>
+              {showSidebar ? (
+                <TaskViewDialogSidebar
+                  task={task}
+                  onEdit={onEdit ? handleEdit : undefined}
+                  onMarkComplete={onQuickStatusChange ? handleMarkComplete : undefined}
+                />
+              ) : null}
             </div>
           </ScrollArea>
         </Tabs>

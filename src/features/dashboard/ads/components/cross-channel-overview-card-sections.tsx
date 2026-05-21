@@ -87,7 +87,6 @@ export function CrossChannelOverviewHeader({
   onExport,
   onToggleProvider,
   selectedProviders,
-  serverAggregated,
   showDateAndExport = true,
 }: {
   availableProviders: string[]
@@ -98,7 +97,6 @@ export function CrossChannelOverviewHeader({
   onExport: () => void
   onToggleProvider: (providerId: string) => void
   selectedProviders: string[]
-  serverAggregated: boolean
   showDateAndExport?: boolean
 }) {
   return (
@@ -108,7 +106,6 @@ export function CrossChannelOverviewHeader({
           <CardTitle className="text-lg">Cross-channel overview</CardTitle>
           <CardDescription>Key performance indicators from the latest successful sync.</CardDescription>
         </div>
-        {serverAggregated ? <Badge variant="secondary" className="self-start">Server aggregated</Badge> : null}
         <div className="flex flex-wrap items-center gap-2">
           {availableProviders.length > 0 ? (
             <DropdownMenu>
@@ -187,12 +184,14 @@ export function CrossChannelOverviewContent({
   metricsLoading,
   summaryCards,
   hasAggregateChartFallback = false,
+  hasConnectedAds = false,
 }: {
   currency?: string
   metrics: MetricRecord[]
   metricsLoading: boolean
   summaryCards: SummaryCard[]
   hasAggregateChartFallback?: boolean
+  hasConnectedAds?: boolean
 }) {
   return (
     <CardContent className="space-y-6">
@@ -208,6 +207,7 @@ export function CrossChannelOverviewContent({
           currency={currency}
           dataSource="ads"
           hasAggregateData={hasAggregateChartFallback}
+          adsAccountConnected={hasConnectedAds}
         />
       </div>
     </CardContent>

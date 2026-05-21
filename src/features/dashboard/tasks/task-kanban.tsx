@@ -393,6 +393,8 @@ export function TaskKanban({
         userRole={userRole}
         participants={participants}
         onEdit={onEdit}
+        onDelete={onDelete}
+        onQuickStatusChange={onQuickStatusChange}
         onOpenChange={handleViewingTaskDialogOpenChange}
       />
     </div>

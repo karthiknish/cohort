@@ -418,6 +418,7 @@ export default function AdsPage() {
           serverSideSummary={effectiveServerSummary}
           currency={activeCurrency}
           connectedProviderIds={connectedProviderIds}
+          hasConnectedAds={connectedAccountCount > 0}
           hasMetricData={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}

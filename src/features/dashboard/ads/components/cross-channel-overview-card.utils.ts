@@ -6,7 +6,109 @@ import {
 import { normalizeAdsProviderId, type CanonicalAdsProviderId } from '@/domain/ads/provider'
 import { formatCurrency } from '@/lib/utils'
 
-import type { MetricRecord, SummaryCard } from './types'
+import type { MetricRecord, MetricsSummary, SummaryCard, Totals } from './types'
+
+const EMPTY_TOTALS: Totals = {
+  spend: 0,
+  impressions: 0,
+  clicks: 0,
+  conversions: 0,
+  revenue: 0,
+}
+
+export function totalsHaveDeliveryActivity(totals: Totals): boolean {
+  return (
+    totals.spend > 0 ||
+    totals.impressions > 0 ||
+    totals.clicks > 0 ||
+    totals.conversions > 0
+  )
+}
+
+/** Sum server summary to connected (and optionally selected) providers only. */
+export function totalsFromServerSummary(
+  summary: MetricsSummary | null | undefined,
+  connectedIds: CanonicalAdsProviderId[],
+  selectedProviderIds: string[] = [],
+): Totals | null {
+  if (!summary) return null
+
+  const providers = summary.providers ?? {}
+  const providerKeys = Object.keys(providers)
+
+  const selected = new Set(
+    selectedProviderIds.map((id) => normalizeAdsProviderId(id) ?? id),
+  )
+  const connected = new Set(connectedIds)
+
+  const keysToSum = (() => {
+    if (selected.size > 0) {
+      return providerKeys.filter((key) => selected.has(normalizeAdsProviderId(key) ?? key))
+    }
+    if (connected.size > 0) {
+      return providerKeys.filter((key) => {
+        const canonical = normalizeAdsProviderId(key)
+        return canonical !== null && connected.has(canonical)
+      })
+    }
+    return providerKeys
+  })()
+
+  if (keysToSum.length === 0) {
+    if (connected.size === 0 && selected.size === 0 && summary.totals) {
+      return summary.totals
+    }
+    return null
+  }
+
+  return keysToSum.reduce<Totals>((acc, key) => {
+    const row = providers[key]
+    if (!row) return acc
+    acc.spend += Number(row.spend ?? 0)
+    acc.impressions += Number(row.impressions ?? 0)
+    acc.clicks += Number(row.clicks ?? 0)
+    acc.conversions += Number(row.conversions ?? 0)
+    acc.revenue += Number(row.revenue ?? 0)
+    return acc
+  }, { ...EMPTY_TOTALS })
+}
+
+/** Prefer daily rows; fall back to one synthetic row from server summary for KPI cards. */
+export function metricsForOverviewDisplay(
+  dailyMetrics: MetricRecord[],
+  summary: MetricsSummary | null | undefined,
+  connectedIds: CanonicalAdsProviderId[],
+  selectedProviderIds: string[],
+  defaultCurrency?: string | null,
+): MetricRecord[] {
+  if (dailyMetrics.length > 0) {
+    return dailyMetrics
+  }
+
+  const totals = totalsFromServerSummary(summary, connectedIds, selectedProviderIds)
+  if (!totals || !totalsHaveDeliveryActivity(totals)) {
+    return []
+  }
+
+  const providerId =
+    (selectedProviderIds[0] ? normalizeAdsProviderId(selectedProviderIds[0]) : null) ??
+    connectedIds[0] ??
+    'unknown'
+
+  return [
+    {
+      id: 'overview-summary',
+      providerId,
+      date: 'summary',
+      spend: totals.spend,
+      impressions: totals.impressions,
+      clicks: totals.clicks,
+      conversions: totals.conversions,
+      revenue: totals.revenue,
+      currency: defaultCurrency ?? null,
+    },
+  ]
+}
 
 export function buildCanonicalConnectedIds(rawIds: string[]): CanonicalAdsProviderId[] {
   const ids = rawIds
@@ -98,7 +200,11 @@ export function buildCrossChannelSummaryCards(
       id: 'spend',
       label: 'Total Spend',
       value: spend > 0 ? fmtMoney(spend) : hasData ? fmtMoney(0) : '—',
-      helper: hasData ? 'Connected platforms in this date range' : 'Connect a platform to populate',
+      helper: hasData
+        ? metrics.length > 1 || metrics[0]?.date !== 'summary'
+          ? 'Connected platforms in this date range'
+          : 'Totals from your latest sync — run sync again for daily trends'
+        : 'Connect a platform to populate',
     },
     {
       id: 'impressions',

@@ -127,6 +127,8 @@ export function TaskList({
         onOpenChange={handleTaskViewDialogOpenChange}
         task={viewingTask}
         onEdit={onEdit}
+        onDelete={onDelete}
+        onQuickStatusChange={onQuickStatusChange}
         workspaceId={workspaceId}
         userId={userId}
         userName={userName}

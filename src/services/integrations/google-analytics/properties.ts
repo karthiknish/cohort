@@ -1,8 +1,14 @@
+import { fetchGoogleAnalyticsPropertyCurrency } from './property-currency'
+
 export type GoogleAnalyticsPropertyOption = {
   id: string
   name: string
   resourceName: string
+  /** ISO 4217 reporting currency when resolved from the Admin API. */
+  currencyCode?: string | null
 }
+
+export { fetchGoogleAnalyticsPropertyCurrency, normalizeGoogleAnalyticsCurrencyCode } from './property-currency'
 
 type GoogleAnalyticsAccountSummariesResponse = {
   accountSummaries?: Array<{

@@ -60,16 +60,22 @@ export function buildAnalyticsMoneyDisplay(
     toFinancialRows(metrics, options?.integrationCurrency),
   )
 
+  const integrationCurrency =
+    typeof options?.integrationCurrency === 'string' && options.integrationCurrency.trim().length > 0
+      ? options.integrationCurrency.trim().toUpperCase()
+      : null
+
   if (
     !isFinancialComparable(financialTotals.comparability) &&
     financialTotals.comparability === 'unknown_currency' &&
     metrics.some((row) => (row.revenue ?? 0) > 0 || (row.spend ?? 0) > 0)
   ) {
+    const fallbackCurrency = integrationCurrency ?? preferenceCurrency
     const preferenceTotals = aggregateMetricFinancials(
       metrics.map((row) => ({
         spend: Number(row.spend ?? 0),
         revenue: row.revenue ?? 0,
-        currency: preferenceCurrency,
+        currency: fallbackCurrency,
         impressions: 0,
         clicks: 0,
         conversions: 0,

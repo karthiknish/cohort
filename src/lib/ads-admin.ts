@@ -405,6 +405,8 @@ export async function writeMetricsBatch(options: {
                 clicks: metric.clicks,
                 conversions: metric.conversions,
                 revenue: metric.revenue ?? null,
+                currency: metric.currency ?? null,
+                currencySource: metric.currencySource ?? null,
                 campaignId: metric.campaignId,
                 campaignName: metric.campaignName,
                 creatives: metric.creatives,

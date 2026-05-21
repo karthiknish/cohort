@@ -25,6 +25,16 @@ describe('buildAnalyticsMoneyDisplay', () => {
     expect(display.totalRevenue).toBe(750)
   })
 
+  it('prefers GA property currency over workspace USD preference when rows lack currency', () => {
+    const display = buildAnalyticsMoneyDisplay(
+      [{ revenue: 100 }],
+      { integrationCurrency: 'GBP', preferenceCurrency: 'USD' },
+    )
+
+    expect(display.displayCurrency).toBe('GBP')
+    expect(display.formatRevenue(100)).toContain('£')
+  })
+
   it('returns multi-currency label when rows conflict', () => {
     const display = buildAnalyticsMoneyDisplay([
       { revenue: 100, currency: 'USD' },

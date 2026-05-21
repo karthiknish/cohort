@@ -7,7 +7,11 @@ import {
 } from '@/lib/integration-token-refresh'
 import { logger } from '@/lib/logger'
 import type { NormalizedMetric } from '@/types/integrations'
-import { fetchGoogleAnalyticsProperties } from '@/services/integrations/google-analytics/properties'
+import {
+  fetchGoogleAnalyticsProperties,
+  fetchGoogleAnalyticsPropertyCurrency,
+} from '@/services/integrations/google-analytics/properties'
+import { updateGoogleAnalyticsCredentials } from '@/lib/analytics-admin'
 
 function formatGaDate(raw: string): string {
   if (!raw || raw.length !== 8) return raw
@@ -137,6 +141,22 @@ export async function syncGoogleAnalyticsMetrics(options: {
     )
   }
 
+  let reportingCurrency =
+    typeof integration.currency === 'string' && integration.currency.trim().length > 0
+      ? integration.currency.trim().toUpperCase()
+      : null
+
+  if (!reportingCurrency) {
+    reportingCurrency = await fetchGoogleAnalyticsPropertyCurrency({ accessToken, propertyId })
+    if (reportingCurrency) {
+      await updateGoogleAnalyticsCredentials({
+        userId: options.userId,
+        clientId: normalizedClientId,
+        currency: reportingCurrency,
+      })
+    }
+  }
+
   const reportRows = await runGaReport({
     accessToken,
     propertyId,
@@ -153,6 +173,8 @@ export async function syncGoogleAnalyticsMetrics(options: {
     clicks: row.sessions,
     conversions: row.conversions,
     revenue: row.totalRevenue,
+    currency: reportingCurrency,
+    currencySource: reportingCurrency ? 'integration' : 'unknown',
   }))
 
   await writeMetricsBatch({

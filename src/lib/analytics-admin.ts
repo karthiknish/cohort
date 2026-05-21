@@ -80,6 +80,7 @@ export async function updateGoogleAnalyticsCredentials(options: {
   refreshTokenExpiresAt?: TimestampInput
   accountId?: string | null
   accountName?: string | null
+  currency?: string | null
 }): Promise<void> {
   const workspaceId = await resolveWorkspaceIdForUser(options.userId)
   const convex = getConvexClientForUser(options.userId)
@@ -94,6 +95,7 @@ export async function updateGoogleAnalyticsCredentials(options: {
     refreshTokenExpiresAtMs: options.refreshTokenExpiresAt === undefined ? undefined : toMillis(options.refreshTokenExpiresAt),
     accountId: options.accountId,
     accountName: options.accountName,
+    currency: options.currency,
   })
 }
 

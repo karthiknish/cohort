@@ -25,7 +25,9 @@ export const initializeGoogleAnalyticsProperty = action({
       clientId,
     })
     if (!integration?.accessToken) throw Errors.integration.missingToken('Google Analytics')
-    const { fetchGoogleAnalyticsProperties } = await import('@/services/integrations/google-analytics/properties')
+    const { fetchGoogleAnalyticsProperties, fetchGoogleAnalyticsPropertyCurrency } = await import(
+      '@/services/integrations/google-analytics/properties',
+    )
     const properties = await fetchGoogleAnalyticsProperties({ accessToken: integration.accessToken })
     if (!properties.length) {
       throw Errors.integration.notConfigured('Google Analytics', 'No Google Analytics properties available')
@@ -38,11 +40,17 @@ export const initializeGoogleAnalyticsProperty = action({
     if (!selectedProperty) {
       throw Errors.validation.invalidInput('Selected Google Analytics property is not available for this integration token')
     }
+    const currencyCode = await fetchGoogleAnalyticsPropertyCurrency({
+      accessToken: integration.accessToken,
+      propertyId: selectedProperty.id,
+    })
+
     await ctx.runMutation(internal.analyticsIntegrations.updateGoogleAnalyticsCredentialsInternal, {
       workspaceId: args.workspaceId,
       clientId,
       accountId: selectedProperty.id,
       accountName: selectedProperty.name,
+      currency: currencyCode,
       linkedAtMs: integration.linkedAtMs ?? nowMs(),
     })
     await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {

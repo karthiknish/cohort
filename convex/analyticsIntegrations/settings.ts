@@ -109,6 +109,7 @@ export const updateGoogleAnalyticsCredentialsInternal = internalMutation({
     refreshTokenExpiresAtMs: v.optional(v.union(v.number(), v.null())),
     accountId: v.optional(v.union(v.string(), v.null())),
     accountName: v.optional(v.union(v.string(), v.null())),
+    currency: v.optional(v.union(v.string(), v.null())),
     linkedAtMs: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
@@ -126,6 +127,11 @@ export const updateGoogleAnalyticsCredentialsInternal = internalMutation({
     if (hasOwn(args, 'idToken')) payload.idToken = args.idToken ?? null
     if (hasOwn(args, 'accountId')) payload.accountId = args.accountId ?? null
     if (hasOwn(args, 'accountName')) payload.accountName = args.accountName ?? null
+    if (hasOwn(args, 'currency')) {
+      const raw = args.currency
+      payload.currency =
+        typeof raw === 'string' && raw.trim().length > 0 ? raw.trim().toUpperCase() : null
+    }
     if (hasOwn(args, 'accessTokenExpiresAtMs')) payload.accessTokenExpiresAtMs = args.accessTokenExpiresAtMs ?? null
     if (hasOwn(args, 'refreshTokenExpiresAtMs')) payload.refreshTokenExpiresAtMs = args.refreshTokenExpiresAtMs ?? null
     if (current) await ctx.db.patch(current._id, payload)

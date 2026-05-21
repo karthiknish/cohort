@@ -4,9 +4,28 @@ import { useMemo } from 'react'
 import { Lightbulb } from 'lucide-react'
 
 import type { FunnelAnalysis } from '@/lib/ad-algorithms'
-import { cn } from '@/lib/utils'
 
 import { InsightsProportionalFunnel } from './insights-proportional-funnel'
+
+const funnelMetricPillClass =
+  'inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs tabular-nums text-muted-foreground shadow-sm'
+
+const funnelBottleneckPillClass =
+  'inline-flex items-center rounded-full border border-warning/45 bg-warning/15 px-2.5 py-1 text-xs font-medium text-warning'
+
+function FunnelMetricPill({
+  label,
+  value,
+}: {
+  label: string
+  value: string
+}) {
+  return (
+    <span className={funnelMetricPillClass}>
+      {label} <strong className="font-semibold text-foreground">{value}</strong>
+    </span>
+  )
+}
 import { AdsChartShell } from './ads-chart-primitives'
 import { InsightsPanelEmpty } from './insights-charts-card-sections'
 
@@ -84,34 +103,20 @@ export function InsightsFunnelPanel({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap gap-2">
-        {ctr !== null ? (
-          <span className="rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs tabular-nums">
-            CTR <strong className="font-semibold text-foreground">{ctr.toFixed(2)}%</strong>
-          </span>
-        ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        {ctr !== null ? <FunnelMetricPill label="CTR" value={`${ctr.toFixed(2)}%`} /> : null}
         {convRate !== null ? (
-          <span className="rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs tabular-nums">
-            Conv. rate{' '}
-            <strong className="font-semibold text-foreground">{convRate.toFixed(2)}%</strong>
-          </span>
+          <FunnelMetricPill label="Conv. rate" value={`${convRate.toFixed(2)}%`} />
         ) : null}
         {analysis?.overallConversionRate !== undefined ? (
-          <span className="rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs tabular-nums">
-            End-to-end{' '}
-            <strong className="font-semibold text-foreground">
-              {analysis.overallConversionRate.toFixed(3)}%
-            </strong>
-          </span>
+          <FunnelMetricPill
+            label="End-to-end"
+            value={`${analysis.overallConversionRate.toFixed(3)}%`}
+          />
         ) : null}
         {analysis?.bottleneckStage ? (
-          <span
-            className={cn(
-              'rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs',
-              'text-amber-800 dark:text-amber-200',
-            )}
-          >
-            Bottleneck: {analysis.bottleneckStage}
+          <span className={funnelBottleneckPillClass}>
+            Bottleneck: <span className="font-semibold">{analysis.bottleneckStage}</span>
           </span>
         ) : null}
       </div>

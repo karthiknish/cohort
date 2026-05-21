@@ -37,11 +37,10 @@ const DATE_RANGE = { from: '2024-01-01', to: '2024-01-31' }
 describe('cross channel overview card sections', () => {
   it('renders the header controls and filter chips', () => {
     const markup = renderToStaticMarkup(
-      <CrossChannelOverviewHeader availableProviders={['google']} dateRange={DATE_RANGE} hasMetricData={true} hasProviderFilter={true} onDateRangeChange={vi.fn()} onExport={vi.fn()} onToggleProvider={vi.fn()} selectedProviders={['google']} serverAggregated={true} />,
+      <CrossChannelOverviewHeader availableProviders={['google']} dateRange={DATE_RANGE} hasMetricData={true} hasProviderFilter={true} onDateRangeChange={vi.fn()} onExport={vi.fn()} onToggleProvider={vi.fn()} selectedProviders={['google']} />,
     )
 
     expect(markup).toContain('Cross-channel overview')
-    expect(markup).toContain('Server aggregated')
     expect(markup).toContain('Filter by Provider')
     expect(markup).toContain('Google')
     expect(markup).toContain('Showing:')

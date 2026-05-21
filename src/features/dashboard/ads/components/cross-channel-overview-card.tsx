@@ -2,8 +2,6 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { Card } from '@/shared/ui/card'
-import { aggregateMetricFinancials } from '@/domain/ads/aggregate-financials'
-
 import type { MetricRecord, MetricsSummary } from './types'
 import type { DateRange } from './date-range-picker'
 
@@ -18,7 +16,9 @@ import {
   buildCrossChannelSummaryCards,
   filterMetricsByProviders,
   filterMetricsToConnected,
-  metricRowsForAggregation,
+  metricsForOverviewDisplay,
+  totalsFromServerSummary,
+  totalsHaveDeliveryActivity,
 } from './cross-channel-overview-card.utils'
 
 interface CrossChannelOverviewCardProps {
@@ -35,6 +35,8 @@ interface CrossChannelOverviewCardProps {
   onExport: () => void
   /** When false, date range and export live in the page header instead of this card. */
   showDateAndExport?: boolean
+  /** At least one ad platform is linked (used for chart empty-state copy). */
+  hasConnectedAds?: boolean
 }
 
 export function CrossChannelOverviewCard({
@@ -49,6 +51,7 @@ export function CrossChannelOverviewCard({
   onDateRangeChange,
   onExport,
   showDateAndExport = true,
+  hasConnectedAds = false,
 }: CrossChannelOverviewCardProps) {
   const [selectedProviders, setSelectedProviders] = useState<string[]>([])
 
@@ -77,9 +80,21 @@ export function CrossChannelOverviewCard({
     [scopedMetrics, selectedProviders],
   )
 
+  const overviewMetrics = useMemo(
+    () =>
+      metricsForOverviewDisplay(
+        filteredMetrics,
+        serverSideSummary,
+        canonicalConnected,
+        selectedProviders,
+        currency,
+      ),
+    [canonicalConnected, currency, filteredMetrics, selectedProviders, serverSideSummary],
+  )
+
   const { cards: summaryCards, chartCurrency } = useMemo(
-    () => buildCrossChannelSummaryCards(filteredMetrics),
-    [filteredMetrics],
+    () => buildCrossChannelSummaryCards(overviewMetrics),
+    [overviewMetrics],
   )
 
   const displayCurrency = chartCurrency ?? currency
@@ -98,15 +113,9 @@ export function CrossChannelOverviewCard({
     if (filteredMetrics.length > 0) {
       return false
     }
-    const aggregate = aggregateMetricFinancials(metricRowsForAggregation(filteredMetrics))
-    const delivery = aggregate.deliveryTotals
-    const financial = aggregate.financialTotals
-    return (
-      delivery.impressions > 0 ||
-      delivery.clicks > 0 ||
-      (financial.spend ?? 0) > 0
-    )
-  }, [filteredMetrics])
+    const totals = totalsFromServerSummary(serverSideSummary, canonicalConnected, selectedProviders)
+    return totals !== null && totalsHaveDeliveryActivity(totals)
+  }, [canonicalConnected, filteredMetrics.length, selectedProviders, serverSideSummary])
 
   return (
     <Card className="shadow-sm">
@@ -119,12 +128,11 @@ export function CrossChannelOverviewCard({
         onExport={onExport}
         onToggleProvider={toggleProvider}
         selectedProviders={selectedProviders}
-        serverAggregated={Boolean(serverSideSummary)}
         showDateAndExport={showDateAndExport}
       />
       {initialMetricsLoading ? (
         <CrossChannelOverviewLoadingState />
-      ) : !hasMetricData ? (
+      ) : !hasMetricData && !hasConnectedAds ? (
         <CrossChannelOverviewEmptyState />
       ) : (
         <CrossChannelOverviewContent
@@ -133,6 +141,7 @@ export function CrossChannelOverviewCard({
           metricsLoading={metricsLoading}
           summaryCards={summaryCards}
           hasAggregateChartFallback={hasAggregateChartFallback}
+          hasConnectedAds={hasConnectedAds}
         />
       )}
     </Card>
