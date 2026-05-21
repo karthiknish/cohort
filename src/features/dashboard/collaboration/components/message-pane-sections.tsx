@@ -209,7 +209,7 @@ export function CollaborationMessageItem({
   )
 
   const bubbleClass = cn(
-    'relative min-w-0 flex-1 flex flex-col space-y-1.5 rounded-2xl p-4 motion-chromatic',
+    'relative min-w-0 max-w-full flex-1 overflow-hidden flex flex-col space-y-1.5 rounded-2xl p-4 motion-chromatic',
     isReply ? 'border border-muted/30 bg-muted/10' : 'border border-transparent bg-muted/5 group-hover:border-muted/20 group-hover:bg-muted/10',
     (isSearchResult || isReply) && 'shadow-sm',
   )

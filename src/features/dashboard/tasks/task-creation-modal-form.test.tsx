@@ -30,10 +30,10 @@ describe('TaskCreationModalFormFields', () => {
       />,
     )
 
-    expect(markup).toContain('Task Title *')
+    expect(markup).toContain('Title')
     expect(markup).toContain('Plan launch retro')
     expect(markup).toContain('Acme Corp')
-    expect(markup).toContain('2 user(s)')
-    expect(markup).toContain('Create Task')
+    expect(markup).toContain('2 teammates')
+    expect(markup).toContain('Create task')
   })
 })

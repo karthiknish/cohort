@@ -15,6 +15,8 @@ import {
 } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
+import { CHAT_MESSAGE_BODY_CLASS } from '../lib/chat-text'
+
 import type { UnifiedMessage } from './message-list'
 
 export type MessageListRenderers = {
@@ -243,7 +245,7 @@ export function ChannelMessageCard({
       data-message-id={message.id}
       data-thread-root-id={message.threadRootId ?? message.id}
       className={cn(
-        'group relative flex items-start gap-3 px-6 py-2.5',
+        'group relative flex max-w-full items-start gap-3 overflow-hidden px-6 py-2.5',
         listRowEnterAnimationClass,
         chromaticTransitionClass,
         !message.deleted && 'hover:bg-muted/5',
@@ -272,7 +274,11 @@ export function ChannelMessageCard({
           renderers.renderDeletedInfo ? renderers.renderDeletedInfo(message) : <p className="text-sm italic text-muted-foreground">Message removed</p>
         ) : (
           <>
-            {renderers.renderMessageContent ? renderers.renderMessageContent(message) : <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>}
+            {renderers.renderMessageContent ? (
+              <div className={CHAT_MESSAGE_BODY_CLASS}>{renderers.renderMessageContent(message)}</div>
+            ) : (
+              <p className={cn(CHAT_MESSAGE_BODY_CLASS, 'whitespace-pre-wrap text-sm')}>{message.content}</p>
+            )}
             {renderers.renderMessageAttachments?.(message)}
           </>
         )}
@@ -339,7 +345,11 @@ export function DirectMessageCard({
     <div
       data-message-id={message.id}
       data-thread-root-id={message.threadRootId ?? message.id}
-      className={cn('group relative flex gap-2', listRowEnterAnimationClass, isOwn && 'justify-end')}
+      className={cn(
+        'group relative flex max-w-full gap-2 overflow-hidden',
+        listRowEnterAnimationClass,
+        isOwn && 'justify-end',
+      )}
     >
       {showAvatars && !isOwn ? (
         <Avatar className="h-8 w-8 shrink-0">
@@ -347,10 +357,10 @@ export function DirectMessageCard({
         </Avatar>
       ) : null}
 
-      <div className={cn('flex max-w-[70%] flex-col', isOwn && 'items-end')}>
+      <div className={cn('flex min-w-0 max-w-[min(70%,100%)] flex-col', isOwn && 'items-end')}>
         <div
           className={cn(
-            'rounded-lg px-3 py-2',
+            'max-w-full min-w-0 overflow-hidden rounded-lg px-3 py-2',
             chromaticTransitionClass,
             message.deleted
               ? 'border border-dashed border-muted/60 bg-background/70 text-muted-foreground'
@@ -364,9 +374,9 @@ export function DirectMessageCard({
           ) : message.deleted ? (
             renderers.renderDeletedInfo ? renderers.renderDeletedInfo(message) : <p className="text-sm italic text-muted-foreground">Message removed</p>
           ) : renderers.renderMessageContent ? (
-            renderers.renderMessageContent(message)
+            <div className={CHAT_MESSAGE_BODY_CLASS}>{renderers.renderMessageContent(message)}</div>
           ) : (
-            <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
+            <p className={cn(CHAT_MESSAGE_BODY_CLASS, 'whitespace-pre-wrap text-sm')}>{message.content}</p>
           )}
         </div>
 

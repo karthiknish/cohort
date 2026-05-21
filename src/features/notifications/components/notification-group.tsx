@@ -33,8 +33,8 @@ export function NotificationGroupList({
           <h3
             className={
               compact
-                ? 'sticky top-0 z-10 border-b border-border/50 bg-popover/95 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur-sm'
-                : 'px-1 pb-2 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground'
+                ? 'sticky top-0 z-10 border-b border-border/50 bg-popover/95 px-3.5 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm'
+                : 'px-1 pb-2 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground'
             }
           >
             {group.label}

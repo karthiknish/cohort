@@ -46,15 +46,16 @@ describe('task form sheet sections', () => {
         titlePlaceholder="e.g. Prepare Q4 campaign brief"
         clientPlaceholder="Select a client from the dashboard"
         projectPlaceholder="Open tasks from a project to link them automatically"
-        clientHelpText="Switch clients from the main dashboard to change this assignment."
-        projectHelpText="Start from a project workspace or filtered project task view to attach tasks here."
+        clientHelpText="Switch clients in the header to change assignment."
+        projectHelpText="Start from a project view to attach tasks here."
         dueDateLayout="compact"
       />,
     )
 
     expect(markup).toContain('Draft campaign brief')
     expect(markup).toContain('Mention input')
-    expect(markup).toContain('Switch clients from the main dashboard')
+    expect(markup).toContain('Essentials')
+    expect(markup).toContain('Switch clients in the header')
     expect(markup).toContain('Pick a date')
   })
 
@@ -69,7 +70,7 @@ describe('task form sheet sections', () => {
       />,
     )
 
-    expect(markup).toContain('Attach files')
-    expect(markup).toContain('Add up to 10 files')
+    expect(markup).toContain('Attach')
+    expect(markup).toContain('Up to 10 files')
   })
 })

@@ -2,16 +2,13 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { useCallback, useRef, useState, useTransition } from 'react'
-import { MessageSquare } from 'lucide-react'
+import { ListTodo } from 'lucide-react'
 import { format } from 'date-fns'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { getIconContainerClasses } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
+import { TASKS_THEME } from './tasks-theme'
 import { useSmartDefaults } from '@/shared/hooks/use-smart-defaults'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
@@ -240,22 +237,26 @@ export function TaskCreationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Create Task
-          </DialogTitle>
-          <DialogDescription>
-            {contextInfo.isAutoPopulated && (
-              <span className="text-xs text-success">
-                Auto-populated from current context
-              </span>
-            )}
-          </DialogDescription>
+      <DialogContent className={TASKS_THEME.dialog.content}>
+        <DialogHeader className={TASKS_THEME.dialog.header}>
+          <div className="flex items-start gap-3">
+            <div className={cn(getIconContainerClasses('medium'), 'h-10 w-10 shrink-0')}>
+              <ListTodo className="h-5 w-5" aria-hidden />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <DialogTitle className="text-left text-lg">Create task</DialogTitle>
+              <DialogDescription className="text-left text-sm">
+                {contextInfo.isAutoPopulated ? (
+                  <span className="text-success">Pre-filled from your current workspace context.</span>
+                ) : (
+                  'Add a task without leaving this screen.'
+                )}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className={TASKS_THEME.dialog.body}>
           <TaskCreationModalFormFields
             title={formData.title}
             description={formData.description}

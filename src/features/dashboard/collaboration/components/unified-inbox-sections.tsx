@@ -22,7 +22,14 @@ import type { CollaborationAttachment, CollaborationMessage } from '@/types/coll
 import type { DirectConversation, DirectMessage } from '../hooks/use-direct-messages'
 import type { PendingAttachment, ReactionPendingState, SendMessageOptions, ThreadCursorsState, ThreadErrorsState, ThreadLoadingState, ThreadMessagesState } from '../hooks/types'
 import type { Channel } from '../types'
-import { buildCollaborationChannelShareUrl, CHANNEL_TYPE_COLORS, formatRelativeTime } from '../utils'
+import {
+  buildCollaborationChannelShareUrl,
+  CHANNEL_TYPE_COLORS,
+  CHAT_CONVERSATION_ROW_CLASS,
+  CHAT_LIST_PREVIEW_CLASS,
+  formatConversationSnippet,
+  formatRelativeTime,
+} from '../utils'
 import { collaborationToUnifiedMessage } from './message-list'
 import { MessagesErrorState } from './message-pane-parts'
 import { UnifiedMessagePane } from './unified-message-pane'
@@ -219,7 +226,7 @@ export function ConversationListPane({
         </Tabs>
       </div>
 
-      <ScrollArea className="min-h-0 w-full flex-1">
+      <ScrollArea className="min-h-0 w-full max-w-full flex-1 overflow-x-hidden">
         {isLoading ? (
           <div
             className="space-y-3 p-4"
@@ -266,7 +273,8 @@ export function ConversationListPane({
                   type="button"
                   onClick={createSelectItemHandler(item)}
                   className={cn(
-                    'cv-scroll-item-compact flex w-full items-center gap-3 rounded-xl p-3 text-left',
+                    CHAT_CONVERSATION_ROW_CLASS,
+                    'cv-scroll-item-compact',
                     chromaticTransitionClass,
                     'hover:bg-muted/60',
                     selected && 'border border-accent/25 bg-accent/8 shadow-sm ring-1 ring-primary/10',
@@ -302,7 +310,11 @@ export function ConversationListPane({
                           {item.metadata.otherParticipantRole}
                         </Badge>
                       ) : null}
-                      <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{item.lastMessageSnippet || 'No messages yet'}</p>
+                      <p className={CHAT_LIST_PREVIEW_CLASS} title={item.lastMessageSnippet ?? undefined}>
+                        {item.lastMessageSnippet
+                          ? formatConversationSnippet(item.lastMessageSnippet)
+                          : 'No messages yet'}
+                      </p>
                     </div>
                   </div>
 

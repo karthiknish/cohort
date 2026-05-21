@@ -392,9 +392,9 @@ export function MessageList({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="min-h-0 flex-1 overflow-y-auto"
+        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
       >
-        <div className={cn('p-4', isChannel && 'space-y-4')}>
+        <div className={cn('min-w-0 max-w-full p-4', isChannel && 'space-y-4')}>
           {hasMore && (
             <MessageListLoadMoreButton disabled={isLoading} isLoading={isLoading} onLoadMore={requestLoadOlder} />
           )}

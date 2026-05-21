@@ -9,7 +9,6 @@ import { PendingAttachmentsList } from '@/features/dashboard/collaboration/compo
 import { Button } from '@/shared/ui/button'
 import { Calendar } from '@/shared/ui/calendar'
 import { Input } from '@/shared/ui/input'
-import { Label } from '@/shared/ui/label'
 import { MentionInput } from '@/shared/ui/mention-input'
 import {
   Popover,
@@ -28,7 +27,19 @@ import { cn } from '@/lib/utils'
 import type { PendingTaskAttachment } from '@/services/task-attachments'
 import type { TaskPriority, TaskStatus } from '@/types/tasks'
 
-import { isTaskDueDateDisabled, type TaskFormState } from './task-types'
+import {
+  TaskContextChip,
+  TaskFormField,
+  TaskFormSection,
+} from './task-modal-primitives'
+import { TASKS_THEME } from './tasks-theme'
+import {
+  formatPriorityLabel,
+  formatStatusLabel,
+  isTaskDueDateDisabled,
+  priorityAccentColors,
+  type TaskFormState,
+} from './task-types'
 
 type MentionableUsers = Array<{ id: string; name: string; role?: string }>
 
@@ -52,6 +63,19 @@ type TaskSheetFieldsProps = {
   clientHelpText?: string
   projectHelpText?: string
   dueDateLayout?: 'compact' | 'full'
+  showStatus?: boolean
+}
+
+function PrioritySelectItem({ value }: { value: TaskPriority }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span
+        className={cn('h-2 w-2 shrink-0 rounded-full', priorityAccentColors[value])}
+        aria-hidden
+      />
+      {formatPriorityLabel(value)}
+    </span>
+  )
 }
 
 export function TaskSheetFields({
@@ -66,6 +90,7 @@ export function TaskSheetFields({
   clientHelpText,
   projectHelpText,
   dueDateLayout = 'full',
+  showStatus = true,
 }: TaskSheetFieldsProps) {
   const handleDueDateSelect = useCallback(
     (date: Date | undefined) => {
@@ -74,24 +99,60 @@ export function TaskSheetFields({
         dueDate: date ? format(date, 'yyyy-MM-dd') : '',
       }))
     },
-    [setFormState]
+    [setFormState],
+  )
+
+  const handleTitleChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setFormState((prev) => ({ ...prev, title: event.target.value }))
+    },
+    [setFormState],
+  )
+
+  const handleDescriptionChange = useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setFormState((prev) => ({ ...prev, description: event.target.value }))
+    },
+    [setFormState],
+  )
+
+  const handleStatusChange = useCallback(
+    (value: string) => {
+      setFormState((prev) => ({ ...prev, status: value as TaskStatus }))
+    },
+    [setFormState],
+  )
+
+  const handlePriorityChange = useCallback(
+    (value: string) => {
+      setFormState((prev) => ({ ...prev, priority: value as TaskPriority }))
+    },
+    [setFormState],
+  )
+
+  const handleAssignedToChange = useCallback(
+    (value: string) => {
+      setFormState((prev) => ({ ...prev, assignedTo: value }))
+    },
+    [setFormState],
   )
 
   const dueDateField = (
-    <div className="space-y-2">
-      <Label htmlFor={ids.dueDate}>Due date</Label>
+    <TaskFormField id={ids.dueDate} label="Due date">
       <Popover>
         <PopoverTrigger asChild>
           <Button
             id={ids.dueDate}
+            type="button"
             variant="outline"
             className={cn(
+              TASKS_THEME.selectTrigger,
               'w-full justify-start text-left font-normal',
-              !formState.dueDate && 'text-muted-foreground'
+              !formState.dueDate && 'text-muted-foreground',
             )}
             disabled={disabled}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
+            <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
             {formState.dueDate ? format(parseISO(formState.dueDate), 'PPP') : <span>Pick a date</span>}
           </Button>
         </PopoverTrigger>
@@ -105,149 +166,115 @@ export function TaskSheetFields({
           />
         </PopoverContent>
       </Popover>
-    </div>
-  )
-
-  const handleTitleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setFormState((prev) => ({ ...prev, title: event.target.value }))
-    },
-    [setFormState]
-  )
-
-  const handleDescriptionChange = useCallback(
-    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setFormState((prev) => ({ ...prev, description: event.target.value }))
-    },
-    [setFormState]
-  )
-
-  const handleStatusChange = useCallback(
-    (value: string) => {
-      setFormState((prev) => ({ ...prev, status: value as TaskStatus }))
-    },
-    [setFormState]
-  )
-
-  const handlePriorityChange = useCallback(
-    (value: string) => {
-      setFormState((prev) => ({ ...prev, priority: value as TaskPriority }))
-    },
-    [setFormState]
-  )
-
-  const handleAssignedToChange = useCallback(
-    (value: string) => {
-      setFormState((prev) => ({ ...prev, assignedTo: value }))
-    },
-    [setFormState]
+    </TaskFormField>
   )
 
   return (
     <>
-      <div className="space-y-2">
-        <Label htmlFor={ids.title}>Title</Label>
-        <Input
-          id={ids.title}
-          value={formState.title}
-          onChange={handleTitleChange}
-          placeholder={titlePlaceholder}
-          required
-          disabled={disabled}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor={ids.description}>Description</Label>
-        <Textarea
-          id={ids.description}
-          value={formState.description}
-          onChange={handleDescriptionChange}
-          placeholder="Add context, goals, or next steps"
-          rows={4}
-          disabled={disabled}
-        />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor={ids.status}>Status</Label>
-          <Select
-            value={formState.status}
-            onValueChange={handleStatusChange}
-            disabled={disabled}
-          >
-            <SelectTrigger id={ids.status}>
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todo">To do</SelectItem>
-              <SelectItem value="in-progress">In progress</SelectItem>
-              <SelectItem value="review">Review</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor={ids.priority}>Priority</Label>
-          <Select
-            value={formState.priority}
-            onValueChange={handlePriorityChange}
-            disabled={disabled}
-          >
-            <SelectTrigger id={ids.priority}>
-              <SelectValue placeholder="Select priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Assigned to</Label>
-        <MentionInput
-          value={formState.assignedTo}
-          onChange={handleAssignedToChange}
-          users={mentionableUsers}
-          placeholder="Type @ to assign teammates or admins"
-          disabled={disabled}
-          allowMultiple
-        />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor={ids.client}>Client</Label>
+      <TaskFormSection title="Essentials">
+        <TaskFormField id={ids.title} label="Title" required>
           <Input
-            id={ids.client}
-            value={formState.clientName}
-            placeholder={clientPlaceholder}
-            readOnly
-            disabled
+            id={ids.title}
+            value={formState.title}
+            onChange={handleTitleChange}
+            placeholder={titlePlaceholder}
+            required
+            disabled={disabled}
+            className={TASKS_THEME.input}
           />
-          {clientHelpText ? <p className="text-xs text-muted-foreground">{clientHelpText}</p> : null}
+        </TaskFormField>
+
+        <TaskFormField id={ids.description} label="Description">
+          <Textarea
+            id={ids.description}
+            value={formState.description}
+            onChange={handleDescriptionChange}
+            placeholder="Add context, goals, or next steps"
+            rows={4}
+            disabled={disabled}
+            className={TASKS_THEME.textarea}
+          />
+        </TaskFormField>
+      </TaskFormSection>
+
+      <TaskFormSection title="Workflow">
+        <div className="grid gap-3.5 sm:grid-cols-2">
+          {showStatus ? (
+            <TaskFormField id={ids.status} label="Status">
+              <Select value={formState.status} onValueChange={handleStatusChange} disabled={disabled}>
+                <SelectTrigger id={ids.status} className={TASKS_THEME.selectTrigger}>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">{formatStatusLabel('todo')}</SelectItem>
+                  <SelectItem value="in-progress">{formatStatusLabel('in-progress')}</SelectItem>
+                  <SelectItem value="review">{formatStatusLabel('review')}</SelectItem>
+                  <SelectItem value="completed">{formatStatusLabel('completed')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </TaskFormField>
+          ) : null}
+
+          <TaskFormField id={ids.priority} label="Priority">
+            <Select value={formState.priority} onValueChange={handlePriorityChange} disabled={disabled}>
+              <SelectTrigger id={ids.priority} className={TASKS_THEME.selectTrigger}>
+                <SelectValue placeholder="Select priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">
+                  <PrioritySelectItem value="low" />
+                </SelectItem>
+                <SelectItem value="medium">
+                  <PrioritySelectItem value="medium" />
+                </SelectItem>
+                <SelectItem value="high">
+                  <PrioritySelectItem value="high" />
+                </SelectItem>
+                <SelectItem value="urgent">
+                  <PrioritySelectItem value="urgent" />
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </TaskFormField>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor={ids.project}>Project</Label>
-          <Input
-            id={ids.project}
-            value={formState.projectName}
-            placeholder={projectPlaceholder}
-            readOnly
-            disabled
+        <TaskFormField label="Assigned to">
+          <MentionInput
+            value={formState.assignedTo}
+            onChange={handleAssignedToChange}
+            users={mentionableUsers}
+            placeholder="Type @ to assign teammates"
+            disabled={disabled}
+            allowMultiple
           />
-          {projectHelpText ? <p className="text-xs text-muted-foreground">{projectHelpText}</p> : null}
-        </div>
-      </div>
+        </TaskFormField>
 
-      {dueDateLayout === 'compact' ? <div className="grid gap-4 sm:grid-cols-2">{dueDateField}</div> : dueDateField}
+        {dueDateLayout === 'compact' ? (
+          <div className="grid gap-3.5 sm:grid-cols-2">{dueDateField}</div>
+        ) : (
+          dueDateField
+        )}
+      </TaskFormSection>
+
+      <TaskFormSection title="Context">
+        <div className="grid gap-3.5 sm:grid-cols-2">
+          <TaskFormField id={ids.client} label="Client" hint={clientHelpText}>
+            <TaskContextChip>
+              <span className={cn(!formState.clientName && 'text-muted-foreground')}>
+                {formState.clientName || clientPlaceholder}
+              </span>
+            </TaskContextChip>
+          </TaskFormField>
+
+          <TaskFormField id={ids.project} label="Project" hint={projectHelpText}>
+            <TaskContextChip>
+              <span className={cn(!formState.projectName && 'text-muted-foreground')}>
+                {formState.projectName || projectPlaceholder}
+              </span>
+            </TaskContextChip>
+          </TaskFormField>
+        </div>
+      </TaskFormSection>
     </>
   )
 }
@@ -276,33 +303,27 @@ export function TaskSheetAttachmentsSection({
       onAddAttachments(event.target.files)
       event.currentTarget.value = ''
     },
-    [onAddAttachments]
+    [onAddAttachments],
   )
 
   return (
-    <div className="space-y-2">
+    <TaskFormSection title="Attachments">
       <div className="flex items-center justify-between gap-2">
-        <Label>Attachments</Label>
+        <p className={TASKS_THEME.hint}>Up to 10 files, 15MB each.</p>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="gap-2"
+          className="h-8 shrink-0 gap-1.5"
           onClick={handleAttachFilesClick}
           disabled={disabled}
         >
-          <Paperclip className="h-4 w-4" />
-          Attach files
+          <Paperclip className="h-3.5 w-3.5" />
+          Attach
         </Button>
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={handleFileInputChange}
-      />
+      <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileInputChange} />
 
       {pendingAttachments.length > 0 ? (
         <PendingAttachmentsList
@@ -310,9 +331,7 @@ export function TaskSheetAttachmentsSection({
           uploading={disabled}
           onRemove={onRemoveAttachment}
         />
-      ) : (
-        <p className="text-xs text-muted-foreground">Add up to 10 files (max 15MB each).</p>
-      )}
-    </div>
+      ) : null}
+    </TaskFormSection>
   )
 }

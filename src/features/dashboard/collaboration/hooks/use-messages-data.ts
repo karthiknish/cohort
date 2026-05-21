@@ -16,6 +16,7 @@ import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment, CollaborationMessage } from '@/types/collaboration'
 
 import type { Channel } from '../types'
+import { formatConversationSnippet } from '../lib/chat-text'
 import { extractMentionsFromContent } from '../utils/mentions'
 import { mapCollaborationMessageRow, previewPendingAttachmentToCollaborationAttachment } from './message-mappers'
 import { useChannelMessageSearch } from './use-channel-message-search'
@@ -265,7 +266,10 @@ export function useMessagesData({
       if (list && list.length > 0) {
         const last = list[list.length - 1]
         if (last) {
-          result.set(channelId, { lastMessage: last.content, lastTimestamp: last.createdAt })
+          result.set(channelId, {
+            lastMessage: formatConversationSnippet(last.content ?? '', 160),
+            lastTimestamp: last.createdAt,
+          })
         }
       }
     })

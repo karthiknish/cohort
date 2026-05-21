@@ -17,6 +17,7 @@ import { LazyImage } from "@/shared/ui/lazy-image"
 import { LiveRegion } from "@/shared/ui/live-region"
 import type { CollaborationMention } from "@/types/collaboration"
 
+import { CHAT_MARKDOWN_CLASS, CHAT_MESSAGE_BODY_CLASS } from '../lib/chat-text'
 import { MENTION_PROTOCOL } from "../utils/mentions"
 import { highlightText, hasHighlightTerms } from "./search-highlighter"
 
@@ -147,7 +148,7 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
       }
 
       return (
-        <span className="block group relative mt-3 rounded-lg border border-muted/60 overflow-hidden">
+        <span className="block group relative mt-3 max-w-full rounded-lg border border-muted/60 overflow-hidden">
           {/* Language label and copy button */}
           <div className="flex items-center justify-between bg-muted/40 px-3 py-1.5 border-b border-muted/40">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -173,7 +174,7 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
           href={href}
           target="_blank"
           rel="noreferrer noopener"
-          className="break-words text-sm font-medium text-primary hover:underline"
+          className="break-all text-sm font-medium text-primary hover:underline"
         >
           {children}
         </a>
@@ -185,13 +186,13 @@ function createMarkdownComponents(highlightTerms?: string[]): Components {
         <LazyImage
           src={src}
           alt={alt ?? "Shared image"}
-          className="block my-3 max-h-80 w-full max-w-xl rounded-md border border-muted/50 object-contain"
+          className="my-3 block h-auto max-h-80 w-full max-w-full rounded-md border border-muted/50 object-contain"
         />
       )
     },
     table: ({ children }) => (
-      <div className="mt-3 overflow-x-auto rounded-md border border-muted/40">
-        <table className="w-full min-w-[320px] divide-y divide-muted/40 text-sm">{children}</table>
+      <div className="mt-3 max-w-full overflow-x-auto rounded-md border border-muted/40">
+        <table className="w-full max-w-full divide-y divide-muted/40 text-sm">{children}</table>
       </div>
     ),
     thead: ({ children }) => (
@@ -238,8 +239,13 @@ function RawMessageContent({ content, mentions, highlightTerms }: MessageContent
   }
 
   return (
-    <div className="space-y-2">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} className="space-y-2" skipHtml>
+    <div className={cn(CHAT_MESSAGE_BODY_CLASS, 'space-y-2')}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={markdownComponents}
+        className={CHAT_MARKDOWN_CLASS}
+        skipHtml
+      >
         {markdown}
       </ReactMarkdown>
       {mentionBadges.length > 0 && (

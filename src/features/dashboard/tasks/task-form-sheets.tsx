@@ -1,21 +1,15 @@
 'use client'
 
 import { useRef, type FormEvent, type Dispatch, type SetStateAction } from 'react'
-import { LoaderCircle } from 'lucide-react'
+import { ListTodo, LoaderCircle, Pencil } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/shared/ui/sheet'
+import { Sheet, SheetClose, SheetContent } from '@/shared/ui/sheet'
 import type { PendingTaskAttachment } from '@/services/task-attachments'
 import { TaskCommentsPanel } from './task-comments'
 import { TaskSheetAttachmentsSection, TaskSheetFields } from './task-form-sheet-sections'
+import { TaskModalError, TaskSheetHeader } from './task-modal-primitives'
+import { TASKS_THEME } from './tasks-theme'
 import { teamMembersToMentionable, type TaskFormState, type TaskParticipant } from './task-types'
 
 const EDIT_TASK_FIELD_IDS = {
@@ -67,17 +61,17 @@ export function CreateTaskSheet({
 }: CreateTaskSheetProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const mentionableUsers = teamMembersToMentionable(participants)
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full max-w-md px-0">
+      <SheetContent side="right" className={TASKS_THEME.sheet.content}>
         <form className="flex h-full flex-col" onSubmit={onSubmit}>
-          <SheetHeader>
-            <SheetTitle>Create task</SheetTitle>
-            <SheetDescription>
-              Provide task details, assignments, and scheduling information.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
+          <TaskSheetHeader
+            icon={ListTodo}
+            title="Create task"
+            description="Capture work, assign teammates, and set a due date."
+          />
+          <div className={TASKS_THEME.sheet.body}>
             <TaskSheetFields
               ids={CREATE_TASK_FIELD_IDS}
               formState={formState}
@@ -86,10 +80,11 @@ export function CreateTaskSheet({
               mentionableUsers={mentionableUsers}
               titlePlaceholder="e.g. Prepare Q4 campaign brief"
               clientPlaceholder="Select a client from the dashboard"
-              projectPlaceholder="Open tasks from a project to link them automatically"
-              clientHelpText="Switch clients from the main dashboard to change this assignment."
-              projectHelpText="Start from a project workspace or filtered project task view to attach tasks here."
+              projectPlaceholder="Open tasks from a project to link automatically"
+              clientHelpText="Switch clients in the header to change assignment."
+              projectHelpText="Start from a project view to attach tasks here."
               dueDateLayout="compact"
+              showStatus={false}
             />
             <TaskSheetAttachmentsSection
               disabled={creating}
@@ -98,18 +93,18 @@ export function CreateTaskSheet({
               onRemoveAttachment={onRemoveAttachment}
               fileInputRef={fileInputRef}
             />
-            {createError && <p className="text-sm text-destructive">{createError}</p>}
+            {createError ? <TaskModalError message={createError} /> : null}
           </div>
-          <SheetFooter className="sm:flex-row-reverse">
-            <Button type="submit" disabled={creating}>
+          <div className={TASKS_THEME.sheet.footer}>
+            <Button type="submit" disabled={creating} className={TASKS_THEME.footerPrimary}>
               {creating ? 'Creating…' : 'Create task'}
             </Button>
             <SheetClose asChild>
-              <Button type="button" variant="outline" disabled={creating}>
+              <Button type="button" variant="outline" className="h-9" disabled={creating}>
                 Cancel
               </Button>
             </SheetClose>
-          </SheetFooter>
+          </div>
         </form>
       </SheetContent>
     </Sheet>
@@ -148,15 +143,13 @@ export function EditTaskSheet({
   participants,
 }: EditTaskSheetProps) {
   const mentionableUsers = teamMembersToMentionable(participants)
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full max-w-md px-0">
+      <SheetContent side="right" className={TASKS_THEME.sheet.content}>
         <form className="flex h-full flex-col" onSubmit={onSubmit}>
-          <SheetHeader>
-            <SheetTitle>Edit task</SheetTitle>
-            <SheetDescription>Update task details, assignments, and scheduling.</SheetDescription>
-          </SheetHeader>
-          <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4">
+          <TaskSheetHeader icon={Pencil} title="Edit task" description="Update details, assignments, and scheduling." />
+          <div className={TASKS_THEME.sheet.body}>
             <TaskSheetFields
               ids={EDIT_TASK_FIELD_IDS}
               formState={formState}
@@ -167,35 +160,39 @@ export function EditTaskSheet({
               clientPlaceholder="No client linked"
               projectPlaceholder="No project linked"
             />
-            {updateError && <p className="text-sm text-destructive">{updateError}</p>}
+            {updateError ? <TaskModalError message={updateError} /> : null}
 
             {taskId ? (
-              <TaskCommentsPanel
-                taskId={taskId}
-                workspaceId={currentWorkspaceId}
-                userId={currentUserId}
-                userName={currentUserName}
-                userRole={currentUserRole}
-                participants={participants}
-              />
+              <section className={TASKS_THEME.formSection}>
+                <h3 className={TASKS_THEME.formSectionTitle}>Discussion</h3>
+                <TaskCommentsPanel
+                  taskId={taskId}
+                  workspaceId={currentWorkspaceId}
+                  userId={currentUserId}
+                  userName={currentUserName}
+                  userRole={currentUserRole}
+                  participants={participants}
+                />
+              </section>
             ) : null}
           </div>
-          <SheetFooter className="border-t p-4">
-            <SheetClose asChild>
-              <Button type="button" variant="outline" disabled={updating}>
-                Cancel
-              </Button>
-            </SheetClose>
-            <Button type="submit" disabled={updating}>
+          <div className={TASKS_THEME.sheet.footer}>
+            <Button type="submit" disabled={updating} className={TASKS_THEME.footerPrimary}>
               {updating ? (
                 <span className="inline-flex items-center gap-2">
-                  <LoaderCircle className="h-4 w-4 animate-spin" /> Saving…
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Saving…
                 </span>
               ) : (
                 'Save changes'
               )}
             </Button>
-          </SheetFooter>
+            <SheetClose asChild>
+              <Button type="button" variant="outline" className="h-9" disabled={updating}>
+                Cancel
+              </Button>
+            </SheetClose>
+          </div>
         </form>
       </SheetContent>
     </Sheet>

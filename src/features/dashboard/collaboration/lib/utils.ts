@@ -245,6 +245,8 @@ export function buildCollaborationChannelShareUrl(channel: CollaborationShareCha
   return url.toString()
 }
 
+export { formatConversationSnippet, CHAT_CONVERSATION_ROW_CLASS, CHAT_LIST_PREVIEW_CLASS, CHAT_MARKDOWN_CLASS, CHAT_MESSAGE_BODY_CLASS } from './chat-text'
+
 export function formatDateSeparator(date: Date): string {
   const today = new Date()
   if (isSameDay(date, today)) {

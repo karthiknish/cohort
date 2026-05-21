@@ -6,6 +6,7 @@ import type { TaskRecord, TaskStatus } from '@/types/tasks'
 import { Dialog, DialogContent } from '@/shared/ui/dialog'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Tabs } from '@/shared/ui/tabs'
+import { TASKS_THEME } from './tasks-theme'
 import type { TaskParticipant } from './task-types'
 import {
   TaskViewCommentsTab,
@@ -123,7 +124,7 @@ export function TaskViewDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+      <DialogContent className={TASKS_THEME.viewDialog.shell}>
         <TaskViewDialogHeader
           title={task.title}
           status={task.status}
@@ -142,12 +143,12 @@ export function TaskViewDialog({
           onValueChange={(v) => setActiveTab(v as 'details' | 'comments')}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="px-6 pt-3">
+          <div className={TASKS_THEME.viewDialog.tabsRail}>
             <TaskViewDialogTabsList commentCount={liveCommentCount} />
           </div>
 
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="px-6 pb-5 pt-4">
+          <ScrollArea className={TASKS_THEME.viewDialog.body}>
+            <div className={TASKS_THEME.viewDialog.scroll}>
               <TaskViewDetailsTab task={task} />
               <TaskViewCommentsTab
                 onCommentCountChange={handleCommentCountChange}

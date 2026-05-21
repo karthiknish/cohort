@@ -20,26 +20,16 @@ import {
   Rocket,
   AlertCircle,
   Keyboard,
-  HelpCircle,
 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import { TruncatedTextPreview } from '@/shared/ui/hover-preview'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu'
-import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
+
+import { ProfileDropdown } from '@/shared/layout/profile-dropdown'
 
 const DASHBOARD_SIDEBAR_TRANSITION_STYLE = { viewTransitionName: 'dashboard-sidebar' } satisfies CSSProperties
 const DASHBOARD_HEADER_TRANSITION_STYLE = { viewTransitionName: 'dashboard-header' } satisfies CSSProperties
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/shared/ui/sheet'
 import { ScrollArea } from '@/shared/ui/scroll-area'
-import { Badge } from '@/shared/ui/badge'
 import { ClientWorkspaceSelector } from '@/shared/components/client-workspace-selector'
 import { SiteLogo } from '@/shared/components/site-logo'
 import { useDashboardRoleAccent } from '@/shared/hooks/use-dashboard-role-accent'
@@ -566,91 +556,17 @@ export function Header() {
 
             <NotificationsDropdownDynamic />
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-full"
-                  aria-label={`Open account menu for ${displayedName}`}
-                >
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs font-medium">{initials}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64 p-1.5">
-                <DropdownMenuLabel className="p-0 font-normal">
-                  <div className="flex items-center gap-3 rounded-md px-2 py-2">
-                    <Avatar className="h-9 w-9 shrink-0">
-                      <AvatarFallback className="text-xs font-medium">{initials}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <TruncatedTextPreview
-                          text={displayedName}
-                          className="text-sm font-semibold text-foreground"
-                          detail={displayedEmail}
-                        />
-                        {isPreviewMode ? (
-                          <Badge
-                            variant="secondary"
-                            className={cn(
-                              'h-5 shrink-0 px-1.5 text-[10px] font-medium uppercase tracking-wide',
-                              accent.accountBadgeClass,
-                            )}
-                          >
-                            Preview
-                          </Badge>
-                        ) : null}
-                        {!isPreviewMode && roleLabel ? (
-                          <Badge
-                            variant="secondary"
-                            className={cn(
-                              'h-5 shrink-0 px-1.5 text-[10px] font-medium uppercase tracking-wide',
-                              accent.accountBadgeClass,
-                            )}
-                          >
-                            {roleLabel}
-                          </Badge>
-                        ) : null}
-                      </div>
-                      {displayedEmail ? (
-                        <p className="truncate text-xs text-muted-foreground">{displayedEmail}</p>
-                      ) : null}
-                    </div>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator className="my-1" />
-                {user?.role === 'admin' ? (
-                  <DropdownMenuItem asChild className="cursor-pointer gap-2">
-                    <Link href="/admin" onClick={handleNavigate} className="flex w-full items-center gap-2">
-                      <Shield className="h-4 w-4 text-muted-foreground" />
-                      Admin panel
-                    </Link>
-                  </DropdownMenuItem>
-                ) : null}
-                <DropdownMenuItem asChild className="cursor-pointer gap-2">
-                  <Link href="/settings" onClick={handleNavigate} className="flex w-full items-center gap-2">
-                    <Settings className="h-4 w-4 text-muted-foreground" />
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleOpenHelp} className="cursor-pointer gap-2">
-                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                  Help & navigation
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="my-1" />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onSelect={handleSignOut}
-                  className="cursor-pointer gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ProfileDropdown
+              displayedName={displayedName}
+              displayedEmail={displayedEmail}
+              initials={initials}
+              isPreviewMode={isPreviewMode}
+              roleLabel={roleLabel}
+              isAdmin={user?.role === 'admin'}
+              onNavigate={handleNavigate}
+              onOpenHelp={handleOpenHelp}
+              onSignOut={handleSignOut}
+            />
           </div>
         </div>
         <div className={cn(accent.headerStripClass)} aria-hidden />

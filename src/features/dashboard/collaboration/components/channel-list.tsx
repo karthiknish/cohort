@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 
 import type { ChannelSummary } from '../hooks'
 import type { Channel } from '../types'
-import { CHANNEL_TYPE_COLORS, formatRelativeTime } from '../utils'
+import { CHANNEL_TYPE_COLORS, formatConversationSnippet, formatRelativeTime } from '../utils'
 
 interface CollaborationChannelListProps {
   channels: Channel[]
@@ -69,7 +69,7 @@ export function CollaborationChannelList({
                   type="button"
                   onClick={selectChannelHandlers[channel.id]}
                   className={cn(
-                    'flex w-full flex-col gap-1.5 rounded-lg border p-3 text-left motion-chromatic outline-none focus-visible:ring-2 focus-visible:ring-primary/20',
+                    'flex w-full max-w-full min-w-0 flex-col gap-1.5 overflow-hidden rounded-lg border p-3 text-left motion-chromatic outline-none focus-visible:ring-2 focus-visible:ring-primary/20',
                     isSelected
                       ? 'border-accent/20 bg-accent/5 shadow-sm'
                       : 'border-transparent hover:bg-muted/50 hover:border-muted/40'
@@ -92,8 +92,13 @@ export function CollaborationChannelList({
                       </Badge>
                   </div>
 
-                  <p className="line-clamp-2 text-xs text-muted-foreground/80 mt-0.5">
-                    {summary?.lastMessage ?? 'No messages yet'}
+                  <p
+                    className="mt-0.5 line-clamp-2 break-all text-xs text-muted-foreground/80"
+                    title={summary?.lastMessage ?? undefined}
+                  >
+                    {summary?.lastMessage
+                      ? formatConversationSnippet(summary.lastMessage, 120)
+                      : 'No messages yet'}
                   </p>
                 </button>
               )

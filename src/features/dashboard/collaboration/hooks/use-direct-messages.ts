@@ -10,6 +10,7 @@ import { api, directMessagesApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { getPreviewDirectAutoReply, getPreviewDirectConversations, getPreviewDirectMessages } from '@/lib/preview-data'
 import type { DirectConversation, DirectMessage } from '@/types/collaboration'
+import { formatConversationSnippet } from '../lib/chat-text'
 import { MESSAGE_PAGE_SIZE } from './constants'
 import { filterDirectMessagesForSearch, parseDirectMessageSearchQuery } from './direct-message-search'
 
@@ -268,7 +269,11 @@ export function useDirectMessages({
 
           return {
             ...conversation,
-            lastMessageSnippet: lastMessage?.deleted ? 'Message deleted' : (lastMessage?.content ?? null),
+            lastMessageSnippet: lastMessage?.deleted
+              ? 'Message deleted'
+              : lastMessage?.content
+                ? formatConversationSnippet(lastMessage.content, 160)
+                : null,
             lastMessageAtMs: lastMessage?.createdAtMs ?? conversation.lastMessageAtMs,
             lastMessageSenderId: lastMessage?.senderId ?? conversation.lastMessageSenderId,
             isRead,
@@ -563,7 +568,7 @@ export function useDirectMessages({
                 conversation.legacyId === selectedConversation.legacyId
                   ? {
                       ...conversation,
-                      lastMessageSnippet: content,
+                      lastMessageSnippet: formatConversationSnippet(content, 160),
                       lastMessageAtMs: now,
                       lastMessageSenderId: currentUserId ?? 'preview-current-user',
                       isRead: true,
@@ -604,7 +609,7 @@ export function useDirectMessages({
                     conversation.legacyId === conversationSnapshot.legacyId
                       ? {
                           ...conversation,
-                          lastMessageSnippet: autoReply.content,
+                          lastMessageSnippet: formatConversationSnippet(autoReply.content, 160),
                           lastMessageAtMs: autoReply.createdAtMs,
                           lastMessageSenderId: autoReply.senderId,
                           isRead: true,

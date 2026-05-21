@@ -318,7 +318,9 @@ export function UnifiedThreadReplyCard({
             {effectiveRenderMessageContent ? (
               effectiveRenderMessageContent(message)
             ) : (
-              <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+              <p className="max-w-full min-w-0 overflow-hidden break-words whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">
+                {message.content}
+              </p>
             )}
             {effectiveRenderMessageAttachments?.(message)}
           </>

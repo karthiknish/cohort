@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { cn } from '@/lib/utils'
 
+import { CHAT_CONVERSATION_ROW_CLASS, CHAT_LIST_PREVIEW_CLASS, formatConversationSnippet } from '../utils'
+
 import type { DirectConversation } from '../hooks/use-direct-messages'
 
 function formatRelativeTime(ms: number | null | undefined): string {
@@ -147,7 +149,8 @@ export function DMSidebar({
                   type="button"
                   onClick={selectConversationHandlers[conversation.legacyId]}
                   className={cn(
-                    'w-full flex items-center gap-3 p-3 rounded-lg text-left motion-chromatic',
+                    CHAT_CONVERSATION_ROW_CLASS,
+                    'rounded-lg motion-chromatic',
                     'hover:bg-muted/50',
                     isSelected && 'bg-accent/5 border border-accent/20',
                     hasUnread && !isSelected && 'bg-muted/30'
@@ -184,11 +187,16 @@ export function DMSidebar({
                       {conversation.isMuted && (
                         <BellOff className="h-3 w-3 text-muted-foreground shrink-0" />
                       )}
-                      <p className={cn(
-                        'truncate text-xs',
-                        hasUnread ? 'text-foreground' : 'text-muted-foreground'
-                      )}>
-                        {conversation.lastMessageSnippet ?? 'No messages yet'}
+                      <p
+                        className={cn(
+                          CHAT_LIST_PREVIEW_CLASS,
+                          hasUnread ? 'text-foreground' : 'text-muted-foreground',
+                        )}
+                        title={conversation.lastMessageSnippet ?? undefined}
+                      >
+                        {conversation.lastMessageSnippet
+                          ? formatConversationSnippet(conversation.lastMessageSnippet)
+                          : 'No messages yet'}
                       </p>
                     </div>
                   </div>

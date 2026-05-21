@@ -9,10 +9,10 @@ export const NotificationsDropdownDynamic = dynamic(
     ssr: false,
     loading: () => (
       <div
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md"
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/40 bg-muted/20"
         aria-hidden
       >
-        <span className="h-5 w-5 rounded bg-muted/60 motion-safe:animate-pulse" />
+        <span className="h-4 w-4 rounded-md bg-muted/60 motion-safe:animate-pulse" />
       </div>
     ),
   }

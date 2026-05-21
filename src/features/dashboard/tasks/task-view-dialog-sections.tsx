@@ -39,12 +39,14 @@ import type { TaskPriority, TaskRecord, TaskStatus } from '@/types/tasks'
 import { TASK_STATUSES } from '@/types/tasks'
 
 import { TaskCommentsPanel } from './task-comments'
+import { TASKS_THEME } from './tasks-theme'
 import {
   formatDate,
   formatPriorityLabel,
   formatStatusLabel,
   formatTimeSpent,
   STATUS_ICONS,
+  taskInfoPanelClasses,
   taskPillColors,
   taskViewPriorityPill,
   taskViewStatusPill,
@@ -103,7 +105,7 @@ export function TaskViewDialogHeader({
   const showMenu = Boolean(onEdit || onDelete || onQuickStatusChange)
 
   return (
-    <DialogHeader className="space-y-3 px-6 pb-0 pt-5 pr-14">
+    <DialogHeader className={TASKS_THEME.viewDialog.header}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
           <TaskStatusBadge status={status} />
@@ -190,21 +192,15 @@ export function TaskViewDialogHeader({
 
 export function TaskViewDialogTabsList({ commentCount }: { commentCount: number }) {
   return (
-    <TabsList className="h-auto w-full justify-start gap-6 rounded-none border-0 bg-transparent p-0">
-      <TabsTrigger
-        value="details"
-        className="rounded-none border-0 border-b-2 border-transparent bg-transparent px-0 pb-2.5 pt-1 text-sm font-medium text-muted-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-      >
+    <TabsList className={cn(TASKS_THEME.tabList, 'w-full max-w-xs')}>
+      <TabsTrigger value="details" className={TASKS_THEME.tabTrigger}>
         Details
       </TabsTrigger>
-      <TabsTrigger
-        value="comments"
-        className="gap-1.5 rounded-none border-0 border-b-2 border-transparent bg-transparent px-0 pb-2.5 pt-1 text-sm font-medium text-muted-foreground shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-      >
+      <TabsTrigger value="comments" className={cn(TASKS_THEME.tabTrigger, 'gap-1.5')}>
         Comments
         <span
           className={cn(
-            'inline-flex min-w-[1.25rem] items-center justify-center rounded-md px-1 text-[11px] font-medium tabular-nums',
+            'inline-flex min-w-[1.25rem] items-center justify-center rounded-md px-1 text-[10px] font-semibold tabular-nums',
             commentCount > 0 ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground',
           )}
         >
@@ -217,8 +213,8 @@ export function TaskViewDialogTabsList({ commentCount }: { commentCount: number 
 
 function DetailBlock({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <section className="space-y-2">
-      <h3 className="text-xs font-medium text-muted-foreground">{label}</h3>
+    <section className={cn(taskInfoPanelClasses.base, 'space-y-2')}>
+      <h3 className={taskInfoPanelClasses.label}>{label}</h3>
       {children}
     </section>
   )
@@ -226,9 +222,9 @@ function DetailBlock({ label, children }: { label: string; children: ReactNode }
 
 export function TaskViewDetailsTab({ task }: { task: TaskRecord }) {
   return (
-    <TabsContent value="details" className="mt-0 space-y-6 focus-visible:outline-none">
+    <TabsContent value="details" className="mt-0 space-y-4 focus-visible:outline-none">
       <DetailBlock label="Description">
-        <p className="text-sm leading-relaxed text-foreground">
+        <p className={cn(taskInfoPanelClasses.value, 'font-normal leading-relaxed')}>
           {task.description?.trim() ? task.description : (
             <span className="text-muted-foreground">No description provided.</span>
           )}
@@ -307,7 +303,7 @@ export function TaskViewDetailsTab({ task }: { task: TaskRecord }) {
         )}
       </DetailBlock>
 
-      <p className="border-t border-border pt-4 text-xs text-muted-foreground">
+      <p className="pt-1 text-[11px] text-muted-foreground">
         Created {formatDate(task.createdAt)} · Updated {formatDate(task.updatedAt)}
       </p>
     </TabsContent>
@@ -356,7 +352,7 @@ export function TaskViewDialogFooter({
   onMarkComplete?: () => void
 }) {
   return (
-    <DialogFooter className="flex-col gap-3 border-t border-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <DialogFooter className={TASKS_THEME.viewDialog.footer}>
       <p className="hidden text-xs text-muted-foreground sm:block">
         <kbd className="mr-1 rounded border border-border bg-muted px-1 font-mono text-[10px]">Esc</kbd>
         to close

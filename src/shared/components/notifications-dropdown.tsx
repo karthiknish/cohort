@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { Drawer, DrawerContent } from '@/shared/ui/drawer'
+import { cn } from '@/lib/utils'
 
 import { notificationsApi } from '@/lib/convex-api'
 import { parsePageSize } from '@/lib/pagination'
@@ -25,6 +26,7 @@ import { NotificationsInboxPanel } from '@/features/notifications/components/not
 import { groupNotificationsByDate } from '@/features/notifications/lib/group-notifications'
 import { useNotificationNavigation } from '@/features/notifications/hooks/use-notification-navigation'
 import { useIsMobile } from '@/shared/hooks/use-is-mobile'
+import { HEADER_DROPDOWN_THEME } from '@/shared/layout/header-dropdown-theme'
 
 const PAGE_SIZE = 20
 
@@ -128,9 +130,9 @@ export function NotificationsDropdown() {
         .catch((error) => {
           const message = error instanceof Error ? error.message : 'Notification update failed'
           notifyFailure({
-        title: 'Update failed',
-        message: message,
-      })
+            title: 'Update failed',
+            message: message,
+          })
         })
         .finally(() => {
           setAckInFlight(false)
@@ -188,6 +190,7 @@ export function NotificationsDropdown() {
 
   const triggerDisabled = !user
   const isLoadingInitial = notificationsInfiniteQuery.isLoading && notifications.length === 0
+  const hasUnread = unreadCount > 0
 
   const inboxPanel = (
     <NotificationsInboxPanel
@@ -210,14 +213,14 @@ export function NotificationsDropdown() {
     <Button
       variant="ghost"
       size="icon"
-      className="relative"
+      className={cn(HEADER_DROPDOWN_THEME.triggerIcon, hasUnread && !open && 'text-foreground')}
       disabled={triggerDisabled}
-      aria-label="View notifications"
+      aria-label={hasUnread ? `${unreadCount} unread notifications` : 'View notifications'}
       onClick={isMobile ? () => handleOpenChange(true) : undefined}
     >
-      <Bell className="h-5 w-5" />
-      {unreadCount > 0 ? (
-        <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+      <Bell className={cn('h-[1.125rem] w-[1.125rem]', hasUnread && 'motion-safe:animate-pulse')} />
+      {hasUnread ? (
+        <span className={HEADER_DROPDOWN_THEME.badge} aria-hidden>
           {unreadCount > 9 ? '9+' : unreadCount}
         </span>
       ) : null}
@@ -229,7 +232,9 @@ export function NotificationsDropdown() {
       <>
         {triggerButton}
         <Drawer open={open} onOpenChange={handleOpenChange} direction="bottom">
-          <DrawerContent className="flex max-h-[85dvh] flex-col p-0">{inboxPanel}</DrawerContent>
+          <DrawerContent className="flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl p-0">
+            {inboxPanel}
+          </DrawerContent>
         </Drawer>
       </>
     )
@@ -238,7 +243,11 @@ export function NotificationsDropdown() {
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[400px] p-0" sideOffset={8}>
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className={cn(HEADER_DROPDOWN_THEME.panel, HEADER_DROPDOWN_THEME.panelNotifications)}
+      >
         {inboxPanel}
       </DropdownMenuContent>
     </DropdownMenu>

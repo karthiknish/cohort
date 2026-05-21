@@ -1,11 +1,14 @@
 'use client'
 
-import { Check, ExternalLink, LoaderCircle, Settings2 } from 'lucide-react'
+import { Bell, Check, ExternalLink, LoaderCircle, Settings2 } from 'lucide-react'
 import Link from 'next/link'
 
 import type { WorkspaceNotification } from '@/types/notifications'
 import { Button } from '@/shared/ui/button'
 import { ScrollArea } from '@/shared/ui/scroll-area'
+import { cn } from '@/lib/utils'
+import { HEADER_DROPDOWN_THEME } from '@/shared/layout/header-dropdown-theme'
+import { getIconContainerClasses } from '@/lib/dashboard-theme'
 
 import { NotificationEmptyState } from '@/features/notifications/components/notification-empty-state'
 import { NotificationGroupList } from '@/features/notifications/components/notification-group'
@@ -23,7 +26,6 @@ type NotificationsInboxPanelProps = {
   onLoadMore: () => void
   onOpen: (notification: WorkspaceNotification) => void
   onDismiss: (id: string) => void
-  /** Tighter padding for dropdown; roomier for drawer. */
   variant?: 'dropdown' | 'drawer'
 }
 
@@ -42,39 +44,46 @@ export function NotificationsInboxPanel({
   variant = 'dropdown',
 }: NotificationsInboxPanelProps) {
   const scrollMaxHeight =
-    variant === 'drawer' ? 'min(28rem,calc(85dvh - 10rem))' : 'min(24rem,70vh)'
+    variant === 'drawer' ? 'min(28rem,calc(85dvh - 11rem))' : 'min(22rem,68vh)'
 
   return (
     <>
-      <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-2 border-b border-border/60 bg-popover px-4 py-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">Notifications</p>
-          {unreadCount > 0 ? (
-            <p className="text-xs text-muted-foreground">{unreadCount} unread</p>
-          ) : (
-            <p className="text-xs text-muted-foreground">You&apos;re caught up</p>
-          )}
+      <div className={HEADER_DROPDOWN_THEME.header}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-2.5">
+            <div className={cn(getIconContainerClasses('medium'), 'h-9 w-9 shrink-0')}>
+              <Bell className="h-4 w-4" aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <p className={HEADER_DROPDOWN_THEME.headerTitle}>Notifications</p>
+              <p className={HEADER_DROPDOWN_THEME.headerSubtitle}>
+                {unreadCount > 0
+                  ? `${unreadCount} unread · opens mark items read`
+                  : "You're caught up"}
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 shrink-0 gap-1 border-border/60 text-xs shadow-sm"
+            onClick={onMarkAllRead}
+            disabled={unreadCount === 0 || ackInFlight}
+          >
+            <Check className="h-3.5 w-3.5" aria-hidden />
+            Mark read
+          </Button>
         </div>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 text-xs"
-          onClick={onMarkAllRead}
-          disabled={unreadCount === 0 || ackInFlight}
-        >
-          <Check className="mr-1 h-3.5 w-3.5" aria-hidden />
-          Mark all read
-        </Button>
       </div>
 
       <ScrollArea style={{ maxHeight: scrollMaxHeight }}>
         {isLoadingInitial ? (
-          <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
             <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
             Loading…
           </div>
         ) : notifications.length === 0 ? (
-          <NotificationEmptyState className="py-12" />
+          <NotificationEmptyState className="py-14" />
         ) : (
           <NotificationGroupList
             groups={groupedNotifications}
@@ -86,29 +95,29 @@ export function NotificationsInboxPanel({
         )}
       </ScrollArea>
 
-      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-border/60 px-3 py-2">
+      <div className={HEADER_DROPDOWN_THEME.footer}>
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 text-xs"
+          className="h-8 text-xs text-muted-foreground hover:text-foreground"
           onClick={onLoadMore}
           disabled={isFetchingNextPage || !hasNextPage}
         >
           {isFetchingNextPage ? (
             <LoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />
           ) : null}
-          Load more
+          {hasNextPage ? 'Load more' : 'End of list'}
         </Button>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
+        <div className="flex items-center gap-0.5">
+          <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs" asChild>
             <Link href="/settings?tab=notifications">
-              <Settings2 className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              <Settings2 className="h-3.5 w-3.5" aria-hidden />
               Settings
             </Link>
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 text-xs" asChild>
+          <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs" asChild>
             <Link href="/dashboard/notifications">
-              <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
               View all
             </Link>
           </Button>
