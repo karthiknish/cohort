@@ -7,8 +7,7 @@ import { Skeleton } from '@/shared/ui/skeleton'
 import type { TaskRecord, TaskStatus } from '@/types/tasks'
 
 import { TaskCard } from './task-card'
-import { TaskRow } from './task-row'
-import { TaskTable, TaskTableBody, TaskTableHeader } from './task-table'
+import { TaskDataTable } from './task-data-table'
 
 export function TaskListLoadingState({ viewMode }: { viewMode: 'grid' | 'list' }) {
   if (viewMode === 'grid') {
@@ -23,18 +22,7 @@ export function TaskListLoadingState({ viewMode }: { viewMode: 'grid' | 'list' }
     )
   }
 
-  return (
-    <TaskTable>
-      <TaskTableHeader showCheckbox={false} />
-      <TaskTableBody>
-        {['row-1', 'row-2', 'row-3', 'row-4', 'row-5'].map((key) => (
-          <div key={key} className="px-4 py-3">
-            <Skeleton className="h-5 w-full" />
-          </div>
-        ))}
-      </TaskTableBody>
-    </TaskTable>
-  )
+  return <TaskDataTable tasks={[]} loading onOpen={() => {}} onEdit={() => {}} onDelete={() => {}} onQuickStatusChange={() => {}} pendingStatusUpdates={new Set()} />
 }
 
 export function TaskListErrorState({
@@ -176,23 +164,15 @@ export function TaskListItems({
   }
 
   return (
-    <TaskTable>
-      <TaskTableHeader showCheckbox={Boolean(onSelectToggle)} />
-      <TaskTableBody>
-        {tasks.map((task) => (
-          <TaskRow
-            key={task.id}
-            task={task}
-            isPendingUpdate={pendingStatusUpdates.has(task.id)}
-            onOpen={onOpen}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onQuickStatusChange={onQuickStatusChange}
-            selected={selectedTaskIds?.has(task.id)}
-            onSelectToggle={onSelectToggle}
-          />
-        ))}
-      </TaskTableBody>
-    </TaskTable>
+    <TaskDataTable
+      tasks={tasks}
+      pendingStatusUpdates={pendingStatusUpdates}
+      onOpen={onOpen}
+      onEdit={onEdit}
+      onDelete={onDelete}
+      onQuickStatusChange={onQuickStatusChange}
+      selectedTaskIds={selectedTaskIds}
+      onSelectToggle={onSelectToggle}
+    />
   )
 }

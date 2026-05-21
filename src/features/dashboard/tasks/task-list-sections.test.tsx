@@ -8,8 +8,10 @@ vi.mock('./task-card', () => ({
   TaskCard: ({ task }: { task: TaskRecord }) => <div>TaskCard:{task.title}</div>,
 }))
 
-vi.mock('./task-row', () => ({
-  TaskRow: ({ task }: { task: TaskRecord }) => <div>TaskRow:{task.title}</div>,
+vi.mock('./task-data-table', () => ({
+  TaskDataTable: ({ tasks }: { tasks: TaskRecord[] }) => (
+    <div>TaskDataTable:{tasks.map((task) => task.title).join(',')}</div>
+  ),
 }))
 
 import {
@@ -73,6 +75,6 @@ describe('task list sections', () => {
     )
 
     expect(markup).toContain('TaskCard:Review launch brief')
-    expect(markup).toContain('TaskRow:Review launch brief')
+    expect(markup).toContain('TaskDataTable:Review launch brief')
   })
 })
