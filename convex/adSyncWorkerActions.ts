@@ -1,4 +1,6 @@
-import { action, internalAction } from './_generated/server'
+'use node'
+
+import { action, internalAction, type ActionCtx } from './_generated/server'
 import { internal } from '/_generated/api'
 import { v } from 'convex/values'
 
@@ -6,6 +8,8 @@ import { fetchGoogleAdsMetrics } from '@/services/integrations/google-ads'
 import { fetchMetaAdsMetrics } from '@/services/integrations/meta-ads'
 import { fetchLinkedInAdsMetrics } from '@/services/integrations/linkedin-ads'
 import { fetchTikTokAdsMetrics } from '@/services/integrations/tiktok-ads'
+import { syncGoogleAnalyticsMetrics } from '@/services/integrations/google-analytics/sync'
+import { refreshGoogleAccessToken } from '@/lib/integration-token-refresh'
 import type { NormalizedMetric } from '@/types/integrations'
 import { Errors, withErrorHandling } from './errors'
 import { resolveMetricCurrency } from '@/domain/ads/money'
@@ -66,6 +70,34 @@ function normalizeRawPayload(value: unknown): SyncRawPayload {
   return undefined
 }
 
+type JobStatusUpdate = {
+  workspaceId: string
+  providerId: string
+  clientId: string | null
+  status: 'pending' | 'success' | 'error'
+  message: string | null
+}
+
+async function updateJobIntegrationStatus(ctx: ActionCtx, args: JobStatusUpdate) {
+  if (args.providerId === 'google-analytics') {
+    await ctx.runMutation(internal.analyticsIntegrations.updateGoogleAnalyticsStatusInternal, {
+      workspaceId: args.workspaceId,
+      clientId: args.clientId,
+      status: args.status,
+      message: args.message,
+    })
+    return
+  }
+
+  await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+    workspaceId: args.workspaceId,
+    providerId: args.providerId,
+    clientId: args.clientId,
+    status: args.status,
+    message: args.message,
+  })
+}
+
 export const processClaimedJob = internalAction({
   //
   args: {
@@ -77,8 +109,26 @@ export const processClaimedJob = internalAction({
   },
   handler: async (ctx, args): Promise<{ metricsInserted: number }> =>
     withErrorHandling(async () => {
-
       const clientId = normalizeClientId(args.clientId)
+
+      if (args.providerId === 'google-analytics') {
+        const gaIntegration = await ctx.runQuery(
+          internal.analyticsIntegrations.getGoogleAnalyticsIntegrationInternal,
+          { workspaceId: args.workspaceId, clientId },
+        )
+
+        if (!gaIntegration?.accessToken) {
+          throw Errors.integration.notFound('Google Analytics')
+        }
+
+        const result = await syncGoogleAnalyticsMetrics({
+          userId: args.workspaceId,
+          clientId,
+          days: args.timeframeDays,
+        })
+
+        return { metricsInserted: result.written }
+      }
 
       const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
         workspaceId: args.workspaceId,
@@ -99,18 +149,32 @@ export const processClaimedJob = internalAction({
             throw Errors.integration.notConfigured('Google', 'Account not configured')
           }
 
-          // Token refreshing in Convex is not migrated yet; for now, fail if expired.
+          // Requires GOOGLE_ADS_CLIENT_ID / GOOGLE_ADS_CLIENT_SECRET (or GOOGLE_CLIENT_*) on Convex.
+          let googleAccessToken = integration.accessToken
           if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
-            throw Errors.integration.expired('Google')
+            googleAccessToken = await refreshGoogleAccessToken({
+              userId: args.workspaceId,
+              clientId,
+              providerId: 'google',
+            })
           }
 
           metrics = await fetchGoogleAdsMetrics({
-            accessToken: integration.accessToken,
+            accessToken: googleAccessToken,
             developerToken: integration.developerToken,
             customerId: accountId,
             loginCustomerId: integration.loginCustomerId,
             managerCustomerId: integration.managerCustomerId,
             timeframeDays: args.timeframeDays,
+            refreshAccessToken: async () => {
+              const refreshed = await refreshGoogleAccessToken({
+                userId: args.workspaceId,
+                clientId,
+                providerId: 'google',
+              })
+              googleAccessToken = refreshed
+              return refreshed
+            },
           })
           break
         }
@@ -172,9 +236,6 @@ export const processClaimedJob = internalAction({
       const insertResult = await ctx.runMutation(internal.adsIntegrations.writeMetricsBatchInternal, {
         workspaceId: args.workspaceId,
         metrics: metrics.map((metric) => {
-          // Stamp currency at write time so read-time joins are not required.
-          // Priority: currency on the metric row (e.g. account_currency from Meta Insights)
-          // > integration-level account currency > unknown.
           const providerId = metric.providerId as CanonicalAdsProviderId
           const resolved = resolveMetricCurrency({
             metricCurrency: metric.currency ?? null,
@@ -182,7 +243,6 @@ export const processClaimedJob = internalAction({
             providerDefaultCurrency: integration.currency ?? null,
           })
 
-          // Canonical surface id derived from publisherPlatform (primarily Meta breakdowns).
           const surfaceId = normalizeSurfaceId(providerId, metric.publisherPlatform ?? null)
 
           return {
@@ -207,10 +267,6 @@ export const processClaimedJob = internalAction({
         }),
       })
 
-      // Self-heal: if the integration has no currency stamped yet, derive it from
-      // the first metric row that carries a per-row currency (e.g. Meta account_currency).
-      // This ensures the read-time fallback in listMetricsWithSummaryV2 works for any
-      // existing null-currency rows that haven't been re-synced yet.
       if (!integration.currency) {
         const derivedCurrency = metrics.find((m) => m.currency)?.currency ?? null
         if (derivedCurrency) {
@@ -253,6 +309,8 @@ export const processAllQueuedJobs = internalAction({
         )
         if (!job) break
 
+        const clientId = normalizeClientId(job.clientId)
+
         try {
           await ctx.runAction(internal.adSyncWorkerActions.processClaimedJob, {
             workspaceId,
@@ -266,10 +324,10 @@ export const processAllQueuedJobs = internalAction({
             ctx.runMutation(internal.adsIntegrations.completeSyncJobInternal, {
               jobId: job.id,
             }),
-            ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+            updateJobIntegrationStatus(ctx, {
               workspaceId,
               providerId: job.providerId,
-              clientId: job.clientId,
+              clientId,
               status: 'success',
               message: null,
             }),
@@ -284,10 +342,10 @@ export const processAllQueuedJobs = internalAction({
               jobId: job.id,
               message,
             }),
-            ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+            updateJobIntegrationStatus(ctx, {
               workspaceId,
               providerId: job.providerId,
-              clientId: job.clientId,
+              clientId,
               status: 'error',
               message,
             }),
@@ -327,7 +385,6 @@ export const runManualSync = action({
         ? args.clientId.trim()
         : null
 
-    // Queue a fresh manual-sync job.
     await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
       workspaceId: args.workspaceId,
       providerId: args.providerId,
@@ -336,14 +393,12 @@ export const runManualSync = action({
       timeframeDays: 30,
     })
 
-    // Claim and process the job immediately.
     const job = await ctx.runMutation(
       internal.adsIntegrations.claimNextSyncJobInternal,
       { workspaceId: args.workspaceId }
     )
 
     if (!job) {
-      // Another worker claimed it; it will be processed by the cron.
       return { synced: false }
     }
 
@@ -360,10 +415,10 @@ export const runManualSync = action({
         ctx.runMutation(internal.adsIntegrations.completeSyncJobInternal, {
           jobId: job.id,
         }),
-        ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+        updateJobIntegrationStatus(ctx, {
           workspaceId: args.workspaceId,
           providerId: job.providerId,
-          clientId: job.clientId,
+          clientId: normalizeClientId(job.clientId),
           status: 'success',
           message: null,
         }),
@@ -378,10 +433,10 @@ export const runManualSync = action({
           jobId: job.id,
           message,
         }),
-        ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+        updateJobIntegrationStatus(ctx, {
           workspaceId: args.workspaceId,
           providerId: job.providerId,
-          clientId: job.clientId,
+          clientId: normalizeClientId(job.clientId),
           status: 'error',
           message,
         }),

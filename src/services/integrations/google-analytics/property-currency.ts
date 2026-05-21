@@ -1,3 +1,5 @@
+import { assertGoogleApiOk } from '@/lib/errors/google-api-error'
+
 /** ISO 4217 code from GA4 Admin API `properties/{id}.currencyCode`. */
 export function normalizeGoogleAnalyticsCurrencyCode(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
@@ -25,10 +27,7 @@ export async function fetchGoogleAnalyticsPropertyCurrency(options: {
     },
   )
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    throw new Error(`Failed to fetch Google Analytics property (${response.status}): ${text}`)
-  }
+  await assertGoogleApiOk(response, 'Failed to fetch Google Analytics property')
 
   const payload = (await response.json()) as { currencyCode?: unknown }
   return normalizeGoogleAnalyticsCurrencyCode(payload.currencyCode)

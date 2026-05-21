@@ -5,7 +5,6 @@ import {
   action,
   normalizeClientId,
   normalizeGoogleAdsAccountId,
-  normalizeGoogleAnalyticsPropertyId,
   normalizeMetaAccountId,
   nowMs,
   resolveGoogleAdsDeveloperToken,
@@ -18,7 +17,6 @@ export const initializeAdAccount = action({
     workspaceId: v.string(),
     providerId: v.union(
       v.literal('google'),
-      v.literal('google-analytics'),
       v.literal('linkedin'),
       v.literal('facebook'),
       v.literal('tiktok')
@@ -104,54 +102,6 @@ export const initializeAdAccount = action({
         loginCustomerId,
         managerCustomerId,
         accounts,
-      }
-    }
-
-    if (args.providerId === 'google-analytics') {
-      if (!integration.accessToken) {
-        throw Errors.integration.missingToken('Google Analytics')
-      }
-
-      const { fetchGoogleAnalyticsProperties } = await import('@/services/integrations/google-analytics/properties')
-      const properties = await fetchGoogleAnalyticsProperties({ accessToken: integration.accessToken })
-
-      if (!properties.length) {
-        throw Errors.integration.notConfigured('Google Analytics', 'No Google Analytics properties available')
-      }
-
-      const selectedPropertyId = normalizeGoogleAnalyticsPropertyId(args.accountId ?? null)
-      if (!selectedPropertyId) {
-        throw Errors.validation.invalidInput('Please select a Google Analytics property to finish setup')
-      }
-
-      const selectedProperty =
-        properties.find((property) => normalizeGoogleAnalyticsPropertyId(property.id) === selectedPropertyId) ?? null
-
-      if (!selectedProperty) {
-        throw Errors.validation.invalidInput('Selected Google Analytics property is not available for this integration token')
-      }
-
-      await ctx.runMutation(internal.adsIntegrations.updateIntegrationCredentialsInternal, {
-        workspaceId: args.workspaceId,
-        providerId: 'google-analytics',
-        clientId,
-        accountId: selectedProperty.id,
-        accountName: selectedProperty.name,
-        linkedAtMs,
-      })
-
-      await ctx.runMutation(internal.adsIntegrations.enqueueSyncJob, {
-        workspaceId: args.workspaceId,
-        providerId: 'google-analytics',
-        clientId,
-        jobType: 'initial-backfill',
-        timeframeDays: 90,
-      })
-
-      return {
-        accountId: selectedProperty.id,
-        accountName: selectedProperty.name,
-        properties,
       }
     }
 

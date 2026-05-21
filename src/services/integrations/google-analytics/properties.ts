@@ -1,3 +1,4 @@
+import { assertGoogleApiOk } from '@/lib/errors/google-api-error'
 import { fetchGoogleAnalyticsPropertyCurrency } from './property-currency'
 
 export type GoogleAnalyticsPropertyOption = {
@@ -20,6 +21,9 @@ type GoogleAnalyticsAccountSummariesResponse = {
   nextPageToken?: string
 }
 
+const DEFAULT_PAGE_SIZE = 200
+const MAX_PROPERTY_LIST_PAGES = 50
+
 function normalizePropertyId(resourceName: string): string {
   const trimmed = resourceName.trim()
   if (trimmed.startsWith('properties/')) {
@@ -34,7 +38,7 @@ export async function fetchGoogleAnalyticsProperties(options: {
   pageSize?: number
   maxPages?: number
 }): Promise<GoogleAnalyticsPropertyOption[]> {
-  const { accessToken, pageSize = 200, maxPages = 5 } = options
+  const { accessToken, pageSize = DEFAULT_PAGE_SIZE, maxPages = MAX_PROPERTY_LIST_PAGES } = options
 
   const unique = new Map<string, GoogleAnalyticsPropertyOption>()
   let nextPageToken: string | undefined
@@ -53,10 +57,7 @@ export async function fetchGoogleAnalyticsProperties(options: {
       },
     })
 
-    if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      throw new Error(`Failed to list Google Analytics properties (${response.status}): ${text}`)
-    }
+    await assertGoogleApiOk(response, 'Failed to list Google Analytics properties')
 
     const payload = (await response.json()) as GoogleAnalyticsAccountSummariesResponse
 

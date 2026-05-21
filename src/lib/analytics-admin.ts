@@ -156,6 +156,45 @@ export async function markGoogleAnalyticsSyncRequested(options: {
   })
 }
 
+export async function writeAnalyticsMetricsBatch(options: {
+  userId: string
+  clientId?: string | null
+  propertyId: string
+  currency?: string | null
+  daily: Array<{
+    propertyId: string
+    date: string
+    users: number
+    sessions: number
+    conversions: number
+    revenue?: number | null
+    currency?: string | null
+  }>
+  breakdowns?: Array<{
+    propertyId: string
+    date: string
+    dimension: 'channel' | 'source' | 'device'
+    dimensionValue: string
+    users: number
+    sessions: number
+    conversions: number
+    revenue?: number | null
+  }>
+}): Promise<{ dailyInserted: number; breakdownInserted: number }> {
+  const workspaceId = await resolveWorkspaceIdForUser(options.userId)
+  const convex = getConvexClientForUser(options.userId)
+  if (!convex) throw new Error('Convex admin client is not configured')
+  const result = (await executeMutation(convex, 'analyticsIntegrations:writeAnalyticsMetricsBatchInternal', {
+    workspaceId,
+    clientId: normalizeClientId(options.clientId),
+    propertyId: options.propertyId,
+    currency: options.currency ?? null,
+    daily: options.daily,
+    breakdowns: options.breakdowns ?? [],
+  })) as { dailyInserted: number; breakdownInserted: number }
+  return result
+}
+
 export async function deleteGoogleAnalyticsIntegration(options: { userId: string; clientId?: string | null }): Promise<void> {
   const workspaceId = await resolveWorkspaceIdForUser(options.userId)
   const convex = getConvexClientForUser(options.userId)

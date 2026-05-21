@@ -18,6 +18,7 @@ import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 
+import { AnalyticsBreakdownSection } from './analytics-breakdown-section'
 import { AnalyticsCharts } from './analytics-charts'
 import { AnalyticsDateRangePicker } from './analytics-date-range-picker'
 import { AnalyticsDeepDiveSection } from './analytics-deep-dive-section'
@@ -382,6 +383,7 @@ function AnalyticsPerformanceSection() {
     algorithmic,
     avgSessionsPerDay,
     avgUsersPerDay,
+    breakdowns,
     chartData,
     conversionRate,
     filteredMetrics,
@@ -464,6 +466,7 @@ function AnalyticsPerformanceSection() {
         isLoading={initialMetricsLoading}
       />
       <AnalyticsDeepDiveSection story={story} formatRevenue={formatRevenue} />
+      <AnalyticsBreakdownSection breakdowns={breakdowns} />
       <AnalyticsCharts
         chartData={chartData}
         formatRevenue={formatRevenue}

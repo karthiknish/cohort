@@ -484,7 +484,7 @@ export function TaskDataTable({
   return (
     <TaskDataTableActionsContext value={actions}>
       <DataTable
-        className={className}
+        className={cn('rounded-none border-0 shadow-none', className)}
         columns={columns}
         data={tasks}
         getRowId={getRowId}

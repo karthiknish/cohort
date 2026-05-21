@@ -1,6 +1,7 @@
 'use client'
 
 import { LoaderCircle } from 'lucide-react'
+import { TASKS_THEME } from './tasks-theme'
 
 export type TaskResultsCountProps = {
   sortedCount: number
@@ -12,17 +13,18 @@ export function TaskResultsCount({ sortedCount, totalCount, loading }: TaskResul
   if (totalCount === 0) return null
 
   return (
-    <div className="flex items-center justify-between border-t border-border/80 px-4 py-2 text-xs text-muted-foreground">
+    <div className={TASKS_THEME.footer}>
       <span>
-        Showing {sortedCount} of {totalCount} task
+        Showing <span className="font-medium text-foreground">{sortedCount}</span> of{' '}
+        <span className="font-medium text-foreground">{totalCount}</span> task
         {totalCount !== 1 ? 's' : ''}
       </span>
-      {loading && (
-        <span className="flex items-center gap-1">
-          <LoaderCircle className="h-3 w-3 animate-spin" />
+      {loading ? (
+        <span className="inline-flex items-center gap-1.5">
+          <LoaderCircle className="h-3 w-3 animate-spin" aria-hidden />
           Updating…
         </span>
-      )}
+      ) : null}
     </div>
   )
 }

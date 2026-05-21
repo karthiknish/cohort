@@ -18,7 +18,6 @@ export const GOOGLE_ADS_SCOPES = [
 
 export const GOOGLE_ANALYTICS_SCOPES = [
   'https://www.googleapis.com/auth/analytics.readonly',
-  'https://www.googleapis.com/auth/analytics.edit',
   'openid',
   'email',
 ] as const

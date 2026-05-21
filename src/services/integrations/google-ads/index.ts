@@ -18,9 +18,13 @@ export {
   checkGoogleAdsIntegrationHealth,
 } from './metrics'
 
+export { fetchGoogleCampaignInsights, buildGoogleCampaignInsightsGaql } from './campaign-insights'
+export type { GoogleCampaignInsightsResult } from './campaign-insights'
+
 // Campaigns
 export {
   listGoogleCampaigns,
+  createGoogleCampaign,
   updateGoogleCampaignStatus,
   updateGoogleCampaignBudget,
   updateGoogleCampaignBudgetByCampaign,

@@ -7,6 +7,7 @@
 // Campaign CRUD
 export {
   listGoogleCampaigns,
+  createGoogleCampaign,
   updateGoogleCampaignStatus,
   updateGoogleCampaignBudget,
   getGoogleCampaignBudgetId,

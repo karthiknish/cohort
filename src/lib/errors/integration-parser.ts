@@ -128,24 +128,31 @@ function extractMetaPayload(payload: unknown): ParsedPayload {
 }
 
 function extractGooglePayload(payload: unknown): ParsedPayload {
-    // Handle null/undefined payload
     if (payload == null) {
         return { message: 'Google API error' }
     }
 
-    const data = payload as { error?: { errors?: Array<{ message?: string; domain?: string }> } | null }
+    const data = payload as {
+        error?: {
+            message?: string
+            status?: string
+            code?: number
+            errors?: Array<{ message?: string; domain?: string; reason?: string }>
+            details?: Array<{ reason?: string }>
+        } | null
+    }
     const error = data?.error
 
-    // Handle null error object
     if (error == null) {
         return { message: 'Google API error' }
     }
 
-    const firstError = error?.errors?.[0]
+    const legacy = error.errors?.[0]
+    const detailReason = error.details?.find((d) => typeof d.reason === 'string')?.reason
 
     return {
-        message: firstError?.message ?? 'Google API error',
-        code: firstError?.domain,
+        message: error.message ?? legacy?.message ?? 'Google API error',
+        code: detailReason ?? error.status ?? legacy?.reason ?? legacy?.domain,
     }
 }
 
@@ -196,9 +203,15 @@ function classifyMetaError(code?: number | string): Classification {
 }
 
 function classifyGoogleError(code?: number | string): Classification {
-    const strCode = String(code ?? '')
-    const isAuthError = GOOGLE_AUTH_ERRORS.some((c) => strCode.includes(c))
-    const isRateLimitError = GOOGLE_RATE_LIMIT_ERRORS.some((c) => strCode.includes(c))
+    const strCode = String(code ?? '').toUpperCase()
+    const isAuthError =
+        GOOGLE_AUTH_ERRORS.some((c) => strCode.includes(c)) ||
+        strCode.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT') ||
+        strCode.includes('PERMISSION_DENIED')
+    const isRateLimitError =
+        GOOGLE_RATE_LIMIT_ERRORS.some((c) => strCode.includes(c)) ||
+        strCode.includes('RESOURCE_EXHAUSTED') ||
+        strCode.includes('RATE_LIMIT')
     const isRetryable = isRateLimitError || GOOGLE_RETRYABLE_ERRORS.some((c) => strCode.includes(c))
 
     return { isAuthError, isRateLimitError, isRetryable }

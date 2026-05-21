@@ -55,6 +55,7 @@ export async function fetchGoogleAdsMetrics(options: GoogleAdsOptions): Promise<
     developerToken,
     customerId,
     loginCustomerId,
+    managerCustomerId,
     timeframeDays,
     pageSize = 1000,
     maxPages = 5,
@@ -66,6 +67,7 @@ export async function fetchGoogleAdsMetrics(options: GoogleAdsOptions): Promise<
 
   const resolvedDeveloperToken = resolveDeveloperToken(developerToken)
   const query = buildGaqlQuery(timeframeDays)
+  const effectiveLoginCustomerId = loginCustomerId ?? managerCustomerId ?? null
 
   let activeAccessToken = accessToken
   let tokenRefreshAttempted = false
@@ -74,7 +76,7 @@ export async function fetchGoogleAdsMetrics(options: GoogleAdsOptions): Promise<
     accessToken: activeAccessToken,
     developerToken: resolvedDeveloperToken,
     customerId,
-    loginCustomerId,
+    loginCustomerId: effectiveLoginCustomerId,
     query,
     pageSize,
     maxPages,

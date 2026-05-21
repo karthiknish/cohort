@@ -92,7 +92,7 @@ function TaskCardComponent({
           'group relative flex h-full flex-col overflow-hidden border border-border/70 bg-card shadow-sm transition-[border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] hover:border-primary/25 hover:shadow-md',
           listItemEnterClass,
           clickableCardClass,
-          isBoard ? 'rounded-xl p-3.5' : 'rounded-[1.25rem] p-4 sm:p-5',
+          isBoard ? 'rounded-xl p-3.5' : 'rounded-2xl p-4 sm:p-5',
           isPendingUpdate && 'pointer-events-none opacity-75',
           selected && 'border-primary/30 ring-2 ring-primary/15',
           overdue && 'border-destructive/25',

@@ -1,5 +1,7 @@
 import { writeMetricsBatch } from '@/lib/ads-admin'
-import { getGoogleAnalyticsIntegration } from '@/lib/analytics-admin'
+import { getGoogleAnalyticsIntegration, writeAnalyticsMetricsBatch } from '@/lib/analytics-admin'
+import { fetchGoogleAnalyticsBreakdowns } from '@/services/integrations/google-analytics/breakdown'
+import { assertGoogleApiOk } from '@/lib/errors/google-api-error'
 import {
   IntegrationTokenError,
   isTokenExpiringSoon,
@@ -13,67 +15,94 @@ import {
 } from '@/services/integrations/google-analytics/properties'
 import { updateGoogleAnalyticsCredentials } from '@/lib/analytics-admin'
 
+const RUN_REPORT_PAGE_LIMIT = 10_000
+const RUN_REPORT_MAX_PAGES = 20
+
 function formatGaDate(raw: string): string {
   if (!raw || raw.length !== 8) return raw
   return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
 }
 
-async function runGaReport(options: {
+type GaReportRow = {
+  date: string
+  totalUsers: number
+  sessions: number
+  conversions: number
+  totalRevenue: number
+}
+
+export async function runGaReport(options: {
   accessToken: string
   propertyId: string
   days: number
-}): Promise<Array<{ date: string; totalUsers: number; sessions: number; conversions: number; totalRevenue: number }>> {
+}): Promise<GaReportRow[]> {
   const { accessToken, propertyId, days } = options
+  const allRows: GaReportRow[] = []
+  let offset = 0
+  let rowCount: number | null = null
 
-  const response = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      dateRanges: [{ startDate: `${Math.max(days, 1)}daysAgo`, endDate: 'today' }],
-      dimensions: [{ name: 'date' }],
-      metrics: [
-        { name: 'totalUsers' },
-        { name: 'sessions' },
-        { name: 'conversions' },
-        { name: 'totalRevenue' },
-      ],
-      limit: 10000,
-    }),
-  })
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    throw new Error(`Failed to fetch Google Analytics report (${response.status}): ${text}`)
-  }
-
-  const payload = (await response.json()) as {
-    rows?: Array<{
-      dimensionValues?: Array<{ value?: string }>
-      metricValues?: Array<{ value?: string }>
-    }>
-  }
-
-  const rows = payload.rows ?? []
-  return rows
-    .map((row) => {
-      const rawDate = row.dimensionValues?.[0]?.value ?? ''
-      const metricValues = row.metricValues ?? []
-      const totalUsers = Number(metricValues[0]?.value ?? 0)
-      const sessions = Number(metricValues[1]?.value ?? 0)
-      const conversions = Number(metricValues[2]?.value ?? 0)
-      const totalRevenue = Number(metricValues[3]?.value ?? 0)
-      return {
-        date: formatGaDate(rawDate),
-        totalUsers: Number.isFinite(totalUsers) ? totalUsers : 0,
-        sessions: Number.isFinite(sessions) ? sessions : 0,
-        conversions: Number.isFinite(conversions) ? conversions : 0,
-        totalRevenue: Number.isFinite(totalRevenue) ? totalRevenue : 0,
-      }
+  for (let page = 0; page < RUN_REPORT_MAX_PAGES; page += 1) {
+    const response = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        dateRanges: [{ startDate: `${Math.max(days, 1)}daysAgo`, endDate: 'today' }],
+        dimensions: [{ name: 'date' }],
+        metrics: [
+          { name: 'totalUsers' },
+          { name: 'sessions' },
+          { name: 'conversions' },
+          { name: 'totalRevenue' },
+        ],
+        limit: RUN_REPORT_PAGE_LIMIT,
+        offset,
+      }),
     })
-    .filter((row) => typeof row.date === 'string' && row.date.length >= 8)
+
+    await assertGoogleApiOk(response, 'Failed to fetch Google Analytics report')
+
+    const payload = (await response.json()) as {
+      rowCount?: number
+      rows?: Array<{
+        dimensionValues?: Array<{ value?: string }>
+        metricValues?: Array<{ value?: string }>
+      }>
+    }
+
+    if (typeof payload.rowCount === 'number' && Number.isFinite(payload.rowCount)) {
+      rowCount = payload.rowCount
+    }
+
+    const pageRows = (payload.rows ?? [])
+      .map((row) => {
+        const rawDate = row.dimensionValues?.[0]?.value ?? ''
+        const metricValues = row.metricValues ?? []
+        const totalUsers = Number(metricValues[0]?.value ?? 0)
+        const sessions = Number(metricValues[1]?.value ?? 0)
+        const conversions = Number(metricValues[2]?.value ?? 0)
+        const totalRevenue = Number(metricValues[3]?.value ?? 0)
+        return {
+          date: formatGaDate(rawDate),
+          totalUsers: Number.isFinite(totalUsers) ? totalUsers : 0,
+          sessions: Number.isFinite(sessions) ? sessions : 0,
+          conversions: Number.isFinite(conversions) ? conversions : 0,
+          totalRevenue: Number.isFinite(totalRevenue) ? totalRevenue : 0,
+        }
+      })
+      .filter((row) => typeof row.date === 'string' && row.date.length >= 8)
+
+    allRows.push(...pageRows)
+
+    if (pageRows.length === 0) break
+    offset += pageRows.length
+    if (rowCount !== null && offset >= rowCount) break
+    if (rowCount === null && pageRows.length < RUN_REPORT_PAGE_LIMIT) break
+  }
+
+  return allRows
 }
 
 export async function syncGoogleAnalyticsMetrics(options: {
@@ -107,7 +136,6 @@ export async function syncGoogleAnalyticsMetrics(options: {
 
   let accessToken = integration.accessToken
 
-  // Refresh proactively if possible to reduce mid-sync failures.
   if (integration.refreshToken && isTokenExpiringSoon(integration.accessTokenExpiresAt, 10 * 60 * 1000)) {
     accessToken = await refreshGoogleAccessToken({
       userId: options.userId,
@@ -177,18 +205,54 @@ export async function syncGoogleAnalyticsMetrics(options: {
     currencySource: reportingCurrency ? 'integration' : 'unknown',
   }))
 
-  await writeMetricsBatch({
-    userId: options.userId,
-    clientId: normalizedClientId,
-    metrics,
+  const breakdownRows = await fetchGoogleAnalyticsBreakdowns({
+    accessToken,
+    propertyId,
+    days,
   })
+
+  await Promise.all([
+    writeMetricsBatch({
+      userId: options.userId,
+      clientId: normalizedClientId,
+      metrics,
+    }),
+    writeAnalyticsMetricsBatch({
+      userId: options.userId,
+      clientId: normalizedClientId,
+      propertyId,
+      currency: reportingCurrency,
+      daily: reportRows.map((row) => ({
+        propertyId,
+        date: row.date,
+        users: row.totalUsers,
+        sessions: row.sessions,
+        conversions: row.conversions,
+        revenue: row.totalRevenue,
+        currency: reportingCurrency,
+      })),
+      breakdowns: breakdownRows.map((row) => ({
+        propertyId,
+        date: row.date,
+        dimension: row.dimension,
+        dimensionValue: row.dimensionValue,
+        users: row.users,
+        sessions: row.sessions,
+        conversions: row.conversions,
+        revenue: row.revenue,
+      })),
+    }),
+  ])
+
+  const written = reportRows.length
 
   logger.info('[Google Analytics Sync] Completed', {
     userId: options.userId,
     clientId: normalizedClientId,
     propertyId,
     syncedDays: days,
-    written: metrics.length,
+    written,
+    breakdownRows: breakdownRows.length,
     requestId: options.requestId ?? undefined,
   })
 
@@ -197,6 +261,6 @@ export async function syncGoogleAnalyticsMetrics(options: {
     propertyId,
     propertyName,
     syncedDays: days,
-    written: metrics.length,
+    written,
   }
 }

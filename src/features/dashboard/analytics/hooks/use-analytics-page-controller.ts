@@ -320,6 +320,7 @@ export function useAnalyticsPageController() {
 
   const {
     metricsData,
+    breakdowns,
     metricsNextCursor,
     metricsLoadingMore,
     loadMoreMetrics,
@@ -587,6 +588,16 @@ export function useAnalyticsPageController() {
     })
   }, [dateRange, metrics])
 
+  const filteredBreakdowns = useMemo(() => {
+    if (!breakdowns.length) return []
+    const startMs = dateRange.start.getTime()
+    const endMs = dateRange.end.getTime()
+    return breakdowns.filter((row) => {
+      const rowDate = new Date(row.date).getTime()
+      return rowDate >= startMs && rowDate <= endMs
+    })
+  }, [breakdowns, dateRange])
+
   const aggregatedByDate = useMemo(() => {
     const map = new Map<string, { date: string; users: number; sessions: number; conversions: number; revenue: number }>()
     filteredMetrics.forEach((metric) => {
@@ -731,6 +742,7 @@ export function useAnalyticsPageController() {
     algorithmic,
     avgSessionsPerDay,
     avgUsersPerDay,
+    breakdowns: filteredBreakdowns,
     chartData,
     conversionRate,
     dateRange,

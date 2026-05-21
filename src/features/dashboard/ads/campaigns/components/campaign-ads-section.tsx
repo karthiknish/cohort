@@ -2,7 +2,7 @@
 
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
-import { useCallback, useEffect, useEffectEvent, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAction } from 'convex/react'
 import NextImage from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -52,52 +52,28 @@ import { cn, formatCurrency } from '@/lib/utils'
 import { resolveMetaSocialPermalink } from '@/services/integrations/meta-ads'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { toAdsProviderId } from '@/features/dashboard/ads/components/utils'
 import { adsAdMetricsApi, adsCreativesApi } from '@/lib/convex-api'
 import { CreateCreativeDialog } from './create-creative-dialog'
+import {
+  computeCreativeTotals,
+  deriveCreativeMetrics,
+  getMetricsForAd,
+  resolveCreativeInsights,
+  sortCreativesByMetric,
+  type CampaignAd,
+  type CreativePerformanceMetrics,
+  type CreativeInsightKind,
+  type CreativeSortKey,
+} from './campaign-creative-metrics'
+import {
+  CampaignCreativesPerformanceStrip,
+  CreativeInsightBadge,
+  CreativeMetricsGrid,
+  CreativeSpendShareBar,
+} from './campaign-creatives-performance'
 
-export type CampaignAd = {
-  providerId: string
-  creativeId: string
-  adId?: string
-  platformCreativeId?: string
-  adGroupId?: string
-  campaignId: string
-  campaignName?: string
-  name?: string
-  type: string
-  status: string
-  headlines?: string[]
-  descriptions?: string[]
-  imageUrl?: string
-  videoUrl?: string
-  videoId?: string
-  imageHash?: string
-  landingPageUrl?: string
-  callToAction?: string
-  pageName?: string
-  pageProfileImageUrl?: string
-  instagramPermalinkUrl?: string
-  objectStoryId?: string
-  objectType?: string
-  pageId?: string
-  instagramActorId?: string
-  assetFeedSpec?: string
-  destinationSpec?: {
-    url?: string
-    fallback_url?: string
-    additional_urls?: string[]
-  }
-  metrics?: {
-    spend: number
-    impressions: number
-    clicks: number
-    conversions: number
-    revenue: number
-    ctr: number
-    cpc: number
-    roas: number
-  }
-}
+export type { CampaignAd } from './campaign-creative-metrics'
 
 type Summary = {
   total: number
@@ -116,13 +92,6 @@ type Props = {
 type ViewMode = 'grid' | 'list'
 type SupportedProviderId = 'google' | 'tiktok' | 'linkedin' | 'facebook'
 
-type AggregatedMetric = {
-  spend: number
-  impressions: number
-  clicks: number
-  conversions: number
-  revenue: number
-}
 
 type AdMetricRow = {
   adId?: string
@@ -204,11 +173,11 @@ function CampaignAdsHeader({
   campaignId,
   canLoad,
   clientId,
+  convexProviderId,
   fetchAds,
   firstAdSetId,
   isPreviewMode,
   loading,
-  providerId,
   setViewMode,
   summaryStats,
   viewMode,
@@ -218,11 +187,11 @@ function CampaignAdsHeader({
   campaignId: string
   canLoad: boolean
   clientId?: string | null
+  convexProviderId: string
   fetchAds: () => Promise<void>
   firstAdSetId?: string
   isPreviewMode?: boolean
   loading: boolean
-  providerId: string
   setViewMode: (viewMode: ViewMode) => void
   summaryStats: { total: number; totalTypes: number; activeCount: number } | null
   viewMode: ViewMode
@@ -256,7 +225,7 @@ function CampaignAdsHeader({
           <CreateCreativeDialog
             key={`creative-${campaignId}-${firstAdSetId ?? 'none'}`}
             workspaceId={workspaceId}
-            providerId={providerId}
+            providerId={convexProviderId}
             campaignId={campaignId}
             clientId={clientId}
             adSetId={firstAdSetId}
@@ -367,19 +336,25 @@ function AdGridItem({
   ad,
   adMetrics,
   currency,
+  insightKind,
+  maxSpend,
   onCreativeClick,
   onToggleStatus,
   providerId,
 }: {
   ad: CampaignAd
-  adMetrics: Record<string, AggregatedMetric>
+  adMetrics: Record<string, CreativePerformanceMetrics | undefined>
   currency: string
+  insightKind?: CreativeInsightKind
+  maxSpend: number
   onCreativeClick: (creative: CampaignAd) => void
   onToggleStatus: (ad: CampaignAd, nextStatus: string) => void
   providerId: string
 }) {
   const handleClick = useCallback(() => onCreativeClick(ad), [onCreativeClick, ad])
   const handleToggleStatus = useCallback((nextStatus: string) => onToggleStatus(ad, nextStatus), [onToggleStatus, ad])
+  const metrics = getMetricsForAd(ad, adMetrics)
+  const spendShare = metrics && maxSpend > 0 ? (metrics.spend / maxSpend) * 100 : 0
   const handleImageError = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
     const target = event.target as HTMLImageElement
     target.style.display = 'none'
@@ -444,20 +419,19 @@ function AdGridItem({
               {ad.status}
             </Badge>
           </div>
-          <h4 className="line-clamp-1 text-xs font-semibold">{ad.name || ad.headlines?.[0] || 'Ad'}</h4>
+          <div className="flex items-start justify-between gap-2">
+            <h4 className="line-clamp-1 flex-1 text-xs font-semibold">{ad.name || ad.headlines?.[0] || 'Ad'}</h4>
+            {insightKind ? <CreativeInsightBadge kind={insightKind} /> : null}
+          </div>
 
-          {adMetrics[ad.creativeId] ? (
-            <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1 border-t border-muted pt-1.5">
-              <div className="flex flex-col">
-                <span className="mb-0.5 text-[9px] uppercase leading-none text-muted-foreground">Spend</span>
-                <span className="text-[11px] font-bold leading-none">{formatCurrency(adMetrics[ad.creativeId]?.spend ?? 0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="mb-0.5 text-[9px] uppercase leading-none text-muted-foreground">Conv.</span>
-                <span className="text-[11px] font-bold leading-none">{adMetrics[ad.creativeId]?.conversions ?? 0}</span>
-              </div>
-            </div>
-          ) : null}
+          {metrics ? (
+            <>
+              <CreativeMetricsGrid metrics={metrics} currency={currency} compact />
+              {metrics.spend > 0 ? <CreativeSpendShareBar share={spendShare} /> : null}
+            </>
+          ) : (
+            <p className="mt-1 text-[10px] text-muted-foreground">No spend in selected period</p>
+          )}
         </div>
       </button>
 
@@ -477,14 +451,18 @@ function AdGridItem({
 function CampaignAdsGrid({
   adMetrics,
   ads,
+  creativeInsights,
   currency,
+  maxSpend,
   onCreativeClick,
   onToggleStatus,
   providerId,
 }: {
-  adMetrics: Record<string, AggregatedMetric>
+  adMetrics: Record<string, CreativePerformanceMetrics | undefined>
   ads: CampaignAd[]
+  creativeInsights: Map<string, CreativeInsightKind>
   currency: string
+  maxSpend: number
   onCreativeClick: (creative: CampaignAd) => void
   onToggleStatus: (ad: CampaignAd, nextStatus: string) => void
   providerId: string
@@ -497,6 +475,8 @@ function CampaignAdsGrid({
           ad={ad}
           adMetrics={adMetrics}
           currency={currency}
+          insightKind={creativeInsights.get(ad.creativeId)}
+          maxSpend={maxSpend}
           onCreativeClick={onCreativeClick}
           onToggleStatus={onToggleStatus}
           providerId={providerId}
@@ -506,17 +486,23 @@ function CampaignAdsGrid({
   )
 }
 
+function formatPercent(value: number): string {
+  return `${value.toFixed(2)}%`
+}
+
 function AdListRow({
   ad,
   adMetrics,
   currency,
+  insightKind,
   onCreativeClick,
   onToggleStatus,
   providerId,
 }: {
   ad: CampaignAd
-  adMetrics: Record<string, AggregatedMetric>
+  adMetrics: Record<string, CreativePerformanceMetrics | undefined>
   currency: string
+  insightKind?: CreativeInsightKind
   onCreativeClick: (creative: CampaignAd) => void
   onToggleStatus: (ad: CampaignAd, nextStatus: string) => void
   providerId: string
@@ -524,6 +510,7 @@ function AdListRow({
   const handleClick = useCallback(() => onCreativeClick(ad), [onCreativeClick, ad])
   const handleStopPropagation = useCallback((event: React.MouseEvent) => event.stopPropagation(), [])
   const handleToggleStatus = useCallback((nextStatus: string) => onToggleStatus(ad, nextStatus), [onToggleStatus, ad])
+  const metrics = getMetricsForAd(ad, adMetrics)
   const permalink =
     providerId === 'facebook'
       ? resolveMetaSocialPermalink({
@@ -556,10 +543,13 @@ function AdListRow({
         </div>
       </TableCell>
       <TableCell>
-        <div className="flex flex-col gap-0.5">
-          <p className="max-w-[240px] truncate font-medium">
-            {ad.name || ad.headlines?.[0] || ad.descriptions?.[0] || ad.creativeId}
-          </p>
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="max-w-[220px] truncate font-medium">
+              {ad.name || ad.headlines?.[0] || ad.descriptions?.[0] || ad.creativeId}
+            </p>
+            {insightKind ? <CreativeInsightBadge kind={insightKind} /> : null}
+          </div>
           <div className="flex items-center gap-1">
             <span className="text-[9px] font-bold uppercase text-muted-foreground">{ad.type}</span>
             {ad.pageName ? (
@@ -581,20 +571,27 @@ function AdListRow({
           />
         </div>
       </TableCell>
-      <TableCell className="text-right font-mono text-xs">
-        {adMetrics[ad.creativeId]?.spend !== undefined
-          ? formatCurrency(adMetrics[ad.creativeId]?.spend ?? 0, currency, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-          : '—'}
+      <TableCell className="text-right font-mono text-xs tabular-nums">
+        {metrics ? formatCurrency(metrics.spend, currency) : '—'}
       </TableCell>
-      <TableCell className="text-right font-mono text-xs">
-        {adMetrics[ad.creativeId]?.clicks !== undefined ? adMetrics[ad.creativeId]?.clicks.toLocaleString() : '—'}
+      <TableCell className="text-right font-mono text-xs tabular-nums hidden md:table-cell">
+        {metrics ? metrics.impressions.toLocaleString() : '—'}
       </TableCell>
-      <TableCell className="text-right font-mono text-xs">
-        {adMetrics[ad.creativeId]?.conversions !== undefined ? adMetrics[ad.creativeId]?.conversions.toLocaleString() : '—'}
+      <TableCell className="text-right font-mono text-xs tabular-nums">
+        {metrics ? metrics.clicks.toLocaleString() : '—'}
       </TableCell>
-      <TableCell className="hidden lg:table-cell">
-        <p className="max-w-[200px] truncate text-sm text-muted-foreground">
-          {ad.headlines?.[0] || ad.descriptions?.[0] || '-'}
+      <TableCell className="text-right font-mono text-xs tabular-nums hidden lg:table-cell">
+        {metrics ? formatPercent(metrics.ctr) : '—'}
+      </TableCell>
+      <TableCell className="text-right font-mono text-xs tabular-nums">
+        {metrics ? metrics.conversions.toLocaleString() : '—'}
+      </TableCell>
+      <TableCell className="text-right font-mono text-xs tabular-nums hidden lg:table-cell">
+        {metrics && metrics.roas > 0 ? `${metrics.roas.toFixed(2)}×` : '—'}
+      </TableCell>
+      <TableCell className="hidden xl:table-cell">
+        <p className="max-w-[180px] truncate text-sm text-muted-foreground">
+          {ad.headlines?.[0] || ad.descriptions?.[0] || '—'}
         </p>
       </TableCell>
       <TableCell onClick={handleStopPropagation}>
@@ -623,31 +620,36 @@ function AdListRow({
 function CampaignAdsList({
   adMetrics,
   ads,
+  creativeInsights,
   currency,
   onCreativeClick,
   onToggleStatus,
   providerId,
 }: {
-  adMetrics: Record<string, AggregatedMetric>
+  adMetrics: Record<string, CreativePerformanceMetrics | undefined>
   ads: CampaignAd[]
+  creativeInsights: Map<string, CreativeInsightKind>
   currency: string
   onCreativeClick: (creative: CampaignAd) => void
   onToggleStatus: (ad: CampaignAd, nextStatus: string) => void
   providerId: string
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div className="overflow-hidden rounded-xl border border-border/60">
       <Table>
         <TableHeader>
-          <TableRow>
+          <TableRow className="bg-muted/30 hover:bg-muted/30">
             <TableHead className="w-16">Preview</TableHead>
-            <TableHead>Creative Details</TableHead>
+            <TableHead>Creative</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Spend</TableHead>
+            <TableHead className="text-right hidden md:table-cell">Impr.</TableHead>
             <TableHead className="text-right">Clicks</TableHead>
+            <TableHead className="text-right hidden lg:table-cell">CTR</TableHead>
             <TableHead className="text-right">Conv.</TableHead>
-            <TableHead className="hidden lg:table-cell">Primary Text/Headline</TableHead>
-            <TableHead className="w-10 text-center">Permalink</TableHead>
+            <TableHead className="text-right hidden lg:table-cell">ROAS</TableHead>
+            <TableHead className="hidden xl:table-cell">Copy</TableHead>
+            <TableHead className="w-10 text-center">Link</TableHead>
             <TableHead className="w-10"></TableHead>
           </TableRow>
         </TableHeader>
@@ -658,6 +660,7 @@ function CampaignAdsList({
               ad={ad}
               adMetrics={adMetrics}
               currency={currency}
+              insightKind={creativeInsights.get(ad.creativeId)}
               onCreativeClick={onCreativeClick}
               onToggleStatus={onToggleStatus}
               providerId={providerId}
@@ -674,6 +677,8 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   const { user } = useAuth()
   const workspaceId = user?.agencyId ? String(user.agencyId) : null
   const displayCurrency = normalizeCurrencyCode(currency)
+  const convexProviderId = useMemo(() => toAdsProviderId(providerId), [providerId])
+  const isMeta = convexProviderId === 'facebook'
 
   const listCreatives = useAction(adsCreativesApi.listCreatives)
   const updateCreativeStatus = useAction(adsCreativesApi.updateCreativeStatus)
@@ -686,8 +691,10 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [hasLoaded, setHasLoaded] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
-  const [adMetrics, setAdMetrics] = useState<Record<string, AggregatedMetric>>({})
-  const [, setMetricsLoading] = useState(false)
+  const [adMetrics, setAdMetrics] = useState<Record<string, CreativePerformanceMetrics | undefined>>({})
+  const [metricsLoading, setMetricsLoading] = useState(false)
+  const [periodDays, setPeriodDays] = useState('30')
+  const [sortKey, setSortKey] = useState<CreativeSortKey>('spend')
 
   const canLoad = !isPreviewMode
 
@@ -706,11 +713,11 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
 
     await listCreatives({
       workspaceId,
-      providerId: providerId as SupportedProviderId,
+      providerId: convexProviderId as SupportedProviderId,
       clientId: clientId ?? null,
       campaignId,
-      maxMetaCreativePages: providerId === 'facebook' ? 50 : undefined,
-      maxGoogleAdsSearchPages: providerId === 'google' ? 20 : undefined,
+      maxMetaCreativePages: convexProviderId === 'facebook' ? 50 : undefined,
+      maxGoogleAdsSearchPages: convexProviderId === 'google' ? 20 : undefined,
     })
       .then((creatives) => {
         const mapped = creatives as CampaignAd[]
@@ -729,10 +736,9 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
       .finally(() => {
         setLoading(false)
       })
-  }, [canLoad, campaignId, clientId, listCreatives, providerId, workspaceId])
- 
-  const fetchMetrics = useCallback(async () => {
+  }, [canLoad, campaignId, clientId, convexProviderId, listCreatives, workspaceId])
 
+  const fetchMetrics = useCallback(async () => {
     if (!canLoad) return
     setMetricsLoading(true)
 
@@ -743,26 +749,36 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
 
     await listAdMetrics({
       workspaceId,
-      providerId: providerId as SupportedProviderId,
+      providerId: convexProviderId as SupportedProviderId,
       clientId: clientId ?? null,
       campaignId,
-      days: '30',
+      days: periodDays,
     })
       .then((data) => {
         const metrics = Array.isArray((data as { metrics?: AdMetricRow[] } | null | undefined)?.metrics)
           ? (data as { metrics?: AdMetricRow[] }).metrics ?? []
           : []
 
-        const aggregated: Record<string, AggregatedMetric> = {}
+        const aggregated: Record<string, CreativePerformanceMetrics | undefined> = {}
         metrics.forEach((m) => {
           if (!m.adId) return
-          const current = aggregated[m.adId] ?? { spend: 0, impressions: 0, clicks: 0, conversions: 0, revenue: 0 }
+          const current = aggregated[m.adId] ?? {
+            spend: 0,
+            impressions: 0,
+            clicks: 0,
+            conversions: 0,
+            revenue: 0,
+            ctr: 0,
+            cpc: 0,
+            cpa: 0,
+            roas: 0,
+          }
           current.spend += m.spend ?? 0
           current.impressions += m.impressions ?? 0
           current.clicks += m.clicks ?? 0
           current.conversions += m.conversions ?? 0
           current.revenue += m.revenue ?? 0
-          aggregated[m.adId] = current
+          aggregated[m.adId] = deriveCreativeMetrics(current) ?? current
         })
         setAdMetrics(aggregated)
       })
@@ -772,22 +788,17 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
       .finally(() => {
         setMetricsLoading(false)
       })
-  }, [canLoad, campaignId, clientId, listAdMetrics, providerId, workspaceId])
+  }, [canLoad, campaignId, clientId, convexProviderId, listAdMetrics, periodDays, workspaceId])
 
-  const runInitialFetches = useEffectEvent(() => {
-    void fetchAds()
-    void fetchMetrics()
-  })
- 
   useEffect(() => {
-    const frameId = requestAnimationFrame(() => {
-      runInitialFetches()
-    })
+    if (!canLoad || !workspaceId) return
+    void fetchAds()
+  }, [canLoad, campaignId, clientId, convexProviderId, fetchAds, workspaceId])
 
-    return () => {
-      cancelAnimationFrame(frameId)
-    }
-  }, [])
+  useEffect(() => {
+    if (!hasLoaded) return
+    void fetchMetrics()
+  }, [fetchMetrics, hasLoaded, periodDays])
 
   const uniqueTypes = useMemo(() => {
     const types = new Set(ads.map(ad => ad.type || 'Unknown'))
@@ -817,15 +828,40 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   }, [availableAdSets])
 
   const filteredAds = useMemo(() => {
-    return ads.filter(ad => {
-      const matchesSearch = !searchQuery ||
-        (ad.name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (ad.headlines?.some((h: string) => h.toLowerCase().includes(searchQuery.toLowerCase())))
+    return ads.filter((ad) => {
+      const matchesSearch =
+        !searchQuery ||
+        ad.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ad.headlines?.some((h: string) => h.toLowerCase().includes(searchQuery.toLowerCase()))
       const matchesType = typeFilter === 'all' || ad.type === typeFilter
       const matchesStatus = statusFilter === 'all' || ad.status === statusFilter
       return matchesSearch && matchesType && matchesStatus
     })
   }, [ads, searchQuery, typeFilter, statusFilter])
+
+  const sortedFilteredAds = useMemo(
+    () => sortCreativesByMetric(filteredAds, adMetrics, sortKey),
+    [adMetrics, filteredAds, sortKey],
+  )
+
+  const performanceTotals = useMemo(
+    () => (filteredAds.length > 0 ? computeCreativeTotals(filteredAds, adMetrics) : null),
+    [adMetrics, filteredAds],
+  )
+
+  const creativeInsights = useMemo(
+    () => resolveCreativeInsights(sortedFilteredAds, adMetrics),
+    [adMetrics, sortedFilteredAds],
+  )
+
+  const maxSpend = useMemo(() => {
+    let max = 0
+    for (const ad of sortedFilteredAds) {
+      const spend = getMetricsForAd(ad, adMetrics)?.spend ?? 0
+      if (spend > max) max = spend
+    }
+    return max
+  }, [adMetrics, sortedFilteredAds])
 
   const handleCreativeClick = useCallback((creative: CampaignAd) => {
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
@@ -856,7 +892,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
 
     void updateCreativeStatus({
         workspaceId,
-        providerId: providerId as SupportedProviderId,
+        providerId: convexProviderId as SupportedProviderId,
         clientId: clientId ?? null,
         creativeId: ad.creativeId,
         adGroupId: ad.adGroupId,
@@ -879,18 +915,22 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
         fallbackMessage: 'Error',
         })
       })
-  }, [ads, clientId, providerId, updateCreativeStatus, workspaceId])
+  }, [ads, clientId, convexProviderId, updateCreativeStatus, workspaceId])
 
   const handleToggleAdStatus = useCallback((ad: CampaignAd, nextStatus: string) => {
     void toggleAdStatus(ad, nextStatus)
   }, [toggleAdStatus])
 
   const summaryStats = useMemo(() => {
-    if (!summary) return null
-    const totalTypes = Object.keys(summary.byType).length
-    const activeCount = summary.byStatus?.ACTIVE ?? summary.byStatus?.ENABLED ?? 0
-    return { total: summary.total, totalTypes, activeCount }
-  }, [summary])
+    if (!hasLoaded && ads.length === 0) return null
+    const total = summary?.total ?? ads.length
+    const totalTypes = summary ? Object.keys(summary.byType).length : new Set(ads.map((ad) => ad.type)).size
+    const activeCount =
+      summary?.byStatus?.ACTIVE ??
+      summary?.byStatus?.ENABLED ??
+      ads.filter((ad) => isAdEnabled(ad.status)).length
+    return { total, totalTypes, activeCount }
+  }, [ads, hasLoaded, summary])
 
   const handleClearFilters = useCallback(() => {
     setSearchQuery('')
@@ -898,18 +938,22 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
     setStatusFilter('all')
   }, [])
 
+  const handleRefreshAll = useCallback(async () => {
+    await Promise.all([fetchAds(), fetchMetrics()])
+  }, [fetchAds, fetchMetrics])
+
   return (
-    <Card className="border-muted/40 shadow-sm">
+    <Card className="overflow-hidden border-border/60 shadow-sm">
       <CampaignAdsHeader
         availableAdSets={availableAdSets}
         campaignId={campaignId}
         canLoad={canLoad}
         clientId={clientId}
-        fetchAds={fetchAds}
+        convexProviderId={convexProviderId}
+        fetchAds={handleRefreshAll}
         firstAdSetId={firstAdSetId}
         isPreviewMode={isPreviewMode}
         loading={loading}
-        providerId={providerId}
         setViewMode={setViewMode}
         summaryStats={summaryStats}
         viewMode={viewMode}
@@ -951,6 +995,17 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
           </div>
         ) : (
           <>
+            <CampaignCreativesPerformanceStrip
+              totals={performanceTotals}
+              currency={displayCurrency}
+              periodDays={periodDays}
+              onPeriodChange={setPeriodDays}
+              sortKey={sortKey}
+              onSortChange={setSortKey}
+              metricsLoading={metricsLoading}
+              isMeta={isMeta}
+            />
+
             <CampaignAdsFilters
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -976,25 +1031,34 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
             ) : viewMode === 'grid' ? (
               <CampaignAdsGrid
                 adMetrics={adMetrics}
-                ads={filteredAds}
+                ads={sortedFilteredAds}
+                creativeInsights={creativeInsights}
                 currency={displayCurrency}
+                maxSpend={maxSpend}
                 onCreativeClick={handleCreativeClick}
                 onToggleStatus={handleToggleAdStatus}
-                providerId={providerId}
+                providerId={convexProviderId}
               />
             ) : (
               <CampaignAdsList
                 adMetrics={adMetrics}
-                ads={filteredAds}
+                ads={sortedFilteredAds}
+                creativeInsights={creativeInsights}
                 currency={displayCurrency}
                 onCreativeClick={handleCreativeClick}
                 onToggleStatus={handleToggleAdStatus}
-                providerId={providerId}
+                providerId={convexProviderId}
               />
             )}
 
-            <div className="text-center text-xs text-muted-foreground">
-              Showing {filteredAds.length} of {ads.length} creatives
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>
+                Showing {sortedFilteredAds.length} of {ads.length} creatives
+                {metricsLoading ? ' · refreshing metrics…' : ''}
+              </span>
+              {isMeta ? (
+                <span>Metrics are per Meta ad (last {periodDays} days)</span>
+              ) : null}
             </div>
           </>
         )}

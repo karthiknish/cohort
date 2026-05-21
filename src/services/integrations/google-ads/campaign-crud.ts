@@ -12,6 +12,8 @@ import type {
     GoogleCampaign,
     GoogleAdsApiErrorResponse,
 } from './types'
+import type { CreateGoogleCampaignOptions } from './campaign-modules/types'
+import { getGoogleObjectiveConfig } from './campaign-modules/objectives'
 
 async function parseGoogleAdsErrorResponse(response: Response, context: string): Promise<GoogleAdsApiErrorResponse | null> {
     return await parseJsonBodySafely<GoogleAdsApiErrorResponse>(response, {
@@ -162,6 +164,143 @@ export async function listGoogleCampaigns(options: {
             brandGuidelinesEnabled: campaign?.brandGuidelinesEnabled,
         }
     })
+}
+
+// =============================================================================
+// CREATE CAMPAIGN
+// =============================================================================
+
+function buildCampaignBiddingFields(options: CreateGoogleCampaignOptions): Record<string, unknown> {
+    const biddingType = (options.biddingStrategyType ?? '').toUpperCase()
+
+    if (biddingType.includes('TARGET_CPA') && options.targetCpa !== undefined) {
+        return {
+            targetCpa: { targetCpaMicros: Math.round(options.targetCpa * 1_000_000).toString() },
+        }
+    }
+
+    if (biddingType.includes('TARGET_ROAS') && options.targetRoas !== undefined) {
+        return { targetRoas: { targetRoas: options.targetRoas } }
+    }
+
+    if (biddingType.includes('MAXIMIZE_CONVERSIONS')) {
+        return options.targetCpa !== undefined
+            ? { maximizeConversions: { targetCpaMicros: Math.round(options.targetCpa * 1_000_000).toString() } }
+            : { maximizeConversions: {} }
+    }
+
+    if (biddingType.includes('MAXIMIZE_CONVERSION_VALUE')) {
+        return options.targetRoas !== undefined
+            ? { maximizeConversionValue: { targetRoas: options.targetRoas } }
+            : { maximizeConversionValue: {} }
+    }
+
+    return { manualCpc: {} }
+}
+
+export async function createGoogleCampaign(
+    options: CreateGoogleCampaignOptions
+): Promise<{ success: boolean; campaignId?: string; budgetId?: string; error?: string }> {
+    const {
+        accessToken,
+        developerToken,
+        customerId,
+        name,
+        advertisingChannelType,
+        status = 'PAUSED',
+        dailyBudget,
+        loginCustomerId,
+        startDate,
+        endDate,
+    } = options
+
+    const objectiveConfig = getGoogleObjectiveConfig(options.objective)
+    const channelType = advertisingChannelType || objectiveConfig?.advertisingChannelTypes[0] || 'SEARCH'
+
+    const headers: Record<string, string> = {
+        Authorization: `Bearer ${accessToken}`,
+        'developer-token': developerToken,
+        'Content-Type': 'application/json',
+    }
+
+    if (loginCustomerId) {
+        headers['login-customer-id'] = loginCustomerId
+    }
+
+    const budgetAmountMicros = dailyBudget !== undefined
+        ? Math.max(Math.round(dailyBudget * 1_000_000), 1_000_000)
+        : 1_000_000
+
+    const budgetResponse = await fetch(`${GOOGLE_API_BASE}/customers/${customerId}/campaignBudgets:mutate`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+            operations: [{
+                create: {
+                    name: `${name} Budget`,
+                    amountMicros: budgetAmountMicros.toString(),
+                    deliveryMethod: 'STANDARD',
+                    explicitlyShared: false,
+                },
+            }],
+        }),
+    })
+
+    if (!budgetResponse.ok) {
+        const errorData = await parseGoogleAdsErrorResponse(budgetResponse, 'Google Ads budget create error')
+        return {
+            success: false,
+            error: errorData?.error?.message ?? 'Failed to create campaign budget',
+        }
+    }
+
+    const budgetPayload = (await budgetResponse.json()) as {
+        results?: Array<{ resourceName?: string }>
+    }
+    const budgetResourceName = budgetPayload.results?.[0]?.resourceName
+    if (!budgetResourceName) {
+        return { success: false, error: 'Campaign budget resource was not returned' }
+    }
+
+    const campaignCreate: Record<string, unknown> = {
+        name,
+        status,
+        advertisingChannelType: channelType,
+        campaignBudget: budgetResourceName,
+        containsEuPoliticalAdvertising: 'DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING',
+        ...buildCampaignBiddingFields(options),
+    }
+
+    if (startDate) campaignCreate.startDate = startDate.replace(/-/g, '')
+    if (endDate) campaignCreate.endDate = endDate.replace(/-/g, '')
+
+    const campaignResponse = await fetch(`${GOOGLE_API_BASE}/customers/${customerId}/campaigns:mutate`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+            operations: [{ create: campaignCreate }],
+        }),
+    })
+
+    if (!campaignResponse.ok) {
+        const errorData = await parseGoogleAdsErrorResponse(campaignResponse, 'Google Ads campaign create error')
+        return {
+            success: false,
+            error: errorData?.error?.message ?? 'Failed to create campaign',
+        }
+    }
+
+    const campaignPayload = (await campaignResponse.json()) as {
+        results?: Array<{ resourceName?: string }>
+    }
+    const campaignResourceName = campaignPayload.results?.[0]?.resourceName
+    const campaignId = campaignResourceName?.split('/').pop()
+
+    return {
+        success: true,
+        campaignId,
+        budgetId: budgetResourceName.split('/').pop(),
+    }
 }
 
 // =============================================================================

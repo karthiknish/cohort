@@ -24,6 +24,7 @@ import { Calendar } from '@/shared/ui/calendar'
 import { Checkbox } from '@/shared/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { isTaskDueDateDisabled } from './task-types'
+import { TASKS_THEME } from './tasks-theme'
 import { TASK_STATUSES } from '@/types/tasks'
 import type { TaskStatus } from '@/types/tasks'
 
@@ -115,9 +116,9 @@ export function TaskBulkToolbar({
   }, [masterIndeterminate])
 
   return (
-    <div className="space-y-3 border-b border-muted/40 bg-muted/10 px-4 py-3">
+    <div className="space-y-3 border-b border-border/50 bg-primary/[0.03] px-4 py-3">
       <div className="flex flex-wrap items-center gap-3 text-sm">
-        <div className="inline-flex items-center gap-2 rounded-md border border-muted/60 bg-background px-3 py-2">
+        <div className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 shadow-sm">
           <Checkbox
             ref={masterRef}
             checked={masterChecked}

@@ -76,6 +76,7 @@ import type * as analyticsInsights from "../analyticsInsights.js";
 import type * as analyticsIntegrations from "../analyticsIntegrations.js";
 import type * as analyticsIntegrations_accountInit from "../analyticsIntegrations/accountInit.js";
 import type * as analyticsIntegrations_discovery from "../analyticsIntegrations/discovery.js";
+import type * as analyticsIntegrations_metrics from "../analyticsIntegrations/metrics.js";
 import type * as analyticsIntegrations_queries from "../analyticsIntegrations/queries.js";
 import type * as analyticsIntegrations_settings from "../analyticsIntegrations/settings.js";
 import type * as analyticsIntegrations_shared from "../analyticsIntegrations/shared.js";
@@ -221,6 +222,7 @@ declare const fullApi: ApiFromModules<{
   analyticsIntegrations: typeof analyticsIntegrations;
   "analyticsIntegrations/accountInit": typeof analyticsIntegrations_accountInit;
   "analyticsIntegrations/discovery": typeof analyticsIntegrations_discovery;
+  "analyticsIntegrations/metrics": typeof analyticsIntegrations_metrics;
   "analyticsIntegrations/queries": typeof analyticsIntegrations_queries;
   "analyticsIntegrations/settings": typeof analyticsIntegrations_settings;
   "analyticsIntegrations/shared": typeof analyticsIntegrations_shared;

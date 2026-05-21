@@ -35,6 +35,7 @@ import { useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
 import { usePersistedTab } from '@/shared/hooks/use-persisted-tab'
 import { usersApi } from '@/lib/convex-api'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import { TASKS_THEME } from './tasks-theme'
 import { isFeatureEnabled } from '@/lib/features'
 import { cn, exportToCsv } from '@/lib/utils'
 import type { TaskStatus } from '@/types/tasks'
@@ -515,7 +516,7 @@ function TasksPageContent({
         loading={initialLoading}
         loadingContent={loadingContent}
       >
-      <div className={cn(DASHBOARD_THEME.layout.container, 'mx-auto max-w-7xl space-y-4 pb-10')}>
+      <div className={cn(DASHBOARD_THEME.layout.container, TASKS_THEME.page)}>
         <TasksHeader
           loading={loading}
           retryCount={retryCount}
@@ -527,7 +528,7 @@ function TasksPageContent({
         />
 
         {initialLoading ? (
-          <Skeleton className="h-8 w-full max-w-md" />
+          <Skeleton className={cn(TASKS_THEME.summaryCard, 'h-24')} />
         ) : (
           <TaskSummaryCards
             taskCounts={filters.taskCounts}
@@ -542,27 +543,16 @@ function TasksPageContent({
           onValueChange={filters.setActiveTab}
           className="space-y-0"
         >
-          <div className="overflow-hidden rounded-lg border border-border/80 bg-card">
-            <div className="sticky top-0 z-10 flex flex-col gap-2 border-b border-border/80 bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                  {filters.viewMode === 'board' ? 'Board' : filters.viewMode === 'grid' ? 'Grid' : 'List'}
-                </h2>
-                <TabsList className="h-8 w-fit gap-0 rounded-md border border-border/60 bg-transparent p-0">
-                  <TabsTrigger
-                    value="all-tasks"
-                    className="h-8 rounded-none rounded-l-md border-0 px-3 text-xs data-[state=active]:bg-muted data-[state=active]:shadow-none"
-                  >
-                    All tasks
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="my-tasks"
-                    className="h-8 rounded-none rounded-r-md border-0 border-l border-border/60 px-3 text-xs data-[state=active]:bg-muted data-[state=active]:shadow-none"
-                  >
-                    My tasks
-                  </TabsTrigger>
-                </TabsList>
-              </div>
+          <div className={TASKS_THEME.workspace}>
+            <div className={cn(TASKS_THEME.rail, 'sticky top-0 z-10 backdrop-blur-md')}>
+              <TabsList className={TASKS_THEME.tabList}>
+                <TabsTrigger value="all-tasks" className={TASKS_THEME.tabTrigger}>
+                  All tasks
+                </TabsTrigger>
+                <TabsTrigger value="my-tasks" className={TASKS_THEME.tabTrigger}>
+                  My tasks
+                </TabsTrigger>
+              </TabsList>
               <TaskViewControls
                 viewMode={filters.viewMode}
                 onViewModeChange={filters.setViewMode}
@@ -572,7 +562,6 @@ function TasksPageContent({
             </div>
 
             <div>
-              {/* Filters */}
               <TaskFilters
                 searchQuery={rawSearchQuery}
                 onSearchChange={setRawSearchQuery}
@@ -590,7 +579,6 @@ function TasksPageContent({
                 onClearFilters={handleClearListFilters}
               />
 
-              {/* Project filter banner */}
               <ProjectFilterBanner
                 projectId={projectFilter.id}
                 projectName={projectFilter.name}
@@ -616,7 +604,12 @@ function TasksPageContent({
                 />
               )}
 
-              {/* Task List / Kanban */}
+              <div
+                className={cn(
+                  TASKS_THEME.content,
+                  filters.viewMode === 'list' && TASKS_THEME.contentList,
+                )}
+              >
               {filters.viewMode === 'board' ? (
                 <TaskKanban
                   tasks={filters.sortedTasks}
@@ -669,8 +662,8 @@ function TasksPageContent({
                   participants={taskParticipants}
                 />
               )}
+              </div>
 
-              {/* Results count */}
               {!initialLoading && !error && (
                 <TaskResultsCount
                   sortedCount={filters.sortedTasks.length}

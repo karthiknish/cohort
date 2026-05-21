@@ -1,5 +1,6 @@
 import type { Doc } from '/_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
+import { internal } from '/_generated/api'
 
 import {
   assertCronKey,
@@ -140,6 +141,31 @@ export const updateGoogleAnalyticsCredentialsInternal = internalMutation({
   },
 })
 
+export const updateGoogleAnalyticsStatusInternal = internalMutation({
+  args: {
+    workspaceId: v.string(),
+    clientId: v.optional(v.union(v.string(), v.null())),
+    status: v.union(v.literal('pending'), v.literal('success'), v.literal('error')),
+    message: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const timestamp = nowMs()
+    const clientId = normalizeClientId(args.clientId ?? null)
+    const { current, legacy } = await findRows(ctx, args.workspaceId, clientId)
+    const existing = current ?? legacy
+    if (!existing) return { ok: true }
+    const payload = {
+      ...basePayload(existing, args.workspaceId, clientId, timestamp),
+      lastSyncStatus: args.status,
+      lastSyncMessage: args.message ?? null,
+      lastSyncedAtMs: args.status === 'success' ? timestamp : null,
+    }
+    if (current) await ctx.db.patch(current._id, payload)
+    else await ctx.db.insert('analyticsIntegrations', payload)
+    return { ok: true }
+  },
+})
+
 export const updateGoogleAnalyticsStatus = mutation({
   args: {
     workspaceId: v.string(),
@@ -148,7 +174,7 @@ export const updateGoogleAnalyticsStatus = mutation({
     message: v.optional(v.union(v.string(), v.null())),
     cronKey: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ ok: boolean }> => {
     const identity = await ctx.auth.getUserIdentity()
     if (identity) {
       await requireWorkspaceAccess(ctx, args.workspaceId)
@@ -234,19 +260,11 @@ export const deleteGoogleAnalyticsMetrics = mutation({
     workspaceId: v.string(),
     clientId: v.optional(v.union(v.string(), v.null())),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ ok: boolean; deleted: number }> => {
     await requireWorkspaceAccess(ctx, args.workspaceId)
-    const clientId = normalizeClientId(args.clientId ?? null)
-    const rows = await ctx.db.query('adMetrics').withIndex('by_workspace_provider_date', (q) =>
-      q.eq('workspaceId', args.workspaceId).eq('providerId', 'google-analytics')
-    ).collect()
-    let deleted = 0
-    for (const row of rows) {
-      if ((clientId === null ? row.clientId === null : row.clientId === clientId)) {
-        await ctx.db.delete(row._id)
-        deleted += 1
-      }
-    }
-    return { ok: true, deleted }
+    return await ctx.runMutation(internal.analyticsIntegrations.deleteGoogleAnalyticsMetricsDataInternal, {
+      workspaceId: args.workspaceId,
+      clientId: normalizeClientId(args.clientId ?? null),
+    })
   },
 })

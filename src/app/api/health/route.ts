@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { apiError, apiSuccess, createApiHandler } from '@/lib/api-handler'
-import { buildConfiguredServiceChecks, type ServiceCheck } from '@/lib/health/service-checks'
+import { buildConfiguredServiceChecks, probeGoogleAdsLiveHealth, type ServiceCheck } from '@/lib/health/service-checks'
 import type { AuthResult } from '@/lib/server-auth'
 import { api as convexApi } from '/_generated/api'
 
@@ -49,6 +49,15 @@ export const GET = createApiHandler(
     }
 
     // Note: Rate limiting is enforced via Convex; we don't separately health-check it here.
+
+    try {
+      checks.googleAdsLive = await probeGoogleAdsLiveHealth()
+    } catch (error) {
+      checks.googleAdsLive = {
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Google Ads live health probe failed',
+      }
+    }
 
     // Check Brevo connectivity
     try {

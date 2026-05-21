@@ -204,11 +204,19 @@ function isConvexReadLimitError(error: unknown): boolean {
 }
 
 function isGoogleOAuthScopeError(error: unknown): boolean {
-  const message = asErrorMessage(error).toLowerCase()
+  const message = asErrorMessage(error)
+  const code =
+    error && typeof error === 'object' && 'code' in error
+      ? String((error as { code?: unknown }).code ?? '')
+      : ''
+
+  if (code === 'ACCESS_TOKEN_SCOPE_INSUFFICIENT') return true
+
+  const lower = message.toLowerCase()
   return (
-    message.includes('access_token_scope_insufficient') ||
-    message.includes('insufficient authentication scopes') ||
-    message.includes('insufficient permission')
+    lower.includes('access_token_scope_insufficient') ||
+    lower.includes('insufficient authentication scopes') ||
+    lower.includes('insufficient permission')
   )
 }
 
@@ -331,7 +339,21 @@ export async function withErrorHandling<T>(
 
     if (isGoogleOAuthScopeError(error)) {
       console.warn(`[${context ?? 'integrationScope'}]`, error)
-      throw Errors.integration.insufficientScope('Google Analytics')
+      const providerLabel = asErrorMessage(error).toLowerCase().includes('google ads')
+        ? 'Google Ads'
+        : 'Google Analytics'
+      throw Errors.integration.insufficientScope(providerLabel)
+    }
+
+    const errorCode =
+      error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: unknown }).code ?? '')
+        : ''
+    if (errorCode === 'RESOURCE_EXHAUSTED' || isRateLimitError(error)) {
+      console.warn(`[${context ?? 'rateLimit'}] Google API quota:`, error)
+      throw Errors.rateLimit.tooManyRequests(
+        'Google API rate limit reached. Please wait a moment and try again.',
+      )
     }
     
     console.error(`[${context ?? 'error'}]`, error)

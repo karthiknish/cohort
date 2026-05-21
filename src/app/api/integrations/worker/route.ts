@@ -1,196 +1,131 @@
 import { z } from 'zod'
-import { ConvexHttpClient } from 'convex/browser'
-import { internal } from '/_generated/api'
 import { recordSchedulerEvent } from '@/lib/scheduler-monitor'
 import { getSchedulerAlertPreference } from '@/lib/scheduler-alert-preferences'
 import { createApiHandler } from '@/lib/api-handler'
 import { UnauthorizedError } from '@/lib/api-errors'
-
-type QueryReference = Parameters<ConvexHttpClient['query']>[0]
 
 const workerSchema = z.object({
   maxJobs: z.number().optional(),
   maxWorkspaces: z.number().optional(),
 })
 
-// Lazy-init Convex client
-let _convexClient: ConvexHttpClient | null = null
-function getConvexClient(): ConvexHttpClient {
-  if (_convexClient) return _convexClient
-  const url = process.env.CONVEX_URL ?? process.env.NEXT_PUBLIC_CONVEX_URL
-  if (!url) throw new Error('CONVEX_URL is not configured')
-  _convexClient = new ConvexHttpClient(url)
-  return _convexClient
+function resolveConvexHttpUrl(): string {
+  const url = process.env.NEXT_PUBLIC_CONVEX_HTTP_URL ?? process.env.NEXT_PUBLIC_CONVEX_SITE_URL
+  if (!url) {
+    throw new Error('NEXT_PUBLIC_CONVEX_HTTP_URL or NEXT_PUBLIC_CONVEX_SITE_URL is not configured')
+  }
+  return url.replace(/\/$/, '')
 }
 
 /**
- * Background worker that processes sync jobs continuously.
- * Designed to be called by external schedulers (Cloud Scheduler, cron services).
- * Processes multiple jobs per invocation to maximize efficiency.
+ * Background worker that delegates ad/analytics sync processing to the Convex cron worker.
+ * Uses a single HTTP call (`mode: "all"`) instead of per-workspace Next.js process loops.
  */
 export const POST = createApiHandler(
   {
     bodySchema: workerSchema,
     rateLimit: 'sensitive',
   },
-  async (req, { auth, body }) => {
-    // Verify this is an authorized cron/worker request
+  async (_req, { auth, body }) => {
     if (!auth.isCron) {
       throw new UnauthorizedError('Worker authentication required')
     }
 
     const startedAt = Date.now()
-    const maxJobs = Math.min(body.maxJobs || 10, 25) // Process up to 25 jobs per invocation
-    const maxWorkspaces = Math.min(body.maxWorkspaces || 50, 100) // Check up to 100 workspaces
-    const origin = req.nextUrl.origin
     const cronSecret = process.env.INTEGRATIONS_CRON_SECRET
 
     if (!cronSecret) {
       throw new Error('INTEGRATIONS_CRON_SECRET is not configured')
     }
 
-    const convex = getConvexClient()
-  
-  let processedJobs = 0
-  let successfulJobs = 0
-  let failedJobs = 0
-  let hadQueuedJobs = false
-  let inspectedQueuedJobs = 0
-  const jobResults: Array<{ workspaceId: string; jobId: string; providerId: string; status: string; error?: string }> = []
-
-    // Get workspaces with queued sync jobs directly from Convex
-    const workspaceIds = await convex.query(internal.adsIntegrations.listWorkspacesWithQueuedJobs as unknown as QueryReference, {
-      limit: maxWorkspaces,
+    const convexHttpUrl = resolveConvexHttpUrl()
+    const processResponse = await fetch(`${convexHttpUrl}/cron/ad-sync-worker`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-cron-key': cronSecret,
+      },
+      body: JSON.stringify({ mode: 'all', maxJobs: body.maxJobs }),
     })
 
-    for (const workspaceId of workspaceIds) {
-      if (processedJobs >= maxJobs) {
-        break // Stop if we've hit the job limit
-      }
+    const result = (await processResponse.json().catch(() => ({
+      error: 'Invalid response from Convex ad sync worker',
+    }))) as {
+      mode?: string
+      processedJobs?: number
+      successfulJobs?: number
+      failedJobs?: number
+      error?: string
+    }
 
-      // Count queued jobs for this workspace
-      const { count: queuedCount } = await convex.query(
-        internal.adsIntegrations.countQueuedJobsForWorkspace as unknown as QueryReference,
-        { workspaceId, limit: Math.min(3, maxJobs - processedJobs) }
-      )
+    const processedJobs = result.processedJobs ?? 0
+    const successfulJobs = result.successfulJobs ?? processedJobs
+    const failedJobs = result.failedJobs ?? 0
+    const hadQueuedJobs = processedJobs > 0 || failedJobs > 0
 
-      if (queuedCount > 0) {
-        hadQueuedJobs = true
-        inspectedQueuedJobs += queuedCount
-      }
+    const summary = {
+      processedJobs,
+      successfulJobs,
+      failedJobs,
+      inspectedQueuedJobs: processedJobs + failedJobs,
+      hadQueuedJobs,
+      mode: result.mode ?? 'all',
+      jobResults: [],
+      timestamp: new Date().toISOString(),
+    }
 
-      // Process up to 3 jobs per workspace per run
-      const jobsToProcess = Math.min(queuedCount, 3, maxJobs - processedJobs)
-      
-      for (let i = 0; i < jobsToProcess; i++) {
+    if (!processResponse.ok) {
+      console.error('[integrations/worker] Convex ad sync worker failed:', result)
+      await recordSchedulerEvent({
+        source: 'worker',
+        processedJobs,
+        successfulJobs,
+        failedJobs: failedJobs + 1,
+        hadQueuedJobs,
+        inspectedQueuedJobs: summary.inspectedQueuedJobs,
+        durationMs: Date.now() - startedAt,
+        errors: [result.error ?? `Convex worker HTTP ${processResponse.status}`],
+        notes: 'Convex /cron/ad-sync-worker returned an error',
+      })
+      throw new Error(result.error ?? `Convex ad sync worker failed (${processResponse.status})`)
+    }
+
+    console.log('[integrations/worker] Completed batch processing via Convex:', summary)
+
+    const providerFailureThresholds = await Promise.all(
+      (['google', 'facebook', 'google-analytics'] as const).map(async (providerId) => {
         try {
-          processedJobs++
-
-          // Call the process endpoint; it will claim and process the next queued job in this workspace.
-          const processResponse = await fetch(`${origin}/api/integrations/process`, {
-            method: 'POST',
-            cache: 'no-store',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-cron-key': cronSecret
-            },
-            body: JSON.stringify({ userId: workspaceId, workspaceId })
-          })
-
-          const result = await processResponse.json().catch(() => ({ error: 'Invalid response' }))
-
-          if (processResponse.ok) {
-            successfulJobs++
-            jobResults.push({
-              workspaceId,
-              jobId: result.jobId || 'unknown',
-              providerId: result.providerId || 'unknown',
-              status: 'success'
-            })
-          } else {
-            failedJobs++
-            jobResults.push({
-              workspaceId,
-              jobId: 'unknown',
-              providerId: 'unknown',
-              status: 'failed',
-              error: result.error || 'Unknown error'
-            })
+          const preference = await getSchedulerAlertPreference(providerId)
+          return {
+            providerId,
+            failedJobs: 0,
+            threshold: preference?.failureThreshold ?? null,
           }
-
-          // Small delay between jobs to avoid overwhelming APIs
-          await new Promise(resolve => setTimeout(resolve, 100))
-
         } catch (error) {
-          failedJobs++
-          const message = error instanceof Error ? error.message : 'Unknown processing error'
-          jobResults.push({
-            workspaceId,
-            jobId: 'unknown',
-            providerId: 'unknown',
-            status: 'failed',
-            error: message
-          })
+          console.error('[integrations/worker] failed to load alert preference', providerId, error)
+          return {
+            providerId,
+            failedJobs: 0,
+            threshold: null,
+          }
         }
-      }
-    }
+      }),
+    )
 
-  const summary = {
-    processedJobs,
-    successfulJobs,
-    failedJobs,
-    inspectedQueuedJobs,
-    hadQueuedJobs,
-    jobResults: jobResults.slice(0, 20), // Limit response size
-    timestamp: new Date().toISOString()
-  }
-
-  console.log('[integrations/worker] Completed batch processing:', summary)
-
-  const errorSummaries = jobResults
-    .filter((job) => job.status === 'failed' && typeof job.error === 'string')
-    .map((job) => `${job.providerId ?? 'unknown'}@${job.workspaceId}: ${job.error}`)
-
-  const providerFailureCounts = jobResults.reduce<Record<string, number>>((acc, job) => {
-    if (job.status === 'failed') {
-      const key = job.providerId || 'unknown'
-      acc[key] = (acc[key] ?? 0) + 1
-    }
-    return acc
-  }, {})
-
-  const providerFailureThresholds = await Promise.all(
-    Object.entries(providerFailureCounts).map(async ([providerId, failedJobCount]) => {
-      try {
-        const preference = await getSchedulerAlertPreference(providerId)
-        return {
-          providerId,
-          failedJobs: failedJobCount,
-          threshold: preference?.failureThreshold ?? null,
-        }
-      } catch (error) {
-        console.error('[integrations/worker] failed to load alert preference', providerId, error)
-        return {
-          providerId,
-          failedJobs: failedJobCount,
-          threshold: null,
-        }
-      }
+    await recordSchedulerEvent({
+      source: 'worker',
+      processedJobs,
+      successfulJobs,
+      failedJobs,
+      hadQueuedJobs,
+      inspectedQueuedJobs: summary.inspectedQueuedJobs,
+      durationMs: Date.now() - startedAt,
+      errors: failedJobs > 0 ? [`${failedJobs} job(s) failed in Convex processor`] : [],
+      providerFailureThresholds,
+      notes: 'Delegated to Convex processAllQueuedJobs',
     })
-  )
-
-  await recordSchedulerEvent({
-    source: 'worker',
-    processedJobs,
-    successfulJobs,
-    failedJobs,
-    hadQueuedJobs,
-    inspectedQueuedJobs,
-    durationMs: Date.now() - startedAt,
-    errors: errorSummaries,
-    providerFailureThresholds,
-    notes: hadQueuedJobs && processedJobs === 0 ? 'Detected queued jobs without progress' : undefined,
-  })
 
     return summary
-})
+  },
+)

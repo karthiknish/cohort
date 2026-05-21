@@ -3,14 +3,26 @@
 import { useAction, useConvexAuth, useQuery } from 'convex/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { adsMetricsApi, analyticsInsightsApi } from '@/lib/convex-api'
+import { analyticsInsightsApi, analyticsIntegrationsApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { getPreviewAnalyticsMetrics, getPreviewAnalyticsInsights } from '@/lib/preview-data'
 import { buildProviderIdsKey, normalizeProviderIds } from '../lib/insight-utils'
 import type { AlgorithmicInsight, MetricRecord, ProviderInsight } from './types'
 
+export type AnalyticsBreakdownRow = {
+  propertyId: string
+  date: string
+  dimension: 'channel' | 'source' | 'device'
+  dimensionValue: string
+  users: number
+  sessions: number
+  conversions: number
+  revenue: number | null
+}
+
 export interface UseAnalyticsDataReturn {
   metricsData: MetricRecord[]
+  breakdowns: AnalyticsBreakdownRow[]
   metricsNextCursor: string | null
   metricsLoadingMore: boolean
   loadMoreMetrics: () => Promise<void>
@@ -36,6 +48,10 @@ function matchesProvider(providerId: string, providerIds?: string[]) {
   return providerIds.includes(providerId)
 }
 
+function isGoogleAnalyticsOnly(providerIds: string[]) {
+  return providerIds.length === 1 && providerIds[0] === 'google-analytics'
+}
+
 export function useAnalyticsData(
   _token: string | null,
   periodDays: number,
@@ -46,9 +62,12 @@ export function useAnalyticsData(
 ): UseAnalyticsDataReturn {
   const includeInsights = options?.includeInsights ?? true
   const providerIdsKey = buildProviderIdsKey(options?.providerIds)
-  const providerIds = useMemo(() => normalizeProviderIds(providerIdsKey ? providerIdsKey.split('|') : undefined), [providerIdsKey])
+  const providerIds = useMemo(
+    () => normalizeProviderIds(providerIdsKey ? providerIdsKey.split('|') : undefined) ?? [],
+    [providerIdsKey],
+  )
+  const gaOnly = isGoogleAnalyticsOnly(providerIds)
 
-  // State for insights from Convex action
   const [insights, setInsights] = useState<ProviderInsight[]>([])
   const [algorithmic, setAlgorithmic] = useState<AlgorithmicInsight[]>([])
   const [insightsLoading, setInsightsLoading] = useState(false)
@@ -56,12 +75,11 @@ export function useAnalyticsData(
   const [insightsError, setInsightsError] = useState<Error | undefined>(undefined)
   const hasFetchedInsightsRef = useRef(false)
 
-  // If in preview mode, return preview data immediately
   const previewMetrics = useMemo(() => {
     if (!isPreviewMode) return null
     return getPreviewAnalyticsMetrics() as MetricRecord[]
   }, [isPreviewMode])
-  
+
   const previewInsights = useMemo(() => {
     if (!isPreviewMode) return null
     return getPreviewAnalyticsInsights()
@@ -70,25 +88,19 @@ export function useAnalyticsData(
   const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexLoading } = useConvexAuth()
   const canQueryConvex = isConvexAuthenticated && !isConvexLoading
 
-  // Metrics are now fetched directly from Convex
-  const metricsRealtime = useQuery(
-    adsMetricsApi.listMetricsWithSummary,
-    isPreviewMode || !workspaceId || !canQueryConvex
-      ? 'skip'
-      : {
+  const gaMetricsRealtime = useQuery(
+    analyticsIntegrationsApi.listAnalyticsMetrics,
+    gaOnly && !isPreviewMode && workspaceId && canQueryConvex
+      ? {
           workspaceId,
           clientId: clientId ?? null,
-          providerIds,
           limit: 500,
         }
-  ) as { metrics: MetricRecord[] } | undefined
+      : 'skip'
+  )
 
-  const metricsLoadingMore = false
-
-  // Convex action for generating insights
   const generateInsights = useAction(analyticsInsightsApi.generateInsights)
 
-  // Function to fetch insights
   const fetchInsights = useCallback(async () => {
     if (isPreviewMode || !workspaceId || !includeInsights) return
 
@@ -119,40 +131,57 @@ export function useAnalyticsData(
     }
   }, [clientId, generateInsights, includeInsights, isPreviewMode, periodDays, providerIds, workspaceId])
 
-  // Fetch insights on mount and when dependencies change
   useEffect(() => {
     if (!isPreviewMode && workspaceId && includeInsights) {
       void fetchInsights()
     }
   }, [fetchInsights, includeInsights, isPreviewMode, workspaceId])
 
-  // Pagination is no longer needed since Convex returns all metrics up to limit
-  // The loadMoreMetrics function is kept for API compatibility but is now a no-op
   const loadMoreMetrics = useCallback(async () => {
     // Pagination is not supported in the Convex query
-    // Data is fetched in full up to the limit
   }, [])
 
-  // Mutate insights function
   const mutateInsights = useCallback(async () => {
     await fetchInsights()
   }, [fetchInsights])
 
   const mappedMetrics = useMemo(() => {
-    const rows = isPreviewMode ? (previewMetrics ?? []) : (metricsRealtime?.metrics ?? [])
-    return rows.map((row) => {
-      const record = row as unknown as Record<string, unknown>
-      return {
-        ...(row as MetricRecord),
-        currency: typeof record.currency === 'string' ? record.currency : null,
-      } satisfies MetricRecord
-    })
-  }, [isPreviewMode, metricsRealtime?.metrics, previewMetrics])
+    if (isPreviewMode) {
+      return (previewMetrics ?? []).map((row) => {
+        const record = row as unknown as Record<string, unknown>
+        return {
+          ...(row as MetricRecord),
+          currency: typeof record.currency === 'string' ? record.currency : null,
+        } satisfies MetricRecord
+      })
+    }
 
-  // Return preview data if in preview mode
+    const rows = gaMetricsRealtime?.metrics ?? []
+    return rows.map((row: (typeof rows)[number]) => ({
+      id: row.id,
+      providerId: row.providerId,
+      date: row.date,
+      currency: row.currency,
+      spend: row.spend,
+      impressions: row.impressions,
+      clicks: row.clicks,
+      conversions: row.conversions,
+      revenue: row.revenue,
+    })) satisfies MetricRecord[]
+  }, [gaMetricsRealtime?.metrics, isPreviewMode, previewMetrics])
+
+  const breakdowns = useMemo((): AnalyticsBreakdownRow[] => {
+    if (isPreviewMode || !gaMetricsRealtime?.breakdowns) return []
+    return gaMetricsRealtime.breakdowns.map((row: (typeof gaMetricsRealtime.breakdowns)[number]) => ({
+      ...row,
+      revenue: row.revenue ?? null,
+    }))
+  }, [gaMetricsRealtime?.breakdowns, isPreviewMode])
+
   if (isPreviewMode && previewMetrics && previewInsights) {
     return {
       metricsData: mappedMetrics,
+      breakdowns: [],
       metricsNextCursor: null,
       metricsLoadingMore: false,
       loadMoreMetrics: async () => {},
@@ -161,7 +190,9 @@ export function useAnalyticsData(
       metricsRefreshing: false,
       mutateMetrics: async () => undefined,
       insights: (previewInsights.insights as ProviderInsight[]).filter((entry) => matchesProvider(entry.providerId, providerIds)),
-      algorithmic: (previewInsights.algorithmic as AlgorithmicInsight[]).filter((entry) => matchesProvider(entry.providerId, providerIds) || entry.providerId === 'global'),
+      algorithmic: (previewInsights.algorithmic as AlgorithmicInsight[]).filter(
+        (entry) => matchesProvider(entry.providerId, providerIds) || entry.providerId === 'global'
+      ),
       insightsError: undefined,
       insightsLoading: false,
       insightsRefreshing: false,
@@ -169,17 +200,18 @@ export function useAnalyticsData(
     }
   }
 
-  const metricsLoading = metricsRealtime === undefined && !isPreviewMode && !!workspaceId && canQueryConvex
+  const metricsLoading = gaMetricsRealtime === undefined && !isPreviewMode && !!workspaceId && canQueryConvex && gaOnly
 
   return {
     metricsData: mappedMetrics,
-    metricsNextCursor: null, // Convex doesn't use cursor pagination
-    metricsLoadingMore,
+    breakdowns,
+    metricsNextCursor: null,
+    metricsLoadingMore: false,
     loadMoreMetrics,
     metricsError: undefined,
     metricsLoading,
-    metricsRefreshing: false, // Convex handles this automatically
-    mutateMetrics: async () => undefined, // Convex auto-refreshes
+    metricsRefreshing: false,
+    mutateMetrics: async () => undefined,
     insights,
     algorithmic,
     insightsError,

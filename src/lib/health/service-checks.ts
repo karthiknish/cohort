@@ -28,6 +28,49 @@ function configuredCheck(isConfigured: boolean, message: string, metadata?: Reco
     : { status: 'warning', message, metadata }
 }
 
+export async function probeGoogleAdsLiveHealth(): Promise<ServiceCheck> {
+  const developerToken = readEnv('GOOGLE_ADS_DEVELOPER_TOKEN')
+  const probeToken = readEnv('GOOGLE_ADS_HEALTH_PROBE_ACCESS_TOKEN')
+  const probeCustomerId = readEnv('GOOGLE_ADS_HEALTH_PROBE_CUSTOMER_ID')
+
+  if (!developerToken) {
+    return {
+      status: 'warning',
+      message: 'GOOGLE_ADS_DEVELOPER_TOKEN is not configured',
+      metadata: { liveProbe: false },
+    }
+  }
+
+  if (!probeToken) {
+    return {
+      status: 'ok',
+      message: 'Configured (set GOOGLE_ADS_HEALTH_PROBE_ACCESS_TOKEN for live probe)',
+      metadata: { liveProbe: false, hasDeveloperToken: true },
+    }
+  }
+
+  const startedAt = Date.now()
+  const { checkGoogleAdsIntegrationHealth } = await import('@/services/integrations/google-ads')
+  const result = await checkGoogleAdsIntegrationHealth({
+    accessToken: probeToken,
+    developerToken,
+    customerId: probeCustomerId ?? undefined,
+    loginCustomerId: readEnv('GOOGLE_ADS_HEALTH_PROBE_LOGIN_CUSTOMER_ID'),
+  })
+
+  return {
+    status: result.healthy ? 'ok' : 'error',
+    message: result.healthy ? undefined : result.error ?? 'Google Ads live health probe failed',
+    responseTime: Date.now() - startedAt,
+    metadata: {
+      liveProbe: true,
+      tokenValid: result.tokenValid,
+      developerTokenValid: result.developerTokenValid,
+      accountAccessible: result.accountAccessible,
+    },
+  }
+}
+
 export function buildConfiguredServiceChecks(): Record<string, ServiceCheck> {
   const appUrl = readEnv('NEXT_PUBLIC_APP_URL')
   const googleAdsCredentials = resolveGoogleAdsOAuthCredentials()

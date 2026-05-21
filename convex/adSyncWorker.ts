@@ -38,10 +38,22 @@ export const run = httpAction(async (ctx, request) => {
   }
 
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null
+
+  if (body?.mode === 'all') {
+    const result = await ctx.runAction(internal.adSyncWorkerActions.processAllQueuedJobs, {})
+    return jsonResponse({
+      mode: 'all',
+      processedJobs: result.processed,
+      successfulJobs: result.processed,
+      failedJobs: result.failed,
+      timestamp: new Date().toISOString(),
+    })
+  }
+
   const workspaceId = typeof body?.workspaceId === 'string' ? body.workspaceId : null
 
   if (!workspaceId) {
-    return jsonResponse({ error: 'Missing workspaceId' }, 400)
+    return jsonResponse({ error: 'Missing workspaceId (or use mode: "all")' }, 400)
   }
 
   const maxJobs = Math.min(coerceNumber(body?.maxJobs) ?? 10, 25)
@@ -78,13 +90,22 @@ export const run = httpAction(async (ctx, request) => {
         jobId: job.id,
       })
 
-      await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
-        workspaceId,
-        providerId: job.providerId,
-        clientId: job.clientId,
-        status: 'success',
-        message: null,
-      })
+      if (job.providerId === 'google-analytics') {
+        await ctx.runMutation(internal.analyticsIntegrations.updateGoogleAnalyticsStatusInternal, {
+          workspaceId,
+          clientId: job.clientId,
+          status: 'success',
+          message: null,
+        })
+      } else {
+        await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+          workspaceId,
+          providerId: job.providerId,
+          clientId: job.clientId,
+          status: 'success',
+          message: null,
+        })
+      }
     } catch (err: unknown) {
       failedJobs++
       const message = err instanceof Error ? err.message : 'Unknown error'
@@ -95,13 +116,22 @@ export const run = httpAction(async (ctx, request) => {
         message,
       })
 
-      await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
-        workspaceId,
-        providerId: job.providerId,
-        clientId: job.clientId,
-        status: 'error',
-        message,
-      })
+      if (job.providerId === 'google-analytics') {
+        await ctx.runMutation(internal.analyticsIntegrations.updateGoogleAnalyticsStatusInternal, {
+          workspaceId,
+          clientId: job.clientId,
+          status: 'error',
+          message,
+        })
+      } else {
+        await ctx.runMutation(internal.adsIntegrations.updateIntegrationStatusInternal, {
+          workspaceId,
+          providerId: job.providerId,
+          clientId: job.clientId,
+          status: 'error',
+          message,
+        })
+      }
     }
   }
 

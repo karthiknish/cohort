@@ -228,6 +228,81 @@ export const listCampaigns = action({
   }, 'adsCampaigns:listCampaigns', { maxRetries: 3 }),
 })
 
+export const createCampaign = action({
+  args: {
+    workspaceId: v.string(),
+    providerId: v.literal('google'),
+    clientId: v.optional(v.union(v.string(), v.null())),
+    name: v.string(),
+    objective: v.string(),
+    advertisingChannelType: v.string(),
+    status: v.optional(v.union(v.literal('ENABLED'), v.literal('PAUSED'))),
+    dailyBudget: v.optional(v.number()),
+    biddingStrategyType: v.optional(v.string()),
+    targetCpa: v.optional(v.number()),
+    targetRoas: v.optional(v.number()),
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<{ success: boolean; campaignId?: string; budgetId?: string }> =>
+    withErrorHandling(async (): Promise<{ success: boolean; campaignId?: string; budgetId?: string }> => {
+      const identity = await ctx.auth.getUserIdentity()
+      requireIdentity(identity)
+
+      const clientId = normalizeClientId(args.clientId ?? null)
+      const { internal } = await import('./_generated/api')
+
+      const integration = await ctx.runQuery(internal.adsIntegrations.getAdIntegrationInternal, {
+        workspaceId: args.workspaceId,
+        providerId: args.providerId,
+        clientId,
+      })
+
+      if (!integration.accessToken) {
+        throw Errors.integration.missingToken(args.providerId)
+      }
+
+      if (isTokenExpiringSoon(integration.accessTokenExpiresAtMs)) {
+        throw Errors.integration.expired(args.providerId)
+      }
+
+      const customerId = integration.accountId
+      if (!customerId) {
+        throw Errors.integration.notConfigured('Google', 'Google Ads customer ID not configured')
+      }
+
+      const { createGoogleCampaign } = await import('@/services/integrations/google-ads')
+      const developerToken = integration.developerToken ?? process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? ''
+
+      const result = await createGoogleCampaign({
+        accessToken: integration.accessToken,
+        developerToken,
+        customerId,
+        name: args.name,
+        objective: args.objective as import('@/services/integrations/google-ads/campaign-modules/types').GoogleCampaignObjective,
+        advertisingChannelType: args.advertisingChannelType,
+        status: args.status ?? 'PAUSED',
+        dailyBudget: args.dailyBudget,
+        biddingStrategyType: args.biddingStrategyType,
+        targetCpa: args.targetCpa,
+        targetRoas: args.targetRoas,
+        startDate: args.startDate,
+        endDate: args.endDate,
+        loginCustomerId: integration.loginCustomerId,
+      })
+
+      if (!result.success) {
+        throw Errors.integration.error('google', result.error ?? 'Failed to create campaign')
+      }
+
+      return {
+        success: true,
+        campaignId: result.campaignId,
+        budgetId: result.budgetId,
+      }
+    }, 'adsCampaigns:createCampaign', { maxRetries: 2 }),
+})
+
 export const updateCampaign = action({
   args: {
     workspaceId: v.string(),

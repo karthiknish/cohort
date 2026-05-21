@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { Columns3, Download, List, LayoutGrid } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { cn } from '@/lib/utils'
+import { TASKS_THEME } from './tasks-theme'
 
 export type TaskViewControlsProps = {
   viewMode: 'list' | 'grid' | 'board'
@@ -12,55 +12,41 @@ export type TaskViewControlsProps = {
   canExport: boolean
 }
 
+const VIEW_OPTIONS = [
+  { mode: 'list' as const, label: 'List', icon: List },
+  { mode: 'grid' as const, label: 'Grid', icon: LayoutGrid },
+  { mode: 'board' as const, label: 'Board', icon: Columns3 },
+]
+
 export function TaskViewControls({
   viewMode,
   onViewModeChange,
   onExport,
   canExport,
 }: TaskViewControlsProps) {
-  const handleListView = useCallback(() => {
-    onViewModeChange('list')
-  }, [onViewModeChange])
-
-  const handleGridView = useCallback(() => {
-    onViewModeChange('grid')
-  }, [onViewModeChange])
-
-  const handleBoardView = useCallback(() => {
-    onViewModeChange('board')
-  }, [onViewModeChange])
-
   return (
-    <div className="flex items-center gap-1">
-      <ViewToggleButton
-        active={viewMode === 'list'}
-        label="List"
-        onClick={handleListView}
-        icon={List}
-      />
-      <ViewToggleButton
-        active={viewMode === 'grid'}
-        label="Grid"
-        onClick={handleGridView}
-        icon={LayoutGrid}
-      />
-      <ViewToggleButton
-        active={viewMode === 'board'}
-        label="Board"
-        onClick={handleBoardView}
-        icon={Columns3}
-      />
-      <span className="mx-1 h-4 w-px bg-border" aria-hidden />
+    <div className="flex flex-wrap items-center gap-2">
+      <div className={TASKS_THEME.segmented} role="group" aria-label="View mode">
+        {VIEW_OPTIONS.map(({ mode, label, icon: Icon }) => (
+          <ViewToggleButton
+            key={mode}
+            active={viewMode === mode}
+            label={label}
+            icon={Icon}
+            onClick={() => onViewModeChange(mode)}
+          />
+        ))}
+      </div>
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="sm"
-        className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+        className="h-9 gap-1.5 border-border/60 bg-background/80 text-xs shadow-sm"
         onClick={onExport}
         disabled={!canExport}
-        aria-label="Export to CSV"
+        aria-label="Export tasks to CSV"
       >
-        <Download className="h-3.5 w-3.5" />
+        <Download className="h-3.5 w-3.5" aria-hidden />
         <span className="hidden sm:inline">Export</span>
       </Button>
     </div>
@@ -78,21 +64,20 @@ function ViewToggleButton({
   onClick: () => void
   icon: typeof List
 }) {
+  const handleClick = useCallback(() => {
+    onClick()
+  }, [onClick])
+
   return (
-    <Button
+    <button
       type="button"
-      variant="ghost"
-      size="sm"
-      className={cn(
-        'h-7 gap-1 px-2 text-xs font-normal',
-        active ? 'bg-muted text-foreground' : 'text-muted-foreground',
-      )}
-      onClick={onClick}
+      className={TASKS_THEME.segmentedButton(active)}
+      onClick={handleClick}
       aria-label={`${label} view`}
       aria-pressed={active}
     >
-      <Icon className="h-3.5 w-3.5" />
+      <Icon className="h-3.5 w-3.5" aria-hidden />
       <span className="hidden sm:inline">{label}</span>
-    </Button>
+    </button>
   )
 }

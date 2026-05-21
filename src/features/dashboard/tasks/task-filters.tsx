@@ -17,8 +17,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/shared/ui/popover'
+import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
 import { SORT_OPTIONS } from './task-types'
 import type { SortField, SortDirection } from './task-types'
+import { TASKS_THEME } from './tasks-theme'
 
 export type TaskFiltersProps = {
   searchQuery: string
@@ -79,10 +81,10 @@ export function TaskFilters({
   )
 
   return (
-    <div className="flex flex-col gap-2 border-b border-border/80 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+    <div className={TASKS_THEME.filterBar}>
+      <div className="relative min-w-0 flex-1 sm:max-w-md">
         <Search
-          className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden
         />
         <Input
@@ -90,10 +92,13 @@ export function TaskFilters({
           value={searchQuery}
           onChange={handleSearchChange}
           onKeyDown={handleSearchKeyDown}
-          placeholder="Search tasks"
-          className="h-8 border-border/60 bg-background pl-8 text-sm shadow-none"
+          placeholder="Search by title, client, or assignee…"
+          className="h-9 border-border/60 bg-background pl-9 pr-20 text-sm shadow-sm"
           aria-label="Search tasks"
         />
+        <span className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 sm:inline-flex">
+          <KeyboardShortcutBadge combo="mod+k" className="scale-90 opacity-70" />
+        </span>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -103,24 +108,27 @@ export function TaskFilters({
               type="button"
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5 border-border/60 bg-background font-normal shadow-none"
+              className="h-9 gap-1.5 border-border/60 bg-background font-normal shadow-sm"
             >
               <Filter className="h-3.5 w-3.5" aria-hidden />
               Filters
               {hasActiveFilters ? (
-                <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
-                  !
+                <span
+                  className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground"
+                  aria-hidden
+                >
+                  •
                 </span>
               ) : null}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-72 space-y-3 p-3">
-            <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <PopoverContent align="end" className="w-72 space-y-3 p-4">
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
-              Refine list
+              Refine
             </p>
             <Select value={selectedStatus} onValueChange={onStatusChange}>
-              <SelectTrigger className="h-8 w-full" aria-label="Filter by status">
+              <SelectTrigger className="h-9 w-full" aria-label="Filter by status">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -133,7 +141,7 @@ export function TaskFilters({
             </Select>
             {showAssigneeFilter ? (
               <Select value={selectedAssignee} onValueChange={onAssigneeChange}>
-                <SelectTrigger className="h-8 w-full" aria-label="Filter by assignee">
+                <SelectTrigger className="h-9 w-full" aria-label="Filter by assignee">
                   <SelectValue placeholder="Assignee" />
                 </SelectTrigger>
                 <SelectContent>
@@ -146,9 +154,9 @@ export function TaskFilters({
                 </SelectContent>
               </Select>
             ) : null}
-            <div className="flex gap-1">
+            <div className="flex gap-2">
               <Select value={sortField} onValueChange={handleSortFieldChange}>
-                <SelectTrigger className="h-8 flex-1" aria-label="Sort by">
+                <SelectTrigger className="h-9 flex-1" aria-label="Sort by">
                   <SelectValue placeholder="Sort" />
                 </SelectTrigger>
                 <SelectContent>
@@ -163,7 +171,7 @@ export function TaskFilters({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="h-8 w-8 shrink-0"
+                className="h-9 w-9 shrink-0"
                 onClick={onSortDirectionToggle}
                 aria-label={sortDirection === 'asc' ? 'Sort descending' : 'Sort ascending'}
               >
@@ -175,7 +183,7 @@ export function TaskFilters({
               </Button>
             </div>
             {hasActiveFilters && onClearFilters ? (
-              <Button type="button" variant="ghost" size="sm" className="h-8 w-full" onClick={onClearFilters}>
+              <Button type="button" variant="ghost" size="sm" className="h-9 w-full" onClick={onClearFilters}>
                 Clear filters
               </Button>
             ) : null}

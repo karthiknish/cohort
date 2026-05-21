@@ -1,7 +1,13 @@
 'use client'
 
-import { LoaderCircle, Plus, RefreshCw } from 'lucide-react'
+import { ListTodo, LoaderCircle, Plus, RefreshCw } from 'lucide-react'
 
+import {
+  DASHBOARD_THEME,
+  PAGE_TITLES,
+  getButtonClasses,
+  getIconContainerClasses,
+} from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
@@ -27,25 +33,35 @@ export function TasksHeader({
   scopeHelper,
   newTaskDisabledReason = null,
 }: TasksHeaderProps) {
+  const title = PAGE_TITLES.tasks?.title ?? 'Tasks'
+  const description = PAGE_TITLES.tasks?.description ?? 'Track and manage work items across projects.'
+
   return (
-    <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0 space-y-1">
-        <div className="flex flex-wrap items-baseline gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Tasks</h1>
-          {scopeLabel ? (
-            <span className="text-sm text-muted-foreground">/ {scopeLabel}</span>
-          ) : null}
+    <header className={DASHBOARD_THEME.layout.header}>
+      <div className="min-w-0 space-y-2">
+        <div className="flex items-center gap-3">
+          <div className={getIconContainerClasses('medium')}>
+            <ListTodo className="h-6 w-6" aria-hidden />
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <h1 className={DASHBOARD_THEME.layout.title}>{title}</h1>
+              {scopeLabel ? (
+                <span className="truncate text-sm font-medium text-muted-foreground">/ {scopeLabel}</span>
+              ) : null}
+            </div>
+            <p className={cn(DASHBOARD_THEME.layout.subtitle, 'mt-1 max-w-2xl text-sm')}>
+              {scopeHelper ?? description}
+            </p>
+          </div>
         </div>
-        {scopeHelper ? (
-          <p className="max-w-xl text-sm text-muted-foreground">{scopeHelper}</p>
-        ) : null}
         {retryCount > 0 ? (
           <p className="text-xs font-medium text-warning">
             Retrying… {retryCount}/{RETRY_CONFIG.maxRetries}
           </p>
         ) : null}
         {newTaskDisabledReason ? (
-          <p className="text-xs text-warning" role="status">
+          <p className="max-w-2xl text-xs text-warning" role="status">
             {newTaskDisabledReason}
           </p>
         ) : null}
@@ -54,9 +70,9 @@ export function TasksHeader({
       <div className="flex shrink-0 items-center gap-2">
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="h-8 gap-1.5 text-muted-foreground"
+          className={cn(getButtonClasses('outline'), 'h-9 gap-1.5')}
           onClick={onRefresh}
           disabled={loading}
           aria-busy={loading}
@@ -73,12 +89,12 @@ export function TasksHeader({
             <Button
               type="button"
               size="sm"
-              className={cn('h-8 gap-1.5 shadow-none')}
+              className={cn(getButtonClasses('primary'), 'h-9 gap-1.5 shadow-none')}
               onClick={onNewTaskClick}
               disabled={Boolean(newTaskDisabledReason)}
             >
               <Plus className="h-4 w-4" aria-hidden />
-              Create
+              New task
             </Button>
           </TooltipTrigger>
           <TooltipContent className="max-w-xs text-balance">
@@ -86,7 +102,7 @@ export function TasksHeader({
               newTaskDisabledReason
             ) : (
               <span className="flex flex-wrap items-center gap-2">
-                New task
+                Create a task
                 <KeyboardShortcutBadge combo="mod+n" className="scale-90" />
               </span>
             )}

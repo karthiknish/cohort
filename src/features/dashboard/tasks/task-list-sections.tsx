@@ -8,6 +8,7 @@ import type { TaskRecord, TaskStatus } from '@/types/tasks'
 
 import { TaskCard } from './task-card'
 import { TaskDataTable } from './task-data-table'
+import { TASKS_THEME } from './tasks-theme'
 
 export function TaskListLoadingState({ viewMode }: { viewMode: 'grid' | 'list' }) {
   if (viewMode === 'grid') {
@@ -15,7 +16,7 @@ export function TaskListLoadingState({ viewMode }: { viewMode: 'grid' | 'list' }
       <>
         {['task-skeleton-1', 'task-skeleton-2', 'task-skeleton-3', 'task-skeleton-4', 'task-skeleton-5', 'task-skeleton-6'].map(
           (skeletonKey) => (
-            <Skeleton key={skeletonKey} className="h-44 w-full rounded-[1.25rem]" />
+            <Skeleton key={skeletonKey} className="h-44 w-full rounded-2xl" />
           ),
         )}
       </>
@@ -68,25 +69,27 @@ export function TaskListEmptyState({
   onCreateTask?: () => void
 }) {
   return (
-    <div className={viewMode === 'grid' ? 'col-span-full' : ''}>
-      <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-        <ListTodo className="h-10 w-10 text-muted-foreground/60" aria-hidden />
-        <p className="mt-3 text-sm font-medium text-foreground">No tasks</p>
-        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+    <div className={viewMode === 'grid' ? 'col-span-full p-4' : 'p-4'}>
+      <div className={TASKS_THEME.emptyPanel}>
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-border/60 bg-background shadow-sm">
+          <ListTodo className="h-6 w-6 text-muted-foreground" aria-hidden />
+        </div>
+        <p className="text-base font-semibold tracking-tight text-foreground">No tasks here yet</p>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
           {showEmptyStateFiltered
-            ? 'Nothing matches your filters.'
+            ? 'Nothing matches your filters. Try clearing search or status filters.'
             : emptyStateMessage}
         </p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
           {showEmptyStateFiltered && onClearFilters ? (
-            <Button type="button" variant="outline" size="sm" className="h-8" onClick={onClearFilters}>
+            <Button type="button" variant="outline" size="sm" className="h-9" onClick={onClearFilters}>
               Clear filters
             </Button>
           ) : null}
           {!showEmptyStateFiltered && onCreateTask ? (
-            <Button type="button" size="sm" className="h-8 gap-1.5" onClick={onCreateTask}>
+            <Button type="button" size="sm" className="h-9 gap-1.5" onClick={onCreateTask}>
               <Plus className="h-4 w-4" aria-hidden />
-              Add item
+              Create task
             </Button>
           ) : null}
         </div>

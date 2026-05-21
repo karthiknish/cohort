@@ -214,6 +214,50 @@ export const marketingTables = {
     .index('by_workspace_provider_date', ['workspaceId', 'providerId', 'date'])
     .index('by_workspace_date', ['workspaceId', 'date']),
 
+  /**
+   * GA4 daily metrics with semantic fields (not mapped through ad spend columns).
+   * Dedup key: workspaceId + clientId + propertyId + date.
+   */
+  analyticsMetricsDaily: defineTable({
+    workspaceId: v.string(),
+    clientId: v.union(v.string(), v.null()),
+    propertyId: v.string(),
+    date: v.string(),
+    users: v.number(),
+    sessions: v.number(),
+    conversions: v.number(),
+    revenue: v.union(v.number(), v.null()),
+    currency: v.union(v.string(), v.null()),
+    createdAtMs: v.number(),
+  })
+    .index('by_workspace_client_property_date', ['workspaceId', 'clientId', 'propertyId', 'date'])
+    .index('by_workspace_date', ['workspaceId', 'date']),
+
+  /**
+   * GA4 breakdown rows (channel, source, device) by day.
+   * Dedup key: workspaceId + clientId + propertyId + date + dimension + dimensionValue.
+   */
+  analyticsMetricsBreakdown: defineTable({
+    workspaceId: v.string(),
+    clientId: v.union(v.string(), v.null()),
+    propertyId: v.string(),
+    date: v.string(),
+    dimension: v.union(v.literal('channel'), v.literal('source'), v.literal('device')),
+    dimensionValue: v.string(),
+    users: v.number(),
+    sessions: v.number(),
+    conversions: v.number(),
+    revenue: v.union(v.number(), v.null()),
+    createdAtMs: v.number(),
+  })
+    .index('by_workspace_property_date_dimension', [
+      'workspaceId',
+      'propertyId',
+      'date',
+      'dimension',
+    ])
+    .index('by_workspace_client_date', ['workspaceId', 'clientId', 'date']),
+
   // ==========================================================================
   // SOCIAL ORGANIC INTEGRATIONS (separate from adIntegrations / paid Meta Ads)
   // ==========================================================================

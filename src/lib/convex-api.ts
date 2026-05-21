@@ -93,6 +93,7 @@ export const analyticsIntegrationsApi = {
   getGoogleAnalyticsStatus: looseApi.analyticsIntegrations.getGoogleAnalyticsStatus,
   listGoogleAnalyticsProperties: looseApi.analyticsIntegrations.listGoogleAnalyticsProperties,
   initializeGoogleAnalyticsProperty: looseApi.analyticsIntegrations.initializeGoogleAnalyticsProperty,
+  listAnalyticsMetrics: looseApi.analyticsIntegrations.listAnalyticsMetrics,
   deleteGoogleAnalyticsIntegration: looseApi.analyticsIntegrations.deleteGoogleAnalyticsIntegration,
   deleteGoogleAnalyticsSyncJobs: looseApi.analyticsIntegrations.deleteGoogleAnalyticsSyncJobs,
   deleteGoogleAnalyticsMetrics: looseApi.analyticsIntegrations.deleteGoogleAnalyticsMetrics,
@@ -118,6 +119,7 @@ export const adsMetricsApi = {
 
 export const adsCampaignsApi = {
   listCampaigns: looseApi.adsCampaigns.listCampaigns,
+  createCampaign: looseApi.adsCampaigns.createCampaign,
   updateCampaign: looseApi.adsCampaigns.updateCampaign,
 }
 

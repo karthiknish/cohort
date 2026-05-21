@@ -2,6 +2,7 @@
 
 import { BriefcaseBusiness, X } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { TASKS_THEME } from './tasks-theme'
 
 export type ProjectFilterBannerProps = {
   projectId: string | null
@@ -17,18 +18,18 @@ export function ProjectFilterBanner({
   if (!projectId && !projectName) return null
 
   return (
-    <div className="mx-4 flex items-center justify-between gap-2 border-b border-border/60 bg-muted/20 px-3 py-2 text-sm">
-      <span className="inline-flex min-w-0 items-center gap-2 text-muted-foreground">
-        <BriefcaseBusiness className="h-4 w-4 shrink-0" aria-hidden />
+    <div className="flex items-center justify-between gap-3 border-b border-border/40 px-4 py-2">
+      <span className={TASKS_THEME.projectPill}>
+        <BriefcaseBusiness className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
         <span className="truncate">
-          Project: <span className="font-medium text-foreground">{projectName ?? 'Selected'}</span>
+          Project <span className="font-semibold">{projectName ?? 'Selected'}</span>
         </span>
       </span>
       <Button
         type="button"
         variant="ghost"
         size="sm"
-        className="h-7 shrink-0 gap-1 px-2 text-xs"
+        className="h-7 shrink-0 gap-1 px-2 text-xs text-muted-foreground"
         onClick={onClear}
       >
         <X className="h-3.5 w-3.5" aria-hidden />
