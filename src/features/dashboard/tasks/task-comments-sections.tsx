@@ -11,7 +11,6 @@ import { RichComposer } from '@/features/dashboard/collaboration/components/rich
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/shared/ui/alert-dialog'
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar'
 import { Button } from '@/shared/ui/button'
-import { CardHeader, CardTitle } from '@/shared/ui/card'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import type { TaskComment } from '@/types/task-comments'
@@ -91,9 +90,9 @@ function TaskCommentThreadItem({
     <div key={comment.id} className="space-y-3">
       <div
         className={cn(
-          'rounded-2xl border px-4 py-3.5 shadow-sm transition-colors',
-          depth === 0 ? 'bg-card' : 'bg-muted/25',
-          isActiveReply && 'border-primary/25 bg-primary/5 ring-1 ring-primary/10',
+          'rounded-lg border border-border/70 px-3 py-3 transition-colors',
+          depth > 0 && 'bg-muted/20',
+          isActiveReply && 'border-primary/30 bg-primary/5',
           isBeingEdited && 'border-primary/30 bg-primary/5 opacity-90',
         )}
       >
@@ -223,28 +222,26 @@ export function TaskCommentsSummaryHeader({
   replyCount: number
   replyTo: TaskComment | null
   editingCommentId: string | null
-  }) {
+}) {
   return (
-    <CardHeader className="border-b border-border/60 pb-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <CardTitle className="text-base text-foreground">Conversation</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {commentsCount} comment{commentsCount === 1 ? '' : 's'}
-            {replyCount > 0 ? ` • ${replyCount} repl${replyCount === 1 ? 'y' : 'ies'}` : ''}
-          </p>
-        </div>
-        {replyTo ? (
-          <span className="rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
-            Thread reply
-          </span>
-        ) : editingCommentId ? (
-          <span className="rounded-full border border-accent/40 bg-accent/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent-foreground">
-            Editing
-          </span>
-        ) : null}
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <h3 className="text-sm font-semibold text-foreground">Conversation</h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {commentsCount} comment{commentsCount === 1 ? '' : 's'}
+          {replyCount > 0 ? ` · ${replyCount} repl${replyCount === 1 ? 'y' : 'ies'}` : ''}
+        </p>
       </div>
-    </CardHeader>
+      {replyTo ? (
+        <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+          Replying
+        </span>
+      ) : editingCommentId ? (
+        <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground">
+          Editing
+        </span>
+      ) : null}
+    </div>
   )
 }
 
@@ -274,17 +271,17 @@ export function TaskCommentsThreadList({
   const sortedRoots = sortCommentsChronologically(roots)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {loading ? (
-        <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
-          <LoaderCircle className="mx-auto mb-2 h-5 w-5 animate-spin text-primary" />
+        <p className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+          <LoaderCircle className="h-4 w-4 animate-spin text-primary" />
           Loading conversation…
-        </div>
+        </p>
       ) : sortedRoots.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 px-4 py-10 text-center">
-          <p className="text-sm font-medium text-foreground">No comments yet</p>
+        <div className="py-6 text-center">
+          <p className="text-sm text-muted-foreground">No comments yet.</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Add context, decisions, or @mentions for teammates below.
+            Add context or @mention teammates below.
           </p>
         </div>
       ) : (
@@ -343,7 +340,7 @@ export function TaskCommentsComposerSection({
   onAttachClick: () => void
   onComposerChange: (value: string) => void
   onSubmit: () => void
-  }) {
+}) {
   const handleFileChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       onAddAttachments(event.target.files)
@@ -353,23 +350,14 @@ export function TaskCommentsComposerSection({
   )
 
   return (
-    <div
-      className={cn(
-        'rounded-xl border p-4 transition-colors',
-        replyTo || editingCommentId
-          ? 'border-primary/20 bg-primary/[0.04]'
-          : 'border-border/60 bg-muted/15',
-      )}
-    >
+    <div className="space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">{composerTitle}</p>
           {replyTo ? (
-            <p className="mt-2 line-clamp-2 rounded-lg border border-border/50 bg-background/80 px-3 py-2 text-xs italic text-muted-foreground">
-              {composerDescription}
-            </p>
+            <p className="mt-1.5 line-clamp-2 text-xs italic text-muted-foreground">{composerDescription}</p>
           ) : (
-            <p className="mt-1 text-xs text-muted-foreground">{composerDescription}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{composerDescription}</p>
           )}
         </div>
         {replyTo || editingCommentId ? (

@@ -103,7 +103,7 @@ export function TaskViewDialogHeader({
   const showMenu = Boolean(onEdit || onDelete || onQuickStatusChange)
 
   return (
-    <DialogHeader className="space-y-3 border-b border-border px-6 pb-4 pt-5 pr-14">
+    <DialogHeader className="space-y-3 px-6 pb-0 pt-5 pr-14">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
           <TaskStatusBadge status={status} />

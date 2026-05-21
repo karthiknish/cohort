@@ -123,7 +123,7 @@ export function TaskViewDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+      <DialogContent className="flex max-h-[90vh] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <TaskViewDialogHeader
           title={task.title}
           status={task.status}
@@ -142,12 +142,12 @@ export function TaskViewDialog({
           onValueChange={(v) => setActiveTab(v as 'details' | 'comments')}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="border-b border-border px-6">
+          <div className="px-6 pt-3">
             <TaskViewDialogTabsList commentCount={liveCommentCount} />
           </div>
 
           <ScrollArea className="min-h-0 flex-1">
-            <div className="px-6 py-5">
+            <div className="px-6 pb-5 pt-4">
               <TaskViewDetailsTab task={task} />
               <TaskViewCommentsTab
                 onCommentCountChange={handleCommentCountChange}

@@ -4,8 +4,6 @@ import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { useConvex, useMutation, useQuery } from 'convex/react'
 
-import { Card, CardContent } from '@/shared/ui/card'
-import { Separator } from '@/shared/ui/separator'
 import { useToast } from '@/shared/ui/use-toast'
 import { filesApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
@@ -155,7 +153,15 @@ function taskCommentsPanelReducer(
 }
 
 export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
-  const { taskId, workspaceId, userId, userName, userRole, participants, onCommentCountChange } = props
+  const {
+    taskId,
+    workspaceId,
+    userId,
+    userName,
+    userRole,
+    participants,
+    onCommentCountChange,
+  } = props
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const convex = useConvex()
@@ -519,32 +525,32 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
     dispatch({ type: 'setDeleteTarget', deleteTarget: comment })
   }, [])
 
+  const threadList = (
+    <TaskCommentsThreadList
+      loading={loading}
+      roots={threaded.roots}
+      repliesByParent={threaded.repliesByParent}
+      replyToId={activeReplyTo?.id ?? null}
+      editingCommentId={activeEditingCommentId}
+      deletingCommentId={deletingCommentId}
+      canManageComment={canManageComment}
+      onStartReply={handleStartReply}
+      onStartEdit={handleStartEdit}
+      onRequestDelete={handleRequestDelete}
+    />
+  )
+
   return (
     <>
-      <Card className="overflow-hidden border-border/60 bg-background/95 shadow-sm">
+      <div className="space-y-6">
         <TaskCommentsSummaryHeader
           commentsCount={comments.length}
           replyCount={threaded.replyCount}
           replyTo={activeReplyTo}
           editingCommentId={activeEditingCommentId}
         />
-
-        <CardContent className="space-y-5 p-5">
-          <TaskCommentsThreadList
-            loading={loading}
-            roots={threaded.roots}
-            repliesByParent={threaded.repliesByParent}
-            replyToId={activeReplyTo?.id ?? null}
-            editingCommentId={activeEditingCommentId}
-            deletingCommentId={deletingCommentId}
-            canManageComment={canManageComment}
-            onStartReply={handleStartReply}
-            onStartEdit={handleStartEdit}
-            onRequestDelete={handleRequestDelete}
-          />
-
-          <Separator />
-
+        {threadList}
+        <div className="border-t border-border pt-6">
           <TaskCommentsComposerSection
             fileInputRef={fileInputRef}
             replyTo={activeReplyTo}
@@ -564,8 +570,8 @@ export function TaskCommentsPanel(props: TaskCommentsPanelProps) {
             onComposerChange={handleComposerChange}
             onSubmit={handleSubmit}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <TaskCommentsDeleteDialog
         deleteTarget={deleteTarget}

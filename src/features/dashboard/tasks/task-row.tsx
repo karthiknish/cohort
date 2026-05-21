@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useCallback, ViewTransition } from 'react'
+import { memo, useCallback, type KeyboardEvent, type MouseEvent, ViewTransition } from 'react'
 import {
   ArrowDown,
   ArrowUp,
@@ -111,9 +111,27 @@ function TaskRowComponent({
   const dueSoon = isDueSoon(task)
   const assignee = (task.assignedTo ?? [])[0] ?? null
 
-  const handleOpenClick = useCallback(() => {
+  const handleOpen = useCallback(() => {
     onOpen?.(task)
   }, [onOpen, task])
+
+  const stopRowOpen = useCallback((event: MouseEvent | KeyboardEvent) => {
+    event.stopPropagation()
+  }, [])
+
+  const handleRowClick = useCallback(() => {
+    handleOpen()
+  }, [handleOpen])
+
+  const handleRowKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        handleOpen()
+      }
+    },
+    [handleOpen],
+  )
 
   const handleEditClick = useCallback(() => {
     onEdit(task)
@@ -136,17 +154,22 @@ function TaskRowComponent({
     <ViewTransition>
       <div
         role="row"
+        tabIndex={onOpen ? 0 : undefined}
+        onClick={onOpen ? handleRowClick : undefined}
+        onKeyDown={onOpen ? handleRowKeyDown : undefined}
+        aria-label={onOpen ? `View task ${task.title}` : undefined}
         className={cn(
           TASK_TABLE_GRID,
           'group px-4 py-2.5 text-sm hover:bg-muted/40',
           listItemEnterClass,
           chromaticTransitionClass,
+          onOpen && 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset',
           isPendingUpdate && 'pointer-events-none opacity-60',
           selected && 'bg-primary/4',
           task.status === 'completed' && 'opacity-90',
         )}
       >
-        <div className="flex justify-center" role="cell">
+        <div className="flex justify-center" role="cell" onClick={stopRowOpen} onKeyDown={stopRowOpen}>
           {onSelectToggle ? (
             <Checkbox
               checked={selected}
@@ -159,43 +182,22 @@ function TaskRowComponent({
           )}
         </div>
 
-        {onOpen ? (
-          <button
-            type="button"
-            onClick={handleOpenClick}
-            className="truncate text-left font-mono text-xs text-muted-foreground hover:text-foreground hover:underline"
-            role="cell"
-          >
-            {formatTaskKey(task.id)}
-          </button>
-        ) : (
-          <span className="truncate font-mono text-xs text-muted-foreground" role="cell">
-            {formatTaskKey(task.id)}
-          </span>
-        )}
+        <span className="truncate font-mono text-xs text-muted-foreground" role="cell">
+          {formatTaskKey(task.id)}
+        </span>
 
-        <div className="min-w-0" role="cell">
-          {onOpen ? (
-            <button
-              type="button"
-              onClick={handleOpenClick}
-              className="flex w-full min-w-0 items-center gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-1 rounded-sm"
-            >
-              <span
-                className={cn(
-                  'truncate font-medium text-foreground',
-                  task.status === 'completed' && 'text-muted-foreground line-through decoration-border',
-                )}
-              >
-                {task.title}
-              </span>
-              {isPendingUpdate ? (
-                <LoaderCircle className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
-              ) : null}
-            </button>
-          ) : (
-            <span className="truncate font-medium text-foreground">{task.title}</span>
-          )}
+        <div className="flex min-w-0 items-center gap-2" role="cell">
+          <span
+            className={cn(
+              'truncate font-medium text-foreground',
+              task.status === 'completed' && 'text-muted-foreground line-through decoration-border',
+            )}
+          >
+            {task.title}
+          </span>
+          {isPendingUpdate ? (
+            <LoaderCircle className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
+          ) : null}
         </div>
 
         <div role="cell">
@@ -238,7 +240,12 @@ function TaskRowComponent({
           <PriorityIndicator priority={task.priority} />
         </div>
 
-        <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" role="cell">
+        <div
+          className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+          role="cell"
+          onClick={stopRowOpen}
+          onKeyDown={stopRowOpen}
+        >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
