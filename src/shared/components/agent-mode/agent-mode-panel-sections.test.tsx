@@ -18,6 +18,16 @@ vi.mock('./mention-dropdown', () => ({
   MentionDropdown: () => <div>Mention Dropdown</div>,
 }))
 
+vi.mock('@/shared/ui/sheet', () => ({
+  Sheet: ({ children, open }: { children: ReactNode; open?: boolean }) =>
+    open ? <div data-slot="agent-sheet">{children}</div> : null,
+  SheetContent: ({ children, ...props }: { children: ReactNode; className?: string }) => (
+    <div data-slot="agent-sheet-content" {...props}>
+      {children}
+    </div>
+  ),
+}))
+
 vi.mock('./agent-message-card', () => ({
   AgentMessageCard: ({ message }: { message: { content: string } }) => <div>{message.content}</div>,
 }))
@@ -81,7 +91,7 @@ const sharedDockComposerProps = {
 const sharedEmptyComposerProps = {
   ...sharedDockComposerProps,
   layout: 'centered' as const,
-  quickSuggestions: ['Schedule a meeting'],
+  quickSuggestions: [{ id: 'test', label: 'Test suggestion', prompt: 'Test prompt', capability: 'navigate' as const }],
   onSuggestionClick: noop,
 }
 
@@ -90,7 +100,8 @@ import type { AgentConversationSummary, AgentMessage } from '@/shared/hooks/use-
 import {
   AgentComposerSection,
   AgentEmptyState,
-  AgentHistoryPanel,
+  AgentHistoryRail,
+  ConversationItem,
   AgentMessagesSection,
   AgentModeHeader,
   AgentModePanelContent,
@@ -116,10 +127,16 @@ describe('agent mode panel sections', () => {
           onStartNewChat={noop}
           onToggleHistory={noop}
         />
-        <AgentHistoryPanel
+        <AgentHistoryRail
           showHistory={true}
           history={history}
           isHistoryLoading={false}
+          historyError={null}
+          historyHasMore={false}
+          historySearch=""
+          onHistorySearchChange={noop}
+          showArchivedHistory={false}
+          onShowArchivedHistoryChange={noop}
           conversationId="chat-1"
           messagesCount={1}
           isConversationLoading={false}
@@ -134,23 +151,43 @@ describe('agent mode panel sections', () => {
           onClose={noop}
           onStartEditing={noop}
           onStopEditing={noop}
+          onRetryHistory={noop}
+          onLoadMoreHistory={noop}
+          onPinConversation={noop}
+          onArchiveConversation={noop}
         />
         <AgentMessagesSection
           isConversationLoading={false}
           isProcessing={true}
           mentionLabels={[]}
-          messages={[{ id: 'm1', content: 'Hello', type: 'user', timestamp: new Date() } as AgentMessage]}
+          messages={[
+            {
+              id: 'm1',
+              clientId: 'm1',
+              content: 'Hello',
+              type: 'user',
+              timestamp: new Date(),
+            } as AgentMessage,
+          ]}
+          processingSteps={[
+            { id: 'parse', label: 'Parsed request', status: 'active' },
+          ]}
+          processingLabel="Understanding request…"
           scrollAreaRef={emptyRef}
+          onMessagesScroll={noop}
+          showJumpToLatest={false}
+          onJumpToLatest={noop}
         />
       </>,
     )
 
     expect(markup).toContain('Agent Mode')
     expect(markup).toContain('Reconnecting')
-    expect(markup).toContain('Previous chats')
+    expect(markup).toContain('Chat history')
     expect(markup).toContain('Launch plan')
     expect(markup).toContain('Hello')
-    expect(markup).toContain('Thinking')
+    expect(markup).toContain('Parsed request')
+    expect(markup).toContain('Understanding request')
   })
 
   it('renders the empty-state composer and banners', () => {
@@ -181,7 +218,7 @@ describe('agent mode panel sections', () => {
             onVoiceInterim={noop}
             onRemoveAttachment={noop}
             onSubmit={noop}
-            quickSuggestions={['Schedule a meeting']}
+            quickSuggestions={[{ id: 'meet', label: 'Open meetings', prompt: 'Open meetings', capability: 'navigate' }]}
             onSuggestionClick={noop}
           />
         </AgentEmptyState>
@@ -193,7 +230,7 @@ describe('agent mode panel sections', () => {
     expect(markup).toContain('Where would you like to go?')
     expect(markup).toContain('Mention Dropdown')
     expect(markup).toContain('Voice')
-    expect(markup).toContain('Schedule a meeting')
+    expect(markup).toContain('Open meetings')
     expect(markup).toContain('12')
     expect(markup).toContain('Message failed to send')
   })
@@ -201,10 +238,12 @@ describe('agent mode panel sections', () => {
   it('renders the panel shell and content branches', () => {
     const shellMarkup = renderToStaticMarkup(
       <AgentModePanelShell
+        isOpen
+        onOpenChange={noop}
         attachmentAccept=".pdf"
-          fileInputRef={emptyRef}
-          headerProps={sharedHeaderProps}
-          historyPanelProps={sharedHistoryPanelProps}
+        fileInputRef={emptyRef}
+        headerProps={sharedHeaderProps}
+        historyPanelProps={sharedHistoryPanelProps}
         onClearError={noop}
         onDragLeave={noop}
         onDragOver={noop}
@@ -224,9 +263,22 @@ describe('agent mode panel sections', () => {
         isProcessing={false}
         lastFailedMessage="Failed again"
         mentionLabels={[]}
-        messages={[{ id: 'm1', content: 'Hello again', type: 'user', timestamp: new Date() } as AgentMessage]}
+        messages={[
+          {
+            id: 'm1',
+            clientId: 'm1',
+            content: 'Hello again',
+            type: 'user',
+            timestamp: new Date(),
+          } as AgentMessage,
+        ]}
         onRetry={noop}
+        processingSteps={[]}
+        processingLabel="Understanding request…"
         scrollAreaRef={emptyRef}
+        onMessagesScroll={noop}
+        showJumpToLatest={false}
+        onJumpToLatest={noop}
         showEmptyState={false}
       />,
     )

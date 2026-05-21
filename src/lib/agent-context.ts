@@ -10,102 +10,15 @@ export type AgentContextChip = {
   href?: string
 }
 
-export type AgentDashboardShortcut = {
-  id: string
-  label: string
-  prompt: string
-  icon?: 'tasks' | 'projects' | 'analytics' | 'ads' | 'proposals' | 'clients' | 'meetings'
-}
-
-const DEFAULT_SUGGESTIONS = [
-  'Summarize my open tasks',
-  'How are my ads performing this week?',
-  'Open analytics',
-  'Create project Website Refresh',
-] as const
-
-const ROUTE_SUGGESTIONS: Array<{ match: (path: string) => boolean; suggestions: string[] }> = [
-  {
-    match: (path) => path.includes('/dashboard/tasks'),
-    suggestions: [
-      'Summarize my tasks due this week',
-      'Create task Follow up with design team',
-      'Mark all notifications as read',
-      'Show overdue tasks',
-    ],
-  },
-  {
-    match: (path) => path.includes('/dashboard/projects'),
-    suggestions: [
-      'List active projects',
-      'Create project Q2 Campaign',
-      'Update this project status to active',
-      'Open tasks for this project',
-    ],
-  },
-  {
-    match: (path) => path.includes('/dashboard/analytics'),
-    suggestions: [
-      'Summarize Google Analytics for the last 30 days',
-      'Generate weekly performance report',
-      'Compare revenue vs previous period',
-      'Open ads dashboard',
-    ],
-  },
-  {
-    match: (path) => path.includes('/dashboard/ads'),
-    suggestions: [
-      'How are my Meta ads doing this week?',
-      'Summarize ads performance',
-      'Generate weekly report',
-      'Pause underperforming campaigns',
-    ],
-  },
-  {
-    match: (path) => path.includes('/dashboard/proposals'),
-    suggestions: [
-      'Create proposal draft for Acme',
-      'Advance proposal conversation',
-      'Generate proposal from draft',
-      'Open proposal analytics',
-    ],
-  },
-  {
-    match: (path) => path.includes('/dashboard/clients'),
-    suggestions: [
-      'List workspace clients',
-      'Summarize client tasks',
-      'Create client Northwind Labs',
-      'Add team member to this client',
-    ],
-  },
-  {
-    match: (path) => path.includes('/dashboard/meetings'),
-    suggestions: [
-      'Schedule a meeting tomorrow at 2pm',
-      'Summarize recent meeting notes',
-      'Open collaboration',
-    ],
-  },
-  {
-    match: (path) => path.startsWith('/for-you'),
-    suggestions: [
-      'Open dashboard overview',
-      'Show my tasks for today',
-      'How are ads performing?',
-      'Create project Website Refresh',
-    ],
-  },
-]
-
-export const AGENT_DASHBOARD_SHORTCUTS: AgentDashboardShortcut[] = [
-  { id: 'tasks', label: 'Tasks', prompt: 'Show my tasks and what is due soon', icon: 'tasks' },
-  { id: 'projects', label: 'Projects', prompt: 'List active projects in this workspace', icon: 'projects' },
-  { id: 'analytics', label: 'Analytics', prompt: 'Open analytics and summarize the last 30 days', icon: 'analytics' },
-  { id: 'ads', label: 'Ads', prompt: 'Summarize ads performance for this week', icon: 'ads' },
-  { id: 'proposals', label: 'Proposals', prompt: 'List recent proposals and their status', icon: 'proposals' },
-  { id: 'clients', label: 'Clients', prompt: 'List workspace clients', icon: 'clients' },
-]
+export {
+  AGENT_DASHBOARD_SHORTCUTS,
+  filterAgentDashboardShortcuts,
+  getAgentQuickSuggestions,
+  getAgentSuggestions,
+  trackAgentSuggestionClick,
+  type AgentDashboardShortcut,
+  type AgentSuggestion,
+} from './agent-suggestions'
 
 export function deriveActiveContextFromPath(pathname: string | null): AgentContextIds {
   if (!pathname) return {}
@@ -127,12 +40,6 @@ export function deriveActiveContextFromPath(pathname: string | null): AgentConte
     activeProjectId: fromSection('projects'),
     activeClientId: fromSection('clients'),
   }
-}
-
-export function getAgentQuickSuggestions(pathname: string | null): string[] {
-  const path = pathname ?? ''
-  const match = ROUTE_SUGGESTIONS.find((entry) => entry.match(path))
-  return match ? [...match.suggestions] : [...DEFAULT_SUGGESTIONS]
 }
 
 export function buildAgentContextChips(options: {

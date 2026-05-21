@@ -107,6 +107,63 @@ function buildCollectingProposalResponse(args: {
 }
 
 export const proposalOperationHandlers: Record<string, OperationHandler> = {
+  async listProposals(ctx, input) {
+    const status = asNonEmptyString(input.params.status)
+    const clientId =
+      asNonEmptyString(input.params.clientId) ?? asNonEmptyString(input.context?.activeClientId ?? null)
+    const limit = Math.min(Math.max(asNumber(input.params.limit) ?? 12, 1), 25)
+
+    const rawProposals = await ctx.runQuery(api.proposals.list, {
+      workspaceId: input.workspaceId,
+      limit: 80,
+      status: status ?? undefined,
+      clientId: clientId ?? undefined,
+    })
+
+    const proposals = Array.isArray(rawProposals)
+      ? rawProposals
+          .map((row) => {
+            if (!row || typeof row !== 'object') return null
+            const record = row as Record<string, unknown>
+            const legacyId = asNonEmptyString(record.legacyId)
+            const proposalStatus = asNonEmptyString(record.status)
+            if (!legacyId || !proposalStatus) return null
+
+            const formData = asRecord(record.formData)
+            const title =
+              asNonEmptyString(formData?.title) ??
+              asNonEmptyString(formData?.projectName) ??
+              asNonEmptyString(record.clientName) ??
+              'Untitled proposal'
+
+            return {
+              proposalId: legacyId,
+              title,
+              status: proposalStatus,
+              clientName: asNonEmptyString(record.clientName) ?? null,
+              stepProgress: asNumber(record.stepProgress) ?? 0,
+              route: `/dashboard/proposals/${encodeURIComponent(legacyId)}/deck`,
+            }
+          })
+          .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+      : []
+
+    const listed = proposals.slice(0, limit)
+
+    return {
+      success: true,
+      route: '/dashboard/proposals',
+      data: {
+        total: proposals.length,
+        proposals: listed,
+      },
+      userMessage:
+        listed.length === 0
+          ? 'I could not find proposals in this workspace.'
+          : `Found ${proposals.length} proposal${proposals.length === 1 ? '' : 's'}: ${listed.map((p) => p.title).join(', ')}.`,
+    }
+  },
+
   async createProposalDraft(ctx, input) {
     const now = Date.now()
     const formDataPatch = asRecord(input.params.formData) ?? {}

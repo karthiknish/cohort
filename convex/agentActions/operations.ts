@@ -9,6 +9,7 @@ import { clientOperationHandlers } from './operations/clients/index'
 import { messagingOperationHandlers } from './operations/messaging/index'
 import { notificationOperationHandlers } from './operations/notifications/index'
 import { projectOperationHandlers } from './operations/projects/index'
+import { meetingOperationHandlers } from './operations/meetings/index'
 import { proposalOperationHandlers } from './operations/proposals/index'
 import { taskOperationHandlers } from './operations/tasks/index'
 import type { OperationHandler, OperationInput, OperationResult } from './types'
@@ -20,6 +21,7 @@ const operationHandlers: Record<string, OperationHandler> = {
   ...projectOperationHandlers,
   ...clientOperationHandlers,
   ...proposalOperationHandlers,
+  ...meetingOperationHandlers,
   ...adsOperationHandlers,
   ...reportOperationHandlers,
 }

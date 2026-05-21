@@ -7,8 +7,11 @@ import { XIcon } from "lucide-react"
 import { interactiveTransitionClass, surfaceMotionClasses } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />
+function Sheet({
+  modal = true,
+  ...props
+}: React.ComponentProps<typeof SheetPrimitive.Root>) {
+  return <SheetPrimitive.Root data-slot="sheet" modal={modal} {...props} />
 }
 
 function SheetTrigger({
@@ -50,13 +53,17 @@ function SheetContent({
   className,
   children,
   side = "right",
+  showOverlay = true,
+  overlayClassName,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left"
+  showOverlay?: boolean
+  overlayClassName?: string
 }) {
   return (
     <SheetPortal>
-      <SheetOverlay />
+      {showOverlay ? <SheetOverlay className={overlayClassName} /> : null}
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(

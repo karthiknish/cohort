@@ -1,8 +1,17 @@
 'use client'
 
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAction, useMutation } from 'convex/react'
+import { tasksApi } from '@/lib/convex-api'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useNavigationContext } from '@/shared/contexts/navigation-context'
@@ -10,31 +19,63 @@ import type { AgentError } from '@/lib/agent-errors'
 import { getPreviewAgentModeResponse, isPreviewModeEnabled } from '@/lib/preview-data'
 import {
   buildAgentAttachmentContext,
+  createPendingAttachmentPlaceholder,
   hasUsableAttachmentContext,
+  parseAgentAttachmentsFromStored,
+  readFileAsBase64,
+  serializeAgentAttachmentsForStorage,
+  toAgentRequestAttachmentContext,
   type AgentAttachmentContext,
+  type ServerPdfExtractionResult,
 } from '@/lib/agent-attachments'
+import { buildAgentConversationShareLink } from '@/lib/agent-conversation-export'
+import { readAgentPanelLayout, shouldKeepAgentOpenOnNavigate } from '@/lib/agent-panel-layout'
 import { agentApi } from '@/lib/convex-api'
 import { AgentValidationError, parseAgentError, ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
 import { deriveActiveContextFromPath, type AgentContextIds } from '@/lib/agent-context'
 import { notifyFailure, notifyError } from '@/lib/notifications'
+import {
+  buildCompletedStepsFromResponse,
+  buildProcessingSteps,
+  deriveAgentStatusFromResponse,
+  filterMessagesForAgentContext,
+  operationProcessingLabel,
+  upsertAgentMessage,
+  type AgentExecutionStep,
+  type AgentMessageLifecycle,
+  type AgentMessageMetadata,
+  type AgentPendingConfirmation,
+  type AgentSendResponse,
+  parsePendingConfirmationFromStored,
+} from '@/lib/agent-message-lifecycle'
+import {
+  mergeAgentMentions,
+  parseAgentMentionsFromStored,
+  parseAgentMentionsFromText,
+  type AgentMentionEntity,
+} from '@/lib/agent-mentions'
 
-
-
-export interface AgentMessageMetadata {
-  action?: 'navigate' | 'execute' | 'clarify' | 'response'
-  operation?: string
-  success?: boolean
-  data?: Record<string, unknown>
-}
+export type {
+  AgentExecutionStep,
+  AgentMessageLifecycle,
+  AgentMessageMetadata,
+  AgentPendingConfirmation,
+} from '@/lib/agent-message-lifecycle'
 
 export interface AgentMessage {
   id: string
+  /** Stable client id for optimistic reconciliation */
+  clientId: string
   type: 'user' | 'agent'
   content: string
   timestamp: Date
   route?: string | null
   status?: 'success' | 'error' | 'info' | 'warning'
+  lifecycle?: AgentMessageLifecycle
   metadata?: AgentMessageMetadata
+  steps?: AgentExecutionStep[]
+  mentions?: import('@/lib/agent-mentions').AgentMentionEntity[]
+  attachments?: AgentAttachmentContext[]
 }
 
 export interface AgentConversationSummary {
@@ -43,6 +84,9 @@ export interface AgentConversationSummary {
   startedAt: string | null
   lastMessageAt: string | null
   messageCount: number | null
+  pinnedAt?: string | null
+  archivedAt?: string | null
+  previewSnippet?: string | null
 }
 
 type StoredAgentMessage = {
@@ -53,6 +97,7 @@ type StoredAgentMessage = {
   route: string | null
   action: string | null
   operation: string | null
+  params: Record<string, unknown> | null
   executeResult: Record<string, unknown> | null
 }
 
@@ -105,8 +150,38 @@ export interface UseAgentModeReturn {
   messages: AgentMessage[]
   /** Whether agent is processing */
   isProcessing: boolean
-  /** Process user input (text or voice transcript) */
-  processInput: (text: string) => void
+  /** Process user input (text or voice transcript); pass retryClientId to resend in place */
+  processInput: (
+    text: string,
+    options?: {
+      retryClientId?: string
+      mentions?: AgentMentionEntity[]
+      confirmation?: {
+        pending: AgentPendingConfirmation
+        decision: 'confirm' | 'cancel' | 'edit'
+      }
+    },
+  ) => void
+  /** Confirm, cancel, or edit a pending write action */
+  confirmPendingAction: (
+    pending: AgentPendingConfirmation,
+    decision: 'confirm' | 'cancel' | 'edit',
+  ) => void
+  /** Undo a recently completed agent write when supported */
+  undoAgentAction: (messageId: string, undoHint: NonNullable<AgentMessageMetadata['undoHint']>) => Promise<void>
+  /** Edit and resend the latest user message */
+  editLastUserMessage: (text: string) => void
+  /** Processing step timeline while awaiting agent response */
+  processingSteps: AgentExecutionStep[]
+  processingLabel: string
+  /** Whether the message list is pinned to the bottom */
+  isPinnedToBottom: boolean
+  /** Scroll chat to latest message */
+  scrollToLatest: () => void
+  /** Mark that the user scrolled away from the bottom */
+  onMessagesScroll: () => void
+  /** Scroll container for the message list */
+  scrollContainerRef: RefObject<HTMLDivElement | null>
   /** Current files attached as agent context */
   pendingAttachments: AgentAttachmentContext[]
   /** Add documents to the current request context */
@@ -124,8 +199,24 @@ export interface UseAgentModeReturn {
   history: AgentConversationSummary[]
   /** Whether history is currently being fetched */
   isHistoryLoading: boolean
+  /** History list fetch error message */
+  historyError: string | null
+  /** Whether more history pages are available */
+  historyHasMore: boolean
+  /** Search query for history filtering */
+  historySearch: string
+  setHistorySearch: (value: string) => void
+  /** Include archived conversations in history */
+  showArchivedHistory: boolean
+  setShowArchivedHistory: (value: boolean) => void
   /** Fetch latest history list */
-  fetchHistory: () => Promise<void>
+  fetchHistory: (options?: { reset?: boolean }) => Promise<void>
+  /** Load the next page of history */
+  loadMoreHistory: () => Promise<void>
+  /** Pin or unpin a conversation */
+  setConversationPinned: (conversationId: string, pinned: boolean) => Promise<void>
+  /** Archive or restore a conversation */
+  setConversationArchived: (conversationId: string, archived: boolean) => Promise<void>
   /** Load a previous conversation into the chat */
   loadConversation: (conversationId: string) => Promise<void>
   /** Whether a previous conversation is being loaded */
@@ -137,6 +228,15 @@ export interface UseAgentModeReturn {
   updateConversationTitle: (conversationId: string, title: string) => Promise<void>
   /** Delete a conversation and its messages */
   deleteConversation: (conversationId: string) => Promise<void>
+  /** Duplicate a conversation and its messages */
+  duplicateConversation: (conversationId: string) => Promise<string | null>
+  /** Export a conversation transcript */
+  exportConversation: (
+    conversationId: string,
+    format?: 'json' | 'markdown',
+  ) => Promise<{ content: string; title: string } | null>
+  /** Copy share payload (markdown + deep link) for a conversation */
+  shareConversation: (conversationId: string) => Promise<{ markdown: string; deepLink: string } | null>
 
   // Error handling
   /** Current error, if present */
@@ -205,8 +305,13 @@ export function useAgentMode(): UseAgentModeReturn {
   const sendMessage = useAction(agentApi.sendMessage)
   const listConversations = useAction(agentApi.listConversations)
   const getConversation = useAction(agentApi.getConversation)
+  const duplicateConversationAction = useAction(agentApi.duplicateConversation)
+  const exportConversationAction = useAction(agentApi.exportConversation)
+  const shareConversationAction = useAction(agentApi.shareConversation)
+  const extractPdfTextAction = useAction(agentApi.extractPdfText)
   const updateTitle = useMutation(agentApi.updateConversationTitle)
   const deleteConversationMutation = useMutation(agentApi.deleteConversation)
+  const softDeleteTask = useMutation(tasksApi.softDeleteTask)
 
   const [isOpen, setOpenState] = useState(false)
 
@@ -222,6 +327,12 @@ export function useAgentMode(): UseAgentModeReturn {
 
   const [history, setHistory] = useState<AgentConversationSummary[]>([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState<string | null>(null)
+  const [historyHasMore, setHistoryHasMore] = useState(false)
+  const [historyCursor, setHistoryCursor] = useState<number | null>(null)
+  const [historySearch, setHistorySearch] = useState('')
+  const [showArchivedHistory, setShowArchivedHistory] = useState(false)
+  const setConversationFlags = useMutation(agentApi.setConversationFlags)
   const [isConversationLoading, setIsConversationLoading] = useState(false)
   const [loadingConversationId, setLoadingConversationId] = useState<string | null>(null)
 
@@ -232,6 +343,12 @@ export function useAgentMode(): UseAgentModeReturn {
   const [rateLimitCountdown, setRateLimitCountdown] = useState<number | null>(null)
   const [pendingAttachments, setPendingAttachments] = useState<AgentAttachmentContext[]>([])
   const [isExtractingAttachments, setIsExtractingAttachments] = useState(false)
+  const [processingSteps, setProcessingSteps] = useState<AgentExecutionStep[]>([])
+  const [processingLabel, setProcessingLabel] = useState('Thinking…')
+  const [isPinnedToBottom, setIsPinnedToBottom] = useState(true)
+
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
+  const activeRequestRef = useRef<string | null>(null)
 
   // Debounce ref to prevent rapid submissions
   const lastSubmitTimeRef = useRef<number>(0)
@@ -259,49 +376,115 @@ export function useAgentMode(): UseAgentModeReturn {
     }
   }, [])
 
+  const scrollToLatest = useCallback(() => {
+    const element = scrollContainerRef.current
+    if (element) {
+      element.scrollTop = element.scrollHeight
+    }
+    setIsPinnedToBottom(true)
+  }, [])
+
+  const onMessagesScroll = useCallback(() => {
+    const element = scrollContainerRef.current
+    if (!element) return
+    const distanceFromBottom = element.scrollHeight - element.scrollTop - element.clientHeight
+    setIsPinnedToBottom(distanceFromBottom < 80)
+  }, [])
+
+  const upsertMessage = useCallback((message: AgentMessage) => {
+    setMessages((prev) => upsertAgentMessage(prev, message))
+    return message
+  }, [])
+
   const addMessage = useCallback((
     type: 'user' | 'agent',
     content: string | unknown,
     route?: string | null,
     status?: 'success' | 'error' | 'info' | 'warning',
-    metadata?: AgentMessageMetadata
+    metadata?: AgentMessageMetadata,
+    options?: {
+      clientId?: string
+      lifecycle?: AgentMessageLifecycle
+      persistedId?: string
+      steps?: AgentExecutionStep[]
+    },
   ) => {
-    // Ensure content is always a string to prevent React error #301
     const safeContent = typeof content === 'string' ? content : String(content ?? '')
+    const clientId = options?.clientId ?? generateId()
     const message: AgentMessage = {
-      id: generateId(),
+      id: options?.persistedId ?? clientId,
+      clientId,
       type,
       content: safeContent,
       timestamp: new Date(),
       route,
       status,
+      lifecycle: options?.lifecycle,
       metadata,
+      steps: options?.steps,
     }
-    setMessages((prev) => [...prev, message])
-    return message
-  }, [])
+    return upsertMessage(message)
+  }, [upsertMessage])
+
+  const extractPdfOnServer = useCallback(
+    async (file: File): Promise<ServerPdfExtractionResult | null> => {
+      if (!workspaceId || isPreviewModeEnabled()) return null
+      try {
+        const dataBase64 = await readFileAsBase64(file)
+        const result = (await extractPdfTextAction({
+          workspaceId,
+          fileName: file.name,
+          dataBase64,
+        })) as ServerPdfExtractionResult
+        return result
+      } catch (err) {
+        console.error('[useAgentMode] Server PDF extraction failed:', err)
+        return null
+      }
+    },
+    [extractPdfTextAction, workspaceId],
+  )
 
   const addAttachments = useCallback(async (files: FileList | File[]) => {
     const nextFiles = Array.from(files)
     if (nextFiles.length === 0) return
 
+    const placeholders = nextFiles.map((file) => createPendingAttachmentPlaceholder(file))
+    setPendingAttachments((prev) => [...prev, ...placeholders])
     setIsExtractingAttachments(true)
+
     try {
-      const extracted = await Promise.all(nextFiles.map((file) => buildAgentAttachmentContext(file)))
-      startTransition(() => {
-        setPendingAttachments((prev) => [...prev, ...extracted])
-      })
-    } catch (err) {
-      console.error('[useAgentMode] Attachment processing failed:', err)
-      notifyFailure({
-        title: 'Could not add attachments',
-        error: err,
-        fallbackMessage: 'Could not process attached files. Try a different file or smaller size.',
-      })
+      for (let index = 0; index < nextFiles.length; index += 1) {
+        const file = nextFiles[index]
+        const placeholderId = placeholders[index]?.id
+        if (!file || !placeholderId) continue
+
+        try {
+          const extracted = await buildAgentAttachmentContext(file, { extractPdfOnServer })
+          setPendingAttachments((prev) =>
+            prev.map((attachment) => (attachment.id === placeholderId ? extracted : attachment)),
+          )
+        } catch (err) {
+          console.error('[useAgentMode] Attachment processing failed:', err, file.name)
+          setPendingAttachments((prev) =>
+            prev.map((attachment) =>
+              attachment.id === placeholderId
+                ? {
+                    ...attachment,
+                    extractionStatus: 'failed',
+                    excerpt: 'Could not read this file.',
+                    errorMessage:
+                      err instanceof Error ? err.message : 'Could not process this attachment.',
+                  }
+                : attachment,
+            ),
+          )
+        }
+      }
     } finally {
       setIsExtractingAttachments(false)
     }
-  }, [])
+  }, [extractPdfOnServer])
 
   const removeAttachment = useCallback((attachmentId: string) => {
     setPendingAttachments((prev) => prev.filter((attachment) => attachment.id !== attachmentId))
@@ -359,8 +542,127 @@ export function useAgentMode(): UseAgentModeReturn {
   }, [addMessage, startRateLimitCountdown])
 
 
-  const processInput = useCallback(async (text: string) => {
-    // Debounce check
+  const applyAgentResponse = useCallback(
+    (response: AgentSendResponse, trimmedText: string, sentAttachments: AgentAttachmentContext[]) => {
+      const derived = deriveAgentStatusFromResponse(response)
+      const steps = response.steps ?? buildCompletedStepsFromResponse(response)
+      const attachmentNames = sentAttachments.map((attachment) => attachment.name)
+      const usedContext =
+        attachmentNames.length > 0 ? { attachmentNames } : undefined
+
+      if (response.action === 'navigate' && response.route) {
+        addMessage(
+          'agent',
+          response.message || 'Navigating...',
+          response.route,
+          derived.status,
+          { ...derived, usedContext },
+          { persistedId: response.agentMessageId, steps },
+        )
+        setTimeout(() => {
+          router.push(response.route!)
+          if (!shouldKeepAgentOpenOnNavigate(readAgentPanelLayout())) {
+            setOpen(false)
+          }
+        }, 800)
+      } else if (response.action === 'execute' && response.executeResult) {
+        const executeRoute =
+          typeof response.route === 'string' && response.route.length > 0
+            ? response.route
+            : typeof response.executeResult.data?.route === 'string' && response.executeResult.data.route.length > 0
+              ? response.executeResult.data.route
+              : null
+
+        addMessage(
+          'agent',
+          response.message || 'Action completed',
+          executeRoute,
+          derived.status,
+          { ...derived, usedContext },
+          { persistedId: response.agentMessageId, steps },
+        )
+        if (response.executeResult.success) {
+          setPendingAttachments([])
+        }
+      } else {
+        addMessage(
+          'agent',
+          response.message || "I didn't quite understand that.",
+          response.route ?? null,
+          derived.status,
+          { ...derived, usedContext },
+          { persistedId: response.agentMessageId, steps },
+        )
+        if (!hasUsableAttachmentContext(sentAttachments)) {
+          setPendingAttachments([])
+        }
+      }
+
+      if (response.conversationId && !conversationId) {
+        setConversationId(response.conversationId)
+      }
+
+      if (response.userMessageId) {
+        upsertMessage({
+          id: response.userMessageId,
+          clientId: activeRequestRef.current ?? response.userMessageId,
+          type: 'user',
+          content: trimmedText,
+          timestamp: new Date(),
+          lifecycle: 'sent',
+        })
+      }
+
+      setLastFailedMessage(null)
+    },
+    [addMessage, conversationId, router, setOpen, upsertMessage],
+  )
+
+  const buildAgentRequestContext = useCallback(
+    (overrides?: {
+      confirmationDecision?: 'confirm' | 'cancel' | 'edit'
+      pendingConfirmation?: AgentPendingConfirmation
+      mentions?: AgentMentionEntity[]
+    }) => ({
+      previousMessages: filterMessagesForAgentContext(messages, PREVIOUS_MESSAGES_LIMIT).map((m) => ({
+        type: m.type,
+        content: m.content,
+      })),
+      activeProposalId: activeContext.activeProposalId ?? null,
+      activeProjectId: activeContext.activeProjectId ?? null,
+      activeClientId: activeContext.activeClientId ?? null,
+      confirmationDecision: overrides?.confirmationDecision ?? null,
+      pendingConfirmation: overrides?.pendingConfirmation
+        ? {
+            confirmationId: overrides.pendingConfirmation.confirmationId,
+            operation: overrides.pendingConfirmation.operation,
+            params: overrides.pendingConfirmation.params,
+          }
+        : null,
+      mentions: overrides?.mentions && overrides.mentions.length > 0 ? overrides.mentions : undefined,
+      attachmentContext:
+        pendingAttachments.length > 0
+          ? toAgentRequestAttachmentContext(pendingAttachments)
+          : undefined,
+      attachments:
+        pendingAttachments.length > 0
+          ? serializeAgentAttachmentsForStorage(pendingAttachments)
+          : undefined,
+    }),
+    [activeContext, messages, pendingAttachments],
+  )
+
+  const processInput = useCallback(async (
+    text: string,
+    options?: {
+      retryClientId?: string
+      mentions?: AgentMentionEntity[]
+      confirmation?: {
+        pending: AgentPendingConfirmation
+        decision: 'confirm' | 'cancel' | 'edit'
+      }
+    },
+  ) => {
     const now = Date.now()
     if (now - lastSubmitTimeRef.current < DEBOUNCE_MS) {
       console.log('[useAgentMode] Debounced rapid submission')
@@ -368,15 +670,26 @@ export function useAgentMode(): UseAgentModeReturn {
     }
     lastSubmitTimeRef.current = now
 
-    // Validate input
-    const validationError = validateInput(text)
+    const confirmationRequest = options?.confirmation
+    const trimmedText = confirmationRequest
+      ? confirmationRequest.decision === 'confirm'
+        ? 'Confirm'
+        : confirmationRequest.decision === 'cancel'
+          ? 'Cancel'
+          : 'Edit'
+      : text.trim()
+
+    const validationError = confirmationRequest ? null : validateInput(text)
     if (validationError) {
       setError(new AgentValidationError(validationError))
       addMessage('agent', validationError, null, 'error', { action: 'response', success: false })
       return
     }
 
-    if (isExtractingAttachments) {
+    const hasExtractingAttachments = pendingAttachments.some(
+      (attachment) => attachment.extractionStatus === 'extracting',
+    )
+    if (isExtractingAttachments || hasExtractingAttachments) {
       addMessage('agent', 'I’m still reading the attached files. Send the message again in a moment.', null, 'warning', {
         action: 'response',
         success: false,
@@ -384,55 +697,71 @@ export function useAgentMode(): UseAgentModeReturn {
       return
     }
 
-    const trimmedText = text.trim()
+    const retryClientId = options?.retryClientId
+    const resolvedMentions = mergeAgentMentions(
+      parseAgentMentionsFromText(trimmedText),
+      options?.mentions ?? [],
+    )
+    const attachmentsForTurn = pendingAttachments.filter(
+      (attachment) => attachment.extractionStatus !== 'extracting',
+    )
+    const userClientId = retryClientId ?? generateId()
+    activeRequestRef.current = userClientId
 
-    // Clear previous errors
     clearError()
     setIsProcessing(true)
     setConnectionStatus('connected')
+    setProcessingSteps(buildProcessingSteps())
+    setProcessingLabel('Understanding request…')
 
-    // Add user message (optimistic)
-    addMessage('user', trimmedText)
+    upsertMessage({
+      id: userClientId,
+      clientId: userClientId,
+      type: 'user',
+      content: trimmedText,
+      timestamp: new Date(),
+      lifecycle: 'sending',
+      mentions: resolvedMentions.length > 0 ? resolvedMentions : undefined,
+      attachments: attachmentsForTurn.length > 0 ? attachmentsForTurn : undefined,
+    })
+
+    if (isPinnedToBottom) {
+      requestAnimationFrame(() => scrollToLatest())
+    }
 
     try {
       if (isPreviewModeEnabled()) {
         const previewResponse = getPreviewAgentModeResponse(trimmedText, activeContext)
+        setProcessingSteps(buildProcessingSteps(previewResponse.operation))
+        setProcessingLabel('Checking data…')
 
-        if (!conversationId) {
-          setConversationId(PREVIEW_AGENT_CONVERSATION_ID)
+        const previewPayload: AgentSendResponse = {
+          conversationId: conversationId ?? PREVIEW_AGENT_CONVERSATION_ID,
+          userMessageId: userClientId,
+          agentMessageId: generateId(),
+          action: previewResponse.action,
+          route: previewResponse.route,
+          message: previewResponse.message,
+          operation: previewResponse.operation,
+          executeResult:
+            previewResponse.action === 'execute'
+              ? {
+                  success: previewResponse.success !== false,
+                  data: previewResponse.data,
+                }
+              : null,
         }
 
-        if (previewResponse.action === 'navigate' && previewResponse.route) {
-          addMessage('agent', previewResponse.message, previewResponse.route, 'success', {
-            action: 'navigate',
-            success: true,
-          })
-          if (!hasUsableAttachmentContext(pendingAttachments)) {
-            setPendingAttachments([])
-          }
-          setTimeout(() => {
-            router.push(previewResponse.route!)
-            setOpen(false)
-          }, 800)
-        } else if (previewResponse.action === 'execute') {
-          addMessage('agent', previewResponse.message, previewResponse.route, previewResponse.success === false ? 'error' : 'success', {
-            action: 'execute',
-            operation: previewResponse.operation,
-            success: previewResponse.success,
-            data: previewResponse.data,
-          })
-          setPendingAttachments([])
-        } else {
-          addMessage('agent', previewResponse.message, previewResponse.route, 'info', {
-            action: 'response',
-            success: true,
-          })
-          if (!hasUsableAttachmentContext(pendingAttachments)) {
-            setPendingAttachments([])
-          }
-        }
-
-        setLastFailedMessage(null)
+        applyAgentResponse(previewPayload, trimmedText, attachmentsForTurn)
+        upsertMessage({
+          id: userClientId,
+          clientId: userClientId,
+          type: 'user',
+          content: trimmedText,
+          timestamp: new Date(),
+          lifecycle: 'sent',
+          attachments: attachmentsForTurn.length > 0 ? attachmentsForTurn : undefined,
+        })
         return
       }
 
@@ -440,129 +769,163 @@ export function useAgentMode(): UseAgentModeReturn {
         throw new Error('Workspace context is required')
       }
 
-      const previousMessages = messages.slice(-PREVIOUS_MESSAGES_LIMIT).map((m) => ({
-        type: m.type,
-        content: m.content,
-      }))
+      setProcessingSteps((steps) =>
+        steps.map((step, index) => ({
+          ...step,
+          status: index === 0 ? 'completed' : index === 1 ? 'active' : step.status,
+        })),
+      )
+      setProcessingLabel('Checking data…')
 
-      const responseData = await sendMessage({
+      const responseData = (await sendMessage({
         workspaceId,
         message: trimmedText,
         conversationId,
-        context: {
-          previousMessages,
-          activeProposalId: activeContext.activeProposalId ?? null,
-          activeProjectId: activeContext.activeProjectId ?? null,
-          activeClientId: activeContext.activeClientId ?? null,
-          attachmentContext: pendingAttachments.map((attachment) => ({
-            name: attachment.name,
-            mimeType: attachment.mimeType,
-            sizeLabel: attachment.sizeLabel,
-            excerpt: attachment.excerpt,
-            extractedText: attachment.extractedText,
-            extractionStatus: attachment.extractionStatus,
-            errorMessage: attachment.errorMessage,
-          })),
-        },
-      })
+        context: buildAgentRequestContext(
+          confirmationRequest
+            ? {
+                confirmationDecision: confirmationRequest.decision,
+                pendingConfirmation: confirmationRequest.pending,
+                mentions: resolvedMentions,
+              }
+            : { mentions: resolvedMentions },
+        ),
+      })) as AgentSendResponse
 
       setConnectionStatus('connected')
+      setProcessingSteps(buildCompletedStepsFromResponse(responseData))
+      setProcessingLabel(operationProcessingLabel(responseData.operation))
 
-      // Save conversationId for subsequent messages
-      if (responseData?.conversationId && !conversationId) {
-        setConversationId(responseData.conversationId)
-      }
-
-      // Determine status and metadata for enhanced UX
-      let status: 'success' | 'error' | 'info' | 'warning' = 'info'
-      const metadata: AgentMessageMetadata = {
-        action: responseData?.action as AgentMessageMetadata['action'],
-        operation: responseData?.operation ?? undefined,
-      }
-
-      // Handle different action types
-      if (responseData?.action === 'navigate' && responseData?.route) {
-        status = 'success'
-        metadata.success = true
-        const route = responseData.route
-        addMessage('agent', responseData.message || 'Navigating...', responseData.route, status, metadata)
-        setTimeout(() => {
-          router.push(route)
-          setOpen(false)
-        }, 800)
-      } else if (responseData?.action === 'execute' && responseData?.executeResult) {
-        status = responseData.executeResult.success ? 'success' : 'error'
-        metadata.success = responseData.executeResult.success
-        const exec = responseData.executeResult as {
-          success: boolean
-          data?: Record<string, unknown>
-          retryable?: boolean
-          userMessage?: string
-        }
-        const mergedData: Record<string, unknown> = {
-          ...(exec.data && typeof exec.data === 'object' && !Array.isArray(exec.data) ? exec.data : {}),
-        }
-        if (typeof exec.retryable === 'boolean') mergedData.retryable = exec.retryable
-        if (typeof exec.userMessage === 'string' && exec.userMessage.trim().length > 0) {
-          mergedData.userMessage = exec.userMessage
-        }
-        metadata.data = Object.keys(mergedData).length > 0 ? mergedData : undefined
-        const executeRoute =
-          typeof responseData.route === 'string' && responseData.route.length > 0
-            ? responseData.route
-            : typeof exec.data?.route === 'string' && exec.data.route.length > 0
-              ? exec.data.route
-              : null
-
-        addMessage('agent', responseData.message || 'Action completed', executeRoute, status, metadata)
-        if (responseData.executeResult.success) {
-          setPendingAttachments([])
-        }
-      } else {
-        addMessage('agent', responseData?.message || 'I didn\'t quite understand that.', responseData?.route, 'info', metadata)
-        if (!hasUsableAttachmentContext(pendingAttachments)) {
-          setPendingAttachments([])
-        }
-      }
-
-      setLastFailedMessage(null)
+      applyAgentResponse(
+        {
+          ...responseData,
+          userMessageId: responseData.userMessageId ?? userClientId,
+          steps: responseData.steps ?? buildCompletedStepsFromResponse(responseData),
+        },
+        trimmedText,
+        attachmentsForTurn,
+      )
     } catch (err) {
       console.error('[useAgentMode] Unexpected error:', err)
       const agentError = parseAgentError(err, null)
+      upsertMessage({
+        id: userClientId,
+        clientId: userClientId,
+        type: 'user',
+        content: trimmedText,
+        timestamp: new Date(),
+        lifecycle: 'failed',
+      })
+      setProcessingSteps((steps) =>
+        steps.map((step) => (step.id === 'action' || step.id === 'done' ? { ...step, status: 'failed' } : step)),
+      )
       handleError(agentError, trimmedText)
     } finally {
       setIsProcessing(false)
+      setProcessingSteps([])
+      setProcessingLabel('Thinking…')
+      activeRequestRef.current = null
+      if (isPinnedToBottom) {
+        requestAnimationFrame(() => scrollToLatest())
+      }
     }
   }, [
     activeContext,
     addMessage,
+    applyAgentResponse,
     clearError,
     conversationId,
     handleError,
-    messages,
     isExtractingAttachments,
+    isPinnedToBottom,
+    messages,
     pendingAttachments,
     router,
+    scrollToLatest,
+    buildAgentRequestContext,
     sendMessage,
+    upsertMessage,
     workspaceId,
   ])
 
+  const confirmPendingAction = useCallback(
+    (pending: AgentPendingConfirmation, decision: 'confirm' | 'cancel' | 'edit') => {
+      void processInput('', { confirmation: { pending, decision } })
+    },
+    [processInput],
+  )
+
+  const undoAgentAction = useCallback(
+    async (messageId: string, undoHint: NonNullable<AgentMessageMetadata['undoHint']>) => {
+      if (!workspaceId) return
+
+      try {
+        if (undoHint.type === 'task') {
+          await softDeleteTask({ workspaceId, legacyId: undoHint.resourceId })
+        } else {
+          notifyFailure({
+            title: 'Undo not available',
+            fallbackMessage: 'Undo is only supported for newly created tasks right now.',
+          })
+          return
+        }
+
+        setMessages((prev) =>
+          prev.map((entry) =>
+            entry.id === messageId
+              ? {
+                  ...entry,
+                  metadata: entry.metadata
+                    ? { ...entry.metadata, undoHint: undefined }
+                    : undefined,
+                }
+              : entry,
+          ),
+        )
+        addMessage('agent', 'Undid that action.', null, 'info', { action: 'response', success: true })
+      } catch (err) {
+        notifyFailure({
+          title: 'Could not undo',
+          error: err,
+          fallbackMessage: 'Sorry — that action could not be undone.',
+        })
+      }
+    },
+    [addMessage, softDeleteTask, workspaceId],
+  )
+
   const retryLastMessage = useCallback(() => {
-    if (lastFailedMessage) {
-      clearError()
-      processInput(lastFailedMessage)
-    }
-  }, [lastFailedMessage, clearError, processInput])
+    if (!lastFailedMessage) return
+    const failedUser = [...messages].reverse().find((entry) => entry.type === 'user' && entry.lifecycle === 'failed')
+    clearError()
+    void processInput(lastFailedMessage, { retryClientId: failedUser?.clientId })
+  }, [lastFailedMessage, clearError, messages, processInput])
 
   const retryLastUserTurn = useCallback(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       const entry = messages[i]
       if (entry?.type === 'user') {
-        void processInput(entry.content)
+        void processInput(entry.content, { retryClientId: entry.clientId })
         return
       }
     }
   }, [messages, processInput])
+
+  const editLastUserMessage = useCallback(
+    (text: string) => {
+      const trimmed = text.trim()
+      if (!trimmed) return
+      for (let i = messages.length - 1; i >= 0; i -= 1) {
+        const entry = messages[i]
+        if (entry?.type === 'user') {
+          void processInput(trimmed, { retryClientId: entry.clientId })
+          return
+        }
+      }
+      void processInput(trimmed)
+    },
+    [messages, processInput],
+  )
 
   const clearMessages = useCallback(() => {
     setMessages([])
@@ -571,8 +934,10 @@ export function useAgentMode(): UseAgentModeReturn {
     clearError()
   }, [clearError])
 
-  const fetchHistory = useCallback(async () => {
+  const fetchHistory = useCallback(async (options?: { reset?: boolean }) => {
+    const reset = options?.reset ?? true
     setIsHistoryLoading(true)
+    setHistoryError(null)
     try {
       if (isPreviewModeEnabled()) {
         setHistory([{
@@ -581,7 +946,10 @@ export function useAgentMode(): UseAgentModeReturn {
           startedAt: messages[0]?.timestamp.toISOString() ?? new Date().toISOString(),
           lastMessageAt: messages[messages.length - 1]?.timestamp.toISOString() ?? new Date().toISOString(),
           messageCount: messages.length,
+          previewSnippet: messages[messages.length - 1]?.content.slice(0, 120) ?? null,
         }])
+        setHistoryHasMore(false)
+        setHistoryCursor(null)
         return
       }
 
@@ -589,19 +957,82 @@ export function useAgentMode(): UseAgentModeReturn {
         throw new Error('Workspace context is required')
       }
 
-      const result = await listConversations({ workspaceId, limit: 20 })
-      setHistory(result.conversations)
+      const result = await listConversations({
+        workspaceId,
+        limit: 30,
+        cursor: reset ? null : historyCursor,
+        search: historySearch.trim() || null,
+        includeArchived: showArchivedHistory,
+      })
+
+      setHistory((prev) => (reset ? result.conversations : [...prev, ...result.conversations]))
+      setHistoryHasMore(result.hasMore)
+      setHistoryCursor(result.nextCursor)
     } catch (err) {
       console.error('[useAgentMode] Failed to fetch history:', err)
-      notifyFailure({
-        title: 'Could not load chats',
-        error: err,
-        fallbackMessage: 'Failed to load conversation history.',
-      })
+      const message = err instanceof Error ? err.message : 'Failed to load conversation history.'
+      setHistoryError(message)
     } finally {
       setIsHistoryLoading(false)
     }
-  }, [conversationId, listConversations, messages, workspaceId])
+  }, [
+    conversationId,
+    historyCursor,
+    historySearch,
+    listConversations,
+    messages,
+    showArchivedHistory,
+    workspaceId,
+  ])
+
+  const loadMoreHistory = useCallback(async () => {
+    if (!historyHasMore || isHistoryLoading) return
+    await fetchHistory({ reset: false })
+  }, [fetchHistory, historyHasMore, isHistoryLoading])
+
+  const setConversationPinned = useCallback(
+    async (targetConversationId: string, pinned: boolean) => {
+      if (!workspaceId || !user?.id) return
+      await setConversationFlags({
+        workspaceId,
+        legacyId: targetConversationId,
+        userId: String(user.id),
+        pinned,
+      })
+      setHistory((prev) =>
+        prev.map((entry) =>
+          entry.id === targetConversationId
+            ? { ...entry, pinnedAt: pinned ? new Date().toISOString() : null }
+            : entry,
+        ),
+      )
+    },
+    [setConversationFlags, user?.id, workspaceId],
+  )
+
+  const setConversationArchived = useCallback(
+    async (targetConversationId: string, archived: boolean) => {
+      if (!workspaceId || !user?.id) return
+      await setConversationFlags({
+        workspaceId,
+        legacyId: targetConversationId,
+        userId: String(user.id),
+        archived,
+      })
+      setHistory((prev) =>
+        prev.map((entry) =>
+          entry.id === targetConversationId
+            ? {
+                ...entry,
+                archivedAt: archived ? new Date().toISOString() : null,
+                pinnedAt: archived ? null : entry.pinnedAt,
+              }
+            : entry,
+        ),
+      )
+    },
+    [setConversationFlags, user?.id, workspaceId],
+  )
 
   const loadConversation = useCallback(async (targetConversationId: string) => {
     if (!targetConversationId) return
@@ -657,20 +1088,61 @@ export function useAgentMode(): UseAgentModeReturn {
               ? 'success'
               : 'info'
 
+        const pendingConfirmation =
+          type === 'agent'
+            ? parsePendingConfirmationFromStored(executeResult, msg.params, msg.id)
+            : null
+
+        const storedData = parseStoredExecuteResultData(executeResult)
+        const undoHintRaw = storedData?.undoHint
+        const undoHint =
+          undoHintRaw &&
+          typeof undoHintRaw === 'object' &&
+          !Array.isArray(undoHintRaw) &&
+          typeof (undoHintRaw as Record<string, unknown>).resourceId === 'string' &&
+          ((undoHintRaw as Record<string, unknown>).type === 'task' ||
+            (undoHintRaw as Record<string, unknown>).type === 'project' ||
+            (undoHintRaw as Record<string, unknown>).type === 'message')
+            ? {
+                type: (undoHintRaw as Record<string, unknown>).type as 'task' | 'project' | 'message',
+                resourceId: (undoHintRaw as Record<string, unknown>).resourceId as string,
+                label:
+                  typeof (undoHintRaw as Record<string, unknown>).label === 'string'
+                    ? ((undoHintRaw as Record<string, unknown>).label as string)
+                    : 'Created',
+              }
+            : undefined
+
+        const storedMentions =
+          msg.params && typeof msg.params === 'object' && !Array.isArray(msg.params)
+            ? parseAgentMentionsFromStored((msg.params as Record<string, unknown>).mentions)
+            : undefined
+        const storedAttachments =
+          msg.params && typeof msg.params === 'object' && !Array.isArray(msg.params)
+            ? parseAgentAttachmentsFromStored((msg.params as Record<string, unknown>).attachments)
+            : undefined
+
         return {
           id: msg.id,
+          clientId: msg.id,
           type,
           content: msg.content,
           timestamp: new Date(msg.timestamp),
           route: msg.route,
-          status,
+          status: pendingConfirmation ? 'warning' : status,
+          lifecycle: 'sent' as const,
+          mentions: storedMentions,
+          attachments: storedAttachments,
           metadata:
-            normalizedAction || operation || executeResult
+            normalizedAction || operation || executeResult || pendingConfirmation
               ? {
-                  action: normalizedAction,
+                  action: pendingConfirmation ? 'clarify' : normalizedAction,
                   operation: operation ?? undefined,
                   success: executionSuccess ?? undefined,
-                  data: parseStoredExecuteResultData(executeResult),
+                  data: storedData,
+                  requiresConfirmation: pendingConfirmation ? true : undefined,
+                  pendingConfirmation: pendingConfirmation ?? undefined,
+                  undoHint,
                 }
               : undefined,
         }
@@ -755,6 +1227,74 @@ export function useAgentMode(): UseAgentModeReturn {
     }
   }, [addMessage, conversationId, deleteConversationMutation, workspaceId])
 
+  const duplicateConversation = useCallback(
+    async (targetConversationId: string) => {
+      if (!targetConversationId || !workspaceId || isPreviewModeEnabled()) return null
+      try {
+        const result = (await duplicateConversationAction({
+          workspaceId,
+          conversationId: targetConversationId,
+        })) as { conversationId: string; messageCount: number }
+
+        await fetchHistory({ reset: true })
+        return result.conversationId
+      } catch (err) {
+        notifyFailure({
+          title: 'Could not duplicate chat',
+          error: err,
+          fallbackMessage: 'Sorry — we could not duplicate that chat.',
+        })
+        return null
+      }
+    },
+    [duplicateConversationAction, fetchHistory, workspaceId],
+  )
+
+  const exportConversation = useCallback(
+    async (targetConversationId: string, format: 'json' | 'markdown' = 'markdown') => {
+      if (!targetConversationId || !workspaceId || isPreviewModeEnabled()) return null
+      try {
+        const result = (await exportConversationAction({
+          workspaceId,
+          conversationId: targetConversationId,
+          format,
+        })) as { content: string; title: string }
+        return result
+      } catch (err) {
+        notifyFailure({
+          title: 'Could not export chat',
+          error: err,
+          fallbackMessage: 'Sorry — we could not export that chat.',
+        })
+        return null
+      }
+    },
+    [exportConversationAction, workspaceId],
+  )
+
+  const shareConversation = useCallback(
+    async (targetConversationId: string) => {
+      if (!targetConversationId || !workspaceId || isPreviewModeEnabled()) return null
+      try {
+        const result = (await shareConversationAction({
+          workspaceId,
+          conversationId: targetConversationId,
+        })) as { markdown: string; deepLinkPath: string }
+
+        const deepLink = buildAgentConversationShareLink(targetConversationId)
+        return { markdown: result.markdown, deepLink }
+      } catch (err) {
+        notifyFailure({
+          title: 'Could not share chat',
+          error: err,
+          fallbackMessage: 'Sorry — we could not prepare a share link for that chat.',
+        })
+        return null
+      }
+    },
+    [shareConversationAction, workspaceId],
+  )
+
   return {
     isOpen,
     setOpen,
@@ -764,6 +1304,8 @@ export function useAgentMode(): UseAgentModeReturn {
     messages,
     isProcessing,
     processInput,
+    confirmPendingAction,
+    undoAgentAction,
     pendingAttachments,
     addAttachments,
     removeAttachment,
@@ -772,18 +1314,37 @@ export function useAgentMode(): UseAgentModeReturn {
     conversationId,
     history,
     isHistoryLoading,
+    historyError,
+    historyHasMore,
+    historySearch,
+    setHistorySearch,
+    showArchivedHistory,
+    setShowArchivedHistory,
     fetchHistory,
+    loadMoreHistory,
+    setConversationPinned,
+    setConversationArchived,
     loadConversation,
     isConversationLoading,
     loadingConversationId,
     updateConversationTitle,
     deleteConversation,
+    duplicateConversation,
+    exportConversation,
+    shareConversation,
     // Error handling
     error,
     clearError,
     lastFailedMessage,
     retryLastMessage,
     retryLastUserTurn,
+    editLastUserMessage,
+    processingSteps,
+    processingLabel,
+    isPinnedToBottom,
+    scrollToLatest,
+    onMessagesScroll,
+    scrollContainerRef,
     connectionStatus,
     rateLimitCountdown,
   }

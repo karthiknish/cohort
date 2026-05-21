@@ -8,7 +8,29 @@ export type AgentRequestContextType = {
   activeProposalId?: string | null
   activeProjectId?: string | null
   activeClientId?: string | null
+  confirmationDecision?: 'confirm' | 'cancel' | 'edit' | null
+  pendingConfirmation?: {
+    confirmationId: string
+    operation: string
+    params: Record<string, unknown>
+  } | null
+  mentions?: Array<{
+    id: string
+    name: string
+    type: 'client' | 'project' | 'team' | 'user'
+    subtitle?: string
+  }>
   attachmentContext?: Array<{
+    name: string
+    mimeType: string
+    sizeLabel: string
+    excerpt: string
+    extractedText?: string
+    extractionStatus: 'ready' | 'limited' | 'failed'
+    errorMessage?: string
+  }>
+  attachments?: Array<{
+    id: string
     name: string
     mimeType: string
     sizeLabel: string
@@ -58,12 +80,18 @@ export type ConversationListResult = {
     startedAt: number | null
     lastMessageAt: number | null
     messageCount: number
+    pinnedAt: number | null
+    archivedAt: number | null
+    previewSnippet: string | null
   }>
+  nextCursor: number | null
+  hasMore: boolean
 }
 
 export type ConversationGetResult = {
   conversation: {
     userId: string
+    title: string | null
     startedAt: number | null
     lastMessageAt: number | null
     messageCount: number
@@ -79,6 +107,7 @@ export type ConversationMessagesResult = {
     route: string | null
     action: string | null
     operation: string | null
+    params: Record<string, unknown> | null
     executeResult: Record<string, unknown> | null
   }>
 }
@@ -127,6 +156,18 @@ export const OPERATION_ALIASES: Record<string, string> = {
   modifytask: 'updateTask',
   createproject: 'createProject',
   addproject: 'createProject',
+  listactiveprojects: 'listActiveProjects',
+  listprojects: 'listActiveProjects',
+  activeprojects: 'listActiveProjects',
+  listproposals: 'listProposals',
+  showproposals: 'listProposals',
+  proposallist: 'listProposals',
+  summarizemeetings: 'summarizeMeetings',
+  meetingsummary: 'summarizeMeetings',
+  meetingnotes: 'summarizeMeetings',
+  comparerevenue: 'summarizeAdsPerformance',
+  revenuecomparison: 'summarizeAdsPerformance',
+  compareadsrevenue: 'summarizeAdsPerformance',
   updateproject: 'updateProject',
   editproject: 'updateProject',
   createclient: 'createClient',

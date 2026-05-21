@@ -40,6 +40,8 @@ export const AGENT_ATTACHMENT_ACCEPT = [
   '.pdf',
 ].join(',')
 
+export type AgentAttachmentExtractionStatus = 'extracting' | 'ready' | 'limited' | 'failed'
+
 export type AgentAttachmentContext = {
   id: string
   name: string
@@ -47,8 +49,104 @@ export type AgentAttachmentContext = {
   sizeLabel: string
   excerpt: string
   extractedText?: string
-  extractionStatus: 'ready' | 'limited' | 'failed'
+  extractionStatus: AgentAttachmentExtractionStatus
   errorMessage?: string
+}
+
+export type AgentStoredAttachment = {
+  id: string
+  name: string
+  mimeType: string
+  sizeLabel: string
+  excerpt: string
+  extractedText?: string
+  extractionStatus: Exclude<AgentAttachmentExtractionStatus, 'extracting'>
+  errorMessage?: string
+}
+
+export function createPendingAttachmentPlaceholder(file: File): AgentAttachmentContext {
+  return {
+    id: `pending-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    name: file.name,
+    mimeType: file.type || 'application/octet-stream',
+    sizeLabel: formatFileSize(file.size),
+    excerpt: 'Reading file…',
+    extractionStatus: 'extracting',
+  }
+}
+
+function isPersistableAttachment(
+  attachment: AgentAttachmentContext,
+): attachment is AgentAttachmentContext & { extractionStatus: AgentStoredAttachment['extractionStatus'] } {
+  return attachment.extractionStatus !== 'extracting'
+}
+
+export function serializeAgentAttachmentsForStorage(
+  attachments: AgentAttachmentContext[],
+): AgentStoredAttachment[] {
+  return attachments.filter(isPersistableAttachment).map((attachment) => ({
+    id: attachment.id,
+    name: attachment.name,
+    mimeType: attachment.mimeType,
+    sizeLabel: attachment.sizeLabel,
+    excerpt: attachment.excerpt,
+    extractedText: attachment.extractedText,
+    extractionStatus: attachment.extractionStatus,
+    errorMessage: attachment.errorMessage,
+  }))
+}
+
+export function toAgentRequestAttachmentContext(
+  attachments: AgentAttachmentContext[],
+): Array<{
+  name: string
+  mimeType: string
+  sizeLabel: string
+  excerpt: string
+  extractedText?: string
+  extractionStatus: AgentStoredAttachment['extractionStatus']
+  errorMessage?: string
+}> {
+  return attachments.filter(isPersistableAttachment).map((attachment) => ({
+    name: attachment.name,
+    mimeType: attachment.mimeType,
+    sizeLabel: attachment.sizeLabel,
+    excerpt: attachment.excerpt,
+    extractedText: attachment.extractedText,
+    extractionStatus: attachment.extractionStatus,
+    errorMessage: attachment.errorMessage,
+  }))
+}
+
+export function parseAgentAttachmentsFromStored(value: unknown): AgentAttachmentContext[] | undefined {
+  if (!Array.isArray(value)) return undefined
+
+  const attachments: AgentAttachmentContext[] = []
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue
+    const record = entry as Record<string, unknown>
+    const id = typeof record.id === 'string' ? record.id : null
+    const name = typeof record.name === 'string' ? record.name : null
+    const mimeType = typeof record.mimeType === 'string' ? record.mimeType : 'application/octet-stream'
+    const sizeLabel = typeof record.sizeLabel === 'string' ? record.sizeLabel : '—'
+    const excerpt = typeof record.excerpt === 'string' ? record.excerpt : ''
+    const status = record.extractionStatus
+    if (!id || !name) continue
+    if (status !== 'ready' && status !== 'limited' && status !== 'failed') continue
+
+    attachments.push({
+      id,
+      name,
+      mimeType,
+      sizeLabel,
+      excerpt,
+      extractedText: typeof record.extractedText === 'string' ? record.extractedText : undefined,
+      extractionStatus: status,
+      errorMessage: typeof record.errorMessage === 'string' ? record.errorMessage : undefined,
+    })
+  }
+
+  return attachments.length > 0 ? attachments : undefined
 }
 
 function formatFileSize(bytes: number): string {
@@ -134,7 +232,7 @@ async function extractTextFromAttachment(file: File): Promise<{
     if (extension === 'pdf' || mimeType === 'application/pdf') {
       return {
         extractionStatus: 'limited',
-        errorMessage: 'PDF text extraction is limited here. Add a short instruction if the important fields are not obvious.',
+        errorMessage: 'PDF text could not be extracted. Add a short instruction if the important fields are not obvious.',
       }
     }
 
@@ -150,7 +248,49 @@ async function extractTextFromAttachment(file: File): Promise<{
   }
 }
 
-export async function buildAgentAttachmentContext(file: File): Promise<AgentAttachmentContext> {
+export async function readFileAsBase64(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let index = 0; index < bytes.length; index += 1) {
+    binary += String.fromCharCode(bytes[index]!)
+  }
+  return btoa(binary)
+}
+
+export type ServerPdfExtractionResult = {
+  extractionStatus: 'ready' | 'limited' | 'failed'
+  extractedText?: string
+  errorMessage?: string
+}
+
+export async function buildAgentAttachmentContext(
+  file: File,
+  options?: {
+    extractPdfOnServer?: (file: File) => Promise<ServerPdfExtractionResult | null>
+  },
+): Promise<AgentAttachmentContext> {
+  const extension = getFileExtension(file.name)
+  const mimeType = file.type || 'application/octet-stream'
+
+  if ((extension === 'pdf' || mimeType === 'application/pdf') && options?.extractPdfOnServer) {
+    const serverResult = await options.extractPdfOnServer(file)
+    if (serverResult) {
+      const extractedText = serverResult.extractedText
+      const excerptSource = extractedText ?? serverResult.errorMessage ?? 'Attached for reference.'
+      return {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}-${file.name}`,
+        name: file.name,
+        mimeType,
+        sizeLabel: formatFileSize(file.size),
+        excerpt: truncateText(excerptSource, MAX_ATTACHMENT_EXCERPT_LENGTH),
+        extractedText,
+        extractionStatus: serverResult.extractionStatus,
+        errorMessage: serverResult.errorMessage,
+      }
+    }
+  }
+
   const extracted = await extractTextFromAttachment(file)
   const extractedText = extracted.extractedText
   const excerptSource = extractedText ?? extracted.errorMessage ?? 'Attached for reference.'

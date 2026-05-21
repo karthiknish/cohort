@@ -8,6 +8,9 @@ const conversationValidator = v.object({
   startedAt: v.union(v.number(), v.null()),
   lastMessageAt: v.union(v.number(), v.null()),
   messageCount: v.number(),
+  pinnedAt: v.union(v.number(), v.null()),
+  archivedAt: v.union(v.number(), v.null()),
+  previewSnippet: v.union(v.string(), v.null()),
 })
 
 export const upsert = workspaceMutation({
@@ -51,6 +54,9 @@ export const upsert = workspaceMutation({
       startedAt: args.startedAt ?? null,
       lastMessageAt: args.lastMessageAt ?? null,
       messageCount: typeof args.messageCount === 'number' ? args.messageCount : 0,
+      pinnedAt: null,
+      archivedAt: null,
+      previewSnippet: null,
       createdAt: now,
       updatedAt: now,
     })
@@ -63,12 +69,19 @@ export const list = workspaceQuery({
   args: {
     userId: v.string(),
     limit: v.number(),
+    cursor: v.optional(v.union(v.number(), v.null())),
+    search: v.optional(v.union(v.string(), v.null())),
+    includeArchived: v.optional(v.boolean()),
   },
   returns: v.object({
     conversations: v.array(conversationValidator),
+    nextCursor: v.union(v.number(), v.null()),
+    hasMore: v.boolean(),
   }),
   handler: async (ctx, args) => {
     const limit = Math.min(Math.max(args.limit, 1), 50)
+    const search = args.search?.trim().toLowerCase() ?? ''
+    const includeArchived = args.includeArchived ?? false
 
     const rows = await ctx.db
       .query('agentConversations')
@@ -76,17 +89,136 @@ export const list = workspaceQuery({
         q.eq('workspaceId', args.workspaceId).eq('userId', args.userId)
       )
       .order('desc')
-      .take(limit)
+      .take(250)
+
+    const messageMatchIds = new Set<string>()
+    if (search) {
+      for (const row of rows.slice(0, 60)) {
+        const messages = await ctx.db
+          .query('agentMessages')
+          .withIndex('by_workspace_conversation_createdAt', (q) =>
+            q.eq('workspaceId', args.workspaceId).eq('conversationLegacyId', row.legacyId),
+          )
+          .order('desc')
+          .take(80)
+
+        if (messages.some((message) => message.content.toLowerCase().includes(search))) {
+          messageMatchIds.add(row.legacyId)
+        }
+      }
+    }
+
+    const filtered = rows.filter((row) => {
+      if (!includeArchived && row.archivedAt) return false
+      if (!search) return true
+      const title = (row.title ?? '').toLowerCase()
+      const snippet = (row.previewSnippet ?? '').toLowerCase()
+      return (
+        title.includes(search) ||
+        snippet.includes(search) ||
+        row.legacyId.toLowerCase().includes(search) ||
+        messageMatchIds.has(row.legacyId)
+      )
+    })
+
+    const sorted = [...filtered].sort((a, b) => {
+      const aPinned = a.pinnedAt ?? 0
+      const bPinned = b.pinnedAt ?? 0
+      if (aPinned !== bPinned) return bPinned - aPinned
+      return (b.lastMessageAt ?? 0) - (a.lastMessageAt ?? 0)
+    })
+
+    let startIndex = 0
+    if (typeof args.cursor === 'number') {
+      const cursorIndex = sorted.findIndex((row) => (row.lastMessageAt ?? 0) < args.cursor!)
+      startIndex = cursorIndex === -1 ? sorted.length : cursorIndex
+    }
+
+    const page = sorted.slice(startIndex, startIndex + limit)
+    const lastRow = page[page.length - 1]
+    const nextCursor = lastRow?.lastMessageAt ?? null
+    const hasMore = startIndex + limit < sorted.length
 
     return {
-      conversations: rows.map((row) => ({
+      conversations: page.map((row) => ({
         legacyId: row.legacyId,
         title: row.title,
         startedAt: row.startedAt,
         lastMessageAt: row.lastMessageAt,
         messageCount: row.messageCount,
+        pinnedAt: row.pinnedAt ?? null,
+        archivedAt: row.archivedAt ?? null,
+        previewSnippet: row.previewSnippet ?? null,
       })),
+      nextCursor,
+      hasMore,
     }
+  },
+})
+
+export const setConversationFlags = workspaceMutation({
+  args: {
+    legacyId: v.string(),
+    userId: v.string(),
+    pinned: v.optional(v.union(v.boolean(), v.null())),
+    archived: v.optional(v.union(v.boolean(), v.null())),
+  },
+  returns: v.object({ ok: v.literal(true) }),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query('agentConversations')
+      .withIndex('by_workspaceId_legacyId', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId)
+      )
+      .unique()
+
+    if (!row) {
+      throw Errors.resource.notFound('Conversation', args.legacyId)
+    }
+
+    if (row.userId !== args.userId) {
+      throw Errors.auth.forbidden()
+    }
+
+    const patch: Record<string, number | null> = { updatedAt: ctx.now }
+    if (args.pinned !== undefined) {
+      patch.pinnedAt = args.pinned ? ctx.now : null
+    }
+    if (args.archived !== undefined) {
+      patch.archivedAt = args.archived ? ctx.now : null
+      if (args.archived) {
+        patch.pinnedAt = null
+      }
+    }
+
+    await ctx.db.patch(row._id, patch)
+    return { ok: true as const }
+  },
+})
+
+export const updatePreviewSnippet = workspaceMutation({
+  args: {
+    legacyId: v.string(),
+    previewSnippet: v.union(v.string(), v.null()),
+  },
+  returns: v.object({ ok: v.literal(true) }),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query('agentConversations')
+      .withIndex('by_workspaceId_legacyId', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId)
+      )
+      .unique()
+
+    if (!row) {
+      return { ok: true as const }
+    }
+
+    await ctx.db.patch(row._id, {
+      previewSnippet: args.previewSnippet?.slice(0, 160) ?? null,
+      updatedAt: ctx.now,
+    })
+    return { ok: true as const }
   },
 })
 
@@ -129,7 +261,7 @@ export const get = workspaceQuery({
         workspaceId: row.workspaceId,
         legacyId: row.legacyId,
         userId: row.userId,
-        title: row.title,
+        title: row.title ?? null,
         startedAt: row.startedAt,
         lastMessageAt: row.lastMessageAt,
         messageCount: row.messageCount,

@@ -17,6 +17,9 @@ import {
   FileText,
   History,
   Loader2,
+  Maximize2,
+  PanelRight,
+  PictureInPicture2,
   Paperclip,
   Pencil,
   RefreshCw,
@@ -44,17 +47,35 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Textarea } from '@/shared/ui/textarea'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu'
+import { Sheet, SheetContent } from '@/shared/ui/sheet'
+import { layoutLabel, panelUsesModalFocusTrap, type AgentPanelLayout } from '@/lib/agent-panel-layout'
 import { VoiceInputButton } from '@/shared/ui/voice-input'
-import type { AgentConversationSummary, AgentMessage, ConnectionStatus } from '@/shared/hooks/use-agent-mode'
+import type {
+  AgentConversationSummary,
+  AgentExecutionStep,
+  AgentMessage,
+  AgentPendingConfirmation,
+  ConnectionStatus,
+} from '@/shared/hooks/use-agent-mode'
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import type { AgentAttachmentContext } from '@/lib/agent-attachments'
 import type { AgentError } from '@/lib/agent-errors'
 import { ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
 import { cn } from '@/lib/utils'
 
+import { AgentConversationItem, ConversationItem } from './agent-conversation-item'
+import { AgentHistoryRail } from './agent-history-rail'
 import { AgentMessageCard } from './agent-message-card'
 import { MentionDropdown, type MentionItem } from './mention-dropdown'
-import { splitAgentTextWithMentions } from './mention-highlights'
+import { AgentMentionPills, splitAgentTextWithMentions } from './mention-highlights'
+import type { AgentSuggestion } from '@/lib/agent-context'
 
 type MentionDropdownProps = ComponentProps<typeof MentionDropdown>
 
@@ -85,6 +106,15 @@ function HistorySkeleton() {
 }
 
 function AttachmentStatusBadge({ attachment }: { attachment: AgentAttachmentContext }) {
+  if (attachment.extractionStatus === 'extracting') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+        Reading
+      </span>
+    )
+  }
+
   if (attachment.extractionStatus === 'ready') {
     return <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">Ready</span>
   }
@@ -159,6 +189,36 @@ function AttachmentList({
         <AttachmentItem key={attachment.id} attachment={attachment} onRemoveAttachment={onRemoveAttachment} />
       ))}
     </div>
+  )
+}
+
+export function AgentMessageAttachmentChips({
+  attachments,
+}: {
+  attachments: AgentAttachmentContext[]
+}) {
+  if (attachments.length === 0) return null
+
+  return (
+    <ul className="mt-2 space-y-1.5" aria-label="Attached files">
+      {attachments.map((attachment) => (
+        <li
+          key={attachment.id}
+          className="flex items-start gap-2 rounded-lg border border-primary-foreground/15 bg-primary-foreground/10 px-2.5 py-1.5 text-left text-xs"
+        >
+          <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-1.5">
+              <span className="truncate font-medium">{attachment.name}</span>
+              <AttachmentStatusBadge attachment={attachment} />
+            </span>
+            {attachment.excerpt ? (
+              <span className="mt-0.5 line-clamp-2 text-[11px] opacity-80">{attachment.excerpt}</span>
+            ) : null}
+          </span>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -258,6 +318,8 @@ function AgentComposerInput({
   disabled,
   mentionLabels,
   maxLength,
+  mentionListboxId,
+  showMentions,
 }: {
   value: string
   onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void
@@ -267,6 +329,8 @@ function AgentComposerInput({
   disabled: boolean
   mentionLabels: string[]
   maxLength: number
+  mentionListboxId?: string
+  showMentions?: boolean
 }) {
   const activeMentions = useMemo(() => {
     const seen = new Set<string>()
@@ -290,13 +354,17 @@ function AgentComposerInput({
         onChange={onChange}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
-        className="min-h-[44px] max-h-[160px] resize-none py-2.5 text-sm leading-relaxed"
+        className="min-h-[44px] max-h-[160px] resize-none py-2.5 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-ring"
         disabled={disabled}
         spellCheck
         autoGrow
         maxLength={maxLength}
         rows={1}
+        role="combobox"
         aria-label="Agent message"
+        aria-expanded={showMentions ?? false}
+        aria-controls={showMentions && mentionListboxId ? mentionListboxId : undefined}
+        aria-autocomplete="list"
       />
 
       <div className="flex items-center justify-between gap-2 px-0.5">
@@ -353,20 +421,22 @@ export type AgentComposerSectionProps = {
   onVoiceInterim: (text: string) => void
   onRemoveAttachment: (attachmentId: string) => void
   onSubmit: () => void
-  quickSuggestions?: string[]
-  onSuggestionClick?: (suggestion: string) => void
+  quickSuggestions?: AgentSuggestion[]
+  onSuggestionClick?: (suggestion: AgentSuggestion) => void
+  mentionListboxId?: string
+  mentionDropdownRef?: RefObject<import('./mention-dropdown').MentionDropdownHandle | null>
 }
 
-const EMPTY_QUICK_SUGGESTIONS: string[] = []
+const EMPTY_QUICK_SUGGESTIONS: AgentSuggestion[] = []
 
 function SuggestionButton({
   suggestion,
   disabled,
   onSuggestionClick,
 }: {
-  suggestion: string
+  suggestion: AgentSuggestion
   disabled: boolean
-  onSuggestionClick: (suggestion: string) => void
+  onSuggestionClick: (suggestion: AgentSuggestion) => void
 }) {
   const handleClick = useCallback(() => {
     onSuggestionClick(suggestion)
@@ -377,9 +447,10 @@ function SuggestionButton({
       type="button"
       onClick={handleClick}
       disabled={disabled}
-      className="rounded-full bg-muted/50 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50"
+      className="rounded-full bg-muted/50 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+      title={suggestion.prompt}
     >
-      {suggestion}
+      {suggestion.label}
     </button>
   )
 }
@@ -411,15 +482,25 @@ export function AgentComposerSection({
   quickSuggestions = EMPTY_QUICK_SUGGESTIONS,
   onSuggestionClick,
   maxMessageLength,
+  mentionListboxId = 'agent-mention-listbox',
+  mentionDropdownRef,
 }: AgentComposerSectionProps) {
   const isCentered = layout === 'centered'
 
   return (
-    <div className={cn(isCentered ? 'rounded-2xl border bg-background p-3' : 'relative border-t bg-muted/30 p-3')}>
+    <div
+      className={cn(
+        isCentered ? 'rounded-2xl border bg-background p-3' : 'relative border-t bg-muted/30 p-3',
+        !isCentered &&
+          'pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]',
+      )}
+    >
       <AttachmentList attachments={pendingAttachments} onRemoveAttachment={onRemoveAttachment} />
 
       <div className={cn('relative flex items-end gap-2', isCentered && 'justify-center')}>
         <MentionDropdown
+          ref={mentionDropdownRef}
+          listboxId={mentionListboxId}
           isOpen={showMentions}
           onClose={onCloseMentions}
           onSelect={onSelectMention}
@@ -440,6 +521,8 @@ export function AgentComposerSection({
           disabled={disabled}
           mentionLabels={mentionLabels}
           maxLength={maxMessageLength}
+          mentionListboxId={mentionListboxId}
+          showMentions={showMentions}
         />
 
         <VoiceInputButton
@@ -479,7 +562,7 @@ export function AgentComposerSection({
         <div className="mt-3 flex flex-wrap justify-center gap-2">
           {quickSuggestions.map((suggestion) => (
             <SuggestionButton
-              key={suggestion}
+              key={suggestion.id}
               suggestion={suggestion}
               disabled={disabled}
               onSuggestionClick={onSuggestionClick}
@@ -496,20 +579,27 @@ export function AgentModeHeader({
   conversationId,
   messagesCount,
   showHistory,
+  panelLayout,
   onClose,
   onStartNewChat,
   onToggleHistory,
+  onSetPanelLayout,
 }: {
   connectionStatus: ConnectionStatus
   conversationId: string | null
   messagesCount: number
   showHistory: boolean
+  panelLayout?: AgentPanelLayout
   onClose: () => void
   onStartNewChat: () => void
   onToggleHistory: () => void
+  onSetPanelLayout?: (layout: AgentPanelLayout) => void
 }) {
+  const LayoutIcon =
+    panelLayout === 'fullscreen' ? Maximize2 : panelLayout === 'compact' ? PictureInPicture2 : PanelRight
+
   return (
-    <div className="flex items-center justify-between border-b px-4 py-3">
+    <div className="flex items-center justify-between border-b px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
       <div className="flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-primary" />
         <span id="agent-mode-dialog-title" className="text-sm font-semibold">
@@ -532,13 +622,44 @@ export function AgentModeHeader({
           variant="ghost"
           size="icon"
           onClick={onToggleHistory}
-          className={cn('h-9 w-9 rounded-full', showHistory && 'bg-muted')}
+          className={cn('h-9 w-9 rounded-full focus-visible:ring-2 focus-visible:ring-ring', showHistory && 'bg-muted')}
           aria-label="Toggle chat history"
+          title="Chat history (⌘⇧H)"
         >
           <History className="h-4 w-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 rounded-full" aria-label="Close Agent Mode">
+        {onSetPanelLayout && panelLayout ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`Panel layout: ${layoutLabel(panelLayout)}`}
+                title={`Layout: ${layoutLabel(panelLayout)}`}
+              >
+                <LayoutIcon className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuRadioGroup
+                value={panelLayout}
+                onValueChange={(value) => {
+                  if (value === 'compact' || value === 'docked' || value === 'fullscreen') {
+                    onSetPanelLayout(value)
+                  }
+                }}
+              >
+                <DropdownMenuRadioItem value="compact">Compact floating</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="docked">Docked (keep dashboard visible)</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="fullscreen">Full screen</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+
+        <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 rounded-full focus-visible:ring-2 focus-visible:ring-ring" aria-label="Close Agent Mode">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -546,178 +667,8 @@ export function AgentModeHeader({
   )
 }
 
-function ConversationItem({
-  conversation,
-  conversationId,
-  isConversationLoading,
-  loadingConversationId,
-  editingConversationId,
-  editingTitle,
-  setEditingTitle,
-  onSelectConversation,
-  onUpdateConversationTitle,
-  onDeleteConversation,
-  onClose,
-  onStartEditing,
-  onStopEditing,
-}: {
-  conversation: AgentConversationSummary
-  conversationId: string | null
-  isConversationLoading: boolean
-  loadingConversationId: string | null
-  editingConversationId: string | null
-  editingTitle: string
-  setEditingTitle: (value: string) => void
-  onSelectConversation: (conversationId: string) => void
-  onUpdateConversationTitle: (conversationId: string, title: string) => void
-  onDeleteConversation: (conversationId: string) => void
-  onClose: () => void
-  onStartEditing: (conversationId: string, title: string) => void
-  onStopEditing: () => void
-}) {
-  const handleChangeTitle = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => setEditingTitle(event.target.value),
-    [setEditingTitle],
-  )
-
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLInputElement>) => {
-      if (event.key === 'Enter') {
-        event.preventDefault()
-        onUpdateConversationTitle(conversation.id, editingTitle)
-        onStopEditing()
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onStopEditing()
-      }
-    },
-    [conversation.id, editingTitle, onUpdateConversationTitle, onStopEditing],
-  )
-
-  const handleSelect = useCallback(() => {
-    if (isConversationLoading) return
-    onSelectConversation(conversation.id)
-    onClose()
-  }, [isConversationLoading, onSelectConversation, conversation.id, onClose])
-
-  const handleSaveTitle = useCallback(() => {
-    onUpdateConversationTitle(conversation.id, editingTitle)
-    onStopEditing()
-  }, [onUpdateConversationTitle, conversation.id, editingTitle, onStopEditing])
-
-  const handleStartEditing = useCallback(() => {
-    onStartEditing(conversation.id, conversation.title || '')
-  }, [onStartEditing, conversation.id, conversation.title])
-
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
-
-  const handleDelete = useCallback(() => {
-    setConfirmDeleteOpen(true)
-  }, [])
-
-  const handleConfirmDelete = useCallback(() => {
-    onDeleteConversation(conversation.id)
-    setConfirmDeleteOpen(false)
-  }, [onDeleteConversation, conversation.id])
-
-  return (
-    <div
-      className={cn(
-        'w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted',
-        conversation.id === conversationId && 'bg-muted',
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          {editingConversationId === conversation.id ? (
-            <Input
-              value={editingTitle}
-              onChange={handleChangeTitle}
-              onKeyDown={handleKeyDown}
-              className="h-8"
-              placeholder="Chat title"
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={handleSelect}
-              className="w-full min-w-0 text-left disabled:cursor-wait"
-              disabled={isConversationLoading}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate font-medium">{conversation.title || 'Chat'}</span>
-                {isConversationLoading && conversation.id === loadingConversationId ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                ) : conversation.lastMessageAt ? (
-                  <span className="shrink-0 text-xs text-muted-foreground" suppressHydrationWarning>{new Date(conversation.lastMessageAt).toLocaleString()}</span>
-                ) : null}
-              </div>
-            </button>
-          )}
-
-          {typeof conversation.messageCount === 'number' ? (
-            <div className="mt-0.5 text-xs text-muted-foreground">{conversation.messageCount} messages</div>
-          ) : null}
-        </div>
-
-        <div className="flex items-center gap-1">
-          {editingConversationId === conversation.id ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleSaveTitle}
-              aria-label="Save title"
-            >
-              <Check className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleStartEditing}
-              aria-label="Edit title"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleDelete}
-            aria-label="Delete chat"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-        <AlertDialogContent onClick={stopPropagation}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes the conversation and its messages from your history. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleConfirmDelete}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  )
-}
+export { AgentConversationItem, ConversationItem } from './agent-conversation-item'
+export { AgentHistoryRail } from './agent-history-rail'
 
 export function AgentHistoryPanel({
   showHistory,
@@ -824,58 +775,149 @@ export function AgentEmptyState({ children }: { children: ReactNode }) {
   )
 }
 
+function stepStatusIcon(status: AgentExecutionStep['status']) {
+  if (status === 'completed') return <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+  if (status === 'failed') return <AlertCircle className="h-3.5 w-3.5 text-destructive" aria-hidden />
+  if (status === 'active') return <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" aria-hidden />
+  return <Clock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+}
+
+export function AgentExecutionTimeline({
+  steps = [],
+  label,
+}: {
+  steps?: AgentExecutionStep[]
+  label: string
+}) {
+  if (steps.length === 0) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
+        <span>{label}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2" role="status" aria-live="polite" aria-atomic="true">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <ol className="space-y-1.5">
+        {steps.map((step) => (
+          <li key={step.id} className="flex items-start gap-2 text-xs">
+            <span className="mt-0.5 shrink-0">{stepStatusIcon(step.status)}</span>
+            <span className="min-w-0">
+              <span
+                className={cn(
+                  'font-medium',
+                  step.status === 'failed' && 'text-destructive',
+                  step.status === 'active' && 'text-foreground',
+                  step.status === 'completed' && 'text-foreground',
+                  step.status === 'pending' && 'text-muted-foreground',
+                )}
+              >
+                {step.label}
+              </span>
+              {step.detail ? <span className="mt-0.5 block text-muted-foreground">{step.detail}</span> : null}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}
+
 export function AgentMessagesSection({
   isConversationLoading,
   isProcessing,
   mentionLabels,
   messages,
   onRetryLastUserTurn,
+  onRetryUserMessage,
+  onConfirmPending,
+  onUndoAction,
+  processingSteps,
+  processingLabel,
   scrollAreaRef,
+  onMessagesScroll,
+  showJumpToLatest,
+  onJumpToLatest,
 }: {
   isConversationLoading: boolean
   isProcessing: boolean
   mentionLabels: string[]
   messages: AgentMessage[]
   onRetryLastUserTurn?: () => void
+  onRetryUserMessage?: (clientId: string, content: string) => void
+  onConfirmPending?: (pending: AgentPendingConfirmation, decision: 'confirm' | 'cancel' | 'edit') => void
+  onUndoAction?: (
+    messageId: string,
+    undoHint: NonNullable<AgentMessage['metadata']>['undoHint'],
+  ) => void
+  processingSteps: AgentExecutionStep[]
+  processingLabel: string
   scrollAreaRef: RefObject<HTMLDivElement | null>
+  onMessagesScroll: () => void
+  showJumpToLatest: boolean
+  onJumpToLatest: () => void
 }) {
   return (
-    <div className="flex-1 overflow-y-auto p-4" ref={scrollAreaRef} onWheel={stopPropagation}>
-      {isConversationLoading ? (
-        <div className="flex h-full min-h-[240px] items-center justify-center">
-          <div className="flex items-center gap-3 rounded-2xl border bg-background px-4 py-3 text-sm text-muted-foreground shadow-sm">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Loading previous chat…</span>
+    <div className="relative flex-1 min-h-0">
+      <div
+        className="h-full overflow-y-auto p-4"
+        ref={scrollAreaRef}
+        onScroll={onMessagesScroll}
+        onWheel={stopPropagation}
+      >
+        {isConversationLoading ? (
+          <div className="flex h-full min-h-[240px] items-center justify-center">
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              Loading previous chat…
+            </p>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {messages.map((message) => (
-            <AgentMessageCard
-              key={message.id}
-              message={message}
-              mentionLabels={mentionLabels}
-              onRetryLastUserTurn={onRetryLastUserTurn}
-            />
-          ))}
+        ) : (
+          <div className="space-y-3">
+            {messages.map((message) => (
+              <AgentMessageCard
+                key={message.clientId}
+                message={message}
+                mentionLabels={mentionLabels}
+                isProcessing={isProcessing}
+                onRetryLastUserTurn={onRetryLastUserTurn}
+                onRetryUserMessage={onRetryUserMessage}
+                onConfirmPending={onConfirmPending}
+                onUndoAction={onUndoAction}
+              />
+            ))}
 
-          {isProcessing ? (
-            <m.div
-              initial={MOTION_FADE_IN}
-              animate={MOTION_FADE_IN_VISIBLE}
-              className="flex justify-start"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2.5 text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                <span className="text-foreground">Thinking…</span>
-              </div>
-            </m.div>
-          ) : null}
+            {isProcessing ? (
+              <m.div
+                initial={MOTION_FADE_IN}
+                animate={MOTION_FADE_IN_VISIBLE}
+                className="flex justify-start"
+              >
+                <div className="max-w-[90%] rounded-lg border border-border/70 bg-muted/30 px-3 py-3">
+                  <AgentExecutionTimeline steps={processingSteps} label={processingLabel} />
+                </div>
+              </m.div>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {showJumpToLatest ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="pointer-events-auto h-8 shadow-md"
+            onClick={onJumpToLatest}
+          >
+            Jump to latest
+          </Button>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -914,6 +956,9 @@ export function FailedMessageBanner({
 }
 
 export function AgentModePanelShell({
+  isOpen,
+  onOpenChange,
+  panelLayout = 'docked',
   attachmentAccept,
   children,
   contextBanner,
@@ -928,13 +973,19 @@ export function AgentModePanelShell({
   onDrop,
   onFileSelection,
   rateLimitCountdown,
+  composerInputRef,
+  onRequestClose,
 }: {
+  isOpen: boolean
+  onOpenChange: (open: boolean) => void
+  onRequestClose?: () => void
+  panelLayout?: AgentPanelLayout
   attachmentAccept: string
   children: ReactNode
   contextBanner?: ReactNode
   fileInputRef: RefObject<HTMLInputElement | null>
   headerProps: ComponentProps<typeof AgentModeHeader>
-  historyPanelProps: ComponentProps<typeof AgentHistoryPanel>
+  historyPanelProps: ComponentProps<typeof AgentHistoryRail>
   agentError?: AgentError | null
   lastFailedMessage?: string | null
   onClearError?: () => void
@@ -943,54 +994,97 @@ export function AgentModePanelShell({
   onDrop: (event: React.DragEvent<HTMLDivElement>) => void
   onFileSelection: (event: ChangeEvent<HTMLInputElement>) => void
   rateLimitCountdown?: number | null
+  composerInputRef?: RefObject<HTMLTextAreaElement | null>
 }) {
-  return (
-    <m.div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="agent-mode-dialog-title"
-      initial={MOTION_FADE_STILL}
-      animate={MOTION_FADE_STILL_VISIBLE}
-      exit={MOTION_FADE_STILL_EXIT}
-      transition={MOTION_PANEL_TRANSITION}
-      className="fixed inset-0 z-[9999] flex h-screen flex-col bg-background"
-      onWheel={stopPropagation}
-      onTouchMove={stopPropagation}
-      onScroll={stopPropagation}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
-    >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={attachmentAccept}
-        multiple
-        className="hidden"
-        onChange={onFileSelection}
-      />
+  const isFullscreen = panelLayout === 'fullscreen'
+  const isCompact = panelLayout === 'compact'
+  const isDocked = panelLayout === 'docked'
+  const usesModal = panelUsesModalFocusTrap(panelLayout)
 
-      <AgentModeHeader {...headerProps} />
-      {contextBanner}
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      onRequestClose?.()
+      return
+    }
+    onOpenChange(true)
+  }
 
-      {agentError && onClearError ? (
-        <AgentErrorBanner
-          error={agentError}
-          lastFailedMessage={lastFailedMessage ?? null}
-          onDismiss={onClearError}
+  const shellBody = (
+    <>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={attachmentAccept}
+          multiple
+          className="hidden"
+          onChange={onFileSelection}
         />
-      ) : null}
 
-      <AnimatePresence>
-        {typeof rateLimitCountdown === 'number' && rateLimitCountdown > 0 ? (
-          <RateLimitBanner countdown={rateLimitCountdown} onDismiss={onClearError} />
+        <AgentModeHeader {...headerProps} panelLayout={panelLayout} />
+        {contextBanner}
+
+        {agentError && onClearError ? (
+          <AgentErrorBanner
+            error={agentError}
+            lastFailedMessage={lastFailedMessage ?? null}
+            onDismiss={onClearError}
+          />
         ) : null}
-      </AnimatePresence>
 
-      <AgentHistoryPanel {...historyPanelProps} />
+        <AnimatePresence>
+          {typeof rateLimitCountdown === 'number' && rateLimitCountdown > 0 ? (
+            <RateLimitBanner countdown={rateLimitCountdown} onDismiss={onClearError} />
+          ) : null}
+        </AnimatePresence>
 
-      {children}
-    </m.div>
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {historyPanelProps.showHistory ? (
+          <AgentHistoryRail {...historyPanelProps} layout="rail" />
+        ) : null}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+      </div>
+    </>
+  )
+
+  return (
+    <Sheet open={isOpen} onOpenChange={handleOpenChange} modal={usesModal}>
+      <SheetContent
+        side="right"
+        showOverlay={usesModal}
+        overlayClassName={cn(
+          usesModal && 'bg-black/50',
+          isDocked && 'bg-black/15 pointer-events-none',
+          isCompact && 'bg-transparent pointer-events-none',
+        )}
+        aria-labelledby="agent-mode-dialog-title"
+        className={cn(
+          'z-[9999] flex flex-col gap-0 p-0 [&>button]:hidden',
+          isFullscreen &&
+            'inset-0 h-[100dvh] max-h-[100dvh] w-screen max-w-none border-0 sm:max-w-none',
+          isDocked &&
+            'inset-y-0 right-0 left-auto h-full w-[min(480px,42vw)] max-w-[520px] border-l shadow-xl max-md:inset-0 max-md:h-[100dvh] max-md:w-screen max-md:max-w-none',
+          isCompact &&
+            'inset-auto bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] top-auto left-auto h-[min(560px,calc(100dvh-5rem-env(safe-area-inset-bottom)))] w-[min(400px,calc(100vw-2rem))] max-w-[400px] rounded-2xl border shadow-2xl max-md:inset-0 max-md:h-[100dvh] max-md:w-screen max-md:max-w-none max-md:rounded-none',
+        )}
+        onOpenAutoFocus={(event) => {
+          event.preventDefault()
+          composerInputRef?.current?.focus()
+        }}
+        onInteractOutside={(event) => {
+          if (!usesModal) {
+            event.preventDefault()
+          }
+        }}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        onWheel={stopPropagation}
+        onTouchMove={stopPropagation}
+        onScroll={stopPropagation}
+      >
+        {shellBody}
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -1004,7 +1098,15 @@ export function AgentModePanelContent({
   messages,
   onRetry,
   onRetryLastUserTurn,
+  onRetryUserMessage,
+  onConfirmPending,
+  onUndoAction,
+  processingSteps,
+  processingLabel,
   scrollAreaRef,
+  onMessagesScroll,
+  showJumpToLatest,
+  onJumpToLatest,
   showEmptyState,
 }: {
   dockComposerProps: AgentComposerSectionProps
@@ -1016,7 +1118,18 @@ export function AgentModePanelContent({
   messages: AgentMessage[]
   onRetry: () => void
   onRetryLastUserTurn?: () => void
+  onRetryUserMessage?: (clientId: string, content: string) => void
+  onConfirmPending?: (pending: AgentPendingConfirmation, decision: 'confirm' | 'cancel' | 'edit') => void
+  onUndoAction?: (
+    messageId: string,
+    undoHint: NonNullable<AgentMessage['metadata']>['undoHint'],
+  ) => void
+  processingSteps: AgentExecutionStep[]
+  processingLabel: string
   scrollAreaRef: RefObject<HTMLDivElement | null>
+  onMessagesScroll: () => void
+  showJumpToLatest: boolean
+  onJumpToLatest: () => void
   showEmptyState: boolean
 }) {
   if (showEmptyState) {
@@ -1035,7 +1148,15 @@ export function AgentModePanelContent({
         mentionLabels={mentionLabels}
         messages={messages}
         onRetryLastUserTurn={onRetryLastUserTurn}
+        onRetryUserMessage={onRetryUserMessage}
+        onConfirmPending={onConfirmPending}
+        onUndoAction={onUndoAction}
+        processingSteps={processingSteps}
+        processingLabel={processingLabel}
         scrollAreaRef={scrollAreaRef}
+        onMessagesScroll={onMessagesScroll}
+        showJumpToLatest={showJumpToLatest}
+        onJumpToLatest={onJumpToLatest}
       />
 
       {!isProcessing ? <FailedMessageBanner lastFailedMessage={lastFailedMessage} onRetry={onRetry} /> : null}

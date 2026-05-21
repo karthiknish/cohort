@@ -39,6 +39,7 @@ import type * as adsTargeting from "../adsTargeting.js";
 import type * as agent from "../agent.js";
 import type * as agentActions from "../agentActions.js";
 import type * as agentActions_helpers from "../agentActions/helpers.js";
+import type * as agentActions_helpers_confirmation from "../agentActions/helpers/confirmation.js";
 import type * as agentActions_helpers_context from "../agentActions/helpers/context.js";
 import type * as agentActions_helpers_dates from "../agentActions/helpers/dates.js";
 import type * as agentActions_helpers_formatting from "../agentActions/helpers/formatting.js";
@@ -52,6 +53,7 @@ import type * as agentActions_operations_ads_index from "../agentActions/operati
 import type * as agentActions_operations_ads_reports from "../agentActions/operations/ads/reports.js";
 import type * as agentActions_operations_clients from "../agentActions/operations/clients.js";
 import type * as agentActions_operations_clients_index from "../agentActions/operations/clients/index.js";
+import type * as agentActions_operations_meetings_index from "../agentActions/operations/meetings/index.js";
 import type * as agentActions_operations_messaging from "../agentActions/operations/messaging.js";
 import type * as agentActions_operations_messaging_index from "../agentActions/operations/messaging/index.js";
 import type * as agentActions_operations_notifications_index from "../agentActions/operations/notifications/index.js";
@@ -64,7 +66,9 @@ import type * as agentActions_operations_shared from "../agentActions/operations
 import type * as agentActions_operations_tasks from "../agentActions/operations/tasks.js";
 import type * as agentActions_operations_tasks_index from "../agentActions/operations/tasks/index.js";
 import type * as agentActions_prompting from "../agentActions/prompting.js";
+import type * as agentActions_runExecuteTurn from "../agentActions/runExecuteTurn.js";
 import type * as agentActions_types from "../agentActions/types.js";
+import type * as agentAttachments from "../agentAttachments.js";
 import type * as agentConversations from "../agentConversations.js";
 import type * as agentMessages from "../agentMessages.js";
 import type * as alertRules from "../alertRules.js";
@@ -180,6 +184,7 @@ declare const fullApi: ApiFromModules<{
   agent: typeof agent;
   agentActions: typeof agentActions;
   "agentActions/helpers": typeof agentActions_helpers;
+  "agentActions/helpers/confirmation": typeof agentActions_helpers_confirmation;
   "agentActions/helpers/context": typeof agentActions_helpers_context;
   "agentActions/helpers/dates": typeof agentActions_helpers_dates;
   "agentActions/helpers/formatting": typeof agentActions_helpers_formatting;
@@ -193,6 +198,7 @@ declare const fullApi: ApiFromModules<{
   "agentActions/operations/ads/reports": typeof agentActions_operations_ads_reports;
   "agentActions/operations/clients": typeof agentActions_operations_clients;
   "agentActions/operations/clients/index": typeof agentActions_operations_clients_index;
+  "agentActions/operations/meetings/index": typeof agentActions_operations_meetings_index;
   "agentActions/operations/messaging": typeof agentActions_operations_messaging;
   "agentActions/operations/messaging/index": typeof agentActions_operations_messaging_index;
   "agentActions/operations/notifications/index": typeof agentActions_operations_notifications_index;
@@ -205,7 +211,9 @@ declare const fullApi: ApiFromModules<{
   "agentActions/operations/tasks": typeof agentActions_operations_tasks;
   "agentActions/operations/tasks/index": typeof agentActions_operations_tasks_index;
   "agentActions/prompting": typeof agentActions_prompting;
+  "agentActions/runExecuteTurn": typeof agentActions_runExecuteTurn;
   "agentActions/types": typeof agentActions_types;
+  agentAttachments: typeof agentAttachments;
   agentConversations: typeof agentConversations;
   agentMessages: typeof agentMessages;
   alertRules: typeof alertRules;

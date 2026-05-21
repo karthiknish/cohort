@@ -155,8 +155,13 @@ export const agentApi = {
   sendMessage: looseApi.agentActions.sendMessage,
   listConversations: looseApi.agentActions.listConversations,
   getConversation: looseApi.agentActions.getConversation,
+  duplicateConversation: looseApi.agentActions.duplicateConversation,
+  exportConversation: looseApi.agentActions.exportConversation,
+  shareConversation: looseApi.agentActions.shareConversation,
+  extractPdfText: looseApi.agentAttachments.extractPdfText,
   updateConversationTitle: looseApi.agent.updateConversationTitle,
   deleteConversation: looseApi.agent.deleteConversation,
+  setConversationFlags: looseApi.agentConversations.setConversationFlags,
 }
 
 export const collaborationApi = {

@@ -52,6 +52,9 @@ export const systemTables = {
     startedAt: v.union(v.number(), v.null()),
     lastMessageAt: v.union(v.number(), v.null()),
     messageCount: v.number(),
+    pinnedAt: v.optional(v.union(v.number(), v.null())),
+    archivedAt: v.optional(v.union(v.number(), v.null())),
+    previewSnippet: v.optional(v.union(v.string(), v.null())),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

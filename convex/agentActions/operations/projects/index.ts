@@ -13,6 +13,57 @@ import {
 import type { OperationHandler } from '../../types'
 
 export const projectOperationHandlers: Record<string, OperationHandler> = {
+  async listActiveProjects(ctx, input) {
+    const statusFilter = asNonEmptyString(input.params.status)?.toLowerCase()
+    const rawProjects = await ctx.runQuery(api.projects.list, {
+      workspaceId: input.workspaceId,
+      limit: 200,
+    })
+
+    const projects = Array.isArray(rawProjects)
+      ? rawProjects
+          .map((row) => {
+            if (!row || typeof row !== 'object') return null
+            const record = row as Record<string, unknown>
+            const legacyId = asNonEmptyString(record.legacyId)
+            const name = asNonEmptyString(record.name)
+            if (!legacyId || !name) return null
+            const status = asNonEmptyString(record.status) ?? 'unknown'
+            return {
+              projectId: legacyId,
+              name,
+              status,
+              clientName: asNonEmptyString(record.clientName) ?? null,
+              route: buildProjectRoute(legacyId, name),
+            }
+          })
+          .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+      : []
+
+    const activeStatuses = new Set(['active', 'in_progress', 'planning', 'on_track'])
+    const filtered = projects.filter((project) => {
+      if (!statusFilter || statusFilter === 'all') {
+        return activeStatuses.has(project.status.toLowerCase())
+      }
+      return project.status.toLowerCase() === statusFilter
+    })
+
+    const listed = filtered.slice(0, 12)
+
+    return {
+      success: true,
+      route: '/dashboard/projects',
+      data: {
+        total: filtered.length,
+        projects: listed,
+      },
+      userMessage:
+        listed.length === 0
+          ? 'I could not find active projects in this workspace.'
+          : `Found ${filtered.length} active project${filtered.length === 1 ? '' : 's'}: ${listed.map((p) => p.name).join(', ')}.`,
+    }
+  },
+
   async createProject(ctx, input) {
     const name = asNonEmptyString(input.params.name)
     if (!name) {

@@ -25,7 +25,9 @@
     "start": "node scripts/ensure-safe-runtime.cjs && bun --bun next start",
     "lint": "bun run biome:check && oxlint -c .oxlintrc.json",
     "typecheck": "bun --bun tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:a11y": "playwright test e2e/agent-mode.a11y.spec.ts",
+    "test:a11y:fixture": "PLAYWRIGHT_SKIP_WEB_SERVER=1 playwright test e2e/agent-mode.a11y.spec.ts --grep fixture"
   },
   "dependencies": {
     "@convex-dev/better-auth": "0.11.3",
@@ -94,6 +96,7 @@
     "livekit-server-sdk": "^2.15.0",
     "lucide-react": "^0.563.0",
     "next-themes": "^0.4.6",
+    "pdf-parse": "1.1.1",
     "posthog-js": "^1.359.1",
     "react": "^19.2.4",
     "react-day-picker": "^9.13.0",
@@ -115,9 +118,12 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@biomejs/biome": "^2.4.9",
     "@convex-dev/eslint-plugin": "^1.1.1",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^25.1.0",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "babel-plugin-react-compiler": "1.0.0",

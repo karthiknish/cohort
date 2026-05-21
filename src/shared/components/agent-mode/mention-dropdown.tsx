@@ -1,7 +1,17 @@
 "use client";
 
 import { Building2, FolderKanban, Loader2, User, Users, type LucideIcon } from "lucide-react";
-import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import {
+	forwardRef,
+	useCallback,
+	useEffect,
+	useEffectEvent,
+	useImperativeHandle,
+	useMemo,
+	useRef,
+	useState,
+	type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { motionDurationSeconds, motionEasing } from "@/lib/animation-system";
 import { cn } from "@/lib/utils";
 import {
@@ -21,7 +31,12 @@ export interface MentionItem {
 	subtitle?: string;
 }
 
+export type MentionDropdownHandle = {
+	handleKeyDown: (event: ReactKeyboardEvent) => boolean;
+};
+
 interface MentionDropdownProps {
+	listboxId?: string;
 	isOpen: boolean;
 	onClose: () => void;
 	onSelect: (item: MentionItem) => void;
@@ -119,11 +134,13 @@ function MentionResultButton({
 	index,
 	item,
 	onSelect,
+	showAmbiguousSubtitle,
 }: {
 	clampedSelectedIndex: number
 	index: number
 	item: MentionItem
 	onSelect: (item: MentionItem) => void
+	showAmbiguousSubtitle: boolean
 }) {
 	const handleClick = useCallback(() => {
 		onSelect(item)
@@ -132,7 +149,9 @@ function MentionResultButton({
 	return (
 		<button
 			type="button"
-			key={`${item.type}-${item.id}`}
+			id={`agent-mention-option-${item.type}-${item.id}`}
+			role="option"
+			aria-selected={index === clampedSelectedIndex}
 			onClick={handleClick}
 			className={cn(
 				"flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
@@ -149,9 +168,18 @@ function MentionResultButton({
 			</div>
 			<div className="min-w-0 flex-1">
 				<p className="truncate text-sm font-medium">{item.name}</p>
-				{item.subtitle && (
-					<p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
-				)}
+				{item.subtitle ? (
+					<p
+						className={cn(
+							'truncate text-xs',
+							showAmbiguousSubtitle
+								? 'font-medium text-foreground'
+								: 'text-muted-foreground',
+						)}
+					>
+						{item.subtitle}
+					</p>
+				) : null}
 			</div>
 			<span className="text-[10px] uppercase tracking-wide text-muted-foreground">
 				{item.type}
@@ -160,17 +188,21 @@ function MentionResultButton({
 	)
 }
 
-export function MentionDropdown({
-	isOpen,
-	onClose,
-	onSelect,
-	searchQuery,
-	clients = EMPTY_CLIENTS,
-	projects = EMPTY_PROJECTS,
-	teams = EMPTY_TEAMS,
-	users = EMPTY_USERS,
-	isLoading = false,
-}: MentionDropdownProps) {
+export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdownProps>(function MentionDropdown(
+	{
+		listboxId = "agent-mention-listbox",
+		isOpen,
+		onClose,
+		onSelect,
+		searchQuery,
+		clients = EMPTY_CLIENTS,
+		projects = EMPTY_PROJECTS,
+		teams = EMPTY_TEAMS,
+		users = EMPTY_USERS,
+		isLoading = false,
+	},
+	ref,
+) {
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const [activeCategory, setActiveCategory] = useState<MentionType | null>(
 		null,
@@ -246,6 +278,17 @@ export function MentionDropdown({
 		selectedIndex,
 		Math.max(filteredItems.length - 1, 0),
 	);
+
+	const duplicateNameKeys = useMemo(() => {
+		const counts = new Map<string, number>();
+		for (const item of filteredItems) {
+			const key = item.name.trim().toLowerCase();
+			counts.set(key, (counts.get(key) ?? 0) + 1);
+		}
+		return new Set(
+			[...counts.entries()].filter(([, count]) => count > 1).map(([name]) => name),
+		);
+	}, [filteredItems]);
 	const closeDropdown = useEffectEvent(() => {
 		onClose();
 	});
@@ -256,62 +299,45 @@ export function MentionDropdown({
 		setActiveCategory(null);
 	}, []);
 
-	const handleDocumentKeyDown = useEffectEvent(
-		(e: KeyboardEvent) => {
-			if (!isOpen) return;
+	const handleListKeyDown = useEffectEvent((e: ReactKeyboardEvent): boolean => {
+		if (!isOpen) return false;
 
-			switch (e.key) {
-				case "ArrowDown":
-					e.preventDefault();
-					setSelectedIndex((prev) =>
-						Math.min(prev + 1, filteredItems.length - 1),
-					);
-					break;
-				case "ArrowUp":
-					e.preventDefault();
-					setSelectedIndex((prev) => Math.max(prev - 1, 0));
-					break;
-				case "Enter": {
-					e.preventDefault();
-					const selectedItem = filteredItems[clampedSelectedIndex];
-					if (selectedItem) {
-						selectMention(selectedItem);
-					}
-					break;
+		switch (e.key) {
+			case "ArrowDown":
+				e.preventDefault();
+				setSelectedIndex((prev) => Math.min(prev + 1, filteredItems.length - 1));
+				return true;
+			case "ArrowUp":
+				e.preventDefault();
+				setSelectedIndex((prev) => Math.max(prev - 1, 0));
+				return true;
+			case "Enter": {
+				e.preventDefault();
+				const selectedItem = filteredItems[clampedSelectedIndex];
+				if (selectedItem) {
+					selectMention(selectedItem);
 				}
-				case "Escape": {
-					e.preventDefault();
-					closeDropdown();
-					break;
-				}
-				case "Tab": {
-					e.preventDefault();
-					// Cycle through categories
-					const categoryOrder: (MentionType | null)[] = [
-						null,
-						"client",
-						"project",
-						"team",
-						"user",
-					];
-					const currentIdx = categoryOrder.indexOf(activeCategory);
-					const nextCategory =
-						categoryOrder[(currentIdx + 1) % categoryOrder.length];
-					setActiveCategory(nextCategory ?? null);
-					break;
-				}
+				return true;
 			}
+			case "Escape": {
+				e.preventDefault();
+				closeDropdown();
+				return true;
+			}
+			case "Tab": {
+				e.preventDefault();
+				const categoryOrder: (MentionType | null)[] = [null, "client", "project", "team", "user"];
+				const currentIdx = categoryOrder.indexOf(activeCategory);
+				const nextCategory = categoryOrder[(currentIdx + 1) % categoryOrder.length];
+				setActiveCategory(nextCategory ?? null);
+				return true;
+			}
+			default:
+				return false;
 		}
-	);
+	});
 
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			handleDocumentKeyDown(e);
-		};
-
-		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, []);
+	useImperativeHandle(ref, () => ({ handleKeyDown: handleListKeyDown }), [handleListKeyDown]);
 
 	// Close on outside click
 	useEffect(() => {
@@ -336,6 +362,14 @@ export function MentionDropdown({
 			<AnimatePresence>
 				<m.div
 					ref={dropdownRef}
+					id={listboxId}
+					role="listbox"
+					aria-label="Mention suggestions"
+					aria-activedescendant={
+						filteredItems[clampedSelectedIndex]
+							? `agent-mention-option-${filteredItems[clampedSelectedIndex].type}-${filteredItems[clampedSelectedIndex].id}`
+							: undefined
+					}
 					initial={DROPDOWN_INITIAL}
 					animate={DROPDOWN_ANIMATE}
 					exit={DROPDOWN_EXIT}
@@ -387,6 +421,7 @@ export function MentionDropdown({
 											index={index}
 											item={item}
 											onSelect={onSelect}
+											showAmbiguousSubtitle={duplicateNameKeys.has(item.name.trim().toLowerCase())}
 										/>
 								))}
 							</div>
@@ -416,7 +451,7 @@ export function MentionDropdown({
 			</AnimatePresence>
 		</LazyMotion>
 	);
-}
+});
 
 // Styled mention pill component for display in messages
 export function MentionPill({ item }: { item: MentionItem }) {
@@ -432,9 +467,9 @@ export function MentionPill({ item }: { item: MentionItem }) {
 	);
 }
 
-// Format mention for display in input
+// Format mention with structured identity for server-side resolution
 export function formatMention(item: MentionItem): string {
-	return `@${item.name}`;
+	return `@[${item.name}](${item.type}:${item.id})`;
 }
 
 // Parse mentions from text

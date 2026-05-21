@@ -51,7 +51,10 @@ export function AgentContextBanner({ chips, shortcuts, disabled, onShortcutPromp
 
       <div className="flex flex-wrap gap-1.5">
         {shortcuts.map((shortcut) => {
-          const Icon = shortcut.icon ? SHORTCUT_ICONS[shortcut.icon] : null
+          const Icon =
+            shortcut.icon && shortcut.icon in SHORTCUT_ICONS
+              ? SHORTCUT_ICONS[shortcut.icon]
+              : null
           return (
             <Button
               key={shortcut.id}

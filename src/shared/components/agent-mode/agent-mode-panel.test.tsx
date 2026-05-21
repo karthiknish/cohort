@@ -26,6 +26,24 @@ vi.mock('@/shared/contexts/client-context', () => ({
   useClientContext: () => ({ selectedClient: null, selectedClientId: null }),
 }))
 
+vi.mock('@/shared/contexts/auth-context', () => ({
+  useAuth: () => ({ user: { role: 'admin' } }),
+}))
+
+vi.mock('@/shared/ui/sheet', () => ({
+  Sheet: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open ? <div data-slot="agent-sheet">{children}</div> : null,
+  SheetContent: ({ children, ...props }: { children: React.ReactNode; className?: string }) => (
+    <div data-slot="agent-sheet-content" {...props}>
+      {children}
+    </div>
+  ),
+}))
+
+vi.mock('@/shared/hooks/use-keyboard-shortcuts', () => ({
+  useKeyboardShortcut: () => {},
+}))
+
 vi.mock('@/shared/hooks/use-mention-data', () => ({
   useMentionData: () => ({
     clients: [],
@@ -82,7 +100,7 @@ describe('AgentModePanel', () => {
     const markup = renderPanel()
 
     expect(markup).toContain('Where would you like to go?')
-    expect(markup).toContain('Summarize my open tasks')
+    expect(markup).toContain('Tasks due this week')
     expect(markup).toContain('Agent Mode')
   })
 
@@ -91,6 +109,7 @@ describe('AgentModePanel', () => {
       messages: [
         {
           id: 'message-1',
+          clientId: 'message-1',
           type: 'user',
           content: 'Retry this',
           timestamp: new Date('2026-03-07T18:26:10.000Z'),

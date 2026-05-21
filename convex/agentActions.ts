@@ -1,7 +1,7 @@
 "use node"
 
 import { api } from '/_generated/api'
-import { action } from './_generated/server'
+import { action, type ActionCtx } from './_generated/server'
 import {
   SYSTEM_PROMPT,
   agentRequestContext,
@@ -17,7 +17,7 @@ import {
   getProposalConversationPromptIdFromAssistantMessage,
   isProposalConversationRequest,
 } from './agentActions/helpers/proposalConversation'
-import { safeExecuteOperation } from './agentActions/operations'
+import { executeOperationTurn, tryResolveConfirmationTurn } from './agentActions/runExecuteTurn'
 import type {
   ConversationGetResult,
   ConversationListResult,
@@ -149,6 +149,15 @@ export const sendMessage = action({
       }
 
       const userMessageLegacyId = crypto.randomUUID()
+      const userMessageParams: Record<string, unknown> = {}
+      if (args.context?.mentions && args.context.mentions.length > 0) {
+        userMessageParams.mentions = args.context.mentions
+      }
+      if (args.context?.attachments && args.context.attachments.length > 0) {
+        userMessageParams.attachments = args.context.attachments
+      }
+      const mentionParams = Object.keys(userMessageParams).length > 0 ? userMessageParams : null
+
       await ctx.runMutation(api.agentMessages.upsert, {
         workspaceId: args.workspaceId,
         conversationLegacyId: convId,
@@ -160,8 +169,14 @@ export const sendMessage = action({
         action: null,
         route: null,
         operation: null,
-        params: null,
+        params: mentionParams as JsonRecord | null,
         executeResult: null,
+      })
+
+      await ctx.runMutation(api.agentConversations.updatePreviewSnippet, {
+        workspaceId: args.workspaceId,
+        legacyId: convId,
+        previewSnippet: args.message.slice(0, 160),
       })
 
       const prompt = `${SYSTEM_PROMPT}${formatConversationHistory(args.context)}\nUser: ${args.message}\n\nRespond with JSON only:`
@@ -178,8 +193,29 @@ export const sendMessage = action({
         retryable?: boolean
         userMessage?: string
       } | null = null
+      let requiresConfirmation = false
+      let confirmation: import('./agentActions/helpers/confirmation').AgentConfirmationProposal | undefined
 
-      if (deterministicIntent?.action === 'navigate') {
+      const turnArgs = {
+        workspaceId: args.workspaceId,
+        userId,
+        conversationId: convId,
+        message: args.message,
+        context: args.context,
+      }
+
+      const confirmationTurn = await tryResolveConfirmationTurn(ctx, turnArgs)
+
+      if (confirmationTurn) {
+        agentAction = confirmationTurn.agentAction
+        agentRoute = confirmationTurn.agentRoute
+        agentMessage = confirmationTurn.agentMessage
+        agentOperation = confirmationTurn.agentOperation
+        agentParams = confirmationTurn.agentParams
+        executeResult = confirmationTurn.executeResult
+        requiresConfirmation = confirmationTurn.requiresConfirmation ?? false
+        confirmation = confirmationTurn.confirmation
+      } else if (deterministicIntent?.action === 'navigate') {
         agentAction = 'navigate'
         agentRoute = deterministicIntent.route
         agentMessage = deterministicIntent.message
@@ -187,34 +223,21 @@ export const sendMessage = action({
         agentAction = 'clarify'
         agentMessage = deterministicIntent.message
       } else if (deterministicIntent?.action === 'execute') {
-        agentAction = 'execute'
-        agentOperation = normalizeOperationName(deterministicIntent.operation)
-        agentParams = deterministicIntent.params
-
-        const result = await safeExecuteOperation(ctx, {
-          workspaceId: args.workspaceId,
-          userId,
-          conversationId: convId,
-          operation: agentOperation,
-          params: agentParams,
-          context: args.context,
-          rawMessage: args.message,
-        })
-
-        executeResult = {
-          success: result.success,
-          data: result.data,
-          route: result.route,
-          retryable: result.retryable,
-          userMessage: result.userMessage,
-        }
-
-        agentRoute = result.route ?? (typeof result.data?.route === 'string' ? result.data.route : null)
-
-        agentMessage =
-          executeResult.userMessage ||
-          deterministicIntent.message ||
-          (executeResult.success ? 'Action completed.' : 'I could not complete that action.')
+        const executeTurn = await executeOperationTurn(
+          ctx,
+          turnArgs,
+          deterministicIntent.operation,
+          deterministicIntent.params,
+          { fallbackMessage: deterministicIntent.message },
+        )
+        agentAction = executeTurn.agentAction
+        agentRoute = executeTurn.agentRoute
+        agentMessage = executeTurn.agentMessage
+        agentOperation = executeTurn.agentOperation
+        agentParams = executeTurn.agentParams
+        executeResult = executeTurn.executeResult
+        requiresConfirmation = executeTurn.requiresConfirmation ?? false
+        confirmation = executeTurn.confirmation
       } else {
         const raw = await geminiAI.generateContent(prompt)
         const parsed = parseGeminiResponse(raw)
@@ -234,43 +257,20 @@ export const sendMessage = action({
               data: { error: 'Missing operation name' },
               userMessage: 'I need an operation name to execute this action.',
             }
+            agentMessage = executeResult.userMessage ?? 'I need an operation name to execute this action.'
           } else {
-            const result = await safeExecuteOperation(ctx, {
-              workspaceId: args.workspaceId,
-              userId,
-              conversationId: convId,
-              operation,
-              params,
-              context: args.context,
-              rawMessage: args.message,
+            const executeTurn = await executeOperationTurn(ctx, turnArgs, operation, params, {
+              fallbackMessage: typeof parsed.message === 'string' ? parsed.message : null,
             })
-
-            executeResult = {
-              success: result.success,
-              data: result.data,
-              route: result.route,
-              retryable: result.retryable,
-              userMessage: result.userMessage,
-            }
-
-            agentRoute = result.route ?? (typeof result.data?.route === 'string' ? result.data.route : null)
+            agentAction = executeTurn.agentAction
+            agentRoute = executeTurn.agentRoute
+            agentMessage = executeTurn.agentMessage
+            agentOperation = executeTurn.agentOperation
+            agentParams = executeTurn.agentParams
+            executeResult = executeTurn.executeResult
+            requiresConfirmation = executeTurn.requiresConfirmation ?? false
+            confirmation = executeTurn.confirmation
           }
-
-          const parsedMessage =
-            typeof parsed.message === 'string' && parsed.message.trim()
-              ? parsed.message.trim()
-              : null
-
-          agentMessage =
-            executeResult?.success === false
-              ? (executeResult.userMessage || 'I could not complete that action.')
-              : (
-                  executeResult?.userMessage ||
-                  parsedMessage ||
-                  (executeResult?.success
-                    ? 'Action completed.'
-                    : 'I could not complete that action.')
-                )
         } else {
           agentMessage = typeof parsed.message === 'string' ? parsed.message : agentMessage
         }
@@ -302,13 +302,77 @@ export const sendMessage = action({
         messageCount: previousMessageCount + 2,
       })
 
+      await ctx.runMutation(api.agentConversations.updatePreviewSnippet, {
+        workspaceId: args.workspaceId,
+        legacyId: convId,
+        previewSnippet: (agentMessage || args.message).slice(0, 160),
+      })
+
+      const steps = [
+        { id: 'parse', label: 'Parsed request', status: 'completed' as const },
+        { id: 'context', label: 'Resolved context', status: 'completed' as const },
+        {
+          id: 'action',
+          label: requiresConfirmation
+            ? 'Awaiting confirmation'
+            : agentAction === 'navigate'
+              ? 'Navigation'
+              : agentAction === 'execute' && agentOperation
+                ? `Executed ${agentOperation}`
+                : agentAction === 'clarify'
+                  ? 'Clarification'
+                  : 'Response',
+          status: requiresConfirmation
+            ? ('active' as const)
+            : executeResult?.success === false
+              ? ('failed' as const)
+              : ('completed' as const),
+          detail: executeResult?.success === false ? executeResult.userMessage : undefined,
+        },
+        {
+          id: 'done',
+          label: requiresConfirmation
+            ? 'Waiting for you'
+            : executeResult?.success === false
+              ? 'Needs attention'
+              : 'Done',
+          status: requiresConfirmation
+            ? ('pending' as const)
+            : executeResult?.success === false
+              ? ('failed' as const)
+              : ('completed' as const),
+        },
+      ]
+
+      const pendingExecution =
+        requiresConfirmation && agentOperation && agentParams
+          ? {
+              confirmationId:
+                typeof agentParams._confirmationId === 'string'
+                  ? agentParams._confirmationId
+                  : agentMessageLegacyId,
+              operation: agentOperation,
+              params: Object.fromEntries(
+                Object.entries(agentParams).filter(
+                  ([key]) => !key.startsWith('_'),
+                ),
+              ),
+            }
+          : undefined
+
       return {
         conversationId: convId,
+        userMessageId: userMessageLegacyId,
+        agentMessageId: agentMessageLegacyId,
         action: agentAction,
         route: agentRoute,
         message: agentMessage,
         operation: agentOperation,
         executeResult,
+        steps,
+        requiresConfirmation: requiresConfirmation || undefined,
+        confirmation,
+        pendingExecution,
       }
     }, 'agentActions:sendMessage'),
 })
@@ -317,6 +381,9 @@ export const listConversations = action({
   args: {
     workspaceId: v.string(),
     limit: v.optional(v.number()),
+    cursor: v.optional(v.union(v.number(), v.null())),
+    search: v.optional(v.union(v.string(), v.null())),
+    includeArchived: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<{
     conversations: Array<{
@@ -325,18 +392,26 @@ export const listConversations = action({
       startedAt: string | null
       lastMessageAt: string | null
       messageCount: number
+      pinnedAt: string | null
+      archivedAt: string | null
+      previewSnippet: string | null
     }>
+    nextCursor: number | null
+    hasMore: boolean
   }> =>
     withErrorHandling(async () => {
       const identity = await ctx.auth.getUserIdentity()
       requireIdentity(identity)
 
-      const limit = Math.min(Math.max(args.limit ?? 20, 1), 50)
+      const limit = Math.min(Math.max(args.limit ?? 30, 1), 50)
 
       const result = await ctx.runQuery(api.agentConversations.list, {
         workspaceId: args.workspaceId,
         userId: identity.subject,
         limit,
+        cursor: args.cursor ?? null,
+        search: args.search ?? null,
+        includeArchived: args.includeArchived ?? false,
       }) as ConversationListResult
 
       return {
@@ -350,7 +425,14 @@ export const listConversations = action({
               ? new Date(row.lastMessageAt).toISOString()
               : null,
           messageCount: row.messageCount,
+          pinnedAt:
+            typeof row.pinnedAt === 'number' ? new Date(row.pinnedAt).toISOString() : null,
+          archivedAt:
+            typeof row.archivedAt === 'number' ? new Date(row.archivedAt).toISOString() : null,
+          previewSnippet: row.previewSnippet ?? null,
         })),
+        nextCursor: result.nextCursor,
+        hasMore: result.hasMore,
       }
     }, 'agentActions:listConversations'),
 })
@@ -425,8 +507,197 @@ export const getConversation = action({
           route: msg.route,
           action: msg.action,
           operation: msg.operation,
+          params: msg.params ?? null,
           executeResult: msg.executeResult,
         })),
       }
     }, 'agentActions:getConversation'),
+})
+
+async function loadConversationExportPayload(
+  ctx: ActionCtx,
+  args: { workspaceId: string; conversationId: string },
+  userId: string,
+) {
+  const conv = await ctx.runQuery(api.agentConversations.get, {
+    workspaceId: args.workspaceId,
+    legacyId: args.conversationId,
+  }) as ConversationGetResult
+
+  if (!conv.conversation) {
+    throw Errors.resource.notFound('Conversation', args.conversationId)
+  }
+  if (conv.conversation.userId !== userId) {
+    throw Errors.auth.forbidden()
+  }
+
+  const msgs = await ctx.runQuery(api.agentMessages.listByConversation, {
+    workspaceId: args.workspaceId,
+    conversationLegacyId: args.conversationId,
+    limit: 500,
+  }) as ConversationMessagesResult
+
+  const title = conv.conversation.title?.trim() || 'Agent chat'
+
+  return {
+    id: args.conversationId,
+    title,
+    startedAt:
+      typeof conv.conversation.startedAt === 'number'
+        ? new Date(conv.conversation.startedAt).toISOString()
+        : null,
+    lastMessageAt:
+      typeof conv.conversation.lastMessageAt === 'number'
+        ? new Date(conv.conversation.lastMessageAt).toISOString()
+        : null,
+    messages: msgs.messages.map((message) => ({
+      id: message.legacyId,
+      type: message.type,
+      content: message.content,
+      timestamp: new Date(message.createdAt).toISOString(),
+      route: message.route,
+      operation: message.operation,
+    })),
+  }
+}
+
+export const duplicateConversation = action({
+  args: {
+    workspaceId: v.string(),
+    conversationId: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ conversationId: string; messageCount: number }> =>
+    withErrorHandling(async () => {
+      const identity = await ctx.auth.getUserIdentity()
+      requireIdentity(identity)
+
+      const conv = await ctx.runQuery(api.agentConversations.get, {
+        workspaceId: args.workspaceId,
+        legacyId: args.conversationId,
+      }) as ConversationGetResult
+
+      if (!conv.conversation) {
+        throw Errors.resource.notFound('Conversation', args.conversationId)
+      }
+      if (conv.conversation.userId !== identity.subject) {
+        throw Errors.auth.forbidden()
+      }
+
+      const msgs = await ctx.runQuery(api.agentMessages.listByConversation, {
+        workspaceId: args.workspaceId,
+        conversationLegacyId: args.conversationId,
+        limit: 500,
+      }) as ConversationMessagesResult
+
+      const now = Date.now()
+      const newConversationId = crypto.randomUUID()
+      const sourceTitle = conv.conversation.title?.trim() || 'Chat'
+      const title = `${sourceTitle.slice(0, 48)} (copy)`
+
+      await ctx.runMutation(api.agentConversations.upsert, {
+        workspaceId: args.workspaceId,
+        legacyId: newConversationId,
+        userId: identity.subject,
+        title,
+        startedAt: now,
+        lastMessageAt: now,
+        messageCount: msgs.messages.length,
+      })
+
+      for (const message of msgs.messages) {
+        await ctx.runMutation(api.agentMessages.upsert, {
+          workspaceId: args.workspaceId,
+          conversationLegacyId: newConversationId,
+          legacyId: crypto.randomUUID(),
+          type: message.type,
+          content: message.content,
+          createdAt: message.createdAt,
+          userId: message.type === 'user' ? identity.subject : null,
+          action: message.action,
+          route: message.route,
+          operation: message.operation,
+          params: (message.params ?? null) as JsonRecord | null,
+          executeResult: (message.executeResult ?? null) as JsonRecord | null,
+        })
+      }
+
+      const lastMessage = msgs.messages[msgs.messages.length - 1]
+      if (lastMessage) {
+        await ctx.runMutation(api.agentConversations.updatePreviewSnippet, {
+          workspaceId: args.workspaceId,
+          legacyId: newConversationId,
+          previewSnippet: lastMessage.content.slice(0, 160),
+        })
+      }
+
+      return { conversationId: newConversationId, messageCount: msgs.messages.length }
+    }, 'agentActions:duplicateConversation'),
+})
+
+export const exportConversation = action({
+  args: {
+    workspaceId: v.string(),
+    conversationId: v.string(),
+    format: v.optional(v.union(v.literal('json'), v.literal('markdown'))),
+  },
+  handler: async (ctx, args): Promise<{ format: 'json' | 'markdown'; content: string; title: string }> =>
+    withErrorHandling(async () => {
+      const identity = await ctx.auth.getUserIdentity()
+      requireIdentity(identity)
+
+      const payload = await loadConversationExportPayload(ctx, args, identity.subject)
+      const format = args.format ?? 'markdown'
+      if (format === 'json') {
+        return { format, content: JSON.stringify(payload, null, 2), title: payload.title }
+      }
+
+      const lines: string[] = [`# ${payload.title}`, '']
+      if (payload.startedAt) lines.push(`Started: ${payload.startedAt}`)
+      if (payload.lastMessageAt) lines.push(`Last message: ${payload.lastMessageAt}`)
+      lines.push('')
+
+      for (const message of payload.messages) {
+        const speaker = message.type === 'user' ? 'You' : 'Agent'
+        lines.push(`## ${speaker} · ${message.timestamp}`)
+        lines.push('')
+        lines.push(message.content.trim())
+        if (message.route) {
+          lines.push('')
+          lines.push(`Route: ${message.route}`)
+        }
+        lines.push('')
+      }
+
+      return { format, content: lines.join('\n').trim(), title: payload.title }
+    }, 'agentActions:exportConversation'),
+})
+
+export const shareConversation = action({
+  args: {
+    workspaceId: v.string(),
+    conversationId: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ markdown: string; deepLinkPath: string }> =>
+    withErrorHandling(async () => {
+      const identity = await ctx.auth.getUserIdentity()
+      requireIdentity(identity)
+
+      const payload = await loadConversationExportPayload(ctx, args, identity.subject)
+      const lines: string[] = [`# ${payload.title}`, '']
+      if (payload.startedAt) lines.push(`Started: ${payload.startedAt}`)
+      if (payload.lastMessageAt) lines.push(`Last message: ${payload.lastMessageAt}`)
+      lines.push('')
+      for (const message of payload.messages) {
+        const speaker = message.type === 'user' ? 'You' : 'Agent'
+        lines.push(`## ${speaker} · ${message.timestamp}`)
+        lines.push('')
+        lines.push(message.content.trim())
+        lines.push('')
+      }
+
+      return {
+        markdown: lines.join('\n').trim(),
+        deepLinkPath: `/dashboard?agentConversation=${encodeURIComponent(args.conversationId)}`,
+      }
+    }, 'agentActions:shareConversation'),
 })

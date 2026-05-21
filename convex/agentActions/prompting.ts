@@ -51,12 +51,20 @@ When the user wants to CREATE or UPDATE data, use:
 - **listWorkspaceClients**: Return a trimmed list of clients in the workspace (optionally filter by name)
   Params: { query?: string }
 
+### Meeting Operations
+- **summarizeMeetings**: List upcoming or recent meetings with notes summaries when available
+  Params: { clientId?: string, includePast?: boolean, limit?: number }
+  Example: "Summarize recent client meetings" → {"action": "execute", "operation": "summarizeMeetings", "params": {"includePast": true}, "message": "Here are your recent meetings."}
+
 ### Messaging Operations
 - **sendDirectMessage**: Send a direct message to a workspace user
   Params: { recipientQuery: string, content: string }
   Example: "send a chat to @Deepak saying hi" → {"action": "execute", "operation": "sendDirectMessage", "params": {"recipientQuery": "Deepak", "content": "hi"}, "message": "Sending that message to Deepak now."}
 
 ### Proposal Operations
+- **listProposals**: List proposal drafts in the workspace (optionally filter by status or client)
+  Params: { status?: string, clientId?: string, limit?: number }
+
 - **createProposalDraft**: Create a proposal draft
   Params: { clientId?: string, clientName?: string, formData?: object, status?: string, stepProgress?: number }
 
@@ -85,6 +93,9 @@ When the user wants to CREATE or UPDATE data, use:
   Examples:
   - "how are my Meta ads doing this week" → use summarizeAdsPerformance with providerIds: ["facebook"] and activeClientId when available
   - "what campaigns are active right now" → use summarizeAdsPerformance with focus: "active"
+  - "compare revenue vs last week" → use summarizeAdsPerformance (same op; includes period-over-period revenue/spend deltas)
+
+Alias: **compareRevenue** maps to summarizeAdsPerformance when the user asks for revenue comparison.
 
 - **generatePerformanceReport**: Generate a daily, weekly, or monthly performance report
   Params: { period?: "daily"|"weekly"|"monthly", startDate?: string, endDate?: string, clientId?: string, providerIds?: string[] }
@@ -119,6 +130,34 @@ const agentRequestContext = v.object({
   activeProposalId: v.optional(v.union(v.string(), v.null())),
   activeProjectId: v.optional(v.union(v.string(), v.null())),
   activeClientId: v.optional(v.union(v.string(), v.null())),
+  confirmationDecision: v.optional(
+    v.union(v.literal('confirm'), v.literal('cancel'), v.literal('edit'), v.null()),
+  ),
+  pendingConfirmation: v.optional(
+    v.union(
+      v.object({
+        confirmationId: v.string(),
+        operation: v.string(),
+        params: v.record(v.string(), v.any()),
+      }),
+      v.null(),
+    ),
+  ),
+  mentions: v.optional(
+    v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        type: v.union(
+          v.literal('client'),
+          v.literal('project'),
+          v.literal('team'),
+          v.literal('user'),
+        ),
+        subtitle: v.optional(v.string()),
+      }),
+    ),
+  ),
   attachmentContext: v.optional(
     v.array(
       v.object({
@@ -131,6 +170,20 @@ const agentRequestContext = v.object({
         errorMessage: v.optional(v.string()),
       })
     )
+  ),
+  attachments: v.optional(
+    v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        mimeType: v.string(),
+        sizeLabel: v.string(),
+        excerpt: v.string(),
+        extractedText: v.optional(v.string()),
+        extractionStatus: v.union(v.literal('ready'), v.literal('limited'), v.literal('failed')),
+        errorMessage: v.optional(v.string()),
+      }),
+    ),
   ),
 })
 

@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   HelpCircle,
   Info,
+  LoaderCircle,
   Navigation,
   RefreshCw,
   Sparkles,
@@ -17,11 +18,12 @@ import Link from 'next/link'
 
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import type { AgentMessage } from '@/shared/hooks/use-agent-mode'
+import type { AgentMessage, AgentPendingConfirmation } from '@/shared/hooks/use-agent-mode'
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
 import { buildAgentDataSections } from './agent-message-data'
-import { AgentMentionText } from './mention-highlights'
+import { AgentMentionPills, AgentMentionText } from './mention-highlights'
+import { AgentMessageAttachmentChips } from './agent-mode-panel-sections'
 
 const AGENT_MESSAGE_INITIAL = { opacity: 0, y: 10 } as const
 const AGENT_MESSAGE_ANIMATE = { opacity: 1, y: 0 } as const
@@ -38,6 +40,10 @@ interface AgentMessageCardProps {
   message: AgentMessage
   mentionLabels?: string[]
   onRetryLastUserTurn?: () => void
+  onRetryUserMessage?: (clientId: string, content: string) => void
+  onConfirmPending?: (pending: AgentPendingConfirmation, decision: 'confirm' | 'cancel' | 'edit') => void
+  onUndoAction?: (messageId: string, undoHint: NonNullable<AgentMessage['metadata']>['undoHint']) => void
+  isProcessing?: boolean
 }
 
 const EMPTY_MENTION_LABELS: string[] = []
@@ -93,6 +99,7 @@ function usesStructuredAgentCard(message: AgentMessage): boolean {
   if (message.type !== 'agent') return false
   const { status, metadata } = message
   const action = metadata?.action
+  if (metadata?.requiresConfirmation) return true
   if (status === 'error' || status === 'warning') return true
   if (status === 'success' && action) return true
   if (status === 'info' && action) return true
@@ -228,28 +235,157 @@ function isRetryableData(data: Record<string, unknown> | undefined): boolean {
   return data?.retryable === true
 }
 
+function UserMessageStatus({
+  lifecycle,
+  onResend,
+}: {
+  lifecycle?: AgentMessage['lifecycle']
+  onResend?: () => void
+}) {
+  if (lifecycle === 'sending') {
+    return (
+      <span className="mt-1 flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
+        <LoaderCircle className="h-3 w-3 animate-spin" aria-hidden />
+        Sending…
+      </span>
+    )
+  }
+
+  if (lifecycle === 'failed' && onResend) {
+    return (
+      <div className="mt-1 flex items-center justify-end gap-2">
+        <span className="text-[11px] text-destructive">Failed to send</span>
+        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onResend}>
+          <RefreshCw className="mr-1 h-3 w-3" />
+          Resend
+        </Button>
+      </div>
+    )
+  }
+
+  return null
+}
+
+function AgentConfirmationPanel({
+  message,
+  isProcessing,
+  onConfirmPending,
+}: {
+  message: AgentMessage
+  isProcessing?: boolean
+  onConfirmPending?: AgentMessageCardProps['onConfirmPending']
+}) {
+  const pending = message.metadata?.pendingConfirmation
+  const confirmation = message.metadata?.confirmation
+  if (!message.metadata?.requiresConfirmation || !pending || !confirmation) {
+    return null
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-warning/35 bg-warning/5 px-3 py-3 text-xs">
+      <p className="font-medium text-foreground">Confirm before running</p>
+      <p className="mt-1 leading-relaxed text-muted-foreground">{confirmation.summary}</p>
+
+      {confirmation.affectedRecords && confirmation.affectedRecords.length > 0 ? (
+        <ul className="mt-2 space-y-1 text-muted-foreground">
+          {confirmation.affectedRecords.map((record) => (
+            <li key={record}>• {record}</li>
+          ))}
+        </ul>
+      ) : null}
+
+      {confirmation.fields && Object.keys(confirmation.fields).length > 0 ? (
+        <dl className="mt-2 grid gap-1.5 rounded-md border border-border/50 bg-background/70 px-2.5 py-2">
+          {Object.entries(confirmation.fields).map(([key, value]) => (
+            <div key={key} className="flex gap-2">
+              <dt className="shrink-0 font-medium text-foreground">{key}</dt>
+              <dd className="text-muted-foreground">{String(value)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+
+      {confirmation.missingFields && confirmation.missingFields.length > 0 ? (
+        <p className="mt-2 text-warning">
+          Still needed: {confirmation.missingFields.join(', ')}
+        </p>
+      ) : null}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          disabled={isProcessing}
+          onClick={() => onConfirmPending?.(pending, 'confirm')}
+        >
+          Confirm
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={isProcessing}
+          onClick={() => onConfirmPending?.(pending, 'edit')}
+        >
+          Edit
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={isProcessing}
+          onClick={() => onConfirmPending?.(pending, 'cancel')}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 export function AgentMessageCard({
   message,
   mentionLabels = EMPTY_MENTION_LABELS,
   onRetryLastUserTurn,
+  onRetryUserMessage,
+  onConfirmPending,
+  onUndoAction,
+  isProcessing,
 }: AgentMessageCardProps) {
-  const { type, content, status, metadata, route } = message
+  const { type, content, status, metadata, route, steps } = message
 
   if (type === 'user') {
+    const handleResend = onRetryUserMessage
+      ? () => onRetryUserMessage(message.clientId, message.content)
+      : undefined
+
     return (
       <LazyMotion features={domAnimation}>
         <m.div
           initial={AGENT_MESSAGE_INITIAL}
           animate={AGENT_MESSAGE_ANIMATE}
-          className="flex justify-end"
+          className="flex flex-col items-end"
         >
-          <div className="max-w-[85%] rounded-2xl bg-primary px-4 py-2.5 text-sm text-primary-foreground">
+          <div
+            className={cn(
+              'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm text-primary-foreground',
+              message.lifecycle === 'failed' ? 'bg-destructive/80' : 'bg-primary',
+              message.lifecycle === 'sending' && 'opacity-80',
+            )}
+          >
             <AgentMentionText
               text={content}
               mentionLabels={mentionLabels}
               mentionClassName="bg-primary-foreground/15 text-primary-foreground ring-primary-foreground/20"
             />
+            {message.mentions && message.mentions.length > 0 ? (
+              <AgentMentionPills mentions={message.mentions} />
+            ) : null}
+            {message.attachments && message.attachments.length > 0 ? (
+              <AgentMessageAttachmentChips attachments={message.attachments} />
+            ) : null}
           </div>
+          <UserMessageStatus lifecycle={message.lifecycle} onResend={handleResend} />
         </m.div>
       </LazyMotion>
     )
@@ -261,7 +397,8 @@ export function AgentMessageCard({
   const tone = derivePresentationTone(message)
   const surfaces = toneSurfaceClasses(tone)
   const accents = toneAccentClasses(tone)
-  const liveRegion = tone === 'error' || tone === 'warning' ? 'assertive' : 'polite'
+  const liveRegion = tone === 'error' || tone === 'warning' ? 'assertive' : 'off'
+  const usedContextNames = metadata?.usedContext?.attachmentNames ?? []
 
   const executeSucceeded = metadata?.action === 'execute' && metadata.success === true
   const showRouteLink = Boolean(route) && (tone === 'success' || executeSucceeded)
@@ -315,11 +452,56 @@ export function AgentMessageCard({
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
                 <AgentMentionText text={content} mentionLabels={mentionLabels} mentionClassName={accents.mention} />
               </p>
+              {usedContextNames.length > 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Used context from: {usedContextNames.join(', ')}
+                </p>
+              ) : null}
 
               {showDetailLine ? (
                 <p className="mt-2 rounded-lg border border-border/50 bg-background/60 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
                   {detailUserMessage}
                 </p>
+              ) : null}
+
+              {steps && steps.length > 0 ? (
+                <ol className="mt-3 space-y-1 border-t border-border/50 pt-3">
+                  {steps.map((step) => (
+                    <li key={step.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span
+                        className={cn(
+                          'h-1.5 w-1.5 shrink-0 rounded-full',
+                          step.status === 'completed' && 'bg-primary',
+                          step.status === 'failed' && 'bg-destructive',
+                          step.status === 'active' && 'bg-primary animate-pulse',
+                          step.status === 'pending' && 'bg-muted-foreground/40',
+                        )}
+                      />
+                      <span className={step.status === 'failed' ? 'text-destructive' : undefined}>{step.label}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
+
+              <AgentConfirmationPanel
+                message={message}
+                isProcessing={isProcessing}
+                onConfirmPending={onConfirmPending}
+              />
+
+              {metadata?.undoHint && onUndoAction ? (
+                <div className="mt-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => onUndoAction(message.id, metadata.undoHint!)}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Undo {metadata.undoHint.label.toLowerCase()}
+                  </Button>
+                </div>
               ) : null}
 
               {dataSections.length > 0 ? (

@@ -77,6 +77,81 @@ export const upsert = workspaceMutation({
   },
 })
 
+export const searchByUser = workspaceQuery({
+  args: {
+    userId: v.string(),
+    query: v.string(),
+    limit: v.number(),
+  },
+  returns: v.object({
+    hits: v.array(
+      v.object({
+        conversationLegacyId: v.string(),
+        messageLegacyId: v.string(),
+        excerpt: v.string(),
+        createdAt: v.number(),
+        type: v.union(v.literal('user'), v.literal('agent')),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const needle = args.query.trim().toLowerCase()
+    if (!needle) {
+      return { hits: [] }
+    }
+
+    const limit = Math.min(Math.max(args.limit, 1), 50)
+    const conversations = await ctx.db
+      .query('agentConversations')
+      .withIndex('by_workspaceId_userId_lastMessageAt', (q) =>
+        q.eq('workspaceId', args.workspaceId).eq('userId', args.userId),
+      )
+      .order('desc')
+      .take(80)
+
+    const hits: Array<{
+      conversationLegacyId: string
+      messageLegacyId: string
+      excerpt: string
+      createdAt: number
+      type: 'user' | 'agent'
+    }> = []
+
+    for (const conversation of conversations) {
+      if (hits.length >= limit) break
+
+      const messages = await ctx.db
+        .query('agentMessages')
+        .withIndex('by_workspace_conversation_createdAt', (q) =>
+          q.eq('workspaceId', args.workspaceId).eq('conversationLegacyId', conversation.legacyId),
+        )
+        .order('desc')
+        .take(120)
+
+      for (const message of messages) {
+        if (!message.content.toLowerCase().includes(needle)) continue
+
+        const index = message.content.toLowerCase().indexOf(needle)
+        const start = Math.max(0, index - 40)
+        const end = Math.min(message.content.length, index + needle.length + 60)
+        const excerpt = message.content.slice(start, end).trim()
+
+        hits.push({
+          conversationLegacyId: conversation.legacyId,
+          messageLegacyId: message.legacyId,
+          excerpt: excerpt.length > 0 ? excerpt : message.content.slice(0, 120),
+          createdAt: message.createdAt,
+          type: message.type,
+        })
+
+        if (hits.length >= limit) break
+      }
+    }
+
+    return { hits }
+  },
+})
+
 export const listByConversation = workspaceQuery({
   args: {
     conversationLegacyId: v.string(),
