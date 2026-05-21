@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { Activity, Facebook, Instagram, MessageSquareMore, Repeat2, UsersRound } from 'lucide-react'
+import { Activity, ExternalLink, Facebook, Instagram, MessageSquareMore, Repeat2, UsersRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -198,7 +198,17 @@ export function SocialSurfacePanel({
       return {
         title: 'No linked Instagram',
         description: SURFACE_COPY.instagram.noIgMessage,
-        action: undefined,
+        action: {
+          label: 'Link in Meta Business',
+          onClick: () => {
+            window.open(
+              'https://www.facebook.com/business/help/898752960195806',
+              '_blank',
+              'noopener,noreferrer',
+            )
+          },
+          icon: ExternalLink,
+        },
       }
     }
     if (!hasData) {
@@ -316,11 +326,17 @@ export function SocialSurfacePanel({
 
   return (
     <div className="space-y-6">
-      <Card className={cn('overflow-hidden', DASHBOARD_THEME.cards.base)}>
-        <CardHeader className={DASHBOARD_THEME.cards.header}>
+      <Card className={cn('overflow-hidden ring-1 ring-muted/20', DASHBOARD_THEME.cards.base)}>
+        <CardHeader className={cn(DASHBOARD_THEME.cards.header, 'bg-muted/[0.02]')}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
-              <div className={cn(DASHBOARD_THEME.icons.container, 'h-12 w-12 shadow-sm')}>
+              <div
+                className={cn(
+                  DASHBOARD_THEME.icons.container,
+                  'h-12 w-12 shadow-sm',
+                  surface === 'facebook' ? 'bg-info/10 text-info border-info/25' : 'bg-accent/10 text-accent border-accent/25',
+                )}
+              >
                 <SurfaceIcon className="h-6 w-6" aria-hidden />
               </div>
               <div className="max-w-2xl space-y-1.5">

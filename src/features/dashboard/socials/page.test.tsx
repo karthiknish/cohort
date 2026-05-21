@@ -1,3 +1,4 @@
+import type React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { describe, expect, it, vi } from 'vitest'
@@ -27,13 +28,33 @@ vi.mock('@/features/dashboard/ads/components/date-range-picker', () => ({
   DateRangePicker: () => <div data-testid="date-range-picker" />,
 }))
 
+vi.mock('@/shared/components/page-motion-shell', () => ({
+  PageMotionShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
+
+vi.mock('@/shared/ui/animate-in', () => ({
+  FadeIn: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  FadeInStagger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  FadeInItem: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
+vi.mock('./components/socials-kpi-grid', () => ({
+  SocialsKpiGrid: ({ items }: { items: Array<{ id: string; label: string }> }) => (
+    <div data-testid="kpi-grid">
+      {items.map((item) => (
+        <span key={item.id}>{item.label}</span>
+      ))}
+    </div>
+  ),
+}))
+
 import { usePreview } from '@/shared/contexts/preview-context'
 import { useSocialsPageController } from './hooks/use-socials-page-controller'
 
 import SocialsPage from './page'
 
-const mockedUsePreview = vi.mocked(usePreview)
-const mockedUseSocialsPageController = vi.mocked(useSocialsPageController)
+const mockedUsePreview = usePreview as ReturnType<typeof vi.fn>
+const mockedUseSocialsPageController = useSocialsPageController as ReturnType<typeof vi.fn>
 
 const baseSetup = {
   setupState: {

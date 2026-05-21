@@ -65,12 +65,15 @@ export function SocialsMetaSetupCard(props: {
   )
 
   return (
-    <div className="rounded-2xl border border-muted/50 bg-muted/[0.04] p-5">
+    <div className="rounded-2xl border border-muted/40 bg-muted/[0.03] p-4 sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={setupState.stage === 'ready' ? 'secondary' : setupState.stage === 'discovering' ? 'info' : 'outline'} className={DASHBOARD_THEME.badges.base}>
-              {setupState.stage.replace('_', ' ')}
+            <Badge
+              variant={setupState.stage === 'ready' ? 'secondary' : setupState.stage === 'discovering' ? 'info' : 'outline'}
+              className={DASHBOARD_THEME.badges.base}
+            >
+              {setupState.stage.replaceAll('_', ' ')}
             </Badge>
             {selectedSourceLabel ? <Badge variant="outline" className={DASHBOARD_THEME.badges.base}>Source: {selectedSourceLabel}</Badge> : null}
           </div>

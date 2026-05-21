@@ -1,8 +1,11 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { FadeInStagger } from '@/shared/ui/animate-in'
-import { RevealTransition } from '@/shared/ui/page-transition'
+
+const LazyRevealTransition = lazy(() =>
+  import('@/shared/ui/page-transition').then((module) => ({ default: module.RevealTransition })),
+)
 
 type PageMotionShellProps = {
   children: ReactNode
@@ -24,5 +27,9 @@ export function PageMotionShell({ children, className, reveal = true }: PageMoti
     return content
   }
 
-  return <RevealTransition>{content}</RevealTransition>
+  return (
+    <Suspense fallback={content}>
+      <LazyRevealTransition>{content}</LazyRevealTransition>
+    </Suspense>
+  )
 }

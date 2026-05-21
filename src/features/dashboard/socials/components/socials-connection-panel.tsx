@@ -163,7 +163,12 @@ export function SocialsConnectionPanel({
 
   return (
     <div id={panelId} className="space-y-3">
-      <Card className={cn('overflow-hidden border-muted/50 shadow-sm', DASHBOARD_THEME.cards.base)}>
+      <Card
+        className={cn(
+          'overflow-hidden border-muted/50 shadow-sm ring-1 ring-muted/20',
+          DASHBOARD_THEME.cards.base,
+        )}
+      >
         <CardContent className="space-y-5 p-5 sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 gap-4">
