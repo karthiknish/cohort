@@ -24,9 +24,9 @@ export function ProjectTaskProgress({ project, className }: ProjectTaskProgressP
           <span className="tabular-nums text-[10px] font-semibold text-muted-foreground/70">{progress}% done</span>
         ) : null}
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/60">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/50 ring-1 ring-border/30">
         <div
-          className="h-full rounded-full bg-primary/80 motion-chromatic"
+          className="h-full rounded-full bg-linear-to-r from-primary/70 to-primary motion-chromatic"
           style={{ width: `${progress}%` }}
         />
       </div>

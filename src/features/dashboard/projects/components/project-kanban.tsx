@@ -3,9 +3,11 @@
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
 import { Badge } from '@/shared/ui/badge'
-import { formatStatusLabel, STATUS_DOT_STYLES } from './utils'
-import { ProjectCard } from './project-card'
 import { ScrollArea } from '@/shared/ui/scroll-area'
+import { cn } from '@/lib/utils'
+
+import { ProjectCard } from './project-card'
+import { formatStatusLabel, STATUS_DOT_STYLES } from './utils'
 
 export interface ProjectKanbanProps {
   projects: ProjectRecord[]
@@ -22,53 +24,49 @@ export function ProjectKanban({ projects, pendingStatusUpdates, onUpdateStatus, 
   })
 
   return (
-    <div className="space-y-6">
+    <div className="py-2">
       <ScrollArea className="w-full">
-        <div className="flex w-full gap-5 pb-6 pr-4 min-h-[500px]">
-          {columns.map(({ status, items }) => {
-            return (
-              <div key={status} className="group flex min-w-[300px] max-w-[380px] flex-1 flex-col rounded-2xl border bg-muted/10 transition-colors hover:bg-muted/15">
-                <div className="flex items-center justify-between gap-2 px-4 py-4.5 border-b border-muted/20">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="h-2.5 w-2.5 rounded-full shadow-sm"
-                      style={STATUS_DOT_STYLES[status]}
-                    />
-                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
-                      {formatStatusLabel(status)}
-                    </span>
-                  </div>
-                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-bold bg-muted/40 group-hover:bg-muted/60 transition-colors">
-                    {items.length}
-                  </Badge>
+        <div className="flex min-h-[28rem] w-full gap-4 pb-4 pr-2">
+          {columns.map(({ status, items }) => (
+            <div
+              key={status}
+              className="flex min-w-[17.5rem] max-w-[22rem] flex-1 flex-col rounded-xl border border-border/60 bg-muted/15 shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-border/50 px-3.5 py-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-2.5 w-2.5 rounded-full shadow-sm" style={STATUS_DOT_STYLES[status]} />
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {formatStatusLabel(status)}
+                  </span>
                 </div>
-
-                <div className="flex-1 space-y-4 p-4">
-                  {items.length === 0 ? (
-                    <div className="flex h-28 flex-col items-center justify-center rounded-xl border border-dashed border-muted/40 bg-background/50 p-4 text-center">
-                      <p className="text-xs font-medium text-muted-foreground">No projects</p>
-                      <p className="mt-1 text-[10px] text-muted-foreground/60">Move a project here via the menu</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {items.map((project) => (
-                        <div key={project.id} className="motion-chromatic active:scale-[0.98]">
-                          <ProjectCard
-                            project={project}
-                            onDelete={onDelete}
-                            onEdit={onEdit}
-                            onUpdateStatus={onUpdateStatus}
-                            isPendingUpdate={pendingStatusUpdates.has(project.id)}
-                            compact
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-semibold tabular-nums">
+                  {items.length}
+                </Badge>
               </div>
-            )
-          })}
+
+              <div className="flex-1 space-y-3 p-3">
+                {items.length === 0 ? (
+                  <div className="flex h-24 flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-background/60 p-4 text-center">
+                    <p className="text-xs font-medium text-muted-foreground">Empty column</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground/70">Change status from the card menu</p>
+                  </div>
+                ) : (
+                  items.map((project) => (
+                    <div key={project.id} className={cn('motion-chromatic', 'active:scale-[0.99]')}>
+                      <ProjectCard
+                        project={project}
+                        onDelete={onDelete}
+                        onEdit={onEdit}
+                        onUpdateStatus={onUpdateStatus}
+                        isPendingUpdate={pendingStatusUpdates.has(project.id)}
+                        compact
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </ScrollArea>
     </div>

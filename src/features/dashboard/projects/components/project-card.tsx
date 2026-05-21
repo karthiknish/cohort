@@ -53,7 +53,8 @@ function ProjectCardComponent({
     <ViewTransition>
       <article
         className={cn(
-          'group relative flex flex-col justify-between rounded-xl border border-muted/40 bg-background shadow-sm hover:border-accent/30 hover:shadow-md',
+          'group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm ring-1 ring-border/30',
+          'transition-[border-color,box-shadow,transform] hover:border-primary/20 hover:shadow-md',
           listItemEnterClass,
           clickableCardClass,
           compact ? 'p-3.5' : 'p-5',

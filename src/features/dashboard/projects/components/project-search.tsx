@@ -4,6 +4,7 @@ import { useCallback, type ChangeEvent } from 'react'
 import { Search, X } from 'lucide-react'
 
 import { Input } from '@/shared/ui/input'
+import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
 
 interface ProjectSearchProps {
   value: string
@@ -13,7 +14,7 @@ interface ProjectSearchProps {
 export function ProjectSearch({ value, onChange }: ProjectSearchProps) {
   const handleChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value),
-    [onChange]
+    [onChange],
   )
 
   const handleClear = useCallback(() => {
@@ -21,21 +22,24 @@ export function ProjectSearch({ value, onChange }: ProjectSearchProps) {
   }, [onChange])
 
   return (
-    <div className="relative w-full sm:w-72">
+    <div className="relative min-w-0 flex-1">
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         id="project-search"
-        placeholder="Search projects…"
+        placeholder="Search by name, client, or tag…"
         value={value}
         onChange={handleChange}
-        className="pl-9 pr-9"
+        className="h-9 border-border/60 bg-background pl-9 pr-20 text-sm shadow-sm"
         aria-label="Search projects"
       />
+      <div className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 sm:flex">
+        {value ? null : <KeyboardShortcutBadge combo="mod+k" className="scale-90 opacity-70" />}
+      </div>
       {value ? (
         <button
           type="button"
           onClick={handleClear}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           aria-label="Clear search"
         >
           <X className="h-4 w-4" />

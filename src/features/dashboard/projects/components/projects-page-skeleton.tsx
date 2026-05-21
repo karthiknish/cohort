@@ -2,58 +2,61 @@
 
 import { Skeleton } from '@/shared/ui/skeleton'
 
+import { PROJECTS_THEME } from './projects-theme'
+
 export function ProjectsPageSkeleton() {
-  const cardSlots = ['card-1', 'card-2', 'card-3', 'card-4', 'card-5', 'card-6']
-  const avatarSlots = ['avatar-1', 'avatar-2', 'avatar-3']
+  const summarySlots = ['sum-1', 'sum-2', 'sum-3', 'sum-4']
+  const pillSlots = ['pill-1', 'pill-2', 'pill-3', 'pill-4', 'pill-5']
+  const rowSlots = ['row-1', 'row-2', 'row-3', 'row-4']
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-24" />
-          <Skeleton className="h-4 w-44" />
-        </div>
-        <Skeleton className="h-9 w-32" />
-      </div>
-
-      <div className="flex gap-3">
-        <Skeleton className="h-10 max-w-sm flex-1" />
-        <Skeleton className="h-10 w-28" />
-        <Skeleton className="h-10 w-28" />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {cardSlots.map((slot) => (
-          <div key={slot} className="space-y-4 rounded-lg border p-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-36" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-              <Skeleton className="h-6 w-20" />
-            </div>
-
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-4/5" />
-
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <Skeleton className="h-3 w-16" />
-                <Skeleton className="h-3 w-8" />
-              </div>
-              <Skeleton className="h-2 w-full rounded-full" />
-            </div>
-
-            <div className="flex items-center justify-between border-t pt-2">
-              <div className="flex -space-x-2">
-                {avatarSlots.map((avatarSlot) => (
-                  <Skeleton key={avatarSlot} className="h-7 w-7 rounded-full border-2 border-background" />
-                ))}
-              </div>
-              <Skeleton className="h-3 w-20" />
-            </div>
+    <div className={PROJECTS_THEME.page}>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-12 w-12 shrink-0 rounded-2xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-64" />
           </div>
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-48 rounded-lg" />
+          <Skeleton className="h-9 w-24" />
+          <Skeleton className="h-9 w-28" />
+        </div>
+      </div>
+
+      <div className={PROJECTS_THEME.summaryStrip}>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {summarySlots.map((slot) => (
+            <Skeleton key={slot} className="h-[5.5rem] rounded-xl" />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {pillSlots.map((slot) => (
+          <Skeleton key={slot} className="h-8 w-24 rounded-full" />
         ))}
+      </div>
+
+      <div className={PROJECTS_THEME.workspace}>
+        <div className={PROJECTS_THEME.workspaceRail}>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-3 w-48" />
+          </div>
+          <div className="flex w-full max-w-xl gap-2">
+            <Skeleton className="h-9 flex-1 rounded-md" />
+            <Skeleton className="h-9 w-36 rounded-md" />
+            <Skeleton className="h-9 w-9 rounded-md" />
+          </div>
+        </div>
+        <div className="space-y-3 p-4">
+          {rowSlots.map((slot) => (
+            <Skeleton key={slot} className="h-28 w-full rounded-xl" />
+          ))}
+        </div>
       </div>
     </div>
   )

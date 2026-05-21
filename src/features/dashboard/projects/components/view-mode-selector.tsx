@@ -1,17 +1,18 @@
 'use client'
 
+import { useCallback } from 'react'
 import { ChartGantt, Columns3, LayoutGrid, List } from 'lucide-react'
 
-import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
 
 import type { ViewMode } from './utils'
+import { PROJECTS_THEME } from './projects-theme'
 
 const VIEW_OPTIONS: { mode: ViewMode; label: string; icon: typeof List }[] = [
-  { mode: 'list', label: 'List view', icon: List },
-  { mode: 'grid', label: 'Grid view', icon: LayoutGrid },
-  { mode: 'board', label: 'Board view', icon: Columns3 },
-  { mode: 'gantt', label: 'Timeline view', icon: ChartGantt },
+  { mode: 'list', label: 'List', icon: List },
+  { mode: 'grid', label: 'Grid', icon: LayoutGrid },
+  { mode: 'board', label: 'Board', icon: Columns3 },
+  { mode: 'gantt', label: 'Timeline', icon: ChartGantt },
 ]
 
 interface ViewModeSelectorProps {
@@ -21,33 +22,48 @@ interface ViewModeSelectorProps {
 
 export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) {
   return (
-    <ToggleGroup
-      type="single"
-      value={viewMode}
-      onValueChange={(value) => {
-        if (value === 'list' || value === 'grid' || value === 'board' || value === 'gantt') {
-          onChange(value)
-        }
-      }}
-      variant="outline"
-      size="sm"
-      className="rounded-lg border border-border/60 bg-background p-0.5"
-      aria-label="Project view mode"
-    >
+    <div className={PROJECTS_THEME.segmented} role="group" aria-label="Project view mode">
       {VIEW_OPTIONS.map(({ mode, label, icon: Icon }) => (
-        <Tooltip key={mode}>
-          <TooltipTrigger asChild>
-            <ToggleGroupItem
-              value={mode}
-              aria-label={label}
-              className="h-8 w-8 rounded-md px-0 data-[state=on]:bg-accent/15 data-[state=on]:text-primary"
-            >
-              <Icon className="h-4 w-4" />
-            </ToggleGroupItem>
-          </TooltipTrigger>
-          <TooltipContent>{label}</TooltipContent>
-        </Tooltip>
+        <ViewModeButton
+          key={mode}
+          active={viewMode === mode}
+          label={label}
+          icon={Icon}
+          onClick={() => onChange(mode)}
+        />
       ))}
-    </ToggleGroup>
+    </div>
+  )
+}
+
+function ViewModeButton({
+  active,
+  label,
+  icon: Icon,
+  onClick,
+}: {
+  active: boolean
+  label: string
+  icon: typeof List
+  onClick: () => void
+}) {
+  const handleClick = useCallback(() => onClick(), [onClick])
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className={PROJECTS_THEME.segmentedItem(active)}
+          onClick={handleClick}
+          aria-label={label}
+          aria-pressed={active}
+        >
+          <Icon className="h-3.5 w-3.5" aria-hidden />
+          <span className="hidden sm:inline">{label}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{label} view</TooltipContent>
+    </Tooltip>
   )
 }

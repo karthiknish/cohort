@@ -60,11 +60,11 @@ function StatusPill({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2',
+        'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-[background-color,border-color,box-shadow]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         active
-          ? 'border-primary/25 bg-primary/10 text-foreground shadow-sm'
-          : 'border-border/60 bg-background text-muted-foreground hover:border-border hover:bg-muted/40 hover:text-foreground',
+          ? 'border-primary/30 bg-primary/8 text-foreground shadow-sm ring-1 ring-primary/10'
+          : 'border-border/60 bg-card text-muted-foreground hover:border-border hover:bg-muted/30 hover:text-foreground',
       )}
     >
       {dotStyle ? (

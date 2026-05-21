@@ -80,9 +80,9 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
     <ViewTransition>
       <article
         className={cn(
-          'group relative rounded-xl border border-muted/30 bg-background p-5 shadow-sm sm:p-6',
+          'group relative overflow-hidden rounded-xl border border-border/60 bg-card p-5 shadow-sm ring-1 ring-border/30 sm:p-6',
           listItemEnterClass,
-          'hover:border-accent/25 hover:bg-muted/20',
+          'transition-[border-color,box-shadow,background-color] hover:border-primary/20 hover:bg-muted/15 hover:shadow-md',
           isPendingUpdate && 'pointer-events-none opacity-75',
         )}
       >

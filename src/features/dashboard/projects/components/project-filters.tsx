@@ -30,14 +30,14 @@ export function ProjectFilters({
 }: ProjectFiltersProps) {
   const handleSortFieldChange = useCallback(
     (value: string) => onSortFieldChange(value as SortField),
-    [onSortFieldChange]
+    [onSortFieldChange],
   )
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex shrink-0 items-center gap-1.5">
       <Select value={sortField} onValueChange={handleSortFieldChange}>
-        <SelectTrigger className="sm:w-36" aria-label="Sort by">
-          <SelectValue placeholder="Sort by" />
+        <SelectTrigger className="h-9 w-[9.5rem] border-border/60 bg-background text-xs shadow-sm" aria-label="Sort by">
+          <SelectValue placeholder="Sort" />
         </SelectTrigger>
         <SelectContent>
           {SORT_OPTIONS.map((option) => (
@@ -53,7 +53,7 @@ export function ProjectFilters({
             variant="outline"
             size="icon"
             onClick={onToggleSortDirection}
-            className="h-10 w-10"
+            className="h-9 w-9 shrink-0 border-border/60 shadow-sm"
             aria-label={`Sort ${sortDirection === 'asc' ? 'descending' : 'ascending'}`}
           >
             {sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}

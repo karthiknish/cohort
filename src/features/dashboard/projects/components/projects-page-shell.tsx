@@ -18,12 +18,10 @@ import {
 } from '@/shared/ui/alert-dialog'
 import { Button } from '@/shared/ui/button'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Separator } from '@/shared/ui/separator'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip'
 import { KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
-import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses } from '@/lib/dashboard-theme'
+import { DASHBOARD_THEME, PAGE_TITLES, getButtonClasses, getIconContainerClasses } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 
@@ -36,6 +34,7 @@ import { ProjectRow } from './project-row'
 import { ProjectSearch } from './project-search'
 import { ProjectStatusPills } from './project-status-pills'
 import { ProjectsPageSkeleton } from './projects-page-skeleton'
+import { PROJECTS_THEME } from './projects-theme'
 import { SummaryCard } from './summary-card'
 import { ViewModeSelector } from './view-mode-selector'
 import { RETRY_CONFIG, type StatusFilter } from './utils'
@@ -52,7 +51,7 @@ export function ProjectsPageShell() {
         loading={initialLoading}
         loadingContent={loadingContent}
       >
-        <div className={DASHBOARD_THEME.layout.container}>
+        <div className={cn(DASHBOARD_THEME.layout.container, PROJECTS_THEME.page)}>
           <ProjectsHeaderSection />
           <ProjectsDialogs />
           <ProjectsSummarySection />
@@ -79,63 +78,69 @@ function ProjectsHeaderSection() {
   }, [handleRefreshProjects])
 
   return (
-    <div className={DASHBOARD_THEME.layout.header}>
-      <div className="max-w-3xl space-y-3">
-        <div className="flex flex-wrap items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-accent/15 bg-accent/8 text-primary shadow-sm">
+    <header className={DASHBOARD_THEME.layout.header}>
+      <div className="min-w-0 space-y-2">
+        <div className="flex items-center gap-3">
+          <div className={getIconContainerClasses('medium')}>
             <Briefcase className="h-6 w-6" aria-hidden />
           </div>
-          <div className="min-w-0 space-y-2">
-            <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground">
-              {PAGE_TITLES.projects?.title ?? 'Projects'}
-            </h1>
-            <p className="text-pretty text-sm leading-relaxed text-muted-foreground md:text-[15px]">
+          <div className="min-w-0">
+            <h1 className={DASHBOARD_THEME.layout.title}>{PAGE_TITLES.projects?.title ?? 'Projects'}</h1>
+            <p className={cn(DASHBOARD_THEME.layout.subtitle, 'mt-1 max-w-2xl text-sm leading-relaxed')}>
               Portfolio for <span className="font-medium text-foreground">{portfolioLabel}</span>
               {projects.length > 0 ? (
-                <span className="text-muted-foreground"> · {projects.length} project{projects.length === 1 ? '' : 's'} loaded</span>
-              ) : null}
-              {retryCount > 0 ? (
-                <span className="ml-1 text-warning">
-                  (Retrying… attempt {retryCount}/{RETRY_CONFIG.maxRetries})
+                <span>
+                  {' '}
+                  · {projects.length} project{projects.length === 1 ? '' : 's'}
                 </span>
               ) : null}
             </p>
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <KeyboardShortcutBadge combo="mod+k" className="origin-left scale-90" />
-                <span>Search backlog</span>
-              </span>
-              <span className="text-muted-foreground/40" aria-hidden>
-                ·
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <KeyboardShortcutBadge combo="mod+shift+n" className="origin-left scale-90" />
-                <span>New project</span>
-              </span>
-              <span className="text-muted-foreground/40" aria-hidden>
-                ·
-              </span>
-              <Link href="/dashboard/tasks" className="font-medium text-primary underline-offset-4 hover:underline">
-                Open tasks
-              </Link>
-            </p>
           </div>
         </div>
+        {retryCount > 0 ? (
+          <p className="text-xs font-medium text-warning">
+            Retrying… {retryCount}/{RETRY_CONFIG.maxRetries}
+          </p>
+        ) : null}
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <KeyboardShortcutBadge combo="mod+k" className="origin-left scale-90" />
+            Search backlog
+          </span>
+          <span className="text-muted-foreground/40" aria-hidden>
+            ·
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <KeyboardShortcutBadge combo="mod+shift+n" className="origin-left scale-90" />
+            New project
+          </span>
+          <span className="text-muted-foreground/40" aria-hidden>
+            ·
+          </span>
+          <Link href="/dashboard/tasks" className="font-medium text-primary underline-offset-4 hover:underline">
+            Open tasks
+          </Link>
+        </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         <ViewModeSelector viewMode={viewMode} onChange={setViewMode} />
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={handleRefreshProjectsClick}
-              className={cn(getButtonClasses('outline'), 'inline-flex items-center gap-2')}
+              className={cn(getButtonClasses('outline'), 'h-9 gap-1.5')}
               disabled={loading}
               aria-label="Refresh projects"
             >
-              {loading ? <LoaderCircle className={cn('h-4 w-4', DASHBOARD_THEME.animations.spin)} /> : <RefreshCw className="h-4 w-4" />}
+              {loading ? (
+                <LoaderCircle className={cn('h-4 w-4', DASHBOARD_THEME.animations.spin)} />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
               <span className="hidden sm:inline">Refresh</span>
             </Button>
           </TooltipTrigger>
@@ -143,7 +148,7 @@ function ProjectsHeaderSection() {
         </Tooltip>
         <CreateProjectDialog onProjectCreated={handleProjectCreated} />
       </div>
-    </div>
+    </header>
   )
 }
 
@@ -215,49 +220,49 @@ function ProjectsSummarySection() {
   )
 
   return (
-    <div className="space-y-4">
-      <div className={DASHBOARD_THEME.stats.container}>
-        <SummaryCard
-          label="Total projects"
-          icon={Briefcase}
-          value={projects.length}
-          description={statusCounts.completed > 0 ? `${statusCounts.completed} completed` : 'All initiatives'}
-          onClick={() => filterByStatus('all')}
-          active={statusFilter === 'all'}
-        />
-        <SummaryCard
-          label="Active focus"
-          icon={ListChecks}
-          value={statusCounts.active}
-          description={`${statusCounts.planning} in planning`}
-          onClick={() => filterByStatus('active')}
-          active={statusFilter === 'active'}
-        />
-        <SummaryCard
-          label="Open tasks"
-          icon={Users}
-          value={openTaskTotal}
-          description={taskTotal > 0 ? `${taskTotal - openTaskTotal} closed` : 'Waiting for tasks'}
-        />
-        <Card className={cn(DASHBOARD_THEME.stats.card, 'overflow-hidden')}>
-          <CardContent className="flex min-w-0 items-center gap-5 p-5">
+    <section className="space-y-4" aria-label="Portfolio summary">
+      <div className={PROJECTS_THEME.summaryStrip}>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <SummaryCard
+            label="Total projects"
+            icon={Briefcase}
+            value={projects.length}
+            description={statusCounts.completed > 0 ? `${statusCounts.completed} completed` : 'All initiatives'}
+            onClick={() => filterByStatus('all')}
+            active={statusFilter === 'all'}
+          />
+          <SummaryCard
+            label="Active focus"
+            icon={ListChecks}
+            value={statusCounts.active}
+            description={`${statusCounts.planning} in planning`}
+            onClick={() => filterByStatus('active')}
+            active={statusFilter === 'active'}
+          />
+          <SummaryCard
+            label="Open tasks"
+            icon={Users}
+            value={openTaskTotal}
+            description={taskTotal > 0 ? `${taskTotal - openTaskTotal} closed` : 'Waiting for tasks'}
+          />
+          <div className="flex min-w-0 items-center gap-4 rounded-xl border border-border/60 bg-background/80 px-4 py-4 shadow-sm">
             <div className="min-w-0 flex-1">
-              <div className="mb-1.5 flex items-center justify-between">
-                <p className={DASHBOARD_THEME.stats.label}>Portfolio health</p>
-                <span className="text-sm font-bold text-info">{completionRate}%</span>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Portfolio health
+                </p>
+                <span className="text-sm font-semibold tabular-nums text-info">{completionRate}%</span>
               </div>
               <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/60">
                 <div
-                  className="h-full bg-linear-to-r from-info to-primary motion-chromatic-slow"
+                  className="h-full rounded-full bg-linear-to-r from-info to-primary motion-chromatic-slow"
                   style={completionStyle}
                 />
               </div>
-              <p className="mt-2 text-[10px] text-muted-foreground/70">
-                Share of projects marked completed in this workspace
-              </p>
+              <p className="mt-2 text-[11px] text-muted-foreground">Share of projects marked completed</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       <ProjectStatusPills
@@ -266,7 +271,7 @@ function ProjectsSummarySection() {
         totalCount={projects.length}
         onStatusChange={filterByStatus}
       />
-    </div>
+    </section>
   )
 }
 
@@ -298,12 +303,9 @@ function ProjectsBacklogSection() {
     searchInput,
     setSearchInput,
     setSortField,
-    setStatusFilterAndReset,
     sortDirection,
     sortField,
     sortedProjects,
-    statusCounts,
-    statusFilter,
     toggleSortDirection,
     viewMode,
   } = useProjectsPageContext()
@@ -320,89 +322,74 @@ function ProjectsBacklogSection() {
   }, [setSearchInput])
 
   return (
-    <Card className="border-muted/60 bg-background shadow-sm">
-      <CardHeader className="space-y-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-lg">Project backlog</CardTitle>
-            <CardDescription>
-              Search, filter by status, and switch views. Results update after you pause typing.
-            </CardDescription>
-          </div>
-          <div className="flex w-full flex-col gap-3 sm:max-w-xl lg:max-w-none lg:items-end">
-            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-end">
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <label htmlFor="project-search" className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">
-                  Search
-                </label>
-                <ProjectSearch value={searchInput} onChange={setSearchInput} />
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">
-                  Sort
-                </span>
-                <ProjectFilters
-                  sortField={sortField}
-                  sortDirection={sortDirection}
-                  onSortFieldChange={setSortField}
-                  onToggleSortDirection={toggleSortDirection}
-                />
-              </div>
-            </div>
+    <section className={PROJECTS_THEME.workspace} aria-label="Project backlog">
+      <div className={PROJECTS_THEME.workspaceRail}>
+        <div className="min-w-0 space-y-0.5">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">Backlog</h2>
+          <p className="text-xs text-muted-foreground">
+            Search and sort update after you pause typing.
             {projects.length > 0 ? (
-              <p className="text-[11px] text-muted-foreground tabular-nums sm:text-right" aria-live="polite">
+              <span className="tabular-nums" aria-live="polite">
+                {' '}
+                ·{' '}
                 {searchInput.trim() !== debouncedSearchQuery.trim() ? (
-                  <span>Matching…</span>
+                  'Matching…'
                 ) : (
-                  <span>
+                  <>
                     Showing <span className="font-medium text-foreground">{sortedProjects.length}</span> of{' '}
-                    <span className="font-medium text-foreground">{projects.length}</span> in this workspace
-                    {hasActiveFilters && sortedProjects.length === 0 ? ' · try clearing filters' : ''}
-                  </span>
+                    <span className="font-medium text-foreground">{projects.length}</span>
+                  </>
                 )}
-              </p>
+              </span>
             ) : null}
-          </div>
+          </p>
         </div>
+        <div className={cn(PROJECTS_THEME.toolbar, 'w-full lg:max-w-2xl lg:justify-end')}>
+          <ProjectSearch value={searchInput} onChange={setSearchInput} />
+          <ProjectFilters
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSortFieldChange={setSortField}
+            onToggleSortDirection={toggleSortDirection}
+          />
+        </div>
+      </div>
 
-        <ProjectStatusPills
-          statusFilter={statusFilter}
-          statusCounts={statusCounts}
-          totalCount={projects.length}
-          onStatusChange={setStatusFilterAndReset}
-        />
-
+      <div className="space-y-3 border-b border-border/50 bg-background/90 px-4 py-3">
         <ProjectActiveFilters labels={activeFilterLabels} onClearAll={clearAllFilters} />
 
         {focusedProject.id || focusedProject.name ? (
-          <div className="rounded-xl border border-accent/15 bg-accent/5 p-3">
+          <div className={PROJECTS_THEME.focusBanner}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-foreground">
-                  Showing linked project{focusedProjectRecord?.name ? `: ${focusedProjectRecord.name}` : focusedProject.name ? `: ${focusedProject.name}` : ''}
+                  Linked project
+                  {focusedProjectRecord?.name
+                    ? `: ${focusedProjectRecord.name}`
+                    : focusedProject.name
+                      ? `: ${focusedProject.name}`
+                      : ''}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  This view was opened from a related task or cross-link. Clear it to return to the full portfolio.
+                  Opened from a task or cross-link. Clear to see the full portfolio.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {focusedProjectTasksHref ? (
                   <Button asChild type="button" size="sm" variant="outline">
-                    <Link href={focusedProjectTasksHref}>Open related tasks</Link>
+                    <Link href={focusedProjectTasksHref}>Related tasks</Link>
                   </Button>
                 ) : null}
                 <Button type="button" size="sm" variant="ghost" onClick={clearFocusedProject}>
-                  Show all projects
+                  Show all
                 </Button>
               </div>
             </div>
           </div>
         ) : null}
+      </div>
 
-        <Separator />
-      </CardHeader>
-
-      <CardContent>
+      <div className={cn(PROJECTS_THEME.content, viewMode === 'list' && 'bg-muted/[0.15]')}>
         {viewMode === 'gantt' ? (
           <GanttView
             projects={sortedProjects}
@@ -433,8 +420,8 @@ function ProjectsBacklogSection() {
             onClearFocusAndFilters={clearAllFilters}
           />
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   )
 }
 
@@ -483,9 +470,9 @@ function ProjectsListState({
 
   if (initialLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3 py-2">
         {['project-skeleton-1', 'project-skeleton-2', 'project-skeleton-3', 'project-skeleton-4'].map((key) => (
-          <Skeleton key={key} className="h-28 w-full" />
+          <Skeleton key={key} className="h-28 w-full rounded-xl" />
         ))}
       </div>
     )
@@ -493,7 +480,7 @@ function ProjectsListState({
 
   if (error) {
     return (
-      <div className="rounded-md border border-destructive/40 bg-destructive/10 p-6 text-center">
+      <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-8 text-center">
         <TriangleAlert className="mx-auto h-10 w-10 text-destructive/60" />
         <p className="mt-2 text-sm font-medium text-destructive">{error}</p>
         <Button variant="outline" size="sm" className="mt-4" onClick={onRefresh} disabled={loading}>
@@ -506,29 +493,27 @@ function ProjectsListState({
 
   if (projects.length === 0 && !hasActiveFilters) {
     return (
-      <div className="rounded-xl border border-dashed border-accent/20 bg-linear-to-br from-primary/5 via-muted/5 to-background p-8 text-center shadow-sm">
-        <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/50" />
+      <div className={PROJECTS_THEME.emptyPanel}>
+        <FolderKanban className="h-12 w-12 text-muted-foreground/40" />
         <h3 className="mt-4 text-lg font-semibold tracking-tight text-foreground">No projects yet</h3>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-          Create a project to group tasks, timelines, and collaboration. New projects pick up the client you have selected
-          in the header.
+          Create a project to group tasks, timelines, and collaboration. New projects use the client selected in the
+          header.
         </p>
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-          <Button type="button" className={cn(getButtonClasses('primary'), 'gap-2')} onClick={openCreateProject}>
-            <Plus className="h-4 w-4" aria-hidden />
-            New project
-          </Button>
-        </div>
+        <Button type="button" className={cn(getButtonClasses('primary'), 'mt-6 gap-2')} onClick={openCreateProject}>
+          <Plus className="h-4 w-4" aria-hidden />
+          New project
+        </Button>
       </div>
     )
   }
 
   if (!hasVisibleProjects && hasActiveFilters) {
     return (
-      <div className="rounded-md border border-dashed border-muted/60 bg-muted/10 p-8 text-center">
-        <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/40" />
+      <div className={PROJECTS_THEME.emptyPanel}>
+        <FolderKanban className="h-12 w-12 text-muted-foreground/40" />
         <h3 className="mt-4 text-lg font-medium text-foreground">No matching projects</h3>
-        <p className="mt-1 text-sm text-muted-foreground">Try a different search or reset your filters to see more work.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Try a different search or reset filters.</p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           {searchInput ? (
             <Button type="button" variant="outline" size="sm" onClick={onSearchClear}>
@@ -545,11 +530,11 @@ function ProjectsListState({
 
   if (!hasVisibleProjects) {
     return (
-      <div className="rounded-xl border border-dashed border-muted/50 bg-muted/10 p-8 text-center">
-        <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/40" />
-        <h3 className="mt-4 text-lg font-semibold text-foreground">Nothing to show in this view</h3>
+      <div className={PROJECTS_THEME.emptyPanel}>
+        <FolderKanban className="h-12 w-12 text-muted-foreground/40" />
+        <h3 className="mt-4 text-lg font-semibold text-foreground">Nothing in this view</h3>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Filters, search, or a deep-linked project may be hiding results. Reset the view to see the full portfolio again.
+          Filters, search, or a deep link may be hiding results.
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onClearFocusAndFilters}>
@@ -566,7 +551,7 @@ function ProjectsListState({
 
   if (viewMode === 'list') {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3 py-2">
         {sortedProjects.map((project) => (
           <ProjectRow
             key={project.id}
@@ -583,7 +568,7 @@ function ProjectsListState({
 
   if (viewMode === 'grid') {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 py-2 sm:grid-cols-2 xl:grid-cols-3">
         {sortedProjects.map((project) => (
           <ProjectCard
             key={project.id}

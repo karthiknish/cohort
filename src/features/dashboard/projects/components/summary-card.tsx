@@ -1,7 +1,6 @@
-import {
-  Card,
-  CardContent,
-} from '@/shared/ui/card'
+'use client'
+
+import { Card, CardContent } from '@/shared/ui/card'
 import { cn } from '@/lib/utils'
 
 export interface SummaryCardProps {
@@ -17,27 +16,21 @@ export function SummaryCard({ label, value, icon: Icon, description, onClick, ac
   const inner = (
     <Card
       className={cn(
-        'overflow-hidden border-muted/50 bg-background shadow-sm motion-chromatic',
-        onClick && 'hover:border-primary/20 hover:shadow-md',
-        active && 'border-primary/25 ring-1 ring-primary/15',
+        'overflow-hidden border-border/60 bg-background/80 shadow-sm transition-all',
+        onClick && 'hover:border-primary/20 hover:bg-muted/20 hover:shadow-md',
+        active && 'border-primary/30 ring-2 ring-primary/15 ring-offset-2 ring-offset-card',
       )}
     >
-      <CardContent className="flex items-center gap-5 p-5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/5 text-primary shadow-sm">
-          <Icon className="h-6 w-6" />
+      <CardContent className="flex items-center gap-4 p-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-muted/30 text-primary">
+          <Icon className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80 leading-none">
-            {label}
-          </p>
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <p className="text-2xl font-bold tracking-tight text-foreground">{value}</p>
-            {description ? (
-              <span className="text-[10px] font-semibold text-muted-foreground/60 tabular-nums uppercase tracking-wide">
-                {description}
-              </span>
-            ) : null}
-          </div>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-foreground">{value}</p>
+          {description ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+          ) : null}
         </div>
       </CardContent>
     </Card>
@@ -51,7 +44,7 @@ export function SummaryCard({ label, value, icon: Icon, description, onClick, ac
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2"
+      className="w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       aria-pressed={active}
     >
       {inner}
