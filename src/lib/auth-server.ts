@@ -77,13 +77,15 @@ async function proxyAuthToConvex(request: Request): Promise<Response> {
   headers.set('x-forwarded-host', requestUrl.host)
   headers.set('x-forwarded-proto', requestUrl.protocol.replace(':', ''))
 
-  const init: RequestInit = {
+  const init: RequestInit & { duplex?: 'half' } = {
     method: request.method,
     headers,
     redirect: 'manual',
   }
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
+  if (request.method !== 'GET' && request.method !== 'HEAD' && request.body != null) {
     init.body = request.body
+    // Node/undici requires duplex when forwarding a streaming request body.
+    init.duplex = 'half'
   }
 
   const response = await fetch(targetUrl, init)
