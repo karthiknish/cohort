@@ -12,7 +12,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
-import { formatCurrency } from '@/lib/utils'
 import {
   ANALYTICS_CHART_CONTAINER_CLASS,
   ANALYTICS_CHART_TOOLTIP_PROPS,
@@ -63,16 +62,13 @@ function formatNumberTick(value: number | string) {
   return Number(value).toLocaleString()
 }
 
-function formatCurrencyTick(value: number | string) {
-  return formatCurrency(Number(value))
-}
-
 function formatPercentTick(value: number | string) {
   return `${Number(value).toFixed(1)}%`
 }
 
 interface AnalyticsChartsProps {
   chartData: AnalyticsChartPoint[]
+  formatRevenue: (amount: number | null | undefined) => string
   isMetricsLoading: boolean
   initialMetricsLoading: boolean
 }
@@ -111,22 +107,27 @@ function ChartCardHeader({
 
 export function AnalyticsCharts({
   chartData,
+  formatRevenue,
   isMetricsLoading,
   initialMetricsLoading,
 }: AnalyticsChartsProps) {
   const showChartSkeleton = initialMetricsLoading || (isMetricsLoading && chartData.length === 0)
+  const formatCurrencyTick = useMemo(
+    () => (value: number | string) => formatRevenue(Number(value)),
+    [formatRevenue],
+  )
 
   const usersSessionsTooltipContent = useMemo(
     () => <AnalyticsUsersSessionsTooltip chartData={chartData} />,
     [chartData],
   )
   const revenueTooltipContent = useMemo(
-    () => <AnalyticsRevenueTooltip chartData={chartData} />,
-    [chartData],
+    () => <AnalyticsRevenueTooltip chartData={chartData} formatRevenue={formatRevenue} />,
+    [chartData, formatRevenue],
   )
   const conversionsTooltipContent = useMemo(
-    () => <AnalyticsConversionsTooltip chartData={chartData} />,
-    [chartData],
+    () => <AnalyticsConversionsTooltip chartData={chartData} formatRevenue={formatRevenue} />,
+    [chartData, formatRevenue],
   )
   const conversionRateTooltipContent = useMemo(
     () => <AnalyticsConversionRateTooltip chartData={chartData} />,

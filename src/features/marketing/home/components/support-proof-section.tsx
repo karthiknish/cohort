@@ -24,7 +24,7 @@ const PROOF_POINTS = [
   },
   {
     title: 'Audit visibility',
-    description: 'Time, scheduling, and request flows are framed around reviewability, not just task completion.',
+    description: 'Delivery and request flows are framed around reviewability, not just task completion.',
     icon: ShieldCheck,
     wellClass: 'bg-success/10 text-success',
   },
@@ -87,15 +87,15 @@ export function SupportProofSection() {
           <div className="flex flex-col gap-6 rounded-[2rem] border border-border/60 bg-gradient-to-br from-muted/40 via-background to-muted/25 p-6 shadow-inner sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:p-8">
             <div className="min-w-0 space-y-2">
               <p className="text-lg font-semibold leading-snug text-foreground sm:text-xl">
-                Start with the operational layer, then wire the rest behind it.
+                Start with projects and tasks, then wire growth tools behind them.
               </p>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Time, scheduling, and forms create the strongest foundation for everything that follows, including live ad accounts.
+                Delivery workflows create the foundation for everything that follows, including live ad accounts.
               </p>
             </div>
             <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center">
               <Button asChild className="rounded-xl shadow-md">
-                <Link href="/dashboard/time">Open operations</Link>
+                <Link href="/dashboard/projects">Open projects</Link>
               </Button>
               <Button asChild variant="outline" className="rounded-xl border-border/80 bg-background/80">
                 <Link href="/dashboard/ads">View Ads</Link>

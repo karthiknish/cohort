@@ -12,7 +12,7 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
-import { projectMilestonesApi, projectsApi } from '@/lib/convex-api'
+import { projectMilestonesApi, projectsApi, tasksApi } from '@/lib/convex-api'
 import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { buildProjectTasksRoute } from '@/lib/project-routes'
 import { getPreviewProjectMilestones, getPreviewProjects } from '@/lib/preview-data'
@@ -25,9 +25,15 @@ import {
   type SortField,
   type StatusFilter,
   type ViewMode,
+  buildTaskCountsByProject,
+  extractPaginatedItems,
   filterProjectsByQuery,
   formatStatusLabel,
+  loadStoredViewMode,
+  mergeProjectTaskCounts,
   projectMatchesContext,
+  PROJECTS_VIEW_MODE_STORAGE_KEY,
+  SORT_OPTIONS,
   useDebouncedValue,
 } from '../components'
 
@@ -101,7 +107,7 @@ export function useProjectsPageController() {
   const [projects, setProjects] = useState<ProjectRecord[]>([])
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [searchInput, setSearchInput] = useState('')
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [viewMode, setViewModeState] = useState<ViewMode>(() => loadStoredViewMode())
   const [sortField, setSortField] = useState<SortField>('updatedAt')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [loading, setLoading] = useState(false)
@@ -134,8 +140,18 @@ export function useProjectsPageController() {
           clientId: selectedClientId ?? undefined,
           status: statusFilter !== 'all' ? statusFilter : undefined,
           limit: 100,
-        }
-  ) as Array<unknown> | undefined
+        },
+  )
+
+  const tasksRealtime = useQuery(
+    tasksApi.list,
+    isPreviewMode || !workspaceId || !user?.id
+      ? 'skip'
+      : {
+          workspaceId,
+          limit: 500,
+        },
+  )
 
   const milestonesRealtime = useQuery(
     projectMilestonesApi.listByProjectIds,
@@ -183,14 +199,24 @@ export function useProjectsPageController() {
       return 0
     }
 
-    const mapped = (Array.isArray(projectsRealtime) ? projectsRealtime : []).map(mapProjectRecord)
+    const rows = extractPaginatedItems<unknown>(projectsRealtime)
+    const taskRows = extractPaginatedItems<{ projectId?: string | null; status?: unknown }>(tasksRealtime)
+    const taskCounts = buildTaskCountsByProject(taskRows)
+    const mapped = rows.map((row) => mergeProjectTaskCounts(mapProjectRecord(row), taskCounts))
 
     setProjects(mapped)
     setError(null)
     setRetryCount(0)
     setLoading(false)
     return mapped.length
-  }, [isPreviewMode, projectsRealtime, selectedClientId, statusFilter, user?.id, workspaceId])
+  }, [isPreviewMode, projectsRealtime, selectedClientId, statusFilter, tasksRealtime, user?.id, workspaceId])
+
+  const setViewMode = useCallback((mode: ViewMode) => {
+    setViewModeState(mode)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(PROJECTS_VIEW_MODE_STORAGE_KEY, mode)
+    }
+  }, [])
 
   const loadMilestones = useCallback(async (projectIds: string[]) => {
     if (viewMode !== 'gantt') return
@@ -524,6 +550,28 @@ export function useProjectsPageController() {
     clearFocusedProject()
   }, [clearFocusedProject])
 
+  const setStatusFilterAndReset = useCallback((value: StatusFilter) => {
+    setStatusFilter(value)
+  }, [])
+
+  const activeFilterLabels = useMemo(() => {
+    const labels: string[] = []
+    if (statusFilter !== 'all') {
+      labels.push(formatStatusLabel(statusFilter))
+    }
+    if (debouncedQuery.trim()) {
+      labels.push(`Search: “${debouncedQuery.trim()}”`)
+    }
+    if (focusedProject.id || focusedProject.name) {
+      labels.push('Linked project')
+    }
+    if (sortField !== 'updatedAt' || sortDirection !== 'desc') {
+      const sortLabel = SORT_OPTIONS.find((option) => option.value === sortField)?.label ?? sortField
+      labels.push(`Sort: ${sortLabel} (${sortDirection === 'asc' ? 'asc' : 'desc'})`)
+    }
+    return labels
+  }, [debouncedQuery, focusedProject.id, focusedProject.name, sortDirection, sortField, statusFilter])
+
   const handleRefreshProjects = useCallback(async () => {
     try {
       const count = await loadProjects()
@@ -542,6 +590,7 @@ export function useProjectsPageController() {
   }, [loadProjects, toast])
 
   return {
+    activeFilterLabels,
     clearAllFilters,
     clearFocusedProject,
     completionRate,
@@ -582,6 +631,7 @@ export function useProjectsPageController() {
     setSearchInput,
     setSortField,
     setStatusFilter,
+    setStatusFilterAndReset,
     setViewMode,
     sortDirection,
     sortField,

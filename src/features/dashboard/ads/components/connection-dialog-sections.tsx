@@ -51,10 +51,80 @@ export function ConnectionProgress({ step, providerName }: { step: ConnectionSte
   )
 }
 
-export function ConnectionDialogBody({ connectionStep, error, errorGuidance, isInProgress, providerInfo, showPreConnect }: { connectionStep: ConnectionStep; error: string | null; errorGuidance: { title: string; action: string } | null; isInProgress: boolean; providerInfo: ProviderInfoShape; showPreConnect: boolean }) {
+export function ConnectionDialogBody({
+  connectionStep,
+  error,
+  errorGuidance,
+  isInProgress,
+  providerInfo,
+  showPreConnect,
+  providerId,
+}: {
+  connectionStep: ConnectionStep
+  error: string | null
+  errorGuidance: { title: string; action: string } | null
+  isInProgress: boolean
+  providerInfo: ProviderInfoShape
+  showPreConnect: boolean
+  providerId?: string | null
+}) {
+  const isMetaAds = providerId === 'facebook' || providerId === 'meta'
+
   return (
     <div className="space-y-4 py-4">
-      {showPreConnect ? <><div><h4 className="mb-2 text-sm font-medium">What you&apos;ll get</h4><ul className="space-y-1.5">{providerInfo.benefits.map((benefit) => <li key={benefit} className="flex items-start gap-2 text-sm text-muted-foreground"><Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />{benefit}</li>)}</ul></div><div><h4 className="mb-2 text-sm font-medium">Requirements</h4><ul className="space-y-1.5">{providerInfo.requirements.map((requirement) => <li key={requirement} className="flex items-start gap-2 text-sm text-muted-foreground"><ChevronRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground/60" />{requirement}</li>)}</ul></div>{providerInfo.loginMethod === 'redirect' ? <Alert className="border-info/20 bg-info/5"><ExternalLink className="h-4 w-4 text-info" /><AlertDescription className="text-sm text-foreground">You&apos;ll be redirected to {providerInfo.shortName} to log in. After granting access, you&apos;ll return here automatically.</AlertDescription></Alert> : null}{providerInfo.loginMethod === 'popup' ? <Alert className="border-info/20 bg-info/5"><AlertCircle className="h-4 w-4 text-info" /><AlertDescription className="text-sm text-foreground">A popup window will open for you to log in to {providerInfo.shortName}. Make sure popups are allowed for this site.</AlertDescription></Alert> : null}</> : null}
+      {showPreConnect ? (
+        <>
+          <div>
+            <h4 className="mb-2 text-sm font-medium">What you&apos;ll get</h4>
+            <ul className="space-y-1.5">
+              {providerInfo.benefits.map((benefit) => (
+                <li key={benefit} className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />
+                  {benefit}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4 className="mb-2 text-sm font-medium">Requirements</h4>
+            <ul className="space-y-1.5">
+              {providerInfo.requirements.map((requirement) => (
+                <li key={requirement} className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <ChevronRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground/60" />
+                  {requirement}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {isMetaAds ? (
+            <Alert className="border-warning/20 bg-warning/5">
+              <AlertCircle className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-sm text-foreground">
+                This connects <strong>paid Meta ads</strong> only. Organic Facebook/Instagram pages use{' '}
+                <strong>Socials</strong> in the sidebar — a separate connection.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          {providerInfo.loginMethod === 'redirect' ? (
+            <Alert className="border-info/20 bg-info/5">
+              <ExternalLink className="h-4 w-4 text-info" />
+              <AlertDescription className="text-sm text-foreground">
+                You&apos;ll be redirected to {providerInfo.shortName} to log in. After granting access,
+                you&apos;ll return here to finish account setup.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          {providerInfo.loginMethod === 'popup' ? (
+            <Alert className="border-info/20 bg-info/5">
+              <AlertCircle className="h-4 w-4 text-info" />
+              <AlertDescription className="text-sm text-foreground">
+                A popup window will open for you to log in to {providerInfo.shortName}. Make sure popups
+                are allowed for this site.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+        </>
+      ) : null}
       {connectionStep === 'redirecting' && providerInfo.loginMethod === 'redirect' ? <div className="space-y-4"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full bg-info/10"><ArrowRight className="h-5 w-5 text-info" /></div><div><p className="font-medium">Redirecting to {providerInfo.shortName}</p><p className="text-sm text-muted-foreground">You&apos;ll be taken to {providerInfo.shortName} to log in</p></div></div><Alert className="border-info/20 bg-info/5"><ExternalLink className="h-4 w-4 text-info" /><AlertDescription className="text-sm text-foreground">After logging in, you&apos;ll be automatically redirected back here to complete setup.</AlertDescription></Alert></div> : null}
       {(isInProgress && !(connectionStep === 'redirecting' && providerInfo.loginMethod === 'redirect')) || connectionStep === 'complete' ? <ConnectionProgress step={connectionStep} providerName={providerInfo.name} /> : null}
       {error ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertTitle>{errorGuidance?.title ?? 'Connection failed'}</AlertTitle><AlertDescription className="space-y-2"><p>{error}</p>{errorGuidance?.action ? <p className="mt-2 text-xs font-medium opacity-90">{errorGuidance.action}</p> : null}</AlertDescription></Alert> : null}

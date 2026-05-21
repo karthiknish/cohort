@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { ProtectedRoute } from '@/shared/components/protected-route'
 import { ClientAccessGate } from '@/features/dashboard/home/components/client-access-gate'
 import { PreviewDataBanner } from '@/features/dashboard/home/components/preview-data-banner'
+import { ForYouAgentMode } from '@/features/marketing/for-you/components/for-you-agent-mode'
 import { ForYouShell } from '@/features/marketing/for-you/components/for-you-shell'
 import { NetworkStatusBanner } from '@/shared/components/network-status-banner'
 import { WorkspaceProviders } from '@/shared/providers/workspace-providers'
@@ -27,6 +28,7 @@ export default async function ForYouLayout({ children }: { children: React.React
               <div className="pb-12 pt-6 sm:pt-8">{children}</div>
             </ClientAccessGate>
           </div>
+          <ForYouAgentMode />
         </div>
       </WorkspaceProviders>
     </ProtectedRoute>

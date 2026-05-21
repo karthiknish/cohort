@@ -24,6 +24,7 @@ export interface PreviewAnalyticsMetric {
     id: string
     providerId: string
     date: string
+    currency?: string | null
     spend: number
     impressions: number
     clicks: number

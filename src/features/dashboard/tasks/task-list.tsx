@@ -126,6 +126,7 @@ export function TaskList({
         open={Boolean(viewingTask)}
         onOpenChange={handleTaskViewDialogOpenChange}
         task={viewingTask}
+        onEdit={onEdit}
         workspaceId={workspaceId}
         userId={userId}
         userName={userName}

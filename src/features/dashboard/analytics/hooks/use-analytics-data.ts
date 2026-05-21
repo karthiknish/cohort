@@ -138,10 +138,21 @@ export function useAnalyticsData(
     await fetchInsights()
   }, [fetchInsights])
 
+  const mappedMetrics = useMemo(() => {
+    const rows = isPreviewMode ? (previewMetrics ?? []) : (metricsRealtime?.metrics ?? [])
+    return rows.map((row) => {
+      const record = row as unknown as Record<string, unknown>
+      return {
+        ...(row as MetricRecord),
+        currency: typeof record.currency === 'string' ? record.currency : null,
+      } satisfies MetricRecord
+    })
+  }, [isPreviewMode, metricsRealtime?.metrics, previewMetrics])
+
   // Return preview data if in preview mode
   if (isPreviewMode && previewMetrics && previewInsights) {
     return {
-      metricsData: previewMetrics,
+      metricsData: mappedMetrics,
       metricsNextCursor: null,
       metricsLoadingMore: false,
       loadMoreMetrics: async () => {},
@@ -161,7 +172,7 @@ export function useAnalyticsData(
   const metricsLoading = metricsRealtime === undefined && !isPreviewMode && !!workspaceId && canQueryConvex
 
   return {
-    metricsData: metricsRealtime?.metrics ?? [],
+    metricsData: mappedMetrics,
     metricsNextCursor: null, // Convex doesn't use cursor pagination
     metricsLoadingMore,
     loadMoreMetrics,

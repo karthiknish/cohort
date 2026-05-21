@@ -1,12 +1,18 @@
 'use client'
 
-import { useCallback } from 'react'
 import { ChartGantt, Columns3, LayoutGrid, List } from 'lucide-react'
 
-import { Button } from '@/shared/ui/button'
+import { ToggleGroup, ToggleGroupItem } from '@/shared/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
 
 import type { ViewMode } from './utils'
+
+const VIEW_OPTIONS: { mode: ViewMode; label: string; icon: typeof List }[] = [
+  { mode: 'list', label: 'List view', icon: List },
+  { mode: 'grid', label: 'Grid view', icon: LayoutGrid },
+  { mode: 'board', label: 'Board view', icon: Columns3 },
+  { mode: 'gantt', label: 'Timeline view', icon: ChartGantt },
+]
 
 interface ViewModeSelectorProps {
   viewMode: ViewMode
@@ -14,69 +20,34 @@ interface ViewModeSelectorProps {
 }
 
 export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) {
-  const handleListView = useCallback(() => onChange('list'), [onChange])
-  const handleGridView = useCallback(() => onChange('grid'), [onChange])
-  const handleBoardView = useCallback(() => onChange('board'), [onChange])
-  const handleGanttView = useCallback(() => onChange('gantt'), [onChange])
-
   return (
-    <div className="flex items-center rounded-md border bg-background p-1">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleListView}
-            aria-label="List view"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>List view</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleGridView}
-            aria-label="Grid view"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Grid view</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={viewMode === 'board' ? 'secondary' : 'ghost'}
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleBoardView}
-            aria-label="Kanban view"
-          >
-            <Columns3 className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Kanban view</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={viewMode === 'gantt' ? 'secondary' : 'ghost'}
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleGanttView}
-            aria-label="Gantt view"
-          >
-            <ChartGantt className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Gantt view</TooltipContent>
-      </Tooltip>
-    </div>
+    <ToggleGroup
+      type="single"
+      value={viewMode}
+      onValueChange={(value) => {
+        if (value === 'list' || value === 'grid' || value === 'board' || value === 'gantt') {
+          onChange(value)
+        }
+      }}
+      variant="outline"
+      size="sm"
+      className="rounded-lg border border-border/60 bg-background p-0.5"
+      aria-label="Project view mode"
+    >
+      {VIEW_OPTIONS.map(({ mode, label, icon: Icon }) => (
+        <Tooltip key={mode}>
+          <TooltipTrigger asChild>
+            <ToggleGroupItem
+              value={mode}
+              aria-label={label}
+              className="h-8 w-8 rounded-md px-0 data-[state=on]:bg-accent/15 data-[state=on]:text-primary"
+            >
+              <Icon className="h-4 w-4" />
+            </ToggleGroupItem>
+          </TooltipTrigger>
+          <TooltipContent>{label}</TooltipContent>
+        </Tooltip>
+      ))}
+    </ToggleGroup>
   )
 }

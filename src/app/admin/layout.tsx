@@ -132,7 +132,7 @@ function AdminBreadcrumb() {
   if (breadcrumbs.length <= 1) return null
 
   return (
-    <Breadcrumb className="mx-auto max-w-7xl border-t border-border/40 px-4 py-2.5 text-sm sm:px-6 lg:px-8">
+    <Breadcrumb className="mx-auto max-w-7xl border-t border-border/40 px-4 py-2 text-sm sm:px-6 lg:px-8">
       <BreadcrumbList>
         {breadcrumbs.map((crumb, index) => (
           <React.Fragment key={crumb.href}>
@@ -162,13 +162,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <ProtectedRoute requiredRole="admin">
       <WorkspaceProviders enablePreview>
         <NavigationProvider>
-          <div className="relative min-h-dvh bg-muted/20">
+          <div className="relative min-h-dvh bg-background">
             <main className="min-h-dvh">
-              <div className="sticky top-0 z-40 border-b border-border/80 bg-background/90 shadow-sm backdrop-blur-md supports-backdrop-filter:bg-background/75">
+              <div className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
                 <AdminNav />
                 <AdminBreadcrumb />
               </div>
-              <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">{children}</div>
+              <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{children}</div>
             </main>
             <AgentModeDynamic />
           </div>

@@ -31,41 +31,33 @@ export function AdminPageShell({
   isPreviewMode,
 }: AdminPageShellProps) {
   return (
-    <div className={cn('w-full space-y-8', className)}>
+    <div className={cn('w-full space-y-6', className)}>
       <header
         className={cn(
-          'flex flex-col gap-4 border-b border-border/60 pb-8 sm:flex-row sm:items-start sm:justify-between',
+          'flex flex-col gap-3 border-b border-border/60 pb-6 sm:flex-row sm:items-start sm:justify-between',
           headerClassName,
         )}
       >
-        <div className="min-w-0 space-y-2">
-          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Administration
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+        <div className="min-w-0 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground">
               {title}
             </h1>
             {isPreviewMode ? (
-              <Badge
-                variant="secondary"
-                className="shrink-0 text-[10px] font-semibold uppercase tracking-wider"
-              >
+              <Badge variant="secondary" className="shrink-0 text-[10px] font-medium uppercase">
                 Preview
               </Badge>
             ) : null}
           </div>
           {description ? (
-            <div className="max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground sm:text-[15px] sm:leading-relaxed">
-              {description}
-            </div>
+            <p className="max-w-xl text-sm text-muted-foreground">{description}</p>
           ) : null}
         </div>
         {actions ? (
           <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">{actions}</div>
         ) : null}
       </header>
-      <PageMotionShell reveal={false} className="space-y-8">
+      <PageMotionShell reveal={false} className="space-y-6">
         {children}
       </PageMotionShell>
     </div>

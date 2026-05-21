@@ -5,6 +5,8 @@ import type {
 } from './types'
 import { isoDaysAgo } from './utils'
 
+const PREVIEW_ANALYTICS_CURRENCY = 'GBP'
+
 export function getPreviewAnalyticsMetrics(): PreviewAnalyticsMetric[] {
     const providers = ['google-analytics', 'google', 'facebook', 'linkedin']
 
@@ -58,6 +60,7 @@ export function getPreviewAnalyticsMetrics(): PreviewAnalyticsMetric[] {
                 id: `preview-analytics-${provider}-${idx}`,
                 providerId: provider,
                 date,
+                currency: PREVIEW_ANALYTICS_CURRENCY,
                 spend: day.spend,
                 impressions: day.impressions,
                 clicks: day.clicks,

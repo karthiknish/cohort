@@ -312,23 +312,11 @@ describe('extractCampaignQueryFromIntent', () => {
     expect(extractCampaignQueryFromIntent('give me ad metrics for the active leicester ad campaign in meta')).toBe('leicester')
   })
 
-  it('routes For You, time off, and time tracking to navigate', () => {
+  it('routes For You to navigate', () => {
     expect(resolveDeterministicAgentIntent('open my for you feed')).toEqual({
       action: 'navigate',
       route: '/for-you',
       message: 'Opening For You with your personalized highlights.',
-    })
-
-    expect(resolveDeterministicAgentIntent('i need to request pto')).toEqual({
-      action: 'navigate',
-      route: '/dashboard/time-off',
-      message: 'Opening Time off for requests and approvals.',
-    })
-
-    expect(resolveDeterministicAgentIntent('open my timesheet')).toEqual({
-      action: 'navigate',
-      route: '/dashboard/tasks?operations=time',
-      message: 'Opening Tasks with the time tracking view.',
     })
   })
 })

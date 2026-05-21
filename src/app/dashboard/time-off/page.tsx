@@ -1,8 +1,6 @@
-import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 
-export const metadata: Metadata = {
-  title: 'Time Off | Cohorts',
-  description: 'Time-off requests and approvals inside Cohorts.',
+/** Time off removed; keep old links working. */
+export default function TimeOffPageRedirect() {
+  redirect('/dashboard/projects')
 }
-
-export { default } from '@/features/dashboard/time-off/page'

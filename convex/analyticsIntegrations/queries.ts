@@ -110,6 +110,7 @@ type GoogleAnalyticsStatus = {
   clientId: string | null
   accountId: string | null
   accountName: string | null
+  currency: string | null
   linkedAtMs: number | null
   lastSyncStatus: string | null
   lastSyncMessage: string | null
@@ -126,6 +127,7 @@ export const getGoogleAnalyticsStatus = zWorkspaceQuery({
     clientId: z.string().nullable(),
     accountId: z.string().nullable(),
     accountName: z.string().nullable(),
+    currency: z.string().nullable(),
     linkedAtMs: z.number().nullable(),
     lastSyncStatus: z.string().nullable(),
     lastSyncMessage: z.string().nullable(),
@@ -136,11 +138,17 @@ export const getGoogleAnalyticsStatus = zWorkspaceQuery({
     const clientId = normalizeClientId(args.clientId ?? null)
     const integration = await findGoogleAnalyticsIntegration(ctx.db, args.workspaceId, clientId)
     if (!integration) return null
+    const currency =
+      typeof integration.currency === 'string' && integration.currency.trim().length > 0
+        ? integration.currency.trim().toUpperCase()
+        : null
+
     return {
       providerId: integration.providerId,
       clientId: integration.clientId,
       accountId: integration.accountId,
       accountName: integration.accountName,
+      currency,
       linkedAtMs: integration.linkedAtMs,
       lastSyncStatus: integration.lastSyncStatus,
       lastSyncMessage: integration.lastSyncMessage,

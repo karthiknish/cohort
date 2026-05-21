@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useId, useMemo, useReducer } from 'react'
-import { Calendar, ChevronsDownUp, ChevronsUpDown, Columns3, Eye, GripVertical, ListTodo, LoaderCircle, RefreshCw, TriangleAlert } from 'lucide-react'
+import { Calendar, ChevronsDownUp, ChevronsUpDown, Columns3, GripVertical, ListTodo, LoaderCircle, RefreshCw, TriangleAlert } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
@@ -392,6 +392,7 @@ export function TaskKanban({
         userName={userName}
         userRole={userRole}
         participants={participants}
+        onEdit={onEdit}
         onOpenChange={handleViewingTaskDialogOpenChange}
       />
     </div>
@@ -473,14 +474,12 @@ function KanbanColumn({
       onDragLeave={handleDragLeave}
       onDrop={handleColumnDrop}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-background/80 px-4 py-4.5 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div className={`h-2.5 w-2.5 rounded-full shadow-sm ${statusLaneColors[column.status]}`} />
-          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            {column.label}
-          </span>
+      <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-background/90 px-4 py-3.5 backdrop-blur-sm">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className={cn('h-2 w-2 shrink-0 rounded-full', statusLaneColors[column.status])} aria-hidden />
+          <span className="truncate text-sm font-semibold text-foreground">{column.label}</span>
         </div>
-        <Badge variant="outline" className={cn('h-6 rounded-full px-2.5 text-[10px] font-semibold', taskPillColors.count)}>
+        <Badge variant="secondary" className="h-6 shrink-0 rounded-full px-2 tabular-nums">
           {column.items.length}
         </Badge>
       </div>
@@ -585,10 +584,6 @@ function KanbanTaskItem({
     onToggleCollapsed(task.id)
   }, [onToggleCollapsed, task.id])
 
-  const handleOpenTask = useCallback(() => {
-    handleViewTask(task)
-  }, [handleViewTask, task])
-
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (!event.altKey) {
@@ -651,6 +646,7 @@ function KanbanTaskItem({
           <TaskCard
             task={task}
             isPendingUpdate={pending}
+            onOpen={handleViewTask}
             onEdit={onEdit}
             onDelete={onDelete}
             onQuickStatusChange={onQuickStatusChange}
@@ -660,25 +656,15 @@ function KanbanTaskItem({
             onSelectToggle={onToggleTaskSelection}
             searchQuery={searchQuery}
           />
-          <div className="flex items-center justify-between gap-2 px-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 rounded-xl"
-              onClick={handleOpenTask}
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              View task
-            </Button>
+          <div className="flex justify-end px-0.5">
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-9 rounded-xl text-muted-foreground hover:text-foreground"
+              className="h-8 rounded-lg text-xs text-muted-foreground hover:text-foreground"
               onClick={handleCollapse}
             >
-              <ChevronsDownUp className="mr-2 h-4 w-4" />
+              <ChevronsDownUp className="mr-1.5 h-3.5 w-3.5" />
               Collapse
             </Button>
           </div>

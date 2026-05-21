@@ -156,36 +156,6 @@ const ROUTE_MAPPINGS: RouteMapping[] = [
     ],
   },
 
-  // Time off
-  {
-    route: '/dashboard/time-off',
-    name: 'Time off',
-    description: 'Request, review, and approve PTO and leave',
-    keywords: ['time off', 'pto', 'vacation', 'leave request', 'sick leave', 'out of office', 'ooo', 'holiday leave'],
-    aliases: ['request pto', 'time off requests', 'leave approvals', 'vacation days'],
-    actions: ['request leave', 'approve pto', 'check time off balance'],
-  },
-
-  // Time tracking (tasks operations tab)
-  {
-    route: '/dashboard/tasks?operations=time',
-    name: 'Time tracking',
-    description: 'Log and review time entries against tasks',
-    keywords: ['timesheet', 'time tracking', 'log time', 'track time', 'billable', 'hours logged', 'time entry', 'time entries'],
-    aliases: ['log my hours', 'submit timesheet', 'track billable time'],
-    actions: ['log hours', 'review time entries', 'export timesheet'],
-  },
-
-  // Scheduling (projects operations tab)
-  {
-    route: '/dashboard/scheduling',
-    name: 'Scheduling',
-    description: 'Resource scheduling and calendar blocks tied to projects',
-    keywords: ['scheduling', 'scheduler', 'availability', 'resource schedule', 'capacity planning', 'booking grid'],
-    aliases: ['team scheduling', 'project scheduling', 'schedule resources'],
-    actions: ['book resources', 'check availability', 'plan capacity'],
-  },
-
   // Collaboration
   {
     route: '/dashboard/collaboration',

@@ -13,30 +13,21 @@ import {
 } from '@/shared/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip'
 
-import { type SortDirection, type SortField, type StatusFilter, STATUS_FILTERS, SORT_OPTIONS, formatStatusLabel } from './utils'
+import { type SortDirection, type SortField, SORT_OPTIONS } from './utils'
 
 interface ProjectFiltersProps {
-  statusFilter: StatusFilter
   sortField: SortField
   sortDirection: SortDirection
-  onStatusChange: (value: StatusFilter) => void
   onSortFieldChange: (value: SortField) => void
   onToggleSortDirection: () => void
 }
 
 export function ProjectFilters({
-  statusFilter,
   sortField,
   sortDirection,
-  onStatusChange,
   onSortFieldChange,
   onToggleSortDirection,
 }: ProjectFiltersProps) {
-  const handleStatusChange = useCallback(
-    (value: string) => onStatusChange(value as StatusFilter),
-    [onStatusChange]
-  )
-
   const handleSortFieldChange = useCallback(
     (value: string) => onSortFieldChange(value as SortField),
     [onSortFieldChange]
@@ -44,18 +35,6 @@ export function ProjectFilters({
 
   return (
     <div className="flex items-center gap-1">
-      <Select value={statusFilter} onValueChange={handleStatusChange}>
-        <SelectTrigger className="sm:w-40" aria-label="Filter by status">
-          <SelectValue placeholder="Status" />
-        </SelectTrigger>
-        <SelectContent>
-          {STATUS_FILTERS.map((value) => (
-            <SelectItem key={value} value={value}>
-              {value === 'all' ? 'All statuses' : formatStatusLabel(value)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
       <Select value={sortField} onValueChange={handleSortFieldChange}>
         <SelectTrigger className="sm:w-36" aria-label="Sort by">
           <SelectValue placeholder="Sort by" />

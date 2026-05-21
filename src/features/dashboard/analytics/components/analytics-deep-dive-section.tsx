@@ -3,7 +3,6 @@
 import { Activity, ArrowUpRight, CalendarRange, DollarSign, Sparkles, TrendingUp, Users } from 'lucide-react'
 
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
-import { formatCurrency } from '@/lib/utils'
 import { Badge } from '@/shared/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import type { GoogleAnalyticsStory } from '../lib/google-analytics-story'
@@ -22,7 +21,13 @@ function formatDayLabel(value: string | null | undefined) {
 const HIGHLIGHT_CARD = 'rounded-lg border border-border/60 bg-muted/30 p-4'
 const HIGHLIGHT_LABEL = 'mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground'
 
-export function AnalyticsDeepDiveSection({ story }: { story: GoogleAnalyticsStory }) {
+export function AnalyticsDeepDiveSection({
+  story,
+  formatRevenue,
+}: {
+  story: GoogleAnalyticsStory
+  formatRevenue: (amount: number | null | undefined) => string
+}) {
   const momentumVariant = story.momentum === 'up' ? 'success' : story.momentum === 'down' ? 'warning' : 'secondary'
 
   return (
@@ -58,7 +63,7 @@ export function AnalyticsDeepDiveSection({ story }: { story: GoogleAnalyticsStor
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Previous range:{' '}
-                {item.key === 'revenue' ? formatCurrency(item.delta.previous) : item.delta.previous.toLocaleString()}
+                {item.key === 'revenue' ? formatRevenue(item.delta.previous) : item.delta.previous.toLocaleString()}
               </p>
             </div>
           ))}
@@ -98,7 +103,7 @@ export function AnalyticsDeepDiveSection({ story }: { story: GoogleAnalyticsStor
                 Peak revenue
               </div>
               <p className="text-lg font-semibold text-foreground">
-                {story.topRevenueDay ? formatCurrency(story.topRevenueDay.revenue) : '—'}
+                {story.topRevenueDay ? formatRevenue(story.topRevenueDay.revenue) : '—'}
               </p>
               <p className="text-xs text-muted-foreground">{formatDayLabel(story.topRevenueDay?.date)}</p>
             </div>

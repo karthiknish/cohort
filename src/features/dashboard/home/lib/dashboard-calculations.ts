@@ -11,9 +11,23 @@ import {
 import { formatCurrency } from '@/lib/utils'
 import type { MetricRecord, SummaryStat } from '@/types/dashboard'
 import {
+    aggregateMetricFinancials,
+    formatAggregatedMoney,
+    financialTotalsHelper,
+    isFinancialComparable,
+} from '@/domain/ads/aggregate-financials'
+import {
     selectTopStatsByRole,
     type TaskSummary,
 } from '../components'
+
+const NON_ADS_PROVIDER_IDS = new Set([
+    'google-analytics',
+    'google_analytics',
+    'googleanalytics',
+    'ga',
+    'ga4',
+])
 
 export interface BuildStatsOptions {
     metrics: MetricRecord[]
@@ -25,55 +39,106 @@ export interface StatsResult {
     primaryStats: SummaryStat[]
     secondaryStats: SummaryStat[]
     orderedStats: SummaryStat[]
+    /** Resolved when paid-media rows share one currency. */
+    displayCurrency: string | null
+    financialComparability: ReturnType<typeof aggregateMetricFinancials>['financialTotals']['comparability']
+}
+
+function filterPaidMediaMetrics(metrics: MetricRecord[]): MetricRecord[] {
+    return metrics.filter((metric) => !NON_ADS_PROVIDER_IDS.has(metric.providerId.toLowerCase()))
 }
 
 export function buildDashboardStats(options: BuildStatsOptions): StatsResult {
     const { metrics, taskSummary, userRole } = options
 
-    const metricsArray = Array.isArray(metrics) ? metrics : []
+    const paidMediaMetrics = filterPaidMediaMetrics(Array.isArray(metrics) ? metrics : [])
+    const { deliveryTotals, financialTotals } = aggregateMetricFinancials(paidMediaMetrics)
 
-    const totalRevenue = metricsArray.reduce((sum, record) => sum + (record.revenue || 0), 0)
-    const totalAdSpend = metricsArray.reduce((sum, record) => sum + (record.spend || 0), 0)
-    const totalClicks = metricsArray.reduce((sum, record) => sum + (record.clicks || 0), 0)
-    const totalImpressions = metricsArray.reduce((sum, record) => sum + (record.impressions || 0), 0)
-    const providerCount = metricsArray.length > 0 ? new Set(metricsArray.map((record) => record.providerId)).size : 0
-    const netMargin = totalRevenue - totalAdSpend
-    const roas = totalAdSpend > 0 && totalRevenue > 0 ? totalRevenue / totalAdSpend : null
+    const totalRevenue = financialTotals.revenue
+    const totalAdSpend = financialTotals.spend
+    const netMargin =
+        isFinancialComparable(financialTotals.comparability) &&
+        totalRevenue !== null &&
+        totalAdSpend !== null
+            ? totalRevenue - totalAdSpend
+            : null
+    const roas =
+        isFinancialComparable(financialTotals.comparability) &&
+        totalAdSpend !== null &&
+        totalRevenue !== null &&
+        totalAdSpend > 0 &&
+        totalRevenue > 0
+            ? totalRevenue / totalAdSpend
+            : null
+
+    const totalClicks = deliveryTotals.clicks
+    const totalImpressions = deliveryTotals.impressions
+    const providerCount =
+        paidMediaMetrics.length > 0
+            ? new Set(paidMediaMetrics.map((record) => record.providerId)).size
+            : 0
     const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : null
-    const totalConversions = metricsArray.reduce((sum, record) => sum + (record.conversions || 0), 0)
-    const displayCurrency = 'USD'
+    const totalConversions = deliveryTotals.conversions
+    const displayCurrency = financialTotals.primaryCurrency
+
+    const formatMoney = (amount: number | null) =>
+        formatAggregatedMoney(amount, financialTotals, formatCurrency)
+
+    const revenueHelper = financialTotalsHelper(
+        financialTotals,
+        paidMediaMetrics.length > 0
+            ? `${paidMediaMetrics.length} synced metric ${paidMediaMetrics.length === 1 ? 'record' : 'records'}`
+            : 'Add revenue records to track income',
+    )
 
     const stats: SummaryStat[] = [
         {
             id: 'total-revenue',
             label: 'Total Revenue',
-            value: formatCurrency(totalRevenue, displayCurrency),
-            helper:
-                metricsArray.length > 0
-                    ? `${metricsArray.length} synced metric ${metricsArray.length === 1 ? 'record' : 'records'}`
-                    : 'Add revenue records to track income',
+            value: formatMoney(totalRevenue),
+            helper: revenueHelper,
             icon: DollarSign,
             href: '/dashboard/analytics',
             featureLabel: 'Open analytics',
-            emphasis: totalRevenue > 0 ? 'positive' : 'neutral',
-            urgency: totalRevenue <= 0 ? 'medium' : 'low',
+            emphasis:
+                totalRevenue !== null && totalRevenue > 0
+                    ? 'positive'
+                    : 'neutral',
+            urgency: totalRevenue === null || totalRevenue <= 0 ? 'medium' : 'low',
         },
         {
             id: 'net-margin',
             label: 'Net Margin',
-            value: formatCurrency(netMargin, displayCurrency),
-            helper: 'Revenue minus ad spend for the selected window',
+            value: formatMoney(netMargin),
+            helper: financialTotalsHelper(
+                financialTotals,
+                'Revenue minus ad spend for the selected window',
+            ),
             icon: TrendingUp,
             href: '/dashboard/analytics',
             featureLabel: 'Open analytics',
-            emphasis: netMargin > 0 ? 'positive' : netMargin < 0 ? 'negative' : 'neutral',
-            urgency: netMargin < 0 ? 'high' : netMargin === 0 ? 'medium' : 'low',
+            emphasis:
+                netMargin !== null && netMargin > 0
+                    ? 'positive'
+                    : netMargin !== null && netMargin < 0
+                      ? 'negative'
+                      : 'neutral',
+            urgency:
+                netMargin !== null && netMargin < 0
+                    ? 'high'
+                    : netMargin === null || netMargin === 0
+                      ? 'medium'
+                      : 'low',
         },
         {
             id: 'roas',
             label: 'ROAS',
             value: roas ? `${roas.toFixed(2)}x` : '—',
-            helper: roas ? 'Shows revenue versus ad spend' : 'Need revenue and ad spend data',
+            helper: roas
+                ? 'Shows revenue versus ad spend'
+                : financialTotals.comparability === 'mixed_currency'
+                  ? 'ROAS requires a single currency'
+                  : 'Need revenue and ad spend data',
             icon: BarChart3,
             href: '/dashboard/analytics',
             featureLabel: 'Open analytics',
@@ -83,8 +148,13 @@ export function buildDashboardStats(options: BuildStatsOptions): StatsResult {
         {
             id: 'ad-spend',
             label: 'Ad Spend',
-            value: formatCurrency(totalAdSpend, displayCurrency),
-            helper: providerCount > 0 ? `Data from ${providerCount} ad platforms` : 'Connect ad accounts to see spend',
+            value: formatMoney(totalAdSpend),
+            helper: financialTotalsHelper(
+                financialTotals,
+                providerCount > 0
+                    ? `Data from ${providerCount} ad platforms`
+                    : 'Connect ad accounts to see spend',
+            ),
             icon: Megaphone,
             href: '/dashboard/ads',
             featureLabel: 'Open ads',
@@ -154,6 +224,8 @@ export function buildDashboardStats(options: BuildStatsOptions): StatsResult {
         primaryStats: primary,
         secondaryStats: secondary,
         orderedStats: [...primary, ...secondary],
+        displayCurrency,
+        financialComparability: financialTotals.comparability,
     }
 }
 
@@ -165,15 +237,16 @@ export function useDashboardStats({ metrics, taskSummary, userRole }: BuildStats
                 taskSummary,
                 userRole,
             }),
-        [metrics, taskSummary, userRole]
+        [metrics, taskSummary, userRole],
     )
 }
 
 export function buildChartData(metrics: MetricRecord[]): Array<{ date: string; revenue: number; spend: number }> {
+    const paidMediaMetrics = filterPaidMediaMetrics(Array.isArray(metrics) ? metrics : [])
     const dailyMap = new Map<string, { revenue: number; spend: number }>()
 
-    if (Array.isArray(metrics)) {
-        metrics.forEach((m) => {
+    if (paidMediaMetrics.length > 0) {
+        paidMediaMetrics.forEach((m) => {
             if (!m || typeof m.date !== 'string') return
             const date = m.date.split('T')[0]
             if (!date) return

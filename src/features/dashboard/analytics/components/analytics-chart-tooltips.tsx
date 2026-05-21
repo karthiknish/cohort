@@ -5,7 +5,7 @@ import type { TooltipProps } from 'recharts'
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import { Minus, TrendingDown, TrendingUp } from 'lucide-react'
 
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 export type AnalyticsChartPoint = {
   date: string
@@ -149,7 +149,11 @@ export function AnalyticsRevenueTooltip({
   active,
   payload,
   chartData,
-}: AnalyticsChartTooltipProps & { chartData: AnalyticsChartPoint[] }) {
+  formatRevenue,
+}: AnalyticsChartTooltipProps & {
+  chartData: AnalyticsChartPoint[]
+  formatRevenue: (amount: number | null | undefined) => string
+}) {
   if (!active || !payload?.length) return null
   const point = resolveChartPoint(payload)
   if (!point) return null
@@ -159,9 +163,9 @@ export function AnalyticsRevenueTooltip({
   return (
     <TooltipPanel title={formatTooltipDate(point.date)}>
       <div className="space-y-1">
-        <TooltipRow label="Revenue" value={formatCurrency(point.revenue)} />
+        <TooltipRow label="Revenue" value={formatRevenue(point.revenue)} />
         <TooltipRow label="Conversions" value={point.conversions.toLocaleString()} />
-        <TooltipRow label="Revenue / session" value={formatCurrency(revenuePerSession)} />
+        <TooltipRow label="Revenue / session" value={formatRevenue(revenuePerSession)} />
         <TooltipRow label="Conv. rate" value={`${point.conversionRate.toFixed(2)}%`} />
       </div>
       <DayChange value={dayOverDayPercent(chartData, point.date, 'revenue')} />
@@ -178,7 +182,11 @@ export function AnalyticsConversionsTooltip({
   active,
   payload,
   chartData,
-}: AnalyticsChartTooltipProps & { chartData: AnalyticsChartPoint[] }) {
+  formatRevenue,
+}: AnalyticsChartTooltipProps & {
+  chartData: AnalyticsChartPoint[]
+  formatRevenue: (amount: number | null | undefined) => string
+}) {
   if (!active || !payload?.length) return null
   const point = resolveChartPoint(payload)
   if (!point) return null
@@ -189,7 +197,7 @@ export function AnalyticsConversionsTooltip({
         <TooltipRow label="Conversions" value={point.conversions.toLocaleString()} />
         <TooltipRow label="Sessions" value={point.sessions.toLocaleString()} />
         <TooltipRow label="Conv. rate" value={`${point.conversionRate.toFixed(2)}%`} />
-        <TooltipRow label="Revenue" value={formatCurrency(point.revenue)} />
+        <TooltipRow label="Revenue" value={formatRevenue(point.revenue)} />
       </div>
       <DayChange value={dayOverDayPercent(chartData, point.date, 'conversions')} />
       <TooltipTip>

@@ -11,6 +11,10 @@ export type SortField = 'updatedAt' | 'createdAt' | 'name' | 'status' | 'taskCou
 export type SortDirection = 'asc' | 'desc'
 export type ViewMode = 'list' | 'grid' | 'board' | 'gantt'
 
+export const PROJECTS_VIEW_MODE_STORAGE_KEY = 'cohorts_projects_view_mode'
+
+const OPEN_TASK_STATUSES = new Set(['todo', 'in-progress', 'review'])
+
 export const STATUS_FILTERS: StatusFilter[] = ['all', ...PROJECT_STATUSES]
 
 export const STATUS_CLASSES: Record<ProjectStatus, string> = {
@@ -26,6 +30,10 @@ export const STATUS_ACCENT_COLORS: Record<ProjectStatus, string> = {
   on_hold: 'hsl(var(--warning))',
   completed: 'hsl(var(--info))',
 }
+
+export const STATUS_DOT_STYLES = Object.fromEntries(
+  PROJECT_STATUSES.map((status) => [status, { backgroundColor: STATUS_ACCENT_COLORS[status] }]),
+) as Record<ProjectStatus, { backgroundColor: string }>
 
 export const STATUS_ICONS: Record<ProjectStatus, React.ComponentType<{ className?: string }>> = {
   planning: FolderKanban,
@@ -125,6 +133,79 @@ export function projectMatchesQuery(
     project.clientName?.toLowerCase().includes(query) === true ||
     project.tags.some((tag) => tag.toLowerCase().includes(query))
   )
+}
+
+export function extractPaginatedItems<T>(data: unknown): T[] {
+  if (Array.isArray(data)) {
+    return data as T[]
+  }
+  if (data && typeof data === 'object' && Array.isArray((data as { items?: unknown }).items)) {
+    return (data as { items: T[] }).items
+  }
+  return []
+}
+
+export function loadStoredViewMode(): ViewMode {
+  if (typeof window === 'undefined') {
+    return 'list'
+  }
+  const stored = window.localStorage.getItem(PROJECTS_VIEW_MODE_STORAGE_KEY)
+  if (stored === 'list' || stored === 'grid' || stored === 'board' || stored === 'gantt') {
+    return stored
+  }
+  return 'list'
+}
+
+export function isOpenTaskStatus(status: unknown): boolean {
+  return typeof status === 'string' && OPEN_TASK_STATUSES.has(status)
+}
+
+export function buildTaskCountsByProject(
+  tasks: Array<{ projectId?: string | null; status?: unknown }>,
+): Record<string, { taskCount: number; openTaskCount: number }> {
+  const counts: Record<string, { taskCount: number; openTaskCount: number }> = {}
+
+  for (const task of tasks) {
+    const projectId = typeof task.projectId === 'string' ? task.projectId : null
+    if (!projectId) continue
+
+    const entry = counts[projectId] ?? { taskCount: 0, openTaskCount: 0 }
+    entry.taskCount += 1
+    if (isOpenTaskStatus(task.status)) {
+      entry.openTaskCount += 1
+    }
+    counts[projectId] = entry
+  }
+
+  return counts
+}
+
+export function mergeProjectTaskCounts(
+  project: ProjectRecord,
+  counts: Record<string, { taskCount: number; openTaskCount: number }>,
+): ProjectRecord {
+  const stats = counts[project.id]
+  if (!stats) {
+    return project
+  }
+  return {
+    ...project,
+    taskCount: stats.taskCount,
+    openTaskCount: stats.openTaskCount,
+  }
+}
+
+export function isProjectOverdue(project: Pick<ProjectRecord, 'status' | 'endDate'>): boolean {
+  if (project.status === 'completed') {
+    return false
+  }
+  const end = parseDate(project.endDate)
+  if (!end) {
+    return false
+  }
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return end.getTime() < today.getTime()
 }
 
 export function filterProjectsByQuery<T extends Pick<ProjectRecord, 'name' | 'description' | 'clientName' | 'tags'>>(

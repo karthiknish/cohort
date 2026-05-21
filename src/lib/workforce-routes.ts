@@ -3,22 +3,19 @@ import {
   BarChart3,
   BriefcaseBusiness,
   Bell,
-  CalendarDays,
   CheckSquare,
-  Clock3,
   FileText,
   Home,
   Megaphone,
   MessageSquare,
-  Palmtree,
   Share2,
   Video,
 } from 'lucide-react'
 
-import type { WorkforceRouteId, WorkforceVisibility } from '@/types/workforce'
+import type { WorkforceVisibility } from '@/types/workforce'
 
 export type WorkforceRouteDefinition = {
-  id: WorkforceRouteId
+  id: string
   href: string
   name: string
   title: string
@@ -40,42 +37,12 @@ export type NavigationGroup = {
   }[]
 }
 
-export const WORKFORCE_ROUTES: WorkforceRouteDefinition[] = [
-  {
-    id: 'time',
-    href: '/dashboard/time',
-    name: 'Time',
-    title: 'Time and attendance',
-    description: 'Clock in and out, breaks, sessions, and timesheet review in your workspace.',
-    section: 'operations',
-    icon: Clock3,
-    roles: ['admin', 'team'],
-  },
-  {
-    id: 'scheduling',
-    href: '/dashboard/scheduling',
-    name: 'Scheduling',
-    title: 'Scheduling and shifts',
-    description: 'Shifts, open coverage, swaps, and availability for the team schedule.',
-    section: 'operations',
-    icon: CalendarDays,
-    roles: ['admin', 'team'],
-  },
-  {
-    id: 'time-off',
-    href: '/dashboard/time-off',
-    name: 'Time off',
-    title: 'Time off',
-    description: 'Leave balances, requests, and approvals.',
-    section: 'operations',
-    icon: Palmtree,
-    roles: ['admin', 'team'],
-  },
-]
+/** Standalone time / scheduling / time-off routes removed from the product. */
+export const WORKFORCE_ROUTES: WorkforceRouteDefinition[] = []
 
 export const WORKFORCE_ROUTE_MAP = Object.fromEntries(
   WORKFORCE_ROUTES.map((route) => [route.id, route]),
-) as Record<WorkforceRouteId, WorkforceRouteDefinition>
+) as Record<string, WorkforceRouteDefinition>
 
 export const DASHBOARD_NAVIGATION_GROUPS: NavigationGroup[] = [
   {
@@ -89,17 +56,6 @@ export const DASHBOARD_NAVIGATION_GROUPS: NavigationGroup[] = [
       { name: 'Meetings', href: '/dashboard/meetings', icon: Video, description: 'Schedule and run meetings' },
       { name: 'Notifications', href: '/dashboard/notifications', icon: Bell, description: 'Mentions and system alerts' },
     ],
-  },
-  {
-    id: 'team-ops',
-    label: 'Team operations',
-    items: WORKFORCE_ROUTES.map((route) => ({
-      name: route.name,
-      href: route.href,
-      description: route.description,
-      icon: route.icon,
-      roles: route.roles,
-    })),
   },
   {
     id: 'agency-tools',

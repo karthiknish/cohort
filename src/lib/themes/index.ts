@@ -155,7 +155,7 @@ export const PROVIDER_INFO = {
       'Active Google Ads account',
       'Admin or Standard access to the account',
     ],
-    loginMethod: 'popup' as const,
+    loginMethod: 'redirect' as const,
     estimatedSetupTime: '30 seconds',
     theme: {
       color: 'text-[rgb(var(--provider-google-rgb))]',
@@ -221,7 +221,7 @@ export const PROVIDER_INFO = {
       'LinkedIn Campaign Manager access',
       'Admin or Account Manager role',
     ],
-    loginMethod: 'popup' as const,
+    loginMethod: 'redirect' as const,
     estimatedSetupTime: '30 seconds',
     theme: {
       color: 'text-[rgb(var(--provider-linkedin-rgb))]',

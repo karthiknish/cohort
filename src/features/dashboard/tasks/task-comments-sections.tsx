@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, type ChangeEvent, type RefObject } from 'react'
+import { formatDistanceToNowStrict } from 'date-fns'
 import { LoaderCircle, MoreHorizontal, Paperclip, Pencil, Reply, Send, Trash2, X } from 'lucide-react'
 
 import { MessageAttachments } from '@/features/dashboard/collaboration/components/message-attachments'
@@ -32,8 +33,17 @@ function getInitials(name: string | null | undefined): string {
 function formatCommentTimestamp(comment: TaskComment): string {
   const source = comment.updatedAt ?? comment.createdAt
   if (!source) return ''
-  const label = new Date(source).toLocaleString()
-  return comment.isEdited ? `${label} • edited` : label
+  const date = new Date(source)
+  const relative = formatDistanceToNowStrict(date, { addSuffix: true })
+  return comment.isEdited ? `${relative} · edited` : relative
+}
+
+function sortCommentsChronologically(items: TaskComment[]): TaskComment[] {
+  return [...items].sort((a, b) => {
+    const aMs = new Date(a.createdAt ?? 0).getTime()
+    const bMs = new Date(b.createdAt ?? 0).getTime()
+    return aMs - bMs
+  })
 }
 
 function TaskCommentThreadItem({
@@ -59,10 +69,11 @@ function TaskCommentThreadItem({
   onStartEdit: (comment: TaskComment) => void
   onRequestDelete: (comment: TaskComment) => void
 }) {
-  const replies = repliesByParent.get(comment.id) ?? []
+  const replies = sortCommentsChronologically(repliesByParent.get(comment.id) ?? [])
   const isActiveReply = replyToId === comment.id
   const isActiveEdit = editingCommentId === comment.id
   const isBusy = deletingCommentId === comment.id
+  const isBeingEdited = isActiveEdit
 
   const handleStartReplyClick = useCallback(() => {
     onStartReply(comment)
@@ -80,10 +91,10 @@ function TaskCommentThreadItem({
     <div key={comment.id} className="space-y-3">
       <div
         className={cn(
-          'rounded-3xl border px-4 py-4 shadow-sm transition-colors',
-          depth === 0 ? 'bg-card/95' : 'bg-muted/30',
-          isActiveReply && 'border-accent/30 bg-accent/10 shadow-primary/10',
-          isActiveEdit && 'border-accent/40 bg-accent/20 shadow-accent/10'
+          'rounded-2xl border px-4 py-3.5 shadow-sm transition-colors',
+          depth === 0 ? 'bg-card' : 'bg-muted/25',
+          isActiveReply && 'border-primary/25 bg-primary/5 ring-1 ring-primary/10',
+          isBeingEdited && 'border-primary/30 bg-primary/5 opacity-90',
         )}
       >
         <div className="flex items-start gap-3">
@@ -145,23 +156,36 @@ function TaskCommentThreadItem({
               </div>
             </div>
 
-            <div className="space-y-3">
-              <MessageContent content={comment.content} mentions={comment.mentions} />
-              {comment.attachments && comment.attachments.length > 0 ? <MessageAttachments attachments={comment.attachments} /> : null}
-            </div>
+            {isBeingEdited ? (
+              <p className="text-xs font-medium text-primary">Editing in the composer below…</p>
+            ) : (
+              <div className="space-y-3">
+                <MessageContent content={comment.content} mentions={comment.mentions} />
+                {comment.attachments && comment.attachments.length > 0 ? (
+                  <MessageAttachments attachments={comment.attachments} />
+                ) : null}
+              </div>
+            )}
 
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-muted-foreground hover:bg-muted/60 hover:text-foreground" onClick={handleStartReplyClick}>
-                <Reply className="mr-1.5 h-3.5 w-3.5" />
-                Reply
-              </Button>
-              {isBusy ? (
-                <span className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                  Updating thread…
-                </span>
-              ) : null}
-            </div>
+            {!isBeingEdited ? (
+              <div className="flex flex-wrap items-center gap-1 pt-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 rounded-lg px-2.5 text-muted-foreground hover:text-foreground"
+                  onClick={handleStartReplyClick}
+                >
+                  <Reply className="mr-1.5 h-3.5 w-3.5" />
+                  Reply
+                </Button>
+                {isBusy ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                    Updating…
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -247,18 +271,24 @@ export function TaskCommentsThreadList({
   onStartEdit: (comment: TaskComment) => void
   onRequestDelete: (comment: TaskComment) => void
 }) {
+  const sortedRoots = sortCommentsChronologically(roots)
+
   return (
     <div className="space-y-4">
       {loading ? (
-        <div className="rounded-3xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
-          Loading comments…
+        <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
+          <LoaderCircle className="mx-auto mb-2 h-5 w-5 animate-spin text-primary" />
+          Loading conversation…
         </div>
-      ) : roots.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
-          No comments yet. Use this thread for decisions, context, and quick handoffs.
+      ) : sortedRoots.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 px-4 py-10 text-center">
+          <p className="text-sm font-medium text-foreground">No comments yet</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Add context, decisions, or @mentions for teammates below.
+          </p>
         </div>
       ) : (
-        roots.map((comment) => (
+        sortedRoots.map((comment) => (
           <TaskCommentThreadItem
             key={comment.id}
             comment={comment}
@@ -323,15 +353,35 @@ export function TaskCommentsComposerSection({
   )
 
   return (
-    <div className="rounded-3xl border border-border/60 bg-muted/20 p-4 shadow-inner shadow-black/5">
+    <div
+      className={cn(
+        'rounded-xl border p-4 transition-colors',
+        replyTo || editingCommentId
+          ? 'border-primary/20 bg-primary/[0.04]'
+          : 'border-border/60 bg-muted/15',
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">{composerTitle}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{composerDescription}</p>
+          {replyTo ? (
+            <p className="mt-2 line-clamp-2 rounded-lg border border-border/50 bg-background/80 px-3 py-2 text-xs italic text-muted-foreground">
+              {composerDescription}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-muted-foreground">{composerDescription}</p>
+          )}
         </div>
         {replyTo || editingCommentId ? (
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground" onClick={onReset} aria-label="Reset composer">
-            <X className="h-4 w-4" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 shrink-0 rounded-lg text-muted-foreground"
+            onClick={onReset}
+            aria-label="Cancel reply or edit"
+          >
+            <X className="mr-1 h-3.5 w-3.5" />
+            Cancel
           </Button>
         ) : null}
       </div>
@@ -383,14 +433,20 @@ export function TaskCommentsComposerSection({
           </Button>
           <Button
             type="button"
-            size="icon"
+            size={editingCommentId ? 'sm' : 'icon'}
             onClick={onSubmit}
             disabled={isSubmitting || composerValue.trim().length === 0}
-            title={editingCommentId ? 'Save comment' : 'Send comment'}
-            className="h-10 w-10 rounded-2xl"
-            aria-label={editingCommentId ? 'Save comment' : 'Send comment'}
+            title={editingCommentId ? 'Save changes' : 'Post comment'}
+            className={cn(editingCommentId ? 'h-10 rounded-lg px-4' : 'h-10 w-10 rounded-xl')}
+            aria-label={editingCommentId ? 'Save changes' : 'Post comment'}
           >
-            {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {isSubmitting ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : editingCommentId ? (
+              'Save'
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>

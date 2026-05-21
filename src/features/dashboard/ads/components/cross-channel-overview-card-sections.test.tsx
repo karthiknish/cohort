@@ -37,7 +37,7 @@ const DATE_RANGE = { from: '2024-01-01', to: '2024-01-31' }
 describe('cross channel overview card sections', () => {
   it('renders the header controls and filter chips', () => {
     const markup = renderToStaticMarkup(
-      <CrossChannelOverviewHeader availableProviders={['google_ads']} dateRange={DATE_RANGE} hasMetricData={true} hasProviderFilter={true} onDateRangeChange={vi.fn()} onExport={vi.fn()} onToggleProvider={vi.fn()} selectedProviders={['google_ads']} serverAggregated={true} />,
+      <CrossChannelOverviewHeader availableProviders={['google']} dateRange={DATE_RANGE} hasMetricData={true} hasProviderFilter={true} onDateRangeChange={vi.fn()} onExport={vi.fn()} onToggleProvider={vi.fn()} selectedProviders={['google']} serverAggregated={true} />,
     )
 
     expect(markup).toContain('Cross-channel overview')
@@ -59,12 +59,12 @@ describe('cross channel overview card sections', () => {
 
   it('renders summary cards and the chart', () => {
     const markup = renderToStaticMarkup(
-      <CrossChannelOverviewContent currency="GBP" metrics={[{ id: '1', providerId: 'google_ads', date: '2024-01-01', spend: 120, impressions: 1000, clicks: 45, conversions: 4, revenue: 380 }]} metricsLoading={false} summaryCards={[{ id: 'spend', label: 'Total Spend', value: '£120', helper: 'All selected platforms combined' }]} />,
+      <CrossChannelOverviewContent currency="GBP" metrics={[{ id: '1', providerId: 'google', date: '2024-01-01', spend: 120, impressions: 1000, clicks: 45, conversions: 4, revenue: 380 }]} metricsLoading={false} summaryCards={[{ id: 'spend', label: 'Total Spend', value: '£120', helper: 'Connected platforms in this date range' }]} />,
     )
 
     expect(markup).toContain('Total Spend')
     expect(markup).toContain('£120')
-    expect(markup).toContain('All selected platforms combined')
-    expect(markup).toContain('chart:GBP:1:google_ads')
+    expect(markup).toContain('Connected platforms in this date range')
+    expect(markup).toContain('chart:GBP:1:google')
   })
 })

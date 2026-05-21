@@ -4,14 +4,10 @@ import Link from 'next/link'
 import { memo, useCallback, useMemo, ViewTransition } from 'react'
 import {
   Calendar,
-  ListChecks,
   LoaderCircle,
   MessageSquare,
-  MoreHorizontal,
   Pencil,
-  Plus,
   Tag,
-  Trash2,
 } from 'lucide-react'
 
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
@@ -22,14 +18,24 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { buildProjectTasksRoute } from '@/lib/project-routes'
-import { clickableCardClass, listItemEnterClass } from '@/lib/motion'
+import { listItemEnterClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '../../collaboration/utils'
-import { STATUS_CLASSES, STATUS_ICONS, formatStatusLabel, formatTaskSummary, formatDateRange, formatDate, STATUS_ACCENT_COLORS } from './utils'
+
+import { ProjectActionsMenu } from './project-actions-menu'
+import { ProjectTaskProgress } from './project-task-progress'
+import {
+  STATUS_CLASSES,
+  STATUS_ICONS,
+  formatStatusLabel,
+  formatDate,
+  formatDateRange,
+  isProjectOverdue,
+  STATUS_ACCENT_COLORS,
+} from './utils'
 
 export interface ProjectRowProps {
   project: ProjectRecord
@@ -46,18 +52,11 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
     clientId: project.clientId,
     clientName: project.clientName,
   })
-  const createTaskHref = buildProjectTasksRoute({
-    projectId: project.id,
-    projectName: project.name,
-    clientId: project.clientId,
-    clientName: project.clientName,
-    action: 'create',
-  })
-  const collaborationHref = `/dashboard/collaboration?${new URLSearchParams({ projectId: project.id }).toString()}`
   const StatusIcon = STATUS_ICONS[project.status]
+  const overdue = isProjectOverdue(project)
 
   const handleEdit = useCallback(() => onEdit(project), [onEdit, project])
-  const handleDelete = useCallback(() => onDelete(project), [onDelete, project])
+
   const statusAccentStyles = useMemo(
     () =>
       Object.fromEntries(
@@ -79,37 +78,46 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
 
   return (
     <ViewTransition>
-      <div className={cn(
-        "group relative rounded-xl border border-muted/30 bg-background p-5 shadow-sm sm:p-6",
-        listItemEnterClass,
-        clickableCardClass,
-        "hover:bg-muted/30",
-        isPendingUpdate && "opacity-75 pointer-events-none"
-      )}>
-      {/* Status accent bar */}
-      <div
+      <article
         className={cn(
-          "absolute left-0 top-0 bottom-0 w-1 rounded-l-xl transition-opacity opacity-70 group-hover:opacity-100",
-          project.status === 'active' ? 'bg-success' :
-            project.status === 'planning' ? 'bg-muted-foreground/60' :
-              project.status === 'on_hold' ? 'bg-warning' : 'bg-info'
+          'group relative rounded-xl border border-muted/30 bg-background p-5 shadow-sm sm:p-6',
+          listItemEnterClass,
+          'hover:border-accent/25 hover:bg-muted/20',
+          isPendingUpdate && 'pointer-events-none opacity-75',
         )}
-      />
+      >
+        <div
+          className={cn(
+            'absolute bottom-0 left-0 top-0 w-1 rounded-l-xl',
+            project.status === 'active'
+              ? 'bg-success'
+              : project.status === 'planning'
+                ? 'bg-muted-foreground/50'
+                : project.status === 'on_hold'
+                  ? 'bg-warning'
+                  : 'bg-info',
+          )}
+          aria-hidden
+        />
 
-      <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-        <div className="flex-1 min-w-0 space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <h3 className="text-lg font-bold text-foreground tracking-tight group-hover:text-primary transition-colors">
-              {project.name}
-            </h3>
-            <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-lg font-semibold tracking-tight text-foreground group-hover:text-primary transition-colors">
+                {project.name}
+              </h3>
+              {overdue ? (
+                <Badge variant="outline" className="border-destructive/30 bg-destructive/10 text-destructive text-[10px]">
+                  Overdue
+                </Badge>
+              ) : null}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Badge
                     variant="outline"
                     className={cn(
                       STATUS_CLASSES[project.status],
-                      "h-6 border px-2 py-0 cursor-pointer motion-chromatic hover:opacity-90 gap-1.5"
+                      'h-6 cursor-pointer gap-1.5 border px-2 py-0 hover:opacity-90',
                     )}
                   >
                     {isPendingUpdate ? (
@@ -117,7 +125,7 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
                     ) : (
                       <StatusIcon className="h-3 w-3" />
                     )}
-                    <span className="text-[10px] font-bold tracking-wider uppercase leading-none">
+                    <span className="text-[10px] font-bold uppercase tracking-wider leading-none">
                       {formatStatusLabel(project.status)}
                     </span>
                   </Badge>
@@ -125,10 +133,10 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
                 <DropdownMenuContent align="start" className="w-48">
                   <div className="px-2 py-1.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
-                      Update Status
+                      Update status
                     </span>
                   </div>
-                  {PROJECT_STATUSES.filter((s) => s !== project.status).map((status) => (
+                  {PROJECT_STATUSES.filter((status) => status !== project.status).map((status) => (
                     <DropdownMenuItem key={status} onClick={statusUpdateHandlers[status]} className="gap-2">
                       <div className="h-2 w-2 rounded-full" style={statusAccentStyles[status]} />
                       <span>{formatStatusLabel(status)}</span>
@@ -137,118 +145,82 @@ function ProjectRowComponent({ project, onDelete, onEdit, onUpdateStatus, isPend
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {project.clientName && (
+              {project.clientName ? (
                 project.clientId ? (
                   <Link href={`/dashboard/clients?clientId=${project.clientId}`}>
-                    <Badge variant="secondary" className="h-6 text-[11px] font-medium bg-muted/50 hover:bg-muted cursor-pointer transition-colors border-none px-2 shadow-none">
+                    <Badge variant="secondary" className="h-6 text-[11px] font-medium hover:bg-muted">
                       {project.clientName}
                     </Badge>
                   </Link>
                 ) : (
-                  <Badge variant="outline" className="h-6 text-[11px] border-dashed border-muted/60 font-medium px-2">
+                  <Badge variant="outline" className="h-6 text-[11px] border-dashed font-medium">
                     {project.clientName}
                   </Badge>
                 )
-              )}
+              ) : null}
             </div>
-          </div>
 
-          {project.description && (
-            <p className="text-sm text-muted-foreground/80 line-clamp-1 max-w-2xl leading-relaxed">
-              {project.description}
-            </p>
-          )}
+            {project.description ? (
+              <p className="max-w-2xl text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                {project.description}
+              </p>
+            ) : null}
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] text-muted-foreground/70">
-            <span className="inline-flex items-center gap-2 font-medium">
-              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-success/10 text-success">
-                <ListChecks className="h-3 w-3" />
-              </div>
-              {formatTaskSummary(project.openTaskCount, project.taskCount)}
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-info/10 text-info">
-                <Calendar className="h-3 w-3" />
-              </div>
-              <span className="font-medium">{formatDateRange(project.startDate, project.endDate)}</span>
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-accent/10 text-primary">
-                <MessageSquare className="h-3 w-3" />
-              </div>
-              <span className="tabular-nums">
+            <ProjectTaskProgress project={project} className="max-w-md" />
+
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
+                {formatDateRange(project.startDate, project.endDate)}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <MessageSquare className="h-3.5 w-3.5" />
                 {project.recentActivityAt ? `Active ${formatRelativeTime(project.recentActivityAt)}` : 'No recent chat'}
               </span>
-            </span>
-          </div>
-
-          {project.tags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 pt-0.5">
-              {project.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="inline-flex items-center gap-1 text-[10px] h-4.5 bg-muted/30 text-muted-foreground/60 border-none font-medium">
-                  <Tag className="h-2.5 w-2.5" />
-                  {tag}
-                </Badge>
-              ))}
             </div>
-          )}
-        </div>
 
-        <div className="flex flex-col items-end gap-3.5 shrink-0">
-          <div className="text-right text-[11px] font-medium text-muted-foreground/50 tabular-nums">
-            <p>Created {formatDate(project.createdAt)}</p>
-            <p>Updated {formatDate(project.updatedAt)}</p>
+            {project.tags.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {project.tags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="secondary"
+                    className="inline-flex h-5 items-center gap-1 px-2 text-[10px] font-medium"
+                  >
+                    <Tag className="h-2.5 w-2.5" />
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
           </div>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 px-3 text-xs font-semibold gap-2 border-muted hover:bg-muted/50 motion-chromatic"
-              onClick={handleEdit}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              Edit
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 px-3 text-xs font-semibold gap-2 bg-accent/5 text-primary border-accent/20 hover:bg-accent/10 motion-chromatic">
-                  <span>View Project</span>
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem asChild className="gap-2 cursor-pointer">
-                  <Link href={createTaskHref} prefetch>
-                    <Plus className="h-4 w-4" />
-                    <span>Create Task</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="gap-2 cursor-pointer">
-                  <Link href={tasksHref} prefetch>
-                    <ListChecks className="h-4 w-4" />
-                    <span>Tasks Overview</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="gap-2 cursor-pointer">
-                  <Link href={collaborationHref} prefetch>
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Open Discussion</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive gap-2 cursor-pointer"
-                  onClick={handleDelete}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Delete Project</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+
+          <div className="flex shrink-0 flex-col items-end gap-3">
+            <div className="text-right text-[11px] text-muted-foreground tabular-nums">
+              <p>Created {formatDate(project.createdAt)}</p>
+              <p>Updated {formatDate(project.updatedAt)}</p>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button size="sm" variant="outline" className="h-8 gap-2 text-xs" onClick={handleEdit}>
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </Button>
+              <Button asChild size="sm" variant="default" className="h-8 text-xs">
+                <Link href={tasksHref} prefetch>
+                  Open tasks
+                </Link>
+              </Button>
+              <ProjectActionsMenu
+                project={project}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onUpdateStatus={onUpdateStatus}
+                showEditItem={false}
+              />
+            </div>
           </div>
         </div>
-      </div>
-      </div>
+      </article>
     </ViewTransition>
   )
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
-import { formatCurrency } from '@/lib/utils'
 import { Card, CardContent } from '@/shared/ui/card'
 import { MetricHint } from '@/shared/ui/hover-preview'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -9,8 +8,9 @@ import { Skeleton } from '@/shared/ui/skeleton'
 interface AnalyticsMetricCardsProps {
   avgUsersPerDay: number
   avgSessionsPerDay: number
-  revenuePerSession: number
+  revenuePerSession: number | null
   sessionsPerUser: number
+  formatRevenue: (amount: number | null | undefined) => string
   isLoading: boolean
 }
 
@@ -45,6 +45,7 @@ export function AnalyticsMetricCards({
   avgSessionsPerDay,
   revenuePerSession,
   sessionsPerUser,
+  formatRevenue,
   isLoading,
 }: AnalyticsMetricCardsProps) {
   return (
@@ -65,7 +66,7 @@ export function AnalyticsMetricCards({
         <SecondaryMetric
           label="Revenue / session"
           tooltip="Average revenue earned per session across the selected period."
-          value={formatCurrency(revenuePerSession)}
+          value={revenuePerSession === null ? '—' : formatRevenue(revenuePerSession)}
           isLoading={isLoading}
         />
         <SecondaryMetric

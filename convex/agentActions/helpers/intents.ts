@@ -640,30 +640,12 @@ function resolveDeterministicNavigationIntent(message: string, context?: AgentRe
     return { route: '/for-you', message: 'Opening For You with your personalized highlights.' }
   }
 
-  if (
-    includesAnyPhrase(normalized, ['time off', 'pto', 'vacation request', 'sick leave', 'leave request', 'request leave', 'out of office'])
-    && !includesAnyPhrase(normalized, ['meeting', 'calendar invite', 'schedule a meet', 'google meet'])
-  ) {
-    return { route: '/dashboard/time-off', message: 'Opening Time off for requests and approvals.' }
-  }
-
-  if (
-    includesAnyPhrase(normalized, ['timesheet', 'time tracking', 'log time', 'track time', 'billable hours', 'time entry', 'time entries'])
-    && !includesAnyPhrase(normalized, ['time off', 'pto', 'vacation', 'sick leave'])
-  ) {
-    return { route: '/dashboard/tasks?operations=time', message: 'Opening Tasks with the time tracking view.' }
-  }
-
   if (includesAnyPhrase(normalized, ['proposal analytics', 'proposal metrics', 'proposal win rate', 'proposal funnel'])) {
     return { route: '/dashboard/proposals/analytics', message: 'Opening Proposal analytics.' }
   }
 
   if (includesAnyPhrase(normalized, ['intake forms', 'client forms', 'form submissions', 'workspace forms', 'lead form', 'open forms', 'checklist'])) {
     return { route: '/dashboard/projects', message: 'Opening Projects for delivery and checklists.' }
-  }
-
-  if (includesAnyPhrase(normalized, ['resource scheduling', 'capacity planning', 'scheduling grid', 'team availability', 'capacity calendar'])) {
-    return { route: '/dashboard/scheduling', message: 'Opening Scheduling.' }
   }
 
   if (

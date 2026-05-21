@@ -170,8 +170,28 @@ export function useDashboardData(options: UseDashboardDataOptions): UseDashboard
                 throw new Error('Malformed metrics response')
             }
 
+            const rows = (metricsRealtime as unknown as { metrics: Array<Record<string, unknown>> }).metrics
+            const data = rows.map((row) => ({
+                id: String(row.id ?? ''),
+                providerId: String(row.providerId ?? 'unknown'),
+                date: String(row.date ?? ''),
+                clientId: typeof row.clientId === 'string' ? row.clientId : null,
+                createdAt:
+                    typeof row.createdAtMs === 'number'
+                        ? new Date(row.createdAtMs).toISOString()
+                        : typeof row.createdAt === 'string'
+                          ? row.createdAt
+                          : null,
+                currency: typeof row.currency === 'string' ? row.currency : null,
+                spend: Number(row.spend ?? 0),
+                impressions: Number(row.impressions ?? 0),
+                clicks: Number(row.clicks ?? 0),
+                conversions: Number(row.conversions ?? 0),
+                revenue: row.revenue === null || row.revenue === undefined ? null : Number(row.revenue),
+            })) satisfies MetricRecord[]
+
             return {
-                data: (metricsRealtime as { metrics: MetricRecord[] }).metrics,
+                data,
                 error: null as string | null,
             }
         } catch (error) {

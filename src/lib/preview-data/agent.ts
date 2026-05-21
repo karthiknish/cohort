@@ -437,14 +437,6 @@ export function getPreviewAgentModeResponse(input: string, context: PreviewAgent
         }
     }
 
-    if (normalized.includes('time off') || normalized.includes('pto')) {
-        return {
-            action: 'navigate',
-            route: '/dashboard/time-off',
-            message: 'Opening Time off.',
-        }
-    }
-
     if (normalized.includes('proposal analytics') || normalized.includes('proposal win rate')) {
         return {
             action: 'navigate',

@@ -2,7 +2,7 @@ export type AnalyticsTotals = {
   users: number
   sessions: number
   conversions: number
-  revenue: number
+  revenue: number | null
 }
 
 export type DailyAnalyticsPoint = {
@@ -31,14 +31,33 @@ export type GoogleAnalyticsStory = {
   topRevenueDay: DailyAnalyticsPoint | null
 }
 
-function buildDelta(current: number, previous: number): MetricDelta {
-  if (previous <= 0) {
-    return { current, previous, deltaPercent: null, direction: current > 0 ? 'new' : 'flat' }
+function buildDelta(current: number | null, previous: number | null): MetricDelta {
+  const currentValue = current ?? 0
+  const previousValue = previous ?? 0
+
+  if (current === null || previous === null) {
+    return { current: currentValue, previous: previousValue, deltaPercent: null, direction: 'flat' }
   }
 
-  const deltaPercent = ((current - previous) / previous) * 100
-  if (Math.abs(deltaPercent) < 1) return { current, previous, deltaPercent, direction: 'flat' }
-  return { current, previous, deltaPercent, direction: deltaPercent > 0 ? 'up' : 'down' }
+  if (previousValue <= 0) {
+    return {
+      current: currentValue,
+      previous: previousValue,
+      deltaPercent: null,
+      direction: currentValue > 0 ? 'new' : 'flat',
+    }
+  }
+
+  const deltaPercent = ((currentValue - previousValue) / previousValue) * 100
+  if (Math.abs(deltaPercent) < 1) {
+    return { current: currentValue, previous: previousValue, deltaPercent, direction: 'flat' }
+  }
+  return {
+    current: currentValue,
+    previous: previousValue,
+    deltaPercent,
+    direction: deltaPercent > 0 ? 'up' : 'down',
+  }
 }
 
 function pickTopDay(chartData: DailyAnalyticsPoint[], key: 'sessions' | 'conversions' | 'revenue') {

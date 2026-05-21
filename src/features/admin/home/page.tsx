@@ -1,868 +1,146 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import Link from 'next/link'
 import {
-  ArrowRight,
-  ArrowUpRight,
   Activity,
-  CircleAlert,
-  BarChart3,
-  Bell,
-  CircleCheck,
-  RefreshCw,
-  Settings,
+  AlertCircle,
+  ArrowUpRight,
+  ChevronRight,
+  Lightbulb,
   ShieldCheck,
-  TrendingUp,
-  TrendingDown,
   UserCheck,
   Users,
-  Zap,
-  FolderKanban,
-  CheckSquare,
-  Bot,
-  Lightbulb,
 } from 'lucide-react'
-
 import { useQuery, usePaginatedQuery } from 'convex/react'
 
 import { api } from '/_generated/api'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
-import { Badge } from '@/shared/ui/badge'
-import { Skeleton } from '@/shared/ui/skeleton'
 import { getPreviewAdminDashboardData } from '@/lib/preview-data'
 import { cn } from '@/lib/utils'
 import { AdminPageShell } from '../components/admin-page-shell'
 
-interface DashboardStats {
-  totalUsers: number
-  activeUsers: number
-  totalClients: number
-  activeClients: number
-  schedulerHealth: 'healthy' | 'warning' | 'error'
-  lastSyncTime: string | null
-  recentErrors: number
-}
-
-interface UsageStats {
-  totalUsers: number
-  activeUsersToday: number
-  activeUsersWeek: number
-  activeUsersMonth: number
-  newUsersToday: number
-  newUsersWeek: number
-  totalProjects: number
-  projectsThisWeek: number
-  totalTasks: number
-  tasksCompletedThisWeek: number
-  totalClients: number
-  activeClientsWeek: number
-  agentConversations: number
-  agentActionsThisWeek: number
-  dailyActiveUsers: Array<{ date: string; count: number }>
-  featureUsage: Array<{ feature: string; count: number; trend: number }>
-}
-
-interface RecentActivity {
-  id: string
-  type: 'user_joined' | 'client_created' | 'lead_received' | 'sync_completed' | 'error' | 'new_user_signup'
-  title: string
-  description: string
-  timestamp: string
-}
-
-type AdminSection = {
-  title: string
-  description: string
-  href: string
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
-  cta: string
-  badge?: string
-  badgeVariant?: 'default' | 'secondary' | 'destructive' | 'outline'
-}
+const adminLinks = [
+  { title: 'Team', href: '/admin/team', icon: Users, description: 'Members and roles' },
+  { title: 'Users', href: '/admin/users', icon: UserCheck, description: 'Approvals and access' },
+  { title: 'Clients', href: '/admin/clients', icon: ShieldCheck, description: 'Workspaces' },
+  { title: 'Features', href: '/admin/features', icon: Lightbulb, description: 'Roadmap board' },
+  { title: 'Health', href: '/admin/health', icon: Activity, description: 'System status' },
+  { title: 'Issues', href: '/admin/issues', icon: AlertCircle, description: 'User reports' },
+] as const
 
 export default function AdminPage() {
   const { user } = useAuth()
   const { isPreviewMode } = usePreview()
-  const previewDashboardData = useMemo(() => getPreviewAdminDashboardData(), [])
+  const previewStats = useMemo(() => getPreviewAdminDashboardData().stats, [])
   const workspaceContext = useQuery(api.users.getMyWorkspaceContext, !isPreviewMode && user ? {} : 'skip')
   const workspaceId = workspaceContext?.workspaceId ?? null
   const includeAllWorkspaces = workspaceContext?.role === 'admin'
   const { results: usersPage } = usePaginatedQuery(
     api.adminUsers.listUsers,
-    !isPreviewMode && workspaceId
-      ? {
-          workspaceId,
-          includeAllWorkspaces,
-        }
-      : 'skip',
-    { initialNumItems: 50 }
+    !isPreviewMode && workspaceId ? { workspaceId, includeAllWorkspaces } : 'skip',
+    { initialNumItems: 50 },
   )
-
   const clientsRealtime = useQuery(
     api.clients.list,
     !isPreviewMode && workspaceId
-      ? {
-          workspaceId,
-          limit: 100,
-          includeAllWorkspaces,
-        }
-      : 'skip'
+      ? { workspaceId, limit: 100, includeAllWorkspaces }
+      : 'skip',
   ) as { items?: Array<unknown> } | undefined
 
-  const schedulerEventsRealtime = useQuery(api.schedulerEvents.list, isPreviewMode ? 'skip' : {
-    limit: 10,
-  }) as
-    | { events?: Array<{ severity?: string; source?: string; createdAt?: string }> }
-    | Array<{ severity?: string; source?: string; createdAt?: string }>
-    | undefined
-
-  const adminNotificationsRealtime = useQuery(api.adminNotifications.list, isPreviewMode ? 'skip' : {
-    limit: 10,
-  }) as
-    | { notifications?: Array<{ id?: string; type?: string; title?: string; message?: string; createdAt?: string }> }
-    | Array<{ id?: string; type?: string; title?: string; message?: string; createdAt?: string }>
-    | undefined
-
-  const usageStatsRealtime = useQuery(api.adminUsage.getStats, isPreviewMode ? 'skip' : {}) as UsageStats | undefined
-
-  const statsLoading = isPreviewMode
-    ? false
-    : (
-    usersPage === undefined ||
-    clientsRealtime === undefined ||
-    schedulerEventsRealtime === undefined ||
-    adminNotificationsRealtime === undefined
-    )
-
-  const usageLoading = isPreviewMode ? false : usageStatsRealtime === undefined
-
-  const derived = useCallback(() => {
-    const usersPayload = usersPage
-    const clientsPayload = clientsRealtime
-    const schedulerPayload = schedulerEventsRealtime
-    const notificationsPayload = adminNotificationsRealtime
-
-    let totalUsers = 0
-    let activeUsers = 0
-    if (usersPayload) {
-      const usersArray = Array.isArray(usersPayload) ? usersPayload : []
-      totalUsers = usersArray.length
-      activeUsers = usersArray.filter((u) => u.status === 'active').length
-    }
-
-    let totalClients = 0
-    let activeClients = 0
-    if (clientsPayload && typeof clientsPayload === 'object') {
-      const clientsArray = Array.isArray(clientsPayload.items) ? clientsPayload.items : []
-      totalClients = clientsArray.length
-      activeClients = totalClients
-    }
-
-    const recentActivities: RecentActivity[] = []
-
-    let schedulerHealth: 'healthy' | 'warning' | 'error' = 'healthy'
-    let lastSyncTime: string | null = null
-    let recentErrors = 0
-    {
-      const events = Array.isArray(schedulerPayload)
-        ? schedulerPayload
-        : Array.isArray(schedulerPayload?.events)
-          ? schedulerPayload.events
-          : []
-      recentErrors = events.filter((e) => e.severity === 'error').length
-      if (recentErrors > 5) schedulerHealth = 'error'
-      else if (recentErrors > 0) schedulerHealth = 'warning'
-
-      const lastSync = events.find((e) => e.source === 'cron' || e.source === 'worker')
-      if (typeof lastSync?.createdAt === 'string') {
-        lastSyncTime = lastSync.createdAt
-      }
-    }
-
-    {
-      const notifications = Array.isArray(notificationsPayload)
-        ? notificationsPayload
-        : Array.isArray(notificationsPayload?.notifications)
-          ? notificationsPayload.notifications
-          : []
-      notifications.forEach((n) => {
-        if (n.type === 'new_user_signup') {
-          recentActivities.push({
-            id: `notification-${n.id ?? 'unknown'}`,
-            type: 'new_user_signup',
-            title: n.title || 'New User Signup',
-            description: n.message ?? '',
-            timestamp: n.createdAt ?? new Date().toISOString(),
-          })
-        }
-      })
-    }
-
-    recentActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-
+  const stats = useMemo(() => {
+    if (isPreviewMode) return previewStats
+    const users = Array.isArray(usersPage) ? usersPage : []
+    const clients = Array.isArray(clientsRealtime?.items) ? clientsRealtime.items : []
     return {
-      stats: {
-        totalUsers,
-        activeUsers,
-        totalClients,
-        activeClients,
-        schedulerHealth,
-        lastSyncTime,
-        recentErrors,
-      } satisfies DashboardStats,
-      activities: recentActivities.slice(0, 5),
+      totalUsers: users.length,
+      activeUsers: users.filter((u) => u.status === 'active').length,
+      totalClients: clients.length,
     }
-  }, [usersPage, clientsRealtime, schedulerEventsRealtime, adminNotificationsRealtime])
+  }, [isPreviewMode, previewStats, usersPage, clientsRealtime])
 
-  const derivedResult = isPreviewMode
-    ? {
-        stats: previewDashboardData.stats,
-        activities: previewDashboardData.activities,
-      }
-    : derived()
-  const stats = derivedResult.stats
-  const activities = derivedResult.activities
-  const usageStats = isPreviewMode ? previewDashboardData.usageStats : usageStatsRealtime
-
-  const skeletonData = useMemo(() => [
-    { id: 'daily-skeleton-mon', height: 65 },
-    { id: 'daily-skeleton-tue', height: 45 },
-    { id: 'daily-skeleton-wed', height: 80 },
-    { id: 'daily-skeleton-thu', height: 35 },
-    { id: 'daily-skeleton-fri', height: 70 },
-    { id: 'daily-skeleton-sat', height: 55 },
-    { id: 'daily-skeleton-sun', height: 90 },
-  ], [])
-
-  const dailyActiveUsersData = useMemo(() => {
-    if (!usageStats?.dailyActiveUsers) return []
-    const maxCount = Math.max(...usageStats.dailyActiveUsers.map(d => d.count), 1)
-    return usageStats.dailyActiveUsers.map((day) => ({
-      ...day,
-      height: maxCount > 0 ? (day.count / maxCount) * 100 : 0,
-      maxCount,
-    }))
-  }, [usageStats])
-
-  const featureUsageData = useMemo(() => {
-    if (!usageStats?.featureUsage) return []
-    const maxCount = Math.max(...usageStats.featureUsage.map(f => f.count), 1)
-    return usageStats.featureUsage.slice(0, 5).map((feature) => ({
-      ...feature,
-      percentage: maxCount > 0 ? (feature.count / maxCount) * 100 : 0,
-      maxCount,
-    }))
-  }, [usageStats])
-
-  const adminSections: AdminSection[] = [
-    {
-      title: 'User Approvals',
-      description: 'Review pending users, approve access, and assign safe baseline roles.',
-      href: '/admin/users',
-      icon: UserCheck,
-      cta: 'Review approvals',
-      badge: stats ? `${Math.max(stats.totalUsers - stats.activeUsers, 0)} pending` : undefined,
-      badgeVariant: 'secondary',
-    },
-    {
-      title: 'Team Management',
-      description: 'Invite members, manage roles, and control access permissions.',
-      href: '/admin/team',
-      icon: Users,
-      cta: 'Manage team',
-      badge: stats ? `${stats.totalUsers} members` : undefined,
-    },
-    {
-      title: 'Client Workspaces',
-      description: 'Create and configure client environments with team assignments.',
-      href: '/admin/clients',
-      icon: ShieldCheck,
-      cta: 'Manage clients',
-      badge: stats ? `${stats.activeClients} active` : undefined,
-    },
-    {
-      title: 'System Health',
-      description: 'Monitor real-time connectivity, latency, and service status.',
-      href: '/admin/health',
-      icon: Activity,
-      cta: 'View status',
-      badge: stats?.schedulerHealth === 'error' ? 'Issues' : stats?.schedulerHealth === 'warning' ? 'Warning' : 'Healthy',
-      badgeVariant: stats?.schedulerHealth === 'error' ? 'destructive' : stats?.schedulerHealth === 'warning' ? 'secondary' : 'outline',
-    },
-    {
-      title: 'Feature roadmap',
-      description: 'Prioritize platform work on the internal Kanban board.',
-      href: '/admin/features',
-      icon: Lightbulb,
-      cta: 'Open board',
-    },
-    {
-      title: 'Issue inbox',
-      description: 'Triage user-reported problems and track resolution.',
-      href: '/admin/issues',
-      icon: CircleAlert,
-      cta: 'Review reports',
-    },
-  ]
+  const statsLoading =
+    !isPreviewMode && (usersPage === undefined || clientsRealtime === undefined)
 
   if (!user && !isPreviewMode) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-background px-4 py-16">
-        <Card className="max-w-md border-border">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <ShieldCheck className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <CardTitle className="text-xl">Admin Access Required</CardTitle>
-            <CardDescription>Sign in with an admin account to access the control panel.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            <Button asChild>
-              <Link href="/auth">Sign in</Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="space-y-4 text-center">
+          <p className="text-sm text-muted-foreground">Sign in with an admin account to continue.</p>
+          <Button asChild size="sm">
+            <Link href="/auth">Sign in</Link>
+          </Button>
+        </div>
       </div>
     )
   }
 
+  const firstName = (user?.name ?? 'Admin').split(' ')[0]
+
   return (
     <AdminPageShell
-      title="Admin dashboard"
-      description={
-        <>
-          Welcome back, {(user?.name ?? 'Avery Stone').split(' ')[0] ?? 'Admin'}. Here is a snapshot of your workspace and platform activity.
-          {isPreviewMode
-            ? ' Preview mode is showing sample admin telemetry and local-only interactions.'
-            : ''}
-        </>
-      }
+      title="Admin"
+      description={`${firstName}, pick a section below.`}
       isPreviewMode={isPreviewMode}
       actions={
-        <>
-          <Button variant="outline" size="sm" disabled title="Convex is realtime; refresh not needed">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/dashboard">
-              <ArrowUpRight className="mr-2 h-4 w-4" />
-              Workspace
-            </Link>
-          </Button>
-        </>
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/dashboard">
+            Workspace
+            <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </Button>
       }
+      className="mx-auto max-w-lg space-y-6"
+      headerClassName="border-0 pb-0"
     >
-        {/* Stats Cards */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">{stats?.totalUsers ?? 0}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats?.activeUsers ?? 0} active
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active Clients</CardTitle>
-              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">{stats?.activeClients ?? 0}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats?.totalClients ?? 0} total workspaces
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">System Status</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {statsLoading ? (
-                <Skeleton className="h-8 w-20" />
-              ) : (
-                <>
-                  <div className="flex items-center gap-2">
-                    {stats?.schedulerHealth === 'healthy' && (
-                      <>
-                        <CircleCheck className="h-5 w-5 text-success" />
-                        <span className="text-2xl font-bold text-success">Healthy</span>
-                      </>
-                    )}
-                    {stats?.schedulerHealth === 'warning' && (
-                      <>
-                        <CircleAlert className="h-5 w-5 text-warning" />
-                        <span className="text-2xl font-bold text-warning">Warning</span>
-                      </>
-                    )}
-                    {stats?.schedulerHealth === 'error' && (
-                      <>
-                        <CircleAlert className="h-5 w-5 text-destructive" />
-                        <span className="text-2xl font-bold text-destructive">Issues</span>
-                      </>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {stats?.recentErrors ?? 0} errors in last hour
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+      <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+        <div>
+          <dt className="sr-only">Users</dt>
+          <dd>
+            <span className="font-medium text-foreground">
+              {statsLoading ? '—' : stats.totalUsers}
+            </span>{' '}
+            users
+            {!statsLoading && stats.totalUsers > stats.activeUsers ? (
+              <span className="text-muted-foreground/80">
+                {' '}
+                · {stats.totalUsers - stats.activeUsers} pending
+              </span>
+            ) : null}
+          </dd>
         </div>
-
-        {/* Usage Analytics Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Usage Analytics
-            </h2>
-            <Badge variant="outline" className="text-xs">Last 7 days</Badge>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Active Users Card */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Active Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {usageLoading ? (
-                  <Skeleton className="h-8 w-20" />
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold">{usageStats?.activeUsersWeek ?? 0}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {usageStats?.activeUsersToday ?? 0} today · {usageStats?.newUsersWeek ?? 0} new
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Projects Card */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Projects</CardTitle>
-                <FolderKanban className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {usageLoading ? (
-                  <Skeleton className="h-8 w-20" />
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold">{usageStats?.totalProjects ?? 0}</div>
-                    <p className="text-xs text-muted-foreground">
-                      +{usageStats?.projectsThisWeek ?? 0} this week
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Tasks Card */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Tasks Completed</CardTitle>
-                <CheckSquare className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {usageLoading ? (
-                  <Skeleton className="h-8 w-20" />
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold">{usageStats?.tasksCompletedThisWeek ?? 0}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {usageStats?.totalTasks ?? 0} total tasks
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Agent Mode Card */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Agent Mode</CardTitle>
-                <Bot className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {usageLoading ? (
-                  <Skeleton className="h-8 w-20" />
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold">{usageStats?.agentConversations ?? 0}</div>
-                    <p className="text-xs text-muted-foreground">
-                      +{usageStats?.agentActionsThisWeek ?? 0} this week
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Daily Active Users Trend + Feature Usage */}
-          <div className="grid gap-4 mt-4 lg:grid-cols-2">
-            {/* Daily Trend Chart */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  Daily Active Users
-                </CardTitle>
-                <CardDescription>User logins over the past 7 days</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {usageLoading ? (
-                  <div className="flex items-end gap-1 h-32">
-                    {skeletonData.map((day) => (
-                      <DailyActiveUsersSkeletonBar key={day.id} height={day.height} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {/* Simple bar chart */}
-                    <div className="flex items-end gap-1 h-24">
-                      {dailyActiveUsersData.map((day, i) => (
-                        <DailyActiveUsersBar
-                          key={day.date}
-                          day={day}
-                          isLatest={i === 6}
-                        />
-                      ))}
-                    </div>
-                    {/* Day labels */}
-                    <div className="flex gap-1">
-                      {dailyActiveUsersData.map((day) => {
-                        const date = new Date(day.date)
-                        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
-                        return (
-                          <div key={day.date} className="flex-1 text-center text-xs text-muted-foreground" suppressHydrationWarning>
-                            {dayName}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Feature Usage Breakdown */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Feature Usage This Week
-                </CardTitle>
-                <CardDescription>Activity by module</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {usageLoading ? (
-                  <div className="space-y-3">
-                    {[
-                      'feature-skeleton-1',
-                      'feature-skeleton-2',
-                      'feature-skeleton-3',
-                      'feature-skeleton-4',
-                      'feature-skeleton-5',
-                    ].map((slotKey) => (
-                      <div key={slotKey} className="flex items-center gap-3">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-2 flex-1" />
-                        <Skeleton className="h-4 w-10" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {featureUsageData.map((feature) => (
-                      <FeatureUsageRow key={feature.feature} feature={feature} />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+        <div>
+          <dt className="sr-only">Clients</dt>
+          <dd>
+            <span className="font-medium text-foreground">
+              {statsLoading ? '—' : stats.totalClients}
+            </span>{' '}
+            clients
+          </dd>
         </div>
+      </dl>
 
-        {/* Main Content Grid */}
-
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Admin Sections - 2 columns */}
-          <div className="lg:col-span-2 space-y-4">
-            <h2 className="text-lg font-semibold">Quick access</h2>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {adminSections.map(({ title, description, href, icon: Icon, cta, badge, badgeVariant }) => (
-                <Card
-                  key={href}
-                  className="group relative overflow-hidden border-border bg-card motion-chromatic hover:border-accent/20 hover:shadow-md"
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      {badge && (
-                        <Badge variant={badgeVariant ?? 'secondary'} className="text-xs">
-                          {badge}
-                        </Badge>
-                      )}
-                    </div>
-                    <CardTitle className="mt-3 text-lg">{title}</CardTitle>
-                    <CardDescription className="text-sm">{description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <Button asChild variant="ghost" className="group/btn -ml-2 px-2">
-                      <Link href={href} className="inline-flex items-center gap-2">
-                        {cta}
-                        <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          {/* Sidebar - Recent Activity & Quick Actions */}
-          <div className="space-y-6">
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Zap className="h-4 w-4" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-2">
-                <Button asChild variant="outline" size="sm" className="justify-start">
-                  <Link href="/admin/users">
-                    <UserCheck className="mr-2 h-4 w-4" />
-                    Review user approvals
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="sm" className="justify-start">
-                  <Link href="/admin/team">
-                    <Users className="mr-2 h-4 w-4" />
-                    Invite team member
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="sm" className="justify-start">
-                  <Link href="/admin/clients">
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    Create client workspace
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="sm" className="justify-start">
-                  <Link href="/admin/health">
-                    <Activity className="mr-2 h-4 w-4" />
-                    System health check
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="sm" className="justify-start">
-                  <Link href="/admin/features">
-                    <Lightbulb className="mr-2 h-4 w-4" />
-                    Feature roadmap
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="sm" className="justify-start">
-                  <Link href="/admin/issues">
-                    <CircleAlert className="mr-2 h-4 w-4" />
-                    Reported issues
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="sm" className="justify-start">
-                  <Link href="/settings">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Agency settings
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Bell className="h-4 w-4" />
-                  Recent Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-              {statsLoading ? (
-                  <div className="space-y-3">
-                    {['activity-skeleton-1', 'activity-skeleton-2', 'activity-skeleton-3'].map((slotKey) => (
-                      <div key={slotKey} className="flex gap-3">
-                        <Skeleton className="h-8 w-8 rounded-full" />
-                        <div className="flex-1 space-y-1">
-                          <Skeleton className="h-4 w-3/4" />
-                          <Skeleton className="h-3 w-1/2" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : activities.length > 0 ? (
-                  <div className="space-y-4">
-                    {activities.map((activity: RecentActivity) => (
-                      <div key={activity.id} className="flex gap-3">
-                        <div className={cn(
-                          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                          activity.type === 'user_joined' && 'bg-success/10 text-success',
-                          activity.type === 'client_created' && 'bg-info/10 text-info',
-                          activity.type === 'new_user_signup' && 'bg-warning/10 text-warning',
-                          activity.type === 'error' && 'bg-destructive/10 text-destructive',
-                        )}>
-                          {activity.type === 'user_joined' && <Users className="h-4 w-4" />}
-                          {activity.type === 'client_created' && <ShieldCheck className="h-4 w-4" />}
-                          {activity.type === 'new_user_signup' && <Bell className="h-4 w-4" />}
-                          {activity.type === 'error' && <CircleAlert className="h-4 w-4" />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-foreground">{activity.title}</p>
-                          <p className="truncate text-xs text-muted-foreground">{activity.description}</p>
-                          {activity.timestamp && (
-                            <p className="mt-0.5 text-xs text-muted-foreground/70">
-                              {formatRelativeTime(activity.timestamp)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-sm text-muted-foreground py-4">
-                    No recent activity
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-          </div>
-        </div>
+      <nav aria-label="Admin sections" className="divide-y divide-border rounded-lg border border-border">
+        {adminLinks.map(({ title, href, icon: Icon, description }) => (
+          <Link
+            key={href}
+            href={href}
+            className={cn(
+              'flex items-center gap-4 px-4 py-3.5 transition-colors',
+              'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium text-foreground">{title}</span>
+              <span className="block text-xs text-muted-foreground">{description}</span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+          </Link>
+        ))}
+      </nav>
     </AdminPageShell>
   )
-}
-
-function DailyActiveUsersSkeletonBar({ height }: { height: number }) {
-  const barStyle = useMemo(() => ({ height: `${height}%` }), [height])
-
-  return <Skeleton className="flex-1 h-full" style={barStyle} />
-}
-
-function DailyActiveUsersBar({
-  day,
-  isLatest,
-}: {
-  day: { date: string; height: number; count: number }
-  isLatest: boolean
-}) {
-  const barStyle = useMemo(
-    () => ({ height: `${Math.max(day.height, 4)}%` }),
-    [day.height]
-  )
-
-  return (
-    <div className="flex flex-1 flex-col items-center gap-1">
-      <div
-        className={cn(
-          'w-full rounded-t-sm motion-chromatic',
-          isLatest ? 'bg-primary' : 'bg-accent/40'
-        )}
-        style={barStyle}
-        title={`${day.count} users on ${day.date}`}
-      />
-    </div>
-  )
-}
-
-function FeatureUsageRow({
-  feature,
-}: {
-  feature: {
-    feature: string
-    count: number
-    trend: number
-    percentage: number
-  }
-}) {
-  const icon =
-    feature.feature === 'Projects'
-      ? FolderKanban
-      : feature.feature === 'Tasks'
-        ? CheckSquare
-        : feature.feature === 'Agent Mode'
-          ? Bot
-          : Activity
-  const Icon = icon
-  const barStyle = useMemo(() => ({ width: `${feature.percentage}%` }), [feature.percentage])
-
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex w-24 items-center gap-2">
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="truncate text-sm">{feature.feature}</span>
-      </div>
-      <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-primary motion-chromatic"
-          style={barStyle}
-        />
-      </div>
-      <div className="flex w-16 items-center justify-end gap-1">
-        <span className="text-sm font-medium">{feature.count}</span>
-        {feature.trend > 0 && <TrendingUp className="h-3 w-3 text-success" />}
-        {feature.trend < 0 && <TrendingDown className="h-3 w-3 text-destructive" />}
-      </div>
-    </div>
-  )
-}
-
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString()
 }

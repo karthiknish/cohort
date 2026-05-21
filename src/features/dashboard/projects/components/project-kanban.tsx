@@ -3,13 +3,9 @@
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
 import { Badge } from '@/shared/ui/badge'
-import { formatStatusLabel, STATUS_ACCENT_COLORS } from './utils'
+import { formatStatusLabel, STATUS_DOT_STYLES } from './utils'
 import { ProjectCard } from './project-card'
 import { ScrollArea } from '@/shared/ui/scroll-area'
-
-const STATUS_DOT_STYLES = Object.fromEntries(
-  PROJECT_STATUSES.map((status) => [status, { backgroundColor: STATUS_ACCENT_COLORS[status] }])
-) as Record<ProjectStatus, { backgroundColor: string }>
 
 export interface ProjectKanbanProps {
   projects: ProjectRecord[]
@@ -49,8 +45,9 @@ export function ProjectKanban({ projects, pendingStatusUpdates, onUpdateStatus, 
 
                 <div className="flex-1 space-y-4 p-4">
                   {items.length === 0 ? (
-                    <div className="flex h-32 flex-col items-center justify-center rounded-xl border border-dashed border-muted/40 bg-background/40 p-4 text-center">
-                      <p className="text-xs font-medium text-muted-foreground/60 italic">No projects here</p>
+                    <div className="flex h-28 flex-col items-center justify-center rounded-xl border border-dashed border-muted/40 bg-background/50 p-4 text-center">
+                      <p className="text-xs font-medium text-muted-foreground">No projects</p>
+                      <p className="mt-1 text-[10px] text-muted-foreground/60">Move a project here via the menu</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -62,6 +59,7 @@ export function ProjectKanban({ projects, pendingStatusUpdates, onUpdateStatus, 
                             onEdit={onEdit}
                             onUpdateStatus={onUpdateStatus}
                             isPendingUpdate={pendingStatusUpdates.has(project.id)}
+                            compact
                           />
                         </div>
                       ))}

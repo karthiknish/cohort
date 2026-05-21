@@ -5,6 +5,11 @@ import { useConvexAuth, useQuery } from 'convex/react'
 import { Info, LoaderCircle, Users } from 'lucide-react'
 import { useMemo } from 'react'
 
+import {
+  aggregateMetricFinancials,
+  formatAggregatedMoney,
+  financialTotalsHelper,
+} from '@/domain/ads/aggregate-financials'
 import { buildChartData } from '@/features/dashboard/home/lib/dashboard-calculations'
 import { PerformanceChart } from '@/features/dashboard/home/components/performance-chart'
 import { DashboardDailySnapshotCard } from '@/features/dashboard/home/components/dashboard-daily-snapshot-card'
@@ -88,7 +93,7 @@ export function DashboardOverviewPage() {
     isRefreshing,
   } = useDashboardData({ selectedClientId })
 
-  const { orderedStats } = useDashboardStats({
+  const { orderedStats, displayCurrency } = useDashboardStats({
     metrics,
     taskSummary,
     userRole: user?.role ?? null,
@@ -150,7 +155,20 @@ export function DashboardOverviewPage() {
     [metrics],
   )
 
-  const adsSummary = useMemo(() => buildAdsSummary(adMetrics), [adMetrics])
+  const adsFinancial = useMemo(() => aggregateMetricFinancials(adMetrics), [adMetrics])
+
+  const adsSummary = useMemo(() => {
+    const providerIds = new Set(adMetrics.map((metric) => metric.providerId))
+    return {
+      spend: adsFinancial.financialTotals.spend ?? 0,
+      revenue: adsFinancial.financialTotals.revenue ?? 0,
+      clicks: adsFinancial.deliveryTotals.clicks,
+      impressions: adsFinancial.deliveryTotals.impressions,
+      conversions: adsFinancial.deliveryTotals.conversions,
+      providers: providerIds,
+      financialTotals: adsFinancial.financialTotals,
+    }
+  }, [adMetrics, adsFinancial])
 
   const projects = useMemo(() => {
     if (isPreviewMode) {
@@ -190,15 +208,20 @@ export function DashboardOverviewPage() {
       : 'Google Analytics connected'
   }, [analyticsStatus, isPreviewMode])
 
-  const adsMetricsList = useMemo<SnapshotMetric[]>(
-    () => [
+  const adsMetricsList = useMemo<SnapshotMetric[]>(() => {
+    const formatMoney = (amount: number | null) =>
+      formatAggregatedMoney(amount, adsSummary.financialTotals, formatCurrency)
+
+    return [
       {
         label: 'Ad spend',
-        value: formatCurrency(adsSummary.spend),
-        helper:
+        value: formatMoney(adsSummary.financialTotals.spend),
+        helper: financialTotalsHelper(
+          adsSummary.financialTotals,
           adsSummary.providers.size > 0
             ? `${adsSummary.providers.size} active channels`
             : 'No ad spend in this period',
+        ),
       },
       {
         label: 'Clicks',
@@ -209,13 +232,12 @@ export function DashboardOverviewPage() {
         label: 'Conversions',
         value: formatCompactNumber(adsSummary.conversions),
         helper:
-          adsSummary.revenue > 0
-            ? `${formatCurrency(adsSummary.revenue)} revenue`
+          adsSummary.financialTotals.revenue !== null && adsSummary.financialTotals.revenue > 0
+            ? `${formatMoney(adsSummary.financialTotals.revenue)} revenue`
             : 'No attributed revenue',
       },
-    ],
-    [adsSummary],
-  )
+    ]
+  }, [adsSummary])
 
   const analyticsMetricsList = useMemo<SnapshotMetric[]>(
     () => [
@@ -244,7 +266,10 @@ export function DashboardOverviewPage() {
   const analyticsLoading = metricsLoading && analyticsMetrics.length === 0
   const adsLoading = metricsLoading && adMetrics.length === 0
   const hasChartData = chartMetrics.length > 0
-  const hasAdsData = adMetrics.length > 0 || adsSummary.spend > 0
+  const hasAdsData =
+    adMetrics.length > 0 ||
+    (adsSummary.financialTotals.spend ?? 0) > 0 ||
+    adsSummary.impressions > 0
   const hasAnalyticsData = analyticsMetrics.length > 0 || analyticsTotals.sessions > 0
 
   const isInitialLoading =
@@ -356,6 +381,7 @@ export function DashboardOverviewPage() {
               <PerformanceChart
                 metrics={chartMetrics}
                 loading={metricsLoading}
+                currency={displayCurrency ?? undefined}
                 dataSource="ads"
                 showDetailLink={false}
                 hideHeader
@@ -398,28 +424,6 @@ export function DashboardOverviewPage() {
         ) : null}
       </div>
     </BoneyardSkeletonBoundary>
-  )
-}
-
-function buildAdsSummary(metrics: MetricRecord[]) {
-  return metrics.reduce(
-    (accumulator, metric) => {
-      accumulator.spend += metric.spend || 0
-      accumulator.impressions += metric.impressions || 0
-      accumulator.clicks += metric.clicks || 0
-      accumulator.conversions += metric.conversions || 0
-      accumulator.revenue += metric.revenue || 0
-      accumulator.providers.add(metric.providerId)
-      return accumulator
-    },
-    {
-      spend: 0,
-      impressions: 0,
-      clicks: 0,
-      conversions: 0,
-      revenue: 0,
-      providers: new Set<string>(),
-    },
   )
 }
 

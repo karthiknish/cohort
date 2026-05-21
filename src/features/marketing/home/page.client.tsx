@@ -103,10 +103,15 @@ function HomePageContent() {
 
       <section className="relative overflow-hidden border-t border-border/40 bg-gradient-to-b from-background via-primary/[0.03] to-background px-6 py-14 sm:py-16">
         <SectionGlow variant="features" />
-        <div className="mx-auto max-w-6xl space-y-4">
-          <p className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Interactive preview · sample data
-          </p>
+        <div className="mx-auto max-w-6xl space-y-5">
+          <div className="text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Interactive preview
+            </p>
+            <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
+              Explore a live sample of the workspace — switch sections, inspect metrics, and hover to pause the tour.
+            </p>
+          </div>
           <MinifiedSoftwarePreview />
         </div>
       </section>

@@ -18,6 +18,14 @@ vi.mock('framer-motion', () => ({
   },
 }))
 
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/dashboard',
+}))
+
+vi.mock('@/shared/contexts/client-context', () => ({
+  useClientContext: () => ({ selectedClient: null, selectedClientId: null }),
+}))
+
 vi.mock('@/shared/hooks/use-mention-data', () => ({
   useMentionData: () => ({
     clients: [],
@@ -46,6 +54,8 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof AgentModePan
   return renderToStaticMarkup(
     <AgentModePanel
       isOpen
+      activeContext={{}}
+      maxMessageLength={4000}
       onClose={noop}
       messages={[]}
       isProcessing={false}
@@ -72,7 +82,7 @@ describe('AgentModePanel', () => {
     const markup = renderPanel()
 
     expect(markup).toContain('Where would you like to go?')
-    expect(markup).toContain('Schedule a meeting')
+    expect(markup).toContain('Summarize my open tasks')
     expect(markup).toContain('Agent Mode')
   })
 

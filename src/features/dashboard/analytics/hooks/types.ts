@@ -2,6 +2,8 @@ export interface MetricRecord {
   id: string
   providerId: string
   date: string
+  /** Native account currency when resolved from metric row or integration. */
+  currency?: string | null
   spend: number
   impressions: number
   clicks: number

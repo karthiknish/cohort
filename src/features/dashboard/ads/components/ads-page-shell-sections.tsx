@@ -18,6 +18,7 @@ type AdsPageLayoutProps = {
   renderAdvancedAnalytics?: () => ReactNode
   showSetup: boolean
   connectedAccountCount: number
+  hasPendingSetup?: boolean
   hasMetricData?: boolean
 }
 
@@ -27,9 +28,11 @@ export function AdsPageLayout({
   renderAdvancedAnalytics,
   showSetup,
   connectedAccountCount,
+  hasPendingSetup = false,
   hasMetricData = false,
 }: AdsPageLayoutProps) {
-  const defaultTab = connectedAccountCount > 0 ? 'performance' : 'setup'
+  const defaultTab =
+    connectedAccountCount > 0 && !hasPendingSetup ? 'performance' : 'setup'
   const [mobileTab, setMobileTab] = useState(defaultTab)
 
   if (!showSetup) {

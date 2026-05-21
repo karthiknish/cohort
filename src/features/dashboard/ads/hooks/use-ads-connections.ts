@@ -145,10 +145,10 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
 
   const {
     user,
-    connectLinkedInAdsAccount,
     startGoogleOauth,
     startMetaOauth,
     startTikTokOauth,
+    startLinkedInOauth,
   } = useAuth()
   const router = useRouter()
   const { selectedClientId } = useClientContext()
@@ -288,13 +288,13 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
       icon: PROVIDER_ICON_MAP.facebook!,
       mode: 'oauth',
     },
-     {
-       id: PROVIDER_IDS.LINKEDIN,
-       name: 'LinkedIn Ads',
-       description: 'Sync lead-gen form results and campaign analytics from LinkedIn.',
-       icon: PROVIDER_ICON_MAP.linkedin!,
-       connect: () => connectLinkedInAdsAccount(),
-     },
+    {
+      id: PROVIDER_IDS.LINKEDIN,
+      name: 'LinkedIn Ads',
+      description: 'Sync lead-gen form results and campaign analytics from LinkedIn.',
+      icon: PROVIDER_ICON_MAP.linkedin!,
+      mode: 'oauth',
+    },
     {
       id: PROVIDER_IDS.TIKTOK,
       name: 'TikTok Ads',
@@ -674,7 +674,6 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     setConnectionErrors((prev) => ({ ...prev, [providerId]: '' }))
     try {
       await action()
-      if (providerId === PROVIDER_IDS.LINKEDIN) await initializeLinkedInIntegration()
       setConnectedProviders((prev) => ({ ...prev, [providerId]: true }))
       triggerRefresh()
     } catch (error: unknown) {
@@ -686,7 +685,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setConnectingProvider(null)
     }
-  }, [initializeLinkedInIntegration, triggerRefresh])
+  }, [triggerRefresh])
 
   const handleOauthRedirect = useCallback(async (providerId: string) => {
     if (typeof window === 'undefined') return
@@ -735,6 +734,11 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
         window.location.href = url
         return
       }
+      if (providerId === PROVIDER_IDS.LINKEDIN) {
+        const { url } = await startLinkedInOauth(redirectTarget, selectedClientId ?? null)
+        window.location.href = url
+        return
+      }
       throw new Error('This provider does not support OAuth yet.')
     } catch (error: unknown) {
       logError(error, 'useAdsConnections:handleOauthRedirect')
@@ -763,7 +767,7 @@ export function useAdsConnections(options: UseAdsConnectionsOptions = {}): UseAd
     } finally {
       setConnectingProvider(null)
     }
-  }, [convexAuthLoading, isAuthenticated, router, selectedClientId, startGoogleOauth, startMetaOauth, startTikTokOauth, user])
+  }, [convexAuthLoading, isAuthenticated, router, selectedClientId, startGoogleOauth, startLinkedInOauth, startMetaOauth, startTikTokOauth, user])
 
   const handleDisconnect = useCallback(async (providerId: string, options?: DisconnectOptions) => {
     const providerName = formatProviderName(providerId)

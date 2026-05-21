@@ -12,11 +12,11 @@ const PAID_MEDIA_BRANDS = ['googleads', 'meta', 'linkedin', 'tiktok'] as const
 
 const PILLARS = [
   {
-    title: 'Operations layer',
-    description: 'Add time tracking, scheduling, and checklists next to the delivery workflows your team already runs.',
+    title: 'Delivery layer',
+    description: 'Projects, tasks, and milestones stay at the center of how your agency runs client work.',
     icon: Clock3,
-    href: '/dashboard/time',
-    badge: 'P0',
+    href: '/dashboard/projects',
+    badge: 'Core',
   },
   {
     title: 'Communication layer',
@@ -26,10 +26,10 @@ const PILLARS = [
     badge: 'P1',
   },
   {
-    title: 'People ops layer',
-    description: 'Time off and availability alongside the rest of the workspace.',
+    title: 'Growth layer',
+    description: 'Ads, analytics, and proposals in the same workspace as execution.',
     icon: CalendarDays,
-    href: '/dashboard/time-off',
+    href: '/dashboard/ads',
     badge: 'P2',
   },
 ] as const
@@ -41,9 +41,9 @@ const WHAT_CHANGED = [
 ] as const
 
 const ROLLOUT_STEPS = [
-  { step: '1', title: 'Time, scheduling, and forms', detail: 'Operational spine first' },
+  { step: '1', title: 'Projects and tasks', detail: 'Delivery spine first' },
   { step: '2', title: 'Collaboration and messaging', detail: 'Team coordination' },
-  { step: '3', title: 'Time off', detail: 'People workflows' },
+  { step: '3', title: 'Ads and analytics', detail: 'Growth workflows' },
 ] as const
 
 export function OperationsExpansionSection() {
@@ -66,7 +66,7 @@ export function OperationsExpansionSection() {
             <div className="min-w-0 space-y-1.5">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Campaign stack unchanged</p>
               <p className="text-sm font-medium leading-snug text-foreground sm:text-base">
-                Same Google Ads, Meta, LinkedIn, and TikTok connectors, now sitting beside time, comms, and people ops.
+                Same Google Ads, Meta, LinkedIn, and TikTok connectors, now sitting beside projects, tasks, and team comms.
               </p>
             </div>
             <div className="flex flex-col gap-4 sm:items-end">
@@ -94,7 +94,7 @@ export function OperationsExpansionSection() {
                   One navigation system for delivery, operations, and internal coordination
                 </h3>
                 <p className="max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Time, scheduling, forms, updates, directory, knowledge, help desk, training, time off, and recognition are now scaffolded directly inside the dashboard.
+                  Projects, tasks, collaboration, ads, and analytics share one navigation system so delivery and growth stay connected.
                 </p>
               </div>
 

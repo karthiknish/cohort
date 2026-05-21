@@ -1,13 +1,22 @@
 'use client'
 
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
+import { usePathname } from 'next/navigation'
 import { AnimatePresence, domAnimation, LazyMotion } from '@/shared/ui/motion'
 
+import type { AgentContextIds } from '@/lib/agent-context'
 import type { AgentConversationSummary, AgentMessage, ConnectionStatus } from '@/shared/hooks/use-agent-mode'
+import { useClientContext } from '@/shared/contexts/client-context'
 import { useMentionData } from '@/shared/hooks/use-mention-data'
+import {
+  AGENT_DASHBOARD_SHORTCUTS,
+  buildAgentContextChips,
+  getAgentQuickSuggestions,
+} from '@/lib/agent-context'
 import { AGENT_ATTACHMENT_ACCEPT, type AgentAttachmentContext } from '@/lib/agent-attachments'
 import type { AgentError } from '@/lib/agent-errors'
 
+import { AgentContextBanner } from './agent-context-banner'
 import {
   AgentModePanelContent,
   AgentModePanelShell,
@@ -17,6 +26,8 @@ import { formatMention, type MentionItem } from './mention-dropdown'
 
 interface AgentModePanelProps {
   isOpen: boolean
+  activeContext: AgentContextIds
+  maxMessageLength: number
   onClose: () => void
   messages: AgentMessage[]
   isProcessing: boolean
@@ -46,17 +57,10 @@ interface AgentModePanelProps {
   rateLimitCountdown?: number | null
 }
 
-const QUICK_SUGGESTIONS = [
-  'Schedule a meeting',
-  'Create project Website Refresh',
-  'Update this project status to active',
-  'How are my Meta ads doing this week?',
-  'Generate weekly report',
-  'Show my Tasks',
-]
-
 export function AgentModePanel({
   isOpen,
+  activeContext,
+  maxMessageLength,
   onClose,
   messages,
   isProcessing,
@@ -84,13 +88,15 @@ export function AgentModePanel({
   rateLimitCountdown,
   error = null,
 }: AgentModePanelProps) {
+  const pathname = usePathname()
+  const { selectedClient, selectedClientId } = useClientContext()
   const [inputValue, setInputValue] = useState('')
   const [showMentions, setShowMentions] = useState(false)
   const [mentionQuery, setMentionQuery] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const isDraggingFilesRef = useRef(false)
@@ -99,6 +105,27 @@ export function AgentModePanel({
   // Fetch data for mentions
   const { clients, projects, teams, users, allItems, isLoading: mentionsLoading } = useMentionData()
   const mentionLabels = useMemo(() => allItems.map((item) => item.name), [allItems])
+
+  const quickSuggestions = useMemo(() => getAgentQuickSuggestions(pathname), [pathname])
+  const contextChips = useMemo(
+    () =>
+      buildAgentContextChips({
+        pathname,
+        ids: {
+          ...activeContext,
+          activeClientId: activeContext.activeClientId ?? selectedClientId ?? undefined,
+        },
+        selectedClientName: selectedClient?.name ?? null,
+      }),
+    [activeContext, pathname, selectedClient?.name, selectedClientId],
+  )
+
+  const handleDashboardShortcut = useCallback(
+    (prompt: string) => {
+      onSendMessage(prompt)
+    },
+    [onSendMessage],
+  )
 
   const handleVoiceTranscript = useCallback((text: string) => {
     if (text.trim()) {
@@ -143,7 +170,7 @@ export function AgentModePanel({
   }, [inputValue, isProcessing, isExtractingAttachments, onSendMessage])
 
   // Detect @ character and extract query
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value
     setInputValue(value)
 
@@ -192,7 +219,7 @@ export function AgentModePanel({
     setShowMentions(false)
   }, [inputValue])
 
-  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Don't handle Enter/Escape if mention dropdown is open (it handles them)
     if (showMentions && ['Enter', 'ArrowUp', 'ArrowDown', 'Tab', 'Escape'].includes(e.key)) {
       return
@@ -337,6 +364,7 @@ export function AgentModePanel({
       inputValue,
       inputRef,
       mentionLabels,
+      maxMessageLength,
       showMentions,
       mentionQuery,
       clients,
@@ -378,6 +406,7 @@ export function AgentModePanel({
       showMentions,
       teams,
       users,
+      maxMessageLength,
     ]
   )
 
@@ -385,9 +414,21 @@ export function AgentModePanel({
     ...sharedComposerProps,
     layout: 'centered',
     disabled: isInputDisabled,
-    quickSuggestions: QUICK_SUGGESTIONS,
+    quickSuggestions,
     onSuggestionClick: handleSuggestionClick,
-  }), [handleSuggestionClick, isInputDisabled, sharedComposerProps])
+  }), [handleSuggestionClick, isInputDisabled, quickSuggestions, sharedComposerProps])
+
+  const contextBanner = useMemo(
+    () => (
+      <AgentContextBanner
+        chips={contextChips}
+        shortcuts={AGENT_DASHBOARD_SHORTCUTS}
+        disabled={isInputDisabled}
+        onShortcutPrompt={handleDashboardShortcut}
+      />
+    ),
+    [contextChips, handleDashboardShortcut, isInputDisabled],
+  )
 
   const dockComposerProps = useMemo<AgentComposerSectionProps>(() => ({
     ...sharedComposerProps,
@@ -448,6 +489,7 @@ export function AgentModePanel({
         {isOpen && (
           <AgentModePanelShell
             attachmentAccept={AGENT_ATTACHMENT_ACCEPT}
+            contextBanner={contextBanner}
             fileInputRef={fileInputRef}
             headerProps={headerProps}
             historyPanelProps={historyPanelProps}

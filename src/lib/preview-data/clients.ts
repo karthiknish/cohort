@@ -68,6 +68,7 @@ export function getPreviewMetrics(clientId: string | null): MetricRecord[] {
                 id: `preview-metric-${id}-${idx}`,
                 providerId: 'preview',
                 clientId: id,
+                currency: 'USD',
                 date: isoDaysAgo(6 - idx),
                 createdAt: isoDaysAgo(6 - idx),
                 spend: Math.round(day.spend * multiplier),

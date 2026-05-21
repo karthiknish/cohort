@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BarChart3, ClipboardList, Clock3, Megaphone, FileText, MessageSquare, CheckSquare, Plus, Briefcase } from 'lucide-react'
+import { BarChart3, Megaphone, FileText, MessageSquare, CheckSquare, Plus, Briefcase } from 'lucide-react'
 
 import { useMemo } from 'react'
 
@@ -27,22 +27,6 @@ type CreateAction = {
 
 // Admin-specific quick links
 const adminQuickLinks: QuickLink[] = [
-  {
-    title: 'Time & attendance',
-    description: 'Clock sessions, approvals, and payroll-ready hours.',
-    href: '/dashboard/time',
-    icon: Clock3,
-    badge: null,
-    roles: ['admin', 'team'],
-  },
-  {
-    title: 'Scheduling',
-    description: 'Shifts, coverage gaps, and swap requests for the team.',
-    href: '/dashboard/scheduling',
-    icon: ClipboardList,
-    badge: null,
-    roles: ['admin', 'team'],
-  },
   {
     title: 'Manage ad integrations',
     description: 'Connect platforms, refresh syncs, and review campaign metrics in the Ads hub.',

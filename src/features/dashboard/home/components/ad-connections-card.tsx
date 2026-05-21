@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useCallback, useMemo, useState } from 'react'
-import { RefreshCw, Check, Clock, AlertTriangle, Loader2, Unlink } from 'lucide-react'
+import { RefreshCw, Check, Clock, AlertTriangle, Loader2, Unlink, Link2 } from 'lucide-react'
 
 import {
   Card,
@@ -14,6 +14,7 @@ import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { Alert, AlertDescription } from '@/shared/ui/alert'
 import { Separator } from '@/shared/ui/separator'
+import { Progress } from '@/shared/ui/progress'
 import {
   Tooltip,
   TooltipContent,
@@ -62,6 +63,10 @@ interface AdConnectionsCardProps {
   onRefresh: () => void
   refreshing: boolean
   syncingProviders?: Record<string, boolean>
+  /** Optional summary for connection progress (e.g. 2 of 4). */
+  connectedCount?: number
+  totalProviders?: number
+  pendingSetupCount?: number
 }
 
 const EMPTY_INTEGRATION_STATUSES: Record<string, IntegrationStatusInfo> = {}
@@ -138,6 +143,9 @@ export function AdConnectionsCard({
   onRefresh,
   refreshing,
   syncingProviders = EMPTY_SYNCING_PROVIDERS,
+  connectedCount,
+  totalProviders,
+  pendingSetupCount = 0,
 }: AdConnectionsCardProps) {
   // Dialog state
   const [connectDialogOpen, setConnectDialogOpen] = useState(false)
@@ -268,6 +276,36 @@ export function AdConnectionsCard({
           </Button>
         </CardHeader>
         <CardContent className="space-y-6">
+          {typeof connectedCount === 'number' && typeof totalProviders === 'number' && totalProviders > 0 ? (
+            <div className="rounded-xl border border-primary/10 bg-primary/[0.03] p-4">
+              <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Link2 className="h-4 w-4 text-primary" aria-hidden />
+                  <span>
+                    {connectedCount} of {totalProviders} platforms connected
+                  </span>
+                  {pendingSetupCount > 0 ? (
+                    <Badge variant="secondary" className="font-normal">
+                      {pendingSetupCount} need setup
+                    </Badge>
+                  ) : connectedCount < totalProviders ? (
+                    <Badge variant="outline" className="font-normal">
+                      {totalProviders - connectedCount} available
+                    </Badge>
+                  ) : null}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Secure OAuth redirect — pick accounts after you return.
+                </p>
+              </div>
+              <Progress
+                value={Math.round((connectedCount / totalProviders) * 100)}
+                className="h-2"
+                aria-label="Connected ad platforms"
+              />
+            </div>
+          ) : null}
+
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {providerStates.map((state) => (
               <ProviderCard

@@ -17,20 +17,13 @@ function filterNavForRole(userRole: 'admin' | 'team' | 'client'): NavigationGrou
   })).filter((group) => group.items.length > 0)
 }
 
-describe('workforce-routes (hybrid team ops nav)', () => {
-  it('exposes team operations routes with expected hrefs', () => {
-    const hrefs = WORKFORCE_ROUTES.map((r) => r.href)
-    expect(hrefs).toEqual([
-      '/dashboard/time',
-      '/dashboard/scheduling',
-      '/dashboard/time-off',
-    ])
+describe('workforce-routes', () => {
+  it('does not expose removed time / scheduling / time-off routes', () => {
+    expect(WORKFORCE_ROUTES).toEqual([])
   })
 
-  it('includes Team operations group with the same links for admin/team', () => {
-    const teamOps = DASHBOARD_NAVIGATION_GROUPS.find((g) => g.id === 'team-ops')
-    expect(teamOps?.label).toBe('Team operations')
-    expect(teamOps?.items.map((i) => i.href)).toEqual(WORKFORCE_ROUTES.map((r) => r.href))
+  it('does not include a Team operations nav group', () => {
+    expect(DASHBOARD_NAVIGATION_GROUPS.some((g) => g.id === 'team-ops')).toBe(false)
   })
 
   it('uses Agency tools group for growth stack', () => {
@@ -40,26 +33,12 @@ describe('workforce-routes (hybrid team ops nav)', () => {
     expect(agency?.items.some((i) => i.href === '/dashboard/proposals')).toBe(true)
   })
 
-  it('hides Team operations group for client role (internal ops are admin/team only)', () => {
-    const clientNav = filterNavForRole('client')
-    expect(clientNav.some((g) => g.id === 'team-ops')).toBe(false)
-  })
-
-  it('shows full Team operations links for admin and team', () => {
-    for (const role of ['admin', 'team'] as const) {
+  it('includes Workspace core links for all roles', () => {
+    for (const role of ['admin', 'team', 'client'] as const) {
       const nav = filterNavForRole(role)
-      const teamOps = nav.find((g) => g.id === 'team-ops')
-      expect(teamOps?.items.map((i) => i.href)).toEqual(WORKFORCE_ROUTES.map((r) => r.href))
+      const core = nav.find((g) => g.id === 'core')
+      expect(core?.items.some((i) => i.href === '/dashboard/projects')).toBe(true)
+      expect(core?.items.some((i) => i.href === '/dashboard/tasks')).toBe(true)
     }
-  })
-
-  it('keeps Workspace (core) before Team operations in group order for admin', () => {
-    const adminNav = filterNavForRole('admin')
-    const ids = adminNav.map((g) => g.id)
-    const core = ids.indexOf('core')
-    const teamOps = ids.indexOf('team-ops')
-    expect(core).toBeGreaterThanOrEqual(0)
-    expect(teamOps).toBeGreaterThanOrEqual(0)
-    expect(core).toBeLessThan(teamOps)
   })
 })

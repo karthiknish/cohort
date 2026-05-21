@@ -60,17 +60,26 @@ describe('task view dialog sections', () => {
   it('renders the header, tabs list, and footer', () => {
     const markup = renderToStaticMarkup(
       <>
-        <TaskViewDialogHeader title="Review launch brief" summary="Todo • High priority" />
+        <TaskViewDialogHeader
+          title="Review launch brief"
+          summary="Assigned to Alex Kim"
+          status="todo"
+          priority="high"
+          client="Acme Corp"
+        />
         <TaskViewDialogTabsList commentCount={3} />
-        <TaskViewDialogFooter onClose={vi.fn()} />
+        <TaskViewDialogFooter onClose={vi.fn()} onEdit={vi.fn()} />
       </>,
     )
 
     expect(markup).toContain('Review launch brief')
-    expect(markup).toContain('Todo • High priority')
+    expect(markup).toContain('To Do')
+    expect(markup).toContain('High priority')
+    expect(markup).toContain('Acme Corp')
     expect(markup).toContain('Comments')
     expect(markup).toContain('3')
     expect(markup).toContain('Close')
+    expect(markup).toContain('Edit task')
   })
 
   it('renders the details and comments tabs', () => {
@@ -79,10 +88,8 @@ describe('task view dialog sections', () => {
       <>
         <TaskViewDetailsTab detailItems={[{ ...detailItems[0], icon: Icon }]} task={task} />
         <TaskViewCommentsTab
-          commentCount={2}
           onCommentCountChange={vi.fn()}
           participants={[]}
-          sourceCommentCount={0}
           taskId="task-1"
           userId={null}
           userName={null}
@@ -93,10 +100,9 @@ describe('task view dialog sections', () => {
     )
 
     expect(markup).toContain('Description')
-    expect(markup).toContain('Linked Project')
+    expect(markup).toContain('Linked project')
     expect(markup).toContain('Brief.pdf')
     expect(markup).toContain('Download')
-    expect(markup).toContain('2 comments')
     expect(markup).toContain('TaskCommentsPanel')
   })
 })

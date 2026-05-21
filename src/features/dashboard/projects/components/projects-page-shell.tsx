@@ -6,7 +6,6 @@ import Link from 'next/link'
 
 import { CreateProjectDialog } from '@/features/dashboard/projects/create-project-dialog'
 import { EditProjectDialog } from '@/features/dashboard/projects/edit-project-dialog'
-import { ProjectReadinessPanel } from '@/features/dashboard/workforce/project-readiness-panel'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,16 +28,17 @@ import { cn } from '@/lib/utils'
 import type { ProjectRecord, ProjectStatus } from '@/types/projects'
 
 import { GanttView } from './gantt-view'
+import { ProjectActiveFilters } from './project-active-filters'
 import { ProjectCard } from './project-card'
 import { ProjectFilters } from './project-filters'
 import { ProjectKanban } from './project-kanban'
 import { ProjectRow } from './project-row'
 import { ProjectSearch } from './project-search'
+import { ProjectStatusPills } from './project-status-pills'
 import { ProjectsPageSkeleton } from './projects-page-skeleton'
-import { ProjectsSchedulingPanel } from './projects-scheduling-panel'
 import { SummaryCard } from './summary-card'
 import { ViewModeSelector } from './view-mode-selector'
-import { RETRY_CONFIG } from './utils'
+import { RETRY_CONFIG, type StatusFilter } from './utils'
 import { useProjectsPageContext } from './projects-page-provider'
 
 export function ProjectsPageShell() {
@@ -56,8 +56,6 @@ export function ProjectsPageShell() {
           <ProjectsHeaderSection />
           <ProjectsDialogs />
           <ProjectsSummarySection />
-          <ProjectReadinessPanel />
-          <ProjectsSchedulingPanel />
           <ProjectsBacklogSection />
         </div>
       </BoneyardSkeletonBoundary>
@@ -201,51 +199,80 @@ function ProjectsDialogs() {
 }
 
 function ProjectsSummarySection() {
-  const { completionRate, openTaskTotal, projects, statusCounts, taskTotal } = useProjectsPageContext()
+  const {
+    completionRate,
+    openTaskTotal,
+    projects,
+    setStatusFilterAndReset,
+    statusCounts,
+    statusFilter,
+    taskTotal,
+  } = useProjectsPageContext()
   const completionStyle = useMemo(() => ({ width: `${completionRate}%` }), [completionRate])
+  const filterByStatus = useCallback(
+    (value: StatusFilter) => setStatusFilterAndReset(value),
+    [setStatusFilterAndReset],
+  )
 
   return (
-    <div className={DASHBOARD_THEME.stats.container}>
-      <SummaryCard
-        label="Total projects"
-        icon={Briefcase}
-        value={projects.length}
-        description={statusCounts.completed > 0 ? `${statusCounts.completed} completed` : 'All initiatives'}
-      />
-      <SummaryCard
-        label="Active Focus"
-        icon={ListChecks}
-        value={statusCounts.active}
-        description={`${statusCounts.planning} in planning`}
-      />
-      <SummaryCard
-        label="Open tasks"
-        icon={Users}
-        value={openTaskTotal}
-        description={taskTotal > 0 ? `${taskTotal - openTaskTotal} closed` : 'Waiting for tasks'}
-      />
-      <Card className={cn(DASHBOARD_THEME.stats.card, 'overflow-hidden')}>
-        <CardContent className="flex min-w-0 items-center gap-5 p-5">
-          <div className="min-w-0 flex-1">
-            <div className="mb-1.5 flex items-center justify-between">
-              <p className={DASHBOARD_THEME.stats.label}>Portfolio Health</p>
-              <span className="text-sm font-bold text-info">{completionRate}%</span>
+    <div className="space-y-4">
+      <div className={DASHBOARD_THEME.stats.container}>
+        <SummaryCard
+          label="Total projects"
+          icon={Briefcase}
+          value={projects.length}
+          description={statusCounts.completed > 0 ? `${statusCounts.completed} completed` : 'All initiatives'}
+          onClick={() => filterByStatus('all')}
+          active={statusFilter === 'all'}
+        />
+        <SummaryCard
+          label="Active focus"
+          icon={ListChecks}
+          value={statusCounts.active}
+          description={`${statusCounts.planning} in planning`}
+          onClick={() => filterByStatus('active')}
+          active={statusFilter === 'active'}
+        />
+        <SummaryCard
+          label="Open tasks"
+          icon={Users}
+          value={openTaskTotal}
+          description={taskTotal > 0 ? `${taskTotal - openTaskTotal} closed` : 'Waiting for tasks'}
+        />
+        <Card className={cn(DASHBOARD_THEME.stats.card, 'overflow-hidden')}>
+          <CardContent className="flex min-w-0 items-center gap-5 p-5">
+            <div className="min-w-0 flex-1">
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className={DASHBOARD_THEME.stats.label}>Portfolio health</p>
+                <span className="text-sm font-bold text-info">{completionRate}%</span>
+              </div>
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/60">
+                <div
+                  className="h-full bg-linear-to-r from-info to-primary motion-chromatic-slow"
+                  style={completionStyle}
+                />
+              </div>
+              <p className="mt-2 text-[10px] text-muted-foreground/70">
+                Share of projects marked completed in this workspace
+              </p>
             </div>
-            <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/60">
-              <div
-                className="h-full bg-linear-to-r from-info to-primary motion-chromatic-slow"
-                style={completionStyle}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
+
+      <ProjectStatusPills
+        statusFilter={statusFilter}
+        statusCounts={statusCounts}
+        totalCount={projects.length}
+        onStatusChange={filterByStatus}
+      />
     </div>
   )
 }
 
 function ProjectsBacklogSection() {
   const {
+    activeFilterLabels,
     clearFocusedProject,
     clearAllFilters,
     error,
@@ -271,10 +298,11 @@ function ProjectsBacklogSection() {
     searchInput,
     setSearchInput,
     setSortField,
-    setStatusFilter,
+    setStatusFilterAndReset,
     sortDirection,
     sortField,
     sortedProjects,
+    statusCounts,
     statusFilter,
     toggleSortDirection,
     viewMode,
@@ -292,42 +320,59 @@ function ProjectsBacklogSection() {
   }, [setSearchInput])
 
   return (
-    <Card className="border-muted/60 bg-background">
+    <Card className="border-muted/60 bg-background shadow-sm">
       <CardHeader className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
             <CardTitle className="text-lg">Project backlog</CardTitle>
             <CardDescription>
-              Search, filter, and review initiatives. Counts update after you pause typing in search.
+              Search, filter by status, and switch views. Results update after you pause typing.
             </CardDescription>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-start">
-            <div className="flex w-full min-w-0 flex-col gap-1 sm:w-72">
-              <ProjectSearch value={searchInput} onChange={setSearchInput} />
-              {projects.length > 0 ? (
-                <p className="text-[11px] text-muted-foreground tabular-nums" aria-live="polite">
-                  {searchInput.trim() !== debouncedSearchQuery.trim() ? (
-                    <span>Matching…</span>
-                  ) : (
-                    <span>
-                      Showing <span className="font-medium text-foreground">{sortedProjects.length}</span> of{' '}
-                      <span className="font-medium text-foreground">{projects.length}</span> in this workspace
-                      {hasActiveFilters && sortedProjects.length === 0 ? ' · try clearing filters' : ''}
-                    </span>
-                  )}
-                </p>
-              ) : null}
+          <div className="flex w-full flex-col gap-3 sm:max-w-xl lg:max-w-none lg:items-end">
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <label htmlFor="project-search" className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">
+                  Search
+                </label>
+                <ProjectSearch value={searchInput} onChange={setSearchInput} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">
+                  Sort
+                </span>
+                <ProjectFilters
+                  sortField={sortField}
+                  sortDirection={sortDirection}
+                  onSortFieldChange={setSortField}
+                  onToggleSortDirection={toggleSortDirection}
+                />
+              </div>
             </div>
-            <ProjectFilters
-              statusFilter={statusFilter}
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onStatusChange={setStatusFilter}
-              onSortFieldChange={setSortField}
-              onToggleSortDirection={toggleSortDirection}
-            />
+            {projects.length > 0 ? (
+              <p className="text-[11px] text-muted-foreground tabular-nums sm:text-right" aria-live="polite">
+                {searchInput.trim() !== debouncedSearchQuery.trim() ? (
+                  <span>Matching…</span>
+                ) : (
+                  <span>
+                    Showing <span className="font-medium text-foreground">{sortedProjects.length}</span> of{' '}
+                    <span className="font-medium text-foreground">{projects.length}</span> in this workspace
+                    {hasActiveFilters && sortedProjects.length === 0 ? ' · try clearing filters' : ''}
+                  </span>
+                )}
+              </p>
+            ) : null}
           </div>
         </div>
+
+        <ProjectStatusPills
+          statusFilter={statusFilter}
+          statusCounts={statusCounts}
+          totalCount={projects.length}
+          onStatusChange={setStatusFilterAndReset}
+        />
+
+        <ProjectActiveFilters labels={activeFilterLabels} onClearAll={clearAllFilters} />
 
         {focusedProject.id || focusedProject.name ? (
           <div className="rounded-xl border border-accent/15 bg-accent/5 p-3">

@@ -7,7 +7,6 @@ import { ArrowRight, Construction, type LucideIcon } from 'lucide-react'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { cn } from '@/lib/utils'
 import { WORKFORCE_ROUTE_MAP, WORKFORCE_ROUTES } from '@/lib/workforce-routes'
-import type { WorkforceRouteId } from '@/types/workforce'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent } from '@/shared/ui/card'
@@ -15,7 +14,7 @@ import { DashboardPageHeader, StatsGrid, StatCard } from '@/features/dashboard/h
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
 
 type WorkforcePageShellProps = {
-  routeId: WorkforceRouteId
+  routeId: string
   title: string
   description: string
   icon: LucideIcon
@@ -44,7 +43,9 @@ export function WorkforcePageShell({
   ctaLabel = 'Link this into task workflows',
 }: WorkforcePageShellProps) {
   const currentRoute = WORKFORCE_ROUTE_MAP[routeId]
-  const relatedRoutes = WORKFORCE_ROUTES.filter((route) => route.section === currentRoute.section && route.id !== routeId).slice(0, 3)
+  const relatedRoutes = currentRoute
+    ? WORKFORCE_ROUTES.filter((route) => route.section === currentRoute.section && route.id !== routeId).slice(0, 3)
+    : []
   const headerBadge = useMemo(() => ({ label: badgeLabel, variant: 'primary' as const }), [badgeLabel])
   const headerAction = useMemo(
     () => (
@@ -74,7 +75,7 @@ export function WorkforcePageShell({
             <Badge className="border-accent/20 bg-accent/10 text-primary hover:bg-accent/10">Team operations</Badge>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">Team work and agency tools in one workspace</h2>
             <p className="text-sm leading-6 text-muted-foreground">
-              Run schedules, time, and checklists here; use Agency tools for analytics, paid media, and client-facing deliverables.
+              Use Agency tools for analytics, paid media, and client-facing deliverables alongside core delivery workflows.
             </p>
           </div>
           <div className="rounded-2xl border border-accent/20 bg-accent/5 p-4 text-sm text-muted-foreground">

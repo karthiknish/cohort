@@ -40,7 +40,7 @@ export function AgentModeButton({ onClick, isOpen, className }: AgentModeButtonP
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">
-          <p>{isOpen ? 'Close Agent Mode' : 'Agent Mode - Chat or speak to navigate'}</p>
+          <p>{isOpen ? 'Close Agent Mode' : 'Agent Mode — chat or speak to navigate (⌘⇧A)'}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

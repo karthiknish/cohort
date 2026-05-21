@@ -3,7 +3,7 @@
 import { Activity, DollarSign, Info, Minus, TrendingDown, TrendingUp, Users, type LucideIcon } from 'lucide-react'
 
 import { DASHBOARD_THEME, getIconContainerClasses } from '@/lib/dashboard-theme'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
 import {
@@ -18,7 +18,7 @@ interface AnalyticsSummaryCardsProps {
   totals: {
     users: number
     sessions: number
-    revenue: number
+    revenue: number | null
     conversions: number
   }
   deltas: {
@@ -27,6 +27,7 @@ interface AnalyticsSummaryCardsProps {
     conversions: MetricDelta
     revenue: MetricDelta
   }
+  formatRevenue: (amount: number | null | undefined) => string
   isLoading: boolean
 }
 
@@ -114,7 +115,7 @@ function SummaryStatCard({
   )
 }
 
-export function AnalyticsSummaryCards({ totals, deltas, isLoading }: AnalyticsSummaryCardsProps) {
+export function AnalyticsSummaryCards({ totals, deltas, formatRevenue, isLoading }: AnalyticsSummaryCardsProps) {
   return (
     <div className={DASHBOARD_THEME.stats.container}>
       <SummaryStatCard
@@ -144,7 +145,7 @@ export function AnalyticsSummaryCards({ totals, deltas, isLoading }: AnalyticsSu
       <SummaryStatCard
         label="Revenue"
         tooltip="Revenue attributed in Google Analytics for the selected period."
-        value={formatCurrency(totals.revenue)}
+        value={formatRevenue(totals.revenue)}
         delta={deltas.revenue}
         icon={DollarSign}
         isLoading={isLoading}

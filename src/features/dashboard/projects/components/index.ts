@@ -13,8 +13,18 @@ export type { SummaryCardProps } from './summary-card'
 export { GanttView } from './gantt-view'
 export type { GanttViewProps } from './gantt-view'
 
+export { ProjectActionsMenu } from './project-actions-menu'
+export type { ProjectActionsMenuProps } from './project-actions-menu'
+
+export { ProjectActiveFilters } from './project-active-filters'
+
 export { ProjectFilters } from './project-filters'
 export { ProjectSearch } from './project-search'
+
+export { ProjectStatusPills } from './project-status-pills'
+
+export { ProjectTaskProgress } from './project-task-progress'
+
 export { ViewModeSelector } from './view-mode-selector'
 
 export * from './utils'

@@ -55,13 +55,13 @@ export function DashboardRoleBanner({ userRole, userDisplayName }: DashboardRole
             <div className="min-w-0 flex-1 space-y-1">
               <p className="font-medium text-foreground">Team operations</p>
               <p className="text-sm text-muted-foreground">
-                Time, schedule, and checklists for your workspace. Open Time & attendance to start or continue your day.
-                Agency analytics and client deliverables live under Agency tools in the sidebar.
+                Run delivery from Projects and Tasks. Agency analytics and client deliverables live under Agency tools in
+                the sidebar.
               </p>
             </div>
-            <Link href="/dashboard/time" className="shrink-0">
+            <Link href="/dashboard/projects" className="shrink-0">
               <Button variant="outline" size="sm" className="border-info/30 text-info hover:bg-info/10">
-                Time <ArrowUpRight className="ml-1 h-3 w-3" />
+                Projects <ArrowUpRight className="ml-1 h-3 w-3" />
               </Button>
             </Link>
           </CardContent>

@@ -3,6 +3,7 @@
 import {
   useCallback,
   useMemo,
+  useState,
   type ChangeEvent,
   type ComponentProps,
   type KeyboardEvent,
@@ -28,10 +29,21 @@ import {
 } from 'lucide-react'
 import { AnimatePresence, m } from '@/shared/ui/motion'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/ui/alert-dialog'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { ScrollArea } from '@/shared/ui/scroll-area'
+import { Textarea } from '@/shared/ui/textarea'
 import { VoiceInputButton } from '@/shared/ui/voice-input'
 import type { AgentConversationSummary, AgentMessage, ConnectionStatus } from '@/shared/hooks/use-agent-mode'
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
@@ -245,14 +257,16 @@ function AgentComposerInput({
   placeholder,
   disabled,
   mentionLabels,
+  maxLength,
 }: {
   value: string
-  onChange: (event: ChangeEvent<HTMLInputElement>) => void
-  onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void
-  inputRef: RefObject<HTMLInputElement | null>
+  onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void
+  onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void
+  inputRef: RefObject<HTMLTextAreaElement | null>
   placeholder: string
   disabled: boolean
   mentionLabels: string[]
+  maxLength: number
 }) {
   const activeMentions = useMemo(() => {
     const seen = new Set<string>()
@@ -266,18 +280,40 @@ function AgentComposerInput({
       })
   }, [mentionLabels, value])
 
+  const remaining = maxLength - value.length
+
   return (
-    <div className="flex-1 space-y-2">
-      <Input
+    <div className="min-w-0 flex-1 space-y-2">
+      <Textarea
         ref={inputRef}
         value={value}
         onChange={onChange}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
-        className="text-sm"
+        className="min-h-[44px] max-h-[160px] resize-none py-2.5 text-sm leading-relaxed"
         disabled={disabled}
-        spellCheck={false}
+        spellCheck
+        autoGrow
+        maxLength={maxLength}
+        rows={1}
+        aria-label="Agent message"
       />
+
+      <div className="flex items-center justify-between gap-2 px-0.5">
+        <p className="text-[10px] text-muted-foreground">
+          <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">Enter</kbd> send ·{' '}
+          <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">Shift+Enter</kbd> new line
+        </p>
+        <span
+          className={cn(
+            'text-[10px] tabular-nums',
+            remaining < 80 ? 'text-warning' : 'text-muted-foreground',
+          )}
+          aria-live="polite"
+        >
+          {value.length}/{maxLength}
+        </span>
+      </div>
 
       {activeMentions.length > 0 ? (
         <div className="flex flex-wrap gap-1.5">
@@ -295,8 +331,9 @@ function AgentComposerInput({
 export type AgentComposerSectionProps = {
   layout: 'centered' | 'dock'
   inputValue: string
-  inputRef: RefObject<HTMLInputElement | null>
+  inputRef: RefObject<HTMLTextAreaElement | null>
   mentionLabels: string[]
+  maxMessageLength: number
   showMentions: boolean
   mentionQuery: string
   clients: MentionDropdownProps['clients']
@@ -307,8 +344,8 @@ export type AgentComposerSectionProps = {
   pendingAttachments: AgentAttachmentContext[]
   isExtractingAttachments: boolean
   disabled: boolean
-  onInputChange: (event: ChangeEvent<HTMLInputElement>) => void
-  onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void
+  onInputChange: (event: ChangeEvent<HTMLTextAreaElement>) => void
+  onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void
   onOpenFilePicker: () => void
   onCloseMentions: () => void
   onSelectMention: (item: MentionItem) => void
@@ -373,6 +410,7 @@ export function AgentComposerSection({
   onSubmit,
   quickSuggestions = EMPTY_QUICK_SUGGESTIONS,
   onSuggestionClick,
+  maxMessageLength,
 }: AgentComposerSectionProps) {
   const isCentered = layout === 'centered'
 
@@ -380,7 +418,7 @@ export function AgentComposerSection({
     <div className={cn(isCentered ? 'rounded-2xl border bg-background p-3' : 'relative border-t bg-muted/30 p-3')}>
       <AttachmentList attachments={pendingAttachments} onRemoveAttachment={onRemoveAttachment} />
 
-      <div className={cn('relative flex items-center gap-2', isCentered && 'justify-center')}>
+      <div className={cn('relative flex items-end gap-2', isCentered && 'justify-center')}>
         <MentionDropdown
           isOpen={showMentions}
           onClose={onCloseMentions}
@@ -398,9 +436,10 @@ export function AgentComposerSection({
           value={inputValue}
           onChange={onInputChange}
           onKeyDown={onKeyDown}
-          placeholder={isCentered ? 'Create projects, run analytics, send messages, or navigate…' : 'Ask naturally for project, analytics, ads, task, or meeting actions'}
+          placeholder={isCentered ? 'Create projects, run analytics, send messages, or navigate…' : 'Ask about tasks, projects, analytics, ads, or meetings…'}
           disabled={disabled}
           mentionLabels={mentionLabels}
+          maxLength={maxMessageLength}
         />
 
         <VoiceInputButton
@@ -571,8 +610,15 @@ function ConversationItem({
     onStartEditing(conversation.id, conversation.title || '')
   }, [onStartEditing, conversation.id, conversation.title])
 
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+
   const handleDelete = useCallback(() => {
+    setConfirmDeleteOpen(true)
+  }, [])
+
+  const handleConfirmDelete = useCallback(() => {
     onDeleteConversation(conversation.id)
+    setConfirmDeleteOpen(false)
   }, [onDeleteConversation, conversation.id])
 
   return (
@@ -649,6 +695,26 @@ function ConversationItem({
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent onClick={stopPropagation}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the conversation and its messages from your history. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleConfirmDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -693,7 +759,7 @@ export function AgentHistoryPanel({
   if (!showHistory) return null
 
   return (
-    <div className="absolute right-4 top-[60px] z-50 w-[340px] overflow-hidden rounded-xl border bg-background shadow-sm">
+    <div className="absolute right-4 top-[60px] z-50 w-[min(340px,calc(100vw-2rem))] overflow-hidden rounded-xl border bg-background shadow-lg">
       <div className="flex items-center justify-between border-b px-3 py-2">
         <p className="text-sm font-medium">Previous chats</p>
         <div className="flex items-center gap-2">
@@ -748,7 +814,7 @@ export function AgentEmptyState({ children }: { children: ReactNode }) {
           </div>
           <p className="text-base font-medium">Where would you like to go?</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ask in plain language, or type @ to pick a client, user, project, or team.
+            Ask in plain language, or type @ to mention a client, user, or project. Use the shortcuts below for dashboard actions.
           </p>
         </div>
 
@@ -850,6 +916,7 @@ export function FailedMessageBanner({
 export function AgentModePanelShell({
   attachmentAccept,
   children,
+  contextBanner,
   fileInputRef,
   headerProps,
   historyPanelProps,
@@ -864,6 +931,7 @@ export function AgentModePanelShell({
 }: {
   attachmentAccept: string
   children: ReactNode
+  contextBanner?: ReactNode
   fileInputRef: RefObject<HTMLInputElement | null>
   headerProps: ComponentProps<typeof AgentModeHeader>
   historyPanelProps: ComponentProps<typeof AgentHistoryPanel>
@@ -903,6 +971,7 @@ export function AgentModePanelShell({
       />
 
       <AgentModeHeader {...headerProps} />
+      {contextBanner}
 
       {agentError && onClearError ? (
         <AgentErrorBanner

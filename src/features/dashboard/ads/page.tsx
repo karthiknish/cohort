@@ -4,6 +4,7 @@ import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 
 import { extractErrorCode, logError } from '@/lib/convex-errors'
+import { normalizeAdsProviderId } from '@/domain/ads/provider'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 
 function isAuthError(error: unknown): boolean {
@@ -25,7 +26,7 @@ import {
   PerformanceSummaryCard,
   MetricsTableCard,
   WorkflowCard,
-  SetupAlerts,
+  AdSetupPanel,
 } from './components'
 import { AdsPageHeader } from './components/ads-page-header'
 import { AdsPageLayout } from './components/ads-page-shell-sections'
@@ -164,8 +165,9 @@ export default function AdsPage() {
     const map: Record<string, string> = {}
     if (adsInsightsSummary?.providers) {
       for (const p of adsInsightsSummary.providers) {
+        const providerId = normalizeAdsProviderId(p.providerId) ?? p.providerId
         if (p.financialTotals.primaryCurrency) {
-          map[p.providerId] = p.financialTotals.primaryCurrency
+          map[providerId] = p.financialTotals.primaryCurrency
         }
       }
     }
@@ -190,6 +192,28 @@ export default function AdsPage() {
   const connectedAccountCount = useMemo(
     () => adPlatforms.filter((p) => connectedProviders[p.id]).length,
     [adPlatforms, connectedProviders],
+  )
+
+  const connectedProviderIds = useMemo(() => {
+    const fromPlatforms = adPlatforms.filter((p) => connectedProviders[p.id]).map((p) => p.id)
+    const fromStatuses = Object.entries(connectedProviders)
+      .filter(([, connected]) => connected)
+      .map(([providerId]) => providerId)
+    return [...new Set([...fromPlatforms, ...fromStatuses])]
+  }, [adPlatforms, connectedProviders])
+
+  const pendingSetupCount = useMemo(
+    () =>
+      [googleNeedsAccountSelection, metaNeedsAccountSelection, tiktokNeedsAccountSelection].filter(Boolean)
+        .length,
+    [googleNeedsAccountSelection, metaNeedsAccountSelection, tiktokNeedsAccountSelection],
+  )
+
+  const hasPendingSetup = pendingSetupCount > 0
+
+  const hasSuccessfulSync = useMemo(
+    () => automationStatuses.some((s) => s.status === 'success'),
+    [automationStatuses],
   )
 
   const scrollToSetupAlerts = useCallback(() => {
@@ -268,13 +292,23 @@ export default function AdsPage() {
     <>
       {showWorkflow ? (
         <FadeIn>
-          <WorkflowCard />
+          <WorkflowCard
+            connectedCount={connectedAccountCount}
+            hasSuccessfulSync={hasSuccessfulSync}
+            hasPendingSetup={hasPendingSetup}
+          />
         </FadeIn>
       ) : null}
 
       <FadeIn>
         <div id="ads-setup-alerts">
-          <SetupAlerts
+          <AdSetupPanel
+            connectedCount={connectedAccountCount}
+            totalProviders={adPlatforms.length}
+            googleNeedsAccountSelection={googleNeedsAccountSelection}
+            googleSetupMessage={googleSetupMessage}
+            onOpenGoogleSetup={openGoogleCampaignSetup}
+            initializingGoogle={initializingGoogle}
             metaSetupMessage={metaSetupMessage}
             metaNeedsAccountSelection={metaNeedsAccountSelection}
             initializingMeta={initializingMeta}
@@ -307,6 +341,9 @@ export default function AdsPage() {
             syncingProviders={syncingProviders}
             onRefresh={handleManualRefresh}
             refreshing={metricsLoading}
+            connectedCount={connectedAccountCount}
+            totalProviders={adPlatforms.length}
+            pendingSetupCount={pendingSetupCount}
           />
         </div>
       </FadeIn>
@@ -380,6 +417,7 @@ export default function AdsPage() {
           processedMetrics={processedMetrics}
           serverSideSummary={effectiveServerSummary}
           currency={activeCurrency}
+          connectedProviderIds={connectedProviderIds}
           hasMetricData={hasMetricData}
           initialMetricsLoading={initialMetricsLoading}
           metricsLoading={metricsLoading}
@@ -506,6 +544,7 @@ export default function AdsPage() {
             renderAdvancedAnalytics={renderAdvancedAnalytics}
             showSetup={!isPreviewMode}
             connectedAccountCount={connectedAccountCount}
+            hasPendingSetup={hasPendingSetup}
             hasMetricData={hasMetricData}
           />
         </div>

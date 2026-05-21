@@ -1,6 +1,6 @@
 'use client'
 
-import { startTransition, useCallback, useMemo, useRef, useState } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAction, useMutation } from 'convex/react'
 import { useAuth } from '@/shared/contexts/auth-context'
@@ -15,6 +15,7 @@ import {
 } from '@/lib/agent-attachments'
 import { agentApi } from '@/lib/convex-api'
 import { AgentValidationError, parseAgentError, ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
+import { deriveActiveContextFromPath, type AgentContextIds } from '@/lib/agent-context'
 import { notifyFailure, notifyError } from '@/lib/notifications'
 
 
@@ -152,48 +153,22 @@ export interface UseAgentModeReturn {
   connectionStatus: ConnectionStatus
   /** Rate limit countdown (seconds remaining) */
   rateLimitCountdown: number | null
+  /** IDs derived from the current route + navigation context */
+  activeContext: AgentContextIds
+  /** Maximum allowed message length */
+  maxMessageLength: number
 }
 
 // Validation constants
-const MAX_MESSAGE_LENGTH = 500
+export const AGENT_MAX_MESSAGE_LENGTH = 4000
 const MIN_MESSAGE_LENGTH = 1
 const DEBOUNCE_MS = 300
+const PREVIOUS_MESSAGES_LIMIT = 12
 const PREVIEW_AGENT_CONVERSATION_ID = 'preview-agent-conversation'
+const AGENT_OPEN_STORAGE_KEY = 'cohorts.agentMode.open'
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-}
-
-function deriveActiveContextFromPath(pathname: string | null): {
-  activeProposalId?: string
-  activeProjectId?: string
-  activeClientId?: string
-} {
-  if (!pathname) return {}
-
-  const segments = pathname.split('/').filter(Boolean)
-
-  const fromSection = (section: string): string | undefined => {
-    const sectionIndex = segments.indexOf(section)
-    if (sectionIndex === -1) return undefined
-
-    const candidate = segments[sectionIndex + 1]
-    if (!candidate) return undefined
-
-    // Ignore utility routes.
-    if (['new', 'viewer', 'deck'].includes(candidate)) return undefined
-    return candidate
-  }
-
-  const activeProposalId = fromSection('proposals')
-  const activeProjectId = fromSection('projects')
-  const activeClientId = fromSection('clients')
-
-  return {
-    activeProposalId,
-    activeProjectId,
-    activeClientId,
-  }
 }
 
 /**
@@ -204,8 +179,8 @@ function validateInput(text: string): string | null {
   if (trimmed.length < MIN_MESSAGE_LENGTH) {
     return 'Message is too short'
   }
-  if (trimmed.length > MAX_MESSAGE_LENGTH) {
-    return `Message too long (max ${MAX_MESSAGE_LENGTH} characters)`
+  if (trimmed.length > AGENT_MAX_MESSAGE_LENGTH) {
+    return `Message too long (max ${AGENT_MAX_MESSAGE_LENGTH} characters)`
   }
   return null
 }
@@ -233,7 +208,14 @@ export function useAgentMode(): UseAgentModeReturn {
   const updateTitle = useMutation(agentApi.updateConversationTitle)
   const deleteConversationMutation = useMutation(agentApi.deleteConversation)
 
-  const [isOpen, setOpen] = useState(false)
+  const [isOpen, setOpenState] = useState(false)
+
+  const setOpen = useCallback((open: boolean) => {
+    setOpenState(open)
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(AGENT_OPEN_STORAGE_KEY, open ? '1' : '0')
+    }
+  }, [])
   const [messages, setMessages] = useState<AgentMessage[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
@@ -255,9 +237,17 @@ export function useAgentMode(): UseAgentModeReturn {
   const lastSubmitTimeRef = useRef<number>(0)
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const toggle = useCallback(() => {
-    setOpen((prev) => !prev)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const stored = window.sessionStorage.getItem(AGENT_OPEN_STORAGE_KEY)
+    if (stored === '1') {
+      setOpenState(true)
+    }
   }, [])
+
+  const toggle = useCallback(() => {
+    setOpen(!isOpen)
+  }, [isOpen, setOpen])
 
   const clearError = useCallback(() => {
     setError(null)
@@ -450,7 +440,7 @@ export function useAgentMode(): UseAgentModeReturn {
         throw new Error('Workspace context is required')
       }
 
-      const previousMessages = messages.slice(-4).map((m) => ({
+      const previousMessages = messages.slice(-PREVIOUS_MESSAGES_LIMIT).map((m) => ({
         type: m.type,
         content: m.content,
       }))
@@ -769,6 +759,8 @@ export function useAgentMode(): UseAgentModeReturn {
     isOpen,
     setOpen,
     toggle,
+    activeContext,
+    maxMessageLength: AGENT_MAX_MESSAGE_LENGTH,
     messages,
     isProcessing,
     processInput,

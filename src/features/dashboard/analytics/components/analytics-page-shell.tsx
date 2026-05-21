@@ -399,6 +399,7 @@ function AnalyticsPerformanceSection() {
     metricsLoadingMore,
     metricsNextCursor,
     metricsRefreshing,
+    formatRevenue,
     revenuePerSession,
     sessionsPerUser,
     story,
@@ -448,16 +449,27 @@ function AnalyticsPerformanceSection() {
         </div>
       </div>
 
-      <AnalyticsSummaryCards totals={totals} deltas={story.deltas} isLoading={initialMetricsLoading} />
+      <AnalyticsSummaryCards
+        totals={totals}
+        deltas={story.deltas}
+        formatRevenue={formatRevenue}
+        isLoading={initialMetricsLoading}
+      />
       <AnalyticsMetricCards
         avgUsersPerDay={avgUsersPerDay}
         avgSessionsPerDay={avgSessionsPerDay}
         revenuePerSession={revenuePerSession}
         sessionsPerUser={sessionsPerUser}
+        formatRevenue={formatRevenue}
         isLoading={initialMetricsLoading}
       />
-      <AnalyticsDeepDiveSection story={story} />
-      <AnalyticsCharts chartData={chartData} isMetricsLoading={metricsLoading} initialMetricsLoading={initialMetricsLoading} />
+      <AnalyticsDeepDiveSection story={story} formatRevenue={formatRevenue} />
+      <AnalyticsCharts
+        chartData={chartData}
+        formatRevenue={formatRevenue}
+        isMetricsLoading={metricsLoading}
+        initialMetricsLoading={initialMetricsLoading}
+      />
       <AnalyticsInsightsSection
         insights={insights}
         algorithmic={algorithmic}

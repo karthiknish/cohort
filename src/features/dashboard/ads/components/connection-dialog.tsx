@@ -130,7 +130,15 @@ export const ConnectionDialog = memo(function ConnectionDialog({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <ConnectionDialogHeader Icon={Icon} providerInfo={providerInfo} />
-        <ConnectionDialogBody connectionStep={connectionStep} error={error} errorGuidance={errorGuidance} isInProgress={isInProgress} providerInfo={providerInfo} showPreConnect={showPreConnect} />
+        <ConnectionDialogBody
+          connectionStep={connectionStep}
+          error={error}
+          errorGuidance={errorGuidance}
+          isInProgress={isInProgress}
+          providerInfo={providerInfo}
+          showPreConnect={showPreConnect}
+          providerId={providerId}
+        />
         <ConnectionDialogFooterActions connectionStep={connectionStep} error={error} handleClose={handleClose} handleConnect={handleConnect} isConnecting={isConnecting} isInProgress={isInProgress} onRetry={onRetry} providerInfo={providerInfo} showPreConnect={showPreConnect} />
       </DialogContent>
     </Dialog>

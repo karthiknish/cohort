@@ -1,8 +1,3 @@
-export type WorkforceRouteId =
-  | 'time'
-  | 'scheduling'
-  | 'time-off'
-
 export type WorkforceVisibility = 'admin' | 'team' | 'client'
 
 export type TimeSessionStatus = 'clocked-in' | 'on-break' | 'clocked-out' | 'needs-review'

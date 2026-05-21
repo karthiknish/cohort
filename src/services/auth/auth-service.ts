@@ -743,6 +743,68 @@ export class AuthService {
     throw new ServiceUnavailableError('TikTok OAuth did not return a URL')
   }
 
+  async startLinkedInOauth(redirect?: string, clientId?: string | null): Promise<{ url: string }> {
+    if (redirect && !isValidRedirectUrl(redirect)) {
+      throw new ValidationError('Invalid redirect URL')
+    }
+
+    await this.ensureFreshSession()
+
+    const params = new URLSearchParams()
+    if (redirect) params.set('redirect', redirect)
+    if (clientId) params.set('clientId', clientId)
+    const search = params.toString() ? `?${params.toString()}` : ''
+
+    const fetchLinkedInOauthUrl = async () =>
+      await fetchWithTimeout(`/api/integrations/linkedin/oauth/url${search}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+
+    let response = await fetchLinkedInOauthUrl()
+
+    if (response.status === 401) {
+      await this.ensureFreshSession().catch(() => null)
+      response = await fetchLinkedInOauthUrl()
+    }
+
+    const payload = await parseOauthStartPayload(response, 'LinkedIn OAuth start', 'Failed to start LinkedIn OAuth')
+
+    if (payload && typeof payload === 'object' && 'success' in payload) {
+      const record = payload as { success: boolean; data?: unknown; error?: unknown }
+      if (!record.success) {
+        const message = typeof record.error === 'string' ? record.error : 'Failed to start LinkedIn OAuth'
+        if (response.status === 401) {
+          throw new SessionExpiredError(message)
+        }
+        throw new BadRequestError(message)
+      }
+
+      const data = record.data as { url?: unknown } | undefined
+      if (typeof data?.url === 'string' && data.url.length > 0) {
+        return { url: data.url }
+      }
+
+      throw new ServiceUnavailableError('LinkedIn OAuth did not return a URL')
+    }
+
+    if (!response.ok) {
+      const record = payload as { error?: unknown }
+      const message = typeof record?.error === 'string' ? record.error : 'Failed to start LinkedIn OAuth'
+      if (response.status === 401) {
+        throw new SessionExpiredError(message)
+      }
+      throw new BadRequestError(message)
+    }
+
+    const legacy = payload as { url?: unknown }
+    if (typeof legacy?.url === 'string' && legacy.url.length > 0) return { url: legacy.url }
+    throw new ServiceUnavailableError('LinkedIn OAuth did not return a URL')
+  }
+
   async resetPassword(): Promise<void> {
     throw new ServiceUnavailableError('Password reset must be implemented with Better Auth')
   }

@@ -32,6 +32,7 @@ interface AuthContextType {
   startGoogleWorkspaceOauth: (redirect?: string) => Promise<{ url: string }>
   startMetaOauth: (redirect?: string, clientId?: string | null, surface?: 'facebook' | 'instagram', entryPoint?: 'socials' | 'ads') => Promise<{ url: string }>
   startTikTokOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
+  startLinkedInOauth: (redirect?: string, clientId?: string | null) => Promise<{ url: string }>
   disconnectProvider: (providerId: string, clientId?: string | null) => Promise<void>
   getIdToken: () => Promise<string | null>
   signUp: (data: SignUpData) => Promise<AuthUser>
@@ -173,6 +174,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return await authService.startTikTokOauth(redirect, clientId)
   }, [])
 
+  const startLinkedInOauth = useCallback(async (redirect?: string, clientId?: string | null) => {
+    return await authService.startLinkedInOauth(redirect, clientId)
+  }, [])
+
   const disconnectProvider = useCallback(async (providerId: string, clientId?: string | null) => {
     void providerId
     void clientId
@@ -217,6 +222,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       startGoogleWorkspaceOauth,
       startMetaOauth,
       startTikTokOauth,
+      startLinkedInOauth,
       disconnectProvider,
       getIdToken,
       signUp,
@@ -246,6 +252,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       startGoogleWorkspaceOauth,
       startMetaOauth,
       startTikTokOauth,
+      startLinkedInOauth,
       disconnectProvider,
       getIdToken,
       signUp,

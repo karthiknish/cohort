@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useToast } from '@/shared/ui/use-toast'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
+import { useCurrency } from '@/shared/contexts/preferences-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { ApiClientError, apiFetch } from '@/lib/api-client'
 import { analyticsIntegrationsApi } from '@/lib/convex-api'
@@ -15,6 +16,7 @@ import { getPreviewAnalyticsMetrics } from '@/lib/preview-data'
 import { notifyFailure } from '@/lib/notifications'
 
 import type { AnalyticsDateRange } from '../components/analytics-date-range-picker'
+import { buildAnalyticsMoneyDisplay } from '../lib/analytics-currency'
 import { buildGoogleAnalyticsStory } from '../lib/google-analytics-story'
 import { useAnalyticsData } from './use-analytics-data'
 import { useGoogleAnalyticsSync } from './use-google-analytics-sync'
@@ -29,6 +31,7 @@ type GoogleAnalyticsStatusRow = {
   providerId: string
   accountId: string | null
   accountName: string | null
+  currency: string | null
   linkedAtMs: number | null
   lastSyncStatus: string | null
   lastSyncMessage: string | null
@@ -99,6 +102,7 @@ export function useAnalyticsPageController() {
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
   const { user } = useAuth()
+  const preferenceCurrency = useCurrency()
   const previewGoogleAnalyticsStatus = useMemo(() => getPreviewGoogleAnalyticsStatus(), [])
 
   const [dateRange, setDateRange] = useState<AnalyticsDateRange>(() => {
@@ -123,6 +127,9 @@ export function useAnalyticsPageController() {
   )
   const [gaLastSyncRequestedAtMs, setGaLastSyncRequestedAtMs] = useState<number | null>(
     isPreviewMode ? previewGoogleAnalyticsStatus.lastSyncRequestedAtMs : null,
+  )
+  const [gaIntegrationCurrency, setGaIntegrationCurrency] = useState<string | null>(
+    isPreviewMode ? 'GBP' : null,
   )
   const [gaLoading, setGaLoading] = useState(false)
   const [gaSetupDialogOpen, setGaSetupDialogOpen] = useState(false)
@@ -172,6 +179,7 @@ export function useAnalyticsPageController() {
     const linkedAtMs = typeof ga?.linkedAtMs === 'number' ? ga.linkedAtMs : null
     const accountName = typeof ga?.accountName === 'string' ? ga.accountName : null
     const accountId = typeof ga?.accountId === 'string' ? ga.accountId : null
+    const integrationCurrency = typeof ga?.currency === 'string' ? ga.currency : null
     const syncStatus = typeof ga?.lastSyncStatus === 'string' ? ga.lastSyncStatus : null
     const syncMessage = typeof ga?.lastSyncMessage === 'string' ? ga.lastSyncMessage : null
     const lastSynced = typeof ga?.lastSyncedAtMs === 'number' ? ga.lastSyncedAtMs : null
@@ -180,6 +188,7 @@ export function useAnalyticsPageController() {
     setGaConnected(Boolean(linkedAtMs))
     setGaAccountLabel(accountName ?? accountId ?? null)
     setGaPropertyId(accountId)
+    setGaIntegrationCurrency(integrationCurrency)
     setGaLastSyncStatus(syncStatus)
     setGaLastSyncMessage(syncMessage)
     setGaLastSyncedAtMs(lastSynced)
@@ -591,46 +600,88 @@ export function useAnalyticsPageController() {
     return Array.from(map.values()).toSorted((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   }, [filteredMetrics])
 
-  const totals = useMemo(() => {
+  const deliveryTotals = useMemo(() => {
     return filteredMetrics.reduce(
       (acc, metric) => {
         acc.users += metric.impressions
         acc.sessions += metric.clicks
         acc.conversions += metric.conversions
-        acc.revenue += metric.revenue ?? 0
         return acc
       },
-      { users: 0, sessions: 0, conversions: 0, revenue: 0 }
+      { users: 0, sessions: 0, conversions: 0 },
     )
   }, [filteredMetrics])
 
-  const previousTotals = useMemo(() => {
-    if (!metrics.length) {
-      return { users: 0, sessions: 0, conversions: 0, revenue: 0 }
-    }
+  const moneyDisplay = useMemo(
+    () =>
+      buildAnalyticsMoneyDisplay(filteredMetrics, {
+        integrationCurrency: gaIntegrationCurrency,
+        preferenceCurrency,
+      }),
+    [filteredMetrics, gaIntegrationCurrency, preferenceCurrency],
+  )
+
+  const previousPeriodMetrics = useMemo(() => {
+    if (!metrics.length) return []
 
     const previousEndMs = dateRange.start.getTime() - 1
     const previousStartMs = previousEndMs - selectedRangeDays * 24 * 60 * 60 * 1000 + 1
 
-    return metrics.reduce(
+    return metrics.filter((metric) => {
+      if (metric.providerId !== 'google-analytics') return false
+      const metricDate = new Date(metric.date).getTime()
+      return metricDate >= previousStartMs && metricDate <= previousEndMs
+    })
+  }, [dateRange.start, metrics, selectedRangeDays])
+
+  const previousDeliveryTotals = useMemo(() => {
+    return previousPeriodMetrics.reduce(
       (acc, metric) => {
-        if (metric.providerId !== 'google-analytics') return acc
-        const metricDate = new Date(metric.date).getTime()
-        if (metricDate < previousStartMs || metricDate > previousEndMs) return acc
         acc.users += metric.impressions
         acc.sessions += metric.clicks
         acc.conversions += metric.conversions
-        acc.revenue += metric.revenue ?? 0
         return acc
       },
-      { users: 0, sessions: 0, conversions: 0, revenue: 0 }
+      { users: 0, sessions: 0, conversions: 0 },
     )
-  }, [dateRange.start, metrics, selectedRangeDays])
+  }, [previousPeriodMetrics])
+
+  const previousMoneyDisplay = useMemo(
+    () =>
+      buildAnalyticsMoneyDisplay(previousPeriodMetrics, {
+        integrationCurrency: gaIntegrationCurrency,
+        preferenceCurrency,
+      }),
+    [gaIntegrationCurrency, previousPeriodMetrics, preferenceCurrency],
+  )
+
+  const totals = useMemo(
+    () => ({
+      users: deliveryTotals.users,
+      sessions: deliveryTotals.sessions,
+      conversions: deliveryTotals.conversions,
+      revenue: moneyDisplay.totalRevenue,
+    }),
+    [deliveryTotals, moneyDisplay.totalRevenue],
+  )
+
+  const previousTotals = useMemo(
+    () => ({
+      users: previousDeliveryTotals.users,
+      sessions: previousDeliveryTotals.sessions,
+      conversions: previousDeliveryTotals.conversions,
+      revenue: previousMoneyDisplay.totalRevenue,
+    }),
+    [previousDeliveryTotals, previousMoneyDisplay.totalRevenue],
+  )
 
   const conversionRate = totals.sessions > 0 ? (totals.conversions / totals.sessions) * 100 : 0
   const avgUsersPerDay = totals.users / selectedRangeDays
   const avgSessionsPerDay = totals.sessions / selectedRangeDays
-  const revenuePerSession = totals.sessions > 0 ? totals.revenue / totals.sessions : 0
+  const revenuePerSession =
+    moneyDisplay.revenueComparable && totals.sessions > 0 && moneyDisplay.totalRevenue !== null
+      ? moneyDisplay.totalRevenue / totals.sessions
+      : null
   const sessionsPerUser = totals.users > 0 ? totals.sessions / totals.users : 0
   const hasGaData = filteredMetrics.length > 0
   const isGaSelectedWithoutData = gaConnected && !hasGaData && !initialMetricsLoading
@@ -679,7 +730,10 @@ export function useAnalyticsPageController() {
     chartData,
     conversionRate,
     dateRange,
+    displayCurrency: moneyDisplay.displayCurrency,
     filteredMetrics,
+    formatRevenue: moneyDisplay.formatRevenue,
+    financialComparability: moneyDisplay.financialTotals.comparability,
     gaAccountLabel,
     gaConnected,
     gaDisconnectDialogOpen,
@@ -721,6 +775,7 @@ export function useAnalyticsPageController() {
     metricsLoadingMore,
     metricsNextCursor,
     metricsRefreshing,
+    revenueComparable: moneyDisplay.revenueComparable,
     revenuePerSession,
     sessionsPerUser,
     setGaDisconnectDialogOpen,

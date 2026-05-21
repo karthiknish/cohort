@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { AgentModeButton } from './agent-mode-button'
 import { AgentModePanel } from './agent-mode-panel'
 import { useAgentMode } from '@/shared/hooks/use-agent-mode'
+import { useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
 
 /**
  * Agent Mode Container
@@ -42,6 +43,8 @@ export function AgentMode() {
     retryLastUserTurn,
     connectionStatus,
     rateLimitCountdown,
+    activeContext,
+    maxMessageLength,
   } = useAgentMode()
 
   const handleClose = useCallback(() => {
@@ -51,11 +54,24 @@ export function AgentMode() {
     })
   }, [setOpen])
 
+  useKeyboardShortcut({
+    combo: 'mod+shift+a',
+    callback: () => {
+      if (isOpen) {
+        handleClose()
+      } else {
+        setOpen(true)
+      }
+    },
+  })
+
   return (
     <>
       <AgentModeButton onClick={toggle} isOpen={isOpen} />
       <AgentModePanel
         isOpen={isOpen}
+        activeContext={activeContext}
+        maxMessageLength={maxMessageLength}
         onClose={handleClose}
         messages={messages}
         isProcessing={isProcessing}
