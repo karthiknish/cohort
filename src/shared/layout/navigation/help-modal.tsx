@@ -37,6 +37,7 @@ import { asErrorMessage, logError } from '@/lib/convex-errors'
 import { onboardingApi } from '@/lib/convex-api'
 import { useToast } from '@/shared/ui/use-toast'
 import { useOnboardingTour } from '@/shared/hooks/use-onboarding-tour'
+import { canAccessPath } from '@/lib/access-control/dashboard-access'
 import { getShortcutsForRole } from './keyboard-shortcuts'
 
 function HelpStepActionLink({
@@ -170,14 +171,7 @@ const navigationGuide = [
 ]
 
 function helpNavigationForRole(role: string | null): typeof navigationGuide {
-  const r = (role ?? 'client') as 'admin' | 'team' | 'client'
-  return navigationGuide.filter((item) => {
-    if (item.href === '/admin/clients') return r === 'admin'
-    if (item.href === '/dashboard/ads' || item.href === '/dashboard/proposals') {
-      return r === 'admin' || r === 'team'
-    }
-    return true
-  })
+  return navigationGuide.filter((item) => canAccessPath(role, item.href))
 }
 
 function gettingStartedStepsForRole(role: string | null) {
@@ -192,9 +186,7 @@ function gettingStartedStepsForRole(role: string | null) {
     }
   }
   if (r === 'client') {
-    return steps.filter(
-      (s) => !s.action.href.startsWith('/dashboard/ads') && !s.action.href.startsWith('/dashboard/proposals')
-    )
+    return steps.filter((s) => canAccessPath('client', s.action.href))
   }
   return steps
 }

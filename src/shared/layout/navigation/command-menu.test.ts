@@ -23,11 +23,12 @@ describe('getNavigationItemsForUserRole', () => {
     expect(admin.some((i) => i.name === 'Clients' && i.href === '/admin/clients')).toBe(true)
   })
 
-  it('hides agency Ads, Socials, Proposals for client role', () => {
+  it('hides agency Ads and Socials but shows Proposals for client role', () => {
     const client = getNavigationItemsForUserRole('client')
     expect(client.some((i) => i.href === '/dashboard/ads')).toBe(false)
     expect(client.some((i) => i.href === '/dashboard/socials')).toBe(false)
-    expect(client.some((i) => i.href === '/dashboard/proposals')).toBe(false)
+    expect(client.some((i) => i.href === '/dashboard/proposals')).toBe(true)
+    expect(client.some((i) => i.href === '/dashboard/analytics')).toBe(true)
   })
 
   it('shows agency routes for team', () => {

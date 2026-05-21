@@ -12,6 +12,7 @@ import {
   Video,
 } from 'lucide-react'
 
+import type { DashboardCapability } from '@/lib/access-control/dashboard-access'
 import type { WorkforceVisibility } from '@/types/workforce'
 
 export type WorkforceRouteDefinition = {
@@ -33,7 +34,9 @@ export type NavigationGroup = {
     href: string
     description: string
     icon: LucideIcon
+    /** @deprecated Prefer `capability`; kept for backward compatibility. */
     roles?: WorkforceVisibility[]
+    capability?: DashboardCapability
   }[]
 }
 
@@ -61,10 +64,36 @@ export const DASHBOARD_NAVIGATION_GROUPS: NavigationGroup[] = [
     id: 'agency-tools',
     label: 'Agency tools',
     items: [
-      { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, description: 'Traffic, funnels, and client performance' },
-      { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad integrations and pacing', roles: ['admin', 'team'] },
-      { name: 'Socials', href: '/dashboard/socials', icon: Share2, description: 'Social and content sync', roles: ['admin', 'team'] },
-      { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Proposals and decks for clients', roles: ['admin', 'team'] },
+      {
+        name: 'Analytics',
+        href: '/dashboard/analytics',
+        icon: BarChart3,
+        description: 'Traffic, funnels, and client performance',
+        capability: 'analytics.view',
+      },
+      {
+        name: 'Ads',
+        href: '/dashboard/ads',
+        icon: Megaphone,
+        description: 'Ad integrations and pacing',
+        capability: 'agency.ads',
+        roles: ['admin', 'team'],
+      },
+      {
+        name: 'Socials',
+        href: '/dashboard/socials',
+        icon: Share2,
+        description: 'Social and content sync',
+        capability: 'agency.socials',
+        roles: ['admin', 'team'],
+      },
+      {
+        name: 'Proposals',
+        href: '/dashboard/proposals',
+        icon: FileText,
+        description: 'Shared proposals and decks from your agency',
+        capability: 'proposals.view',
+      },
     ],
   },
 ]

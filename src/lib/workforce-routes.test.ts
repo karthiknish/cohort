@@ -1,21 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  DASHBOARD_NAVIGATION_GROUPS,
-  type NavigationGroup,
-  WORKFORCE_ROUTES,
-} from './workforce-routes'
+import { navItemsForRole } from '@/lib/access-control/dashboard-access'
 
-/** Mirrors sidebar filtering in `src/shared/layout/navigation.tsx` */
-function filterNavForRole(userRole: 'admin' | 'team' | 'client'): NavigationGroup[] {
-  return DASHBOARD_NAVIGATION_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => {
-      if (!item.roles) return true
-      return item.roles.includes(userRole)
-    }),
-  })).filter((group) => group.items.length > 0)
-}
+import { DASHBOARD_NAVIGATION_GROUPS, WORKFORCE_ROUTES } from './workforce-routes'
 
 describe('workforce-routes', () => {
   it('does not expose removed time / scheduling / time-off routes', () => {
@@ -35,10 +22,20 @@ describe('workforce-routes', () => {
 
   it('includes Workspace core links for all roles', () => {
     for (const role of ['admin', 'team', 'client'] as const) {
-      const nav = filterNavForRole(role)
+      const nav = navItemsForRole(role)
       const core = nav.find((g) => g.id === 'core')
       expect(core?.items.some((i) => i.href === '/dashboard/projects')).toBe(true)
       expect(core?.items.some((i) => i.href === '/dashboard/tasks')).toBe(true)
     }
+  })
+
+  it('shows Analytics and Proposals but not Ads/Socials for clients', () => {
+    const nav = navItemsForRole('client')
+    const agency = nav.find((g) => g.id === 'agency-tools')
+    const hrefs = agency?.items.map((i) => i.href) ?? []
+    expect(hrefs).toContain('/dashboard/analytics')
+    expect(hrefs).toContain('/dashboard/proposals')
+    expect(hrefs).not.toContain('/dashboard/ads')
+    expect(hrefs).not.toContain('/dashboard/socials')
   })
 })

@@ -63,6 +63,7 @@ interface ProposalHistoryProps {
   onDownloadDeck: (proposal: ProposalDraft) => void
   onCreateNew: () => void
   canCreate: boolean
+  canManage?: boolean
   isCreating: boolean
 }
 
@@ -79,6 +80,7 @@ function ProposalHistoryComponent({
   onDownloadDeck,
   onCreateNew,
   canCreate,
+  canManage = true,
   isCreating,
 }: ProposalHistoryProps) {
   const rows = proposals.map((proposal) => {
@@ -117,11 +119,12 @@ function ProposalHistoryComponent({
         <ProposalHistoryHeader isLoading={isLoading} onRefresh={onRefresh} proposalCount={proposals.length} />
         <div className="space-y-3">
           {proposals.length === 0 && !isLoading ? (
-            <ProposalHistoryEmptyState canCreate={canCreate} isCreating={isCreating} isGenerating={isGenerating} onCreateNew={onCreateNew} />
+            <ProposalHistoryEmptyState canCreate={canCreate} canManage={canManage} isCreating={isCreating} isGenerating={isGenerating} onCreateNew={onCreateNew} />
           ) : (
             rows.map((row) => (
               <ProposalHistoryRow
                 key={row.proposal.id}
+                canManage={canManage}
                 deletingProposalId={deletingProposalId}
                 onDownloadDeck={onDownloadDeck}
                 onRequestDelete={onRequestDelete}

@@ -7,7 +7,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { chromaticTransitionClass, chromaticTransitionNormalClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { getPreviewSettingsProfile } from '@/lib/preview-data'
-import { DASHBOARD_NAVIGATION_GROUPS } from '@/lib/workforce-routes'
+import { navItemsForRole } from '@/lib/access-control/dashboard-access'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import {
@@ -154,17 +154,7 @@ function NavigationList({ onNavigate, collapsed = false }: { onNavigate?: () => 
     }
   }, [pathname])
 
-  // Filter navigation items based on user role
-  const navigationGroups = useMemo(() => {
-    const userRole = user?.role ?? 'client'
-    return DASHBOARD_NAVIGATION_GROUPS.map((group) => ({
-      ...group,
-      items: group.items.filter((item) => {
-        if (!item.roles) return true
-        return item.roles.includes(userRole as 'admin' | 'team' | 'client')
-      }),
-    })).filter((group) => group.items.length > 0)
-  }, [user?.role])
+  const navigationGroups = useMemo(() => navItemsForRole(user?.role ?? null), [user?.role])
 
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={100}>

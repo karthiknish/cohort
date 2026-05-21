@@ -34,6 +34,7 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '@/shared/ui/command'
+import { can, capabilityForHref, type DashboardCapability } from '@/lib/access-control/dashboard-access'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useKeyboardShortcut, KeyboardShortcutBadge } from '@/shared/hooks/use-keyboard-shortcuts'
@@ -141,8 +142,7 @@ const navigationItemDefs: Array<{
   href: string
   icon: ComponentType<{ className?: string }>
   description: string
-  /** When set, only these roles see the item (default: all roles) */
-  roles?: readonly ('admin' | 'team' | 'client')[]
+  capability?: DashboardCapability
 }> = [
   { name: 'Dashboard', href: '/dashboard', icon: Home, description: 'Overview and stats' },
   {
@@ -150,15 +150,39 @@ const navigationItemDefs: Array<{
     href: '/admin/clients',
     icon: Users,
     description: 'Manage client workspaces',
-    roles: ['admin'] as const,
+    capability: 'admin.directory',
   },
   { name: 'For You', href: '/for-you', icon: Activity, description: 'Personalized activity feed' },
-  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, description: 'Performance insights' },
-  { name: 'Ads', href: '/dashboard/ads', icon: Megaphone, description: 'Ad platform integrations', roles: ['admin', 'team'] as const },
-  { name: 'Socials', href: '/dashboard/socials', icon: Share2, description: 'Meta social insights & AI suggestions', roles: ['admin', 'team'] as const },
+  {
+    name: 'Analytics',
+    href: '/dashboard/analytics',
+    icon: BarChart3,
+    description: 'Performance insights',
+    capability: 'analytics.view',
+  },
+  {
+    name: 'Ads',
+    href: '/dashboard/ads',
+    icon: Megaphone,
+    description: 'Ad platform integrations',
+    capability: 'agency.ads',
+  },
+  {
+    name: 'Socials',
+    href: '/dashboard/socials',
+    icon: Share2,
+    description: 'Meta social insights & AI suggestions',
+    capability: 'agency.socials',
+  },
   { name: 'Meetings', href: '/dashboard/meetings', icon: Video, description: 'Schedule and run meetings' },
   { name: 'Tasks', href: '/dashboard/tasks', icon: CheckSquare, description: 'Task management' },
-  { name: 'Proposals', href: '/dashboard/proposals', icon: FileText, description: 'Create proposals', roles: ['admin', 'team'] as const },
+  {
+    name: 'Proposals',
+    href: '/dashboard/proposals',
+    icon: FileText,
+    description: 'View shared proposals and decks',
+    capability: 'proposals.view',
+  },
   { name: 'Collaboration', href: '/dashboard/collaboration', icon: MessageSquare, description: 'Team chat' },
   { name: 'Projects', href: '/dashboard/projects', icon: Briefcase, description: 'Project management' },
 ]
@@ -168,34 +192,32 @@ const quickActions: Array<{
   action: string
   icon: ComponentType<{ className?: string }>
   description: string
-  roles?: readonly ('admin' | 'team' | 'client')[]
+  capability?: DashboardCapability
 }> = [
   {
     name: 'Create proposal',
     action: '/dashboard/proposals',
     icon: Plus,
     description: 'Generate new proposal',
-    roles: ['admin', 'team'] as const,
+    capability: 'proposals.manage',
   },
   { name: 'Add task', action: '/dashboard/tasks?action=create', icon: Plus, description: 'Create a new task' },
   { name: 'Open projects', action: '/dashboard/projects', icon: Plus, description: 'Jump to active projects' },
 ]
 
+function itemAllowed(userRole: string | null, capability?: DashboardCapability, href?: string) {
+  const resolved = capability ?? (href ? capabilityForHref(href) : null)
+  if (!resolved) return true
+  return can(userRole, resolved)
+}
+
 /** Exposed for tests: command palette entries filtered the same as the rendered menu. */
 export function getNavigationItemsForUserRole(userRole: string | null) {
-  const role = (userRole ?? 'client') as 'admin' | 'team' | 'client'
-  return navigationItemDefs.filter((item) => {
-    if (!item.roles) return true
-    return item.roles.includes(role)
-  })
+  return navigationItemDefs.filter((item) => itemAllowed(userRole, item.capability, item.href))
 }
 
 export function getQuickActionsForUserRole(userRole: string | null) {
-  const role = (userRole ?? 'client') as 'admin' | 'team' | 'client'
-  return quickActions.filter((item) => {
-    if (!item.roles) return true
-    return item.roles.includes(role)
-  })
+  return quickActions.filter((item) => itemAllowed(userRole, item.capability, item.action))
 }
 
 export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {

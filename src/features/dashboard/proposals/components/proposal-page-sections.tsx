@@ -28,6 +28,7 @@ import { ProposalVersionHistory } from './proposal-version-history'
 import { ProposalWizardHeader } from './proposal-wizard-header'
 
 export function ProposalPageActions(props: {
+  canManage?: boolean
   currentFormData: ProposalFormData
   draftId: string | null
   isSubmitting: boolean
@@ -38,6 +39,7 @@ export function ProposalPageActions(props: {
   onStartProposal: () => void
 }) {
   const {
+    canManage = true,
     currentFormData,
     draftId,
     isSubmitting,
@@ -47,6 +49,10 @@ export function ProposalPageActions(props: {
     onVersionRestored,
     onStartProposal,
   } = props
+
+  if (!canManage) {
+    return null
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -71,13 +77,29 @@ export function ProposalPageActions(props: {
 
 export function ProposalStartStateCard(props: {
   canStart: boolean
+  /** When false, user can view shared proposals but not create. */
+  canManage?: boolean
   /** Shown when `canStart` is false (e.g. no client selected). */
   blockedHint?: string | null
 }) {
-  const { canStart, blockedHint } = props
+  const { canStart, canManage = true, blockedHint } = props
 
   if (canStart) {
     return null
+  }
+
+  if (!canManage) {
+    return (
+      <Alert className="border-dashed border-muted-foreground/30 bg-muted/20">
+        <AlertTitle className="flex items-center gap-2">
+          <FileText className="h-4 w-4" aria-hidden />
+          Shared proposals
+        </AlertTitle>
+        <AlertDescription>
+          Your agency publishes proposals and decks here. Open a row below to preview or download when ready.
+        </AlertDescription>
+      </Alert>
+    )
   }
 
   return (

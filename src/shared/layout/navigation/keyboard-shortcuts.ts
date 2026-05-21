@@ -1,5 +1,7 @@
 'use client'
 
+import { can, type DashboardCapability } from '@/lib/access-control/dashboard-access'
+
 export type ShortcutRole = 'admin' | 'team' | 'client'
 export type ShortcutContext = 'global' | 'proposal-builder'
 
@@ -8,7 +10,9 @@ export interface ShortcutDefinition {
   description: string
   group: 'Navigation' | 'Actions' | 'Panels' | 'Proposal Builder'
   context: ShortcutContext
+  /** @deprecated Prefer `capability`. */
   roles?: readonly ShortcutRole[]
+  capability?: DashboardCapability
 }
 
 const globalShortcuts: ShortcutDefinition[] = [
@@ -47,14 +51,14 @@ const globalShortcuts: ShortcutDefinition[] = [
     description: 'Go to ads',
     group: 'Navigation',
     context: 'global',
-    roles: ['admin', 'team'],
+    capability: 'agency.ads',
   },
   {
     combo: 'g p',
     description: 'Go to proposals',
     group: 'Navigation',
     context: 'global',
-    roles: ['admin', 'team'],
+    capability: 'proposals.view',
   },
   {
     combo: 'g s',
@@ -73,7 +77,7 @@ const globalShortcuts: ShortcutDefinition[] = [
     description: 'Create a proposal',
     group: 'Actions',
     context: 'global',
-    roles: ['admin', 'team'],
+    capability: 'proposals.manage',
   },
 ]
 
@@ -110,17 +114,20 @@ export function getShortcutsForRole(
   userRole: string | null | undefined,
   context?: ShortcutContext,
 ): ShortcutDefinition[] {
-  const role = (userRole ?? 'client') as ShortcutRole
-
   return DASHBOARD_SHORTCUTS.filter((shortcut) => {
     if (context && shortcut.context !== context) {
       return false
+    }
+
+    if (shortcut.capability) {
+      return can(userRole, shortcut.capability)
     }
 
     if (!shortcut.roles) {
       return true
     }
 
+    const role = (userRole ?? 'client') as ShortcutRole
     return shortcut.roles.includes(role)
   })
 }

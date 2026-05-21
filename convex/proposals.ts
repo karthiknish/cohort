@@ -1,4 +1,11 @@
 import { Errors } from './errors'
+
+function assertCanManageProposals(ctx: { user: { role: string | null } }) {
+  const role = ctx.user.role
+  if (role !== 'admin' && role !== 'team') {
+    throw Errors.auth.forbidden('Only agency team members can create or edit proposals.')
+  }
+}
 import {
   zWorkspaceQuery,
   zWorkspaceMutation,
@@ -171,6 +178,7 @@ export const create = zWorkspaceMutation({
   },
   returns: z.object({ legacyId: z.string() }),
   handler: async (ctx, args) => {
+    assertCanManageProposals(ctx)
     const timestamp = nowMs()
     let legacyId = generateId('proposal')
     let attempt = 0
@@ -232,6 +240,7 @@ export const update = zWorkspaceMutation({
   },
   returns: z.object({ ok: z.boolean() }),
   handler: async (ctx, args) => {
+    assertCanManageProposals(ctx)
     const existing = await ctx.db
       .query('proposals')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))
@@ -271,6 +280,7 @@ export const remove = zWorkspaceMutation({
   args: { workspaceId: z.string(), legacyId: z.string() },
   returns: z.object({ ok: z.boolean() }),
   handler: async (ctx, args) => {
+    assertCanManageProposals(ctx)
     const existing = await ctx.db
       .query('proposals')
       .withIndex('by_workspace_legacyId', (q) => q.eq('workspaceId', args.workspaceId).eq('legacyId', args.legacyId))

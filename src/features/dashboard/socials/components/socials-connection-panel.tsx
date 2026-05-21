@@ -66,7 +66,7 @@ function ConnectionStatusBadge({
   }
 
   if (syncPending || lastSyncStatus === 'pending') {
-    return <Badge className={getBadgeClasses('info')}>Syncing…</Badge>
+    return <Badge className={getBadgeClasses('primary')}>Syncing…</Badge>
   }
 
   if (!setupComplete) {

@@ -83,13 +83,13 @@ export function DashboardRoleBanner({ userRole, userDisplayName }: DashboardRole
                 Welcome back{userDisplayName?.trim() ? `, ${userDisplayName.split(' ')[0]}` : ''}
               </p>
               <p className="text-sm text-muted-foreground">
-                This portal highlights your projects, proposals, and messages with your agency. Sensitive admin tools stay
+                Review your projects, Analytics, and proposals shared by your agency. Paid media and admin tools stay
                 hidden for your role.
               </p>
             </div>
-            <Link href="/dashboard/collaboration" className="shrink-0">
+            <Link href="/dashboard/proposals" className="shrink-0">
               <Button variant="outline" size="sm" className="border-success/30 text-success hover:bg-success/10">
-                Collaboration <ArrowUpRight className="ml-1 h-3 w-3" />
+                Proposals <ArrowUpRight className="ml-1 h-3 w-3" />
               </Button>
             </Link>
           </CardContent>

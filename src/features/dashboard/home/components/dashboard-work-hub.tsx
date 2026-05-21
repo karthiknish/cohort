@@ -17,6 +17,7 @@ import {
 
 import { cn } from '@/lib/utils'
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import { can, capabilityForHref, type DashboardCapability } from '@/lib/access-control/dashboard-access'
 import { WORKFORCE_ROUTES } from '@/lib/workforce-routes'
 import type { WorkforceVisibility } from '@/types/workforce'
 import { Badge } from '@/shared/ui/badge'
@@ -28,6 +29,7 @@ type HubTile = {
   description: string
   icon: LucideIcon
   roles?: WorkforceVisibility[]
+  capability?: DashboardCapability
 }
 
 const CORE_DELIVERY_TILES: HubTile[] = [
@@ -63,20 +65,21 @@ const GROWTH_TILES: HubTile[] = [
     title: 'Analytics',
     description: 'Traffic, funnels, and trends.',
     icon: BarChart3,
+    capability: 'analytics.view',
   },
   {
     href: '/dashboard/ads',
     title: 'Ads',
     description: 'Paid media sync and performance.',
     icon: Megaphone,
-    roles: ['admin', 'team'],
+    capability: 'agency.ads',
   },
   {
     href: '/dashboard/proposals',
     title: 'Proposals',
     description: 'Decks and client-ready assets.',
     icon: FileText,
-    roles: ['admin', 'team'],
+    capability: 'proposals.view',
   },
 ]
 
@@ -96,7 +99,12 @@ const CLIENT_EXTRA_TILES: HubTile[] = [
 ]
 
 function filterByRole(tiles: HubTile[], role: WorkforceVisibility): HubTile[] {
-  return tiles.filter((tile) => !tile.roles || tile.roles.includes(role))
+  return tiles.filter((tile) => {
+    const capability = tile.capability ?? capabilityForHref(tile.href)
+    if (capability) return can(role, capability)
+    if (!tile.roles) return true
+    return tile.roles.includes(role)
+  })
 }
 
 function HubCluster({

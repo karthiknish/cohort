@@ -60,11 +60,13 @@ export function ProposalHistoryHeader({
 
 export function ProposalHistoryEmptyState({
   canCreate,
+  canManage = true,
   isCreating,
   isGenerating,
   onCreateNew,
 }: {
   canCreate: boolean
+  canManage?: boolean
   isCreating: boolean
   isGenerating: boolean
   onCreateNew: () => void
@@ -76,12 +78,20 @@ export function ProposalHistoryEmptyState({
       </div>
       <h3 className="mb-2 text-lg font-semibold tracking-tight">No proposals yet</h3>
       <p className="mb-6 max-w-[320px] text-sm text-muted-foreground">
-        Use <span className="font-medium text-foreground">New Proposal</span> in the header to open the guided builder and generate your first deck.
+        {canManage
+          ? (
+              <>
+                Use <span className="font-medium text-foreground">New Proposal</span> in the header to open the guided builder and generate your first deck.
+              </>
+            )
+          : 'When your agency shares a proposal or deck, it will appear here for you to review.'}
       </p>
-      <Button onClick={onCreateNew} disabled={!canCreate || isCreating || isGenerating} className="shadow-sm motion-chromatic hover:shadow-md">
-        {isCreating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-        New proposal
-      </Button>
+      {canManage ? (
+        <Button onClick={onCreateNew} disabled={!canCreate || isCreating || isGenerating} className="shadow-sm motion-chromatic hover:shadow-md">
+          {isCreating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+          New proposal
+        </Button>
+      ) : null}
     </div>
   )
 }
@@ -98,12 +108,14 @@ export type ProposalHistoryRowViewModel = {
 }
 
 export function ProposalHistoryRow({
+  canManage = true,
   deletingProposalId,
   onDownloadDeck,
   onRequestDelete,
   onResume,
   row,
 }: {
+  canManage?: boolean
   deletingProposalId: string | null
   onDownloadDeck: (proposal: ProposalDraft) => void
   onRequestDelete: (proposal: ProposalDraft) => void
@@ -171,7 +183,7 @@ export function ProposalHistoryRow({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {proposal.status === 'draft' && !isActiveDraft ? (
+          {canManage && proposal.status === 'draft' && !isActiveDraft ? (
             <Button size="sm" variant="secondary" onClick={handleResumeAsEdit} className="h-9 px-4 font-medium">
               <Pencil className="mr-2 h-3.5 w-3.5" />
               Edit
@@ -198,23 +210,25 @@ export function ProposalHistoryRow({
                 </a>
               </Button>
             </div>
-          ) : deckRequestable ? (
+          ) : canManage && deckRequestable ? (
             <Button size="sm" variant="outline" onClick={handleDownloadDeck} disabled={isDeckPreparing} className="h-9 border-dashed px-4">
               {isDeckPreparing ? <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" /> : <FileText className="mr-2 h-3.5 w-3.5 text-info" />}
               {isDeckPreparing ? 'Preparing…' : 'Generate Deck'}
             </Button>
           ) : null}
 
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={handleRequestDelete}
-            disabled={Boolean(deletingProposalId)}
-            className="h-9 w-9 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-            aria-label={`Delete ${displayName}`}
-          >
-            {deletingProposalId === proposal.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-          </Button>
+          {canManage ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleRequestDelete}
+              disabled={Boolean(deletingProposalId)}
+              className="h-9 w-9 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+              aria-label={`Delete ${displayName}`}
+            >
+              {deletingProposalId === proposal.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

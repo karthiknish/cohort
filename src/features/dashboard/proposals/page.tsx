@@ -5,6 +5,8 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import type { ProposalDraft } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
 import { useToast } from '@/shared/ui/use-toast'
+import { can } from '@/lib/access-control/dashboard-access'
+import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
@@ -40,8 +42,10 @@ function ProposalsPageContent() {
   const { push } = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
+  const { user } = useAuth()
   const { selectedClient, selectedClientId, selectClient } = useClientContext()
   const { isPreviewMode } = usePreview()
+  const canManageProposals = isPreviewMode || can(user?.role, 'proposals.manage')
   const [isWizardOpen, setIsWizardOpen] = useState(false)
   const clientIdParam = searchParams.get('clientId')
 
@@ -342,6 +346,7 @@ function ProposalsPageContent() {
         <div className="flex flex-col gap-6 border-b border-border/60 pb-6 lg:flex-row lg:items-start lg:justify-between">
           <ProposalWizardHeader clientName={selectedClient?.name ?? null} />
           <ProposalPageActions
+            canManage={canManageProposals}
             currentFormData={formState}
             draftId={draftId}
             isSubmitting={isSubmitting}
@@ -357,7 +362,8 @@ function ProposalsPageContent() {
 
         {!isWizardOpen ? (
           <ProposalStartStateCard
-            canStart={Boolean(selectedClientId)}
+            canManage={canManageProposals}
+            canStart={canManageProposals && Boolean(selectedClientId)}
             blockedHint={
               selectedClientId
                 ? null
@@ -378,7 +384,8 @@ function ProposalsPageContent() {
           downloadingDeckId={downloadingDeckId}
           onDownloadDeck={isPreviewMode ? handlePreviewDownloadDeck : handleDownloadDeck}
           onCreateNew={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
-          canCreate={Boolean(selectedClientId)}
+          canManage={canManageProposals}
+          canCreate={canManageProposals && Boolean(selectedClientId)}
           isCreating={isCreatingDraft}
         />
         <ProposalDeleteDialog

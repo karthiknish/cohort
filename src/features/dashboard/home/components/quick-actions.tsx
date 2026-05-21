@@ -6,6 +6,7 @@ import { useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
+import { can, type DashboardCapability } from '@/lib/access-control/dashboard-access'
 import { useAuth } from '@/shared/contexts/auth-context'
 
 type QuickLink = {
@@ -14,7 +15,7 @@ type QuickLink = {
   href: string
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   badge: string | null
-  roles?: ('admin' | 'team' | 'client')[]
+  capability?: DashboardCapability
 }
 
 type CreateAction = {
@@ -22,7 +23,7 @@ type CreateAction = {
   href: string
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   description: string
-  roles?: ('admin' | 'team' | 'client')[]
+  capability?: DashboardCapability
 }
 
 // Admin-specific quick links
@@ -33,7 +34,7 @@ const adminQuickLinks: QuickLink[] = [
     href: '/dashboard/ads',
     icon: Megaphone,
     badge: null,
-    roles: ['admin', 'team'],
+    capability: 'agency.ads',
   },
   {
     title: 'Manage projects',
@@ -41,7 +42,6 @@ const adminQuickLinks: QuickLink[] = [
     href: '/dashboard/projects',
     icon: Briefcase,
     badge: null,
-    roles: ['admin', 'team'],
   },
   {
     title: 'Deep-dive analytics',
@@ -83,7 +83,7 @@ const createActions: CreateAction[] = [
     href: '/dashboard/proposals',
     icon: FileText,
     description: 'AI-powered',
-    roles: ['admin', 'team'],
+    capability: 'proposals.manage',
   },
   {
     label: 'New Task',
@@ -112,8 +112,12 @@ export function QuickActions({ compact }: QuickActionsProps) {
     const quickLinks = userRole === 'client' ? clientQuickLinks : adminQuickLinks
 
     return {
-      filteredQuickLinks: quickLinks.filter((link) => !link.roles || link.roles.includes(userRole as 'admin' | 'team' | 'client')),
-      filteredCreateActions: createActions.filter((action) => !action.roles || action.roles.includes(userRole as 'admin' | 'team' | 'client')),
+      filteredQuickLinks: quickLinks.filter(
+        (link) => !link.capability || can(userRole, link.capability),
+      ),
+      filteredCreateActions: createActions.filter(
+        (action) => !action.capability || can(userRole, action.capability),
+      ),
     }
   }, [userRole])
 
