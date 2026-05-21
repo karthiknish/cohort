@@ -227,7 +227,7 @@ describe('agent mode panel sections', () => {
       </>,
     )
 
-    expect(markup).toContain('Where would you like to go?')
+    expect(markup).toContain('What can I help with?')
     expect(markup).toContain('Mention Dropdown')
     expect(markup).toContain('Voice')
     expect(markup).toContain('Open meetings')

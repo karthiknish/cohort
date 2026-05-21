@@ -408,6 +408,10 @@ export function UnifiedConversationHeader({
   const [channelInfoOpen, setChannelInfoOpen] = useState(false)
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const handleOpenChannelInfo = useCallback(() => {
+    setChannelInfoOpen(true)
+  }, [])
+
   const handleArchiveToggle = useCallback(() => {
     header.onArchive?.(!header.isArchived)
   }, [header])
@@ -541,7 +545,7 @@ export function UnifiedConversationHeader({
                 size="icon"
                 className="h-8 w-8"
                 aria-label="Channel details"
-                onClick={() => setChannelInfoOpen(true)}
+                onClick={handleOpenChannelInfo}
               >
                 <Info className="h-3.5 w-3.5" />
               </Button>

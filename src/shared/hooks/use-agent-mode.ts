@@ -11,7 +11,7 @@ import {
 } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAction, useMutation } from 'convex/react'
-import { tasksApi } from '@/lib/convex-api'
+import { agentApi, tasksApi } from '@/lib/convex-api'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { useNavigationContext } from '@/shared/contexts/navigation-context'
@@ -30,7 +30,6 @@ import {
 } from '@/lib/agent-attachments'
 import { buildAgentConversationShareLink } from '@/lib/agent-conversation-export'
 import { readAgentPanelLayout, shouldKeepAgentOpenOnNavigate } from '@/lib/agent-panel-layout'
-import { agentApi } from '@/lib/convex-api'
 import { AgentValidationError, parseAgentError, ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
 import { deriveActiveContextFromPath, type AgentContextIds } from '@/lib/agent-context'
 import { notifyFailure, notifyError } from '@/lib/notifications'
@@ -74,7 +73,7 @@ export interface AgentMessage {
   lifecycle?: AgentMessageLifecycle
   metadata?: AgentMessageMetadata
   steps?: AgentExecutionStep[]
-  mentions?: import('@/lib/agent-mentions').AgentMentionEntity[]
+  mentions?: AgentMentionEntity[]
   attachments?: AgentAttachmentContext[]
 }
 
@@ -838,9 +837,7 @@ export function useAgentMode(): UseAgentModeReturn {
     handleError,
     isExtractingAttachments,
     isPinnedToBottom,
-    messages,
     pendingAttachments,
-    router,
     scrollToLatest,
     buildAgentRequestContext,
     sendMessage,

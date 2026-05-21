@@ -154,10 +154,12 @@ function SettingsPageInner() {
   )
 }
 
+const SETTINGS_PAGE_FALLBACK = <SettingsPageFallback />
+
 export default function SettingsPage() {
   return (
     <PageMotionShell reveal={false} className="space-y-0">
-      <Suspense fallback={<SettingsPageFallback />}>
+      <Suspense fallback={SETTINGS_PAGE_FALLBACK}>
         <SettingsPageInner />
       </Suspense>
     </PageMotionShell>

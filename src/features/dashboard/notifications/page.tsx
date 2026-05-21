@@ -1,7 +1,7 @@
 'use client'
 
 import { notifyFailure } from '@/lib/notifications'
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   Check,
   CheckCheck,
@@ -77,6 +77,26 @@ export default function NotificationsPage() {
     <Suspense fallback={NOTIFICATIONS_PAGE_FALLBACK}>
       <NotificationsPageContent />
     </Suspense>
+  )
+}
+
+function NotificationVirtualRow({
+  start,
+  dataIndex,
+  measureRef,
+  children,
+}: {
+  start: number
+  dataIndex: number
+  measureRef: (element: Element | null) => void
+  children: ReactNode
+}) {
+  const style = useMemo(() => ({ transform: `translateY(${start}px)` }), [start])
+
+  return (
+    <div data-index={dataIndex} ref={measureRef} className="absolute left-0 top-0 w-full pb-2" style={style}>
+      {children}
+    </div>
   )
 }
 
@@ -423,6 +443,13 @@ function NotificationsPageContent() {
     notificationVirtualizer.measure()
   }, [notificationVirtualizer, shouldVirtualizeNotifications, notifications.length])
 
+  const virtualTotalSize = notificationVirtualizer.getTotalSize()
+  const virtualContainerStyle = useMemo(() => ({ height: virtualTotalSize }), [virtualTotalSize])
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedIds(new Set())
+  }, [])
+
   return (
     <div className={DASHBOARD_THEME.layout.container}>
       <LiveRegion message={notificationAnnouncement} />
@@ -558,7 +585,7 @@ function NotificationsPageContent() {
                     <Button size="sm" variant="outline" onClick={handleBulkDismiss} disabled={ackInFlight}>
                       Dismiss
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                    <Button size="sm" variant="ghost" onClick={handleClearSelection}>
                       Clear
                     </Button>
                   </div>
@@ -574,22 +601,18 @@ function NotificationsPageContent() {
                     ref={notificationScrollRef}
                     className="h-[calc(100vh-24rem)] overflow-y-auto"
                   >
-                    <div
-                      className="relative w-full"
-                      style={{ height: notificationVirtualizer.getTotalSize() }}
-                    >
+                    <div className="relative w-full" style={virtualContainerStyle}>
                       {notificationVirtualizer.getVirtualItems().map((vi) => {
                         const notification = notifications[vi.index]
                         if (!notification) {
                           return null
                         }
                         return (
-                          <div
+                          <NotificationVirtualRow
                             key={notification.id}
-                            data-index={vi.index}
-                            ref={notificationVirtualizer.measureElement}
-                            className="absolute left-0 top-0 w-full pb-2"
-                            style={{ transform: `translateY(${vi.start}px)` }}
+                            start={vi.start}
+                            dataIndex={vi.index}
+                            measureRef={notificationVirtualizer.measureElement}
                           >
                             <NotificationItem
                               notification={notification}
@@ -600,7 +623,7 @@ function NotificationsPageContent() {
                               onMarkRead={handleMarkAsRead}
                               onSelectToggle={handleSelectToggle}
                             />
-                          </div>
+                          </NotificationVirtualRow>
                         )
                       })}
                     </div>

@@ -1,5 +1,9 @@
 import { writeMetricsBatch } from '@/lib/ads-admin'
-import { getGoogleAnalyticsIntegration, writeAnalyticsMetricsBatch } from '@/lib/analytics-admin'
+import {
+  getGoogleAnalyticsIntegration,
+  updateGoogleAnalyticsCredentials,
+  writeAnalyticsMetricsBatch,
+} from '@/lib/analytics-admin'
 import { fetchGoogleAnalyticsBreakdowns } from '@/services/integrations/google-analytics/breakdown'
 import { assertGoogleApiOk } from '@/lib/errors/google-api-error'
 import {
@@ -13,8 +17,6 @@ import {
   fetchGoogleAnalyticsProperties,
   fetchGoogleAnalyticsPropertyCurrency,
 } from '@/services/integrations/google-analytics/properties'
-import { updateGoogleAnalyticsCredentials } from '@/lib/analytics-admin'
-
 const RUN_REPORT_PAGE_LIMIT = 10_000
 const RUN_REPORT_MAX_PAGES = 20
 

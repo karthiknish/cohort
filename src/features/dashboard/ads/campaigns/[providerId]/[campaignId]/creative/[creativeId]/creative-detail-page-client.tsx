@@ -388,7 +388,7 @@ export default function CreativeDetailPageClient({
     setPreviewHeadlineIndex(0)
     setPreviewDescriptionIndex(0)
     setIsEditing(true)
-  }, [creative?.creativeId, creative?.platformCreativeId])
+  }, [creative])
 
   const runMetricsFetch = useEffectEvent(() => {
     void fetchMetrics()

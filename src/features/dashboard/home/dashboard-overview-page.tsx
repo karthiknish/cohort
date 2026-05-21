@@ -13,7 +13,6 @@ import {
 import { buildChartData } from '@/features/dashboard/home/lib/dashboard-calculations'
 import { PerformanceChart } from '@/features/dashboard/home/components/performance-chart'
 import { DashboardDailySnapshotCard } from '@/features/dashboard/home/components/dashboard-daily-snapshot-card'
-import { DashboardSkeleton } from '@/features/dashboard/home/components/dashboard-skeleton'
 import { StatsCards } from '@/features/dashboard/home/components/stats-cards'
 import { useDashboardData, useDashboardStats } from '@/features/dashboard/home/hooks'
 import { analyticsIntegrationsApi, projectsApi } from '@/lib/convex-api'
@@ -294,7 +293,6 @@ export function DashboardOverviewPage() {
     <BoneyardSkeletonBoundary
       name="dashboard-overview-page"
       loading={isInitialLoading}
-      loadingContent={<DashboardSkeleton />}
     >
       <div className="mx-auto max-w-7xl space-y-8 pb-10">
         <header className="space-y-3 border-b border-muted/40 pb-6">

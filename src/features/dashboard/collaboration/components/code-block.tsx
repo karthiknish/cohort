@@ -75,7 +75,7 @@ export function CodeBlock({
         fallbackMessage: 'Copy failed',
         })
     }
-  }, [code, toast])
+  }, [code])
 
   const lines = code.split('\n')
   const shouldTruncate = lines.length > 10 && !isExpanded

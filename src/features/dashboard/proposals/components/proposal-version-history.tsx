@@ -203,7 +203,7 @@ export function ProposalVersionHistory({
     if (!isOpen) {
       setPreviewVersion(null)
     }
-  }, [])
+  }, [setPreviewVersion])
 
   const handleRestoreOpenChange = useCallback((isOpen: boolean) => {
     if (!isOpen) {

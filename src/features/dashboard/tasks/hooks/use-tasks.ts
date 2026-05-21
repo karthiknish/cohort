@@ -350,7 +350,7 @@ export function useTasks({
         })
       }
     },
-    [isPreviewMode, patchTask, pendingStatusUpdates, toast, workspaceId]
+    [isPreviewMode, patchTask, pendingStatusUpdates, setPendingStatusUpdates, setTasks, toast, workspaceId]
   )
 
   const handleDeleteTask = useCallback(
@@ -466,7 +466,7 @@ export function useTasks({
         return null
       }
     },
-    [createTask, isPreviewMode, toast, workspaceId]
+    [createTask, isPreviewMode, setTasks, toast, workspaceId]
   )
 
   const handleUpdateTask = useCallback(
@@ -527,7 +527,7 @@ export function useTasks({
         throw err
       }
     },
-    [isPreviewMode, patchTask, toast, workspaceId]
+    [isPreviewMode, patchTask, setTasks, toast, workspaceId]
   )
 
   const handleBulkUpdate = useCallback(
@@ -576,7 +576,7 @@ export function useTasks({
         return false
       }
     },
-    [bulkPatchTasks, isPreviewMode, toast, workspaceId]
+    [bulkPatchTasks, isPreviewMode, setTasks, toast, workspaceId]
   )
 
   const handleBulkDelete = useCallback(

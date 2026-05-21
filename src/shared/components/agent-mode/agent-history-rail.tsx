@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo, type ChangeEvent, type MouseEvent } from 'react'
 import {
   AlertCircle,
   Archive,
@@ -59,6 +59,123 @@ type AgentHistoryRailProps = {
   layout?: 'rail' | 'sheet'
 }
 
+function ConversationHistoryActions({
+  conversation,
+  onDuplicateConversation,
+  onExportConversation,
+  onShareConversation,
+  onPinConversation,
+  onArchiveConversation,
+}: {
+  conversation: AgentConversationSummary
+  onDuplicateConversation?: (conversationId: string) => void
+  onExportConversation?: (conversationId: string) => void
+  onShareConversation?: (conversationId: string) => void
+  onPinConversation: (conversationId: string, pinned: boolean) => void
+  onArchiveConversation: (conversationId: string, archived: boolean) => void
+}) {
+  const handleDuplicate = useCallback(
+    (event: MouseEvent) => {
+      event.stopPropagation()
+      onDuplicateConversation?.(conversation.id)
+    },
+    [conversation.id, onDuplicateConversation],
+  )
+
+  const handleExport = useCallback(
+    (event: MouseEvent) => {
+      event.stopPropagation()
+      onExportConversation?.(conversation.id)
+    },
+    [conversation.id, onExportConversation],
+  )
+
+  const handleShare = useCallback(
+    (event: MouseEvent) => {
+      event.stopPropagation()
+      onShareConversation?.(conversation.id)
+    },
+    [conversation.id, onShareConversation],
+  )
+
+  const handlePin = useCallback(
+    (event: MouseEvent) => {
+      event.stopPropagation()
+      onPinConversation(conversation.id, !conversation.pinnedAt)
+    },
+    [conversation.id, conversation.pinnedAt, onPinConversation],
+  )
+
+  const handleArchive = useCallback(
+    (event: MouseEvent) => {
+      event.stopPropagation()
+      onArchiveConversation(conversation.id, !conversation.archivedAt)
+    },
+    [conversation.archivedAt, conversation.id, onArchiveConversation],
+  )
+
+  return (
+    <div className="absolute right-2 top-2 hidden gap-1 group-hover:flex group-focus-within:flex">
+      {onDuplicateConversation ? (
+        <Button
+          type="button"
+          size="icon"
+          variant="secondary"
+          className="h-7 w-7 focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Duplicate chat"
+          onClick={handleDuplicate}
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </Button>
+      ) : null}
+      {onExportConversation ? (
+        <Button
+          type="button"
+          size="icon"
+          variant="secondary"
+          className="h-7 w-7 focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Export chat"
+          onClick={handleExport}
+        >
+          <Download className="h-3.5 w-3.5" />
+        </Button>
+      ) : null}
+      {onShareConversation ? (
+        <Button
+          type="button"
+          size="icon"
+          variant="secondary"
+          className="h-7 w-7 focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Share chat"
+          onClick={handleShare}
+        >
+          <Link2 className="h-3.5 w-3.5" />
+        </Button>
+      ) : null}
+      <Button
+        type="button"
+        size="icon"
+        variant="secondary"
+        className="h-7 w-7 focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={conversation.pinnedAt ? 'Unpin chat' : 'Pin chat'}
+        onClick={handlePin}
+      >
+        {conversation.pinnedAt ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+      </Button>
+      <Button
+        type="button"
+        size="icon"
+        variant="secondary"
+        className="h-7 w-7"
+        aria-label={conversation.archivedAt ? 'Restore chat' : 'Archive chat'}
+        onClick={handleArchive}
+      >
+        <Archive className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  )
+}
+
 export function AgentHistoryRail({
   history,
   isHistoryLoading,
@@ -96,16 +213,27 @@ export function AgentHistoryRail({
     [history, showArchivedHistory],
   )
 
+  const handleHistorySearchChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      onHistorySearchChange(event.target.value)
+    },
+    [onHistorySearchChange],
+  )
+
+  const handleToggleArchivedHistory = useCallback(() => {
+    onShowArchivedHistoryChange(!showArchivedHistory)
+  }, [onShowArchivedHistoryChange, showArchivedHistory])
+
   return (
     <aside
       className={cn(
-        'flex h-full min-h-0 flex-col border-border bg-background',
+        'flex h-full min-h-0 flex-col border-border bg-muted/15',
         layout === 'rail' ? 'w-[min(300px,38vw)] shrink-0 border-r' : 'w-full border-b',
       )}
       aria-label="Chat history"
     >
-      <div className="flex items-center justify-between gap-2 border-b px-3 py-2.5">
-        <p className="text-sm font-semibold">Chat history</p>
+      <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-background/80 px-3 py-2.5 backdrop-blur-sm">
+        <p className="text-sm font-semibold tracking-tight">Chat history</p>
         <div className="flex items-center gap-1">
           {conversationId || messagesCount > 0 ? (
             <Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={onStartNewChat}>
@@ -124,7 +252,7 @@ export function AgentHistoryRail({
           <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             value={historySearch}
-            onChange={(event) => onHistorySearchChange(event.target.value)}
+            onChange={handleHistorySearchChange}
             placeholder="Search chats and messages…"
             className="h-9 pl-8"
             aria-label="Search chat history and messages"
@@ -137,7 +265,7 @@ export function AgentHistoryRail({
             size="sm"
             variant={showArchivedHistory ? 'secondary' : 'outline'}
             className="h-8 gap-1.5"
-            onClick={() => onShowArchivedHistoryChange(!showArchivedHistory)}
+            onClick={handleToggleArchivedHistory}
           >
             <Archive className="h-3.5 w-3.5" />
             Archived
@@ -199,83 +327,14 @@ export function AgentHistoryRail({
                         onStartEditing={onStartEditing}
                         onStopEditing={onStopEditing}
                       />
-                      <div className="absolute right-2 top-2 hidden gap-1 group-hover:flex group-focus-within:flex">
-                        {onDuplicateConversation ? (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="secondary"
-                            className="h-7 w-7 focus-visible:ring-2 focus-visible:ring-ring"
-                            aria-label="Duplicate chat"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              onDuplicateConversation(conversation.id)
-                            }}
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                        ) : null}
-                        {onExportConversation ? (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="secondary"
-                            className="h-7 w-7 focus-visible:ring-2 focus-visible:ring-ring"
-                            aria-label="Export chat"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              onExportConversation(conversation.id)
-                            }}
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </Button>
-                        ) : null}
-                        {onShareConversation ? (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="secondary"
-                            className="h-7 w-7 focus-visible:ring-2 focus-visible:ring-ring"
-                            aria-label="Share chat"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              onShareConversation(conversation.id)
-                            }}
-                          >
-                            <Link2 className="h-3.5 w-3.5" />
-                          </Button>
-                        ) : null}
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="secondary"
-                          className="h-7 w-7 focus-visible:ring-2 focus-visible:ring-ring"
-                          aria-label={conversation.pinnedAt ? 'Unpin chat' : 'Pin chat'}
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            onPinConversation(conversation.id, !conversation.pinnedAt)
-                          }}
-                        >
-                          {conversation.pinnedAt ? (
-                            <PinOff className="h-3.5 w-3.5" />
-                          ) : (
-                            <Pin className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="secondary"
-                          className="h-7 w-7"
-                          aria-label={conversation.archivedAt ? 'Restore chat' : 'Archive chat'}
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            onArchiveConversation(conversation.id, !conversation.archivedAt)
-                          }}
-                        >
-                          <Archive className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      <ConversationHistoryActions
+                        conversation={conversation}
+                        onDuplicateConversation={onDuplicateConversation}
+                        onExportConversation={onExportConversation}
+                        onShareConversation={onShareConversation}
+                        onPinConversation={onPinConversation}
+                        onArchiveConversation={onArchiveConversation}
+                      />
                     </div>
                   ))}
                 </div>

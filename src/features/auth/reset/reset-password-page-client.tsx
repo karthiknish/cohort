@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Lock, ArrowLeft, Shield, Check, X, LoaderCircle, CircleCheck } from 'lucide-react'
 
 import { useAuth } from '@/shared/contexts/auth-context'
-import { AuthPageSkeleton } from '@/features/auth/components/auth-page-skeleton'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
@@ -316,14 +315,12 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
   )
 
   const { status, email, verificationError } = verificationState
-  const loadingContent = useMemo(() => <AuthPageSkeleton />, [])
   const fixtureContent = useMemo(() => <ResetPasswordFixture />, [])
 
   return (
     <BoneyardSkeletonBoundary
       name="auth-reset-page"
       loading={status === 'loading'}
-      loadingContent={loadingContent}
       fixture={fixtureContent}
     >
     <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">

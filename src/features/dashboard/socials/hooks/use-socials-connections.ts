@@ -192,7 +192,6 @@ export function useSocialsConnections(): UseSocialsConnectionsReturn {
     user,
     startMetaOauth,
     selectedClientId,
-    toast,
     router,
     showPreviewModeToast,
   ])

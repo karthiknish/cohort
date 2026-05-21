@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { useCallback } from 'react'
 import { X } from 'lucide-react'
 
 import { useIsMobile } from '@/shared/hooks/use-is-mobile'
@@ -61,6 +62,9 @@ export function ResponsiveOverlay({
 }: ResponsiveOverlayProps) {
   const isMobile = useIsMobile()
   const useDrawer = preferDrawer || isMobile
+  const handleClose = useCallback(() => {
+    onOpenChange(false)
+  }, [onOpenChange])
 
   const header = (
     <>
@@ -101,7 +105,7 @@ export function ResponsiveOverlay({
                 variant="ghost"
                 size="icon"
                 className="absolute right-3 top-3 h-8 w-8"
-                onClick={() => onOpenChange(false)}
+                onClick={handleClose}
                 aria-label="Close"
               >
                 <X className="h-4 w-4" aria-hidden />

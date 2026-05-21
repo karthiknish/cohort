@@ -210,7 +210,7 @@ export function useUnifiedMessagePaneController({
     } catch {
       // Error toast comes from message actions; keep editor open.
     }
-  }, [editingMessageId, editingValue, onEditMessage, toast])
+  }, [editingMessageId, editingValue, onEditMessage])
 
   const handleShare = useCallback(async (message: UnifiedMessage, platform: 'email') => {
     if (!onShareToPlatform) return

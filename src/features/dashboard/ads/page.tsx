@@ -21,7 +21,6 @@ import { Skeleton } from '@/shared/ui/skeleton'
 import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 
 import {
-  AdsSkeleton,
   CrossChannelOverviewCard,
   PerformanceSummaryCard,
   MetricsTableCard,
@@ -271,15 +270,6 @@ export default function AdsPage() {
   }, [connectionErrors, loadMoreError, metricError, suppressMetricsErrors, toast])
 
   const isInitialLoading = initialMetricsLoading && !integrationStatuses
-  const loadingContent = useMemo(
-    () => (
-      <div className={DASHBOARD_THEME.layout.container}>
-        <AdsSkeleton />
-      </div>
-    ),
-    [],
-  )
-
   const activeCurrency = displayCurrency ?? undefined
 
   const showWorkflow =
@@ -288,7 +278,7 @@ export default function AdsPage() {
       automationStatuses.length === 0 ||
       automationStatuses.every((s) => s.status !== 'success'))
 
-  const renderSetup = () => (
+  const renderSetup = useCallback(() => (
     <>
       {showWorkflow ? (
         <FadeIn>
@@ -408,9 +398,46 @@ export default function AdsPage() {
         </FadeIn>
       ) : null}
     </>
-  )
+  ), [
+    showWorkflow,
+    connectedAccountCount,
+    hasSuccessfulSync,
+    hasPendingSetup,
+    adPlatforms,
+    setSelectedMetaAccountId,
+    googleNeedsAccountSelection,
+    googleSetupMessage,
+    openGoogleCampaignSetup,
+    initializingGoogle,
+    metaSetupMessage,
+    metaNeedsAccountSelection,
+    initializingMeta,
+    handleInitializeMeta,
+    metaAccountOptions,
+    selectedMetaAccountId,
+    loadingMetaAccountOptions,
+    handleReloadMetaAccountOptions,
+    tiktokSetupMessage,
+    tiktokNeedsAccountSelection,
+    initializingTikTok,
+    handleInitializeTikTok,
+    connectedProviders,
+    connectingProvider,
+    connectionErrors,
+    integrationStatusMap,
+    handleConnect,
+    handleDisconnect,
+    handleOauthRedirect,
+    handleSyncNow,
+    syncingProviders,
+    handleManualRefresh,
+    metricsLoading,
+    pendingSetupCount,
+    dateRange,
+    scrollToSetupAlerts,
+  ])
 
-  const renderAnalytics = () => (
+  const renderAnalytics = useCallback(() => (
     <>
       <FadeIn>
         <CrossChannelOverviewCard
@@ -466,9 +493,30 @@ export default function AdsPage() {
         </AdsSuspenseReveal>
       </FadeIn>
     </>
-  )
+  ), [
+    processedMetrics,
+    effectiveServerSummary,
+    activeCurrency,
+    connectedProviderIds,
+    connectedAccountCount,
+    hasMetricData,
+    initialMetricsLoading,
+    metricsLoading,
+    dateRange,
+    setDateRange,
+    handleExport,
+    providerSummaries,
+    providerCurrencyMap,
+    suppressMetricsErrors,
+    metricError,
+    handleManualRefresh,
+    algorithmicInsights.insights,
+    algorithmicInsights.globalEfficiencyScore,
+    algorithmicInsights.providerEfficiencyScores,
+    algorithmicInsights.analysis,
+  ])
 
-  const renderAdvancedAnalytics = () => (
+  const renderAdvancedAnalytics = useCallback(() => (
     <>
       <FadeIn>
         <AdsSuspenseReveal fallback={ADS_SKELETON_250}>
@@ -518,13 +566,29 @@ export default function AdsPage() {
         />
       </FadeIn>
     </>
-  )
+  ), [
+    periodComparison,
+    providerComparison,
+    activeCurrency,
+    metricsLoading,
+    initialMetricsLoading,
+    hasMetricData,
+    derivedMetrics,
+    processedMetrics,
+    formulaEditor,
+    suppressMetricsErrors,
+    metricError,
+    nextCursor,
+    loadingMore,
+    loadMoreError,
+    handleManualRefresh,
+    handleLoadMoreMetrics,
+  ])
 
   return (
     <BoneyardSkeletonBoundary
       name="dashboard-ads-page"
       loading={isInitialLoading}
-      loadingContent={loadingContent}
     >
       <div className={DASHBOARD_THEME.layout.container}>
         <div className="space-y-6 pb-10">

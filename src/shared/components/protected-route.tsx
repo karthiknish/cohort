@@ -192,6 +192,16 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
     replace(`/auth${redirectParam}`)
   }, [pathname, replace])
 
+  const handleRetrySync = useCallback(() => {
+    void retrySync()
+  }, [retrySync])
+
+  const handleSignOutAfterSyncFailure = useCallback(() => {
+    void signOut().finally(() => {
+      redirectToAuth()
+    })
+  }, [redirectToAuth, signOut])
+
   useEffect(() => {
     return () => {
       clearSessionTimers()
@@ -342,15 +352,9 @@ export function ProtectedRoute({ children, requiredRole, allowPreviewAccess = fa
         title="Could not connect your workspace"
         message={authError?.message ?? 'We could not finish securing your session. Try again or sign in once more.'}
         actionLabel="Retry"
-        actionOnClick={() => {
-          void retrySync()
-        }}
+        actionOnClick={handleRetrySync}
         secondaryActionLabel="Sign out"
-        secondaryActionOnClick={() => {
-          void signOut().finally(() => {
-            redirectToAuth()
-          })
-        }}
+        secondaryActionOnClick={handleSignOutAfterSyncFailure}
       />
     )
   }

@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import Link from 'next/link'
 import { BarChart3 } from 'lucide-react'
 
@@ -177,9 +178,14 @@ export function InsightsChartsTabs({
 }) {
   const tabs = Object.keys(TAB_LABELS) as InsightsTabId[]
 
+  const handleTabChange = useCallback(
+    (value: string) => onTabChange(value as InsightsTabId),
+    [onTabChange],
+  )
+
   return (
     <CardContent>
-      <Tabs value={activeTab} onValueChange={(v) => onTabChange(v as InsightsTabId)} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="flex h-auto w-full flex-wrap gap-1 bg-muted/50 p-1 sm:grid sm:grid-cols-5">
           {tabs.map((tab) => (
             <TabsTrigger

@@ -93,7 +93,7 @@ export function ImageUploader({
           setIsUploading(false)
         })
     },
-    [onChange, onUpload, toast, validateFile, value]
+    [onChange, onUpload,  validateFile, value]
   )
 
   const handleFileChange = useCallback(

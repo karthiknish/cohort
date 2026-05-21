@@ -17,7 +17,7 @@ export function DashboardAgencyRoutesGate({ children }: { children: ReactNode })
   const pathname = usePathname()
 
   if (!isAgencyOnlyPath(pathname)) {
-    return <>{children}</>
+    return children
   }
 
   return <RoleAccessGate>{children}</RoleAccessGate>

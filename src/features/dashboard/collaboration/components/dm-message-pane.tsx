@@ -106,7 +106,7 @@ export function DMMessagePane({
         })
       throw error
     }
-  }, [isSending, onSendMessage, toast])
+  }, [isSending, onSendMessage])
 
   const handleReaction = useCallback(async (messageId: string, emoji: string) => {
     await onToggleReaction(messageId, emoji)

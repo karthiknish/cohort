@@ -159,6 +159,11 @@ export function EfficiencyRadarChart({
     [breakdown],
   )
 
+  const radarTooltipContent = useMemo(
+    () => <ChartTooltipContent hideLabel />,
+    [],
+  )
+
   if (!chartData.length) {
     return (
       <InsightsPanelEmpty
@@ -190,7 +195,7 @@ export function EfficiencyRadarChart({
           />
           <RechartsTooltip
             {...ADS_CHART_TOOLTIP_PROPS}
-            content={<ChartTooltipContent hideLabel />}
+            content={radarTooltipContent}
           />
         </RadarChart>
       </ChartContainer>
@@ -341,6 +346,8 @@ export function BenchmarkComparisonChart({
     [percentileFormatter],
   )
 
+  const formatPercentTick = useCallback((value: number) => `${value}%`, [])
+
   if (!chartData.length) {
     return (
       <InsightsPanelEmpty
@@ -368,7 +375,7 @@ export function BenchmarkComparisonChart({
             axisLine={false}
             tickMargin={10}
             style={ADS_AXIS_TICK_STYLE}
-            tickFormatter={(v) => `${v}%`}
+            tickFormatter={formatPercentTick}
           />
           <RechartsTooltip
             {...ADS_CHART_TOOLTIP_PROPS}

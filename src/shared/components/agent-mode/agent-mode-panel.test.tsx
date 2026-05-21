@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 
+import type { AgentContextIds } from '@/lib/agent-context'
 import { AgentValidationError } from '@/lib/agent-errors'
 import type { AgentConversationSummary, AgentMessage } from '@/shared/hooks/use-agent-mode'
 
@@ -8,6 +9,7 @@ import { AgentModePanel } from './agent-mode-panel'
 
 const noop = () => {}
 const noopAsync = async () => {}
+const EMPTY_ACTIVE_CONTEXT = {} satisfies AgentContextIds
 
 vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
@@ -82,7 +84,7 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof AgentModePan
   return renderToStaticMarkup(
     <AgentModePanel
       isOpen
-      activeContext={{}}
+      activeContext={EMPTY_ACTIVE_CONTEXT}
       maxMessageLength={4000}
       onClose={noop}
       messages={[]}
@@ -109,7 +111,7 @@ describe('AgentModePanel', () => {
   it('renders the centered empty-state composer when there are no messages', () => {
     const markup = renderPanel()
 
-    expect(markup).toContain('Where would you like to go?')
+    expect(markup).toContain('What can I help with?')
     expect(markup).toContain('Tasks due this week')
     expect(markup).toContain('Agent Mode')
   })

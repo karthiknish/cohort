@@ -95,7 +95,10 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
   const { data: geocodeBatch } = useGeocodeResolveBatch(unknownLocationNames, {
     enabled: unknownLocationNames.length > 0 && hasLoaded,
   })
-  const resolvedCoordinates = geocodeBatch?.coordinates ?? {}
+  const resolvedCoordinates = useMemo(
+    () => geocodeBatch?.coordinates ?? {},
+    [geocodeBatch?.coordinates],
+  )
   const geocodeFailedNames = geocodeBatch?.failedNames ?? []
 
   const fetchTargeting = useCallback(async () => {

@@ -444,7 +444,7 @@ function DashboardWidgetRow({
     <div
       className="flex items-center gap-2 rounded-lg border bg-muted/30 p-2 group"
       role="listitem"
-      tabIndex={0}
+      tabIndex={-1}
       aria-describedby={instructionsId}
       aria-label={`${widget.title}, position ${index + 1} of ${total}`}
       onKeyDown={handleKeyDown}

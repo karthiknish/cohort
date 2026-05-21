@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { useConvexAuth, useQuery } from 'convex/react'
 import { Bell, CheckSquare, CircleCheck, MessageSquare } from 'lucide-react'
@@ -253,6 +253,9 @@ export function ForYouWhatsNext() {
   const loadingUpdates = !isPreviewMode && liveNotifications === undefined
   const loading = tab === 'tasks' ? loadingTasks : loadingUpdates
 
+  const selectTasksTab = useCallback(() => setTab('tasks'), [])
+  const selectUpdatesTab = useCallback(() => setTab('updates'), [])
+
   return (
     <section aria-labelledby="for-you-whats-next-heading">
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -260,8 +263,8 @@ export function ForYouWhatsNext() {
           What&apos;s next
         </h2>
         <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1">
-          <TabButton active={tab === 'tasks'} label="Tasks" onClick={() => setTab('tasks')} />
-          <TabButton active={tab === 'updates'} label="Updates" onClick={() => setTab('updates')} />
+          <TabButton active={tab === 'tasks'} label="Tasks" onClick={selectTasksTab} />
+          <TabButton active={tab === 'updates'} label="Updates" onClick={selectUpdatesTab} />
         </div>
       </div>
 

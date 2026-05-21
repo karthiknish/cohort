@@ -1,5 +1,5 @@
-import { MeetingsPageSkeleton } from '@/features/dashboard/meetings/components/meetings-page-skeleton'
+import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
 
 export default function MeetingsLoading() {
-  return <MeetingsPageSkeleton />
+  return <BoneyardPageLoading name="dashboard-meetings-page" />
 }

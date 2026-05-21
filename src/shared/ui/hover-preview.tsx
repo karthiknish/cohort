@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Info } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -31,6 +31,19 @@ export function HoverPreview({
   )
 }
 
+type TruncatedTextPreviewTriggerProps = {
+  text: string
+  className?: string
+}
+
+function TruncatedTextPreviewTrigger({ text, className }: TruncatedTextPreviewTriggerProps) {
+  return (
+    <button type="button" className={cn('block min-w-0 truncate text-left', className)}>
+      {text}
+    </button>
+  )
+}
+
 type TruncatedTextPreviewProps = {
   text: string
   className?: string
@@ -40,17 +53,37 @@ type TruncatedTextPreviewProps = {
 
 /** Truncated inline text that expands in a hover card — no navigation. */
 export function TruncatedTextPreview({ text, className, detail }: TruncatedTextPreviewProps) {
+  const trigger = useMemo(
+    () => <TruncatedTextPreviewTrigger text={text} className={className} />,
+    [text, className],
+  )
+
   return (
-    <HoverPreview
-      trigger={
-        <span className={cn('block min-w-0 truncate', className)} tabIndex={0}>
-          {text}
-        </span>
-      }
-    >
+    <HoverPreview trigger={trigger}>
       <p className="font-medium text-foreground">{text}</p>
       {detail ? <div className="mt-1 text-xs text-muted-foreground">{detail}</div> : null}
     </HoverPreview>
+  )
+}
+
+type MetricHintTriggerProps = {
+  description: string
+  label?: string
+  className?: string
+}
+
+function MetricHintTrigger({ description, label, className }: MetricHintTriggerProps) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        className,
+      )}
+      aria-label={label ?? description}
+    >
+      <Info className="h-3 w-3" aria-hidden />
+    </button>
   )
 }
 
@@ -62,25 +95,24 @@ type MetricHintProps = {
 
 /** Info icon with metric/KPI explanation on hover (replaces tooltip-only hints). */
 export function MetricHint({ description, label, className }: MetricHintProps) {
+  const trigger = useMemo(
+    () => <MetricHintTrigger description={description} label={label} className={className} />,
+    [description, label, className],
+  )
+
   return (
-    <HoverPreview
-      trigger={
-        <button
-          type="button"
-          className={cn(
-            'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            className,
-          )}
-          aria-label={label ?? description}
-        >
-          <Info className="h-3 w-3" aria-hidden />
-        </button>
-      }
-      className="max-w-xs"
-    >
+    <HoverPreview trigger={trigger} className="max-w-xs">
       <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
     </HoverPreview>
   )
+}
+
+type MetricCardPreviewTriggerProps = {
+  children: ReactNode
+}
+
+function MetricCardPreviewTrigger({ children }: MetricCardPreviewTriggerProps) {
+  return <div className="cursor-default">{children}</div>
 }
 
 type MetricCardPreviewProps = {
@@ -90,8 +122,10 @@ type MetricCardPreviewProps = {
 
 /** Wraps a KPI/metric card so the full explanation appears on hover. */
 export function MetricCardPreview({ children, description }: MetricCardPreviewProps) {
+  const trigger = useMemo(() => <MetricCardPreviewTrigger>{children}</MetricCardPreviewTrigger>, [children])
+
   return (
-    <HoverPreview trigger={<div className="cursor-default">{children}</div>} className="max-w-xs">
+    <HoverPreview trigger={trigger} className="max-w-xs">
       <p className="text-xs leading-relaxed">{description}</p>
     </HoverPreview>
   )

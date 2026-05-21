@@ -56,7 +56,7 @@ function useAttendeeController(options: UseMeetingAttendeesOptions) {
       if (participantEntries.length === 0) return
       setEmailsState((current) => mergeMeetingParticipantEmails(current, participantEntries, options.organizerEmail))
     },
-    [options.organizerEmail, toast]
+    [options.organizerEmail]
   )
 
   const commitInput = useCallback(() => {
@@ -73,7 +73,7 @@ function useAttendeeController(options: UseMeetingAttendeesOptions) {
     addEmails(parsed)
     setInput('')
     return true
-  }, [addEmails, input, toast])
+  }, [addEmails, input])
 
   const addSuggestedEmail = useCallback(
     (email: string) => {

@@ -18,6 +18,7 @@ import {
   isProposalConversationRequest,
 } from './agentActions/helpers/proposalConversation'
 import { executeOperationTurn, tryResolveConfirmationTurn } from './agentActions/runExecuteTurn'
+import type { AgentConfirmationProposal } from './agentActions/helpers/confirmation'
 import type {
   ConversationGetResult,
   ConversationListResult,
@@ -194,7 +195,7 @@ export const sendMessage = action({
         userMessage?: string
       } | null = null
       let requiresConfirmation = false
-      let confirmation: import('./agentActions/helpers/confirmation').AgentConfirmationProposal | undefined
+      let confirmation: AgentConfirmationProposal | undefined
 
       const turnArgs = {
         workspaceId: args.workspaceId,

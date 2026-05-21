@@ -1,5 +1,7 @@
 'use client'
 
+import { useMemo } from 'react'
+
 import { cn } from '@/lib/utils'
 import type { ProjectRecord } from '@/types/projects'
 
@@ -15,6 +17,7 @@ export function ProjectTaskProgress({ project, className }: ProjectTaskProgressP
   const open = project.openTaskCount
   const closed = Math.max(total - open, 0)
   const progress = total > 0 ? Math.round((closed / total) * 100) : 0
+  const progressStyle = useMemo(() => ({ width: `${progress}%` }), [progress])
 
   return (
     <div className={cn('space-y-1.5', className)}>
@@ -27,7 +30,7 @@ export function ProjectTaskProgress({ project, className }: ProjectTaskProgressP
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/50 ring-1 ring-border/30">
         <div
           className="h-full rounded-full bg-linear-to-r from-primary/70 to-primary motion-chromatic"
-          style={{ width: `${progress}%` }}
+          style={progressStyle}
         />
       </div>
     </div>

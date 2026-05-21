@@ -369,6 +369,10 @@ export function CreativeEditorTabs(props: {
 
   const showEditableContent = isEditing
 
+  const noopSelectPreview = useCallback(() => undefined, [])
+  const handleSelectHeadlinePreview = onPreviewHeadlineIndexChange ?? noopSelectPreview
+  const handleSelectDescriptionPreview = onPreviewDescriptionIndexChange ?? noopSelectPreview
+
   return (
     <div className="flex flex-col gap-4">
       <Tabs defaultValue="edit" className="w-full">
@@ -501,7 +505,7 @@ export function CreativeEditorTabs(props: {
                         isPreviewing={headlineItem.index === previewHeadlineIndex}
                         onUpdate={onUpdateHeadline}
                         onRemove={onRemoveHeadline}
-                        onSelectPreview={onPreviewHeadlineIndexChange ?? (() => undefined)}
+                        onSelectPreview={handleSelectHeadlinePreview}
                       />
                     ))}
                   </div>
@@ -581,7 +585,7 @@ export function CreativeEditorTabs(props: {
                         isPreviewing={descriptionItem.index === previewDescriptionIndex}
                         onUpdate={onUpdateDescription}
                         onRemove={onRemoveDescription}
-                        onSelectPreview={onPreviewDescriptionIndexChange ?? (() => undefined)}
+                        onSelectPreview={handleSelectDescriptionPreview}
                       />
                     ))}
                   </div>

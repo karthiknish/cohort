@@ -47,6 +47,7 @@ const AXIS_TICK_STYLE = {
 } as const
 
 const CHART_TOOLTIP_CURSOR = { strokeDasharray: '3 3' } as const
+const CONVERSIONS_BAR_CURSOR = { fill: 'hsl(var(--muted))', opacity: 0.2 } as const
 const CHART_ACTIVE_DOT = { r: 5, strokeWidth: 0 } as const
 const CHART_LEGEND_CONTENT = <ChartLegendContent className="pt-3 text-xs text-muted-foreground" />
 const CHART_MARGIN = { top: 8, right: 12, left: 4, bottom: 4 } as const
@@ -317,7 +318,7 @@ export function AnalyticsCharts({
                 />
                 <RechartsTooltip
                   {...ANALYTICS_CHART_TOOLTIP_PROPS}
-                  cursor={{ fill: 'hsl(var(--muted))', opacity: 0.2 }}
+                  cursor={CONVERSIONS_BAR_CURSOR}
                   content={conversionsTooltipContent}
                 />
                 <ChartLegend content={CHART_LEGEND_CONTENT} />

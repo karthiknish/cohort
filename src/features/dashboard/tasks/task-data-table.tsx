@@ -124,18 +124,18 @@ function TaskSelectHeader() {
 
 function TaskSelectCell({ row }: CellContext<TaskRecord, unknown>) {
   const { onSelectToggle, selectedTaskIds } = useTaskDataTableActions()
-  if (!onSelectToggle) return null
-
   const task = row.original
   const handleChange = useCallback(
     (checked: boolean) => {
-      onSelectToggle(task.id, checked)
+      onSelectToggle?.(task.id, checked)
     },
     [onSelectToggle, task.id],
   )
 
+  if (!onSelectToggle) return null
+
   return (
-    <div className="flex justify-center" onClick={stopRowActivation}>
+    <div className="flex justify-center" onPointerDown={stopRowActivation}>
       <Checkbox
         checked={selectedTaskIds?.has(task.id) ?? false}
         onCheckedChange={handleChange}
@@ -295,7 +295,7 @@ function TaskActionsCell({ row }: CellContext<TaskRecord, unknown>) {
   }, [onDelete, task])
 
   return (
-    <div className="flex justify-end" onClick={stopRowActivation}>
+    <div className="flex justify-end" onPointerDown={stopRowActivation}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button

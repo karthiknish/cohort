@@ -10,6 +10,14 @@ import _dashboard_meetings_page from './dashboard-meetings-page.bones.json'
 import _dashboard_tasks_page from './dashboard-tasks-page.bones.json'
 import _dashboard_collaboration_page from './dashboard-collaboration-page.bones.json'
 import _dashboard_projects_page from './dashboard-projects-page.bones.json'
+import _dashboard_proposals_page from './dashboard-proposals-page.bones.json'
+import _dashboard_clients_page from './dashboard-clients-page.bones.json'
+import _dashboard_ads_page from './dashboard-ads-page.bones.json'
+import _auth_main_page from './auth-main-page.bones.json'
+import _auth_forgot_page from './auth-forgot-page.bones.json'
+import _auth_reset_page from './auth-reset-page.bones.json'
+import _marketing_privacy_page from './marketing-privacy-page.bones.json'
+import _marketing_terms_page from './marketing-terms-page.bones.json'
 
 registerBones({
   "dashboard-overview-page": _dashboard_overview_page,
@@ -20,4 +28,12 @@ registerBones({
   "dashboard-tasks-page": _dashboard_tasks_page,
   "dashboard-collaboration-page": _dashboard_collaboration_page,
   "dashboard-projects-page": _dashboard_projects_page,
+  "dashboard-proposals-page": _dashboard_proposals_page,
+  "dashboard-clients-page": _dashboard_clients_page,
+  "dashboard-ads-page": _dashboard_ads_page,
+  "auth-main-page": _auth_main_page,
+  "auth-forgot-page": _auth_forgot_page,
+  "auth-reset-page": _auth_reset_page,
+  "marketing-privacy-page": _marketing_privacy_page,
+  "marketing-terms-page": _marketing_terms_page,
 })

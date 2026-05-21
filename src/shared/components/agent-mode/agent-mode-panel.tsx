@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type RefObject } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/shared/contexts/auth-context'
-import type { AgentContextIds } from '@/lib/agent-context'
 import type {
   AgentConversationSummary,
   AgentExecutionStep,
@@ -12,7 +11,12 @@ import type {
   ConnectionStatus,
 } from '@/shared/hooks/use-agent-mode'
 import { useMentionData } from '@/shared/hooks/use-mention-data'
-import { getAgentSuggestions, trackAgentSuggestionClick, type AgentSuggestion } from '@/lib/agent-context'
+import {
+  getAgentSuggestions,
+  trackAgentSuggestionClick,
+  type AgentContextIds,
+  type AgentSuggestion,
+} from '@/lib/agent-context'
 import {
   formatAgentMentionMarkup,
   mergeAgentMentions,
@@ -41,6 +45,8 @@ import {
   type AgentComposerSectionProps,
 } from './agent-mode-panel-sections'
 import { type MentionDropdownHandle, type MentionItem } from './mention-dropdown'
+
+const noop = () => {}
 
 interface AgentModePanelProps {
   isOpen: boolean
@@ -765,9 +771,9 @@ export function AgentModePanel({
         processingSteps={processingSteps}
         processingLabel={processingLabel}
         scrollAreaRef={scrollAreaRef}
-        onMessagesScroll={onMessagesScroll ?? (() => {})}
+        onMessagesScroll={onMessagesScroll ?? noop}
         showJumpToLatest={!isPinnedToBottom && messages.length > 0}
-        onJumpToLatest={onJumpToLatest ?? (() => {})}
+        onJumpToLatest={onJumpToLatest ?? noop}
         showEmptyState={showEmptyState}
       />
     </AgentModePanelShell>

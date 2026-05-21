@@ -30,10 +30,11 @@ export function TaskViewControls({
         {VIEW_OPTIONS.map(({ mode, label, icon: Icon }) => (
           <ViewToggleButton
             key={mode}
+            mode={mode}
             active={viewMode === mode}
             label={label}
             icon={Icon}
-            onClick={() => onViewModeChange(mode)}
+            onViewModeChange={onViewModeChange}
           />
         ))}
       </div>
@@ -54,19 +55,21 @@ export function TaskViewControls({
 }
 
 function ViewToggleButton({
+  mode,
   active,
   label,
-  onClick,
+  onViewModeChange,
   icon: Icon,
 }: {
+  mode: 'list' | 'grid' | 'board'
   active: boolean
   label: string
-  onClick: () => void
+  onViewModeChange: (mode: 'list' | 'grid' | 'board') => void
   icon: typeof List
 }) {
   const handleClick = useCallback(() => {
-    onClick()
-  }, [onClick])
+    onViewModeChange(mode)
+  }, [mode, onViewModeChange])
 
   return (
     <button

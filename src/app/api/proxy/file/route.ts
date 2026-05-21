@@ -11,7 +11,12 @@ function sanitizeFilename(value: string): string {
   const sanitized = value
     .replace(/[\r\n]/g, '')
     .replace(/["\\/;:]/g, '_')
-    .replace(/[\x00-\x1F\x7F]/g, '')
+    .split('')
+    .filter((char) => {
+      const code = char.charCodeAt(0)
+      return code > 0x1f && code !== 0x7f
+    })
+    .join('')
     .trim()
 
   return sanitized.length > 0 ? sanitized : 'file'

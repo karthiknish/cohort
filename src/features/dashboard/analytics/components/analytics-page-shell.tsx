@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback } from 'react'
 import { BarChart3, CheckCircle2, Link2, LoaderCircle, RotateCw, Unlink } from 'lucide-react'
 
 import { DisconnectDialog } from '../../ads/components/connection-dialog'
@@ -26,19 +26,15 @@ import { AnalyticsExportButton } from './analytics-export-button'
 import { AnalyticsInsightsSection } from './analytics-insights-section'
 import { AnalyticsMetricCards } from './analytics-metric-cards'
 import { useAnalyticsPageContext } from './analytics-page-provider'
-import { AnalyticsPageSkeleton } from './analytics-page-skeleton'
 import { AnalyticsSummaryCards } from './analytics-summary-cards'
 import { GoogleAnalyticsSetupDialog } from './google-analytics-setup-dialog'
 
 export function AnalyticsPageShell() {
   const { initialMetricsLoading } = useAnalyticsPageContext()
-  const loadingContent = useMemo(() => <AnalyticsPageSkeleton />, [])
-
   return (
     <BoneyardSkeletonBoundary
       name="dashboard-analytics-page"
       loading={initialMetricsLoading}
-      loadingContent={loadingContent}
     >
       <div className={DASHBOARD_THEME.layout.container}>
         <div className="space-y-8 pb-10">

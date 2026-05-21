@@ -1,5 +1,5 @@
-import { TasksPageSkeleton } from '@/features/dashboard/tasks/tasks-page-skeleton'
+import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
 
 export default function TasksLoading() {
-  return <TasksPageSkeleton />
+  return <BoneyardPageLoading name="dashboard-tasks-page" />
 }

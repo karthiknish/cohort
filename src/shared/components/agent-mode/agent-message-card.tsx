@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { domAnimation, LazyMotion, m } from '@/shared/ui/motion'
 import {
   AlertCircle,
@@ -47,6 +48,20 @@ interface AgentMessageCardProps {
 }
 
 const EMPTY_MENTION_LABELS: string[] = []
+
+function AgentAvatar({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/15',
+        className,
+      )}
+      aria-hidden
+    >
+      <Sparkles className="h-4 w-4 text-primary" />
+    </div>
+  )
+}
 
 function getActionLabel(action?: string, operation?: string): string {
   if (operation === 'summarizeAdsPerformance') {
@@ -308,6 +323,22 @@ function AgentConfirmationPanel({
 }) {
   const pending = message.metadata?.pendingConfirmation
   const confirmation = message.metadata?.confirmation
+
+  const handleConfirm = useCallback(() => {
+    if (!pending) return
+    onConfirmPending?.(pending, 'confirm')
+  }, [onConfirmPending, pending])
+
+  const handleEdit = useCallback(() => {
+    if (!pending) return
+    onConfirmPending?.(pending, 'edit')
+  }, [onConfirmPending, pending])
+
+  const handleCancel = useCallback(() => {
+    if (!pending) return
+    onConfirmPending?.(pending, 'cancel')
+  }, [onConfirmPending, pending])
+
   if (!message.metadata?.requiresConfirmation || !pending || !confirmation) {
     return null
   }
@@ -347,7 +378,7 @@ function AgentConfirmationPanel({
           type="button"
           size="sm"
           disabled={isProcessing}
-          onClick={() => onConfirmPending?.(pending, 'confirm')}
+          onClick={handleConfirm}
         >
           Confirm
         </Button>
@@ -356,7 +387,7 @@ function AgentConfirmationPanel({
           size="sm"
           variant="outline"
           disabled={isProcessing}
-          onClick={() => onConfirmPending?.(pending, 'edit')}
+          onClick={handleEdit}
         >
           Edit
         </Button>
@@ -365,7 +396,7 @@ function AgentConfirmationPanel({
           size="sm"
           variant="ghost"
           disabled={isProcessing}
-          onClick={() => onConfirmPending?.(pending, 'cancel')}
+          onClick={handleCancel}
         >
           Cancel
         </Button>
@@ -385,23 +416,30 @@ export function AgentMessageCard({
 }: AgentMessageCardProps) {
   const { type, content, status, metadata, route, steps } = message
 
-  if (type === 'user') {
-    const handleResend = onRetryUserMessage
-      ? () => onRetryUserMessage(message.clientId, message.content)
-      : undefined
+  const handleResend = useCallback(() => {
+    onRetryUserMessage?.(message.clientId, message.content)
+  }, [message.clientId, message.content, onRetryUserMessage])
 
+  const handleUndo = useCallback(() => {
+    if (!metadata?.undoHint) return
+    onUndoAction?.(message.id, metadata.undoHint)
+  }, [message.id, metadata?.undoHint, onUndoAction])
+
+  if (type === 'user') {
     return (
       <LazyMotion features={domAnimation}>
         <m.div
           initial={AGENT_MESSAGE_INITIAL}
           animate={AGENT_MESSAGE_ANIMATE}
-          className="flex flex-col items-end"
+          className="flex flex-col items-end gap-1"
         >
           <div
             className={cn(
-              'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm text-primary-foreground',
-              message.lifecycle === 'failed' ? 'bg-destructive/80' : 'bg-primary',
-              message.lifecycle === 'sending' && 'opacity-80',
+              'max-w-[min(85%,28rem)] rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed text-primary-foreground shadow-sm',
+              message.lifecycle === 'failed'
+                ? 'bg-destructive/90 ring-1 ring-destructive/30'
+                : 'bg-gradient-to-br from-primary to-primary/90 ring-1 ring-primary/20',
+              message.lifecycle === 'sending' && 'opacity-75',
             )}
           >
             <AgentMentionText
@@ -416,7 +454,10 @@ export function AgentMessageCard({
               <AgentMessageAttachmentChips attachments={message.attachments} />
             ) : null}
           </div>
-          <UserMessageStatus lifecycle={message.lifecycle} onResend={handleResend} />
+          <UserMessageStatus
+            lifecycle={message.lifecycle}
+            onResend={onRetryUserMessage ? handleResend : undefined}
+          />
         </m.div>
       </LazyMotion>
     )
@@ -463,12 +504,13 @@ export function AgentMessageCard({
           initial={AGENT_MESSAGE_ENHANCED_INITIAL}
           animate={AGENT_MESSAGE_ENHANCED_ANIMATE}
           transition={AGENT_MESSAGE_TRANSITION}
-          className="flex justify-start"
+          className="flex items-start gap-3"
         >
+          <AgentAvatar />
           <div
             role="status"
             aria-live={liveRegion}
-            className={cn('max-w-[90%] overflow-hidden rounded-xl border shadow-sm', surfaces.shell)}
+            className={cn('min-w-0 max-w-[min(90%,32rem)] flex-1 overflow-hidden rounded-2xl rounded-tl-md border shadow-sm', surfaces.shell)}
           >
             <div className={cn('flex items-center gap-2 border-b px-4 py-2.5', surfaces.header)}>
               <StatusGlyph tone={tone} />
@@ -534,7 +576,7 @@ export function AgentMessageCard({
                     size="sm"
                     variant="outline"
                     className="gap-2"
-                    onClick={() => onUndoAction(message.id, metadata.undoHint!)}
+                    onClick={handleUndo}
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                     Undo {metadata.undoHint.label.toLowerCase()}
@@ -706,12 +748,13 @@ export function AgentMessageCard({
 
   return (
     <LazyMotion features={domAnimation}>
-      <m.div initial={AGENT_MESSAGE_INITIAL} animate={AGENT_MESSAGE_ANIMATE} className="flex justify-start">
-        <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-secondary px-4 py-2.5 text-sm text-secondary-foreground">
+      <m.div initial={AGENT_MESSAGE_INITIAL} animate={AGENT_MESSAGE_ANIMATE} className="flex items-start gap-3">
+        <AgentAvatar />
+        <div className="max-w-[min(85%,28rem)] whitespace-pre-wrap rounded-2xl rounded-tl-md border border-border/50 bg-card px-4 py-2.5 text-sm leading-relaxed text-foreground shadow-sm">
           <AgentMentionText
             text={content}
             mentionLabels={mentionLabels}
-            mentionClassName="bg-secondary-foreground/15 text-secondary-foreground ring-secondary-foreground/20"
+            mentionClassName="bg-primary/10 text-primary ring-primary/15"
           />
         </div>
       </m.div>

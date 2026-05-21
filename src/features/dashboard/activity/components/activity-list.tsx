@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { format, isToday, isYesterday } from 'date-fns'
 import { Calendar, Search, RefreshCw, X } from 'lucide-react'
@@ -13,6 +13,28 @@ import { ActivityItem } from './activity-item'
 import type { EnhancedActivity, SortOption, DateRangeOption, ActivityType, StatusFilter } from '../types'
 
 const VIRTUAL_ACTIVITY_ROW_THRESHOLD = 48
+
+function ActivityVirtualTranslateRow({
+  start,
+  className,
+  dataIndex,
+  measureRef,
+  children,
+}: {
+  start: number
+  className: string
+  dataIndex: number
+  measureRef: (element: Element | null) => void
+  children: ReactNode
+}) {
+  const style = useMemo(() => ({ transform: `translateY(${start}px)` }), [start])
+
+  return (
+    <div data-index={dataIndex} ref={measureRef} className={className} style={style}>
+      {children}
+    </div>
+  )
+}
 
 interface ActivityListProps {
   activities: EnhancedActivity[]
@@ -210,6 +232,9 @@ export function ActivityList({
     activityVirtualizer.measure()
   }, [activityFlatRows, activityVirtualizer, shouldVirtualizeActivity, sortedActivities.length])
 
+  const virtualTotalSize = activityVirtualizer.getTotalSize()
+  const virtualContainerStyle = useMemo(() => ({ height: virtualTotalSize }), [virtualTotalSize])
+
   return (
     <div className={cn('space-y-4', className)}>
       {/* Select all checkbox header */}
@@ -289,10 +314,7 @@ export function ActivityList({
               )}
             </div>
           ) : shouldVirtualizeActivity ? (
-            <div
-              className="relative w-full"
-              style={{ height: activityVirtualizer.getTotalSize() }}
-            >
+            <div className="relative w-full" style={virtualContainerStyle}>
               {activityVirtualizer.getVirtualItems().map((vi) => {
                 const row = activityFlatRows[vi.index]
                 if (!row) {
@@ -300,12 +322,12 @@ export function ActivityList({
                 }
                 if (row.type === 'header') {
                   return (
-                    <div
+                    <ActivityVirtualTranslateRow
                       key={row.key}
-                      data-index={vi.index}
-                      ref={activityVirtualizer.measureElement}
+                      start={vi.start}
+                      dataIndex={vi.index}
+                      measureRef={activityVirtualizer.measureElement}
                       className="absolute left-0 top-0 w-full border-b bg-background/95 py-2 pr-2 backdrop-blur"
-                      style={{ transform: `translateY(${vi.start}px)` }}
                     >
                       <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
@@ -314,16 +336,16 @@ export function ActivityList({
                           {row.count}
                         </Badge>
                       </h3>
-                    </div>
+                    </ActivityVirtualTranslateRow>
                   )
                 }
                 return (
-                  <div
+                  <ActivityVirtualTranslateRow
                     key={row.key}
-                    data-index={vi.index}
-                    ref={activityVirtualizer.measureElement}
+                    start={vi.start}
+                    dataIndex={vi.index}
+                    measureRef={activityVirtualizer.measureElement}
                     className="absolute left-0 top-0 w-full ml-2 border-l-2 border-muted pl-4 sm:pl-6"
-                    style={{ transform: `translateY(${vi.start}px)` }}
                   >
                     <div className="cv-scroll-item-activity pt-2 sm:pt-3">
                       <ActivityItem
@@ -341,7 +363,7 @@ export function ActivityList({
                         currentUserName={currentUserName}
                       />
                     </div>
-                  </div>
+                  </ActivityVirtualTranslateRow>
                 )
               })}
             </div>

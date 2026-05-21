@@ -19,6 +19,32 @@ export interface MentionableUser {
   avatar?: string
 }
 
+function MentionUserNameTrigger({ name }: { name: string }) {
+  return <span className="block truncate font-medium">{name}</span>
+}
+
+function MentionUserHoverPreview({ user }: { user: MentionableUser }) {
+  const trigger = useMemo(() => <MentionUserNameTrigger name={user.name} />, [user.name])
+
+  return (
+    <HoverPreview trigger={trigger} className="w-56">
+      <div className="flex items-center gap-3">
+        <Avatar className="h-9 w-9 shrink-0">
+          {user.avatar ? <AvatarImage src={user.avatar} alt="" className="object-cover" /> : null}
+          <AvatarFallback className="bg-muted">
+            <User className="h-4 w-4 text-muted-foreground" />
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 space-y-0.5">
+          <p className="font-medium text-foreground">{user.name}</p>
+          {user.email ? <p className="text-xs text-muted-foreground">{user.email}</p> : null}
+          {user.role ? <p className="text-xs text-muted-foreground">{user.role}</p> : null}
+        </div>
+      </div>
+    </HoverPreview>
+  )
+}
+
 export interface MentionInputProps {
   value: string
   onChange: (value: string, mentions: MentionableUser[]) => void
@@ -521,30 +547,7 @@ export function MentionInput(
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <HoverPreview
-                            trigger={<span className="block truncate font-medium">{user.name}</span>}
-                            className="w-56"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-9 w-9 shrink-0">
-                                {user.avatar ? (
-                                  <AvatarImage src={user.avatar} alt="" className="object-cover" />
-                                ) : null}
-                                <AvatarFallback className="bg-muted">
-                                  <User className="h-4 w-4 text-muted-foreground" />
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="min-w-0 space-y-0.5">
-                                <p className="font-medium text-foreground">{user.name}</p>
-                                {user.email ? (
-                                  <p className="text-xs text-muted-foreground">{user.email}</p>
-                                ) : null}
-                                {user.role ? (
-                                  <p className="text-xs text-muted-foreground">{user.role}</p>
-                                ) : null}
-                              </div>
-                            </div>
-                          </HoverPreview>
+                          <MentionUserHoverPreview user={user} />
                           <p className="truncate text-xs text-muted-foreground">
                             {user.role || user.email || 'Team member'}
                           </p>

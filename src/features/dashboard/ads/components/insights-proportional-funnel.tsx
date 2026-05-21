@@ -70,9 +70,10 @@ function TrapezoidSegment({
 }) {
   const top = stage.visualWidthPct
   const bottom = nextWidthPct
+  const containerStyle = useMemo(() => ({ height: segmentHeight }), [segmentHeight])
 
   return (
-    <div className="relative flex w-full justify-center" style={{ height: segmentHeight }}>
+    <div className="relative flex w-full justify-center" style={containerStyle}>
       <svg
         className="h-full w-full max-w-md"
         viewBox="0 0 100 100"

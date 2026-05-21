@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { BellOff, Settings2 } from 'lucide-react'
 
+import { cn } from '@/lib/utils'
 import { Button } from '@/shared/ui/button'
 
 type NotificationEmptyStateProps = {
@@ -15,7 +16,10 @@ export function NotificationEmptyState({ filterLabel, className }: NotificationE
 
   return (
     <div
-      className={className ?? 'flex flex-col items-center justify-center gap-4 px-6 py-16 text-center'}
+      className={cn(
+        'flex flex-col items-center justify-center gap-4 px-6 py-14 text-center',
+        className,
+      )}
     >
       <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border/60 bg-muted/25 text-muted-foreground shadow-sm">
         <BellOff className="h-6 w-6" aria-hidden />

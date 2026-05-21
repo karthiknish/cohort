@@ -40,7 +40,6 @@ import { isFeatureEnabled } from '@/lib/features'
 import { cn, exportToCsv } from '@/lib/utils'
 import type { TaskStatus } from '@/types/tasks'
 
-import { TasksPageSkeleton } from './tasks-page-skeleton'
 
 const TaskList = dynamic(() => import('@/features/dashboard/tasks/task-list').then((mod) => mod.TaskList), {
   loading: () => <div className="p-6 text-sm text-muted-foreground">Loading tasks…</div>,
@@ -475,8 +474,6 @@ function TasksPageContent({
 
 
   const initialLoading = loading && tasks.length === 0
-  const loadingContent = useMemo(() => <TasksPageSkeleton />, [])
-
   const scopeLabel = selectedClient?.name ?? (selectedClientId ? 'Selected client' : null)
   const scopeHelper = selectedClient
     ? `Tasks for ${selectedClient.name}`
@@ -514,7 +511,6 @@ function TasksPageContent({
       <BoneyardSkeletonBoundary
         name="dashboard-tasks-page"
         loading={initialLoading}
-        loadingContent={loadingContent}
       >
       <div className={cn(DASHBOARD_THEME.layout.container, TASKS_THEME.page)}>
         <TasksHeader

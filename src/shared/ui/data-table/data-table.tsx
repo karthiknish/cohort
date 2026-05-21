@@ -244,6 +244,7 @@ function DataTableUrlSync({
     setPagination,
     showPagination,
     syncPaginationToUrl,
+    get,
     urlPageParam,
     urlPageSizeParam,
   ])

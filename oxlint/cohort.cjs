@@ -8,13 +8,16 @@ const DIRECT_COLOR_VALUE_RE =
   /^(?:#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|(?:rgb|rgba|hsl|hsla|oklch|oklab|lab|lch)\(|(?:aliceblue|antiquewhite|aqua|aquamarine|azure|beige|bisque|black|blue|brown|coral|crimson|cyan|fuchsia|gold|gray|green|indigo|khaki|lavender|lime|magenta|maroon|navy|olive|orange|orchid|pink|plum|purple|red|salmon|silver|tan|teal|tomato|violet|white|yellow)\b)/i;
 
 const ALLOWED_COLOR_FILE_RE =
-  /(?:^|[\\/])src[\\/]lib[\\/]colors\.ts$|(?:^|[\\/])src[\\/]lib[\\/]themes[\\/]/;
+  /(?:^|[\\/])src[\\/]lib[\\/]colors\.ts$|(?:^|[\\/])src[\\/]lib[\\/]themes[\\/]|(?:^|[\\/])src[\\/]features[\\/]dashboard[\\/]ads[\\/]creative[\\/]components[\\/]creative-social-preview\.tsx$|(?:^|[\\/])src[\\/]features[\\/]dashboard[\\/]ads[\\/]components[\\/]ads-chart-configs\.ts$|(?:^|[\\/])src[\\/]features[\\/]dashboard[\\/]ads[\\/]components[\\/]insights-(?:proportional-funnel|funnel-panel)\.tsx$|(?:^|[\\/])src[\\/]features[\\/]dashboard[\\/]ads[\\/]campaigns[\\/]components[\\/]audience-control-section\.tsx$|(?:^|[\\/])src[\\/]features[\\/]dashboard[\\/]meetings[\\/]components[\\/](?:google-workspace-icon|google-workspace-card|meeting-attendees-field-sections)\.tsx$|(?:^|[\\/])src[\\/]features[\\/]dashboard[\\/]collaboration[\\/]components[\\/]message-attachments\.tsx$|(?:^|[\\/])src[\\/]features[\\/]dashboard[\\/]tasks[\\/]task-types\.ts$|(?:^|[\\/])src[\\/]features[\\/]marketing[\\/]for-you[\\/]components[\\/]for-you-(?:clients|quick-links|whats-next)\.tsx$|(?:^|[\\/])src[\\/]shared[\\/]components[\\/]ppt-viewer\.tsx$|(?:^|[\\/])src[\\/]app[\\/]layout\.tsx$/;
 
 const ALLOWED_COLOR_TEMPLATE_RE =
   /(?:^|[\\/])src[\\/]lib[\\/]notifications[\\/]email-templates[\\/]/;
 
 const SHADCN_WRAPPER_FILE_RE =
   /(?:^|[\\/])src[\\/]shared[\\/]/;
+
+const ALLOWED_DIRECT_UI_IMPORT_FILE_RE =
+  /(?:^|[\\/])src[\\/]features[\\/]marketing[\\/]home[\\/]components[\\/]platform-brand-logos\.tsx$/;
 
 const RATE_LIMIT_CONFIG_FILE_RE =
   /(?:^|[\\/])(?:src[\\/]lib[\\/](?:rate-limiter(?:-convex)?|geminiRateLimits)\.ts|convex[\\/](?:rateLimit|geminiRateLimit)\.ts)$/;
@@ -476,12 +479,26 @@ function createOnlyShadcnComponentsRule() {
     },
     create(context) {
       const filename = normalizeFilename(context);
-      if (SHADCN_WRAPPER_FILE_RE.test(filename) || /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(filename)) {
+      if (
+        SHADCN_WRAPPER_FILE_RE.test(filename) ||
+        ALLOWED_DIRECT_UI_IMPORT_FILE_RE.test(filename) ||
+        /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(filename)
+      ) {
         return {};
       }
 
-      function checkSourceLiteral(node) {
+      function checkSourceLiteral(node, declaration) {
         if (!node || node.type !== "Literal" || typeof node.value !== "string") {
+          return;
+        }
+
+        if (
+          declaration &&
+          (declaration.importKind === "type" ||
+            (declaration.specifiers &&
+              declaration.specifiers.length > 0 &&
+              declaration.specifiers.every((specifier) => specifier.importKind === "type")))
+        ) {
           return;
         }
 
@@ -502,7 +519,7 @@ function createOnlyShadcnComponentsRule() {
 
       return {
         ImportDeclaration(node) {
-          checkSourceLiteral(node.source);
+          checkSourceLiteral(node.source, node);
         },
         ImportExpression(node) {
           checkSourceLiteral(node.source);

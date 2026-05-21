@@ -498,6 +498,127 @@ function CampaignInsightsPageContent() {
     void loadInsights()
   }, [loadInsights])
 
+  const renderPerformance = useCallback(
+    () => (
+      <>
+        <CampaignSection
+          title="Key metrics"
+          description="Totals for the selected date range. Expand for reach, efficiency, and cost breakdowns."
+        >
+          <MetricCardsSection
+            metrics={calculatedMetrics}
+            loading={insightsLoading}
+            currency={displayCurrency}
+            efficiencyScore={efficiencyScore}
+          />
+        </CampaignSection>
+
+        <CampaignSection
+          title="Trends"
+          description="Spend, engagement, conversions, and reach over time."
+        >
+          {insightsError ? (
+            <CampaignInsightsError
+              message={insightsError}
+              onRetry={handleRetryInsights}
+              retrying={insightsLoading}
+            />
+          ) : (
+            <InsightsChartsSection
+              chartMetrics={chartMetrics}
+              engagementChartData={engagementChartData}
+              conversionsChartData={conversionsChartData}
+              reachChartData={reachChartData}
+              insightsLoading={insightsLoading}
+              currency={displayCurrency}
+            />
+          )}
+        </CampaignSection>
+
+        {!insightsLoading && !insightsError ? (
+          <AlgorithmicInsightsSection
+            insights={algorithmicInsightsList}
+            loading={insightsLoading}
+            efficiencyScore={efficiencyScore ?? 0}
+          />
+        ) : null}
+      </>
+    ),
+    [
+      calculatedMetrics,
+      insightsLoading,
+      displayCurrency,
+      efficiencyScore,
+      insightsError,
+      handleRetryInsights,
+      chartMetrics,
+      engagementChartData,
+      conversionsChartData,
+      reachChartData,
+      algorithmicInsightsList,
+    ],
+  )
+
+  const renderControls = useCallback(
+    () => (
+      <>
+        <BudgetControlSection
+          key={`budget-${providerId}-${campaignId}-${campaign?.budgetType ?? 'none'}-${campaign?.budget ?? 'none'}`}
+          providerId={providerId}
+          campaignId={campaignId}
+          clientId={selectedClientId}
+          isPreviewMode={isPreviewMode}
+          currency={displayCurrency}
+          budget={campaign?.budget}
+          budgetType={campaign?.budgetType}
+          onReloadCampaign={loadCampaign}
+        />
+        <AudienceControlSection
+          providerId={providerId}
+          campaignId={campaignId}
+          clientId={selectedClientId}
+          isPreviewMode={isPreviewMode}
+        />
+      </>
+    ),
+    [
+      providerId,
+      campaignId,
+      campaign?.budgetType,
+      campaign?.budget,
+      selectedClientId,
+      isPreviewMode,
+      displayCurrency,
+      loadCampaign,
+    ],
+  )
+
+  const renderCreatives = useCallback(
+    () => (
+      <CampaignAdsSection
+        providerId={providerId}
+        campaignId={campaignId}
+        clientId={selectedClientId}
+        isPreviewMode={isPreviewMode}
+        currency={displayCurrency}
+      />
+    ),
+    [providerId, campaignId, selectedClientId, isPreviewMode, displayCurrency],
+  )
+
+  const renderAdvanced = useCallback(
+    () => (
+      <div className="grid grid-cols-1 gap-6">
+        <FormulaBuilderCard
+          formulaEditor={formulaEditor}
+          metricTotals={calculatedMetrics ?? undefined}
+          loading={insightsLoading}
+        />
+      </div>
+    ),
+    [formulaEditor, calculatedMetrics, insightsLoading],
+  )
+
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6 p-6 pb-20">
       <CampaignHeader
@@ -521,90 +642,10 @@ function CampaignInsightsPageContent() {
       ) : null}
 
       <CampaignPageLayout
-        renderPerformance={() => (
-          <>
-            <CampaignSection
-              title="Key metrics"
-              description="Totals for the selected date range. Expand for reach, efficiency, and cost breakdowns."
-            >
-              <MetricCardsSection
-                metrics={calculatedMetrics}
-                loading={insightsLoading}
-                currency={displayCurrency}
-                efficiencyScore={efficiencyScore}
-              />
-            </CampaignSection>
-
-            <CampaignSection
-              title="Trends"
-              description="Spend, engagement, conversions, and reach over time."
-            >
-              {insightsError ? (
-                <CampaignInsightsError
-                  message={insightsError}
-                  onRetry={handleRetryInsights}
-                  retrying={insightsLoading}
-                />
-              ) : (
-                <InsightsChartsSection
-                  chartMetrics={chartMetrics}
-                  engagementChartData={engagementChartData}
-                  conversionsChartData={conversionsChartData}
-                  reachChartData={reachChartData}
-                  insightsLoading={insightsLoading}
-                  currency={displayCurrency}
-                />
-              )}
-            </CampaignSection>
-
-            {!insightsLoading && !insightsError ? (
-              <AlgorithmicInsightsSection
-                insights={algorithmicInsightsList}
-                loading={insightsLoading}
-                efficiencyScore={efficiencyScore ?? 0}
-              />
-            ) : null}
-          </>
-        )}
-        renderControls={() => (
-          <>
-            <BudgetControlSection
-              key={`budget-${providerId}-${campaignId}-${campaign?.budgetType ?? 'none'}-${campaign?.budget ?? 'none'}`}
-              providerId={providerId}
-              campaignId={campaignId}
-              clientId={selectedClientId}
-              isPreviewMode={isPreviewMode}
-              currency={displayCurrency}
-              budget={campaign?.budget}
-              budgetType={campaign?.budgetType}
-              onReloadCampaign={loadCampaign}
-            />
-            <AudienceControlSection
-              providerId={providerId}
-              campaignId={campaignId}
-              clientId={selectedClientId}
-              isPreviewMode={isPreviewMode}
-            />
-          </>
-        )}
-        renderCreatives={() => (
-          <CampaignAdsSection
-            providerId={providerId}
-            campaignId={campaignId}
-            clientId={selectedClientId}
-            isPreviewMode={isPreviewMode}
-            currency={displayCurrency}
-          />
-        )}
-        renderAdvanced={() => (
-          <div className="grid grid-cols-1 gap-6">
-            <FormulaBuilderCard
-              formulaEditor={formulaEditor}
-              metricTotals={calculatedMetrics ?? undefined}
-              loading={insightsLoading}
-            />
-          </div>
-        )}
+        renderPerformance={renderPerformance}
+        renderControls={renderControls}
+        renderCreatives={renderCreatives}
+        renderAdvanced={renderAdvanced}
       />
     </div>
   )

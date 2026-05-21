@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { Bot, ChevronLeft, ChevronRight, MessageSquare, Search, Sparkles } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -26,6 +27,9 @@ export function PreviewWindow({
   handleMetricClick,
   stepTab,
 }: PreviewWindowProps) {
+  const handlePreviousTab = useCallback(() => stepTab(-1), [stepTab])
+  const handleNextTab = useCallback(() => stepTab(1), [stepTab])
+
   return (
     <div
       ref={surfaceRef}
@@ -65,7 +69,7 @@ export function PreviewWindow({
             type="button"
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border/50 bg-background/80 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
             aria-label="Previous preview section"
-            onClick={() => stepTab(-1)}
+            onClick={handlePreviousTab}
             disabled={activeTabIndex <= 0}
           >
             <ChevronLeft className="h-3.5 w-3.5" />
@@ -90,7 +94,7 @@ export function PreviewWindow({
             type="button"
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border/50 bg-background/80 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
             aria-label="Next preview section"
-            onClick={() => stepTab(1)}
+            onClick={handleNextTab}
             disabled={activeTabIndex >= PREVIEW_TAB_ORDER.length - 1}
           >
             <ChevronRight className="h-3.5 w-3.5" />

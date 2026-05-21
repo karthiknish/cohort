@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, CheckCircle2, CircleAlert, Loader2, PlugZap } from 'lucide-react'
 
@@ -117,6 +117,31 @@ export function AdSetupPanel({
     initializingTikTok ||
     initializingGoogle
 
+  const googleSelectAction = useMemo(
+    () => (
+      <Button size="sm" onClick={onOpenGoogleSetup} disabled={initializingGoogle}>
+        Select account
+      </Button>
+    ),
+    [onOpenGoogleSetup, initializingGoogle],
+  )
+
+  const tiktokFinishAction = useMemo(
+    () => (
+      <Button size="sm" onClick={onInitializeTikTok} disabled={initializingTikTok}>
+        {initializingTikTok ? (
+          <>
+            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+            Finishing…
+          </>
+        ) : (
+          'Finish setup'
+        )}
+      </Button>
+    ),
+    [onInitializeTikTok, initializingTikTok],
+  )
+
   if (!hasSetupWork && connectedCount >= totalProviders) {
     return null
   }
@@ -179,11 +204,7 @@ export function AdSetupPanel({
             done={false}
             title="Select your Google Ads account"
             description="OAuth succeeded — pick which ads account to sync into this workspace."
-            action={
-              <Button size="sm" onClick={onOpenGoogleSetup} disabled={initializingGoogle}>
-                Select account
-              </Button>
-            }
+            action={googleSelectAction}
           />
         ) : null}
 
@@ -275,18 +296,7 @@ export function AdSetupPanel({
             done={false}
             title="Complete TikTok Ads setup"
             description="Confirm your default TikTok ad account so we can queue the initial 90-day sync."
-            action={
-              <Button size="sm" onClick={onInitializeTikTok} disabled={initializingTikTok}>
-                {initializingTikTok ? (
-                  <>
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                    Finishing…
-                  </>
-                ) : (
-                  'Finish setup'
-                )}
-              </Button>
-            }
+            action={tiktokFinishAction}
           />
         ) : null}
 

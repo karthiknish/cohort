@@ -13,6 +13,8 @@ import { FadeIn } from '@/shared/ui/animate-in'
 import { LazyMotion, domAnimation, m, useReducedMotion } from '@/shared/ui/motion'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip'
 
+const LOGO_AUTO_WIDTH_STYLE: CSSProperties = { width: 'auto' }
+
 type IntegrationInsight = {
   stat: string
   label: string
@@ -341,7 +343,7 @@ function HubCore() {
           width={100}
           height={32}
           className="relative h-8 w-auto"
-          style={{ width: 'auto' }}
+          style={LOGO_AUTO_WIDTH_STYLE}
           priority
         />
       </m.div>
@@ -507,7 +509,7 @@ export function FeaturesSection() {
                 width={100}
                 height={32}
                 className="h-8 w-auto"
-                style={{ width: 'auto' }}
+                style={LOGO_AUTO_WIDTH_STYLE}
                 priority
               />
             </div>

@@ -81,7 +81,7 @@ export function useSocialsSetup(status: SocialsConnectionStatus | null): UseSoci
     } finally {
       setPagesLoading(false)
     }
-  }, [canAct, discoverPages, selectedClientId, status?.facebookPageId, workspaceId])
+  }, [canAct, discoverPages, selectedClientId, selectedPageId, status?.facebookPageId, workspaceId])
 
   useEffect(() => {
     if (!status?.connected) {

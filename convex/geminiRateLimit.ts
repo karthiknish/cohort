@@ -64,9 +64,8 @@ export async function enforceGeminiActionRateLimit(
   }
 
   const config = GEMINI_RATE_LIMITS[args.name]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = (await ctx.runMutation(
-    internal.geminiRateLimit.applyGeminiRateLimitInternal as any,
+    internal.geminiRateLimit.applyGeminiRateLimitInternal,
     {
       name: `gemini.${args.name}`,
       key: buildGeminiRateLimitKey(args),

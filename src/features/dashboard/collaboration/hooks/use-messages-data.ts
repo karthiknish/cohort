@@ -350,7 +350,7 @@ export function useMessagesData({
         message: '${channel.name}: ${errorMessage}',
       })
     },
-    [channelListRetryNonce, toast],
+    [channelListRetryNonce],
   )
 
   useRealtimeMessages({
@@ -551,7 +551,7 @@ export function useMessagesData({
         })
       }
     },
-    [currentUserId, isPreviewMode, markThreadAsReadMutation, selectedChannel, toast, workspaceId],
+    [currentUserId, isPreviewMode, markThreadAsReadMutation, selectedChannel,  workspaceId],
   )
 
   useEffect(() => {
@@ -637,7 +637,7 @@ export function useMessagesData({
         })
       }
     },
-    [convex, toast, updateSharedTo]
+    [convex,  updateSharedTo]
   )
 
   const isSendDisabled = useMemo(() => {
@@ -1006,7 +1006,7 @@ export function useMessagesData({
         setLoadingMoreChannelId(null)
       }
     },
-    [channels, convex, isPreviewMode, mutateChannelMessages, nextCursorByChannel, toast, workspaceId]
+    [channels, convex, isPreviewMode, mutateChannelMessages, nextCursorByChannel,  workspaceId]
   )
 
   const setMessageInput = useCallback(

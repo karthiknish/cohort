@@ -158,6 +158,10 @@ export function ChannelInfoDialog({
     }
   }, [channel.avatarUrl, channel.id, displayName, isAdmin, setChannelAvatar, toast, workspaceId])
 
+  const handleRemovePhotoClick = useCallback(() => {
+    void handleRemovePhoto()
+  }, [handleRemovePhoto])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[min(90dvh,40rem)] w-[min(100vw-1.5rem,28rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
@@ -199,7 +203,7 @@ export function ChannelInfoDialog({
                   variant="ghost"
                   size="sm"
                   className="h-8 gap-1.5 px-2 text-destructive hover:text-destructive"
-                  onClick={() => void handleRemovePhoto()}
+                  onClick={handleRemovePhotoClick}
                   disabled={uploading || removing}
                 >
                   {removing ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
@@ -215,7 +219,7 @@ export function ChannelInfoDialog({
               type="file"
               accept="image/jpeg,image/png,image/webp"
               className="sr-only"
-              onChange={(event) => void handleFileChange(event)}
+              onChange={handleFileChange}
             />
           ) : null}
           <div className="flex justify-end border-t border-border/60 pt-3">

@@ -215,8 +215,6 @@ function ProposalsPageContent() {
   const displayedDraftId = isPreviewMode ? previewDraftId : draftId
   const displayedLoadingState = isPreviewMode ? false : isLoadingProposals
   const isInitialLoading = displayedLoadingState && displayedProposals.length === 0 && !isWizardOpen
-  const loadingContent = useMemo(() => <DashboardSkeleton />, [])
-
   const handleStartPreviewProposal = useCallback(() => {
     const initialForm = createInitialProposalFormState()
 
@@ -339,7 +337,6 @@ function ProposalsPageContent() {
     <BoneyardSkeletonBoundary
       name="dashboard-proposals-page"
       loading={isInitialLoading}
-      loadingContent={loadingContent}
     >
       <div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
         <LiveRegion message={submissionAnnouncement} />

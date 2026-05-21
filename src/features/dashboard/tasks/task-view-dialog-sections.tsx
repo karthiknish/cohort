@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useCallback, type ReactNode } from 'react'
 import {
   Calendar,
   CheckCircle2,
@@ -63,6 +63,24 @@ function TaskStatusBadge({ status }: { status: TaskStatus }) {
       <Icon className="h-3 w-3 shrink-0" aria-hidden />
       {formatStatusLabel(status)}
     </Badge>
+  )
+}
+
+function TaskQuickStatusMenuItem({
+  nextStatus,
+  onQuickStatusChange,
+}: {
+  nextStatus: TaskStatus
+  onQuickStatusChange: (status: TaskStatus) => void
+}) {
+  const handleClick = useCallback(() => {
+    onQuickStatusChange(nextStatus)
+  }, [nextStatus, onQuickStatusChange])
+
+  return (
+    <DropdownMenuItem onClick={handleClick}>
+      Move to {formatStatusLabel(nextStatus)}
+    </DropdownMenuItem>
   )
 }
 
@@ -135,12 +153,11 @@ export function TaskViewDialogHeader({
             <DropdownMenuContent align="end" className="w-48">
               {onQuickStatusChange
                 ? TASK_STATUSES.filter((s) => s !== status && s !== 'archived').map((nextStatus) => (
-                    <DropdownMenuItem
+                    <TaskQuickStatusMenuItem
                       key={nextStatus}
-                      onClick={() => onQuickStatusChange(nextStatus)}
-                    >
-                      Move to {formatStatusLabel(nextStatus)}
-                    </DropdownMenuItem>
+                      nextStatus={nextStatus}
+                      onQuickStatusChange={onQuickStatusChange}
+                    />
                   ))
                 : null}
               {onQuickStatusChange && onEdit ? <DropdownMenuSeparator /> : null}

@@ -1,7 +1,7 @@
 'use client'
 
 import { notifyFailure } from '@/lib/notifications'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Filter, X, Save } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -168,44 +168,36 @@ export function AdvancedFilter({
     })
   }, [currentFilters, filterName, sortBy, sortOrder, onSaveFilter, toast])
 
-  const filterFooter = (
-    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={clearAllFilters}
-        disabled={Object.keys(currentFilters).length === 0}
-      >
-        Clear All
-      </Button>
+  const handleOpenFilters = useCallback(() => {
+    setOpen(true)
+  }, [])
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        {onSaveFilter ? (
-          <div className="flex flex-wrap gap-2">
-            <Input
-              placeholder="Filter name…"
-              value={filterName}
-              onChange={handleFilterNameChange}
-              className="w-40"
-            />
-            <Button type="button" size="sm" onClick={saveCurrentConfig} disabled={!filterName.trim()}>
-              <Save className="mr-1 h-4 w-4" aria-hidden />
-              Save
-            </Button>
-          </div>
-        ) : null}
-
-        <Button type="button" size="sm" onClick={applyFilters}>
-          Apply Filters
-        </Button>
-      </div>
-    </div>
+  const filterFooter = useMemo(
+    () => (
+      <AdvancedFilterFooter
+        currentFilters={currentFilters}
+        filterName={filterName}
+        onSaveFilter={onSaveFilter}
+        clearAllFilters={clearAllFilters}
+        handleFilterNameChange={handleFilterNameChange}
+        saveCurrentConfig={saveCurrentConfig}
+        applyFilters={applyFilters}
+      />
+    ),
+    [
+      applyFilters,
+      clearAllFilters,
+      currentFilters,
+      filterName,
+      handleFilterNameChange,
+      onSaveFilter,
+      saveCurrentConfig,
+    ],
   )
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <Button variant="outline" size="sm" className="gap-2" onClick={() => setOpen(true)}>
+      <Button variant="outline" size="sm" className="gap-2" onClick={handleOpenFilters}>
         <Filter className="h-4 w-4" aria-hidden />
         Filter
         {activeFilterCount > 0 ? (
@@ -331,6 +323,61 @@ export function ActiveFiltersBar({
       >
         Clear all
       </Button>
+    </div>
+  )
+}
+
+interface AdvancedFilterFooterProps {
+  currentFilters: FilterMap
+  filterName: string
+  onSaveFilter?: (config: FilterConfig) => void
+  clearAllFilters: () => void
+  handleFilterNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  saveCurrentConfig: () => void
+  applyFilters: () => void
+}
+
+function AdvancedFilterFooter({
+  currentFilters,
+  filterName,
+  onSaveFilter,
+  clearAllFilters,
+  handleFilterNameChange,
+  saveCurrentConfig,
+  applyFilters,
+}: AdvancedFilterFooterProps) {
+  return (
+    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={clearAllFilters}
+        disabled={Object.keys(currentFilters).length === 0}
+      >
+        Clear All
+      </Button>
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {onSaveFilter ? (
+          <div className="flex flex-wrap gap-2">
+            <Input
+              placeholder="Filter name…"
+              value={filterName}
+              onChange={handleFilterNameChange}
+              className="w-40"
+            />
+            <Button type="button" size="sm" onClick={saveCurrentConfig} disabled={!filterName.trim()}>
+              <Save className="mr-1 h-4 w-4" aria-hidden />
+              Save
+            </Button>
+          </div>
+        ) : null}
+
+        <Button type="button" size="sm" onClick={applyFilters}>
+          Apply Filters
+        </Button>
+      </div>
     </div>
   )
 }

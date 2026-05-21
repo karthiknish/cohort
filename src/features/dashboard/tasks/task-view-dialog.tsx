@@ -118,6 +118,10 @@ export function TaskViewDialog({
     onQuickStatusChange(task, 'completed')
   }, [onQuickStatusChange, task])
 
+  const handleTabChange = useCallback((value: string) => {
+    setActiveTab(value as 'details' | 'comments')
+  }, [])
+
   if (!task) return null
 
   const canMarkComplete = task.status !== 'completed' && task.status !== 'archived'
@@ -140,7 +144,7 @@ export function TaskViewDialog({
 
         <Tabs
           value={activeTab}
-          onValueChange={(v) => setActiveTab(v as 'details' | 'comments')}
+          onValueChange={handleTabChange}
           className="flex min-h-0 flex-1 flex-col"
         >
           <div className={TASKS_THEME.viewDialog.tabsRail}>

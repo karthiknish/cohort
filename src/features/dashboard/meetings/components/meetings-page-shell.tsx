@@ -8,7 +8,6 @@ import {
   MeetingsDefaultView,
   SharedRoomLoadingSection,
 } from './meetings-page-shell-sections'
-import { MeetingsPageSkeleton } from './meetings-page-skeleton'
 
 export function MeetingsPageShell() {
   const {
@@ -289,8 +288,6 @@ export function MeetingsPageShell() {
   )
 
   const isInitialLoading = !resolvedActiveInSiteMeeting && !sharedRoomName && googleWorkspaceStatusLoading && upcomingMeetingsLoading
-  const loadingContent = useMemo(() => <MeetingsPageSkeleton />, [])
-
   const pageContent = resolvedActiveInSiteMeeting ? (
     <ActiveMeetingRoomSection
       meetingRoomKey={
@@ -330,7 +327,6 @@ export function MeetingsPageShell() {
     <BoneyardSkeletonBoundary
       name="dashboard-meetings-page"
       loading={isInitialLoading}
-      loadingContent={loadingContent}
     >
       {pageContent}
     </BoneyardSkeletonBoundary>

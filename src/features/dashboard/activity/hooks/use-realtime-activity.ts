@@ -181,7 +181,7 @@ export function useRealtimeActivity(limitCount = 20, preferPreviewData = false) 
         })
       }
     },
-    [ackMutation, selectedClient?.id, toast, user?.agencyId, user?.role]
+    [ackMutation, selectedClient?.id,  user?.agencyId, user?.role]
   )
 
   return {

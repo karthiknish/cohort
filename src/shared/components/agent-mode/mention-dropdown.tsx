@@ -337,7 +337,7 @@ export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdown
 		}
 	});
 
-	useImperativeHandle(ref, () => ({ handleKeyDown: handleListKeyDown }), [handleListKeyDown]);
+	useImperativeHandle(ref, () => ({ handleKeyDown: handleListKeyDown }), []);
 
 	// Close on outside click
 	useEffect(() => {
@@ -374,7 +374,7 @@ export const MentionDropdown = forwardRef<MentionDropdownHandle, MentionDropdown
 					animate={DROPDOWN_ANIMATE}
 					exit={DROPDOWN_EXIT}
 					transition={DROPDOWN_TRANSITION}
-					className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-xl border bg-background shadow-lg"
+					className="absolute bottom-full left-0 right-0 z-20 mb-2 overflow-hidden rounded-xl border border-border/70 bg-background/95 shadow-xl backdrop-blur-md"
 				>
 					{/* Category tabs */}
 					<div className="flex items-center gap-1 border-b bg-muted/30 px-2 py-1.5">

@@ -287,7 +287,7 @@ export function FeatureFormDialog({
     setReferences((prev) => [...prev, { url: trimmedUrl, label }])
     setNewRefUrl('')
     setNewRefLabel('')
-  }, [newRefUrl, newRefLabel, toast])
+  }, [newRefUrl, newRefLabel])
 
   const handleRemoveReference = useCallback((index: number) => {
     setReferences((prev) => prev.filter((_, i) => i !== index))
@@ -367,7 +367,7 @@ export function FeatureFormDialog({
           setIsSubmitting(false)
         })
     },
-    [title, description, status, priority, imageUrl, references, onSubmit, onOpenChange, toast]
+    [title, description, status, priority, imageUrl, references, onSubmit, onOpenChange]
   )
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

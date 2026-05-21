@@ -7,6 +7,9 @@ import { Skeleton } from '@/shared/ui/skeleton'
 import type { TaskRecord, TaskStatus } from '@/types/tasks'
 
 import { TaskCard } from './task-card'
+
+const noop = () => {}
+const EMPTY_PENDING_STATUS_UPDATES = new Set<string>()
 import { TaskDataTable } from './task-data-table'
 import { TASKS_THEME } from './tasks-theme'
 
@@ -23,7 +26,17 @@ export function TaskListLoadingState({ viewMode }: { viewMode: 'grid' | 'list' }
     )
   }
 
-  return <TaskDataTable tasks={[]} loading onOpen={() => {}} onEdit={() => {}} onDelete={() => {}} onQuickStatusChange={() => {}} pendingStatusUpdates={new Set()} />
+  return (
+    <TaskDataTable
+      tasks={[]}
+      loading
+      onOpen={noop}
+      onEdit={noop}
+      onDelete={noop}
+      onQuickStatusChange={noop}
+      pendingStatusUpdates={EMPTY_PENDING_STATUS_UPDATES}
+    />
+  )
 }
 
 export function TaskListErrorState({

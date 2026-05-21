@@ -106,7 +106,7 @@ function useCrossChannelSearchController({
       .finally(() => {
         setIsSearching(false)
       })
-  }, [hasAttachment, hasLink, isSearching, onSearch, query, selectedChannelType, toast])
+  }, [hasAttachment, hasLink, isSearching, onSearch, query, selectedChannelType])
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {

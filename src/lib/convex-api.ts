@@ -17,6 +17,9 @@ export const settingsApi = {
 export const usersApi = {
   listWorkspaceMembers: looseApi.users.listWorkspaceMembers,
   listAllUsers: looseApi.users.listAllUsers,
+  ensureProfileOnSignIn: looseApi.users.ensureProfileOnSignIn,
+  ensureProfileOnSignInFromApp: looseApi.users.ensureProfileOnSignInFromApp,
+  bootstrapUpsert: looseApi.users.bootstrapUpsert,
 }
 
 export const onboardingApi = {
@@ -164,6 +167,16 @@ export const agentApi = {
   updateConversationTitle: looseApi.agent.updateConversationTitle,
   deleteConversation: looseApi.agent.deleteConversation,
   setConversationFlags: looseApi.agentConversations.setConversationFlags,
+  searchByUser: looseApi.agentMessages.searchByUser,
+}
+
+export const adminNotificationsApi = {
+  list: looseApi.adminNotifications.list,
+}
+
+export const schedulerEventsApi = {
+  insert: looseApi.schedulerEvents.insert,
+  list: looseApi.schedulerEvents.list,
 }
 
 export const collaborationApi = {
@@ -269,11 +282,26 @@ export const problemReportsApi = {
 }
 
 export const workforceApi = {
+  getTimeDashboard: looseApi.workforce.getTimeDashboard,
+  seedTimeModule: looseApi.workforce.seedTimeModule,
+  clockAction: looseApi.workforce.clockAction,
+  submitTimeSessionReview: looseApi.workforce.submitTimeSessionReview,
+  getSchedulingDashboard: looseApi.workforce.getSchedulingDashboard,
+  seedSchedulingModule: looseApi.workforce.seedSchedulingModule,
+  createCoverageShift: looseApi.workforce.createCoverageShift,
+  setMyAvailability: looseApi.workforce.setMyAvailability,
+  createShiftSwapRequest: looseApi.workforce.createShiftSwapRequest,
+  reviewShiftSwapRequest: looseApi.workforce.reviewShiftSwapRequest,
+  claimOpenShift: looseApi.workforce.claimOpenShift,
   getFormsDashboard: looseApi.workforce.getFormsDashboard,
   seedFormsModule: looseApi.workforce.seedFormsModule,
   createChecklistTemplate: looseApi.workforce.createChecklistTemplate,
   submitChecklist: looseApi.workforce.submitChecklist,
   reviewFormSubmission: looseApi.workforce.reviewFormSubmission,
+  getTimeOffDashboard: looseApi.workforce.getTimeOffDashboard,
+  seedTimeOffModule: looseApi.workforce.seedTimeOffModule,
+  createTimeOffRequest: looseApi.workforce.createTimeOffRequest,
+  reviewTimeOffRequest: looseApi.workforce.reviewTimeOffRequest,
 }
 
 export const gammaApi = {

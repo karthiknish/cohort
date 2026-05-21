@@ -173,7 +173,7 @@ export function useMessageActions({
         })
       }
     },
-    [applyMessageUpdate, channels, isPreviewMode, toast, toggleReaction, userId, workspaceId]
+    [applyMessageUpdate, channels, isPreviewMode,  toggleReaction, userId, workspaceId]
   )
 
   const handleEditMessage = useCallback(
@@ -372,7 +372,7 @@ export function useMessageActions({
         setMessageDeletingId((current) => (current === messageId ? null : current))
       }
     },
-     [applyMessageUpdate, channels, isPreviewMode, softDeleteMessage, toast, userId, workspaceId]
+    [applyMessageUpdate, channels, isPreviewMode, softDeleteMessage, toast, userId, workspaceId]
    )
 
 

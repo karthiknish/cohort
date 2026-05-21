@@ -116,7 +116,7 @@ export function useOnboardingTour() {
         })
 
         driverObj.drive()
-    }, [toast, tourSteps, upsertOnboarding, user?.id])
+    }, [tourSteps, upsertOnboarding, user?.id])
 
     return { startTour }
 }

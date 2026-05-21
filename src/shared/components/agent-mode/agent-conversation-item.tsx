@@ -100,8 +100,11 @@ export function AgentConversationItem({
   return (
     <div
       className={cn(
-        'w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted',
-        conversation.id === conversationId && 'bg-muted',
+        'w-full rounded-xl px-3 py-2.5 text-left text-sm transition-colors',
+        'hover:bg-muted/70',
+        conversation.id === conversationId &&
+          'border-l-2 border-primary bg-primary/[0.06] pl-[calc(0.75rem-2px)] shadow-sm',
+        conversation.id !== conversationId && 'border-l-2 border-transparent',
       )}
     >
       <div className="flex items-start justify-between gap-2">

@@ -161,7 +161,7 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
     }
 
     event.target.value = ''
-  }, [pendingAttachments.length, toast])
+  }, [pendingAttachments.length])
 
   const uploadPendingMeetingAttachments = useCallback(async (attachments: PendingAttachment[]): Promise<MeetingChatAttachment[]> => {
     if (!user?.id) {
@@ -251,7 +251,7 @@ export function InSiteMeetingRoomChat({ compact = false }: InSiteMeetingRoomChat
     if (hasAttachments) {
       setUploadingFiles(false)
     }
-  }, [canSend, pendingAttachments, resetMentionState, send, toast, trimmedDraft, uploadPendingMeetingAttachments])
+  }, [canSend, pendingAttachments, resetMentionState, send,  trimmedDraft, uploadPendingMeetingAttachments])
 
   const insertSelectedMention = useCallback((candidate: MeetingChatMentionCandidate) => {
     const textarea = textareaRef.current

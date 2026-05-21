@@ -1,5 +1,5 @@
-import { ProjectsPageSkeleton } from '@/features/dashboard/projects/components/projects-page-skeleton'
+import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
 
 export default function ProjectsLoading() {
-  return <ProjectsPageSkeleton />
+  return <BoneyardPageLoading name="dashboard-projects-page" />
 }

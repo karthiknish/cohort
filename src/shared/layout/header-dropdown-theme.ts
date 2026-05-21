@@ -9,14 +9,16 @@ export const HEADER_DROPDOWN_THEME = {
   badge:
     'absolute -right-0.5 -top-0.5 inline-flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full border-2 border-background bg-destructive px-1 text-[9px] font-bold leading-none text-destructive-foreground shadow-sm',
   panel:
-    'overflow-hidden rounded-xl border border-border/70 bg-popover p-0 shadow-lg ring-1 ring-border/40',
-  panelNotifications: 'w-[22rem] sm:w-[26rem]',
+    'flex flex-col overflow-hidden rounded-xl border border-border/70 bg-popover p-0 shadow-lg ring-1 ring-border/40',
+  panelNotifications: 'w-[22rem] gap-1.5 p-2.5 sm:w-[26rem]',
   panelProfile: 'w-72',
   header:
-    'border-b border-border/60 bg-gradient-to-br from-card via-card to-muted/25 px-4 py-3.5',
+    'shrink-0 rounded-lg border border-border/60 bg-gradient-to-br from-card via-card to-muted/25 px-4 py-3.5',
   headerTitle: 'text-sm font-semibold tracking-tight text-foreground',
   headerSubtitle: 'text-xs text-muted-foreground',
-  footer: 'flex items-center justify-between gap-2 border-t border-border/60 bg-muted/15 px-3 py-2.5',
+  footer:
+    'flex shrink-0 items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/15 px-3.5 py-2.5',
+  inboxBody: 'px-1.5 py-1',
   menuBody: 'p-1.5',
   menuItem:
     'cursor-pointer gap-2.5 rounded-lg px-2.5 py-2 text-sm focus:bg-muted/50 data-[variant=destructive]:focus:bg-destructive/10',

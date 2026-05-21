@@ -12,7 +12,6 @@ import type { ClientTeamMember } from '@/types/clients'
 import { CollaborationDashboardProvider, useCollaborationDashboardContext } from './collaboration-dashboard-provider'
 import { UnifiedInbox } from './unified-inbox'
 import { NewDMDialog } from './new-dm-dialog'
-import { CollaborationSkeleton } from './collaboration-skeleton'
 import { isFeatureEnabled } from '@/lib/features'
 
 import { cn } from '@/lib/utils'
@@ -162,13 +161,10 @@ export function CollaborationDashboard() {
 
 function CollaborationDashboardContent() {
   const { collab } = useCollaborationDashboardContext()
-  const loadingContent = useMemo(() => <CollaborationSkeleton />, [])
-
   return (
     <BoneyardSkeletonBoundary
       name="dashboard-collaboration-page"
       loading={collab.isBootstrapping}
-      loadingContent={loadingContent}
     >
       <div className={DASHBOARD_THEME.layout.container}>
         <CollaborationHeaderSection />

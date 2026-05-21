@@ -2,6 +2,7 @@ import { action } from './_generated/server'
 import { v } from 'convex/values'
 import { Errors, withErrorHandling } from './errors'
 import { META_API_BASE } from '@/services/integrations/meta-ads/constants'
+import type { GoogleCampaignObjective } from '@/services/integrations/google-ads/campaign-modules/types'
 
 function requireIdentity(identity: unknown): asserts identity {
   if (!identity) {
@@ -279,7 +280,7 @@ export const createCampaign = action({
         developerToken,
         customerId,
         name: args.name,
-        objective: args.objective as import('@/services/integrations/google-ads/campaign-modules/types').GoogleCampaignObjective,
+        objective: args.objective as GoogleCampaignObjective,
         advertisingChannelType: args.advertisingChannelType,
         status: args.status ?? 'PAUSED',
         dailyBudget: args.dailyBudget,

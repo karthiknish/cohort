@@ -82,8 +82,10 @@ export function useMinifiedPreview(): MinifiedPreviewController {
 
   const focusTabButton = useCallback((id: PreviewTabId) => {
     requestAnimationFrame(() => {
-      document.getElementById(`preview-tab-d-${id}`)?.focus()
-        ?? document.getElementById(`preview-tab-m-${id}`)?.focus()
+      const tabButton =
+        document.getElementById(`preview-tab-d-${id}`) ??
+        document.getElementById(`preview-tab-m-${id}`)
+      tabButton?.focus()
     })
   }, [])
 

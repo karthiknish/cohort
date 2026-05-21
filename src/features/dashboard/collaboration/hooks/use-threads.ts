@@ -254,7 +254,7 @@ export function useThreads({ workspaceId, currentUserId }: UseThreadsOptions) {
         setThreadLoadingByRootId((prev) => ({ ...prev, [trimmedId]: false }))
       }
     },
-    [fetchThreadRepliesPage, toast]
+    [fetchThreadRepliesPage]
   )
 
   const loadMoreThreadReplies = useCallback(
@@ -289,7 +289,7 @@ export function useThreads({ workspaceId, currentUserId }: UseThreadsOptions) {
         setThreadLoadingByRootId((prev) => ({ ...prev, [trimmedId]: false }))
       }
     },
-    [fetchThreadRepliesPage, threadLoadingByRootId, threadNextCursorByRootId, toast]
+    [fetchThreadRepliesPage, threadLoadingByRootId, threadNextCursorByRootId]
   )
 
   const clearThreadReplies = useCallback((threadRootId?: string) => {

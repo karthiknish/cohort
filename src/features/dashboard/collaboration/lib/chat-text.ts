@@ -5,7 +5,7 @@ export function formatConversationSnippet(
 ): string {
   if (!raw?.trim()) return ''
 
-  let text = raw
+  const text = raw
     .replace(/```[\s\S]*?```/g, '[code]')
     .replace(/`([^`]+)`/g, '$1')
     .replace(/!\[[^\]]*\]\([^)]+\)/g, '[image]')

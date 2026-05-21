@@ -31,6 +31,15 @@ const adminLinks = [
   { title: 'Issues', href: '/admin/issues', icon: AlertCircle, description: 'User reports' },
 ] as const
 
+const ADMIN_WORKSPACE_LINK_ACTION = (
+  <Button asChild variant="ghost" size="sm">
+    <Link href="/dashboard">
+      Workspace
+      <ArrowUpRight className="h-4 w-4" />
+    </Link>
+  </Button>
+)
+
 export default function AdminPage() {
   const { user } = useAuth()
   const { isPreviewMode } = usePreview()
@@ -84,14 +93,7 @@ export default function AdminPage() {
       title="Admin"
       description={`${firstName}, pick a section below.`}
       isPreviewMode={isPreviewMode}
-      actions={
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/dashboard">
-            Workspace
-            <ArrowUpRight className="h-4 w-4" />
-          </Link>
-        </Button>
-      }
+      actions={ADMIN_WORKSPACE_LINK_ACTION}
       className="mx-auto max-w-lg space-y-6"
       headerClassName="border-0 pb-0"
     >

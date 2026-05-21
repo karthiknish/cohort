@@ -501,7 +501,7 @@ export default function AdminUsersPage() {
       .finally(() => {
         setSavingId(null)
       })
-  }, [isPreviewMode, toast, updateUserRoleStatus, users])
+  }, [isPreviewMode, reportActionFailure, toast, updateUserRoleStatus, users])
 
   const handleApprovalToggle = useCallback((record: AdminUserRecord, approved: boolean) => {
     if (record.role === 'admin' && !approved) {
@@ -550,7 +550,7 @@ export default function AdminUsersPage() {
       .finally(() => {
         setSavingId(null)
       })
-  }, [isPreviewMode, toast, updateUserRoleStatus, users])
+  }, [isPreviewMode, reportActionFailure, toast, updateUserRoleStatus, users])
 
   const handleInviteUser = useCallback(() => {
     if (!inviteEmail) return
@@ -613,7 +613,7 @@ export default function AdminUsersPage() {
       .finally(() => {
         setInviteSending(false)
       })
-  }, [createInvitation, inviteEmail, inviteRole, isPreviewMode, toast, user])
+  }, [createInvitation, inviteEmail, inviteRole, isPreviewMode, reportActionFailure, toast, user])
 
   const handleResendInvitation = useCallback((invitation: AdminInvitationRecord) => {
     if (isPreviewMode) {
@@ -653,7 +653,7 @@ export default function AdminUsersPage() {
       .finally(() => {
         setInvitationActionKey((current) => (current === actionKey ? null : current))
       })
-  }, [isPreviewMode, resendInvitation, toast])
+  }, [isPreviewMode, reportActionFailure, resendInvitation, toast])
 
   const handleRevokeInvitation = useCallback((invitation: AdminInvitationRecord) => {
     if (isPreviewMode) {
@@ -686,7 +686,7 @@ export default function AdminUsersPage() {
       .finally(() => {
         setInvitationActionKey((current) => (current === actionKey ? null : current))
       })
-  }, [isPreviewMode, revokeInvitation, toast])
+  }, [isPreviewMode, reportActionFailure, revokeInvitation, toast])
 
   const handleRefresh = useCallback(() => {
     if (loading) return

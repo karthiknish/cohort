@@ -1,5 +1,7 @@
 'use client'
 
+import { useCallback } from 'react'
+
 import { cn } from '@/lib/utils'
 import type { ProjectStatus } from '@/types/projects'
 import { PROJECT_STATUSES } from '@/types/projects'
@@ -19,25 +21,54 @@ export function ProjectStatusPills({
   totalCount,
   onStatusChange,
 }: ProjectStatusPillsProps) {
+  const handleSelectAll = useCallback(() => {
+    onStatusChange('all')
+  }, [onStatusChange])
+
   return (
     <div className="flex flex-wrap gap-2" role="group" aria-label="Filter projects by status">
       <StatusPill
         label="All"
         count={totalCount}
         active={statusFilter === 'all'}
-        onClick={() => onStatusChange('all')}
+        onClick={handleSelectAll}
       />
       {PROJECT_STATUSES.map((status) => (
-        <StatusPill
+        <ProjectStatusOptionPill
           key={status}
-          label={formatStatusLabel(status)}
+          status={status}
           count={statusCounts[status] ?? 0}
           active={statusFilter === status}
-          dotStyle={STATUS_DOT_STYLES[status]}
-          onClick={() => onStatusChange(status)}
+          onStatusChange={onStatusChange}
         />
       ))}
     </div>
+  )
+}
+
+function ProjectStatusOptionPill({
+  status,
+  count,
+  active,
+  onStatusChange,
+}: {
+  status: ProjectStatus
+  count: number
+  active: boolean
+  onStatusChange: (value: StatusFilter) => void
+}) {
+  const handleClick = useCallback(() => {
+    onStatusChange(status)
+  }, [onStatusChange, status])
+
+  return (
+    <StatusPill
+      label={formatStatusLabel(status)}
+      count={count}
+      active={active}
+      dotStyle={STATUS_DOT_STYLES[status]}
+      onClick={handleClick}
+    />
   )
 }
 

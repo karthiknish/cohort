@@ -1,7 +1,6 @@
 "use client"
 
 import Link from 'next/link'
-import { LoaderCircle } from "lucide-react"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
@@ -16,14 +15,13 @@ import { OperationsExpansionSection } from "@/features/marketing/home/components
 import { SupportProofSection } from "@/features/marketing/home/components/support-proof-section"
 import { authClient } from "@/lib/auth-client"
 import { FadeIn } from "@/shared/ui/animate-in"
+import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 import { RevealTransition, RevealTransitionFallback } from '@/shared/ui/page-transition'
 
 const HOME_PAGE_FALLBACK = (
   <RevealTransitionFallback>
-    <div className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
-      <LoaderCircle className="h-6 w-6 animate-spin text-muted-foreground" />
-    </div>
+    <BoneyardPageLoading name="marketing-home-page" minHeight="min-h-screen" />
   </RevealTransitionFallback>
 )
 
@@ -55,7 +53,6 @@ function HomePageContent() {
       <BoneyardSkeletonBoundary
         name="marketing-home-page"
         loading={sessionPending && !user}
-        loadingContent={HOME_PAGE_FALLBACK}
       >
       <div className="w-full bg-background">
       {/* ── Hero section ── */}

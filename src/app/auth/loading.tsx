@@ -1,5 +1,5 @@
-import { AuthPageSkeleton } from '@/features/auth/components/auth-page-skeleton'
+import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
 
 export default function AuthLoading() {
-  return <AuthPageSkeleton />
+  return <BoneyardPageLoading name="auth-main-page" minHeight="min-h-screen" />
 }

@@ -1,5 +1,5 @@
-import { AnalyticsPageSkeleton } from '@/features/dashboard/analytics/components/analytics-page-skeleton'
+import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
 
 export default function AnalyticsLoading() {
-  return <AnalyticsPageSkeleton />
+  return <BoneyardPageLoading name="dashboard-analytics-page" />
 }

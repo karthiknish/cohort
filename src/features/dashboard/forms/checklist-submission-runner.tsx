@@ -13,6 +13,72 @@ import { LiveRegion } from '@/shared/ui/live-region'
 
 type AnswerMap = Record<string, string>
 
+function ChecklistFieldInput({
+  field,
+  value,
+  disabled,
+  pending,
+  error,
+  onFieldChange,
+}: {
+  field: FormFieldDefinition
+  value: string
+  disabled: boolean
+  pending: boolean
+  error?: string
+  onFieldChange: (fieldId: string, value: string) => void
+}) {
+  const handleChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      onFieldChange(field.id, event.target.value)
+    },
+    [field.id, onFieldChange],
+  )
+
+  return (
+    <div className="space-y-1">
+      <Label htmlFor={`f-${field.id}`}>
+        {field.label}
+        {field.required ? <span className="text-destructive"> *</span> : null}
+      </Label>
+      {field.type === 'number' ? (
+        <Input
+          id={`f-${field.id}`}
+          type="number"
+          className="rounded-xl"
+          value={value}
+          onChange={handleChange}
+          disabled={disabled || pending}
+        />
+      ) : field.type === 'checklist' ? (
+        <Input
+          id={`f-${field.id}`}
+          placeholder="Done / notes"
+          className="rounded-xl"
+          value={value}
+          onChange={handleChange}
+          disabled={disabled || pending}
+        />
+      ) : (
+        <Input
+          id={`f-${field.id}`}
+          className="rounded-xl"
+          value={value}
+          onChange={handleChange}
+          disabled={disabled || pending}
+        />
+      )}
+      {error ? (
+        <p className="text-xs text-destructive" role="alert">
+          {error}
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">Type: {field.type}</p>
+      )}
+    </div>
+  )
+}
+
 export function ChecklistSubmissionRunner({
   templateLegacyId,
   templateTitle,
@@ -63,6 +129,10 @@ export function ChecklistSubmissionRunner({
     setValues({})
   }, [fields, isPreviewMode, onSubmit, values])
 
+  const handleSendClick = useCallback(() => {
+    void handleSend()
+  }, [handleSend])
+
   useEffect(() => {
     const previousPending = previousPendingRef.current
 
@@ -98,51 +168,20 @@ export function ChecklistSubmissionRunner({
       </CardHeader>
       <CardContent className="space-y-4" aria-busy={pending}>
         {fields.map((field) => (
-          <div key={field.id} className="space-y-1">
-            <Label htmlFor={`f-${field.id}`}>
-              {field.label}
-              {field.required ? <span className="text-destructive"> *</span> : null}
-            </Label>
-            {field.type === 'number' ? (
-              <Input
-                id={`f-${field.id}`}
-                type="number"
-                className="rounded-xl"
-                value={values[field.id] ?? ''}
-                onChange={(e) => handleChange(field.id, e.target.value)}
-                disabled={disabled || pending}
-              />
-            ) : field.type === 'checklist' ? (
-              <Input
-                id={`f-${field.id}`}
-                placeholder="Done / notes"
-                className="rounded-xl"
-                value={values[field.id] ?? ''}
-                onChange={(e) => handleChange(field.id, e.target.value)}
-                disabled={disabled || pending}
-              />
-            ) : (
-              <Input
-                id={`f-${field.id}`}
-                className="rounded-xl"
-                value={values[field.id] ?? ''}
-                onChange={(e) => handleChange(field.id, e.target.value)}
-                disabled={disabled || pending}
-              />
-            )}
-            {fieldErrors[field.id] ? (
-              <p className="text-xs text-destructive" role="alert">
-                {fieldErrors[field.id]}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Type: {field.type}</p>
-            )}
-          </div>
+          <ChecklistFieldInput
+            key={field.id}
+            field={field}
+            value={values[field.id] ?? ''}
+            disabled={disabled}
+            pending={pending}
+            error={fieldErrors[field.id]}
+            onFieldChange={handleChange}
+          />
         ))}
         <Button
           type="button"
           className="w-full gap-2 rounded-xl"
-          onClick={() => void handleSend()}
+          onClick={handleSendClick}
           disabled={disabled || pending || isPreviewMode}
         >
           {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

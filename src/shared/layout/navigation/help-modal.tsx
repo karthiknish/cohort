@@ -176,7 +176,7 @@ function helpNavigationForRole(role: string | null): typeof navigationGuide {
 
 function gettingStartedStepsForRole(role: string | null) {
   const r = (role ?? 'client') as 'admin' | 'team' | 'client'
-  let steps = [...gettingStartedSteps]
+  const steps = [...gettingStartedSteps]
   if (r !== 'admin') {
     steps[0] = {
       ...steps[0]!,

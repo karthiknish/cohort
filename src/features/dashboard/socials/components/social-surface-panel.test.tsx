@@ -18,6 +18,8 @@ const overview = {
   rowCount: 28,
 } as const
 
+const noop = () => {}
+
 const organicKpis = [
   { id: 'reach', label: 'Reach', value: '12.3K', detail: '45K total impressions this period' },
   { id: 'impressions', label: 'Impressions', value: '45K', detail: 'Avg 3.7x per person reached' },
@@ -36,7 +38,7 @@ describe('SocialSurfacePanel', () => {
         connected={true}
         setupComplete={true}
         hasData={false}
-        onRequestSync={() => {}}
+        onRequestSync={noop}
       />,
     )
     expect(markup).not.toContain('Facebook not connected')
@@ -52,7 +54,7 @@ describe('SocialSurfacePanel', () => {
         connected={true}
         setupComplete={true}
         hasData={true}
-        onRequestSync={() => {}}
+        onRequestSync={noop}
       />,
     )
     expect(markup).toContain('Facebook organic performance')
@@ -74,7 +76,7 @@ describe('SocialSurfacePanel', () => {
         connected={false}
         setupComplete={false}
         hasData={false}
-        onRequestSync={() => {}}
+        onRequestSync={noop}
       />,
     )
     expect(markup).toContain('Instagram not connected')

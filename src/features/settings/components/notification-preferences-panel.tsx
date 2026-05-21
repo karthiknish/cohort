@@ -25,6 +25,10 @@ import { useToast } from '@/shared/ui/use-toast'
 
 import { NotificationCategoryMatrix } from './notification-category-matrix'
 
+const QUIET_HOURS_LABEL_PREFIX = (
+  <Moon className="h-4 w-4 text-muted-foreground" aria-hidden />
+)
+
 export function NotificationPreferencesPanel() {
   const { toast } = useToast()
   const { isPreviewMode } = usePreview()
@@ -165,6 +169,20 @@ export function NotificationPreferencesPanel() {
     [persist],
   )
 
+  const handleQuietHoursStartChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      handleQuietHoursTimeChange('start', event.target.value)
+    },
+    [handleQuietHoursTimeChange],
+  )
+
+  const handleQuietHoursEndChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      handleQuietHoursTimeChange('end', event.target.value)
+    },
+    [handleQuietHoursTimeChange],
+  )
+
   if (loading || !localPrefs) {
     return (
       <Card>
@@ -225,7 +243,7 @@ export function NotificationPreferencesPanel() {
               id="quiet-hours-enabled"
               label="Quiet hours"
               description="Pause email notifications during a daily window (in-app still delivers)."
-              labelPrefix={<Moon className="h-4 w-4 text-muted-foreground" aria-hidden />}
+              labelPrefix={QUIET_HOURS_LABEL_PREFIX}
               orientation="horizontal"
               className="items-start justify-between"
             >
@@ -245,7 +263,7 @@ export function NotificationPreferencesPanel() {
                     type="time"
                     value={localPrefs.quietHours.start}
                     disabled={saving || localPrefs.pauseAll}
-                    onChange={(event) => handleQuietHoursTimeChange('start', event.target.value)}
+                    onChange={handleQuietHoursStartChange}
                   />
                 </FormField>
                 <FormField id="quiet-hours-end" label="Until">
@@ -254,7 +272,7 @@ export function NotificationPreferencesPanel() {
                     type="time"
                     value={localPrefs.quietHours.end}
                     disabled={saving || localPrefs.pauseAll}
-                    onChange={(event) => handleQuietHoursTimeChange('end', event.target.value)}
+                    onChange={handleQuietHoursEndChange}
                   />
                 </FormField>
               </div>

@@ -195,8 +195,6 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
   }, [teamMembers, teamSearch])
 
   const isInitialLoading = loading && !selectedClient
-  const loadingContent = useMemo(() => <ClientsDashboardSkeleton />, [])
-
   if (!selectedClient && !isInitialLoading) {
     return (
       <Card className={cn('mx-auto max-w-2xl', DASHBOARD_THEME.cards.base, 'bg-gradient-to-br from-muted/20 to-background')}>
@@ -351,7 +349,6 @@ function ClientsDashboardContent({ initialClientId }: ClientsDashboardPageClient
       <BoneyardSkeletonBoundary
         name="dashboard-clients-page"
         loading={isInitialLoading}
-        loadingContent={loadingContent}
       >
         {readyContent}
       </BoneyardSkeletonBoundary>

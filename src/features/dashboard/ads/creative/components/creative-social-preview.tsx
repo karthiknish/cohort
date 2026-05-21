@@ -97,6 +97,33 @@ function PreviewAvatar(props: {
   )
 }
 
+function PreviewVariantButton({
+  index,
+  selected,
+  onSelect,
+}: {
+  index: number
+  selected: boolean
+  onSelect: (index: number) => void
+}) {
+  const handleClick = useCallback(() => onSelect(index), [index, onSelect])
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn(
+        'h-6 min-w-6 rounded-md px-1.5 text-[10px] font-bold transition-colors',
+        selected
+          ? 'bg-primary text-primary-foreground'
+          : 'bg-muted/50 text-muted-foreground hover:bg-muted',
+      )}
+    >
+      {index + 1}
+    </button>
+  )
+}
+
 export function CreativeSocialPreview(props: {
   creative: Creative
   campaignName: string
@@ -156,6 +183,16 @@ export function CreativeSocialPreview(props: {
   const pageDisplayName = useMemo(
     () => creative.pageName || creative.campaignName || creative.name || campaignName,
     [campaignName, creative.campaignName, creative.name, creative.pageName],
+  )
+
+  const handlePreviewHeadlineSelect = useCallback(
+    (index: number) => onPreviewHeadlineIndexChange?.(index),
+    [onPreviewHeadlineIndexChange],
+  )
+
+  const handlePreviewDescriptionSelect = useCallback(
+    (index: number) => onPreviewDescriptionIndexChange?.(index),
+    [onPreviewDescriptionIndexChange],
   )
 
   const primaryText = creative.descriptions?.[0] || ''
@@ -625,19 +662,12 @@ export function CreativeSocialPreview(props: {
                   <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2 py-1">
                     <span className="text-[10px] font-semibold text-muted-foreground">Headline</span>
                     {Array.from({ length: headlineVariantCount }, (_, index) => (
-                      <button
+                      <PreviewVariantButton
                         key={`headline-preview-${index}`}
-                        type="button"
-                        onClick={() => onPreviewHeadlineIndexChange(index)}
-                        className={cn(
-                          'h-6 min-w-6 rounded-md px-1.5 text-[10px] font-bold transition-colors',
-                          previewHeadlineIndex === index
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted/50 text-muted-foreground hover:bg-muted',
-                        )}
-                      >
-                        {index + 1}
-                      </button>
+                        index={index}
+                        selected={previewHeadlineIndex === index}
+                        onSelect={handlePreviewHeadlineSelect}
+                      />
                     ))}
                   </div>
                 ) : null}
@@ -645,19 +675,12 @@ export function CreativeSocialPreview(props: {
                   <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2 py-1">
                     <span className="text-[10px] font-semibold text-muted-foreground">Copy</span>
                     {Array.from({ length: descriptionVariantCount }, (_, index) => (
-                      <button
+                      <PreviewVariantButton
                         key={`description-preview-${index}`}
-                        type="button"
-                        onClick={() => onPreviewDescriptionIndexChange(index)}
-                        className={cn(
-                          'h-6 min-w-6 rounded-md px-1.5 text-[10px] font-bold transition-colors',
-                          previewDescriptionIndex === index
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted/50 text-muted-foreground hover:bg-muted',
-                        )}
-                      >
-                        {index + 1}
-                      </button>
+                        index={index}
+                        selected={previewDescriptionIndex === index}
+                        onSelect={handlePreviewDescriptionSelect}
+                      />
                     ))}
                   </div>
                 ) : null}

@@ -60,6 +60,10 @@ export default function SocialsPage() {
     void setup.confirmSelectedPage()
   }, [setup])
 
+  const handleReloadSources = useCallback(() => {
+    void setup.loadPages()
+  }, [setup])
+
   const handleSurfaceChange = useCallback(
     (value: string) => {
       if (value === 'facebook' || value === 'instagram') {
@@ -110,8 +114,8 @@ export default function SocialsPage() {
                   instagramStatus={setup.instagramStatus}
                   facebookCount={setup.facebookCount}
                   instagramCount={setup.instagramCount}
-                  onReloadSources={() => void setup.loadPages()}
-                  onRetryDiscovery={() => void setup.loadPages()}
+                  onReloadSources={handleReloadSources}
+                  onRetryDiscovery={handleReloadSources}
                 />
 
                 <SocialsPagePicker
@@ -123,7 +127,7 @@ export default function SocialsPage() {
                   setupComplete={setupComplete}
                   onSelectPage={setup.setSelectedPageId}
                   onConfirm={handleConfirmPage}
-                  onReload={() => void setup.loadPages()}
+                  onReload={handleReloadSources}
                 />
               </div>
             ) : null}

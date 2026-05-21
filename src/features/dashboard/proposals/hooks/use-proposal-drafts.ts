@@ -255,7 +255,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         } finally {
             setIsCreatingDraft(false)
         }
-    }, [draftId, hasPersistableData, isCreatingDraft, formState, currentStep, selectedClientId, selectedClient, toast, workspaceId, convexCreateProposal, user?.id])
+    }, [convexCreateProposal, currentSnapshotKey, currentStep, draftId, formState, hasPersistableData, isCreatingDraft, selectedClient, selectedClientId, toast, user?.id, workspaceId])
 
     const saveDraftNow = useCallback(async (saveOptions?: { showToast?: boolean }) => {
         if (isPreviewMode || !hasPersistableData || !selectedClientId) {
@@ -387,7 +387,7 @@ export function useProposalDrafts(options: UseProposalDraftsOptions): UseProposa
         } finally {
             setIsCreatingDraft(false)
         }
-    }, [isCreatingDraft, selectedClient, selectedClientId, toast, onFormStateChange, onStepChange, onSubmittedChange, onPresentationDeckChange, onAiSuggestionsChange, onLastSubmissionSnapshotChange, workspaceId, convexCreateProposal, user?.id])
+    }, [buildSnapshotKey, convexCreateProposal, isCreatingDraft, onAiSuggestionsChange, onFormStateChange, onLastSubmissionSnapshotChange, onPresentationDeckChange, onStepChange, onSubmittedChange, selectedClient, selectedClientId, toast, user?.id, workspaceId])
 
     const handleResumeProposal = useCallback((proposal: ProposalDraft, forceEdit?: boolean) => {
         const mergedForm = mergeProposalForm(proposal.formData as Partial<ProposalFormData>)

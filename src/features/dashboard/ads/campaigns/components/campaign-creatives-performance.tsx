@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback, useMemo } from 'react'
 import { BarChart3, MousePointerClick, Percent, Sparkles, Target, TrendingUp, Wallet } from 'lucide-react'
 
 import { cn, formatCurrency } from '@/lib/utils'
@@ -84,6 +85,11 @@ export function CampaignCreativesPerformanceStrip({
   metricsLoading: boolean
   isMeta: boolean
 }) {
+  const handleSortValueChange = useCallback(
+    (value: string) => onSortChange(value as CreativeSortKey),
+    [onSortChange],
+  )
+
   return (
     <section
       className="space-y-3 rounded-2xl border border-border/60 bg-gradient-to-br from-muted/25 via-card to-card p-4"
@@ -115,7 +121,7 @@ export function CampaignCreativesPerformanceStrip({
               ))}
             </SelectContent>
           </Select>
-          <Select value={sortKey} onValueChange={(value) => onSortChange(value as CreativeSortKey)}>
+          <Select value={sortKey} onValueChange={handleSortValueChange}>
             <SelectTrigger className="h-8 w-[11rem] border-border/60 bg-background text-xs shadow-sm">
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
@@ -192,6 +198,8 @@ export function CreativeInsightBadge({ kind }: { kind: CreativeInsightKind }) {
 
 export function CreativeSpendShareBar({ share }: { share: number }) {
   const width = Math.min(Math.max(share, 4), 100)
+  const widthStyle = useMemo(() => ({ width: `${width}%` }), [width])
+
   return (
     <div className="mt-2 space-y-1">
       <div className="flex items-center justify-between text-[9px] uppercase tracking-wide text-muted-foreground">
@@ -199,7 +207,7 @@ export function CreativeSpendShareBar({ share }: { share: number }) {
         <span className="tabular-nums">{share.toFixed(0)}%</span>
       </div>
       <div className="h-1 overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary/80 transition-all" style={{ width: `${width}%` }} />
+        <div className="h-full rounded-full bg-primary/80 transition-all" style={widthStyle} />
       </div>
     </div>
   )

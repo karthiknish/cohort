@@ -147,7 +147,7 @@ function ChannelMembersDialogForm({
       .finally(() => {
         setDeleting(false)
       })
-  }, [channel.isCustom, onDelete, onOpenChange, toast])
+  }, [channel.isCustom, onDelete, onOpenChange])
 
   return (
     <>

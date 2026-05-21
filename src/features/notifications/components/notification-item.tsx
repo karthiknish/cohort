@@ -98,17 +98,18 @@ export function NotificationItem({
     [notification.id, notification.title, onMarkRead],
   )
 
+  const handleSelectChange = useCallback(() => {
+    onSelectToggle?.(notification.id)
+  }, [notification.id, onSelectToggle])
+
+  const handleSelectClick = useCallback((event: React.MouseEvent) => {
+    event.stopPropagation()
+  }, [])
+
   return (
-    <article
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       onClick={handleClick}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault()
-          handleClick()
-        }
-      }}
       className={cn(
         'group relative flex w-full cursor-pointer gap-3 border-b border-border/50 border-l-[3px] text-left transition-[background-color,box-shadow]',
         accentClass,
@@ -123,8 +124,8 @@ export function NotificationItem({
           type="checkbox"
           checked={selected}
           className="mt-1 h-4 w-4 shrink-0 accent-primary"
-          onChange={() => onSelectToggle(notification.id)}
-          onClick={(event) => event.stopPropagation()}
+          onChange={handleSelectChange}
+          onClick={handleSelectClick}
           aria-label={`Select ${notification.title}`}
         />
       ) : null}
@@ -184,6 +185,6 @@ export function NotificationItem({
           </Button>
         ) : null}
       </div>
-    </article>
+    </button>
   )
 }

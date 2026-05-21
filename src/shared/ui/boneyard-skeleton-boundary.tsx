@@ -6,6 +6,10 @@ import { Skeleton as BoneyardSkeleton } from 'boneyard-js/react'
 type BoneyardSkeletonBoundaryProps = {
   name: string
   loading: boolean
+  /**
+   * Only used when no bones are registered for `name`. Prefer running
+   * `boneyard:build` and omitting this so page-specific bones render.
+   */
   loadingContent?: ReactNode
   children: ReactNode
   className?: string

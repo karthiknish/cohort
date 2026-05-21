@@ -494,7 +494,7 @@ export function useDirectMessages({
         throw error
       }
     },
-    [getOrCreateConversationMutation, isPreviewMode, previewConversations, toast, workspaceId]
+    [getOrCreateConversationMutation, isPreviewMode, previewConversations,  workspaceId]
   )
 
   const startNewDM = useCallback(
@@ -670,7 +670,7 @@ export function useDirectMessages({
         fallbackMessage: 'Unable to mark read',
         })
     }
-  }, [isPreviewMode, markAsReadMutation, selectedConversation, toast, workspaceId])
+  }, [isPreviewMode, markAsReadMutation, selectedConversation,  workspaceId])
 
   const editMessage = useCallback(
     async (messageLegacyId: string, newContent: string) => {
@@ -723,7 +723,7 @@ export function useDirectMessages({
         })
       }
     },
-    [editMessageMutation, isPreviewMode, toast, workspaceId]
+    [editMessageMutation, isPreviewMode,  workspaceId]
   )
 
   const deleteMessage = useCallback(
@@ -777,7 +777,7 @@ export function useDirectMessages({
         })
       }
     },
-    [currentUserId, deleteMessageMutation, isPreviewMode, toast, workspaceId]
+    [currentUserId, deleteMessageMutation, isPreviewMode,  workspaceId]
   )
 
   const toggleReaction = useCallback(
@@ -859,7 +859,7 @@ export function useDirectMessages({
         })
       }
     },
-    [currentUserId, isPreviewMode, toast, toggleReactionMutation, workspaceId]
+    [currentUserId, isPreviewMode,  toggleReactionMutation, workspaceId]
   )
 
   const archiveConversation = useCallback(
@@ -896,7 +896,7 @@ export function useDirectMessages({
         })
       }
     },
-    [isPreviewMode, selectedConversation, setArchiveStatusMutation, toast, workspaceId]
+    [isPreviewMode, selectedConversation, setArchiveStatusMutation,  workspaceId]
   )
 
   const muteConversation = useCallback(
@@ -933,7 +933,7 @@ export function useDirectMessages({
         })
       }
     },
-    [isPreviewMode, selectedConversation, setMuteStatusMutation, toast, workspaceId]
+    [isPreviewMode, selectedConversation, setMuteStatusMutation,  workspaceId]
   )
 
   useEffect(() => {

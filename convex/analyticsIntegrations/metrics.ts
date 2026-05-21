@@ -233,16 +233,3 @@ export const deleteGoogleAnalyticsMetricsDataInternal = internalMutation({
   },
 })
 
-export const deleteGoogleAnalyticsMetricsData = mutation({
-  args: {
-    workspaceId: v.string(),
-    clientId: v.optional(v.union(v.string(), v.null())),
-  },
-  handler: async (ctx, args): Promise<{ ok: boolean; deleted: number }> => {
-    await requireWorkspaceAccess(ctx, args.workspaceId)
-    return await ctx.runMutation(internal.analyticsIntegrations.deleteGoogleAnalyticsMetricsDataInternal, {
-      workspaceId: args.workspaceId,
-      clientId: normalizeClientId(args.clientId ?? null),
-    })
-  },
-})

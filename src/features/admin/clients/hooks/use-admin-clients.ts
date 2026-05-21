@@ -248,7 +248,7 @@ export function useAdminClients(): UseAdminClientsReturn {
                 title: 'Could not load more',
             })
         }
-    }, [clientsInfiniteQuery, isPreviewMode, toast])
+    }, [clientsInfiniteQuery, isPreviewMode])
 
     // Delete dialog handlers
     const handleDeleteDialogChange = useCallback((open: boolean) => {
@@ -298,7 +298,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setDeletingClientId(null)
         }
-    }, [clientPendingDelete, isPreviewMode, workspaceId, softDeleteClientMutation, toast])
+    }, [clientPendingDelete, isPreviewMode, toast, workspaceId, softDeleteClientMutation])
 
     // Team member dialog handlers
     const handleTeamDialogChange = useCallback((open: boolean) => {
@@ -390,7 +390,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setAddingMember(false)
         }
-    }, [clientPendingMembers, isPreviewMode, workspaceId, memberName, memberRole, addTeamMemberMutation, toast])
+    }, [clientPendingMembers, isPreviewMode, toast, workspaceId, memberName, memberRole, addTeamMemberMutation])
 
     const handleRemoveTeamMember = useCallback(async (client: ClientRecord, memberName: string) => {
         const normalizedName = memberName.trim()
@@ -448,7 +448,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setRemovingTeamMemberKey(null)
         }
-    }, [isPreviewMode, workspaceId, removeTeamMemberMutation, toast])
+    }, [isPreviewMode, toast, workspaceId, removeTeamMemberMutation])
 
     // Client form handlers
     const resetClientForm = useCallback(() => {
@@ -540,7 +540,7 @@ export function useAdminClients(): UseAdminClientsReturn {
         } finally {
             setClientSaving(false)
         }
-    }, [isPreviewMode, workspaceId, clientAccountManager, clientName, resetClientForm, teamMemberFields, createClientMutation, user?.id, toast])
+    }, [isPreviewMode, toast, workspaceId, clientAccountManager, clientName, resetClientForm, teamMemberFields, createClientMutation, user?.id])
 
     return {
         // Client list

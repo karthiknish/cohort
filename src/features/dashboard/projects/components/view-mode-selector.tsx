@@ -26,10 +26,11 @@ export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) 
       {VIEW_OPTIONS.map(({ mode, label, icon: Icon }) => (
         <ViewModeButton
           key={mode}
+          mode={mode}
           active={viewMode === mode}
           label={label}
           icon={Icon}
-          onClick={() => onChange(mode)}
+          onChange={onChange}
         />
       ))}
     </div>
@@ -37,17 +38,19 @@ export function ViewModeSelector({ viewMode, onChange }: ViewModeSelectorProps) 
 }
 
 function ViewModeButton({
+  mode,
   active,
   label,
   icon: Icon,
-  onClick,
+  onChange,
 }: {
+  mode: ViewMode
   active: boolean
   label: string
   icon: typeof List
-  onClick: () => void
+  onChange: (mode: ViewMode) => void
 }) {
-  const handleClick = useCallback(() => onClick(), [onClick])
+  const handleClick = useCallback(() => onChange(mode), [mode, onChange])
 
   return (
     <Tooltip>

@@ -161,7 +161,7 @@ export default function ProposalDeckPage() {
           </CardHeader>
           <CardContent>
             <Button variant="outline" asChild>
-                <a href="/dashboard/proposals">Return to proposals</a>
+                <Link href="/dashboard/proposals">Return to proposals</Link>
             </Button>
           </CardContent>
         </Card>

@@ -12,6 +12,7 @@ import {
 } from 'react'
 import {
   AlertCircle,
+  ArrowDown,
   Check,
   Clock,
   FileText,
@@ -73,7 +74,7 @@ import { cn } from '@/lib/utils'
 import { AgentConversationItem, ConversationItem } from './agent-conversation-item'
 import { AgentHistoryRail } from './agent-history-rail'
 import { AgentMessageCard } from './agent-message-card'
-import { MentionDropdown, type MentionItem } from './mention-dropdown'
+import { MentionDropdown, type MentionDropdownHandle, type MentionItem } from './mention-dropdown'
 import { AgentMentionPills, splitAgentTextWithMentions } from './mention-highlights'
 import type { AgentSuggestion } from '@/lib/agent-context'
 
@@ -88,6 +89,17 @@ const MOTION_FADE_STILL = { opacity: 0, y: 0 } as const
 const MOTION_FADE_STILL_VISIBLE = { opacity: 1, y: 0 } as const
 const MOTION_FADE_STILL_EXIT = { opacity: 0, y: 0 } as const
 const MOTION_PANEL_TRANSITION = { duration: motionDurationSeconds.fast, ease: motionEasing.out } as const
+const TYPING_DOT_DELAYS = [
+  { key: 'typing-dot-0', style: { animationDelay: '0ms' } },
+  { key: 'typing-dot-1', style: { animationDelay: '150ms' } },
+  { key: 'typing-dot-2', style: { animationDelay: '300ms' } },
+] as const
+
+const AGENT_PANEL_SURFACE =
+  'relative bg-background before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-24 before:bg-gradient-to-b before:from-primary/[0.04] before:to-transparent'
+
+const AGENT_MESSAGE_THREAD =
+  'relative min-h-full bg-[radial-gradient(circle_at_1px_1px,color-mix(in_srgb,var(--foreground)_6%,transparent)_1px,transparent_0)] [background-size:20px_20px]'
 
 function stopPropagation(event: { stopPropagation: () => void }) {
   event.stopPropagation()
@@ -98,9 +110,33 @@ function HistorySkeleton() {
     <div className="space-y-2 p-2">
       {['history-skeleton-1', 'history-skeleton-2', 'history-skeleton-3'].map((key) => (
         <div key={key} className="animate-pulse">
-          <div className="h-12 rounded-lg bg-muted" />
+          <div className="h-14 rounded-xl bg-muted/80" />
         </div>
       ))}
+    </div>
+  )
+}
+
+function AgentTypingIndicator({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3" role="status" aria-live="polite">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/15">
+        <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+      </div>
+      <div className="rounded-2xl rounded-tl-md border border-border/60 bg-card/90 px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="flex gap-1" aria-hidden>
+            {TYPING_DOT_DELAYS.map((dot) => (
+              <span
+                key={dot.key}
+                className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary/70"
+                style={dot.style}
+              />
+            ))}
+          </span>
+          <span className="text-sm text-muted-foreground">{label}</span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -138,10 +174,10 @@ function AttachmentItem({
   }, [onRemoveAttachment, attachment.id])
 
   return (
-    <div key={attachment.id} className="rounded-2xl border bg-card/70 p-3 shadow-sm">
+    <div key={attachment.id} className="rounded-xl border border-border/60 bg-card/80 p-3 shadow-sm backdrop-blur-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className="rounded-xl bg-accent/10 p-2 text-primary">
+          <div className="rounded-lg bg-primary/10 p-2 text-primary ring-1 ring-primary/10">
             <FileText className="h-4 w-4" />
           </div>
           <div className="min-w-0">
@@ -347,14 +383,14 @@ function AgentComposerInput({
   const remaining = maxLength - value.length
 
   return (
-    <div className="min-w-0 flex-1 space-y-2">
+    <div className="min-w-0 flex-1">
       <Textarea
         ref={inputRef}
         value={value}
         onChange={onChange}
         onKeyDown={onKeyDown}
         placeholder={placeholder}
-        className="min-h-[44px] max-h-[160px] resize-none py-2.5 text-sm leading-relaxed focus-visible:ring-2 focus-visible:ring-ring"
+        className="min-h-[44px] max-h-[160px] resize-none border-0 bg-transparent px-0 py-2 text-sm leading-relaxed shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
         disabled={disabled}
         spellCheck
         autoGrow
@@ -367,15 +403,15 @@ function AgentComposerInput({
         aria-autocomplete="list"
       />
 
-      <div className="flex items-center justify-between gap-2 px-0.5">
+      <div className="flex items-center justify-between gap-2 border-t border-border/40 pt-2">
         <p className="text-[10px] text-muted-foreground">
-          <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">Enter</kbd> send ·{' '}
-          <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">Shift+Enter</kbd> new line
+          <kbd className="rounded-md border border-border/60 bg-muted/50 px-1 font-mono text-[10px]">Enter</kbd> send ·{' '}
+          <kbd className="rounded-md border border-border/60 bg-muted/50 px-1 font-mono text-[10px]">⇧ Enter</kbd> line
         </p>
         <span
           className={cn(
             'text-[10px] tabular-nums',
-            remaining < 80 ? 'text-warning' : 'text-muted-foreground',
+            remaining < 80 ? 'font-medium text-warning' : 'text-muted-foreground',
           )}
           aria-live="polite"
         >
@@ -384,10 +420,10 @@ function AgentComposerInput({
       </div>
 
       {activeMentions.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {activeMentions.map((mention) => (
-            <Badge key={mention} variant="secondary" className="rounded-full bg-accent/10 text-primary hover:bg-accent/10">
-              {mention}
+            <Badge key={mention} variant="secondary" className="rounded-full bg-primary/10 text-primary hover:bg-primary/10">
+              @{mention}
             </Badge>
           ))}
         </div>
@@ -424,7 +460,7 @@ export type AgentComposerSectionProps = {
   quickSuggestions?: AgentSuggestion[]
   onSuggestionClick?: (suggestion: AgentSuggestion) => void
   mentionListboxId?: string
-  mentionDropdownRef?: RefObject<import('./mention-dropdown').MentionDropdownHandle | null>
+  mentionDropdownRef?: RefObject<MentionDropdownHandle | null>
 }
 
 const EMPTY_QUICK_SUGGESTIONS: AgentSuggestion[] = []
@@ -447,10 +483,13 @@ function SuggestionButton({
       type="button"
       onClick={handleClick}
       disabled={disabled}
-      className="rounded-full bg-muted/50 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+      className="group rounded-xl border border-border/60 bg-card/80 px-3 py-2 text-left text-xs font-medium shadow-sm transition-all hover:border-primary/25 hover:bg-primary/[0.04] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
       title={suggestion.prompt}
     >
-      {suggestion.label}
+      <span className="flex items-center gap-1.5">
+        <Sparkles className="h-3 w-3 text-primary/70 transition-colors group-hover:text-primary" aria-hidden />
+        {suggestion.label}
+      </span>
     </button>
   )
 }
@@ -490,14 +529,14 @@ export function AgentComposerSection({
   return (
     <div
       className={cn(
-        isCentered ? 'rounded-2xl border bg-background p-3' : 'relative border-t bg-muted/30 p-3',
+        isCentered ? 'p-1' : 'relative border-t border-border/50 bg-muted/20 p-3',
         !isCentered &&
           'pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]',
       )}
     >
       <AttachmentList attachments={pendingAttachments} onRemoveAttachment={onRemoveAttachment} />
 
-      <div className={cn('relative flex items-end gap-2', isCentered && 'justify-center')}>
+      <div className={cn('relative', isCentered && 'mx-auto max-w-xl')}>
         <MentionDropdown
           ref={mentionDropdownRef}
           listboxId={mentionListboxId}
@@ -512,54 +551,72 @@ export function AgentComposerSection({
           isLoading={mentionsLoading}
         />
 
-        <AgentComposerInput
-          inputRef={inputRef}
-          value={inputValue}
-          onChange={onInputChange}
-          onKeyDown={onKeyDown}
-          placeholder={isCentered ? 'Create projects, run analytics, send messages, or navigate…' : 'Ask about tasks, projects, analytics, ads, or meetings…'}
-          disabled={disabled}
-          mentionLabels={mentionLabels}
-          maxLength={maxMessageLength}
-          mentionListboxId={mentionListboxId}
-          showMentions={showMentions}
-        />
-
-        <VoiceInputButton
-          variant="standalone"
-          showWaveform={false}
-          onTranscript={onVoiceTranscript}
-          onInterimTranscript={onVoiceInterim}
-          disabled={disabled}
-        />
-
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={onOpenFilePicker}
-          disabled={disabled}
-          className="h-10 w-10 shrink-0 rounded-full"
-          aria-label="Attach context files"
-          title="Attach context files"
+        <div
+          className={cn(
+            'rounded-2xl border border-border/70 bg-card p-3 shadow-sm transition-shadow',
+            'focus-within:border-primary/30 focus-within:shadow-md focus-within:ring-2 focus-within:ring-primary/15',
+            disabled && 'opacity-60',
+          )}
         >
-          {isExtractingAttachments ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-        </Button>
+          <AgentComposerInput
+            inputRef={inputRef}
+            value={inputValue}
+            onChange={onInputChange}
+            onKeyDown={onKeyDown}
+            placeholder={
+              isCentered
+                ? 'Create projects, run analytics, send messages, or navigate…'
+                : 'Ask about tasks, projects, analytics, ads, or meetings…'
+            }
+            disabled={disabled}
+            mentionLabels={mentionLabels}
+            maxLength={maxMessageLength}
+            mentionListboxId={mentionListboxId}
+            showMentions={showMentions}
+          />
 
-        <Button
-          size="icon"
-          onClick={onSubmit}
-          disabled={!inputValue.trim() || disabled}
-          className="h-10 w-10 shrink-0 rounded-full"
-          aria-label="Send message"
-          title="Send message"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+          <div className="mt-2 flex items-center justify-end gap-1.5">
+            <VoiceInputButton
+              variant="standalone"
+              showWaveform={false}
+              onTranscript={onVoiceTranscript}
+              onInterimTranscript={onVoiceInterim}
+              disabled={disabled}
+            />
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onOpenFilePicker}
+              disabled={disabled}
+              className="h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+              aria-label="Attach context files"
+              title="Attach context files (⌘⇧U)"
+            >
+              {isExtractingAttachments ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Paperclip className="h-4 w-4" />
+              )}
+            </Button>
+
+            <Button
+              size="icon"
+              onClick={onSubmit}
+              disabled={!inputValue.trim() || disabled}
+              className="h-9 w-9 shrink-0 rounded-full bg-primary shadow-sm hover:bg-primary/90 disabled:opacity-40"
+              aria-label="Send message"
+              title="Send message"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
 
       {isCentered && quickSuggestions.length > 0 && onSuggestionClick ? (
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
+        <div className="mx-auto mt-4 grid max-w-xl gap-2 sm:grid-cols-2">
           {quickSuggestions.map((suggestion) => (
             <SuggestionButton
               key={suggestion.id}
@@ -598,19 +655,35 @@ export function AgentModeHeader({
   const LayoutIcon =
     panelLayout === 'fullscreen' ? Maximize2 : panelLayout === 'compact' ? PictureInPicture2 : PanelRight
 
+  const handlePanelLayoutChange = useCallback(
+    (value: string) => {
+      if (value === 'compact' || value === 'docked' || value === 'fullscreen') {
+        onSetPanelLayout?.(value)
+      }
+    },
+    [onSetPanelLayout],
+  )
+
   return (
-    <div className="flex items-center justify-between border-b px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-      <div className="flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-primary" />
-        <span id="agent-mode-dialog-title" className="text-sm font-semibold">
-          Agent Mode
-        </span>
+    <div className="flex items-center justify-between border-b border-border/60 bg-gradient-to-r from-primary/[0.06] via-background to-background px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/15">
+          <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+        </div>
+        <div className="min-w-0">
+          <span id="agent-mode-dialog-title" className="block text-sm font-semibold tracking-tight">
+            Agent Mode
+          </span>
+          <span className="block truncate text-[11px] text-muted-foreground">
+            {conversationId ? 'Active conversation' : 'Workspace assistant'}
+          </span>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1.5">
         {conversationId || messagesCount > 0 ? (
-          <Button variant="outline" size="sm" onClick={onStartNewChat} className="h-9 gap-2 rounded-full">
-            <SquarePen className="h-4 w-4" />
-            New chat
+          <Button variant="outline" size="sm" onClick={onStartNewChat} className="h-8 gap-1.5 rounded-full px-3 text-xs">
+            <SquarePen className="h-3.5 w-3.5" />
+            New
           </Button>
         ) : null}
 
@@ -643,14 +716,7 @@ export function AgentModeHeader({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuRadioGroup
-                value={panelLayout}
-                onValueChange={(value) => {
-                  if (value === 'compact' || value === 'docked' || value === 'fullscreen') {
-                    onSetPanelLayout(value)
-                  }
-                }}
-              >
+              <DropdownMenuRadioGroup value={panelLayout} onValueChange={handlePanelLayoutChange}>
                 <DropdownMenuRadioItem value="compact">Compact floating</DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="docked">Docked (keep dashboard visible)</DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="fullscreen">Full screen</DropdownMenuRadioItem>
@@ -757,15 +823,20 @@ export function AgentHistoryPanel({
 
 export function AgentEmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-1 items-center justify-center p-6">
+    <div className={cn('flex flex-1 flex-col items-center justify-center overflow-y-auto p-6', AGENT_PANEL_SURFACE)}>
       <div className="w-full max-w-xl">
-        <div className="mb-4 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
-            <Sparkles className="h-6 w-6 text-primary" />
+        <div className="mb-6 text-center">
+          <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center">
+            <span className="absolute inset-0 rounded-2xl bg-primary/10 blur-md" aria-hidden />
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/20">
+              <Sparkles className="h-7 w-7 text-primary" aria-hidden />
+            </div>
           </div>
-          <p className="text-base font-medium">Where would you like to go?</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Ask in plain language, or type @ to mention a client, user, or project. Use the shortcuts below for dashboard actions.
+          <p className="text-lg font-semibold tracking-tight">What can I help with?</p>
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
+            Ask in plain language, attach files for context, or type{' '}
+            <kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-mono text-[11px]">@</kbd> to
+            mention clients, projects, or teammates.
           </p>
         </div>
 
@@ -790,38 +861,38 @@ export function AgentExecutionTimeline({
   label: string
 }) {
   if (steps.length === 0) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
-        <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
-        <span>{label}</span>
-      </div>
-    )
+    return <AgentTypingIndicator label={label} />
   }
 
   return (
-    <div className="space-y-2" role="status" aria-live="polite" aria-atomic="true">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <ol className="space-y-1.5">
-        {steps.map((step) => (
-          <li key={step.id} className="flex items-start gap-2 text-xs">
-            <span className="mt-0.5 shrink-0">{stepStatusIcon(step.status)}</span>
-            <span className="min-w-0">
-              <span
-                className={cn(
-                  'font-medium',
-                  step.status === 'failed' && 'text-destructive',
-                  step.status === 'active' && 'text-foreground',
-                  step.status === 'completed' && 'text-foreground',
-                  step.status === 'pending' && 'text-muted-foreground',
-                )}
-              >
-                {step.label}
+    <div className="flex gap-3" role="status" aria-live="polite" aria-atomic="true">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/15">
+        <Sparkles className="h-4 w-4 text-primary" aria-hidden />
+      </div>
+      <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md border border-border/60 bg-card/90 px-3 py-3 shadow-sm">
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        <ol className="mt-2 space-y-2">
+          {steps.map((step) => (
+            <li key={step.id} className="flex items-start gap-2 text-xs">
+              <span className="mt-0.5 shrink-0">{stepStatusIcon(step.status)}</span>
+              <span className="min-w-0">
+                <span
+                  className={cn(
+                    'font-medium',
+                    step.status === 'failed' && 'text-destructive',
+                    step.status === 'active' && 'text-foreground',
+                    step.status === 'completed' && 'text-foreground',
+                    step.status === 'pending' && 'text-muted-foreground',
+                  )}
+                >
+                  {step.label}
+                </span>
+                {step.detail ? <span className="mt-0.5 block text-muted-foreground">{step.detail}</span> : null}
               </span>
-              {step.detail ? <span className="mt-0.5 block text-muted-foreground">{step.detail}</span> : null}
-            </span>
-          </li>
-        ))}
-      </ol>
+            </li>
+          ))}
+        </ol>
+      </div>
     </div>
   )
 }
@@ -861,22 +932,22 @@ export function AgentMessagesSection({
   onJumpToLatest: () => void
 }) {
   return (
-    <div className="relative flex-1 min-h-0">
+    <div className={cn('relative flex-1 min-h-0', AGENT_PANEL_SURFACE)}>
       <div
-        className="h-full overflow-y-auto p-4"
+        className={cn('h-full overflow-y-auto px-4 py-5', AGENT_MESSAGE_THREAD)}
         ref={scrollAreaRef}
         onScroll={onMessagesScroll}
         onWheel={stopPropagation}
       >
         {isConversationLoading ? (
           <div className="flex h-full min-h-[240px] items-center justify-center">
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              Loading previous chat…
-            </p>
+            <div className="flex flex-col items-center gap-3 text-center">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden />
+              <p className="text-sm text-muted-foreground">Loading conversation…</p>
+            </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="mx-auto max-w-2xl space-y-5">
             {messages.map((message) => (
               <AgentMessageCard
                 key={message.clientId}
@@ -891,14 +962,8 @@ export function AgentMessagesSection({
             ))}
 
             {isProcessing ? (
-              <m.div
-                initial={MOTION_FADE_IN}
-                animate={MOTION_FADE_IN_VISIBLE}
-                className="flex justify-start"
-              >
-                <div className="max-w-[90%] rounded-lg border border-border/70 bg-muted/30 px-3 py-3">
-                  <AgentExecutionTimeline steps={processingSteps} label={processingLabel} />
-                </div>
+              <m.div initial={MOTION_FADE_IN} animate={MOTION_FADE_IN_VISIBLE} className="flex justify-start">
+                <AgentExecutionTimeline steps={processingSteps} label={processingLabel} />
               </m.div>
             ) : null}
           </div>
@@ -906,15 +971,16 @@ export function AgentMessagesSection({
       </div>
 
       {showJumpToLatest ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
           <Button
             type="button"
             size="sm"
             variant="secondary"
-            className="pointer-events-auto h-8 shadow-md"
+            className="pointer-events-auto h-8 gap-1.5 rounded-full border border-border/60 bg-background/95 px-4 shadow-lg backdrop-blur-sm"
             onClick={onJumpToLatest}
           >
-            Jump to latest
+            <ArrowDown className="h-3.5 w-3.5" aria-hidden />
+            Latest messages
           </Button>
         </div>
       ) : null}
@@ -935,17 +1001,17 @@ export function FailedMessageBanner({
     <div
       role="alert"
       aria-live="assertive"
-      className="flex items-center justify-between gap-3 border-t bg-destructive/10 px-4 py-2.5"
+      className="flex items-center justify-between gap-3 border-t border-destructive/20 bg-destructive/[0.07] px-4 py-2.5"
     >
       <div className="flex items-center gap-2 text-sm text-destructive">
         <WifiOff className="h-4 w-4 shrink-0" aria-hidden />
-        <span>Message failed to send</span>
+        <span className="font-medium">Message failed to send</span>
       </div>
       <Button
         variant="outline"
         size="sm"
         onClick={onRetry}
-        className="h-8 gap-2 border-destructive/20 text-destructive hover:bg-destructive/10"
+        className="h-8 gap-1.5 rounded-full border-destructive/25 text-destructive hover:bg-destructive/10"
         aria-label="Retry sending failed message"
       >
         <RefreshCw className="h-3.5 w-3.5" aria-hidden />
@@ -1001,13 +1067,33 @@ export function AgentModePanelShell({
   const isDocked = panelLayout === 'docked'
   const usesModal = panelUsesModalFocusTrap(panelLayout)
 
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      onRequestClose?.()
-      return
-    }
-    onOpenChange(true)
-  }
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        onRequestClose?.()
+        return
+      }
+      onOpenChange(true)
+    },
+    [onOpenChange, onRequestClose],
+  )
+
+  const handleOpenAutoFocus = useCallback(
+    (event: Event) => {
+      event.preventDefault()
+      composerInputRef?.current?.focus()
+    },
+    [composerInputRef],
+  )
+
+  const handleInteractOutside = useCallback(
+    (event: Event) => {
+      if (!usesModal) {
+        event.preventDefault()
+      }
+    },
+    [usesModal],
+  )
 
   const shellBody = (
     <>
@@ -1058,23 +1144,16 @@ export function AgentModePanelShell({
         )}
         aria-labelledby="agent-mode-dialog-title"
         className={cn(
-          'z-[9999] flex flex-col gap-0 p-0 [&>button]:hidden',
+          'z-[9999] flex flex-col gap-0 overflow-hidden p-0 [&>button]:hidden',
           isFullscreen &&
             'inset-0 h-[100dvh] max-h-[100dvh] w-screen max-w-none border-0 sm:max-w-none',
           isDocked &&
-            'inset-y-0 right-0 left-auto h-full w-[min(480px,42vw)] max-w-[520px] border-l shadow-xl max-md:inset-0 max-md:h-[100dvh] max-md:w-screen max-md:max-w-none',
+            'inset-y-0 right-0 left-auto h-full w-[min(480px,42vw)] max-w-[520px] border-l border-border/60 shadow-2xl max-md:inset-0 max-md:h-[100dvh] max-md:w-screen max-md:max-w-none',
           isCompact &&
-            'inset-auto bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] top-auto left-auto h-[min(560px,calc(100dvh-5rem-env(safe-area-inset-bottom)))] w-[min(400px,calc(100vw-2rem))] max-w-[400px] rounded-2xl border shadow-2xl max-md:inset-0 max-md:h-[100dvh] max-md:w-screen max-md:max-w-none max-md:rounded-none',
+            'inset-auto bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] top-auto left-auto h-[min(560px,calc(100dvh-5rem-env(safe-area-inset-bottom)))] w-[min(400px,calc(100vw-2rem))] max-w-[400px] rounded-2xl border border-border/60 shadow-2xl ring-1 ring-black/5 max-md:inset-0 max-md:h-[100dvh] max-md:w-screen max-md:max-w-none max-md:rounded-none max-md:ring-0',
         )}
-        onOpenAutoFocus={(event) => {
-          event.preventDefault()
-          composerInputRef?.current?.focus()
-        }}
-        onInteractOutside={(event) => {
-          if (!usesModal) {
-            event.preventDefault()
-          }
-        }}
+        onOpenAutoFocus={handleOpenAutoFocus}
+        onInteractOutside={handleInteractOutside}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}

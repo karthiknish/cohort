@@ -1,4 +1,4 @@
-import { internalMutation, internalQuery, mutation } from '../_generated/server'
+import { internalMutation, internalQuery, type MutationCtx } from '../_generated/server'
 import type { Id } from '../_generated/dataModel'
 import { v } from 'convex/values'
 import { z } from 'zod/v4'
@@ -22,36 +22,33 @@ export type ClaimedSocialSyncJob = {
   timeframeDays: number
 }
 
-export const enqueueSyncJobInternal = internalMutation({
-  args: {
-    workspaceId: v.string(),
-    clientId: v.optional(v.union(v.string(), v.null())),
-    surface: v.optional(v.union(v.string(), v.null())),
-    jobType: v.optional(
-      v.union(v.literal('initial-backfill'), v.literal('scheduled-sync'), v.literal('manual-sync')),
-    ),
-    timeframeDays: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const timestamp = nowMs()
-    const clientId = normalizeClientId(args.clientId ?? null)
+type EnqueueSyncJobArgs = {
+  workspaceId: string
+  clientId?: string | null
+  surface?: string | null
+  jobType?: 'initial-backfill' | 'scheduled-sync' | 'manual-sync'
+  timeframeDays?: number
+}
 
-    const id = await ctx.db.insert('socialSyncJobs', {
-      workspaceId: args.workspaceId,
-      clientId,
-      surface: args.surface ?? null,
-      jobType: args.jobType ?? 'manual-sync',
-      timeframeDays: args.timeframeDays ?? 30,
-      status: 'queued',
-      createdAtMs: timestamp,
-      startedAtMs: null,
-      processedAtMs: null,
-      errorMessage: null,
-    })
+async function enqueueSyncJob(ctx: MutationCtx, args: EnqueueSyncJobArgs) {
+  const timestamp = nowMs()
+  const clientId = normalizeClientId(args.clientId ?? null)
 
-    return { jobId: id }
-  },
-})
+  const id = await ctx.db.insert('socialSyncJobs', {
+    workspaceId: args.workspaceId,
+    clientId,
+    surface: args.surface ?? null,
+    jobType: args.jobType ?? 'manual-sync',
+    timeframeDays: args.timeframeDays ?? 30,
+    status: 'queued',
+    createdAtMs: timestamp,
+    startedAtMs: null,
+    processedAtMs: null,
+    errorMessage: null,
+  })
+
+  return { jobId: id }
+}
 
 export const requestManualSync = zWorkspaceMutation({
   args: {
@@ -75,28 +72,21 @@ export const requestManualSync = zWorkspaceMutation({
       throw Errors.integration.notConfigured('Meta', 'Connect Meta and select a Facebook Page before syncing')
     }
 
-    const id = await ctx.db.insert('socialSyncJobs', {
+    const { jobId } = await enqueueSyncJob(ctx, {
       workspaceId: args.workspaceId,
       clientId,
       surface: args.surface ?? null,
       jobType: 'manual-sync',
       timeframeDays: args.timeframeDays,
-      status: 'queued',
-      createdAtMs: timestamp,
-      startedAtMs: null,
-      processedAtMs: null,
-      errorMessage: null,
     })
 
-    if (integration) {
-      await ctx.db.patch(integration._id, {
-        lastSyncStatus: 'pending',
-        lastSyncRequestedAtMs: timestamp,
-        updatedAt: timestamp,
-      })
-    }
+    await ctx.db.patch(integration._id, {
+      lastSyncStatus: 'pending',
+      lastSyncRequestedAtMs: timestamp,
+      updatedAt: timestamp,
+    })
 
-    return { jobId: id }
+    return { jobId }
   },
 })
 

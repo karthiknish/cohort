@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Bell, Check, ExternalLink, LoaderCircle, Settings2 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -45,6 +46,7 @@ export function NotificationsInboxPanel({
 }: NotificationsInboxPanelProps) {
   const scrollMaxHeight =
     variant === 'drawer' ? 'min(28rem,calc(85dvh - 11rem))' : 'min(22rem,68vh)'
+  const scrollAreaStyle = useMemo(() => ({ maxHeight: scrollMaxHeight }), [scrollMaxHeight])
 
   return (
     <>
@@ -76,23 +78,25 @@ export function NotificationsInboxPanel({
         </div>
       </div>
 
-      <ScrollArea style={{ maxHeight: scrollMaxHeight }}>
-        {isLoadingInitial ? (
-          <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
-            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
-            Loading…
-          </div>
-        ) : notifications.length === 0 ? (
-          <NotificationEmptyState className="py-14" />
-        ) : (
-          <NotificationGroupList
-            groups={groupedNotifications}
-            compact
-            ackInFlight={ackInFlight}
-            onOpen={onOpen}
-            onDismiss={onDismiss}
-          />
-        )}
+      <ScrollArea className="min-h-0 flex-1" style={scrollAreaStyle}>
+        <div className={HEADER_DROPDOWN_THEME.inboxBody}>
+          {isLoadingInitial ? (
+            <div className="flex items-center justify-center gap-2 px-3 py-12 text-sm text-muted-foreground">
+              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+              Loading…
+            </div>
+          ) : notifications.length === 0 ? (
+            <NotificationEmptyState />
+          ) : (
+            <NotificationGroupList
+              groups={groupedNotifications}
+              compact
+              ackInFlight={ackInFlight}
+              onOpen={onOpen}
+              onDismiss={onDismiss}
+            />
+          )}
+        </div>
       </ScrollArea>
 
       <div className={HEADER_DROPDOWN_THEME.footer}>

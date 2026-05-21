@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { FileText, Plus, X } from 'lucide-react'
 
 import { useIsMobile } from '@/shared/hooks/use-is-mobile'
@@ -248,6 +248,15 @@ export function ProposalBuilderOverlay(props: {
 
   const activeStep = steps[currentStep]
 
+  const handleDrawerOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next && !isSubmitting) {
+        onClose()
+      }
+    },
+    [isSubmitting, onClose],
+  )
+
   const builderBody = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-muted/40 bg-background/95 px-4 py-4 backdrop-blur-md sm:items-center sm:px-6">
@@ -353,15 +362,7 @@ export function ProposalBuilderOverlay(props: {
 
   if (isMobile) {
     return (
-      <Drawer
-        open={open}
-        onOpenChange={(next) => {
-          if (!next && !isSubmitting) {
-            onClose()
-          }
-        }}
-        direction="right"
-      >
+      <Drawer open={open} onOpenChange={handleDrawerOpenChange} direction="right">
         <DrawerContent className="inset-y-0 left-auto mt-0 h-full max-h-none w-full max-w-none rounded-none border-0 data-[vaul-drawer-direction=right]:w-full">
           {builderBody}
         </DrawerContent>

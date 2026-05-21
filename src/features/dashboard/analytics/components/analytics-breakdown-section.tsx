@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Monitor, Radio, Share2 } from 'lucide-react'
 
 import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
@@ -53,6 +54,16 @@ function aggregateBreakdown(rows: AnalyticsBreakdownRow[], dimension: BreakdownD
     }))
 }
 
+function BreakdownShareBar({ share }: { share: number }) {
+  const widthStyle = useMemo(() => ({ width: `${Math.max(share, 2)}%` }), [share])
+
+  return (
+    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+      <div className="h-full rounded-full bg-primary/80" style={widthStyle} />
+    </div>
+  )
+}
+
 function BreakdownCard({
   dimension,
   rows,
@@ -84,12 +95,7 @@ function BreakdownCard({
                 <span className="truncate font-medium text-foreground">{entry.label}</span>
                 <span className="shrink-0 text-muted-foreground">{entry.share.toFixed(1)}%</span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary/80"
-                  style={{ width: `${Math.max(entry.share, 2)}%` }}
-                />
-              </div>
+              <BreakdownShareBar share={entry.share} />
               <p className="text-xs text-muted-foreground">
                 {entry.sessions.toLocaleString()} sessions · {entry.users.toLocaleString()} users
               </p>

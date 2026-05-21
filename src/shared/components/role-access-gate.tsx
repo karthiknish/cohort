@@ -81,7 +81,7 @@ export function RoleAccessGate({
     pathname.startsWith(`${pathnamePrefix}/`)
 
   if (!appliesToPath && !capability) {
-    return <>{children}</>
+    return children
   }
 
   if (loading) {
@@ -102,7 +102,7 @@ export function RoleAccessGate({
 
   if (denied) {
     if (fallback) {
-      return <>{fallback}</>
+      return fallback
     }
     return (
       <AccessDeniedPanel
@@ -114,5 +114,5 @@ export function RoleAccessGate({
     )
   }
 
-  return <>{children}</>
+  return children
 }

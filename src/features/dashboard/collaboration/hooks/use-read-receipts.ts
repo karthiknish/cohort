@@ -86,7 +86,7 @@ export function useReadReceipts({
         })
       }
     },
-    [workspaceId, userId, messages, markAsRead, enabled, toast]
+    [workspaceId, userId, messages, markAsRead, enabled]
   )
 
   // Mark multiple messages as read
@@ -122,7 +122,7 @@ export function useReadReceipts({
         })
       }
     },
-    [workspaceId, userId, messages, markMultipleAsRead, enabled, toast]
+    [workspaceId, userId, messages, markMultipleAsRead, enabled]
   )
 
   // Mark all messages in channel as read
@@ -166,7 +166,6 @@ export function useReadReceipts({
       messages,
       markChannelAsRead,
       enabled,
-      toast,
     ]
   )
 

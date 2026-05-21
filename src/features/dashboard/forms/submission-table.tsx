@@ -118,29 +118,12 @@ export function SubmissionTable({
                   </WorkforceStatusBadge>
                 </TableCell>
                 {canReview && onMarkReady && onNeedsFollowUp ? (
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs"
-                        disabled={pendingId === submission.id}
-                        onClick={() => handleNeedsFollowUp(submission)}
-                      >
-                        {pendingId === submission.id ? <LoaderCircle className="h-3 w-3 animate-spin" /> : 'Follow up'}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="h-7 text-xs"
-                        disabled={pendingId === submission.id}
-                        onClick={() => handleMarkReady(submission)}
-                      >
-                        {pendingId === submission.id ? <LoaderCircle className="h-3 w-3 animate-spin" /> : 'Mark ready'}
-                      </Button>
-                    </div>
-                  </TableCell>
+                  <SubmissionReviewActions
+                    submission={submission}
+                    pendingId={pendingId}
+                    onNeedsFollowUp={handleNeedsFollowUp}
+                    onMarkReady={handleMarkReady}
+                  />
                 ) : null}
               </TableRow>
             ))}
@@ -148,5 +131,47 @@ export function SubmissionTable({
         </Table>
       </CardContent>
     </Card>
+  )
+}
+
+function SubmissionReviewActions({
+  submission,
+  pendingId,
+  onNeedsFollowUp,
+  onMarkReady,
+}: {
+  submission: ChecklistSubmission
+  pendingId: string | null
+  onNeedsFollowUp: (submission: ChecklistSubmission) => void
+  onMarkReady: (submission: ChecklistSubmission) => void
+}) {
+  const handleNeedsFollowUpClick = useCallback(() => {
+    onNeedsFollowUp(submission)
+  }, [onNeedsFollowUp, submission])
+
+  const handleMarkReadyClick = useCallback(() => {
+    onMarkReady(submission)
+  }, [onMarkReady, submission])
+
+  const isPending = pendingId === submission.id
+
+  return (
+    <TableCell>
+      <div className="flex flex-wrap gap-1">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs"
+          disabled={isPending}
+          onClick={handleNeedsFollowUpClick}
+        >
+          {isPending ? <LoaderCircle className="h-3 w-3 animate-spin" /> : 'Follow up'}
+        </Button>
+        <Button type="button" size="sm" className="h-7 text-xs" disabled={isPending} onClick={handleMarkReadyClick}>
+          {isPending ? <LoaderCircle className="h-3 w-3 animate-spin" /> : 'Mark ready'}
+        </Button>
+      </div>
+    </TableCell>
   )
 }

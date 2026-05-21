@@ -59,6 +59,8 @@ const task: TaskRecord = {
   attachments: [{ url: 'https://example.com/file.pdf', name: 'Brief.pdf', type: 'pdf', size: '2 MB' }],
 }
 
+const taskWithoutAttachments: TaskRecord = { ...task, attachments: [] }
+
 describe('task view dialog sections', () => {
   it('renders the header, tabs list, and footer without duplicate summary', () => {
     const markup = renderToStaticMarkup(
@@ -118,7 +120,7 @@ describe('task view dialog sections', () => {
 
   it('renders empty attachments as plain text', () => {
     const markup = renderToStaticMarkup(
-      <TaskViewDetailsTab task={{ ...task, attachments: [] }} />,
+      <TaskViewDetailsTab task={taskWithoutAttachments} />,
     )
 
     expect(markup).toContain('No attachments.')

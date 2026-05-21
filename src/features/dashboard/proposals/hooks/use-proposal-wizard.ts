@@ -245,7 +245,7 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
         } else if (onSubmit) {
             void onSubmit()
         }
-    }, [clearErrors, formState, isLastStep, onSubmit, stepId, toast])
+    }, [clearErrors, formState, isLastStep, onSubmit, stepId])
 
     const handleBack = useCallback(() => {
         if (!isFirstStep) {
@@ -282,7 +282,7 @@ export function useProposalWizard(options: UseProposalWizardOptions = {}): UsePr
             }
             setCurrentStep(targetIndex)
         },
-        [clearErrors, currentStep, formState, stepId, toast],
+        [clearErrors, currentStep, formState, stepId],
     )
 
     const resetWizard = useCallback(() => {

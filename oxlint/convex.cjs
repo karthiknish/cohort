@@ -84,6 +84,8 @@ function matchesAnyGlob(filePath, matchers) {
 const DEFAULT_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx']
 const DEFAULT_SKIP_DIRS = ['node_modules', '.git', 'dist', 'build', '.next', '.convex', '_generated']
 const USAGE_ROOTS = ['api', 'internal', 'looseApi', 'generatedApi', 'convexApi']
+const BRACKET_INTERNAL_REF_RE = /\['([^']+)'\]\.([A-Za-z_][\w]*)/g
+const REGISTERED_HANDLER_RE = /callRegisteredHandler\(\s*([A-Za-z_][\w]*)/g
 const ROUTE_NAME_PATTERN = /\b([A-Za-z][\w.-]*):([A-Za-z_][\w]*)\b/g
 
 function getProjectFiles(dir, extensions = DEFAULT_EXTENSIONS, skipDirs = DEFAULT_SKIP_DIRS) {
@@ -122,6 +124,24 @@ function extractApiUsages(content) {
     const functionName = routeMatch[2]
     if (moduleName.includes('://')) continue
     usages.add(`${moduleName}:${functionName}`)
+  }
+
+  let bracketMatch = null
+  BRACKET_INTERNAL_REF_RE.lastIndex = 0
+  while ((bracketMatch = BRACKET_INTERNAL_REF_RE.exec(content)) !== null) {
+    const modulePath = bracketMatch[1].replace(/\//g, '.')
+    const functionName = bracketMatch[2]
+    usages.add(`${modulePath}.${functionName}`)
+    const parts = modulePath.split('.')
+    if (parts.length >= 2) {
+      usages.add(`__ns__:${parts[0]}:${functionName}`)
+    }
+  }
+
+  let handlerMatch = null
+  REGISTERED_HANDLER_RE.lastIndex = 0
+  while ((handlerMatch = REGISTERED_HANDLER_RE.exec(content)) !== null) {
+    usages.add(handlerMatch[1])
   }
 
   return usages
@@ -247,7 +267,11 @@ const noUnusedFunctionsRule = {
           const key = `${modulePath}.${declarator.id.name}`
           if (isIgnored(key, ignorePatterns)) continue
 
-          if (!usages.has(key) && !hasRouteUsage(modulePath, declarator.id.name, usages)) {
+          if (
+            !usages.has(key) &&
+            !usages.has(declarator.id.name) &&
+            !hasRouteUsage(modulePath, declarator.id.name, usages)
+          ) {
             context.report({
               node: declarator.id,
               messageId: 'unusedFunction',

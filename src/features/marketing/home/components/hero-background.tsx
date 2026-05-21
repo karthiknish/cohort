@@ -6,6 +6,11 @@ import { LazyMotion, domAnimation, m } from '@/shared/ui/motion'
 import { motionEasing, motionLoopSeconds } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
 
+const diagonalShimmerStyle = {
+  backgroundImage:
+    'repeating-linear-gradient(115deg, rgb(from var(--primary) r g b / 0.35) 0px, rgb(from var(--primary) r g b / 0.35) 1px, transparent 1px, transparent 48px)',
+} as const
+
 const orbs = [
   {
     id: 'hero-orb-primary-left',
@@ -112,13 +117,7 @@ export function HeroBackground({ className }: HeroBackgroundProps) {
       <div className="absolute -right-16 top-1/3 h-56 w-56 rounded-full bg-accent/10 blur-3xl" />
 
       {/* Diagonal shimmer bands (very subtle) */}
-      <div
-        className="absolute inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(115deg, rgb(from var(--primary) r g b / 0.35) 0px, rgb(from var(--primary) r g b / 0.35) 1px, transparent 1px, transparent 48px)',
-        }}
-      />
+      <div className="absolute inset-0 opacity-[0.04]" style={diagonalShimmerStyle} />
 
       <LazyMotion features={domAnimation}>
         <div className="absolute inset-x-0 top-0 mx-auto h-[36rem] w-full max-w-6xl motion-reduce:opacity-80">

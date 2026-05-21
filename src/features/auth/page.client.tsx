@@ -7,7 +7,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 
 import { AuthCard } from '@/features/auth/components/auth-card'
-import { AuthPageSkeleton } from '@/features/auth/components/auth-page-skeleton'
+import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
 import { calculatePasswordStrength, startGoogleOAuthSignIn } from '@/features/auth/auth-utils'
 import { authClient } from '@/lib/auth-client'
 import { logError } from '@/lib/convex-errors'
@@ -22,7 +22,7 @@ const TAB_STORAGE_KEY = 'cohorts.auth.activeTab'
 const REMEMBER_ME_KEY = 'cohorts.auth.rememberMe'
 const AUTH_PAGE_FALLBACK = (
   <RevealTransitionFallback>
-    <AuthPageSkeleton />
+    <BoneyardPageLoading name="auth-main-page" minHeight="min-h-screen" />
   </RevealTransitionFallback>
 )
 
@@ -129,7 +129,6 @@ function HomeAuthPageContent() {
   }, [getRedirectParam])
 
   const isAuthLoading = loading
-  const loadingContent = useMemo(() => <AuthPageSkeleton />, [])
   const passwordStrength = useMemo(() => calculatePasswordStrength(signUpData.password), [signUpData.password])
   const passwordsMatch = signUpData.password === signUpData.confirmPassword
 
@@ -311,7 +310,6 @@ function HomeAuthPageContent() {
       <BoneyardSkeletonBoundary
         name="auth-main-page"
         loading={isAuthLoading && !user}
-        loadingContent={loadingContent}
       >
         <div className="flex min-h-dvh flex-1 items-center justify-center px-6 py-12 sm:py-16">
           <div className="w-full max-w-120">

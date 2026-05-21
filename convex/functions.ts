@@ -456,7 +456,11 @@ const _authenticatedMutationBase = customMutation(mutation, {
   },
 })
 
-export const authenticatedMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any }) =>
+export const authenticatedMutation = ((
+  opts: Parameters<typeof _authenticatedMutationBase>[0] & {
+    handler: MutationHandler<{ cachedResponse?: IdempotencyResponse }, unknown, unknown>
+  },
+) =>
   _authenticatedMutationBase({
     ...opts,
     handler: withIdempotencyReplay(opts.handler),
@@ -538,7 +542,11 @@ const _adminMutationBase = customMutation(mutation, {
   },
 })
 
-export const adminMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any }) =>
+export const adminMutation = ((
+  opts: Parameters<typeof _adminMutationBase>[0] & {
+    handler: MutationHandler<{ cachedResponse?: IdempotencyResponse }, unknown, unknown>
+  },
+) =>
   _adminMutationBase({
     ...opts,
     handler: withIdempotencyReplay(opts.handler),
@@ -581,7 +589,11 @@ const _workspaceMutationBase = customMutation(mutation, {
   },
 })
 
-export const workspaceMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any }) =>
+export const workspaceMutation = ((
+  opts: Parameters<typeof _workspaceMutationBase>[0] & {
+    handler: MutationHandler<{ cachedResponse?: IdempotencyResponse }, unknown, unknown>
+  },
+) =>
   _workspaceMutationBase({
     ...opts,
     handler: withIdempotencyReplay(opts.handler),
@@ -639,7 +651,11 @@ const _zAuthenticatedMutationBase = zCustomMutation(mutation, {
   },
 })
 
-export const zAuthenticatedMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any }) =>
+export const zAuthenticatedMutation = ((
+  opts: Parameters<typeof _zAuthenticatedMutationBase>[0] & {
+    handler: MutationHandler<{ cachedResponse?: IdempotencyResponse }, unknown, unknown>
+  },
+) =>
   _zAuthenticatedMutationBase({
     ...opts,
     handler: withIdempotencyReplay(opts.handler),
@@ -665,7 +681,11 @@ const _zWorkspaceMutationBase = zCustomMutation(mutation, {
   },
 })
 
-export const zWorkspaceMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any }) =>
+export const zWorkspaceMutation = ((
+  opts: Parameters<typeof _zWorkspaceMutationBase>[0] & {
+    handler: MutationHandler<{ cachedResponse?: IdempotencyResponse }, unknown, unknown>
+  },
+) =>
   _zWorkspaceMutationBase({
     ...opts,
     handler: withIdempotencyReplay(opts.handler),
@@ -755,7 +775,11 @@ const _zAdminMutationBase = zCustomMutation(mutation, {
   },
 })
 
-export const zAdminMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any }) =>
+export const zAdminMutation = ((
+  opts: Parameters<typeof _zAdminMutationBase>[0] & {
+    handler: MutationHandler<{ cachedResponse?: IdempotencyResponse }, unknown, unknown>
+  },
+) =>
   _zAdminMutationBase({
     ...opts,
     handler: withIdempotencyReplay(opts.handler),
@@ -847,7 +871,11 @@ const _rateLimitedAuthenticatedMutationBase = customMutation(mutation, {
   },
 })
 
-export const rateLimitedAuthenticatedMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any; rateLimit?: RateLimitPreset }) =>
+export const rateLimitedAuthenticatedMutation = ((
+  opts: Parameters<typeof _rateLimitedAuthenticatedMutationBase>[0] & {
+    handler: MutationHandler<{ cachedResponse?: IdempotencyResponse }, unknown, unknown>
+  },
+) =>
   _rateLimitedAuthenticatedMutationBase({
     ...opts,
     handler: withIdempotencyReplay(opts.handler),
@@ -878,7 +906,11 @@ const _rateLimitedWorkspaceMutationBase = customMutation(mutation, {
   },
 })
 
-export const rateLimitedWorkspaceMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any; rateLimit?: RateLimitPreset }) =>
+export const rateLimitedWorkspaceMutation = ((
+  opts: Parameters<typeof _rateLimitedWorkspaceMutationBase>[0] & {
+    handler: MutationHandler<{ cachedResponse?: IdempotencyResponse }, unknown, unknown>
+  },
+) =>
   _rateLimitedWorkspaceMutationBase({
     ...opts,
     handler: withIdempotencyReplay(opts.handler),
@@ -909,7 +941,11 @@ const _rateLimitedAdminMutationBase = customMutation(mutation, {
   },
 })
 
-export const rateLimitedAdminMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any; rateLimit?: RateLimitPreset }) =>
+export const rateLimitedAdminMutation = ((
+  opts: Parameters<typeof _rateLimitedAdminMutationBase>[0] & {
+    handler: MutationHandler<{ cachedResponse?: IdempotencyResponse }, unknown, unknown>
+  },
+) =>
   _rateLimitedAdminMutationBase({
     ...opts,
     handler: withIdempotencyReplay(opts.handler),
@@ -940,7 +976,11 @@ const _zRateLimitedAuthenticatedMutationBase = zCustomMutation(mutation, {
   },
 })
 
-export const zRateLimitedAuthenticatedMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any; rateLimit?: RateLimitPreset }) =>
+export const zRateLimitedAuthenticatedMutation = ((
+  opts: Parameters<typeof _zRateLimitedAuthenticatedMutationBase>[0] & {
+    handler: MutationHandler<{ cachedResponse?: IdempotencyResponse }, unknown, unknown>
+  },
+) =>
   _zRateLimitedAuthenticatedMutationBase({
     ...opts,
     handler: withIdempotencyReplay(opts.handler),
@@ -968,7 +1008,9 @@ const _zRateLimitedIdentityMutationBase = zCustomMutation(mutation, {
   },
 })
 
-export const zRateLimitedIdentityMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any; rateLimit?: RateLimitPreset }) =>
+export const zRateLimitedIdentityMutation = ((opts: Parameters<typeof _zRateLimitedIdentityMutationBase>[0] & {
+  handler: MutationHandler<{ cachedResponse?: IdempotencyResponse }, unknown, unknown>
+}) =>
   _zRateLimitedIdentityMutationBase({
     ...opts,
     handler: withIdempotencyReplay(opts.handler),
@@ -999,7 +1041,9 @@ const _zRateLimitedWorkspaceMutationBase = zCustomMutation(mutation, {
   },
 })
 
-export const zRateLimitedWorkspaceMutation = ((opts: { handler: (ctx: any, args: any) => any; args?: any; returns?: any; rateLimit?: RateLimitPreset }) =>
+export const zRateLimitedWorkspaceMutation = ((opts: Parameters<typeof _zRateLimitedWorkspaceMutationBase>[0] & {
+  handler: MutationHandler<{ cachedResponse?: IdempotencyResponse }, unknown, unknown>
+}) =>
   _zRateLimitedWorkspaceMutationBase({
     ...opts,
     handler: withIdempotencyReplay(opts.handler),

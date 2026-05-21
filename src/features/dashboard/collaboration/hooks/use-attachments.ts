@@ -38,7 +38,7 @@ export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
     if (result.valid.length > 0) {
       setPendingAttachments((prev) => [...prev, ...result.valid])
     }
-  }, [pendingAttachments.length, toast])
+  }, [pendingAttachments.length])
 
   const handleRemoveAttachment = useCallback((attachmentId: string) => {
     setPendingAttachments((prev) => prev.filter((attachment) => attachment.id !== attachmentId))
@@ -100,7 +100,7 @@ export function useAttachments({ userId, workspaceId }: UseAttachmentsOptions) {
     } finally {
       setUploading(false)
     }
-  }, [generateUploadUrl, toast, userId, workspaceId])
+  }, [generateUploadUrl,  userId, workspaceId])
 
   return {
     pendingAttachments,

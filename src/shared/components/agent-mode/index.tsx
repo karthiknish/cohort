@@ -9,7 +9,7 @@ import {
   shouldHideAgentFab,
   type AgentPanelLayout,
 } from '@/lib/agent-panel-layout'
-import { useAgentMode } from '@/shared/hooks/use-agent-mode'
+import { useAgentMode, type AgentMessageMetadata } from '@/shared/hooks/use-agent-mode'
 
 /**
  * Agent Mode Container
@@ -84,11 +84,67 @@ function AgentModeInner() {
 
   const handleLauncherClick = useCallback(() => {
     if (isOpen) {
-      requestCloseRef.current?.() ?? handleClose()
+      if (requestCloseRef.current) {
+        requestCloseRef.current()
+      } else {
+        handleClose()
+      }
       return
     }
     setOpen(true)
   }, [handleClose, isOpen, setOpen])
+
+  const handleRegisterRequestClose = useCallback((handler: (() => void) | null) => {
+    requestCloseRef.current = handler
+  }, [])
+
+  const handleSendMessage = useCallback(
+    (text: string, options?: Parameters<typeof processInput>[1]) => {
+      void processInput(text, options)
+    },
+    [processInput],
+  )
+
+  const handleOpenHistory = useCallback(() => {
+    void fetchHistory({ reset: true })
+  }, [fetchHistory])
+
+  const handleRetryHistory = useCallback(() => {
+    void fetchHistory({ reset: true })
+  }, [fetchHistory])
+
+  const handleLoadMoreHistory = useCallback(() => {
+    void loadMoreHistory()
+  }, [loadMoreHistory])
+
+  const handlePinConversation = useCallback(
+    (id: string, pinned: boolean) => {
+      void setConversationPinned(id, pinned)
+    },
+    [setConversationPinned],
+  )
+
+  const handleArchiveConversation = useCallback(
+    (id: string, archived: boolean) => {
+      void setConversationArchived(id, archived)
+    },
+    [setConversationArchived],
+  )
+
+  const handleRetryUserMessage = useCallback(
+    (clientId: string, content: string) => {
+      void processInput(content, { retryClientId: clientId })
+    },
+    [processInput],
+  )
+
+  const handleUndoAction = useCallback(
+    (messageId: string, undoHint: NonNullable<AgentMessageMetadata['undoHint']> | undefined) => {
+      if (!undoHint) return
+      void undoAgentAction(messageId, undoHint)
+    },
+    [undoAgentAction],
+  )
 
   return (
     <>
@@ -100,14 +156,10 @@ function AgentModeInner() {
         maxMessageLength={maxMessageLength}
         onClose={handleClose}
         onOpenChange={setOpen}
-        onRegisterRequestClose={(handler) => {
-          requestCloseRef.current = handler
-        }}
+        onRegisterRequestClose={handleRegisterRequestClose}
         messages={messages}
         isProcessing={isProcessing}
-        onSendMessage={(text, options) => {
-          void processInput(text, options)
-        }}
+        onSendMessage={handleSendMessage}
         pendingAttachments={pendingAttachments}
         onAddAttachments={addAttachments}
         onRemoveAttachment={removeAttachment}
@@ -122,21 +174,11 @@ function AgentModeInner() {
         onHistorySearchChange={setHistorySearch}
         showArchivedHistory={showArchivedHistory}
         onShowArchivedHistoryChange={setShowArchivedHistory}
-        onOpenHistory={() => {
-          void fetchHistory({ reset: true })
-        }}
-        onRetryHistory={() => {
-          void fetchHistory({ reset: true })
-        }}
-        onLoadMoreHistory={() => {
-          void loadMoreHistory()
-        }}
-        onPinConversation={(id, pinned) => {
-          void setConversationPinned(id, pinned)
-        }}
-        onArchiveConversation={(id, archived) => {
-          void setConversationArchived(id, archived)
-        }}
+        onOpenHistory={handleOpenHistory}
+        onRetryHistory={handleRetryHistory}
+        onLoadMoreHistory={handleLoadMoreHistory}
+        onPinConversation={handlePinConversation}
+        onArchiveConversation={handleArchiveConversation}
         onSelectConversation={loadConversation}
         isConversationLoading={isConversationLoading}
         loadingConversationId={loadingConversationId}
@@ -151,14 +193,9 @@ function AgentModeInner() {
         lastFailedMessage={lastFailedMessage}
         onRetry={retryLastMessage}
         onRetryLastUserTurn={retryLastUserTurn}
-        onRetryUserMessage={(clientId, content) => {
-          void processInput(content, { retryClientId: clientId })
-        }}
+        onRetryUserMessage={handleRetryUserMessage}
         onConfirmPending={confirmPendingAction}
-        onUndoAction={(messageId, undoHint) => {
-          if (!undoHint) return
-          void undoAgentAction(messageId, undoHint)
-        }}
+        onUndoAction={handleUndoAction}
         processingSteps={processingSteps}
         processingLabel={processingLabel}
         scrollContainerRef={scrollContainerRef}

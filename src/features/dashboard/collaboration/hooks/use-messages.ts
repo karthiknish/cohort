@@ -324,7 +324,7 @@ export function useFetchMessages({
         setFetchingMessages(false)
       }
     },
-     [channels, convex, setMessagesByChannel, toast, workspaceId]
+     [channels, convex, setMessagesByChannel,  workspaceId]
    )
 
 

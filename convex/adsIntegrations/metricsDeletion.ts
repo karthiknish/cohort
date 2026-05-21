@@ -262,59 +262,6 @@ export const listAllWorkspacesWithIntegrations = internalQuery({
 })
 
 /**
- * List workspaces that have queued sync jobs.
- * Used by the worker to find workspaces to process.
- * No auth required - called from server-side cron code.
- */
-export const listWorkspacesWithQueuedJobs = internalQuery({
-  args: {
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    // No auth check - this is called by cron jobs
-    const limit = Math.min(Math.max(args.limit ?? 100, 1), 500)
-
-    const queuedJobs = await ctx.db
-      .query('adSyncJobs')
-      .withIndex('by_status_processedAt', (q) => q.eq('status', 'queued'))
-      .take(limit * 5) // Over-fetch since we need unique workspaceIds
-
-    const workspaceIds = new Set<string>()
-    for (const job of queuedJobs) {
-      workspaceIds.add(job.workspaceId)
-      if (workspaceIds.size >= limit) break
-    }
-
-    return Array.from(workspaceIds)
-  },
-})
-
-/**
- * Count queued jobs for a workspace.
- * Used by the worker to check if there are jobs to process.
- * No auth required - called from server-side cron code.
- */
-export const countQueuedJobsForWorkspace = internalQuery({
-  args: {
-    workspaceId: v.string(),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    // No auth check - this is called by cron jobs
-    const limit = Math.min(args.limit ?? 10, 100)
-
-    const jobs = await ctx.db
-      .query('adSyncJobs')
-      .withIndex('by_workspace_status_createdAt', (q) =>
-        q.eq('workspaceId', args.workspaceId).eq('status', 'queued')
-      )
-      .take(limit)
-
-    return { count: jobs.length, hasMore: jobs.length >= limit }
-  },
-})
-
-/**
  * HTTP-callable mutation to clean up old completed/failed jobs.
  * Called from cron route with cronKey authentication.
  */

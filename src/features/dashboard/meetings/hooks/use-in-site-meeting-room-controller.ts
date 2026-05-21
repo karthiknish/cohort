@@ -621,7 +621,7 @@ export function useInSiteMeetingRoomController(props: MeetingRoomPageProps) {
         fallbackMessage: 'Picture in Picture is not available in this browser.',
       })
     }
-  }, [getRoomVideoElement, joinConfig, toast])
+  }, [getRoomVideoElement, joinConfig])
 
   const toggleMinimizedRoom = useCallback(() => {
     if (!canMinimizeRoom) {

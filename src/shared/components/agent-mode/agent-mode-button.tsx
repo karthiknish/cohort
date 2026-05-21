@@ -27,16 +27,17 @@ export function AgentModeButton({ onClick, isOpen, className }: AgentModeButtonP
             size="icon"
             id="agent-mode-launcher"
             className={cn(
-              'fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg',
+              'relative fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg ring-2 ring-background',
               chromaticTransitionNormalClass,
-              'bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70',
-              'hover:scale-105 hover:shadow-xl',
-              isOpen && 'rotate-45 bg-destructive hover:bg-destructive/90',
+              'bg-gradient-to-br from-primary via-primary to-primary/85',
+              'hover:scale-[1.04] hover:shadow-xl hover:ring-primary/20',
+              !isOpen && 'before:absolute before:inset-0 before:-z-10 before:rounded-full before:bg-primary/20 before:blur-md before:content-[""]',
+              isOpen && 'rotate-45 bg-destructive hover:bg-destructive/90 hover:ring-destructive/30',
               className
             )}
             aria-label={isOpen ? 'Close Agent Mode' : 'Open Agent Mode'}
           >
-            <Sparkles className={cn('h-6 w-6 transition-transform', isOpen && 'rotate-45')} />
+            <Sparkles className={cn('h-6 w-6 transition-transform duration-200', isOpen && '-rotate-45')} />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">

@@ -108,9 +108,20 @@ export function toISO(value: unknown): string | null {
  * Normalizes input strings before validation/storage.
  * This is not HTML sanitization and must not be relied on for XSS protection.
  */
+function isDisallowedInputChar(char: string): boolean {
+  const code = char.charCodeAt(0)
+  return (
+    code <= 0x08 ||
+    code === 0x0b ||
+    code === 0x0c ||
+    (code >= 0x0e && code <= 0x1f) ||
+    code === 0x7f
+  )
+}
+
 export function sanitizeInput(value: string): string {
   if (typeof value !== 'string') return value
-  return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim()
+  return [...value].filter((char) => !isDisallowedInputChar(char)).join('').trim()
 }
 
 /**

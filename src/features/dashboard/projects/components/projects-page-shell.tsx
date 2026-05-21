@@ -33,7 +33,6 @@ import { ProjectKanban } from './project-kanban'
 import { ProjectRow } from './project-row'
 import { ProjectSearch } from './project-search'
 import { ProjectStatusPills } from './project-status-pills'
-import { ProjectsPageSkeleton } from './projects-page-skeleton'
 import { PROJECTS_THEME } from './projects-theme'
 import { SummaryCard } from './summary-card'
 import { ViewModeSelector } from './view-mode-selector'
@@ -42,14 +41,11 @@ import { useProjectsPageContext } from './projects-page-provider'
 
 export function ProjectsPageShell() {
   const { initialLoading } = useProjectsPageContext()
-  const loadingContent = useMemo(() => <ProjectsPageSkeleton />, [])
-
   return (
     <TooltipProvider>
       <BoneyardSkeletonBoundary
         name="dashboard-projects-page"
         loading={initialLoading}
-        loadingContent={loadingContent}
       >
         <div className={cn(DASHBOARD_THEME.layout.container, PROJECTS_THEME.page)}>
           <ProjectsHeaderSection />
@@ -218,6 +214,12 @@ function ProjectsSummarySection() {
     (value: StatusFilter) => setStatusFilterAndReset(value),
     [setStatusFilterAndReset],
   )
+  const handleFilterAll = useCallback(() => {
+    filterByStatus('all')
+  }, [filterByStatus])
+  const handleFilterActive = useCallback(() => {
+    filterByStatus('active')
+  }, [filterByStatus])
 
   return (
     <section className="space-y-4" aria-label="Portfolio summary">
@@ -228,7 +230,7 @@ function ProjectsSummarySection() {
             icon={Briefcase}
             value={projects.length}
             description={statusCounts.completed > 0 ? `${statusCounts.completed} completed` : 'All initiatives'}
-            onClick={() => filterByStatus('all')}
+            onClick={handleFilterAll}
             active={statusFilter === 'all'}
           />
           <SummaryCard
@@ -236,7 +238,7 @@ function ProjectsSummarySection() {
             icon={ListChecks}
             value={statusCounts.active}
             description={`${statusCounts.planning} in planning`}
-            onClick={() => filterByStatus('active')}
+            onClick={handleFilterActive}
             active={statusFilter === 'active'}
           />
           <SummaryCard

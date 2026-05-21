@@ -53,6 +53,14 @@ const animatedStepClassName = ['space-y-6', listItemEnterClass].join(' ')
 const interactiveCardClassName =
   'motion-chromatic hover:shadow-sm active:scale-[0.98]'
 
+const LABEL_ICON_CLASS = 'h-4 w-4 text-primary/70'
+
+const companyNameLabelPrefix = <Building2 className={LABEL_ICON_CLASS} aria-hidden />
+const websiteLabelPrefix = <Globe className={LABEL_ICON_CLASS} aria-hidden />
+const industryLabelPrefix = <Factory className={LABEL_ICON_CLASS} aria-hidden />
+const companySizeLabelPrefix = <Users2 className={LABEL_ICON_CLASS} aria-hidden />
+const locationsLabelPrefix = <MapPin className={LABEL_ICON_CLASS} aria-hidden />
+
 function SelectionIndicator({ selected }: { selected: boolean }) {
   return (
     <span
@@ -114,7 +122,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
         <FormField
           id="companyName"
           label="Company Name"
-          labelPrefix={<Building2 className="h-4 w-4 text-primary/70" aria-hidden />}
+          labelPrefix={companyNameLabelPrefix}
           error={validationErrors['company.name']}
         >
           <Input
@@ -132,7 +140,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
         <FormField
           id="website"
           label="Website URL"
-          labelPrefix={<Globe className="h-4 w-4 text-primary/70" aria-hidden />}
+          labelPrefix={websiteLabelPrefix}
         >
           <Input
             id="website"
@@ -150,7 +158,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
         <FormField
           id="industry"
           label="Industry / Sector"
-          labelPrefix={<Factory className="h-4 w-4 text-primary/70" aria-hidden />}
+          labelPrefix={industryLabelPrefix}
           error={validationErrors['company.industry']}
         >
           <Input
@@ -168,7 +176,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
         <FormField
           id="companySize"
           label="Company Size"
-          labelPrefix={<Users2 className="h-4 w-4 text-primary/70" aria-hidden />}
+          labelPrefix={companySizeLabelPrefix}
         >
           <Input
             id="companySize"
@@ -184,7 +192,7 @@ export function ProposalCompanyStepSection({ formState, validationErrors, onUpda
       <FormField
         id="locations"
         label="Target Locations"
-        labelPrefix={<MapPin className="h-4 w-4 text-primary/70" aria-hidden />}
+        labelPrefix={locationsLabelPrefix}
       >
         <Textarea
           id="locations"

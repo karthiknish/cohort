@@ -151,6 +151,10 @@ export function NotificationsDropdown() {
     [notificationsInfiniteQuery],
   )
 
+  const handleMobileOpen = useCallback(() => {
+    handleOpenChange(true)
+  }, [handleOpenChange])
+
   const markUnreadNotificationsRead = useEffectEvent((ids: string[]) => {
     void updateNotificationStatus(ids, 'read', { silent: true })
   })
@@ -216,7 +220,7 @@ export function NotificationsDropdown() {
       className={cn(HEADER_DROPDOWN_THEME.triggerIcon, hasUnread && !open && 'text-foreground')}
       disabled={triggerDisabled}
       aria-label={hasUnread ? `${unreadCount} unread notifications` : 'View notifications'}
-      onClick={isMobile ? () => handleOpenChange(true) : undefined}
+      onClick={isMobile ? handleMobileOpen : undefined}
     >
       <Bell className={cn('h-[1.125rem] w-[1.125rem]', hasUnread && 'motion-safe:animate-pulse')} />
       {hasUnread ? (
@@ -232,7 +236,7 @@ export function NotificationsDropdown() {
       <>
         {triggerButton}
         <Drawer open={open} onOpenChange={handleOpenChange} direction="bottom">
-          <DrawerContent className="flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl p-0">
+          <DrawerContent className="flex max-h-[85dvh] flex-col gap-1.5 overflow-hidden rounded-t-2xl p-3">
             {inboxPanel}
           </DrawerContent>
         </Drawer>
@@ -245,7 +249,7 @@ export function NotificationsDropdown() {
       <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        sideOffset={8}
+        sideOffset={10}
         className={cn(HEADER_DROPDOWN_THEME.panel, HEADER_DROPDOWN_THEME.panelNotifications)}
       >
         {inboxPanel}

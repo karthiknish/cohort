@@ -1,6 +1,6 @@
 "use client"
 
-import { type CSSProperties } from 'react'
+import { type CSSProperties, useMemo } from 'react'
 import {
   CircleCheckIcon,
   InfoIcon,
@@ -29,6 +29,13 @@ const DEFAULT_TOAST_OPTIONS: NonNullable<ToasterProps['toastOptions']> = {
 
 const Toaster = ({ toastOptions, ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
+  const mergedToastOptions = useMemo(
+    () => ({
+      ...DEFAULT_TOAST_OPTIONS,
+      ...toastOptions,
+    }),
+    [toastOptions],
+  )
 
   return (
     <Sonner
@@ -37,10 +44,7 @@ const Toaster = ({ toastOptions, ...props }: ToasterProps) => {
       containerAriaLabel="Notifications"
       icons={TOASTER_ICONS}
       style={TOASTER_STYLE}
-      toastOptions={{
-        ...DEFAULT_TOAST_OPTIONS,
-        ...toastOptions,
-      }}
+      toastOptions={mergedToastOptions}
       {...props}
     />
   )

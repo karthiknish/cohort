@@ -74,7 +74,7 @@ function CopyButton({ code }: { code: string }) {
         fallbackMessage: 'Copy failed',
         })
     }
-  }, [code, toast])
+  }, [code])
 
   return (
     <>
