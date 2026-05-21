@@ -321,7 +321,11 @@ export const softDelete = zWorkspaceMutation({
       .unique()
 
     if (!client) {
-      throw Errors.resource.notFound('Client')
+      return args.legacyId
+    }
+
+    if (client.deletedAtMs !== null) {
+      return client.legacyId
     }
 
     const timestamp = args.deletedAtMs ?? ctx.now

@@ -77,3 +77,20 @@ export function isReadLimitAppError(error: unknown): boolean {
 export function isConflictAppError(error: unknown): boolean {
   return extractErrorCode(error) === 'CONFLICT'
 }
+
+/** Matches `ErrorCode.RESOURCE.NOT_FOUND` from convex/errors.ts */
+export function isNotFoundAppError(error: unknown): boolean {
+  return extractErrorCode(error) === 'NOT_FOUND'
+}
+
+/** Matches `ErrorCode.INTEGRATION.INSUFFICIENT_SCOPE` from convex/errors.ts */
+export function isIntegrationScopeAppError(error: unknown): boolean {
+  return extractErrorCode(error) === 'INTEGRATION_INSUFFICIENT_SCOPE'
+}
+
+export function mapGoogleAnalyticsIntegrationError(error: unknown): string {
+  if (isIntegrationScopeAppError(error)) {
+    return 'Google Analytics needs updated permissions. Disconnect the integration, then connect again and approve all requested access.'
+  }
+  return asErrorMessage(error)
+}

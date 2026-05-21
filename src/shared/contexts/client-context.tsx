@@ -7,6 +7,7 @@ import { useQuery, useMutation } from 'convex/react'
 import { useAuth } from '@/shared/contexts/auth-context'
 import type { ClientRecord, ClientTeamMember } from '@/types/clients'
 import { clientsApi } from '@/lib/convex-api'
+import { isNotFoundAppError } from '@/lib/convex-errors'
 import { getPreviewClients, isPreviewModeEnabled, PREVIEW_MODE_EVENT, PREVIEW_MODE_STORAGE_KEY } from '@/lib/preview-data'
 import { getWorkspaceId } from '@/lib/utils'
 
@@ -442,17 +443,32 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     const remainingClients = clientsRef.current.filter((client) => client.id !== clientId)
     const fallbackClientId = resolveSelectedClientId(remainingClients, selectedClientIdRef.current, null)
 
-    await convexSoftDeleteClient({
-      workspaceId: targetWorkspaceId,
-      legacyId: clientId,
-      deletedAtMs: Date.now(),
-    })
+    try {
+      await convexSoftDeleteClient({
+        workspaceId: targetWorkspaceId,
+        legacyId: clientId,
+        deletedAtMs: Date.now(),
+      })
+    } catch (error) {
+      if (!isNotFoundAppError(error)) {
+        throw error
+      }
+    }
 
     dispatch({
       type: 'setSelectedClientId',
       selectedClientId: selectedClientIdRef.current === clientId ? fallbackClientId : selectedClientIdRef.current,
     })
   }, [workspaceId, convexSoftDeleteClient])
+
+  useEffect(() => {
+    if (previewEnabled || loading) return
+    if (!selectedClientId) return
+    if (resolvedClients.some((client) => client.id === selectedClientId)) return
+
+    const fallbackClientId = resolveSelectedClientId(resolvedClients, null, null)
+    dispatch({ type: 'setSelectedClientId', selectedClientId: fallbackClientId })
+  }, [loading, previewEnabled, resolvedClients, selectedClientId])
 
   const selectedClient = useMemo(() => {
     if (!selectedClientId) return null

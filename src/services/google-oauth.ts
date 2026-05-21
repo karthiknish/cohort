@@ -18,6 +18,7 @@ export const GOOGLE_ADS_SCOPES = [
 
 export const GOOGLE_ANALYTICS_SCOPES = [
   'https://www.googleapis.com/auth/analytics.readonly',
+  'https://www.googleapis.com/auth/analytics.edit',
   'openid',
   'email',
 ] as const
@@ -67,12 +68,8 @@ export function resolveGoogleAnalyticsOAuthCredentials(): {
   clientSecret: string | null
 } {
   return {
-    clientId: firstEnvValue(['GOOGLE_ANALYTICS_CLIENT_ID', 'GOOGLE_CLIENT_ID', 'GOOGLE_ADS_CLIENT_ID']),
-    clientSecret: firstEnvValue([
-      'GOOGLE_ANALYTICS_CLIENT_SECRET',
-      'GOOGLE_CLIENT_SECRET',
-      'GOOGLE_ADS_CLIENT_SECRET',
-    ]),
+    clientId: firstEnvValue(['GOOGLE_ANALYTICS_CLIENT_ID', 'GOOGLE_CLIENT_ID']),
+    clientSecret: firstEnvValue(['GOOGLE_ANALYTICS_CLIENT_SECRET', 'GOOGLE_CLIENT_SECRET']),
   }
 }
 

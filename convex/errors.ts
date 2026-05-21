@@ -36,6 +36,7 @@ export const ErrorCode = {
     EXPIRED: 'INTEGRATION_EXPIRED',
     NOT_CONFIGURED: 'INTEGRATION_NOT_CONFIGURED',
     MISSING_TOKEN: 'MISSING_TOKEN',
+    INSUFFICIENT_SCOPE: 'INTEGRATION_INSUFFICIENT_SCOPE',
   },
   RATE_LIMIT: {
     TOO_MANY_REQUESTS: 'TOO_MANY_REQUESTS',
@@ -136,6 +137,13 @@ export const Errors = {
       ),
     missingToken: (provider: string) =>
       appError(ErrorCode.INTEGRATION.MISSING_TOKEN, `${provider} integration is missing access token`, { provider }),
+    insufficientScope: (provider: string, message?: string) =>
+      appError(
+        ErrorCode.INTEGRATION.INSUFFICIENT_SCOPE,
+        message ??
+          `${provider} connection is missing required permissions. Disconnect and reconnect to grant access.`,
+        { provider, requiresReconnect: true },
+      ),
   },
 
   rateLimit: {
@@ -192,6 +200,15 @@ function isConvexReadLimitError(error: unknown): boolean {
     m.includes('too many documents') ||
     m.includes('bytes read') ||
     m.includes('document read limit')
+  )
+}
+
+function isGoogleOAuthScopeError(error: unknown): boolean {
+  const message = asErrorMessage(error).toLowerCase()
+  return (
+    message.includes('access_token_scope_insufficient') ||
+    message.includes('insufficient authentication scopes') ||
+    message.includes('insufficient permission')
   )
 }
 
@@ -310,6 +327,11 @@ export async function withErrorHandling<T>(
     if (isConvexReadLimitError(error)) {
       console.warn(`[${context ?? 'readLimit'}]`, error)
       throw Errors.base.readLimit()
+    }
+
+    if (isGoogleOAuthScopeError(error)) {
+      console.warn(`[${context ?? 'integrationScope'}]`, error)
+      throw Errors.integration.insufficientScope('Google Analytics')
     }
     
     console.error(`[${context ?? 'error'}]`, error)

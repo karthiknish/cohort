@@ -11,7 +11,7 @@ import { useCurrency } from '@/shared/contexts/preferences-context'
 import { usePreview } from '@/shared/contexts/preview-context'
 import { ApiClientError, apiFetch } from '@/lib/api-client'
 import { analyticsIntegrationsApi } from '@/lib/convex-api'
-import { asErrorMessage, logError } from '@/lib/convex-errors'
+import { asErrorMessage, isIntegrationScopeAppError, logError, mapGoogleAnalyticsIntegrationError } from '@/lib/convex-errors'
 import { getPreviewAnalyticsMetrics } from '@/lib/preview-data'
 import { notifyFailure } from '@/lib/notifications'
 
@@ -234,7 +234,11 @@ export function useAnalyticsPageController() {
       .catch((error) => {
         setGaProperties([])
         setGaSelectedPropertyId('')
-        return Promise.reject(error)
+        const mappedMessage = mapGoogleAnalyticsIntegrationError(error)
+        if (isIntegrationScopeAppError(error)) {
+          setGaSetupMessage(mappedMessage)
+        }
+        return Promise.reject(new Error(mappedMessage))
       })
       .finally(() => {
         setGaLoadingProperties(false)
@@ -270,7 +274,7 @@ export function useAnalyticsPageController() {
       })
       toast({ title: 'Google Analytics connected', description: 'Select a property to finish setup.' })
       void loadGoogleAnalyticsPropertyOptions().catch((error) => {
-        const mappedMessage = asErrorMessage(error)
+        const mappedMessage = mapGoogleAnalyticsIntegrationError(error)
         requestAnimationFrame(() => {
           setGaSetupMessage(mappedMessage)
         })
@@ -300,7 +304,7 @@ export function useAnalyticsPageController() {
     }
 
     void loadGoogleAnalyticsPropertyOptions().catch((error) => {
-      const message = asErrorMessage(error)
+      const message = mapGoogleAnalyticsIntegrationError(error)
       requestAnimationFrame(() => {
         setGaSetupMessage(message)
       })
@@ -457,7 +461,7 @@ export function useAnalyticsPageController() {
     setGaSetupDialogOpen(true)
     setGaSetupMessage(null)
     void loadGoogleAnalyticsPropertyOptions().catch((error) => {
-      const message = asErrorMessage(error)
+      const message = mapGoogleAnalyticsIntegrationError(error)
       setGaSetupMessage(message)
       notifyFailure({ title: 'Property load failed', message })
     })
@@ -493,7 +497,7 @@ export function useAnalyticsPageController() {
         return refreshGoogleAnalyticsStatus().then(() => mutateMetrics())
       })
       .catch((error) => {
-        const message = asErrorMessage(error)
+        const message = mapGoogleAnalyticsIntegrationError(error)
         setGaSetupMessage(message)
         notifyFailure({ title: 'Setup failed', message })
       })
