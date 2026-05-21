@@ -107,6 +107,15 @@ export const PRIORITY_ORDER: Record<TaskPriority, number> = {
   low: 3,
 }
 
+/** Compact status pills for data-table cells (no heavy border tokens). */
+export const statusTablePillClass: Record<TaskStatus, string> = {
+  todo: 'bg-muted text-muted-foreground',
+  'in-progress': 'bg-info/15 text-info',
+  review: 'bg-warning/15 text-warning-foreground',
+  completed: 'bg-success/15 text-success',
+  archived: 'bg-muted/80 text-muted-foreground',
+}
+
 export type TaskFormState = {
   title: string
   description: string

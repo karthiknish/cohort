@@ -32,24 +32,11 @@ import {
   formatStatusLabel,
   isDueSoon,
   isOverdue,
+  PRIORITY_ORDER,
   STATUS_ICONS,
+  statusTablePillClass,
 } from './task-types'
 import { formatTaskKey } from './task-table'
-
-const statusPillClass: Record<TaskStatus, string> = {
-  todo: 'bg-muted text-muted-foreground',
-  'in-progress': 'bg-info/15 text-info',
-  review: 'bg-warning/15 text-warning',
-  completed: 'bg-success/15 text-success',
-  archived: 'bg-muted/80 text-muted-foreground',
-}
-
-const PRIORITY_SORT_ORDER: Record<TaskPriority, number> = {
-  urgent: 0,
-  high: 1,
-  medium: 2,
-  low: 3,
-}
 
 type TaskDataTableActions = {
   pendingStatusUpdates: Set<string>
@@ -192,7 +179,7 @@ function TaskStatusCell({ row }: CellContext<TaskRecord, unknown>) {
     <span
       className={cn(
         'inline-flex max-w-full items-center rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-        statusPillClass[status],
+        statusTablePillClass[status],
       )}
     >
       {formatStatusLabel(status)}
@@ -397,7 +384,7 @@ function createTaskColumns(showSelection: boolean): ColumnDef<TaskRecord>[] {
       cell: TaskPriorityCell,
       enableSorting: true,
       sortingFn: (rowA, rowB) =>
-        PRIORITY_SORT_ORDER[rowA.original.priority] - PRIORITY_SORT_ORDER[rowB.original.priority],
+        PRIORITY_ORDER[rowA.original.priority] - PRIORITY_ORDER[rowB.original.priority],
       size: 104,
     },
     {
