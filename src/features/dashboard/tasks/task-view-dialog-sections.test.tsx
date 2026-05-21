@@ -39,9 +39,7 @@ import {
   TaskViewDetailsTab,
   TaskViewDialogFooter,
   TaskViewDialogHeader,
-  TaskViewDialogSidebar,
   TaskViewDialogTabsList,
-  type TaskDetailItem,
 } from './task-view-dialog-sections'
 
 const task: TaskRecord = {
@@ -49,7 +47,7 @@ const task: TaskRecord = {
   title: 'Review launch brief',
   description: 'Check timeline and owner list.',
   status: 'todo',
-  priority: 'high',
+  priority: 'medium',
   assignedTo: ['Alex Kim'],
   clientId: 'client-1',
   client: 'Acme Corp',
@@ -61,76 +59,69 @@ const task: TaskRecord = {
   attachments: [{ url: 'https://example.com/file.pdf', name: 'Brief.pdf', type: 'pdf', size: '2 MB' }],
 }
 
-const detailItems: TaskDetailItem[] = [
-  { label: 'Assignee', value: 'Alex Kim', icon: vi.fn() as never },
-]
-
 describe('task view dialog sections', () => {
-  it('renders the header, tabs list, sidebar, and footer', () => {
+  it('renders the header, tabs list, and footer without duplicate summary', () => {
     const markup = renderToStaticMarkup(
       <>
         <TaskViewDialogHeader
           title="Review launch brief"
           status="todo"
-          priority="high"
+          priority="medium"
           client="Acme Corp"
           assignedTo={['Alex Kim']}
           dueDate="2026-03-20"
           timeSpentMinutes={0}
         />
         <TaskViewDialogTabsList commentCount={3} />
-        <TaskViewDialogSidebar task={task} onEdit={vi.fn()} onMarkComplete={vi.fn()} />
-        <TaskViewDialogFooter onClose={vi.fn()} onEdit={vi.fn()} />
+        <TaskViewDialogFooter onClose={vi.fn()} onEdit={vi.fn()} onMarkComplete={vi.fn()} />
       </>,
     )
 
     expect(markup).toContain('Review launch brief')
     expect(markup).toContain('To Do')
-    expect(markup).toContain('High priority')
-    expect(markup).toContain('Acme Corp')
-    expect(markup).toContain('Assigned to Alex Kim')
-    expect(markup).toContain('Comments')
-    expect(markup).toContain('3')
-    expect(markup).toContain('Task summary')
-    expect(markup).toContain('Quick actions')
-    expect(markup).toContain('Mark as complete')
-    expect(markup).toContain('Esc')
-    expect(markup).toContain('Close')
+    expect(markup).toContain('Medium')
+    expect(markup).toContain('Alex Kim')
+    expect(markup).not.toContain('Task summary')
+    expect(markup).not.toContain('Quick actions')
+    expect(markup).toContain('Mark complete')
     expect(markup).toContain('Edit task')
   })
 
-  it('renders the details and comments tabs', () => {
-    const Icon = () => <span>Icon</span>
-    const markup = renderToStaticMarkup(
-      <>
-        <TaskViewDetailsTab detailItems={[{ ...detailItems[0], icon: Icon }]} task={task} />
-        <TaskViewCommentsTab
-          onCommentCountChange={vi.fn()}
-          participants={[]}
-          taskId="task-1"
-          userId={null}
-          userName={null}
-          userRole={null}
-          workspaceId={null}
-        />
-      </>,
-    )
+  it('renders a minimal details tab without info cards', () => {
+    const markup = renderToStaticMarkup(<TaskViewDetailsTab task={task} />)
 
     expect(markup).toContain('Description')
-    expect(markup).toContain('Linked project')
+    expect(markup).toContain('Check timeline and owner list.')
+    expect(markup).toContain('Project')
     expect(markup).toContain('Brief.pdf')
-    expect(markup).toContain('Download')
+    expect(markup).toContain('Created')
+    expect(markup).toContain('Updated')
+    expect(markup).not.toContain('ASSIGNEE')
+    expect(markup).not.toContain('TIME SPENT')
+  })
+
+  it('renders the comments tab', () => {
+    const markup = renderToStaticMarkup(
+      <TaskViewCommentsTab
+        onCommentCountChange={vi.fn()}
+        participants={[]}
+        taskId="task-1"
+        userId={null}
+        userName={null}
+        userRole={null}
+        workspaceId={null}
+      />,
+    )
+
     expect(markup).toContain('TaskCommentsPanel')
   })
 
-  it('renders the empty attachments drop zone', () => {
-    const Icon = () => <span>Icon</span>
-    const taskWithoutAttachments = { ...task, attachments: [] }
+  it('renders empty attachments as plain text', () => {
     const markup = renderToStaticMarkup(
-      <TaskViewDetailsTab detailItems={[{ ...detailItems[0], icon: Icon }]} task={taskWithoutAttachments} />,
+      <TaskViewDetailsTab task={{ ...task, attachments: [] }} />,
     )
 
-    expect(markup).toContain('Drag and drop files here')
-    expect(markup).toContain('No attachments on this task.')
+    expect(markup).toContain('No attachments.')
+    expect(markup).not.toContain('Drag and drop')
   })
 })

@@ -13,11 +13,13 @@ import { TaskTable, TaskTableBody, TaskTableHeader } from './task-table'
 export function TaskListLoadingState({ viewMode }: { viewMode: 'grid' | 'list' }) {
   if (viewMode === 'grid') {
     return (
-      <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-        {['task-skeleton-1', 'task-skeleton-2', 'task-skeleton-3'].map((skeletonKey) => (
-          <Skeleton key={skeletonKey} className="h-36 w-full rounded-lg" />
-        ))}
-      </div>
+      <>
+        {['task-skeleton-1', 'task-skeleton-2', 'task-skeleton-3', 'task-skeleton-4', 'task-skeleton-5', 'task-skeleton-6'].map(
+          (skeletonKey) => (
+            <Skeleton key={skeletonKey} className="h-44 w-full rounded-[1.25rem]" />
+          ),
+        )}
+      </>
     )
   }
 
@@ -158,6 +160,7 @@ export function TaskListItems({
           <div key={task.id} className="h-full">
             <TaskCard
               task={task}
+              variant="grid"
               isPendingUpdate={pendingStatusUpdates.has(task.id)}
               onOpen={onOpen}
               onEdit={onEdit}

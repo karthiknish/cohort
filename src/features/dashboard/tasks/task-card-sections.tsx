@@ -7,6 +7,7 @@ import {
   Calendar,
   CalendarX2,
   ChevronRight,
+  ChevronUp,
   Clock4,
   Copy,
   FolderKanban,
@@ -46,10 +47,10 @@ import {
   formatPriorityLabel,
   formatStatusLabel,
   formatTimeSpent,
-  priorityColors,
   STATUS_ICONS,
-  taskInfoPanelClasses,
   taskPillColors,
+  taskViewPriorityPill,
+  taskViewStatusPill,
 } from './task-types'
 
 type HighlightRenderer = (text: string, query: string) => ReactNode
@@ -88,6 +89,12 @@ export function TaskCardHeaderSection({
   onQuickStatusChange,
   onClone,
   onShare,
+  showTitle = true,
+  showMenu = true,
+  showContextPills = true,
+  showIndicators = true,
+  compactIndicators = false,
+  titleClassName,
 }: {
   task: TaskRecord
   isPendingUpdate?: boolean
@@ -99,44 +106,52 @@ export function TaskCardHeaderSection({
   onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
   onClone?: (task: TaskRecord) => void
   onShare?: (task: TaskRecord) => void
+  showTitle?: boolean
+  showMenu?: boolean
+  showContextPills?: boolean
+  showIndicators?: boolean
+  compactIndicators?: boolean
+  titleClassName?: string
 }) {
   const handleOpenTask = useCallback(() => {
     onOpen?.(task)
   }, [onOpen, task])
 
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0 flex-1 space-y-1">
-        {onOpen ? (
-          <button
-            type="button"
-            onClick={handleOpenTask}
-            className="block min-w-0 rounded-md text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
-            aria-label={`View task ${task.title}`}
-          >
-            <div className="flex items-start gap-2">
-              <h3 className="line-clamp-2 min-w-0 flex-1 text-[1.05rem] font-bold leading-tight text-foreground transition-colors group-hover:text-primary hover:text-primary">
-                {highlightMatch(task.title, searchQuery)}
-              </h3>
-              {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
-            </div>
-          </button>
-        ) : (
-          <div className="flex items-start gap-2">
-            <h3 className="line-clamp-2 min-w-0 flex-1 text-[1.05rem] font-bold leading-tight text-foreground transition-colors group-hover:text-primary">
-              {highlightMatch(task.title, searchQuery)}
-            </h3>
-            {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
-          </div>
-        )}
-
-        {(task.client || task.projectName) ? (
-          <TaskCardContextPills task={task} />
-        ) : null}
-
-        <TaskCardIndicators task={task} />
+  const titleMarkup = onOpen ? (
+    <button
+      type="button"
+      onClick={handleOpenTask}
+      className="block min-w-0 rounded-md text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2"
+      aria-label={`View task ${task.title}`}
+    >
+      <div className="flex items-start gap-2">
+        <h3
+          className={cn(
+            'line-clamp-2 min-w-0 flex-1 font-semibold leading-tight text-foreground transition-colors group-hover:text-primary hover:text-primary',
+            titleClassName ?? 'text-[1.05rem]',
+          )}
+        >
+          {highlightMatch(task.title, searchQuery)}
+        </h3>
+        {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
       </div>
+    </button>
+  ) : (
+    <div className="flex items-start gap-2">
+      <h3
+        className={cn(
+          'line-clamp-2 min-w-0 flex-1 font-semibold leading-tight text-foreground transition-colors group-hover:text-primary',
+          titleClassName ?? 'text-[1.05rem]',
+        )}
+      >
+        {highlightMatch(task.title, searchQuery)}
+      </h3>
+      {isPendingUpdate ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" /> : null}
+    </div>
+  )
 
+  if (!showTitle && !showContextPills && !showIndicators && showMenu) {
+    return (
       <TaskCardActionsMenu
         task={task}
         onEdit={onEdit}
@@ -145,6 +160,33 @@ export function TaskCardHeaderSection({
         onClone={onClone}
         onShare={onShare}
       />
+    )
+  }
+
+  if (!showTitle && !showMenu && showIndicators) {
+    return <TaskCardIndicators task={task} compact={compactIndicators} />
+  }
+
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1 space-y-1">
+        {showTitle ? titleMarkup : null}
+
+        {showContextPills && (task.client || task.projectName) ? <TaskCardContextPills task={task} /> : null}
+
+        {showIndicators ? <TaskCardIndicators task={task} compact={compactIndicators} /> : null}
+      </div>
+
+      {showMenu ? (
+        <TaskCardActionsMenu
+          task={task}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onQuickStatusChange={onQuickStatusChange}
+          onClone={onClone}
+          onShare={onShare}
+        />
+      ) : null}
     </div>
   )
 }
@@ -191,9 +233,9 @@ function TaskCardContextPills({ task }: { task: TaskRecord }) {
   )
 }
 
-function TaskCardIndicators({ task }: { task: TaskRecord }) {
+function TaskCardIndicators({ task, compact = false }: { task: TaskRecord; compact?: boolean }) {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-2">
+    <div className={cn('flex flex-wrap items-center gap-1.5', compact ? 'mt-0' : 'mt-2 gap-2')}>
       {(task.parentId || (task.subtaskCount ?? 0) > 0) ? (
         <TooltipProvider>
           <Tooltip>
@@ -360,65 +402,73 @@ function TaskCardActionsMenu({
   )
 }
 
+export function TaskCardStatusBadge({ status }: { status: TaskStatus }) {
+  const Icon = STATUS_ICONS[status]
+
+  return (
+    <Badge
+      variant="outline"
+      className={cn('gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold', taskViewStatusPill[status])}
+    >
+      <Icon className="h-3 w-3 shrink-0" aria-hidden />
+      {formatStatusLabel(status)}
+    </Badge>
+  )
+}
+
 export function TaskCardPriorityBadge({ priority }: { priority: TaskRecord['priority'] }) {
   return (
     <Badge
       variant="outline"
-      className={cn(priorityColors[priority], 'h-7 rounded-full px-2.5 text-[10px] font-bold uppercase tracking-[0.18em]')}
+      className={cn('gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold', taskViewPriorityPill[priority])}
     >
+      <ChevronUp className="h-3 w-3 shrink-0" aria-hidden />
       {formatPriorityLabel(priority)}
     </Badge>
   )
 }
 
-export function TaskCardInfoPanels({
+export function TaskCardCompactMeta({
   task,
   overdue,
   dueSoon,
+  compact = false,
 }: {
   task: TaskRecord
   overdue: boolean
   dueSoon: boolean
+  compact?: boolean
 }) {
-  return (
-    <div className="mt-auto grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5 border-t border-border/70 pt-4">
-      <div className={cn(taskInfoPanelClasses.base, 'flex min-w-0 items-start gap-3')}>
-        <div className={cn(taskInfoPanelClasses.icon, 'mt-0.5')}>
-          <User className="h-3 w-3" />
-        </div>
-        <div className="min-w-0 space-y-1">
-          <p className={taskInfoPanelClasses.label}>Assignee</p>
-          <p className={cn(taskInfoPanelClasses.value, 'line-clamp-2')}>
-            {(task.assignedTo ?? []).length > 0 ? (task.assignedTo ?? []).join(', ') : 'Unassigned'}
-          </p>
-        </div>
-      </div>
+  const assignee =
+    (task.assignedTo ?? []).length > 0 ? (task.assignedTo ?? []).join(', ') : 'Unassigned'
 
-      <div
+  return (
+    <div
+      className={cn(
+        'flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground',
+        compact ? 'pt-1' : 'mt-auto border-t border-border/60 pt-3',
+      )}
+    >
+      <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+        <User className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+        <span className="truncate font-medium text-foreground">{assignee}</span>
+      </span>
+      <span
         className={cn(
-          taskInfoPanelClasses.base,
-          'flex items-start gap-3',
-          overdue && 'border-destructive/20 bg-destructive/10',
-          dueSoon && !overdue && 'border-warning/20 bg-warning/10'
+          'inline-flex items-center gap-1.5',
+          overdue && 'font-medium text-destructive',
+          dueSoon && !overdue && 'font-medium text-warning',
         )}
       >
-        <div
-          className={cn(
-            taskInfoPanelClasses.icon,
-            'mt-0.5',
-            overdue && 'border-destructive/20 bg-background text-destructive',
-            dueSoon && !overdue && 'border-warning/20 bg-background text-warning'
-          )}
-        >
-          <Calendar className="h-3 w-3" />
-        </div>
-        <div className="min-w-0 space-y-1">
-          <p className={taskInfoPanelClasses.label}>Due date</p>
-          <p className={cn(taskInfoPanelClasses.value, !task.dueDate && 'text-muted-foreground')}>
-            {task.dueDate ? formatDate(task.dueDate) : 'No due date'}
-          </p>
-        </div>
-      </div>
+        <Calendar className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+        {task.dueDate ? formatDate(task.dueDate) : 'No due date'}
+      </span>
+      {!compact ? (
+        <span className="inline-flex items-center gap-1.5">
+          <Clock4 className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+          {formatTimeSpent(task.timeSpentMinutes)}
+        </span>
+      ) : null}
     </div>
   )
 }

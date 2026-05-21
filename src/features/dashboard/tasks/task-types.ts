@@ -46,6 +46,29 @@ export const priorityColors: Record<TaskPriority, string> = {
   urgent: 'border-transparent bg-destructive/10 text-destructive shadow-sm',
 }
 
+export const taskViewStatusPill: Record<TaskStatus, string> = {
+  todo: 'border-primary/25 bg-primary/10 text-primary',
+  'in-progress': 'border-primary/25 bg-primary/10 text-primary',
+  review: 'border-accent/30 bg-accent/15 text-accent-foreground',
+  completed: 'border-primary/25 bg-primary/10 text-primary',
+  archived: 'border-border bg-muted text-muted-foreground',
+}
+
+export const taskViewPriorityPill: Record<TaskPriority, string> = {
+  low: 'border-border bg-muted text-muted-foreground',
+  medium:
+    'border-violet-300/80 bg-violet-100 text-violet-950 dark:border-violet-500/50 dark:bg-violet-950/80 dark:text-violet-100',
+  high: 'border-amber-300/80 bg-amber-50 text-amber-950 dark:border-amber-500/50 dark:bg-amber-950/80 dark:text-amber-100',
+  urgent: 'border-destructive/40 bg-destructive/15 text-destructive dark:bg-destructive/20 dark:text-destructive-foreground',
+}
+
+export const priorityAccentColors: Record<TaskPriority, string> = {
+  urgent: 'bg-destructive',
+  high: 'bg-warning',
+  medium: 'bg-primary',
+  low: 'bg-muted-foreground/35',
+}
+
 export const taskPillColors = {
   count: 'border-border bg-background text-foreground shadow-sm',
   client: 'border-border bg-muted text-muted-foreground shadow-sm',

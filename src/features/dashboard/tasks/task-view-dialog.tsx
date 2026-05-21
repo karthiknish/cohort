@@ -1,25 +1,17 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Calendar, Clock4, User } from 'lucide-react'
 
 import type { TaskRecord, TaskStatus } from '@/types/tasks'
-import { cn } from '@/lib/utils'
 import { Dialog, DialogContent } from '@/shared/ui/dialog'
 import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Tabs } from '@/shared/ui/tabs'
-import {
-  formatDate,
-  formatTimeSpent,
-  type TaskParticipant,
-} from './task-types'
+import type { TaskParticipant } from './task-types'
 import {
   TaskViewCommentsTab,
-  type TaskDetailItem,
   TaskViewDetailsTab,
   TaskViewDialogFooter,
   TaskViewDialogHeader,
-  TaskViewDialogSidebar,
   TaskViewDialogTabsList,
 } from './task-view-dialog-sections'
 
@@ -127,21 +119,11 @@ export function TaskViewDialog({
 
   if (!task) return null
 
-  const detailItems: TaskDetailItem[] = [
-    {
-      label: 'Assignee',
-      value: task.assignedTo.length > 0 ? task.assignedTo.join(', ') : 'Unassigned',
-      icon: User,
-    },
-    { label: 'Due date', value: formatDate(task.dueDate), icon: Calendar },
-    { label: 'Time spent', value: formatTimeSpent(task.timeSpentMinutes), icon: Clock4 },
-  ]
-
-  const showSidebar = activeTab === 'details'
+  const canMarkComplete = task.status !== 'completed' && task.status !== 'archived'
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
+      <DialogContent className="flex max-h-[90vh] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
         <TaskViewDialogHeader
           title={task.title}
           status={task.status}
@@ -160,36 +142,33 @@ export function TaskViewDialog({
           onValueChange={(v) => setActiveTab(v as 'details' | 'comments')}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="border-b border-border/60 px-6">
+          <div className="border-b border-border px-6">
             <TaskViewDialogTabsList commentCount={liveCommentCount} />
           </div>
 
           <ScrollArea className="min-h-0 flex-1">
-            <div className={cn(showSidebar && 'flex min-h-0 flex-col lg:flex-row', !showSidebar && 'px-6 py-5')}>
-              <div className={cn(showSidebar && 'min-w-0 flex-1 px-6 py-5')}>
-                <TaskViewDetailsTab detailItems={detailItems} task={task} />
-                <TaskViewCommentsTab
-                  onCommentCountChange={handleCommentCountChange}
-                  participants={participants}
-                  taskId={task.id}
-                  userId={userId}
-                  userName={userName}
-                  userRole={userRole}
-                  workspaceId={workspaceId}
-                />
-              </div>
-              {showSidebar ? (
-                <TaskViewDialogSidebar
-                  task={task}
-                  onEdit={onEdit ? handleEdit : undefined}
-                  onMarkComplete={onQuickStatusChange ? handleMarkComplete : undefined}
-                />
-              ) : null}
+            <div className="px-6 py-5">
+              <TaskViewDetailsTab task={task} />
+              <TaskViewCommentsTab
+                onCommentCountChange={handleCommentCountChange}
+                participants={participants}
+                taskId={task.id}
+                userId={userId}
+                userName={userName}
+                userRole={userRole}
+                workspaceId={workspaceId}
+              />
             </div>
           </ScrollArea>
         </Tabs>
 
-        <TaskViewDialogFooter onClose={handleFooterClose} onEdit={onEdit ? handleEdit : undefined} />
+        <TaskViewDialogFooter
+          onClose={handleFooterClose}
+          onEdit={onEdit ? handleEdit : undefined}
+          onMarkComplete={
+            onQuickStatusChange && canMarkComplete ? handleMarkComplete : undefined
+          }
+        />
       </DialogContent>
     </Dialog>
   )

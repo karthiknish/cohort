@@ -6,18 +6,17 @@ import type { TaskRecord, TaskStatus } from '@/types/tasks'
 import { clickableCardClass, listItemEnterClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import {
+  TaskCardCompactMeta,
   TaskCardHeaderSection,
-  TaskCardInfoPanels,
   TaskCardOverdueBanner,
   TaskCardPriorityBadge,
+  TaskCardStatusBadge,
 } from './task-card-sections'
-import {
-  isDueSoon,
-  isOverdue,
-} from './task-types'
+import { isDueSoon, isOverdue, priorityAccentColors } from './task-types'
 
 export type TaskCardProps = {
   task: TaskRecord
+  variant?: 'grid' | 'board'
   isPendingUpdate?: boolean
   onOpen?: (task: TaskRecord) => void
   onEdit: (task: TaskRecord) => void
@@ -30,7 +29,6 @@ export type TaskCardProps = {
   searchQuery?: string
 }
 
-// Highlight search term in text
 function highlightMatch(text: string, query: string): React.ReactNode {
   if (!query) return text
 
@@ -59,6 +57,7 @@ function highlightMatch(text: string, query: string): React.ReactNode {
 
 function TaskCardComponent({
   task,
+  variant = 'grid',
   isPendingUpdate,
   onOpen,
   onEdit,
@@ -71,60 +70,88 @@ function TaskCardComponent({
 }: TaskCardProps) {
   const overdue = isOverdue(task)
   const dueSoon = isDueSoon(task)
+  const isBoard = variant === 'board'
+
+  const headerProps = {
+    task,
+    isPendingUpdate,
+    onOpen,
+    searchQuery,
+    highlightMatch,
+    onEdit,
+    onDelete,
+    onQuickStatusChange,
+    onClone,
+    onShare,
+  }
 
   return (
     <ViewTransition>
       <div
         className={cn(
-          'group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-border/70 bg-gradient-to-b from-background via-background to-muted/20 p-5 shadow-sm hover:border-accent/30',
+          'group relative flex h-full flex-col overflow-hidden border border-border/70 bg-card shadow-sm transition-[border-color,box-shadow,transform] duration-[var(--motion-duration-fast)] hover:border-primary/25 hover:shadow-md',
           listItemEnterClass,
           clickableCardClass,
-          isPendingUpdate && 'opacity-75 pointer-events-none',
-          selected && 'border-accent/40 ring-2 ring-primary/15 shadow-md',
-          overdue && 'border-destructive/20 bg-destructive/10',
-          dueSoon && !overdue && 'border-warning/20 bg-warning/10',
-          task.parentId && 'ml-4'
+          isBoard ? 'rounded-xl p-3.5' : 'rounded-[1.25rem] p-4 sm:p-5',
+          isPendingUpdate && 'pointer-events-none opacity-75',
+          selected && 'border-primary/30 ring-2 ring-primary/15',
+          overdue && 'border-destructive/25',
+          dueSoon && !overdue && 'border-warning/25',
+          task.parentId && !isBoard && 'ml-4',
         )}
       >
-      {/* Priority accent bar */}
-      <div
-        className={cn(
-          "absolute left-0 top-0 bottom-0 w-1 rounded-l-xl transition-opacity group-hover:opacity-100",
-          task.priority === 'urgent' ? 'bg-destructive' :
-            task.priority === 'high' ? 'bg-warning' :
-              task.priority === 'medium' ? 'bg-info' : 'bg-success'
-        )}
-      />
+        {!isBoard ? (
+          <div
+            className={cn(
+              'absolute left-0 top-0 bottom-0 w-1 rounded-l-[1.25rem] opacity-80',
+              priorityAccentColors[task.priority],
+            )}
+          />
+        ) : null}
 
-      {/* Overdue indicator banner */}
-      {overdue ? <TaskCardOverdueBanner /> : null}
+        {overdue ? <TaskCardOverdueBanner /> : null}
 
-      <div className="flex flex-1 flex-col gap-4">
-        <TaskCardHeaderSection
-          task={task}
-          isPendingUpdate={isPendingUpdate}
-          onOpen={onOpen}
-          searchQuery={searchQuery}
-          highlightMatch={highlightMatch}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onQuickStatusChange={onQuickStatusChange}
-          onClone={onClone}
-          onShare={onShare}
-        />
+        <div className={cn('flex flex-1 flex-col', isBoard ? 'gap-2.5' : 'gap-3')}>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              {isBoard ? (
+                <TaskCardPriorityBadge priority={task.priority} />
+              ) : (
+                <>
+                  <TaskCardStatusBadge status={task.status} />
+                  <TaskCardPriorityBadge priority={task.priority} />
+                </>
+              )}
+            </div>
+            <TaskCardHeaderSection {...headerProps} showTitle={false} />
+          </div>
 
-        <div className="flex flex-wrap gap-2">
-          <TaskCardPriorityBadge priority={task.priority} />
+          <TaskCardHeaderSection
+            {...headerProps}
+            showMenu={false}
+            showIndicators={!isBoard}
+            showContextPills={!isBoard}
+            titleClassName={isBoard ? 'text-sm' : undefined}
+          />
+
+          {!isBoard && task.description ? (
+            <p className="line-clamp-2 text-sm leading-6 text-muted-foreground">
+              {highlightMatch(task.description, searchQuery)}
+            </p>
+          ) : null}
+
+          {isBoard ? (
+            <TaskCardHeaderSection
+              {...headerProps}
+              showTitle={false}
+              showMenu={false}
+              showIndicators
+              compactIndicators
+            />
+          ) : null}
+
+          <TaskCardCompactMeta task={task} overdue={overdue} dueSoon={dueSoon} compact={isBoard} />
         </div>
-
-        {task.description && (
-          <p className="min-h-[2.75rem] line-clamp-2 text-sm leading-6 text-muted-foreground">
-            {highlightMatch(task.description, searchQuery)}
-          </p>
-        )}
-
-        <TaskCardInfoPanels task={task} overdue={overdue} dueSoon={dueSoon} />
-      </div>
       </div>
     </ViewTransition>
   )

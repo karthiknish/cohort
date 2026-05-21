@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import type { TaskRecord } from '@/types/tasks'
 
-import { TaskCardHeaderSection, TaskCardInfoPanels, TaskCardPriorityBadge } from './task-card-sections'
+import { TaskCardCompactMeta, TaskCardHeaderSection, TaskCardPriorityBadge, TaskCardStatusBadge } from './task-card-sections'
 
 vi.mock('next/link', () => ({
   default: ({ children, href }: { children: ReactNode; href: string }) => <a href={href}>{children}</a>,
@@ -55,16 +55,18 @@ describe('task card sections', () => {
     expect(markup).toContain('Task actions')
   })
 
-  it('renders the priority badge and info panels', () => {
+  it('renders the status, priority badges, and compact meta', () => {
     const markup = renderToStaticMarkup(
       <>
+        <TaskCardStatusBadge status="todo" />
         <TaskCardPriorityBadge priority="high" />
-        <TaskCardInfoPanels task={task} overdue={false} dueSoon={true} />
+        <TaskCardCompactMeta task={task} overdue={false} dueSoon={true} />
       </>,
     )
 
+    expect(markup).toContain('To Do')
     expect(markup).toContain('High')
     expect(markup).toContain('Alex Kim')
-    expect(markup).toContain('Due date')
+    expect(markup).toContain('45m')
   })
 })

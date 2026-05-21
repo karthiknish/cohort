@@ -87,7 +87,13 @@ export function TaskList({
 
   return (
     <>
-      <div className={isGrid ? 'grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3' : 'min-h-[12rem]'}>
+      <div
+        className={
+          isGrid
+            ? 'grid auto-rows-fr gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3'
+            : 'min-h-[12rem]'
+        }
+      >
         {initialLoading ? <TaskListLoadingState viewMode={viewMode} /> : null}
         {!loading && error ? (
           <TaskListErrorState error={error} loading={loading} onRefresh={onRefresh} viewMode={viewMode} />

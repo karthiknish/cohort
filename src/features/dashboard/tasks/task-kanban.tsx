@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useId, useMemo, useReducer } from 'react'
-import { Calendar, ChevronsDownUp, ChevronsUpDown, Columns3, GripVertical, ListTodo, LoaderCircle, RefreshCw, TriangleAlert } from 'lucide-react'
+import { GripVertical, ListTodo, LoaderCircle, RefreshCw, TriangleAlert } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
@@ -53,13 +53,11 @@ type DraggedTask = {
 type TaskKanbanState = {
   draggedTask: DraggedTask | null
   dragOverStatus: TaskStatus | null
-  collapsedTaskIds: Set<string>
   viewingTask: TaskRecord | null
   boardAnnouncement: string
 }
 
 type TaskKanbanAction =
-  | { type: 'toggleCollapsed'; taskId: string }
   | { type: 'startDrag'; draggedTask: DraggedTask }
   | { type: 'setDragOverStatus'; status: TaskStatus | null }
   | { type: 'resetDragState' }
@@ -69,26 +67,12 @@ type TaskKanbanAction =
 const INITIAL_TASK_KANBAN_STATE: TaskKanbanState = {
   draggedTask: null,
   dragOverStatus: null,
-  collapsedTaskIds: new Set<string>(),
   viewingTask: null,
   boardAnnouncement: '',
 }
 
 function taskKanbanReducer(state: TaskKanbanState, action: TaskKanbanAction): TaskKanbanState {
   switch (action.type) {
-    case 'toggleCollapsed': {
-      const nextCollapsedTaskIds = new Set(state.collapsedTaskIds)
-      if (nextCollapsedTaskIds.has(action.taskId)) {
-        nextCollapsedTaskIds.delete(action.taskId)
-      } else {
-        nextCollapsedTaskIds.add(action.taskId)
-      }
-
-      return {
-        ...state,
-        collapsedTaskIds: nextCollapsedTaskIds,
-      }
-    }
     case 'startDrag':
       return {
         ...state,
@@ -153,15 +137,11 @@ export function TaskKanban({
   userRole = null,
   participants = EMPTY_TASK_PARTICIPANTS,
 }: TaskKanbanProps) {
-  const [{ draggedTask, dragOverStatus, collapsedTaskIds, viewingTask, boardAnnouncement }, dispatch] = useReducer(
+  const [{ draggedTask, dragOverStatus, viewingTask, boardAnnouncement }, dispatch] = useReducer(
     taskKanbanReducer,
     INITIAL_TASK_KANBAN_STATE,
   )
   const keyboardInstructionsId = useId()
-
-  const toggleCollapsed = useCallback((taskId: string) => {
-    dispatch({ type: 'toggleCollapsed', taskId })
-  }, [])
 
   const columns = useMemo(
     () =>
@@ -261,12 +241,15 @@ export function TaskKanban({
     const columnSkeletonKeys = ['todo', 'in-progress', 'review', 'completed'] as const
 
     return (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="flex gap-4 overflow-hidden px-4 pb-4">
         {columnSkeletonKeys.map((columnKey) => (
-          <div key={columnKey} className="space-y-4 rounded-xl border border-border/60 bg-muted/30 p-4">
-            <Skeleton className="h-6 w-32 rounded-lg" />
-            <Skeleton className="h-24 w-full rounded-xl" />
-            <Skeleton className="h-24 w-full rounded-xl" />
+          <div
+            key={columnKey}
+            className="flex min-h-[min(68vh,560px)] w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 p-3"
+          >
+            <Skeleton className="mb-3 h-8 w-full rounded-lg" />
+            <Skeleton className="mb-3 h-28 w-full rounded-xl" />
+            <Skeleton className="h-28 w-full rounded-xl" />
           </div>
         ))}
       </div>
@@ -321,33 +304,26 @@ export function TaskKanban({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 px-4 pb-4 pt-2">
       <LiveRegion message={boardAnnouncement} />
       <p id={keyboardInstructionsId} className="sr-only">
         Use Alt plus Left Arrow or Alt plus Right Arrow on a focused task card to move it between workflow columns. You can also drag and drop tasks with a pointer.
       </p>
-      <div className="flex items-center justify-between px-1">
-        <div>
-          <div className="flex items-center gap-2.5 font-bold tracking-tight text-foreground">
-            <Columns3 className="h-5 w-5 text-primary" />
-            <span>Workflow Board</span>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Drag tasks between columns to update status.
-          </p>
-        </div>
-        <div className={cn('rounded-full border px-3 py-1 text-sm font-semibold', taskPillColors.count)}>
+      <div className="flex items-center justify-between gap-3 px-1">
+        <p className="text-xs text-muted-foreground">
+          Drag tasks between columns to update status. Click a card to open details.
+        </p>
+        <div className={cn('shrink-0 rounded-full border px-3 py-1 text-xs font-semibold tabular-nums', taskPillColors.count)}>
           {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
         </div>
       </div>
 
       <ScrollArea className="w-full">
-        <div className="flex w-full gap-5 pb-6 pr-4 min-h-[600px]">
+        <div className="flex w-full gap-4 pb-4 pr-2 min-h-[min(72vh,640px)]">
           {columns.map((column) => (
             <KanbanColumn
               key={column.status}
               bulkActive={bulkActive}
-              collapsedTaskIds={collapsedTaskIds}
               column={column}
               dragOverStatus={dragOverStatus}
               draggedTask={draggedTask}
@@ -355,6 +331,7 @@ export function TaskKanban({
               handleDragLeave={handleDragLeave}
               handleDragOver={handleDragOver}
               handleDrop={handleDrop}
+              handleDragStart={handleDragStart}
               keyboardInstructionsId={keyboardInstructionsId}
               onKeyboardMoveTask={handleKeyboardMoveTask}
               handleViewTask={handleViewTask}
@@ -363,7 +340,6 @@ export function TaskKanban({
               onEdit={onEdit}
               onQuickStatusChange={onQuickStatusChange}
               onShare={onShare}
-              onToggleCollapsed={toggleCollapsed}
               onToggleTaskSelection={onToggleTaskSelection}
               pendingStatusUpdates={pendingStatusUpdates}
               searchQuery={searchQuery}
@@ -403,7 +379,6 @@ export function TaskKanban({
 
 function KanbanColumn({
   bulkActive,
-  collapsedTaskIds,
   column,
   dragOverStatus,
   draggedTask,
@@ -411,6 +386,7 @@ function KanbanColumn({
   handleDragLeave,
   handleDragOver,
   handleDrop,
+  handleDragStart,
   keyboardInstructionsId,
   onKeyboardMoveTask,
   handleViewTask,
@@ -419,14 +395,12 @@ function KanbanColumn({
   onEdit,
   onQuickStatusChange,
   onShare,
-  onToggleCollapsed,
   onToggleTaskSelection,
   pendingStatusUpdates,
   searchQuery,
   selectedTaskIds,
 }: {
   bulkActive: boolean
-  collapsedTaskIds: Set<string>
   column: { status: TaskStatus; label: string; items: TaskRecord[] }
   dragOverStatus: TaskStatus | null
   draggedTask: DraggedTask | null
@@ -434,6 +408,7 @@ function KanbanColumn({
   handleDragLeave: () => void
   handleDragOver: (e: React.DragEvent, status: TaskStatus) => void
   handleDrop: (e: React.DragEvent, targetStatus: TaskStatus) => void
+  handleDragStart: (e: React.DragEvent, task: TaskRecord) => void
   keyboardInstructionsId: string
   onKeyboardMoveTask: (task: TaskRecord, direction: 'previous' | 'next') => void
   handleViewTask: (task: TaskRecord) => void
@@ -442,7 +417,6 @@ function KanbanColumn({
   onEdit: (task: TaskRecord) => void
   onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
   onShare?: (task: TaskRecord) => void
-  onToggleCollapsed: (taskId: string) => void
   onToggleTaskSelection?: (taskId: string, checked: boolean) => void
   pendingStatusUpdates: Set<string>
   searchQuery: string
@@ -453,12 +427,12 @@ function KanbanColumn({
 
   const handleColumnDragOver = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => handleDragOver(event, column.status),
-    [column.status, handleDragOver]
+    [column.status, handleDragOver],
   )
 
   const handleColumnDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => handleDrop(event, column.status),
-    [column.status, handleDrop]
+    [column.status, handleDrop],
   )
 
   return (
@@ -467,65 +441,67 @@ function KanbanColumn({
       tabIndex={bulkActive ? -1 : 0}
       aria-label={`${column.label} task lane`}
       className={cn(
-        'group flex min-w-[292px] max-w-[360px] flex-1 flex-col overflow-hidden rounded-[1.5rem] border border-border/60 bg-gradient-to-b from-background to-muted/20 shadow-sm transition-colors',
-        !bulkActive && 'hover:border-border hover:bg-muted/25',
-        isDragTarget && 'border-accent/30 bg-accent/10',
-        isDraggingFrom && 'opacity-50'
+        'flex min-h-[min(68vh,560px)] w-[min(100%,280px)] shrink-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-muted/15 shadow-sm transition-colors sm:w-[280px]',
+        isDragTarget && 'border-primary/30 bg-primary/5 ring-1 ring-primary/15',
+        isDraggingFrom && !isDragTarget && 'opacity-60',
       )}
       onDragOver={handleColumnDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleColumnDrop}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-background/90 px-4 py-3.5 backdrop-blur-sm">
-        <div className="flex min-w-0 items-center gap-2.5">
+      <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-card/80 px-3.5 py-3 backdrop-blur-sm">
+        <div className="flex min-w-0 items-center gap-2">
           <div className={cn('h-2 w-2 shrink-0 rounded-full', statusLaneColors[column.status])} aria-hidden />
           <span className="truncate text-sm font-semibold text-foreground">{column.label}</span>
         </div>
-        <Badge variant="secondary" className="h-6 shrink-0 rounded-full px-2 tabular-nums">
+        <Badge variant="secondary" className="h-6 shrink-0 rounded-full px-2 text-[11px] tabular-nums">
           {column.items.length}
         </Badge>
       </div>
-      <div className="flex-1 space-y-4 p-4">
-        {column.items.length === 0 ? (
-          <div className={cn(
-            'flex h-32 flex-col items-center justify-center rounded-[1.15rem] border border-dashed border-border/60 bg-background/70 p-4 text-center transition-colors',
-            isDragTarget && 'border-accent/40 bg-accent/5'
-          )}>
-            {draggedTask ? (
-              <>
-                <GripVertical className="mb-1 h-5 w-5 text-muted-foreground" />
-                <p className="text-xs font-medium text-muted-foreground">Drop to move</p>
-              </>
-            ) : (
-              <p className="text-xs font-medium italic text-muted-foreground">Drop tasks here</p>
-            )}
-          </div>
-        ) : (
-          column.items.map((task) => (
-            <KanbanTaskItem
-              key={task.id}
-              bulkActive={bulkActive}
-              handleDragEnd={handleDragEnd}
-              handleViewTask={handleViewTask}
-              isCollapsed={collapsedTaskIds.has(task.id)}
-              isDragging={draggedTask?.id === task.id}
-              keyboardInstructionsId={keyboardInstructionsId}
-              onClone={onClone}
-              onDelete={onDelete}
-              onEdit={onEdit}
-              onKeyboardMoveTask={onKeyboardMoveTask}
-              onQuickStatusChange={onQuickStatusChange}
-              onShare={onShare}
-              onToggleCollapsed={onToggleCollapsed}
-              onToggleTaskSelection={onToggleTaskSelection}
-              pending={pendingStatusUpdates.has(task.id)}
-              searchQuery={searchQuery}
-              selected={selectedTaskIds.has(task.id)}
-              task={task}
-            />
-          ))
-        )}
-      </div>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="space-y-3 p-3">
+          {column.items.length === 0 ? (
+            <div
+              className={cn(
+                'flex min-h-[7.5rem] flex-col items-center justify-center rounded-lg border border-dashed border-border/70 bg-card/60 p-4 text-center transition-colors',
+                isDragTarget && 'border-primary/35 bg-primary/5',
+              )}
+            >
+              {draggedTask ? (
+                <>
+                  <GripVertical className="mb-1.5 h-5 w-5 text-muted-foreground" aria-hidden />
+                  <p className="text-xs font-medium text-muted-foreground">Drop to move here</p>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">No tasks in this column</p>
+              )}
+            </div>
+          ) : (
+            column.items.map((task) => (
+              <KanbanTaskItem
+                key={task.id}
+                bulkActive={bulkActive}
+                handleDragEnd={handleDragEnd}
+                handleDragStart={handleDragStart}
+                handleViewTask={handleViewTask}
+                isDragging={draggedTask?.id === task.id}
+                keyboardInstructionsId={keyboardInstructionsId}
+                onClone={onClone}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                onKeyboardMoveTask={onKeyboardMoveTask}
+                onQuickStatusChange={onQuickStatusChange}
+                onShare={onShare}
+                onToggleTaskSelection={onToggleTaskSelection}
+                pending={pendingStatusUpdates.has(task.id)}
+                searchQuery={searchQuery}
+                selected={selectedTaskIds.has(task.id)}
+                task={task}
+              />
+            ))
+          )}
+        </div>
+      </ScrollArea>
     </div>
   )
 }
@@ -533,8 +509,8 @@ function KanbanColumn({
 function KanbanTaskItem({
   bulkActive,
   handleDragEnd,
+  handleDragStart,
   handleViewTask,
-  isCollapsed,
   isDragging,
   keyboardInstructionsId,
   onClone,
@@ -543,7 +519,6 @@ function KanbanTaskItem({
   onKeyboardMoveTask,
   onQuickStatusChange,
   onShare,
-  onToggleCollapsed,
   onToggleTaskSelection,
   pending,
   searchQuery,
@@ -552,8 +527,8 @@ function KanbanTaskItem({
 }: {
   bulkActive: boolean
   handleDragEnd: () => void
+  handleDragStart: (e: React.DragEvent, task: TaskRecord) => void
   handleViewTask: (task: TaskRecord) => void
-  isCollapsed: boolean
   isDragging: boolean
   keyboardInstructionsId: string
   onClone?: (task: TaskRecord) => void
@@ -562,29 +537,18 @@ function KanbanTaskItem({
   onKeyboardMoveTask: (task: TaskRecord, direction: 'previous' | 'next') => void
   onQuickStatusChange: (task: TaskRecord, newStatus: TaskStatus) => void
   onShare?: (task: TaskRecord) => void
-  onToggleCollapsed: (taskId: string) => void
   onToggleTaskSelection?: (taskId: string, checked: boolean) => void
   pending: boolean
   searchQuery: string
   selected: boolean
   task: TaskRecord
 }) {
-  const handleDragStart = useCallback(
+  const onItemDragStart = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
-      if (bulkActive) return
-      event.dataTransfer.effectAllowed = 'move'
-      event.dataTransfer.setData('text/plain', task.id)
+      handleDragStart(event, task)
     },
-    [bulkActive, task.id]
+    [handleDragStart, task],
   )
-
-  const handleExpand = useCallback(() => {
-    onToggleCollapsed(task.id)
-  }, [onToggleCollapsed, task.id])
-
-  const handleCollapse = useCallback(() => {
-    onToggleCollapsed(task.id)
-  }, [onToggleCollapsed, task.id])
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -615,63 +579,30 @@ function KanbanTaskItem({
       aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
       aria-roledescription="task card"
       draggable={!bulkActive && !pending}
-      onDragStart={handleDragStart}
+      onDragStart={onItemDragStart}
       onDragEnd={handleDragEnd}
       onKeyDown={handleKeyDown}
       className={cn(
-        'motion-chromatic active:scale-[0.98]',
+        'rounded-xl transition-opacity',
+        isDragging && 'opacity-40',
         !bulkActive && !pending && 'cursor-grab active:cursor-grabbing',
-        (bulkActive || pending) && 'cursor-default'
+        (bulkActive || pending) && 'cursor-default',
       )}
     >
-      {isCollapsed ? (
-        <button
-          type="button"
-          onClick={handleExpand}
-          className={cn(
-            'flex w-full flex-col gap-3 rounded-[1.35rem] border border-border/60 bg-gradient-to-b from-background via-background to-muted/20 p-4 text-left shadow-sm motion-chromatic hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-md',
-            pending && 'pointer-events-none opacity-75'
-          )}
-          aria-label={`Expand task ${task.title}`}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="line-clamp-2 text-base font-bold leading-tight text-foreground">{task.title}</h3>
-            <ChevronsUpDown className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-          </div>
-          <div className={cn('inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold', taskPillColors.neutral)}>
-            <Calendar className="h-3.5 w-3.5" />
-            <span>{formatDate(task.dueDate)}</span>
-          </div>
-        </button>
-      ) : (
-        <div className="space-y-2">
-          <TaskCard
-            task={task}
-            isPendingUpdate={pending}
-            onOpen={handleViewTask}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onQuickStatusChange={onQuickStatusChange}
-            onClone={onClone}
-            onShare={onShare}
-            selected={selected}
-            onSelectToggle={onToggleTaskSelection}
-            searchQuery={searchQuery}
-          />
-          <div className="flex justify-end px-0.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 rounded-lg text-xs text-muted-foreground hover:text-foreground"
-              onClick={handleCollapse}
-            >
-              <ChevronsDownUp className="mr-1.5 h-3.5 w-3.5" />
-              Collapse
-            </Button>
-          </div>
-        </div>
-      )}
+      <TaskCard
+        task={task}
+        variant="board"
+        isPendingUpdate={pending}
+        onOpen={handleViewTask}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onQuickStatusChange={onQuickStatusChange}
+        onClone={onClone}
+        onShare={onShare}
+        selected={selected}
+        onSelectToggle={onToggleTaskSelection}
+        searchQuery={searchQuery}
+      />
     </div>
   )
 }
