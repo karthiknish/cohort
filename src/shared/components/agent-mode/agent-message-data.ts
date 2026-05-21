@@ -55,6 +55,15 @@ function formatPercent(value: number): string {
   return `${value.toFixed(2)}%`
 }
 
+function formatCtrPercent(clicks: number | null, impressions: number | null, ctr: number | null): string | null {
+  if (ctr === null) return null
+  if (impressions !== null && impressions > 0 && clicks !== null && clicks > impressions) {
+    const normalized = Math.min(100, (Math.min(clicks, impressions) / impressions) * 100)
+    return `${normalized.toFixed(2)}%`
+  }
+  return formatPercent(ctr)
+}
+
 function formatRatio(value: number): string {
   return `${value.toFixed(2)}x`
 }
@@ -111,6 +120,8 @@ function buildMetricsFromTotals(
   const impressions = asNumber(totals.impressions)
   const clicks = asNumber(totals.clicks)
   const ctr = asNumber(totals.ctr)
+  const cpc = asNumber(totals.cpc)
+  const cpa = asNumber(totals.cpa)
   const conversions = asNumber(totals.conversions)
   const deltaPercent = asRecord(comparison?.deltaPercent)
 
@@ -158,11 +169,27 @@ function buildMetricsFromTotals(
     ctr !== null
       ? {
           label: 'CTR',
-          value: formatPercent(ctr),
+          value: formatCtrPercent(clicks, impressions, ctr) ?? formatPercent(ctr),
           delta: formatDeltaPercent(asNumber(deltaPercent?.ctr)),
           deltaTone: getDeltaTone(asNumber(deltaPercent?.ctr)),
         }
       : null,
+    cpc !== null && clicks !== null && clicks > 0
+      ? {
+          label: 'CPC',
+          value: formatCurrency(cpc),
+        }
+      : clicks !== null && clicks > 0
+        ? { label: 'CPC', value: '—' }
+        : null,
+    cpa !== null && conversions !== null && conversions > 0
+      ? {
+          label: 'CPA',
+          value: formatCurrency(cpa),
+        }
+      : conversions !== null && conversions > 0
+        ? { label: 'CPA', value: '—' }
+        : null,
     conversions !== null
       ? {
           label: 'Conversions',
@@ -228,10 +255,21 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
     if (paused !== null) details.push({ label: 'Paused', value: formatWholeNumber(paused) })
   }
 
+  const currentSituation = asString(data.currentSituation)
+  if (currentSituation) {
+    sections.push({
+      type: 'metrics',
+      title: 'Insight',
+      items: [{ label: 'Summary', value: currentSituation }],
+    })
+  }
+
   if (details.length > 0) sections.push({ type: 'metrics', title: 'Overview', items: details })
 
   const totalsMetrics = buildMetricsFromTotals(resolveTotals(data), comparison)
-  if (totalsMetrics.length > 0 && metricsAvailable !== false) sections.push({ type: 'metrics', title: 'Performance', items: totalsMetrics })
+  if (totalsMetrics.length > 0 && metricsAvailable !== false) {
+    sections.push({ type: 'metrics', title: 'Performance', items: totalsMetrics })
+  }
 
   const providerBreakdown = asRecordArray(data.providerBreakdown)
   if (providerBreakdown.length > 0 && metricsAvailable !== false) {
@@ -310,7 +348,9 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
   if (aiSuccessRate !== null) reportItems.push({ label: 'AI Success', value: formatPercent(aiSuccessRate) })
   if (deliveredInApp !== null) reportItems.push({ label: 'In-app Delivery', value: deliveredInApp ? 'Delivered' : 'Not delivered' })
 
-  if (reportItems.length > 0) sections.push({ type: 'metrics', title: 'Report Highlights', items: reportItems })
+  if (operation === 'generatePerformanceReport' && reportItems.length > 0) {
+    sections.push({ type: 'metrics', title: 'Report Highlights', items: reportItems })
+  }
 
   const totalTasks = asNumber(data.totalTasks)
   const openTasks = asNumber(data.openTasks)

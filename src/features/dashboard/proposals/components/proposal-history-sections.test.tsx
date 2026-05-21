@@ -56,7 +56,7 @@ describe('proposal history sections', () => {
     expect(markup).toContain('2 proposals')
     expect(markup).toContain('Refresh')
     expect(markup).toContain('No proposals yet')
-    expect(markup).toContain('Create first proposal')
+    expect(markup).toContain('New proposal')
   })
 
   it('renders a history row with proposal actions', () => {

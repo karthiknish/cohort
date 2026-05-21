@@ -11,16 +11,8 @@ import type {
   AgentPendingConfirmation,
   ConnectionStatus,
 } from '@/shared/hooks/use-agent-mode'
-import { useClientContext } from '@/shared/contexts/client-context'
 import { useMentionData } from '@/shared/hooks/use-mention-data'
-import {
-  AGENT_DASHBOARD_SHORTCUTS,
-  buildAgentContextChips,
-  filterAgentDashboardShortcuts,
-  getAgentSuggestions,
-  trackAgentSuggestionClick,
-  type AgentSuggestion,
-} from '@/lib/agent-context'
+import { getAgentSuggestions, trackAgentSuggestionClick, type AgentSuggestion } from '@/lib/agent-context'
 import {
   formatAgentMentionMarkup,
   mergeAgentMentions,
@@ -43,7 +35,6 @@ import { useAgentPanelUrl } from '@/shared/hooks/use-agent-panel-url'
 import { useKeyboardShortcut } from '@/shared/hooks/use-keyboard-shortcuts'
 import type { AgentError } from '@/lib/agent-errors'
 
-import { AgentContextBanner } from './agent-context-banner'
 import {
   AgentModePanelContent,
   AgentModePanelShell,
@@ -173,9 +164,8 @@ export function AgentModePanel({
 }: AgentModePanelProps) {
   const pathname = usePathname()
   const { user } = useAuth()
-  const { selectedClient, selectedClientId } = useClientContext()
   const [panelLayout, setPanelLayout] = useState<AgentPanelLayout>(() =>
-    typeof window === 'undefined' ? 'docked' : readAgentPanelLayout(),
+    typeof window === 'undefined' ? 'fullscreen' : readAgentPanelLayout(),
   )
   const [inputValue, setInputValue] = useState('')
   const [composerMentions, setComposerMentions] = useState<AgentMentionEntity[]>([])
@@ -199,30 +189,6 @@ export function AgentModePanel({
     () => getAgentSuggestions(pathname, { role: user?.role }),
     [pathname, user?.role],
   )
-  const dashboardShortcuts = useMemo(
-    () => filterAgentDashboardShortcuts(AGENT_DASHBOARD_SHORTCUTS, user?.role),
-    [user?.role],
-  )
-  const contextChips = useMemo(
-    () =>
-      buildAgentContextChips({
-        pathname,
-        ids: {
-          ...activeContext,
-          activeClientId: activeContext.activeClientId ?? selectedClientId ?? undefined,
-        },
-        selectedClientName: selectedClient?.name ?? null,
-      }),
-    [activeContext, pathname, selectedClient?.name, selectedClientId],
-  )
-
-  const handleDashboardShortcut = useCallback(
-    (prompt: string) => {
-      onSendMessage(prompt)
-    },
-    [onSendMessage],
-  )
-
   const handleVoiceTranscript = useCallback((text: string) => {
     if (text.trim()) {
       onSendMessage(text)
@@ -649,18 +615,6 @@ export function AgentModePanel({
     onSuggestionClick: handleSuggestionClick,
   }), [handleSuggestionClick, isInputDisabled, quickSuggestions, sharedComposerProps])
 
-  const contextBanner = useMemo(
-    () => (
-      <AgentContextBanner
-        chips={contextChips}
-        shortcuts={dashboardShortcuts}
-        disabled={isInputDisabled}
-        onShortcutPrompt={handleDashboardShortcut}
-      />
-    ),
-    [contextChips, dashboardShortcuts, handleDashboardShortcut, isInputDisabled],
-  )
-
   const dockComposerProps = useMemo<AgentComposerSectionProps>(() => ({
     ...sharedComposerProps,
     layout: 'dock',
@@ -782,7 +736,6 @@ export function AgentModePanel({
       onRequestClose={requestClose}
       panelLayout={panelLayout}
       attachmentAccept={AGENT_ATTACHMENT_ACCEPT}
-      contextBanner={contextBanner}
       fileInputRef={fileInputRef}
       composerInputRef={inputRef}
       headerProps={headerProps}

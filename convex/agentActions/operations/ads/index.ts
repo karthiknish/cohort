@@ -327,17 +327,16 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
           activeCampaigns,
         },
         userMessage: [
-          normalizedCampaignQuery ? `${providerLabel} Campaign Check` : focus === 'active' ? `${providerLabel} Active Ads` : `${providerLabel} Snapshot`,
-          `${periodLabel} window: ${startDate} to ${endDate}`,
-          ...(matchingSummary ? [matchingSummary] : []),
           normalizedCampaignQuery
-            ? 'I don’t have synced metrics for that campaign and date window yet.'
-            : 'No synced metrics are available for this window yet.',
-          ...(focus === 'active' || normalizedCampaignQuery ? [normalizedCampaignQuery ? 'Best matching campaigns:' : 'Active campaigns:', ...activeCampaignLines] : []),
+            ? `${providerLabel} campaign check (${startDate} to ${endDate}): no synced metrics yet.`
+            : `${providerLabel} ${periodLabel}: no synced metrics in this window yet.`,
+          matchingSummary,
           normalizedCampaignQuery
-            ? 'You can open a matching campaign below, widen the date range, or check that recent syncs have completed.'
-            : 'Check that the integration is connected and that recent syncs have completed.',
-        ].join('\n'),
+            ? 'Open a matching campaign below or widen the date range after sync completes.'
+            : 'Confirm integrations are connected and recent syncs have completed.',
+        ]
+          .filter((line): line is string => Boolean(line))
+          .join(' '),
       }
     }
 
@@ -372,6 +371,7 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
       ? activeCampaigns.map((campaign, index) => `${index + 1}. ${campaign.name} (${campaign.providerId})`)
       : ['No active campaigns were returned from the connected providers.']
     const leaderLine = topCampaigns[0] ? `Leading campaign: ${topCampaigns[0].name}` : null
+    const headline = `${providerLabel} ${periodLabel}: ${formatCurrency(spend)} spend · ${formatCurrency(revenue)} revenue · ${formatRatio(roas)} ROAS · ${formatWholeNumber(conversions)} conversions.`
 
     return {
       success: true,
@@ -412,26 +412,9 @@ export const adsOperationHandlers: Record<string, OperationHandler> = {
           }),
         })),
         currentSituation,
+        metricsAvailable: true,
       },
-      userMessage: [
-        focus === 'active' ? `${providerLabel} Active Ads` : `${providerLabel} Snapshot`,
-        `${periodLabel} window: ${startDate} to ${endDate}`,
-        `Spend: ${formatCurrency(spend)}`,
-        `Revenue: ${formatCurrency(revenue)}`,
-        `ROAS: ${formatRatio(roas)}`,
-        `Impressions: ${formatWholeNumber(impressions)}`,
-        `Clicks: ${formatWholeNumber(clicks)}`,
-        `CTR: ${formatPercent(ctr)}`,
-        `CPC: ${formatCurrency(cpc)}`,
-        `CPA: ${conversions > 0 ? formatCurrency(cpa) : 'N/A'}`,
-        `Conversions: ${formatWholeNumber(conversions)}`,
-        campaignStateLine,
-        leaderLine,
-        ...(focus === 'active' ? ['Active campaigns:', ...activeCampaignLines] : []),
-        'Top campaigns:',
-        ...topCampaignLines,
-        `Current situation: ${currentSituation}`,
-      ].filter((line): line is string => Boolean(line)).join('\n'),
+      userMessage: headline,
     }
   },
 }

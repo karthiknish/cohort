@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   cycleAgentPanelLayout,
   panelUsesModalFocusTrap,
+  readAgentPanelLayout,
   shouldHideAgentFab,
   shouldKeepAgentOpenOnNavigate,
 } from './agent-panel-layout'
@@ -24,6 +25,10 @@ describe('agent panel layout', () => {
     expect(panelUsesModalFocusTrap('compact')).toBe(false)
     expect(panelUsesModalFocusTrap('docked')).toBe(false)
     expect(panelUsesModalFocusTrap('fullscreen')).toBe(true)
+  })
+
+  it('defaults to fullscreen layout', () => {
+    expect(readAgentPanelLayout()).toBe('fullscreen')
   })
 
   it('hides the FAB when open in docked or compact layout', () => {

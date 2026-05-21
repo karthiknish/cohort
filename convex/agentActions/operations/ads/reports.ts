@@ -69,7 +69,7 @@ export const reportOperationHandlers: Record<string, OperationHandler> = {
       previousProviders: asRecord(previousSummary.providers),
     })
 
-    const { spend, impressions, clicks, conversions, revenue, roas, ctr } = currentTotals
+    const { spend, impressions, clicks, conversions, revenue, roas, ctr, cpc, cpa } = currentTotals
 
     const proposalRaw = await ctx.runQuery(api.proposalAnalytics.summarize, {
       workspaceId: input.workspaceId,
@@ -141,6 +141,26 @@ export const reportOperationHandlers: Record<string, OperationHandler> = {
       inAppDelivered = false
     }
 
+    const currentSituation = metricsAvailable
+      ? [
+          spend > 0
+            ? roas >= 3
+              ? 'ROAS is strong for this period.'
+              : roas >= 1.5
+                ? 'ROAS is stable with room to optimize.'
+                : 'ROAS is soft and needs attention.'
+            : 'Spend has not started flowing in this window.',
+          ctr >= 1.5 ? 'CTR looks healthy.' : impressions > 0 ? 'CTR is light — creative or audience tuning may help.' : null,
+          conversions > 0
+            ? `${formatWholeNumber(conversions)} conversions recorded.`
+            : clicks > 0
+              ? 'Traffic is coming in, but conversions are still thin.'
+              : null,
+        ]
+          .filter((line): line is string => Boolean(line))
+          .join(' ')
+      : 'No synced ads metrics were available for this window. Proposal activity is still included below.'
+
     return {
       success: true,
       route: '/dashboard/analytics',
@@ -154,18 +174,20 @@ export const reportOperationHandlers: Record<string, OperationHandler> = {
         metricsSummary,
         metricsAvailable,
         metricsRecordCount,
+        totals: { spend, impressions, clicks, conversions, revenue, roas, ctr, cpc, cpa },
         previousWindow,
         comparison: { ...totalsComparison, previousWindow },
         providerBreakdown,
         proposalSummary,
+        currentSituation,
         delivery: {
           inApp: inAppDelivered,
           email: false,
         },
       },
       userMessage: metricsAvailable
-        ? `Generated your ${periodLabel.toLowerCase()} performance report${inAppDelivered ? ' and shared it in-app.' : '.'}`
-        : `Generated your ${periodLabel.toLowerCase()} report${inAppDelivered ? ' and shared it in-app.' : '.'} No synced ads metrics were available for that window yet.`,
+        ? `${periodLabel} report: ${formatCurrency(spend)} spend · ${formatCurrency(revenue)} revenue · ${formatRatio(roas)} ROAS · ${formatWholeNumber(conversions)} conversions.${inAppDelivered ? ' Shared in-app.' : ''}`
+        : `${periodLabel} report is ready, but no synced ads metrics were found for ${startDate} to ${endDate}.${inAppDelivered ? ' Shared in-app.' : ''}`,
     }
   },
 }

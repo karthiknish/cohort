@@ -25,6 +25,9 @@
     "start": "node scripts/ensure-safe-runtime.cjs && bun --bun next start",
     "lint": "bun run biome:check && oxlint -c .oxlintrc.json",
     "typecheck": "bun --bun tsc -p tsconfig.json --noEmit",
+    "ci:check": "bun run biome:check && bun run typecheck && bun run convex:typecheck && bunx oxlint -c .oxlintrc.json src",
+    "ci:test": "vitest run",
+    "ci:build": "next build",
     "test": "vitest run",
     "test:a11y": "playwright test e2e/agent-mode.a11y.spec.ts",
     "test:a11y:fixture": "PLAYWRIGHT_SKIP_WEB_SERVER=1 playwright test e2e/agent-mode.a11y.spec.ts --grep fixture"

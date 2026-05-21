@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
   buildAgentContextChips,
   deriveActiveContextFromPath,
-  getAgentQuickSuggestions,
 } from './agent-context'
+import { getAgentSuggestions } from './agent-suggestions'
 
 describe('agent-context', () => {
   it('derives entity ids from dashboard paths', () => {
@@ -17,8 +17,8 @@ describe('agent-context', () => {
   })
 
   it('returns route-specific quick suggestions', () => {
-    const ads = getAgentQuickSuggestions('/dashboard/ads')
-    expect(ads[0]).toContain('Meta ads')
+    const ads = getAgentSuggestions('/dashboard/ads', { role: 'admin' })
+    expect(ads.some((suggestion) => suggestion.prompt.includes('Meta ads'))).toBe(true)
   })
 
   it('builds context chips for client and page', () => {

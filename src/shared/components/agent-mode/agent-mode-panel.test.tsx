@@ -20,6 +20,16 @@ vi.mock('framer-motion', () => ({
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
+  useRouter: () => ({ replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}))
+
+vi.mock('@/shared/hooks/use-agent-panel-url', () => ({
+  useAgentPanelUrl: () => ({
+    openHistoryView: vi.fn(),
+    closeHistoryView: vi.fn(),
+    replaceUrl: vi.fn(),
+  }),
 }))
 
 vi.mock('@/shared/contexts/client-context', () => ({

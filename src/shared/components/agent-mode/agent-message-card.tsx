@@ -21,7 +21,7 @@ import { Button } from '@/shared/ui/button'
 import type { AgentMessage, AgentPendingConfirmation } from '@/shared/hooks/use-agent-mode'
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
-import { buildAgentDataSections } from './agent-message-data'
+import { buildAgentDataSections, type AgentDataSection } from './agent-message-data'
 import { AgentMentionPills, AgentMentionText } from './mention-highlights'
 import { AgentMessageAttachmentChips } from './agent-mode-panel-sections'
 
@@ -235,6 +235,37 @@ function isRetryableData(data: Record<string, unknown> | undefined): boolean {
   return data?.retryable === true
 }
 
+function usesStructuredMetricsCard(operation?: string): boolean {
+  return operation === 'summarizeAdsPerformance' || operation === 'generatePerformanceReport'
+}
+
+function resolveAgentDisplayContent(
+  content: string,
+  operation: string | undefined,
+  dataSections: AgentDataSection[],
+  data?: Record<string, unknown>,
+): string {
+  if (!usesStructuredMetricsCard(operation) || dataSections.length === 0) {
+    return content
+  }
+
+  const situation = typeof data?.currentSituation === 'string' ? data.currentSituation.trim() : ''
+  if (situation.length > 0) return situation
+
+  const firstLine = content
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => line.length > 0)
+
+  return firstLine ?? content.trim()
+}
+
+function routeLinkLabel(operation?: string): string {
+  if (operation === 'summarizeAdsPerformance') return 'Open ads dashboard'
+  if (operation === 'generatePerformanceReport') return 'Open analytics'
+  return 'Go to page'
+}
+
 function UserMessageStatus({
   lifecycle,
   onResend,
@@ -403,11 +434,14 @@ export function AgentMessageCard({
   const executeSucceeded = metadata?.action === 'execute' && metadata.success === true
   const showRouteLink = Boolean(route) && (tone === 'success' || executeSucceeded)
 
+  const displayContent = resolveAgentDisplayContent(content, operation, dataSections, metadata?.data)
   const detailUserMessage =
     typeof metadata?.data?.userMessage === 'string' && metadata.data.userMessage.trim().length > 0
       ? metadata.data.userMessage.trim()
       : null
-  const showDetailLine = Boolean(detailUserMessage && detailUserMessage !== content.trim())
+  const showDetailLine =
+    !usesStructuredMetricsCard(operation) &&
+    Boolean(detailUserMessage && detailUserMessage !== content.trim() && detailUserMessage !== displayContent.trim())
 
   const showRetryButton =
     Boolean(onRetryLastUserTurn) && isRetryableData(metadata?.data) && metadata?.action === 'execute'
@@ -449,8 +483,12 @@ export function AgentMessageCard({
             </div>
 
             <div className="px-4 py-3">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                <AgentMentionText text={content} mentionLabels={mentionLabels} mentionClassName={accents.mention} />
+              <p className="text-sm leading-relaxed text-foreground">
+                <AgentMentionText
+                  text={displayContent}
+                  mentionLabels={mentionLabels}
+                  mentionClassName={accents.mention}
+                />
               </p>
               {usedContextNames.length > 0 ? (
                 <p className="mt-2 text-xs text-muted-foreground">
@@ -519,28 +557,54 @@ export function AgentMessageCard({
                       </div>
 
                       {section.type === 'metrics' ? (
-                        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                          {section.items.map((item) => (
-                            <div key={item.label} className="rounded-md bg-background px-2.5 py-2 shadow-sm">
-                              <div className="flex items-center justify-between gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                                <span>{item.label}</span>
-                                {item.delta ? (
-                                  <span
-                                    className={cn(
-                                      'rounded-full px-1.5 py-0.5 text-[10px] font-semibold normal-case',
-                                      item.deltaTone === 'positive' && 'bg-accent/10 text-primary',
-                                      item.deltaTone === 'negative' && 'bg-destructive/10 text-destructive',
-                                      item.deltaTone === 'neutral' && 'bg-muted text-muted-foreground',
-                                    )}
-                                  >
-                                    {item.delta}
-                                  </span>
-                                ) : null}
+                        section.title === 'Insight' ? (
+                          <p className="text-sm leading-relaxed text-foreground">{section.items[0]?.value}</p>
+                        ) : (
+                          <div
+                            className={cn(
+                              'grid gap-2',
+                              section.title === 'Performance'
+                                ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4'
+                                : 'grid-cols-2 md:grid-cols-3',
+                            )}
+                          >
+                            {section.items.map((item, index) => (
+                              <div
+                                key={item.label}
+                                className={cn(
+                                  'rounded-md border border-border/50 bg-background px-2.5 py-2 shadow-sm',
+                                  section.title === 'Performance' &&
+                                    index < 3 &&
+                                    'sm:col-span-1 border-primary/15 bg-primary/[0.03]',
+                                )}
+                              >
+                                <div className="flex items-center justify-between gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                                  <span>{item.label}</span>
+                                  {item.delta ? (
+                                    <span
+                                      className={cn(
+                                        'rounded-full px-1.5 py-0.5 text-[10px] font-semibold normal-case',
+                                        item.deltaTone === 'positive' && 'bg-accent/10 text-primary',
+                                        item.deltaTone === 'negative' && 'bg-destructive/10 text-destructive',
+                                        item.deltaTone === 'neutral' && 'bg-muted text-muted-foreground',
+                                      )}
+                                    >
+                                      {item.delta}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <div
+                                  className={cn(
+                                    'mt-1 font-semibold text-foreground',
+                                    section.title === 'Performance' && index < 3 ? 'text-base' : 'text-sm',
+                                  )}
+                                >
+                                  {item.value}
+                                </div>
                               </div>
-                              <div className="mt-1 text-sm font-semibold text-foreground">{item.value}</div>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        )
                       ) : (
                         <div className="space-y-2">
                           {section.items.map((item) =>
@@ -611,7 +675,7 @@ export function AgentMessageCard({
                 <div className="mt-3">
                   <Button asChild size="sm" variant="outline" className="gap-2">
                     <Link href={route!}>
-                      Go to page
+                      {routeLinkLabel(operation)}
                       <ArrowRight className="h-3 w-3" />
                     </Link>
                   </Button>
@@ -628,7 +692,7 @@ export function AgentMessageCard({
                 </div>
               ) : null}
 
-              {operation ? (
+              {operation && !usesStructuredMetricsCard(operation) ? (
                 <div className="mt-2 text-xs text-muted-foreground">
                   Operation: <code className="rounded bg-muted px-1 py-0.5">{operation}</code>
                 </div>

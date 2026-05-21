@@ -2,7 +2,8 @@
 
 ### Required checks
 
-- [ ] `bun --bun tsc -p tsconfig.json --noEmit --pretty false`
+- [ ] `bun run ci:check` (Biome, app + Convex typecheck, oxlint on `src/`)
+- [ ] `bun run ci:test`
 - [ ] targeted lint for touched files passes
 - [ ] `bunx react-doctor@latest . --verbose --diff` shows no new errors for touched files
 

@@ -260,6 +260,8 @@ export function computeAggregateMetrics(source: Record<string, unknown> | null):
   const conversions = asNumber(source?.conversions) ?? 0
   const revenue = asNumber(source?.revenue) ?? 0
 
+  const normalizedClicks = impressions > 0 ? Math.min(clicks, impressions) : clicks
+
   return {
     spend,
     impressions,
@@ -267,7 +269,7 @@ export function computeAggregateMetrics(source: Record<string, unknown> | null):
     conversions,
     revenue,
     roas: spend > 0 ? revenue / spend : 0,
-    ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
+    ctr: impressions > 0 ? Math.min(100, (normalizedClicks / impressions) * 100) : 0,
     cpc: clicks > 0 ? spend / clicks : 0,
     cpa: conversions > 0 ? spend / conversions : 0,
   }

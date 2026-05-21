@@ -9,7 +9,7 @@ export function isAgentPanelLayout(value: string | null | undefined): value is A
 }
 
 export function readAgentPanelLayout(): AgentPanelLayout {
-  if (typeof window === 'undefined') return 'docked'
+  if (typeof window === 'undefined') return 'fullscreen'
 
   const stored = window.localStorage.getItem(LAYOUT_KEY)
   if (isAgentPanelLayout(stored)) return stored
@@ -18,7 +18,7 @@ export function readAgentPanelLayout(): AgentPanelLayout {
     return 'fullscreen'
   }
 
-  return 'docked'
+  return 'fullscreen'
 }
 
 export function writeAgentPanelLayout(layout: AgentPanelLayout): void {

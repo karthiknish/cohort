@@ -48,7 +48,7 @@ describe('task comment sections', () => {
 
     expect(markup).toContain('Conversation')
     expect(markup).toContain('2 comments')
-    expect(markup).toContain('Thread reply')
+    expect(markup).toContain('Replying')
   })
 
   it('renders threaded comment cards', () => {
