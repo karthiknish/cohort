@@ -304,11 +304,14 @@ export const workforceApi = {
   reviewTimeOffRequest: looseApi.workforce.reviewTimeOffRequest,
 }
 
-export const gammaApi = {
-  getStatus: looseApi.gamma.getStatus,
-  listFolders: looseApi.gamma.listFolders,
-  listThemes: looseApi.gamma.listThemes,
+export const presentationDeckApi = {
+  getStatus: looseApi.presentationDeck.getStatus,
+  listFolders: looseApi.presentationDeck.listFolders,
+  listThemes: looseApi.presentationDeck.listThemes,
 }
+
+/** @deprecated Use presentationDeckApi */
+export const gammaApi = presentationDeckApi
 
 export const analyticsInsightsApi = {
   generateInsights: looseApi.analyticsInsights.generateInsights,

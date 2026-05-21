@@ -454,6 +454,28 @@ export class GammaService {
                     ? (payload.warnings as unknown[]).filter((w): w is string => typeof w === 'string')
                     : undefined
 
+                const credits =
+                    payload.credits && typeof payload.credits === 'object'
+                        ? (payload.credits as Record<string, unknown>)
+                        : null
+
+                const creditsDeducted = typeof credits?.deducted === 'number' ? credits.deducted : null
+                const creditsRemaining = typeof credits?.remaining === 'number' ? credits.remaining : null
+
+                const externalDeckId =
+                    typeof payload.gammaId === 'string'
+                        ? payload.gammaId
+                        : (() => {
+                              const url = webAppUrl ?? shareUrl
+                              if (!url) return null
+                              try {
+                                  const segments = new URL(url).pathname.split('/').filter(Boolean)
+                                  return segments.at(-1) ?? null
+                              } catch {
+                                  return null
+                              }
+                          })()
+
                 return {
                     generationId,
                     status,
@@ -461,6 +483,9 @@ export class GammaService {
                     shareUrl,
                     generatedFiles,
                     warnings,
+                    creditsDeducted,
+                    creditsRemaining,
+                    externalDeckId,
                     raw: payload,
                 }
             } catch (error: unknown) {
@@ -664,6 +689,22 @@ export class GammaService {
 
             console.log(`[GammaService] Waiting ${pollDelay}ms before next poll`)
             await wait(pollDelay)
+        }
+    }
+
+    /**
+     * Archive a completed deck in the provider workspace.
+     */
+    async archiveDeck(externalDeckId: string): Promise<void> {
+        const headers = this.ensureRequestHeaders()
+        const response = await fetch(`${GAMMA_BASE_URL}/gammas/${encodeURIComponent(externalDeckId)}/archive`, {
+            method: 'POST',
+            headers,
+        })
+
+        if (!response.ok) {
+            const details = await response.text().catch(() => '')
+            throw new Error(`Presentation archive failed (${response.status}): ${details || 'Unknown error'}`)
         }
     }
 

@@ -33,9 +33,9 @@ vi.mock('@/shared/components/page-motion-shell', () => ({
 }))
 
 vi.mock('@/shared/ui/animate-in', () => ({
-  FadeIn: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  FadeInStagger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  FadeInItem: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  FadeIn: ({ children }: { children: React.ReactNode }) => <div data-fade-in="">{children}</div>,
+  FadeInStagger: ({ children }: { children: React.ReactNode }) => <div data-fade-stagger="">{children}</div>,
+  FadeInItem: ({ children }: { children: React.ReactNode }) => <div data-fade-item="">{children}</div>,
 }))
 
 vi.mock('./components/socials-kpi-grid', () => ({

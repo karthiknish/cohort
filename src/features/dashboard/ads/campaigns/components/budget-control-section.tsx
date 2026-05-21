@@ -7,7 +7,9 @@ import { useAction } from 'convex/react'
 import { DollarSign, RefreshCw, Save } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
+import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { MotionCard } from '@/shared/ui/motion-primitives'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -172,15 +174,16 @@ export function BudgetControlSection({
   }, [])
 
   return (
-    <Card>
-      <CardHeader className="pb-4">
+    <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+      <CardHeader className="border-b border-border/50 pb-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-              <DollarSign className="h-5 w-5 text-muted-foreground" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/15">
+              <DollarSign className="h-5 w-5 text-primary" aria-hidden />
             </div>
-            <div>
-              <CardTitle className="text-lg">Budget control</CardTitle>
+            <div className="space-y-0.5">
+              <p className={ADS_PAGE_THEME.sectionEyebrow}>Campaign settings</p>
+              <CardTitle className="text-lg font-semibold tracking-tight">Budget control</CardTitle>
               <CardDescription>
                 Current: <span className="font-medium text-foreground">{currentBudgetLabel}</span>
               </CardDescription>
@@ -205,7 +208,7 @@ export function BudgetControlSection({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-6">
         {!canEdit && (
           <div className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
             Preview Mode is enabled. Switch to live mode to edit budgets.
@@ -247,6 +250,6 @@ export function BudgetControlSection({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </MotionCard>
   )
 }

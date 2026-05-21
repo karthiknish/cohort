@@ -113,6 +113,7 @@ import type * as meetings from "../meetings.js";
 import type * as notificationTargeting from "../notificationTargeting.js";
 import type * as notifications from "../notifications.js";
 import type * as onboardingStates from "../onboardingStates.js";
+import type * as presentationDeck from "../presentationDeck.js";
 import type * as privacyMasks from "../privacyMasks.js";
 import type * as problemReports from "../problemReports.js";
 import type * as projectMilestones from "../projectMilestones.js";
@@ -259,6 +260,7 @@ declare const fullApi: ApiFromModules<{
   notificationTargeting: typeof notificationTargeting;
   notifications: typeof notifications;
   onboardingStates: typeof onboardingStates;
+  presentationDeck: typeof presentationDeck;
   privacyMasks: typeof privacyMasks;
   problemReports: typeof problemReports;
   projectMilestones: typeof projectMilestones;

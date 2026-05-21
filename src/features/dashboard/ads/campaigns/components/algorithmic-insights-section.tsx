@@ -6,7 +6,9 @@ import {
   TrendingUp,
   Target,
 } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
+import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { MotionCard } from '@/shared/ui/motion-primitives'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { cn } from '@/lib/utils'
 import type { AlgorithmicInsight } from '@/lib/ad-algorithms'
@@ -41,9 +43,10 @@ export function AlgorithmicInsightsSection({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       {/* 1. Efficiency Score */}
-      <Card className="border-muted/40 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">Efficiency Score</CardTitle>
+      <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+        <CardHeader className="border-b border-border/50 pb-4">
+          <p className={ADS_PAGE_THEME.sectionEyebrow}>Health</p>
+          <CardTitle className="text-lg font-semibold tracking-tight">Efficiency score</CardTitle>
           <CardDescription>Overall performance health rating</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center space-y-4 py-6">
@@ -97,17 +100,18 @@ export function AlgorithmicInsightsSection({
             </>
           )}
         </CardContent>
-      </Card>
+      </MotionCard>
 
       {/* 2. AI Algorithm Insights / Suggestions */}
-      <Card className="border-muted/40 shadow-sm lg:col-span-2">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle className="text-lg">Algorithm Analysis</CardTitle>
+      <MotionCard className={cn(ADS_PAGE_THEME.surfaceCard, 'lg:col-span-2')}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border/50 pb-4">
+          <div className="space-y-1">
+            <p className={ADS_PAGE_THEME.sectionEyebrow}>Recommendations</p>
+            <CardTitle className="text-lg font-semibold tracking-tight">Algorithm analysis</CardTitle>
             <CardDescription>AI-generated performance suggestions</CardDescription>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {loading ? (
             <div className="space-y-4">
                 {[1, 2, 3].map((skeletonId) => (
@@ -121,9 +125,9 @@ export function AlgorithmicInsightsSection({
               ))}
             </div>
           ) : insights.length === 0 ? (
-            <div className="flex h-[200px] flex-col items-center justify-center space-y-2 text-center">
-              <div className="rounded-full bg-muted/30 p-4">
-                <CircleCheck className="h-8 w-8 text-muted-foreground/40" />
+            <div className={cn(ADS_PAGE_THEME.emptyState, 'min-h-[200px] py-8')}>
+              <div className="rounded-2xl bg-muted/30 p-4 ring-1 ring-border/50">
+                <CircleCheck className="h-8 w-8 text-muted-foreground/50" aria-hidden />
               </div>
               <p className="text-sm font-bold">Everything looks great!</p>
               <p className="max-w-[280px] text-xs font-medium text-muted-foreground/60">
@@ -165,7 +169,7 @@ export function AlgorithmicInsightsSection({
             </div>
           )}
         </CardContent>
-      </Card>
+      </MotionCard>
     </div>
   )
 }

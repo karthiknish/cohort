@@ -40,7 +40,7 @@ describe('cross channel overview card sections', () => {
       <CrossChannelOverviewHeader availableProviders={['google']} dateRange={DATE_RANGE} hasMetricData={true} hasProviderFilter={true} onDateRangeChange={vi.fn()} onExport={vi.fn()} onToggleProvider={vi.fn()} selectedProviders={['google']} />,
     )
 
-    expect(markup).toContain('Cross-channel overview')
+    expect(markup).toContain('Cross-channel KPIs')
     expect(markup).toContain('Filter by Provider')
     expect(markup).toContain('Google')
     expect(markup).toContain('Showing:')

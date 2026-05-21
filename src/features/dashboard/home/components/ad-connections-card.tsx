@@ -21,7 +21,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { cn } from '@/lib/utils'
+import { MotionCard } from '@/shared/ui/motion-primitives'
 import {
   ConnectionDialog,
   DisconnectDialog,
@@ -255,12 +257,13 @@ export function AdConnectionsCard({
 
   return (
     <>
-      <Card className="shadow-sm">
-        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div className="flex flex-col gap-1">
-            <CardTitle className="text-lg">Ad platform connections</CardTitle>
-            <CardDescription>
-              Connect your paid media accounts to import spend, conversions, and creative performance.
+      <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+        <CardHeader className="flex flex-col gap-4 border-b border-border/50 pb-5 md:flex-row md:items-start md:justify-between">
+          <div className="flex flex-col gap-1.5">
+            <p className={ADS_PAGE_THEME.sectionEyebrow}>Integrations</p>
+            <CardTitle className="text-lg font-semibold tracking-tight">Ad platform connections</CardTitle>
+            <CardDescription className="max-w-xl text-pretty leading-relaxed">
+              OAuth into each network to import spend, conversions, and creative performance into this workspace.
             </CardDescription>
           </div>
           <Button
@@ -269,15 +272,15 @@ export function AdConnectionsCard({
             size="sm"
             onClick={onRefresh}
             disabled={refreshing}
-            className="inline-flex items-center gap-2"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border-border/70"
           >
             <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
             Refresh
           </Button>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           {typeof connectedCount === 'number' && typeof totalProviders === 'number' && totalProviders > 0 ? (
-            <div className="rounded-xl border border-primary/10 bg-primary/[0.03] p-4">
+            <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] p-4 ring-1 ring-primary/10">
               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                   <Link2 className="h-4 w-4 text-primary" aria-hidden />
@@ -327,7 +330,7 @@ export function AdConnectionsCard({
             </p>
           </div>
         </CardContent>
-      </Card>
+      </MotionCard>
 
       {/* Connection Dialog */}
       <ConnectionDialog
@@ -415,12 +418,15 @@ const ProviderCard = memo(function ProviderCard({
   const theme = (providerInfo as ProviderInfo | undefined)?.theme
 
   return (
-    <Card className={cn(
-      'relative overflow-hidden border-muted/70 bg-background shadow-sm motion-chromatic',
-      isConnected && (theme?.border || 'border-accent/20'),
-      error && 'border-destructive/30',
-      !isConnected && 'hover:border-muted-foreground/30 opacity-90 hover:opacity-100'
-    )}>
+    <Card
+      className={cn(
+        ADS_PAGE_THEME.providerTile,
+        'motion-chromatic',
+        isConnected && (theme?.border || 'border-primary/25 ring-1 ring-primary/10'),
+        error && 'border-destructive/40',
+        !isConnected && 'opacity-95 hover:border-border hover:opacity-100',
+      )}
+    >
       {/* Status indicator bar */}
       {isConnected && (
         <div className={cn(

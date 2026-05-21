@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  Fragment,
   useCallback,
   useMemo,
   useState,
@@ -46,7 +47,6 @@ import {
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
-import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Textarea } from '@/shared/ui/textarea'
 import {
   DropdownMenu,
@@ -59,7 +59,6 @@ import { Sheet, SheetContent } from '@/shared/ui/sheet'
 import { layoutLabel, panelUsesModalFocusTrap, type AgentPanelLayout } from '@/lib/agent-panel-layout'
 import { VoiceInputButton } from '@/shared/ui/voice-input'
 import type {
-  AgentConversationSummary,
   AgentExecutionStep,
   AgentMessage,
   AgentPendingConfirmation,
@@ -71,9 +70,10 @@ import type { AgentError } from '@/lib/agent-errors'
 import { ERROR_DISPLAY_MESSAGES } from '@/lib/agent-errors'
 import { cn } from '@/lib/utils'
 
-import { AgentConversationItem, ConversationItem } from './agent-conversation-item'
 import { AgentHistoryRail } from './agent-history-rail'
 import { AgentMessageCard } from './agent-message-card'
+import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
+import { AttachmentKindIcon, getAttachmentKind } from '@/shared/ui/chat-media-gallery'
 import { MentionDropdown, type MentionDropdownHandle, type MentionItem } from './mention-dropdown'
 import { AgentMentionPills, splitAgentTextWithMentions } from './mention-highlights'
 import type { AgentSuggestion } from '@/lib/agent-context'
@@ -89,11 +89,7 @@ const MOTION_FADE_STILL = { opacity: 0, y: 0 } as const
 const MOTION_FADE_STILL_VISIBLE = { opacity: 1, y: 0 } as const
 const MOTION_FADE_STILL_EXIT = { opacity: 0, y: 0 } as const
 const MOTION_PANEL_TRANSITION = { duration: motionDurationSeconds.fast, ease: motionEasing.out } as const
-const TYPING_DOT_DELAYS = [
-  { key: 'typing-dot-0', style: { animationDelay: '0ms' } },
-  { key: 'typing-dot-1', style: { animationDelay: '150ms' } },
-  { key: 'typing-dot-2', style: { animationDelay: '300ms' } },
-] as const
+const AGENT_TYPING_ICON = <Sparkles className="h-4 w-4 text-primary" aria-hidden />
 
 const AGENT_PANEL_SURFACE =
   'relative bg-background before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-24 before:bg-gradient-to-b before:from-primary/[0.04] before:to-transparent'
@@ -105,38 +101,35 @@ function stopPropagation(event: { stopPropagation: () => void }) {
   event.stopPropagation()
 }
 
-function HistorySkeleton() {
-  return (
-    <div className="space-y-2 p-2">
-      {['history-skeleton-1', 'history-skeleton-2', 'history-skeleton-3'].map((key) => (
-        <div key={key} className="animate-pulse">
-          <div className="h-14 rounded-xl bg-muted/80" />
-        </div>
-      ))}
-    </div>
-  )
+function startOfLocalDay(date: Date): number {
+  const copy = new Date(date)
+  copy.setHours(0, 0, 0, 0)
+  return copy.getTime()
 }
 
-function AgentTypingIndicator({ label }: { label: string }) {
+function formatMessageDayLabel(date: Date): string {
+  const now = new Date()
+  const todayStart = startOfLocalDay(now)
+  const messageStart = startOfLocalDay(date)
+  const yesterdayStart = todayStart - 24 * 60 * 60 * 1000
+
+  if (messageStart === todayStart) return 'Today'
+  if (messageStart === yesterdayStart) return 'Yesterday'
+  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })
+}
+
+function messageDayKey(timestamp: Date): string {
+  return String(startOfLocalDay(timestamp))
+}
+
+function AgentMessageDayDivider({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3" role="status" aria-live="polite">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/15">
-        <Sparkles className="h-4 w-4 text-primary" aria-hidden />
-      </div>
-      <div className="rounded-2xl rounded-tl-md border border-border/60 bg-card/90 px-4 py-3 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="flex gap-1" aria-hidden>
-            {TYPING_DOT_DELAYS.map((dot) => (
-              <span
-                key={dot.key}
-                className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary/70"
-                style={dot.style}
-              />
-            ))}
-          </span>
-          <span className="text-sm text-muted-foreground">{label}</span>
-        </div>
-      </div>
+    <div className="flex items-center gap-3 py-1" role="separator" aria-label={label}>
+      <div className="h-px flex-1 bg-border/60" />
+      <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </span>
+      <div className="h-px flex-1 bg-border/60" />
     </div>
   )
 }
@@ -173,12 +166,18 @@ function AttachmentItem({
     onRemoveAttachment(attachment.id)
   }, [onRemoveAttachment, attachment.id])
 
+  const kind = getAttachmentKind({
+    name: attachment.name,
+    url: '#',
+    type: attachment.mimeType,
+  })
+
   return (
     <div key={attachment.id} className="rounded-xl border border-border/60 bg-card/80 p-3 shadow-sm backdrop-blur-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-primary/10 p-2 text-primary ring-1 ring-primary/10">
-            <FileText className="h-4 w-4" />
+            <AttachmentKindIcon kind={kind} className="h-4 w-4" />
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -236,24 +235,37 @@ export function AgentMessageAttachmentChips({
   if (attachments.length === 0) return null
 
   return (
-    <ul className="mt-2 space-y-1.5" aria-label="Attached files">
-      {attachments.map((attachment) => (
-        <li
-          key={attachment.id}
-          className="flex items-start gap-2 rounded-lg border border-primary-foreground/15 bg-primary-foreground/10 px-2.5 py-1.5 text-left text-xs"
-        >
-          <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-          <span className="min-w-0 flex-1">
-            <span className="flex flex-wrap items-center gap-1.5">
-              <span className="truncate font-medium">{attachment.name}</span>
-              <AttachmentStatusBadge attachment={attachment} />
+    <ul className="mt-2.5 space-y-2" aria-label="Attached files">
+      {attachments.map((attachment) => {
+        const kind = getAttachmentKind({
+          name: attachment.name,
+          url: '#',
+          type: attachment.mimeType,
+        })
+
+        return (
+          <li
+            key={attachment.id}
+            className="flex items-start gap-2.5 rounded-xl border border-primary-foreground/15 bg-primary-foreground/10 px-3 py-2 text-left text-xs"
+          >
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-foreground/15 ring-1 ring-primary-foreground/20">
+              <AttachmentKindIcon kind={kind} className="h-4 w-4 opacity-90" />
             </span>
-            {attachment.excerpt ? (
-              <span className="mt-0.5 line-clamp-2 text-[11px] opacity-80">{attachment.excerpt}</span>
-            ) : null}
-          </span>
-        </li>
-      ))}
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-1.5">
+                <span className="truncate font-semibold">{attachment.name}</span>
+                <AttachmentStatusBadge attachment={attachment} />
+                <span className="text-[10px] opacity-75">{attachment.sizeLabel}</span>
+              </span>
+              {attachment.excerpt ? (
+                <span className="mt-1 line-clamp-3 text-[11px] leading-relaxed opacity-85">
+                  {attachment.excerpt}
+                </span>
+              ) : null}
+            </span>
+          </li>
+        )
+      })}
     </ul>
   )
 }
@@ -634,6 +646,7 @@ export function AgentComposerSection({
 export function AgentModeHeader({
   connectionStatus,
   conversationId,
+  activeConversationTitle,
   messagesCount,
   showHistory,
   panelLayout,
@@ -644,6 +657,7 @@ export function AgentModeHeader({
 }: {
   connectionStatus: ConnectionStatus
   conversationId: string | null
+  activeConversationTitle?: string | null
   messagesCount: number
   showHistory: boolean
   panelLayout?: AgentPanelLayout
@@ -675,7 +689,11 @@ export function AgentModeHeader({
             Agent Mode
           </span>
           <span className="block truncate text-[11px] text-muted-foreground">
-            {conversationId ? 'Active conversation' : 'Workspace assistant'}
+            {activeConversationTitle?.trim()
+              ? activeConversationTitle
+              : conversationId
+                ? 'Active conversation'
+                : 'Workspace assistant'}
           </span>
         </div>
       </div>
@@ -736,104 +754,24 @@ export function AgentModeHeader({
 export { AgentConversationItem, ConversationItem } from './agent-conversation-item'
 export { AgentHistoryRail } from './agent-history-rail'
 
-export function AgentHistoryPanel({
-  showHistory,
-  history,
-  isHistoryLoading,
-  conversationId,
-  messagesCount,
-  isConversationLoading,
-  loadingConversationId,
-  editingConversationId,
-  editingTitle,
-  setEditingTitle,
-  onSelectConversation,
-  onUpdateConversationTitle,
-  onDeleteConversation,
-  onStartNewChat,
-  onClose,
-  onStartEditing,
-  onStopEditing,
-}: {
-  showHistory: boolean
-  history: AgentConversationSummary[]
-  isHistoryLoading: boolean
-  conversationId: string | null
-  messagesCount: number
-  isConversationLoading: boolean
-  loadingConversationId: string | null
-  editingConversationId: string | null
-  editingTitle: string
-  setEditingTitle: (value: string) => void
-  onSelectConversation: (conversationId: string) => void
-  onUpdateConversationTitle: (conversationId: string, title: string) => void
-  onDeleteConversation: (conversationId: string) => void
-  onStartNewChat: () => void
-  onClose: () => void
-  onStartEditing: (conversationId: string, title: string) => void
-  onStopEditing: () => void
-}) {
-  if (!showHistory) return null
-
-  return (
-    <div className="absolute right-4 top-[60px] z-50 w-[min(340px,calc(100vw-2rem))] overflow-hidden rounded-xl border bg-background shadow-lg">
-      <div className="flex items-center justify-between border-b px-3 py-2">
-        <p className="text-sm font-medium">Previous chats</p>
-        <div className="flex items-center gap-2">
-          {conversationId || messagesCount > 0 ? (
-            <Button variant="ghost" size="sm" className="h-8 gap-2" onClick={onStartNewChat}>
-              <SquarePen className="h-3.5 w-3.5" />
-              New
-            </Button>
-          ) : null}
-          {isHistoryLoading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : null}
-        </div>
-      </div>
-      <ScrollArea className="max-h-[320px]">
-        {isHistoryLoading ? (
-          <HistorySkeleton />
-        ) : history.length === 0 ? (
-          <p className="p-4 text-center text-sm text-muted-foreground">No previous chats yet.</p>
-        ) : (
-          <div className="p-2">
-            {history.map((conversation) => (
-              <ConversationItem
-                key={conversation.id}
-                conversation={conversation}
-                conversationId={conversationId}
-                isConversationLoading={isConversationLoading}
-                loadingConversationId={loadingConversationId}
-                editingConversationId={editingConversationId}
-                editingTitle={editingTitle}
-                setEditingTitle={setEditingTitle}
-                onSelectConversation={onSelectConversation}
-                onUpdateConversationTitle={onUpdateConversationTitle}
-                onDeleteConversation={onDeleteConversation}
-                onClose={onClose}
-                onStartEditing={onStartEditing}
-                onStopEditing={onStopEditing}
-              />
-            ))}
-          </div>
-        )}
-      </ScrollArea>
-    </div>
-  )
-}
-
 export function AgentEmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className={cn('flex flex-1 flex-col items-center justify-center overflow-y-auto p-6', AGENT_PANEL_SURFACE)}>
+    <div
+      className={cn(
+        'flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-8 sm:px-6',
+        AGENT_PANEL_SURFACE,
+      )}
+    >
       <div className="w-full max-w-xl">
-        <div className="mb-6 text-center">
-          <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center">
-            <span className="absolute inset-0 rounded-2xl bg-primary/10 blur-md" aria-hidden />
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 ring-1 ring-primary/20">
-              <Sparkles className="h-7 w-7 text-primary" aria-hidden />
+        <div className="mb-8 text-center">
+          <div className="relative mx-auto mb-5 flex h-16 w-16 items-center justify-center">
+            <span className="absolute inset-0 rounded-2xl bg-primary/15 blur-lg" aria-hidden />
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent ring-1 ring-primary/25">
+              <Sparkles className="h-8 w-8 text-primary" aria-hidden />
             </div>
           </div>
-          <p className="text-lg font-semibold tracking-tight">What can I help with?</p>
-          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
+          <p className="text-xl font-semibold tracking-tight">What can I help with?</p>
+          <p className="mx-auto mt-2.5 max-w-sm text-sm leading-relaxed text-muted-foreground">
             Ask in plain language, attach files for context, or type{' '}
             <kbd className="rounded-md border border-border/60 bg-muted/50 px-1.5 py-0.5 font-mono text-[11px]">@</kbd> to
             mention clients, projects, or teammates.
@@ -861,7 +799,7 @@ export function AgentExecutionTimeline({
   label: string
 }) {
   if (steps.length === 0) {
-    return <AgentTypingIndicator label={label} />
+    return <ChatTypingIndicator label={label} variant="bubble" icon={AGENT_TYPING_ICON} />
   }
 
   return (
@@ -947,22 +885,43 @@ export function AgentMessagesSection({
             </div>
           </div>
         ) : (
-          <div className="mx-auto max-w-2xl space-y-5">
-            {messages.map((message) => (
-              <AgentMessageCard
-                key={message.clientId}
-                message={message}
-                mentionLabels={mentionLabels}
-                isProcessing={isProcessing}
-                onRetryLastUserTurn={onRetryLastUserTurn}
-                onRetryUserMessage={onRetryUserMessage}
-                onConfirmPending={onConfirmPending}
-                onUndoAction={onUndoAction}
-              />
-            ))}
+          <div className="mx-auto w-full max-w-3xl space-y-4 pb-2">
+            {messages.map((message, index) => {
+              const timestamp =
+                message.timestamp instanceof Date ? message.timestamp : new Date(message.timestamp)
+              const dayKey = Number.isNaN(timestamp.getTime()) ? null : messageDayKey(timestamp)
+              const previousMessage = index > 0 ? messages[index - 1] : null
+              const previousTimestamp = previousMessage
+                ? previousMessage.timestamp instanceof Date
+                  ? previousMessage.timestamp
+                  : new Date(previousMessage.timestamp)
+                : null
+              const previousDayKey =
+                previousTimestamp && !Number.isNaN(previousTimestamp.getTime())
+                  ? messageDayKey(previousTimestamp)
+                  : null
+              const showDayDivider = dayKey !== null && dayKey !== previousDayKey
+
+              return (
+                <Fragment key={message.clientId}>
+                  {showDayDivider ? (
+                    <AgentMessageDayDivider label={formatMessageDayLabel(timestamp)} />
+                  ) : null}
+                  <AgentMessageCard
+                    message={message}
+                    mentionLabels={mentionLabels}
+                    isProcessing={isProcessing}
+                    onRetryLastUserTurn={onRetryLastUserTurn}
+                    onRetryUserMessage={onRetryUserMessage}
+                    onConfirmPending={onConfirmPending}
+                    onUndoAction={onUndoAction}
+                  />
+                </Fragment>
+              )
+            })}
 
             {isProcessing ? (
-              <m.div initial={MOTION_FADE_IN} animate={MOTION_FADE_IN_VISIBLE} className="flex justify-start">
+              <m.div initial={MOTION_FADE_IN} animate={MOTION_FADE_IN_VISIBLE} className="flex justify-start pt-1">
                 <AgentExecutionTimeline steps={processingSteps} label={processingLabel} />
               </m.div>
             ) : null}
@@ -1123,11 +1082,30 @@ export function AgentModePanelShell({
           ) : null}
         </AnimatePresence>
 
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
         {historyPanelProps.showHistory ? (
-          <AgentHistoryRail {...historyPanelProps} layout="rail" />
+          <>
+            <button
+              type="button"
+              className="fixed inset-0 z-[10000] bg-black/45 backdrop-blur-[2px] md:hidden"
+              aria-label="Close chat history"
+              onClick={historyPanelProps.onClose}
+            />
+            <AgentHistoryRail
+              {...historyPanelProps}
+              layout="rail"
+              className="max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-[10001] max-md:border-r max-md:shadow-2xl"
+            />
+          </>
         ) : null}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+        <div
+          className={cn(
+            'flex min-h-0 min-w-0 flex-1 flex-col transition-[opacity,filter]',
+            historyPanelProps.showHistory && 'max-md:pointer-events-none max-md:opacity-40 max-md:blur-[1px]',
+          )}
+        >
+          {children}
+        </div>
       </div>
     </>
   )

@@ -13,9 +13,11 @@ import {
   CardTitle,
 } from '@/shared/ui/card'
 import { Skeleton } from '@/shared/ui/skeleton'
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { formatProviderName } from '@/lib/themes'
 import { normalizeAdsProviderId } from '@/domain/ads/provider'
 import { listItemEnterClass } from '@/lib/motion'
+import { MotionCard } from '@/shared/ui/motion-primitives'
 import { cn, formatCurrency } from '@/lib/utils'
 
 import type { ProviderSummary } from './types'
@@ -59,16 +61,17 @@ export function PerformanceSummaryCard({
   const formatNumber = (value: number): string => new Intl.NumberFormat('en-US').format(value)
 
   return (
-    <Card className="overflow-hidden border-muted/60 shadow-sm">
-      <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between pb-4">
+    <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+      <CardHeader className="flex flex-col gap-4 border-b border-border/50 pb-5 md:flex-row md:items-start md:justify-between">
         <div className="flex flex-col gap-2">
-          <CardTitle className="flex items-center gap-3 text-xl">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-muted/60 bg-muted/30">
-              <BarChart3 className="h-5 w-5 text-foreground" />
+          <p className={ADS_PAGE_THEME.sectionEyebrow}>By platform</p>
+          <CardTitle className="flex items-center gap-3 text-lg font-semibold tracking-tight">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/10">
+              <BarChart3 className="h-5 w-5 text-primary" aria-hidden />
             </div>
             {title}
           </CardTitle>
-          <CardDescription className="text-sm">
+          <CardDescription className="max-w-xl text-pretty leading-relaxed">
             {description}
           </CardDescription>
         </div>
@@ -98,32 +101,30 @@ export function PerformanceSummaryCard({
           </div>
         ) : null}
       </CardHeader>
-      <CardContent className="pt-2">
+      <CardContent className="pt-6">
         {initialMetricsLoading ? (
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-3">
             {['summary-skeleton-1', 'summary-skeleton-2', 'summary-skeleton-3'].map((key) => (
-              <Skeleton key={key} className="h-36 w-full rounded-xl" />
+              <Skeleton key={key} className="h-40 w-full rounded-2xl" />
             ))}
           </div>
         ) : metricError ? (
-          <Alert variant="destructive" className="rounded-xl">
+          <Alert variant="destructive" className="rounded-2xl">
             <AlertTitle>Unable to load metrics</AlertTitle>
             <AlertDescription>{metricError}</AlertDescription>
           </Alert>
         ) : !hasMetrics ? (
-          <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-muted/60 bg-muted/20 p-12 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <BarChart3 className="h-6 w-6 text-muted-foreground/50" />
+          <div className={ADS_PAGE_THEME.emptyState}>
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/50 ring-1 ring-border/50">
+              <BarChart3 className="h-6 w-6 text-muted-foreground/60" aria-hidden />
             </div>
-            <p className="text-sm text-muted-foreground">
-              {emptyMessage}
-            </p>
-            <Button asChild size="sm" variant="outline" className="h-10">
+            <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">{emptyMessage}</p>
+            <Button asChild size="sm" variant="outline" className="rounded-full">
               <Link href={emptyCtaHref}>{emptyCtaLabel}</Link>
             </Button>
           </div>
         ) : (
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {Object.entries(providerSummaries).map(([providerId, summary], index) => {
               const providerCurrency = providerCurrencies?.[normalizeAdsProviderId(providerId) ?? providerId] ?? currency
               const ctr = summary.impressions > 0 ? (summary.clicks / summary.impressions) * 100 : null
@@ -148,35 +149,41 @@ export function PerformanceSummaryCard({
                   key={providerId}
                   className={listItemEnterClass}
                 >
-                  <Card
-                    className={cn(
-                      'rounded-xl border border-muted/60 bg-card motion-chromatic-lg',
-                      'hover:border-muted hover:shadow-md'
-                    )}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-muted/60 bg-muted/30">
-                          {ProviderIcon ? <ProviderIcon className="h-4 w-4" /> : <BarChart3 className="h-4 w-4 text-muted-foreground" />}
+                  <Card className={cn(ADS_PAGE_THEME.providerTile, 'motion-chromatic-lg')}>
+                    <CardHeader className="border-b border-border/40 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/15 bg-primary/10">
+                          {ProviderIcon ? (
+                            <ProviderIcon className="h-4 w-4 text-primary" aria-hidden />
+                          ) : (
+                            <BarChart3 className="h-4 w-4 text-primary" aria-hidden />
+                          )}
                         </div>
-                        <CardTitle className="text-base">
-                          {formatProviderName(providerId)}
-                        </CardTitle>
+                        <div>
+                          <CardTitle className="text-base font-semibold">
+                            {formatProviderName(providerId)}
+                          </CardTitle>
+                          <CardDescription className="text-xs">Since last sync</CardDescription>
+                        </div>
                       </div>
-                      <CardDescription className="text-xs">Since last sync</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 pt-4">
                       <div>
-                        <div className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wider">Total Spend</div>
-                        <div className="text-3xl font-bold tracking-tight tabular-nums mt-1">
+                        <div className={ADS_PAGE_THEME.kpiLabel}>Total spend</div>
+                        <div className="mt-1 text-3xl font-bold tracking-tight tabular-nums">
                           {formatCurrency(summary.spend, providerCurrency)}
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                         {dynamicStats.map((stat) => (
-                          <div key={stat.id} className="rounded-lg border border-muted/50 bg-muted/20 p-2">
-                            <div className="text-[10px] font-medium text-muted-foreground/70 uppercase">{stat.label}</div>
-                            <div className="text-sm font-semibold tabular-nums mt-0.5">{stat.value}</div>
+                          <div
+                            key={stat.id}
+                            className="rounded-xl border border-border/50 bg-muted/20 px-2.5 py-2"
+                          >
+                            <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              {stat.label}
+                            </div>
+                            <div className="mt-0.5 text-sm font-semibold tabular-nums">{stat.value}</div>
                           </div>
                         ))}
                       </div>
@@ -188,6 +195,6 @@ export function PerformanceSummaryCard({
           </div>
         )}
       </CardContent>
-    </Card>
+    </MotionCard>
   )
 }

@@ -3,8 +3,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, Lock, ArrowLeft, Shield, Check, X, LoaderCircle, CircleCheck } from 'lucide-react'
+import { Eye, EyeOff, Lock, Shield, Check, X, LoaderCircle, CircleCheck } from 'lucide-react'
 
+import { authLockIconLg, authLockIconSm } from '@/features/auth/auth-icons'
+import { AuthField, authInputClassName } from '@/features/auth/components/auth-field'
+import { AuthPanel } from '@/features/auth/components/auth-panel'
+import { AuthShell } from '@/features/auth/components/auth-shell'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -112,27 +116,16 @@ const initialVerificationState: VerificationState = {
   verificationError: null,
 }
 
+const primaryButtonClassName = 'h-11 w-full rounded-full text-sm font-semibold shadow-sm'
+
 function ResetPasswordFixture() {
   return (
-    <div className="mx-auto w-full max-w-md space-y-6">
-      <Link
-        href="/auth"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+    <AuthShell>
+      <AuthPanel
+        title="Set new password"
+        description="Your new password must be different from your previous password."
+        icon={authLockIconLg}
       >
-        <ArrowLeft className="h-4 w-4" />
-        Back to sign in
-      </Link>
-
-      <div className="space-y-2 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
-          <Lock className="h-6 w-6 text-accent" />
-        </div>
-        <h1 className="text-2xl font-semibold text-foreground">Set new password</h1>
-        <p className="text-sm text-muted-foreground">
-          Your new password must be different from your previous password.
-        </p>
-      </div>
-
       <form className="space-y-5">
         <FadeInStagger as="div" className="space-y-5">
           <FadeInItem as="div">
@@ -176,7 +169,8 @@ function ResetPasswordFixture() {
           </FadeInItem>
         </FadeInStagger>
       </form>
-    </div>
+      </AuthPanel>
+    </AuthShell>
   )
 }
 
@@ -323,29 +317,15 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
       loading={status === 'loading'}
       fixture={fixtureContent}
     >
-    <FadeIn as="div" className="mx-auto w-full max-w-md space-y-6">
-      {/* Back Link */}
-      <Link
-        href="/auth"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to sign in
-      </Link>
-
-      <div className="space-y-2 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10">
-          <Lock className="h-6 w-6 text-accent" />
-        </div>
-        <h1 className="text-2xl font-semibold text-foreground">Set new password</h1>
-        <p className="text-sm text-muted-foreground">
-          Your new password must be different from your previous password.
-        </p>
-      </div>
-
+      <AuthShell>
+        <AuthPanel
+          title="Set new password"
+          description="Choose a strong password you have not used on this account before."
+          icon={authLockIconLg}
+        >
       {status === 'loading' && (
         <div className="flex flex-col items-center gap-4 py-8">
-          <LoaderCircle className="h-8 w-8 animate-spin text-accent" />
+          <LoaderCircle className="h-8 w-8 animate-spin text-primary" aria-hidden />
           <p className="text-sm text-muted-foreground">Verifying your reset link…</p>
         </div>
       )}
@@ -358,7 +338,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
               <p>{verificationError ?? 'This reset link is invalid or has expired.'}</p>
             </AlertDescription>
           </Alert>
-          <Button asChild className="w-full">
+          <Button asChild className={primaryButtonClassName}>
             <Link href="/auth/forgot">
               Request a new reset link
             </Link>
@@ -379,12 +359,8 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
               </FadeInItem>
             )}
 
-            <FadeInItem as="div" className="space-y-2">
-              <Label htmlFor="new-password">New password</Label>
-              <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
-                  <Lock className="h-4 w-4" />
-                </span>
+            <FadeInItem as="div">
+              <AuthField id="new-password" label="New password" icon={authLockIconSm}>
                 <Input
                   id="new-password"
                   type={showPassword ? 'text' : 'password'}
@@ -394,25 +370,24 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                   value={newPassword}
                   onChange={handleNewPasswordChange}
                   placeholder="Enter a new password"
-                  className="pl-9 pr-10"
+                  className={cn(authInputClassName, 'pr-11')}
                   disabled={submitting}
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  className="absolute inset-y-0 right-1 h-full w-9 text-muted-foreground hover:text-foreground"
+                  className="absolute inset-y-0 right-1.5 h-full w-9 text-muted-foreground hover:text-foreground"
                   onClick={handleToggleShowPassword}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   disabled={submitting}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
                 </Button>
-              </div>
+              </AuthField>
 
-              {/* Password Strength Indicator */}
               {newPassword.length > 0 && (
-                <div className="space-y-2 pt-1">
+                <div className="mt-3 space-y-2 rounded-2xl border border-border/50 bg-muted/25 p-3.5">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1.5">
                       <Shield className="h-3 w-3 text-muted-foreground" />
@@ -450,12 +425,8 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
               )}
             </FadeInItem>
 
-            <FadeInItem as="div" className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm new password</Label>
-              <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground">
-                  <Lock className="h-4 w-4" />
-                </span>
+            <FadeInItem as="div">
+              <AuthField id="confirm-password" label="Confirm new password" icon={authLockIconSm}>
                 <Input
                   id="confirm-password"
                   type={showConfirmPassword ? 'text' : 'password'}
@@ -466,9 +437,10 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                   onChange={handleConfirmPasswordChange}
                   placeholder="Re-enter your new password"
                   className={cn(
-                    "pl-9 pr-10",
-                    confirmPassword.length > 0 && !passwordsMatch && "border-destructive focus-visible:ring-destructive",
-                    confirmPassword.length > 0 && passwordsMatch && "border-success focus-visible:ring-success"
+                    authInputClassName,
+                    'pr-11',
+                    confirmPassword.length > 0 && !passwordsMatch && 'border-destructive focus-visible:ring-destructive/30',
+                    confirmPassword.length > 0 && passwordsMatch && 'border-success focus-visible:ring-success/30',
                   )}
                   disabled={submitting}
                 />
@@ -476,27 +448,29 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  className="absolute inset-y-0 right-1 h-full w-9 text-muted-foreground hover:text-foreground"
+                  className="absolute inset-y-0 right-1.5 h-full w-9 text-muted-foreground hover:text-foreground"
                   onClick={handleToggleShowConfirmPassword}
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                   disabled={submitting}
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
                 </Button>
-              </div>
+              </AuthField>
               {confirmPassword.length > 0 && (
-                <p className={cn(
-                  "text-xs flex items-center gap-1",
-                  passwordsMatch ? "text-success" : "text-destructive"
-                )}>
+                <p
+                  className={cn(
+                    'mt-2 flex items-center gap-1.5 text-xs',
+                    passwordsMatch ? 'text-success' : 'text-destructive',
+                  )}
+                >
                   {passwordsMatch ? (
                     <>
-                      <Check className="h-3 w-3" />
+                      <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
                       Passwords match
                     </>
                   ) : (
                     <>
-                      <X className="h-3 w-3" />
+                      <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
                       Passwords do not match
                     </>
                   )}
@@ -514,7 +488,7 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
             )}
 
             <FadeInItem as="div">
-              <Button type="submit" className="w-full" disabled={submitting}>
+              <Button type="submit" className={primaryButtonClassName} disabled={submitting}>
                 {submitting ? (
                   <>
                     <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
@@ -530,31 +504,28 @@ function ResetPasswordContent({ oobCode }: ResetPasswordPageClientProps) {
       )}
 
       {status === 'success' && (
-        <FadeIn as="div" className="space-y-6">
-          <div className="rounded-lg border border-success/20 bg-success/10 p-6 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-success/15">
-              <CircleCheck className="h-6 w-6 text-success" />
+        <FadeIn as="div" className="space-y-5">
+          <div className="rounded-2xl border border-success/20 bg-success/10 p-6 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-success/15 text-success">
+              <CircleCheck className="h-6 w-6" aria-hidden />
             </div>
-            <h3 className="font-semibold text-foreground mb-1">Password reset successful</h3>
+            <h3 className="mb-1 font-semibold text-foreground">Password reset successful</h3>
             <p className="text-sm text-muted-foreground">
-              Your password has been successfully updated. You can now sign in with your new password.
+              Your password has been updated. Sign in with your new credentials.
             </p>
           </div>
 
-          <Button className="w-full" onClick={handleReturnToSignIn}>
+          <Button className={primaryButtonClassName} onClick={handleReturnToSignIn}>
             Continue to sign in
           </Button>
         </FadeIn>
       )}
-    </FadeIn>
+        </AuthPanel>
+      </AuthShell>
     </BoneyardSkeletonBoundary>
   )
 }
 
 export default function ResetPasswordPageClient({ oobCode = null }: ResetPasswordPageClientProps) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-12">
-      <ResetPasswordContent oobCode={oobCode} />
-    </div>
-  )
+  return <ResetPasswordContent oobCode={oobCode} />
 }

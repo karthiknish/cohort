@@ -4,7 +4,9 @@ import { useCallback } from 'react'
 import Link from 'next/link'
 import { BarChart3 } from 'lucide-react'
 
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { MotionCard } from '@/shared/ui/motion-primitives'
 import { Button } from '@/shared/ui/button'
 import {
   Select,
@@ -89,27 +91,30 @@ export function InsightsChartPanel({
 
 export function InsightsChartsLoadingState() {
   return (
-    <Card className="shadow-sm">
-      <CardHeader>
-        <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-4 w-64" />
+    <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+      <CardHeader className="border-b border-border/50 pb-5">
+        <Skeleton className="h-6 w-48 rounded-lg" />
+        <Skeleton className="mt-2 h-4 w-64 rounded-lg" />
       </CardHeader>
-      <CardContent className="space-y-4">
-        <Skeleton className="h-9 w-full rounded-lg" />
+      <CardContent className="space-y-4 pt-6">
+        <Skeleton className="h-9 w-full rounded-xl" />
         <ChartSkeleton />
       </CardContent>
-    </Card>
+    </MotionCard>
   )
 }
 
 export function InsightsChartsEmptyState({ hasConnections = false }: { hasConnections?: boolean }) {
   return (
-    <Card className="shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-lg">Performance Insights</CardTitle>
-        <CardDescription>Visual analysis of your ad performance</CardDescription>
+    <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+      <CardHeader className="border-b border-border/50 pb-5">
+        <p className={ADS_PAGE_THEME.sectionEyebrow}>Visual analysis</p>
+        <CardTitle className="text-lg font-semibold tracking-tight">Performance insights</CardTitle>
+        <CardDescription className="max-w-xl text-pretty leading-relaxed">
+          Comparison, funnel, and benchmark charts from synced delivery data.
+        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <InsightsPanelEmpty
           title={hasConnections ? 'Waiting for synced metrics' : 'Connect ad platforms first'}
           description={
@@ -121,7 +126,7 @@ export function InsightsChartsEmptyState({ hasConnections = false }: { hasConnec
           actionLabel={hasConnections ? 'Run sync' : 'Connect account'}
         />
       </CardContent>
-    </Card>
+    </MotionCard>
   )
 }
 
@@ -137,17 +142,19 @@ export function InsightsChartsHeader({
   selectedProvider: string
 }) {
   return (
-    <CardHeader>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <CardTitle className="text-lg">Performance Insights</CardTitle>
-          <CardDescription>
-            Visual analysis across {providersCount} platform{providersCount !== 1 ? 's' : ''}
+    <CardHeader className="border-b border-border/50 pb-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <p className={ADS_PAGE_THEME.sectionEyebrow}>Visual analysis</p>
+          <CardTitle className="text-lg font-semibold tracking-tight">Performance insights</CardTitle>
+          <CardDescription className="max-w-xl text-pretty leading-relaxed">
+            Charts across {providersCount} platform{providersCount !== 1 ? 's' : ''} — switch tabs for
+            comparison, efficiency, trends, funnel, and benchmarks.
           </CardDescription>
         </div>
         {providers.length > 1 ? (
           <Select value={selectedProvider} onValueChange={onSelectedProviderChange}>
-            <SelectTrigger className="w-full sm:w-45">
+            <SelectTrigger className="w-full rounded-xl border-border/70 sm:w-45">
               <SelectValue placeholder="Select provider" />
             </SelectTrigger>
             <SelectContent>
@@ -184,15 +191,15 @@ export function InsightsChartsTabs({
   )
 
   return (
-    <CardContent>
+    <CardContent className="pt-6">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="flex h-auto w-full flex-wrap gap-1 bg-muted/50 p-1 sm:grid sm:grid-cols-5">
+        <TabsList className="flex h-auto w-full flex-wrap gap-1 rounded-xl bg-muted/40 p-1 sm:grid sm:grid-cols-5">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab}
               value={tab}
               className={cn(
-                'min-w-[4.5rem] flex-1 text-xs sm:text-sm',
+                'min-w-[4.5rem] flex-1 rounded-lg text-xs sm:text-sm data-[state=active]:shadow-sm',
                 !tabAvailability[tab] && 'opacity-70',
               )}
             >

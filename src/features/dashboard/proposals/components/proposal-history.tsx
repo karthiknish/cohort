@@ -1,7 +1,13 @@
 'use client'
 
 import { memo } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { History } from 'lucide-react'
+
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
+import { FadeIn } from '@/shared/ui/animate-in'
+import { MotionCard } from '@/shared/ui/motion-primitives'
+import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 
 import type { ProposalDraft } from '@/types/proposals'
 import {
@@ -110,32 +116,49 @@ function ProposalHistoryComponent({
   })
 
   return (
-    <Card className="border-muted/60 bg-background">
-      <CardHeader>
-        <CardTitle className="text-lg">Proposal history</CardTitle>
-        <CardDescription>Access draft, ready, and sent proposals in one place.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <ProposalHistoryHeader isLoading={isLoading} onRefresh={onRefresh} proposalCount={proposals.length} />
-        <div className="space-y-3">
-          {proposals.length === 0 && !isLoading ? (
-            <ProposalHistoryEmptyState canCreate={canCreate} canManage={canManage} isCreating={isCreating} isGenerating={isGenerating} onCreateNew={onCreateNew} />
-          ) : (
-            rows.map((row) => (
-              <ProposalHistoryRow
-                key={row.proposal.id}
+    <FadeIn>
+      <MotionCard className={cn(DASHBOARD_THEME.cards.base, 'overflow-hidden')}>
+        <CardHeader className={DASHBOARD_THEME.cards.header}>
+          <div className="flex items-start gap-3">
+            <div className={cn(DASHBOARD_THEME.icons.container, 'h-10 w-10 shrink-0')}>
+              <History className="h-5 w-5" aria-hidden />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <CardTitle className="text-lg font-semibold tracking-tight">Proposal history</CardTitle>
+              <CardDescription className="text-sm leading-relaxed">
+                Drafts, generated decks, and sent proposals for this client — resume work or open materials in one place.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ProposalHistoryHeader isLoading={isLoading} onRefresh={onRefresh} proposalCount={proposals.length} />
+          <div className="space-y-3">
+            {proposals.length === 0 && !isLoading ? (
+              <ProposalHistoryEmptyState
+                canCreate={canCreate}
                 canManage={canManage}
-                deletingProposalId={deletingProposalId}
-                onDownloadDeck={onDownloadDeck}
-                onRequestDelete={onRequestDelete}
-                onResume={onResume}
-                row={row}
+                isCreating={isCreating}
+                isGenerating={isGenerating}
+                onCreateNew={onCreateNew}
               />
-            ))
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            ) : (
+              rows.map((row) => (
+                <ProposalHistoryRow
+                  key={row.proposal.id}
+                  canManage={canManage}
+                  deletingProposalId={deletingProposalId}
+                  onDownloadDeck={onDownloadDeck}
+                  onRequestDelete={onRequestDelete}
+                  onResume={onResume}
+                  row={row}
+                />
+              ))
+            )}
+          </div>
+        </CardContent>
+      </MotionCard>
+    </FadeIn>
   )
 }
 

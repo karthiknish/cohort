@@ -1,7 +1,7 @@
 'use client'
 
 import { ChevronLeft, ChevronRight, FileText } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
@@ -18,11 +18,11 @@ export function ProposalDraftStatusStrip({
   draftId: string | null
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 sm:text-[11px]">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/50 bg-muted/20 px-3 py-2">
+      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <div
           className={cn(
-            'h-1.5 w-1.5 rounded-full motion-chromatic-slow',
+            'h-2 w-2 shrink-0 rounded-full',
             autosaveStatus === 'saving'
               ? 'animate-pulse bg-primary'
               : autosaveStatus === 'error'
@@ -31,10 +31,11 @@ export function ProposalDraftStatusStrip({
                   ? 'bg-warning'
                   : 'bg-success',
           )}
+          aria-hidden
         />
         <span>{autosaveLabel}</span>
       </div>
-      <span className="tabular-nums tracking-tight text-muted-foreground/80">
+      <span className="font-mono text-[10px] tracking-tight text-muted-foreground/80">
         Draft #{draftId?.slice(0, 8).toUpperCase() ?? 'NEW'}
       </span>
     </div>
@@ -49,7 +50,7 @@ export function ProposalDraftContentShell({
   validationMessages: string[]
 }) {
   return (
-    <div className="relative min-h-[300px] rounded-xl border border-muted/40 bg-muted/5 p-4 shadow-inner backdrop-blur-sm motion-chromatic-lg sm:p-6">
+    <div className="relative min-h-[280px] rounded-2xl border border-border/50 bg-background p-4 shadow-sm sm:p-6">
       <div className="space-y-5">
         <ProposalStepFeedback validationMessages={validationMessages} />
         {stepContent}
@@ -75,39 +76,50 @@ export function ProposalDraftFooter({
   onNext: () => void
   totalSteps: number
 }) {
+  const progressPercent = Math.round(((currentStep + 1) / totalSteps) * 100)
+  const progressStyle = useMemo(() => ({ width: `${progressPercent}%` }), [progressPercent])
+
   return (
-    <div className="mt-auto flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-muted/30 bg-background/95 pt-4 pb-1 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80">
-      <Button
-        variant="outline"
-        onClick={onBack}
-        disabled={isFirstStep}
-        className="h-10 px-6 font-medium motion-chromatic hover:border-accent/20 hover:bg-accent/5 hover:text-primary"
-      >
-        <ChevronLeft className="mr-2 h-4 w-4" /> Previous
-      </Button>
-      <div className="flex items-center gap-4">
-        <div className="mr-2 hidden flex-col items-end sm:flex">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Step {currentStep + 1}</span>
-          <span className="text-xs font-medium text-primary">{Math.round(((currentStep + 1) / totalSteps) * 100)}% Complete</span>
-        </div>
+    <div className="mt-auto shrink-0 space-y-3 border-t border-border/50 pt-4">
+      <div className="h-1 overflow-hidden rounded-full bg-muted/60" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
+        <div
+          className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+          style={progressStyle}
+        />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button
+          variant="outline"
+          onClick={onBack}
+          disabled={isFirstStep}
+          className="h-10 gap-1.5 rounded-full px-4 font-medium"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden />
+          Previous
+        </Button>
+        <p className="hidden text-center text-xs text-muted-foreground sm:block">
+          Step {currentStep + 1} of {totalSteps}
+          <span className="mx-1.5 text-border">·</span>
+          <span className="font-medium text-foreground">{progressPercent}%</span>
+        </p>
         <Button
           onClick={onNext}
           disabled={isSubmitting}
           className={cn(
-            'h-10 px-8 font-semibold shadow-lg motion-chromatic active:scale-[0.98]',
-            isLastStep && 'bg-success shadow-success/20 hover:bg-success/90',
+            'h-10 gap-1.5 rounded-full px-6 font-semibold shadow-sm',
+            isLastStep && 'bg-success text-success-foreground hover:bg-success/90',
           )}
         >
           {isLastStep ? (
-            <span className="flex items-center">
-              <FileText className="mr-2 h-4 w-4" />
-              Generate Strategy
-            </span>
+            <>
+              <FileText className="h-4 w-4" aria-hidden />
+              {isSubmitting ? 'Generating…' : 'Generate strategy'}
+            </>
           ) : (
-            <span className="flex items-center">
-              {isSubmitting ? 'Submitting…' : 'Continue'}
-              {!isSubmitting ? <ChevronRight className="ml-2 h-4 w-4" /> : null}
-            </span>
+            <>
+              {isSubmitting ? 'Saving…' : 'Continue'}
+              {!isSubmitting ? <ChevronRight className="h-4 w-4" aria-hidden /> : null}
+            </>
           )}
         </Button>
       </div>

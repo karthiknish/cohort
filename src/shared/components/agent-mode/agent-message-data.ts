@@ -1,12 +1,42 @@
 import { formatProviderName } from '@/lib/themes'
+import { getChartColor } from '@/lib/colors'
 
 type DeltaTone = 'positive' | 'negative' | 'neutral'
-type MetricItem = { label: string; value: string; delta?: string | null; deltaTone?: DeltaTone }
-type ListItem = { primary: string; secondary?: string; href?: string | null; delta?: string | null; deltaTone?: DeltaTone }
+export type MetricItem = {
+  label: string
+  value: string
+  numericValue?: number
+  delta?: string | null
+  deltaTone?: DeltaTone
+  emphasis?: 'primary' | 'default'
+}
+type ListItem = {
+  primary: string
+  secondary?: string
+  href?: string | null
+  delta?: string | null
+  deltaTone?: DeltaTone
+  numericValue?: number
+}
 
 export type AgentDataSection =
   | { type: 'metrics'; title: string; items: MetricItem[] }
   | { type: 'list'; title: string; items: ListItem[] }
+
+export type AgentChartPoint = {
+  name: string
+  value: number
+  href?: string | null
+}
+
+export type AgentChartSeries = {
+  id: string
+  title: string
+  subtitle?: string
+  points: AgentChartPoint[]
+  valueFormat: 'currency' | 'number' | 'percent'
+  layout: 'horizontal' | 'vertical'
+}
 
 const AGENT_MESSAGE_CURRENCY_FORMATTER = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -130,6 +160,8 @@ function buildMetricsFromTotals(
       ? {
           label: 'Spend',
           value: formatCurrency(spend),
+          numericValue: spend,
+          emphasis: 'primary',
           delta: formatDeltaPercent(asNumber(deltaPercent?.spend)),
           deltaTone: getDeltaTone(asNumber(deltaPercent?.spend), true),
         }
@@ -138,6 +170,8 @@ function buildMetricsFromTotals(
       ? {
           label: 'Revenue',
           value: formatCurrency(revenue),
+          numericValue: revenue,
+          emphasis: 'primary',
           delta: formatDeltaPercent(asNumber(deltaPercent?.revenue)),
           deltaTone: getDeltaTone(asNumber(deltaPercent?.revenue)),
         }
@@ -146,6 +180,8 @@ function buildMetricsFromTotals(
       ? {
           label: 'ROAS',
           value: formatRatio(roas),
+          numericValue: roas,
+          emphasis: 'primary',
           delta: formatDeltaPercent(asNumber(deltaPercent?.roas)),
           deltaTone: getDeltaTone(asNumber(deltaPercent?.roas)),
         }
@@ -154,6 +190,7 @@ function buildMetricsFromTotals(
       ? {
           label: 'Impressions',
           value: formatWholeNumber(impressions),
+          numericValue: impressions,
           delta: formatDeltaPercent(asNumber(deltaPercent?.impressions)),
           deltaTone: getDeltaTone(asNumber(deltaPercent?.impressions)),
         }
@@ -162,6 +199,7 @@ function buildMetricsFromTotals(
       ? {
           label: 'Clicks',
           value: formatWholeNumber(clicks),
+          numericValue: clicks,
           delta: formatDeltaPercent(asNumber(deltaPercent?.clicks)),
           deltaTone: getDeltaTone(asNumber(deltaPercent?.clicks)),
         }
@@ -170,6 +208,7 @@ function buildMetricsFromTotals(
       ? {
           label: 'CTR',
           value: formatCtrPercent(clicks, impressions, ctr) ?? formatPercent(ctr),
+          numericValue: ctr,
           delta: formatDeltaPercent(asNumber(deltaPercent?.ctr)),
           deltaTone: getDeltaTone(asNumber(deltaPercent?.ctr)),
         }
@@ -178,6 +217,7 @@ function buildMetricsFromTotals(
       ? {
           label: 'CPC',
           value: formatCurrency(cpc),
+          numericValue: cpc,
         }
       : clicks !== null && clicks > 0
         ? { label: 'CPC', value: '—' }
@@ -186,6 +226,7 @@ function buildMetricsFromTotals(
       ? {
           label: 'CPA',
           value: formatCurrency(cpa),
+          numericValue: cpa,
         }
       : conversions !== null && conversions > 0
         ? { label: 'CPA', value: '—' }
@@ -194,6 +235,7 @@ function buildMetricsFromTotals(
       ? {
           label: 'Conversions',
           value: formatWholeNumber(conversions),
+          numericValue: conversions,
           delta: formatDeltaPercent(asNumber(deltaPercent?.conversions)),
           deltaTone: getDeltaTone(asNumber(deltaPercent?.conversions)),
         }
@@ -211,6 +253,172 @@ function resolveTotals(data: Record<string, unknown>): Record<string, unknown> |
   return asRecord(metricsSummary.totals) ?? asRecord(asRecord(metricsSummary.summary)?.totals)
 }
 
+function resolveMetricsAvailable(data: Record<string, unknown>): boolean | null {
+  if (typeof data.metricsAvailable === 'boolean') return data.metricsAvailable
+  const count = asNumber(asRecord(data.metricsSummary)?.count)
+  return count !== null ? count > 0 : null
+}
+
+export function buildAgentMessageCharts(
+  operation: string | undefined,
+  data: Record<string, unknown> | undefined,
+): AgentChartSeries[] {
+  if (!data) return []
+
+  const charts: AgentChartSeries[] = []
+  const metricsAvailable = resolveMetricsAvailable(data)
+  if (metricsAvailable === false) return charts
+
+  const comparison = asRecord(data.comparison)
+  const deltaPercent = asRecord(comparison?.deltaPercent)
+  const totals = resolveTotals(data)
+
+  if (totals) {
+    const spend = asNumber(totals.spend)
+    const revenue = asNumber(totals.revenue)
+    const financialPoints = compact<AgentChartPoint>([
+      spend !== null && spend > 0 ? { name: 'Spend', value: spend } : null,
+      revenue !== null && revenue > 0 ? { name: 'Revenue', value: revenue } : null,
+    ])
+    if (financialPoints.length >= 2) {
+      charts.push({
+        id: 'financial',
+        title: 'Spend vs revenue',
+        subtitle: 'Synced totals for this window',
+        points: financialPoints,
+        valueFormat: 'currency',
+        layout: 'vertical',
+      })
+    }
+
+    const deliveryPoints = compact<AgentChartPoint>([
+      asNumber(totals.impressions) !== null && (asNumber(totals.impressions) ?? 0) > 0
+        ? { name: 'Impressions', value: asNumber(totals.impressions)! }
+        : null,
+      asNumber(totals.clicks) !== null && (asNumber(totals.clicks) ?? 0) > 0
+        ? { name: 'Clicks', value: asNumber(totals.clicks)! }
+        : null,
+      asNumber(totals.conversions) !== null && (asNumber(totals.conversions) ?? 0) > 0
+        ? { name: 'Conversions', value: asNumber(totals.conversions)! }
+        : null,
+    ])
+    if (deliveryPoints.length >= 2) {
+      charts.push({
+        id: 'delivery',
+        title: 'Delivery volume',
+        points: deliveryPoints,
+        valueFormat: 'number',
+        layout: 'horizontal',
+      })
+    }
+  }
+
+  if (deltaPercent) {
+    const deltaPoints = compact<AgentChartPoint>([
+      asNumber(deltaPercent.spend) !== null
+        ? { name: 'Spend', value: asNumber(deltaPercent.spend)! }
+        : null,
+      asNumber(deltaPercent.revenue) !== null
+        ? { name: 'Revenue', value: asNumber(deltaPercent.revenue)! }
+        : null,
+      asNumber(deltaPercent.roas) !== null
+        ? { name: 'ROAS', value: asNumber(deltaPercent.roas)! }
+        : null,
+      asNumber(deltaPercent.conversions) !== null
+        ? { name: 'Conversions', value: asNumber(deltaPercent.conversions)! }
+        : null,
+    ]).filter((point) => Math.abs(point.value) >= 0.05)
+
+    if (deltaPoints.length >= 2) {
+      charts.push({
+        id: 'period-delta',
+        title: 'Period change',
+        subtitle: 'Percent vs previous window',
+        points: deltaPoints,
+        valueFormat: 'percent',
+        layout: 'horizontal',
+      })
+    }
+  }
+
+  const providerBreakdown = asRecordArray(data.providerBreakdown)
+  if (providerBreakdown.length > 0) {
+    const points = providerBreakdown
+      .map((provider) => {
+        const spend = asNumber(asRecord(provider.totals)?.spend)
+        if (spend === null || spend <= 0) return null
+        const providerId = asString(provider.providerId) ?? 'unknown'
+        return {
+          name: asString(provider.label) ?? formatProviderName(providerId),
+          value: spend,
+        }
+      })
+      .filter((point): point is AgentChartPoint => point !== null)
+
+    if (points.length >= 1) {
+      charts.push({
+        id: 'providers',
+        title: 'Spend by platform',
+        points,
+        valueFormat: 'currency',
+        layout: 'horizontal',
+      })
+    }
+  }
+
+  const topCampaigns = asRecordArray(data.topCampaigns)
+  if (topCampaigns.length > 0) {
+    const points = compact<AgentChartPoint>(
+      topCampaigns.map((campaign) => {
+        const spend = asNumber(campaign.spend)
+        if (spend === null || spend <= 0) return null
+        const name = asString(campaign.name) ?? 'Campaign'
+        return {
+          name: name.length > 28 ? `${name.slice(0, 26)}…` : name,
+          value: spend,
+          href: asString(campaign.route) ?? undefined,
+        }
+      }),
+    )
+
+    if (points.length >= 2) {
+      charts.push({
+        id: 'top-campaigns',
+        title: 'Top campaigns by spend',
+        points: points.slice(0, 5),
+        valueFormat: 'currency',
+        layout: 'horizontal',
+      })
+    }
+  }
+
+  if (operation === 'summarizeClientTasks') {
+    const statusBreakdown = asRecordArray(data.statusBreakdown)
+    const statusPoints = statusBreakdown
+      .map((entry) => {
+        const count = asNumber(entry.count)
+        if (count === null || count <= 0) return null
+        return {
+          name: formatLabel(asString(entry.status) ?? 'unknown'),
+          value: count,
+        }
+      })
+      .filter((point): point is AgentChartPoint => point !== null)
+
+    if (statusPoints.length >= 2) {
+      charts.push({
+        id: 'task-status',
+        title: 'Tasks by status',
+        points: statusPoints,
+        valueFormat: 'number',
+        layout: 'horizontal',
+      })
+    }
+  }
+
+  return charts
+}
+
 export function buildAgentDataSections(operation: string | undefined, data: Record<string, unknown> | undefined): AgentDataSection[] {
   if (!data) return []
 
@@ -225,11 +433,7 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
   const previousWindow = asRecord(comparison?.previousWindow) ?? asRecord(data.previousWindow)
   const campaignQuery = asString(data.campaignQuery)
   const matchedCampaignCount = asNumber(data.matchedCampaignCount)
-  const metricsAvailable = typeof data.metricsAvailable === 'boolean'
-    ? data.metricsAvailable
-    : asNumber(asRecord(data.metricsSummary)?.count) !== null
-      ? (asNumber(asRecord(data.metricsSummary)?.count) ?? 0) > 0
-      : null
+  const metricsAvailable = resolveMetricsAvailable(data)
 
   if (periodLabel) details.push({ label: 'Window', value: periodLabel })
   if (startDate || endDate) details.push({ label: 'Dates', value: startDate && endDate ? `${startDate} → ${endDate}` : startDate ?? endDate ?? '' })
@@ -292,6 +496,7 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
             roas !== null ? `${formatRatio(roas)} ROAS` : null,
             conversionsValue !== null ? `${formatWholeNumber(conversionsValue)} conv` : null,
           ].filter((item): item is string => Boolean(item)).join(' • ') || undefined,
+          numericValue: spend ?? undefined,
           delta: formatDeltaPercent(deltaValue),
           deltaTone: getDeltaTone(deltaValue),
         }
@@ -331,6 +536,7 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
           primary: asString(campaign.name) ?? 'Unnamed campaign',
           secondary: pieces.join(' • ') || undefined,
           href: asString(campaign.route),
+          numericValue: spend ?? undefined,
         }
       }),
     })
@@ -344,8 +550,8 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
   const deliveredInApp = typeof delivery?.inApp === 'boolean' ? delivery.inApp : null
 
   if (metricsAvailable === false) reportItems.push({ label: 'Ads Data', value: 'Awaiting synced metrics' })
-  if (totalSubmitted !== null) reportItems.push({ label: 'Proposals', value: formatWholeNumber(totalSubmitted) })
-  if (aiSuccessRate !== null) reportItems.push({ label: 'AI Success', value: formatPercent(aiSuccessRate) })
+  if (totalSubmitted !== null) reportItems.push({ label: 'Proposals', value: formatWholeNumber(totalSubmitted), numericValue: totalSubmitted })
+  if (aiSuccessRate !== null) reportItems.push({ label: 'AI Success', value: formatPercent(aiSuccessRate), numericValue: aiSuccessRate })
   if (deliveredInApp !== null) reportItems.push({ label: 'In-app Delivery', value: deliveredInApp ? 'Delivered' : 'Not delivered' })
 
   if (operation === 'generatePerformanceReport' && reportItems.length > 0) {
@@ -363,12 +569,12 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
   if (operation === 'summarizeClientTasks') {
     const taskSummaryItems = compact<MetricItem>([
       clientName ? { label: 'Client', value: clientName } : null,
-      totalTasks !== null ? { label: 'Total Tasks', value: formatWholeNumber(totalTasks) } : null,
-      openTasks !== null ? { label: 'Open', value: formatWholeNumber(openTasks) } : null,
-      completedTasks !== null ? { label: 'Completed', value: formatWholeNumber(completedTasks) } : null,
-      overdueTasks !== null ? { label: 'Overdue', value: formatWholeNumber(overdueTasks) } : null,
-      dueSoonTasks !== null ? { label: 'Due Soon', value: formatWholeNumber(dueSoonTasks) } : null,
-      highPriorityTasks !== null ? { label: 'High Priority', value: formatWholeNumber(highPriorityTasks) } : null,
+      totalTasks !== null ? { label: 'Total Tasks', value: formatWholeNumber(totalTasks), numericValue: totalTasks, emphasis: 'primary' } : null,
+      openTasks !== null ? { label: 'Open', value: formatWholeNumber(openTasks), numericValue: openTasks, emphasis: 'primary' } : null,
+      completedTasks !== null ? { label: 'Completed', value: formatWholeNumber(completedTasks), numericValue: completedTasks } : null,
+      overdueTasks !== null ? { label: 'Overdue', value: formatWholeNumber(overdueTasks), numericValue: overdueTasks } : null,
+      dueSoonTasks !== null ? { label: 'Due Soon', value: formatWholeNumber(dueSoonTasks), numericValue: dueSoonTasks } : null,
+      highPriorityTasks !== null ? { label: 'High Priority', value: formatWholeNumber(highPriorityTasks), numericValue: highPriorityTasks } : null,
     ])
 
     if (taskSummaryItems.length > 0) {
@@ -383,6 +589,7 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
         items: statusBreakdown.slice(0, 5).map((entry) => ({
           label: formatLabel(asString(entry.status) ?? 'unknown'),
           value: formatWholeNumber(asNumber(entry.count) ?? 0),
+          numericValue: asNumber(entry.count) ?? 0,
         })),
       })
     }
@@ -482,4 +689,9 @@ export function buildAgentDataSections(operation: string | undefined, data: Reco
   }
 
   return sections
+}
+
+/** Chart color helper for agent visualizations */
+export function getAgentChartFill(index: number): string {
+  return getChartColor(index)
 }

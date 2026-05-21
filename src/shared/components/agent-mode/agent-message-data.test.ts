@@ -1,8 +1,24 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildAgentDataSections } from './agent-message-data'
+import { buildAgentDataSections, buildAgentMessageCharts } from './agent-message-data'
 
 describe('buildAgentDataSections', () => {
+  it('builds chart series for ads snapshots', () => {
+    const charts = buildAgentMessageCharts('summarizeAdsPerformance', {
+      totals: { spend: 1200, revenue: 3600, impressions: 50000, clicks: 900, conversions: 40 },
+      comparison: { deltaPercent: { spend: -8, revenue: 12, roas: 4, conversions: 6 } },
+      providerBreakdown: [{ providerId: 'google', label: 'Google Ads', totals: { spend: 800 } }],
+      topCampaigns: [
+        { name: 'Brand', spend: 400 },
+        { name: 'Prospecting', spend: 250 },
+      ],
+    })
+
+    expect(charts.map((chart) => chart.id)).toEqual(
+      expect.arrayContaining(['financial', 'delivery', 'period-delta', 'providers', 'top-campaigns']),
+    )
+  })
+
   it('extracts snapshot metrics and campaign lists', () => {
     const sections = buildAgentDataSections('summarizeAdsPerformance', {
       periodLabel: 'Custom',
@@ -166,13 +182,13 @@ describe('buildAgentDataSections', () => {
     })
 
     expect(sections.map((section) => section.title)).toEqual(['Task Summary', 'Status Breakdown', 'Tasks'])
-    expect(sections[0]).toMatchObject({
-      type: 'metrics',
-      title: 'Task Summary',
-      items: expect.arrayContaining([
+    const taskSummary = sections.find((section) => section.title === 'Task Summary')
+    expect(taskSummary?.type).toBe('metrics')
+    expect(taskSummary?.items).toEqual(
+      expect.arrayContaining([
         { label: 'Client', value: 'ABC Client' },
-        { label: 'Total Tasks', value: '4' },
+        { label: 'Total Tasks', value: '4', emphasis: 'primary', numericValue: 4 },
       ]),
-    })
+    )
   })
 })

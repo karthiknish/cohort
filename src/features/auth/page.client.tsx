@@ -7,6 +7,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 
 import { AuthCard } from '@/features/auth/components/auth-card'
+import { AuthShell } from '@/features/auth/components/auth-shell'
 import { BoneyardPageLoading } from '@/shared/ui/boneyard-page-loading'
 import { calculatePasswordStrength, startGoogleOAuthSignIn } from '@/features/auth/auth-utils'
 import { authClient } from '@/lib/auth-client'
@@ -311,8 +312,7 @@ function HomeAuthPageContent() {
         name="auth-main-page"
         loading={isAuthLoading && !user}
       >
-        <div className="flex min-h-dvh flex-1 items-center justify-center px-6 py-12 sm:py-16">
-          <div className="w-full max-w-120">
+        <AuthShell>
             <AuthCard
               activeTab={activeTab}
               emailError={emailError}
@@ -335,8 +335,7 @@ function HomeAuthPageContent() {
               onSubmitSignUp={handleSubmitSignUp}
               onGoogleSignIn={handleGoogleSignIn}
             />
-          </div>
-        </div>
+        </AuthShell>
       </BoneyardSkeletonBoundary>
     </RevealTransition>
   )

@@ -23,6 +23,8 @@ import type { AgentMessage, AgentPendingConfirmation } from '@/shared/hooks/use-
 import { motionDurationSeconds, motionEasing } from '@/lib/animation-system'
 import { cn } from '@/lib/utils'
 import { buildAgentDataSections, type AgentDataSection } from './agent-message-data'
+import { AgentDataSections } from './agent-data-sections'
+import { AgentPlainText } from './agent-plain-text'
 import { AgentMentionPills, AgentMentionText } from './mention-highlights'
 import { AgentMessageAttachmentChips } from './agent-mode-panel-sections'
 
@@ -584,134 +586,12 @@ export function AgentMessageCard({
                 </div>
               ) : null}
 
-              {dataSections.length > 0 ? (
-                <div className="mt-4 space-y-3">
-                  {dataSections.map((section) => (
-                    <div
-                      key={section.title}
-                      className={cn(
-                        'rounded-lg border border-border/60 bg-background/80 px-3 py-2.5',
-                        accents.section,
-                      )}
-                    >
-                      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {section.title}
-                      </div>
-
-                      {section.type === 'metrics' ? (
-                        section.title === 'Insight' ? (
-                          <p className="text-sm leading-relaxed text-foreground">{section.items[0]?.value}</p>
-                        ) : (
-                          <div
-                            className={cn(
-                              'grid gap-2',
-                              section.title === 'Performance'
-                                ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4'
-                                : 'grid-cols-2 md:grid-cols-3',
-                            )}
-                          >
-                            {section.items.map((item, index) => (
-                              <div
-                                key={item.label}
-                                className={cn(
-                                  'rounded-md border border-border/50 bg-background px-2.5 py-2 shadow-sm',
-                                  section.title === 'Performance' &&
-                                    index < 3 &&
-                                    'sm:col-span-1 border-primary/15 bg-primary/[0.03]',
-                                )}
-                              >
-                                <div className="flex items-center justify-between gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                                  <span>{item.label}</span>
-                                  {item.delta ? (
-                                    <span
-                                      className={cn(
-                                        'rounded-full px-1.5 py-0.5 text-[10px] font-semibold normal-case',
-                                        item.deltaTone === 'positive' && 'bg-accent/10 text-primary',
-                                        item.deltaTone === 'negative' && 'bg-destructive/10 text-destructive',
-                                        item.deltaTone === 'neutral' && 'bg-muted text-muted-foreground',
-                                      )}
-                                    >
-                                      {item.delta}
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <div
-                                  className={cn(
-                                    'mt-1 font-semibold text-foreground',
-                                    section.title === 'Performance' && index < 3 ? 'text-base' : 'text-sm',
-                                  )}
-                                >
-                                  {item.value}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )
-                      ) : (
-                        <div className="space-y-2">
-                          {section.items.map((item) =>
-                            item.href ? (
-                              <Link
-                                key={`${item.primary}-${item.secondary ?? ''}`}
-                                href={item.href}
-                                className="block rounded-md bg-background px-2.5 py-2 shadow-sm transition-colors hover:bg-muted/40"
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <div className="text-sm font-medium text-foreground">{item.primary}</div>
-                                    {item.secondary ? (
-                                      <div className="mt-0.5 text-xs text-muted-foreground">{item.secondary}</div>
-                                    ) : null}
-                                  </div>
-                                  <ArrowRight className="mt-0.5 h-3.5 w-3.5 text-muted-foreground" />
-                                </div>
-                                {item.delta ? (
-                                  <div
-                                    className={cn(
-                                      'mt-2 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                                      item.deltaTone === 'positive' && 'bg-accent/10 text-primary',
-                                      item.deltaTone === 'negative' && 'bg-destructive/10 text-destructive',
-                                      item.deltaTone === 'neutral' && 'bg-muted text-muted-foreground',
-                                    )}
-                                  >
-                                    {item.delta}
-                                  </div>
-                                ) : null}
-                              </Link>
-                            ) : (
-                              <div
-                                key={`${item.primary}-${item.secondary ?? ''}`}
-                                className="rounded-md bg-background px-2.5 py-2 shadow-sm"
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div>
-                                    <div className="text-sm font-medium text-foreground">{item.primary}</div>
-                                    {item.secondary ? (
-                                      <div className="mt-0.5 text-xs text-muted-foreground">{item.secondary}</div>
-                                    ) : null}
-                                  </div>
-                                  {item.delta ? (
-                                    <span
-                                      className={cn(
-                                        'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                                        item.deltaTone === 'positive' && 'bg-accent/10 text-primary',
-                                        item.deltaTone === 'negative' && 'bg-destructive/10 text-destructive',
-                                        item.deltaTone === 'neutral' && 'bg-muted text-muted-foreground',
-                                      )}
-                                    >
-                                      {item.delta}
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+              <AgentDataSections
+                sections={dataSections}
+                operation={operation}
+                data={metadata?.data}
+                accentClass={accents.section}
+              />
 
               {showRouteLink ? (
                 <div className="mt-3">
@@ -750,8 +630,8 @@ export function AgentMessageCard({
     <LazyMotion features={domAnimation}>
       <m.div initial={AGENT_MESSAGE_INITIAL} animate={AGENT_MESSAGE_ANIMATE} className="flex items-start gap-3">
         <AgentAvatar />
-        <div className="max-w-[min(85%,28rem)] whitespace-pre-wrap rounded-2xl rounded-tl-md border border-border/50 bg-card px-4 py-2.5 text-sm leading-relaxed text-foreground shadow-sm">
-          <AgentMentionText
+        <div className="max-w-[min(90%,32rem)] rounded-2xl rounded-tl-md border border-border/50 bg-card px-4 py-3 text-sm leading-relaxed text-foreground shadow-sm">
+          <AgentPlainText
             text={content}
             mentionLabels={mentionLabels}
             mentionClassName="bg-primary/10 text-primary ring-primary/15"

@@ -4,7 +4,9 @@ import { Suspense, createElement, useCallback, useEffect, useMemo, useRef, useSt
 import { useAction } from 'convex/react'
 import { useParams } from 'next/navigation'
 
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { type DateRange } from '@/features/dashboard/ads/components/date-range-picker'
+import { MotionCard } from '@/shared/ui/motion-primitives'
 import { normalizeCurrencyCode } from '@/constants/currencies'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent } from '@/shared/ui/card'
@@ -502,6 +504,7 @@ function CampaignInsightsPageContent() {
     () => (
       <>
         <CampaignSection
+          eyebrow="Snapshot"
           title="Key metrics"
           description="Totals for the selected date range. Expand for reach, efficiency, and cost breakdowns."
         >
@@ -514,6 +517,7 @@ function CampaignInsightsPageContent() {
         </CampaignSection>
 
         <CampaignSection
+          eyebrow="Charts"
           title="Trends"
           description="Spend, engagement, conversions, and reach over time."
         >
@@ -620,7 +624,7 @@ function CampaignInsightsPageContent() {
   )
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 p-6 pb-20">
+    <div className={ADS_PAGE_THEME.innerContainer}>
       <CampaignHeader
         campaign={campaign}
         loading={campaignLoading}
@@ -631,14 +635,20 @@ function CampaignInsightsPageContent() {
       />
 
       {campaignError && !isPreviewMode ? (
-        <Card className="border-destructive/20 bg-destructive/5">
+        <MotionCard className="overflow-hidden rounded-2xl border border-destructive/25 bg-destructive/5 ring-1 ring-destructive/15">
           <CardContent className="flex flex-wrap items-center gap-3 p-4 text-sm text-destructive">
             <span className="font-medium">{campaignError}</span>
-            <Button type="button" variant="outline" size="sm" onClick={handleRetryCampaign}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-xl"
+              onClick={handleRetryCampaign}
+            >
               Retry
             </Button>
           </CardContent>
-        </Card>
+        </MotionCard>
       ) : null}
 
       <CampaignPageLayout

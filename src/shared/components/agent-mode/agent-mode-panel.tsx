@@ -698,9 +698,16 @@ export function AgentModePanel({
     showHistory,
   ])
 
+  const activeConversationTitle = useMemo(() => {
+    if (!conversationId) return null
+    const match = history.find((entry) => entry.id === conversationId)
+    return match?.title?.trim() || null
+  }, [conversationId, history])
+
   const headerProps = useMemo(() => ({
     connectionStatus,
     conversationId,
+    activeConversationTitle,
     messagesCount: messages.length,
     showHistory,
     panelLayout,
@@ -709,6 +716,7 @@ export function AgentModePanel({
     onToggleHistory: handleToggleHistory,
     onSetPanelLayout: handleSetPanelLayout,
   }), [
+    activeConversationTitle,
     connectionStatus,
     conversationId,
     handleSetPanelLayout,

@@ -13,7 +13,9 @@ import { useAuth } from '@/shared/contexts/auth-context'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
+import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { MotionCard } from '@/shared/ui/motion-primitives'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { toast } from '@/shared/ui/use-toast'
 import { cn } from '@/lib/utils'
@@ -302,10 +304,10 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
 
   if (loading && !hasLoaded) {
     return (
-      <Card>
-        <CardHeader className="pb-4">
+      <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+        <CardHeader className="border-b border-border/50 pb-5">
           <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-10 rounded-lg" />
+            <Skeleton className="h-10 w-10 rounded-xl" />
             <div className="space-y-2">
               <Skeleton className="h-5 w-40" />
               <Skeleton className="h-4 w-60" />
@@ -322,30 +324,30 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
             </div>
           </div>
         </CardContent>
-      </Card>
+      </MotionCard>
     )
   }
 
   if (!canLoad) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-16">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
-            <Target className="h-6 w-6 text-muted-foreground" />
+      <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+        <CardContent className={cn(ADS_PAGE_THEME.emptyState, 'py-16')}>
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/50 ring-1 ring-border/50">
+            <Target className="h-6 w-6 text-muted-foreground" aria-hidden />
           </div>
           <p className="text-sm font-medium">Preview Mode</p>
           <p className="text-xs text-muted-foreground mt-1">Enable live mode to view audience targeting</p>
         </CardContent>
-      </Card>
+      </MotionCard>
     )
   }
 
   if (targeting.length === 0 && hasLoaded) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-16">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
-            <Users className="h-6 w-6 text-muted-foreground" />
+      <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+        <CardContent className={cn(ADS_PAGE_THEME.emptyState, 'py-16')}>
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/50 ring-1 ring-border/50">
+            <Users className="h-6 w-6 text-muted-foreground" aria-hidden />
           </div>
           <p className="text-sm font-medium">No Targeting Data</p>
           <p className="text-xs text-muted-foreground mt-1 mb-4">Create an audience to start targeting</p>
@@ -355,20 +357,21 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
           </Button>
           <AudienceBuilderDialog isOpen={builderOpen} onOpenChange={setBuilderOpen} providerId={providerId} />
         </CardContent>
-      </Card>
+      </MotionCard>
     )
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-4">
+    <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
+      <CardHeader className="border-b border-border/50 pb-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-              <Target className="h-5 w-5 text-muted-foreground" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/15">
+              <Target className="h-5 w-5 text-primary" aria-hidden />
             </div>
-            <div>
-              <CardTitle className="text-lg">Audience Targeting</CardTitle>
+            <div className="space-y-0.5">
+              <p className={ADS_PAGE_THEME.sectionEyebrow}>Campaign settings</p>
+              <CardTitle className="text-lg font-semibold tracking-tight">Audience targeting</CardTitle>
               <CardDescription>
                 {insights?.totalEntities || targeting.length} targeting configurations
               </CardDescription>
@@ -397,7 +400,7 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pt-6">
         {geocodeFailedNames.length > 0 ? (
           <Alert variant="default" className="border-amber-500/40 bg-amber-500/10">
             <AlertTriangle className="h-4 w-4 text-warning" />
@@ -451,6 +454,6 @@ export function AudienceControlSection({ providerId, campaignId, clientId, isPre
       </CardContent>
 
       <AudienceBuilderDialog isOpen={builderOpen} onOpenChange={setBuilderOpen} providerId={providerId} />
-    </Card>
+    </MotionCard>
   )
 }

@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDown } from 'lucide-react'
 
+import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
 import type { CollaborationMessage, CollaborationMention } from '@/types/collaboration'
@@ -107,6 +108,8 @@ export interface MessageListProps {
   // Deep-link focus support
   focusMessageId?: string | null
   focusThreadId?: string | null
+  /** Shown as animated bubble above the latest messages when others are typing */
+  typingIndicatorText?: string
 }
 
 const EMPTY_REACTION_PENDING_BY_MESSAGE: Record<string, string | null> = {}
@@ -159,6 +162,7 @@ export function MessageList({
   updatingMessageId,
   focusMessageId,
   focusThreadId,
+  typingIndicatorText,
 }: MessageListProps) {
   const renderContext = useMessageListRenderContext()
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -280,6 +284,20 @@ export function MessageList({
 
     previousEdgeRef.current = { firstId, lastId }
   }, [sortedMessages])
+
+  useEffect(() => {
+    if (!typingIndicatorText) return
+    const container = scrollRef.current
+    if (!container || !shouldStickToBottomRef.current) return
+
+    const frame = requestAnimationFrame(() => {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+    }
+  }, [typingIndicatorText])
 
   useEffect(() => {
     const container = scrollRef.current
@@ -459,6 +477,10 @@ export function MessageList({
             ))}
           </div>
           
+          {typingIndicatorText ? (
+            <ChatTypingIndicator label={typingIndicatorText} variant="bubble" className="mt-2" />
+          ) : null}
+
           <div ref={messagesEndRef} />
         </div>
       </div>

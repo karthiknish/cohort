@@ -2,7 +2,10 @@
 
 import { useMemo, useCallback } from 'react'
 import { Info } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
+import { cn } from '@/lib/utils'
+import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { MotionCard } from '@/shared/ui/motion-primitives'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { PerformanceChart } from '@/features/dashboard/home/components/performance-chart'
 import {
@@ -209,10 +212,10 @@ export function InsightsChartsSection({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* 1. Performance Overview */}
-      <Card className="border-muted/40 bg-card shadow-sm">
-        <CardHeader>
+      <MotionCard className={ADS_PAGE_THEME.chartCard}>
+        <CardHeader className={ADS_PAGE_THEME.chartCardHeader}>
           <div className="flex items-center gap-2">
-            <CardTitle className="text-lg">Performance Overview</CardTitle>
+            <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Performance Overview</CardTitle>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -231,7 +234,7 @@ export function InsightsChartsSection({
           </div>
           <CardDescription>Spend and revenue over time</CardDescription>
         </CardHeader>
-        <CardContent className="h-[300px]">
+        <CardContent className="h-[300px] pt-2">
           <PerformanceChart
             metrics={chartMetrics}
             loading={insightsLoading}
@@ -241,13 +244,13 @@ export function InsightsChartsSection({
             hideHeader
           />
         </CardContent>
-      </Card>
+      </MotionCard>
 
       {/* 2. Engagement Trends */}
-      <Card className="border-muted/40 shadow-sm">
-        <CardHeader>
+      <MotionCard className={ADS_PAGE_THEME.chartCard}>
+        <CardHeader className={ADS_PAGE_THEME.chartCardHeader}>
           <div className="flex items-center gap-2">
-            <CardTitle className="text-lg">Engagement Trends</CardTitle>
+            <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Engagement Trends</CardTitle>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -262,7 +265,7 @@ export function InsightsChartsSection({
           </div>
           <CardDescription>Clicks & CTR over time</CardDescription>
         </CardHeader>
-        <CardContent className="h-[300px]">
+        <CardContent className="h-[300px] pt-2">
           {insightsLoading ? (
             <Skeleton className="h-full w-full" />
           ) : engagementChartData.length === 0 ? (
@@ -310,13 +313,13 @@ export function InsightsChartsSection({
             </ChartContainer>
           )}
         </CardContent>
-      </Card>
+      </MotionCard>
 
       {/* 3. Conversions Over Time */}
-      <Card className="border-muted/40 shadow-sm">
-        <CardHeader>
+      <MotionCard className={ADS_PAGE_THEME.chartCard}>
+        <CardHeader className={ADS_PAGE_THEME.chartCardHeader}>
           <div className="flex items-center gap-2">
-            <CardTitle className="text-lg">Conversions Over Time</CardTitle>
+            <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Conversions Over Time</CardTitle>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -331,7 +334,7 @@ export function InsightsChartsSection({
           </div>
           <CardDescription>Daily conversion performance</CardDescription>
         </CardHeader>
-        <CardContent className="h-[300px]">
+        <CardContent className="h-[300px] pt-2">
           {insightsLoading ? (
             <Skeleton className="h-full w-full" />
           ) : conversionsChartData.length === 0 ? (
@@ -380,13 +383,13 @@ export function InsightsChartsSection({
             </ChartContainer>
           )}
         </CardContent>
-      </Card>
+      </MotionCard>
 
       {/* 4. Cost Efficiency */}
-      <Card className="border-muted/40 shadow-sm">
-        <CardHeader>
+      <MotionCard className={ADS_PAGE_THEME.chartCard}>
+        <CardHeader className={ADS_PAGE_THEME.chartCardHeader}>
           <div className="flex items-center gap-2">
-            <CardTitle className="text-lg">Cost Efficiency</CardTitle>
+            <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Cost Efficiency</CardTitle>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -401,7 +404,7 @@ export function InsightsChartsSection({
           </div>
           <CardDescription>CPC & CPA trends</CardDescription>
         </CardHeader>
-        <CardContent className="h-[300px]">
+        <CardContent className="h-[300px] pt-2">
           {insightsLoading ? (
             <Skeleton className="h-full w-full" />
           ) : conversionsChartData.length === 0 ? (
@@ -445,14 +448,14 @@ export function InsightsChartsSection({
             </ChartContainer>
           )}
         </CardContent>
-      </Card>
+      </MotionCard>
 
       {/* 5. Reach vs Impressions (Facebook specific) */}
       {reachChartData && reachChartData.length > 0 && (
-        <Card className="border-muted/40 shadow-sm lg:col-span-2">
-          <CardHeader>
+        <MotionCard className={cn(ADS_PAGE_THEME.chartCard, 'lg:col-span-2')}>
+          <CardHeader className={ADS_PAGE_THEME.chartCardHeader}>
             <div className="flex items-center gap-2">
-              <CardTitle className="text-lg">Reach vs Impressions</CardTitle>
+              <CardTitle className="text-base font-semibold tracking-tight sm:text-lg">Reach vs Impressions</CardTitle>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -506,7 +509,7 @@ export function InsightsChartsSection({
               </BarChart>
             </ChartContainer>
           </CardContent>
-        </Card>
+        </MotionCard>
       )}
     </div>
   )

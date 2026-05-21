@@ -28,6 +28,8 @@ import {
 import { createInitialProposalFormState } from './utils/form-steps'
 import { useKeyboardShortcuts } from '@/shared/hooks/use-keyboard-shortcuts'
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
+import { FadeIn } from '@/shared/ui/animate-in'
+import { cn } from '@/lib/utils'
 
 // Extracted hooks
 import {
@@ -340,33 +342,52 @@ function ProposalsPageContent() {
     >
       <div ref={wizardRef} className={DASHBOARD_THEME.layout.container}>
         <LiveRegion message={submissionAnnouncement} />
-        <div className="flex flex-col gap-6 border-b border-border/60 pb-6 lg:flex-row lg:items-start lg:justify-between">
-          <ProposalWizardHeader clientName={selectedClient?.name ?? null} />
-          <ProposalPageActions
-            canManage={canManageProposals}
-            currentFormData={formState}
-            draftId={draftId}
-            isSubmitting={isSubmitting}
-            selectedClientId={selectedClientId}
-            isCreatingDraft={isCreatingDraft}
-            onApplyTemplate={handleSelectTemplate}
-            onVersionRestored={handleVersionRestored}
-            onStartProposal={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
-          />
-        </div>
 
-        <ProposalMetrics proposals={displayedProposals} isLoading={displayedLoadingState} />
+        <section
+          className={cn(
+            'relative overflow-hidden rounded-2xl border border-muted/40 bg-linear-to-br from-primary/[0.07] via-background to-info/[0.05] p-5 shadow-sm sm:p-6',
+          )}
+        >
+          <div
+            className="pointer-events-none absolute -left-8 top-0 h-32 w-32 rounded-full bg-primary/10 blur-3xl"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute -right-10 -bottom-8 h-36 w-36 rounded-full bg-info/10 blur-3xl"
+            aria-hidden
+          />
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <ProposalWizardHeader clientName={selectedClient?.name ?? null} />
+            <ProposalPageActions
+              canManage={canManageProposals}
+              currentFormData={formState}
+              draftId={draftId}
+              isSubmitting={isSubmitting}
+              selectedClientId={selectedClientId}
+              isCreatingDraft={isCreatingDraft}
+              onApplyTemplate={handleSelectTemplate}
+              onVersionRestored={handleVersionRestored}
+              onStartProposal={isPreviewMode ? handleStartPreviewProposal : handleStartProposal}
+            />
+          </div>
+        </section>
+
+        <FadeIn>
+          <ProposalMetrics proposals={displayedProposals} isLoading={displayedLoadingState} />
+        </FadeIn>
 
         {!isWizardOpen ? (
-          <ProposalStartStateCard
-            canManage={canManageProposals}
-            canStart={canManageProposals && Boolean(selectedClientId)}
-            blockedHint={
-              selectedClientId
-                ? null
-                : 'Pick a client from the workspace switcher in the header. Proposals are always created for the active client.'
-            }
-          />
+          <FadeIn>
+            <ProposalStartStateCard
+              canManage={canManageProposals}
+              canStart={canManageProposals && Boolean(selectedClientId)}
+              blockedHint={
+                selectedClientId
+                  ? null
+                  : 'Pick a client from the workspace switcher in the header. Proposals are always created for the active client.'
+              }
+            />
+          </FadeIn>
         ) : null}
 
         <ProposalHistory

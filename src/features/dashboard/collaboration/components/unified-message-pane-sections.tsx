@@ -51,6 +51,7 @@ import type { ClientTeamMember } from '@/types/clients'
 import type { PendingAttachment } from '../hooks/types'
 import { CHANNEL_TYPE_COLORS } from '../utils'
 import { MessageAttachments } from './message-attachments'
+import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
 import { PendingAttachmentsList } from './message-composer'
 import { MessageContent } from './message-content'
 import { DeletedMessageInfo, DeletingOverlay, MessageEditForm } from './message-item-parts'
@@ -780,9 +781,13 @@ export function UnifiedComposerSection({
         onChange={onAttachmentInputChange}
       />
       <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="min-h-[1rem] text-[11px] leading-snug text-muted-foreground/90 transition-opacity duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-standard)] motion-reduce:transition-none">
-          {typingIndicator ?? 'Enter to send · Shift+Enter for a new line'}
-        </span>
+        {typingIndicator ? (
+          <ChatTypingIndicator label={typingIndicator} variant="composer" />
+        ) : (
+          <span className="min-h-[1rem] text-[11px] leading-snug text-muted-foreground/90">
+            Enter to send · Shift+Enter for a new line
+          </span>
+        )}
         <div className="flex-1" />
         <Button
           onClick={handleSend}

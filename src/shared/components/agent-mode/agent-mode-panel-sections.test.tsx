@@ -28,8 +28,12 @@ vi.mock('@/shared/ui/sheet', () => ({
   ),
 }))
 
-vi.mock('./agent-message-card', () => ({
-  AgentMessageCard: ({ message }: { message: { content: string } }) => <div>{message.content}</div>,
+vi.mock('@/shared/ui/motion', () => ({
+  domAnimation: {},
+  LazyMotion: ({ children }: { children: ReactNode }) => <div data-lazy-motion="">{children}</div>,
+  m: {
+    div: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  },
 }))
 
 const noop = vi.fn()
@@ -101,7 +105,6 @@ import {
   AgentComposerSection,
   AgentEmptyState,
   AgentHistoryRail,
-  ConversationItem,
   AgentMessagesSection,
   AgentModeHeader,
   AgentModePanelContent,
@@ -183,7 +186,7 @@ describe('agent mode panel sections', () => {
 
     expect(markup).toContain('Agent Mode')
     expect(markup).toContain('Reconnecting')
-    expect(markup).toContain('Chat history')
+    expect(markup).toContain('Chats')
     expect(markup).toContain('Launch plan')
     expect(markup).toContain('Hello')
     expect(markup).toContain('Parsed request')

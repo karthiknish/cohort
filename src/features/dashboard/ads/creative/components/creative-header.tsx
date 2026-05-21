@@ -14,9 +14,11 @@ import {
   TrendingUp,
   Trash2,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react'
 import Link from 'next/link'
 
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { Button } from '@/shared/ui/button'
 import { TruncatedTextPreview } from '@/shared/ui/hover-preview'
 import { Badge } from '@/shared/ui/badge'
@@ -35,9 +37,11 @@ import { resolveMetaSocialPermalink } from '@/services/integrations/meta-ads'
 
 function getStatusVariant(status: string): string {
   const s = status.toLowerCase()
-  if (s === 'enabled' || s === 'enable' || s === 'active') return 'bg-success/10 text-success border-success/20'
+  if (s === 'enabled' || s === 'enable' || s === 'active')
+    return 'bg-success/10 text-success border-success/20'
   if (s === 'paused' || s === 'disable') return 'bg-warning/10 text-warning border-warning/20'
-  if (s === 'deleted' || s === 'removed') return 'bg-destructive/10 text-destructive border-destructive/20'
+  if (s === 'deleted' || s === 'removed')
+    return 'bg-destructive/10 text-destructive border-destructive/20'
   return 'bg-muted/50 text-muted-foreground border-muted'
 }
 
@@ -74,148 +78,163 @@ export function CreativeHeader(props: {
 
   return (
     <LazyMotion features={domAnimation}>
-      <m.div
+      <m.header
         initial="hidden"
         animate="visible"
         variants={fadeInDownVariants}
         transition={transitions.slow}
-        className="mb-6 flex flex-col gap-4 border-b bg-background/80 px-1 py-5 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between"
+        className={cn(ADS_PAGE_THEME.innerHero, 'mb-6')}
       >
-        <div className="flex items-center gap-4">
-          <Link href={backUrl} className="group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-muted-foreground/10 bg-muted/50 group-hover:border-accent/20 group-hover:bg-accent/10 motion-chromatic-lg">
-              <ArrowLeft className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
-            </div>
-          </Link>
+        <div className={ADS_PAGE_THEME.innerHeroGlow} aria-hidden />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <Link href={backUrl} className="group shrink-0">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-background/80 transition-colors group-hover:border-primary/25 group-hover:bg-primary/10">
+                <ArrowLeft
+                  className="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary"
+                  aria-hidden
+                />
+              </div>
+            </Link>
 
-          <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                Ads
-                <ChevronRight className="mx-1 h-3 w-3 opacity-50" />
-                {creative.providerId}
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80">
+                  <Sparkles className="h-3 w-3 text-primary" aria-hidden />
+                  Creative
+                  <ChevronRight className="h-3 w-3 opacity-50" aria-hidden />
+                  {creative.providerId}
+                </span>
+                <div
+                  className={cn(
+                    'rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest',
+                    getStatusVariant(creative.status),
+                  )}
+                >
+                  {creative.status}
+                </div>
+                {isDirty ? (
+                  <Badge variant="secondary" className="h-5 gap-1 rounded-full px-2 text-[10px] font-semibold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                    Unsaved
+                  </Badge>
+                ) : null}
               </div>
-              <div
-                className={cn(
-                  'rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest',
-                  getStatusVariant(creative.status),
-                )}
-              >
-                {creative.status}
-              </div>
-              {isDirty ? (
-                <Badge variant="secondary" className="h-5 gap-1 px-2 text-[10px] font-semibold">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  Unsaved
-                </Badge>
+              <h1 className="flex flex-wrap items-center gap-2.5 text-xl font-semibold tracking-tight sm:text-2xl">
+                <TruncatedTextPreview text={displayName} className="min-w-0 max-w-[min(100%,20rem)]" />
+                <span className="shrink-0 rounded-lg border border-border/60 bg-muted/30 p-1.5">
+                  {getTypeIcon(creative.type)}
+                </span>
+                {socialPermalink ? (
+                  <a
+                    href={socialPermalink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/60 text-muted-foreground hover:border-primary/30 hover:text-primary"
+                    title="Open post on Instagram or Facebook"
+                    aria-label="Open social permalink"
+                  >
+                    <ExternalLink className="h-4 w-4" aria-hidden />
+                  </a>
+                ) : null}
+              </h1>
+              {creative.campaignName ? (
+                <p className="text-sm text-muted-foreground">
+                  Campaign: <span className="font-medium text-foreground">{creative.campaignName}</span>
+                </p>
               ) : null}
             </div>
-            <h1 className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
-              <TruncatedTextPreview text={displayName} className="min-w-0 max-w-[min(100%,20rem)]" />
-              <span className="shrink-0 rounded-lg border border-muted-foreground/10 bg-muted-foreground/5 p-1">
-                {getTypeIcon(creative.type)}
-              </span>
-              {socialPermalink ? (
-                <a
-                  href={socialPermalink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-muted-foreground/15 text-muted-foreground hover:border-accent/30 hover:text-primary"
-                  title="Open post on Instagram or Facebook"
-                  aria-label="Open social permalink"
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            {isDirty ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onCancelEditing}
+                  disabled={isSaving}
+                  className="h-10 rounded-xl border-border/70"
                 >
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              ) : null}
-            </h1>
+                  <X className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                  Discard
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={onSave}
+                  disabled={isSaving}
+                  className="h-10 rounded-full px-5 text-sm font-semibold shadow-sm"
+                >
+                  {isSaving ? (
+                    <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden />
+                  ) : (
+                    <Save className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                  )}
+                  {isSaving ? 'Saving…' : 'Save changes'}
+                </Button>
+              </>
+            ) : (
+              <div className="hidden items-center gap-1.5 border-r border-border/50 pr-3 lg:flex">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-10 rounded-xl border border-transparent px-3 text-xs font-medium text-muted-foreground hover:border-border/60 hover:bg-muted/40"
+                >
+                  <Share className="mr-2 h-4 w-4" aria-hidden />
+                  Export
+                </Button>
+              </div>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 rounded-xl border-border/70"
+                  aria-label="Creative actions"
+                >
+                  <MoreHorizontal className="h-5 w-5" aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-60 rounded-2xl border-border/60 p-2 shadow-xl"
+              >
+                <DropdownMenuItem onClick={onRefreshCreative} className="cursor-pointer gap-3 rounded-xl py-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/50">
+                    <RefreshCw className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold">Sync from Meta</span>
+                    <span className="text-[10px] text-muted-foreground">Refresh creative data</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onRefreshPerformance} className="cursor-pointer gap-3 rounded-xl py-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/50">
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold">Update metrics</span>
+                    <span className="text-[10px] text-muted-foreground">Reload performance stats</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="my-2" />
+                <DropdownMenuItem className="cursor-pointer gap-3 rounded-xl py-2.5 text-destructive focus:bg-destructive/10 focus:text-destructive">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-destructive/10">
+                    <Trash2 className="h-4 w-4 text-destructive" aria-hidden />
+                  </div>
+                  <span className="text-sm font-semibold">Delete asset</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {isDirty ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onCancelEditing}
-                disabled={isSaving}
-                className="h-9 rounded-xl"
-              >
-                <X className="mr-1.5 h-3.5 w-3.5" />
-                Discard
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={onSave}
-                disabled={isSaving}
-                className="h-9 rounded-xl bg-primary px-5 text-xs font-bold shadow-lg shadow-primary/20 hover:bg-accent/90"
-              >
-                {isSaving ? (
-                  <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Save className="mr-1.5 h-3.5 w-3.5" />
-                )}
-                {isSaving ? 'Saving…' : 'Save changes'}
-              </Button>
-            </>
-          ) : (
-            <div className="hidden items-center gap-1.5 border-r border-muted-foreground/10 pr-3 lg:flex">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-9 rounded-xl border border-transparent px-3 text-xs font-medium text-muted-foreground hover:border-muted-foreground/10 hover:bg-muted/50"
-              >
-                <Share className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </div>
-          )}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-xl border border-transparent transition-[background-color,border-color] hover:border-muted-foreground/10 hover:bg-muted/50"
-                aria-label="Creative actions"
-              >
-                <MoreHorizontal className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-60 rounded-2xl border-muted-foreground/10 p-2 shadow-2xl">
-              <DropdownMenuItem onClick={onRefreshCreative} className="cursor-pointer gap-3 rounded-xl py-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/50">
-                  <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold">Sync from Meta</span>
-                  <span className="text-[10px] text-muted-foreground">Refresh creative data</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onRefreshPerformance} className="cursor-pointer gap-3 rounded-xl py-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/50">
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold">Update metrics</span>
-                  <span className="text-[10px] text-muted-foreground">Reload performance stats</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="my-2" />
-              <DropdownMenuItem className="cursor-pointer gap-3 rounded-xl py-2.5 text-destructive focus:bg-destructive/10 focus:text-destructive">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-destructive/10">
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </div>
-                <span className="text-sm font-semibold">Delete asset</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </m.div>
+      </m.header>
     </LazyMotion>
   )
 }

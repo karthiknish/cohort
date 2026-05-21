@@ -76,8 +76,12 @@ vi.mock('./mention-dropdown', () => ({
   formatMention: (item: { label: string }) => `@${item.label}`,
 }))
 
-vi.mock('./agent-message-card', () => ({
-  AgentMessageCard: ({ message }: { message: AgentMessage }) => <div>{message.content}</div>,
+vi.mock('@/shared/ui/motion', () => ({
+  domAnimation: {},
+  LazyMotion: ({ children }: { children: React.ReactNode }) => <div data-lazy-motion="">{children}</div>,
+  m: {
+    div: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  },
 }))
 
 function renderPanel(overrides: Partial<React.ComponentProps<typeof AgentModePanel>> = {}) {

@@ -4,10 +4,11 @@ import { useCallback } from 'react'
 import Link from 'next/link'
 import { Download, Filter, Info, X } from 'lucide-react'
 
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { FadeInItem, FadeInStagger } from '@/shared/ui/animate-in'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -20,6 +21,7 @@ import { Skeleton } from '@/shared/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip'
 
 import { PerformanceChart } from '@/features/dashboard/home/components/performance-chart'
+import { cn } from '@/lib/utils'
 
 import type { MetricRecord, SummaryCard } from './types'
 import { DateRangePicker, type DateRange } from './date-range-picker'
@@ -64,15 +66,15 @@ function SelectedProviderChip({
   }, [onToggleProvider, providerId])
 
   return (
-    <Badge key={providerId} variant="secondary" className="gap-1">
+    <Badge key={providerId} variant="secondary" className="gap-1 rounded-full border border-border/50 px-2.5">
       {formatProviderName(providerId)}
       <button
         type="button"
         onClick={handleRemove}
-        className="ml-1 hover:text-foreground"
+        className="ml-0.5 rounded-full p-0.5 hover:bg-muted hover:text-foreground"
         aria-label={`Remove ${formatProviderName(providerId)} filter`}
       >
-        <X className="h-3 w-3" />
+        <X className="h-3 w-3" aria-hidden />
       </button>
     </Badge>
   )
@@ -100,18 +102,21 @@ export function CrossChannelOverviewHeader({
   showDateAndExport?: boolean
 }) {
   return (
-    <CardHeader className="flex flex-col gap-1">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <CardTitle className="text-lg">Cross-channel overview</CardTitle>
-          <CardDescription>Key performance indicators from the latest successful sync.</CardDescription>
+    <CardHeader className="flex flex-col gap-3 border-b border-border/50 pb-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <p className={ADS_PAGE_THEME.sectionEyebrow}>Overview</p>
+          <CardTitle className="text-lg font-semibold tracking-tight">Cross-channel KPIs</CardTitle>
+          <CardDescription className="max-w-xl text-pretty leading-relaxed">
+            Totals and trends from your latest successful sync — filter by platform without leaving this view.
+          </CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {availableProviders.length > 0 ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Filter className="h-4 w-4" />
+                <Button variant="outline" size="sm" className="gap-2 rounded-xl border-border/70">
+                  <Filter className="h-4 w-4" aria-hidden />
                   Providers
                   {hasProviderFilter ? (
                     <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-xs">
@@ -167,15 +172,55 @@ export function CrossChannelOverviewHeader({
 }
 
 export function CrossChannelOverviewLoadingState() {
-  return <CardContent className="space-y-6"><div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">{[0, 1, 2, 3].map((slot) => <Skeleton key={slot} className="h-24 w-full rounded-lg" />)}</div></CardContent>
+  return (
+    <CardContent className="space-y-6 pt-6">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((slot) => (
+          <Skeleton key={slot} className="h-28 w-full rounded-2xl" />
+        ))}
+      </div>
+      <Skeleton className="h-[300px] w-full rounded-2xl" />
+    </CardContent>
+  )
 }
 
 export function CrossChannelOverviewEmptyState() {
-  return <CardContent className="space-y-6"><div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-muted/60 p-10 text-center text-sm text-muted-foreground"><p>Connect an ad platform and run a sync to view aggregate performance.</p><Button asChild size="sm" variant="outline"><Link href="#connect-ad-platforms">Connect an account</Link></Button></div></CardContent>
+  return (
+    <CardContent className="pt-6">
+      <div className={ADS_PAGE_THEME.emptyState}>
+        <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
+          Connect an ad platform and run a sync to populate spend, delivery, and conversion KPIs here.
+        </p>
+        <Button asChild size="sm" variant="outline" className="rounded-full">
+          <Link href="#connect-ad-platforms">Connect an account</Link>
+        </Button>
+      </div>
+    </CardContent>
+  )
 }
 
 function SummaryCardTile({ card }: { card: SummaryCard }) {
-  return <FadeInItem><Card className="border-muted/70 bg-background shadow-sm"><CardContent className="space-y-2 p-5"><div className="flex items-center justify-between"><p className="text-xs font-medium uppercase text-muted-foreground">{card.label}</p><TooltipProvider><Tooltip><TooltipTrigger aria-label={`Metric information: ${card.helper}`}><Info className="h-3 w-3 text-muted-foreground/70" /></TooltipTrigger><TooltipContent><p>{card.helper}</p></TooltipContent></Tooltip></TooltipProvider></div><p className="text-2xl font-semibold text-foreground">{card.value}</p><p className="text-xs text-muted-foreground">{card.helper}</p></CardContent></Card></FadeInItem>
+  return (
+    <FadeInItem>
+      <div className={ADS_PAGE_THEME.kpiTile}>
+        <div className="flex items-start justify-between gap-2">
+          <p className={ADS_PAGE_THEME.kpiLabel}>{card.label}</p>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger aria-label={`Metric information: ${card.helper}`}>
+                <Info className="h-3.5 w-3.5 text-muted-foreground/70" aria-hidden />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{card.helper}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <p className={cn(ADS_PAGE_THEME.kpiValue, 'mt-2')}>{card.value}</p>
+        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{card.helper}</p>
+      </div>
+    </FadeInItem>
+  )
 }
 
 export function CrossChannelOverviewContent({
@@ -194,13 +239,13 @@ export function CrossChannelOverviewContent({
   hasConnectedAds?: boolean
 }) {
   return (
-    <CardContent className="space-y-6">
-      <FadeInStagger className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <CardContent className="space-y-6 pt-6">
+      <FadeInStagger className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => (
           <SummaryCardTile key={card.id} card={card} />
         ))}
       </FadeInStagger>
-      <div className="h-[300px] w-full min-w-0">
+      <div className="h-[300px] w-full min-w-0 rounded-2xl border border-border/50 bg-muted/15 p-3 sm:p-4">
         <PerformanceChart
           metrics={metrics}
           loading={metricsLoading}

@@ -65,21 +65,20 @@ export default function ProposalDeckPage() {
       clientId: proposalRow.clientId ?? null,
       clientName: proposalRow.clientName ?? null,
       presentationDeck: (proposalRow.presentationDeck ?? null) as ProposalPresentationDeck | null,
-      gammaDeck: (proposalRow.presentationDeck ?? null) as ProposalPresentationDeck | null,
     }
   }, [isPreviewMode, previewProposal, proposalRow])
 
   // PDF storage URL (preferred for viewing)
   const pdfStorageUrl = useMemo(() => {
     if (!proposal) return null
-    const deck = proposal.presentationDeck ?? proposal.gammaDeck
+    const deck = proposal.presentationDeck
     return deck?.pdfStorageUrl ?? null
   }, [proposal])
 
   // Direct PDF URL (fallback for download)
   const pdfUrl = useMemo(() => {
     if (!proposal) return null
-    const deck = proposal.presentationDeck ?? proposal.gammaDeck
+    const deck = proposal.presentationDeck
     return proposal.pdfUrl ?? deck?.pdfUrl ?? null
   }, [proposal])
 
@@ -99,7 +98,7 @@ export default function ProposalDeckPage() {
   }, [proposal])
   
   const slideGuidance = useMemo(() => {
-    const text = proposal?.gammaDeck?.instructions
+    const text = proposal?.presentationDeck?.instructions
     if (!text) return []
     
     // Parse: "Slide 1: Title * point 1 * point 2 Slide 2: Title 2..."

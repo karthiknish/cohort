@@ -230,6 +230,9 @@ export interface GammaGenerationStatus {
     shareUrl: string | null
     generatedFiles: GammaGeneratedFile[]
     warnings?: string[]
+    creditsDeducted?: number | null
+    creditsRemaining?: number | null
+    externalDeckId?: string | null
     raw: Record<string, unknown>
 }
 

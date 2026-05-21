@@ -1,3 +1,4 @@
+import { internal } from './_generated/api'
 import { Errors } from './errors'
 
 function assertCanManageProposals(ctx: { user: { role: string | null } }) {
@@ -288,6 +289,21 @@ export const remove = zWorkspaceMutation({
 
     if (!existing) {
       throw Errors.resource.notFound('Proposal', args.legacyId)
+    }
+
+    const deck =
+      existing.presentationDeck && typeof existing.presentationDeck === 'object'
+        ? (existing.presentationDeck as Record<string, unknown>)
+        : null
+    const externalDeckId =
+      typeof deck?.externalDeckId === 'string'
+        ? deck.externalDeckId
+        : null
+
+    if (externalDeckId) {
+      await ctx.scheduler.runAfter(0, internal.proposalGeneration.archiveProposalDeck, {
+        externalDeckId,
+      })
     }
 
     await ctx.db.delete(existing._id)

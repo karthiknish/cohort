@@ -14,6 +14,7 @@ import {
   isLikelyImageUrl,
 } from '../utils'
 import { MessageAttachments } from './message-attachments'
+import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
 import {
   DateSeparator,
   EmptyMessagesState,
@@ -879,6 +880,7 @@ type CollaborationMessageViewportProps = {
   threadMessagesByRootId: Record<string, CollaborationMessage[]>
   threadNextCursorByRootId: Record<string, string | null>
   visibleMessages: CollaborationMessage[]
+  typingIndicator?: string
 }
 
 export function CollaborationMessageViewport({
@@ -918,6 +920,7 @@ export function CollaborationMessageViewport({
   threadMessagesByRootId,
   threadNextCursorByRootId,
   visibleMessages,
+  typingIndicator,
 }: CollaborationMessageViewportProps) {
   return (
     <div className="flex-1 overflow-y-auto">
@@ -1018,6 +1021,10 @@ export function CollaborationMessageViewport({
             visibleMessages={visibleMessages}
           />
         )}
+
+        {typingIndicator && !isSearchActive ? (
+          <ChatTypingIndicator label={typingIndicator} variant="bubble" className="mt-2" />
+        ) : null}
 
         <div ref={messagesEndRef} />
       </div>

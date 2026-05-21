@@ -10,7 +10,7 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react'
-import { Card, CardContent } from '@/shared/ui/card'
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
@@ -90,47 +90,40 @@ function MetricCard({
   featured?: boolean
 }) {
   const content = (
-    <Card
+    <div
       className={cn(
-        'group overflow-hidden border-muted/40 shadow-sm transition-shadow hover:shadow-md',
-        featured && 'border-primary/15 bg-linear-to-br from-card to-muted/20',
+        ADS_PAGE_THEME.kpiTile,
+        'group',
+        featured && 'border-primary/20 bg-linear-to-br from-primary/[0.04] via-card to-muted/15 ring-1 ring-primary/10',
       )}
     >
-      <CardContent className={cn('p-4', featured && 'p-5')}>
-        {loading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-8 w-28" />
+      {loading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-20 rounded-md" />
+          <Skeleton className="h-8 w-28 rounded-md" />
+        </div>
+      ) : (
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className={ADS_PAGE_THEME.kpiLabel}>{label}</p>
+            <p className={cn(ADS_PAGE_THEME.kpiValue, featured && 'text-3xl')}>{value}</p>
+            {subValue ? <p className="text-xs font-medium text-muted-foreground">{subValue}</p> : null}
           </div>
-        ) : (
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
-                {label}
-              </p>
-              <p className={cn('font-black tracking-tight', featured ? 'text-3xl' : 'text-2xl')}>
-                {value}
-              </p>
-              {subValue && (
-                <p className="text-xs font-medium text-muted-foreground/60">{subValue}</p>
-              )}
-            </div>
-            <div
-              className={cn(
-                "rounded-full p-2.5",
-                trend === 'up'
-                  ? "bg-success/10 text-success"
-                  : trend === 'down'
-                    ? "bg-destructive/10 text-destructive"
-                    : "bg-muted/50 text-muted-foreground/70"
-              )}
-            >
-              <Icon className="h-5 w-5" />
-            </div>
+          <div
+            className={cn(
+              'rounded-xl p-2.5 ring-1',
+              trend === 'up'
+                ? 'bg-success/10 text-success ring-success/15'
+                : trend === 'down'
+                  ? 'bg-destructive/10 text-destructive ring-destructive/15'
+                  : 'bg-primary/10 text-primary ring-primary/15',
+            )}
+          >
+            <Icon className="h-5 w-5" aria-hidden />
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   )
 
   if (!description) {
@@ -248,7 +241,7 @@ export function MetricCardsSection({
             type="button"
             variant="ghost"
             size="sm"
-            className="w-full gap-1.5 text-muted-foreground hover:text-foreground"
+            className="w-full gap-1.5 rounded-xl text-muted-foreground hover:text-foreground"
           >
             <ChevronDown
               className={cn('h-4 w-4 transition-transform', moreOpen && 'rotate-180')}

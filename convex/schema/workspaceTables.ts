@@ -10,7 +10,6 @@ export const workspaceTables = {
     role: v.union(v.string(), v.null()),
     status: v.union(v.string(), v.null()),
     agencyId: v.union(v.string(), v.null()),
-    stripeCustomerId: v.optional(v.union(v.string(), v.null())),
     phoneNumber: v.optional(v.union(v.string(), v.null())),
     photoUrl: v.optional(v.union(v.string(), v.null())),
     notificationPreferences: v.optional(

@@ -340,11 +340,14 @@ export default function AdsPage() {
 
       {connectedAccountCount > 0 ? (
         <FadeIn>
-          <div className="space-y-4 border-t border-muted/40 pt-6">
+          <div className="space-y-4 border-t border-border/50 pt-6">
             <div className="space-y-1">
-              <h3 className="text-base font-semibold text-foreground">Campaigns</h3>
-              <p className="text-sm text-muted-foreground">
-                Per-provider lists for the date range selected above.
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80">
+                Campaign management
+              </p>
+              <h3 className="text-base font-semibold tracking-tight text-foreground">Per-platform campaigns</h3>
+              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                Drill into live campaigns for each linked account — filtered by the date range in the page header.
               </p>
             </div>
             <AdsSuspenseReveal fallback={ADS_SKELETON_200}>
@@ -600,6 +603,9 @@ export default function AdsPage() {
               onExport={handleExport}
               refreshing={metricsLoading}
               canExport={hasMetricData}
+              connectedCount={connectedAccountCount}
+              totalProviders={adPlatforms.length}
+              pendingSetupCount={pendingSetupCount}
             />
           </FadeIn>
 

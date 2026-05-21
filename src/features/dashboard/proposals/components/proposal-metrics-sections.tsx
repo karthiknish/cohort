@@ -1,6 +1,12 @@
 'use client'
 
-import { Card, CardContent } from '@/shared/ui/card'
+import type { LucideIcon } from 'lucide-react'
+import { DollarSign, FileText, Send, Sparkles } from 'lucide-react'
+
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
+import { cn } from '@/lib/utils'
+import { MotionCard } from '@/shared/ui/motion-primitives'
+import { CardContent } from '@/shared/ui/card'
 
 export type ProposalMetricStat = {
   label: string
@@ -8,43 +14,64 @@ export type ProposalMetricStat = {
   description: string
   color: string
   bg: string
+  icon?: LucideIcon
+}
+
+const METRIC_ICONS: Record<string, LucideIcon> = {
+  'Total Proposals': FileText,
+  'Ready for Pitch': Sparkles,
+  'Sent to Clients': Send,
+  'Pipeline Value': DollarSign,
 }
 
 export function ProposalMetricsLoadingGrid() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className={DASHBOARD_THEME.stats.container}>
       {['proposal-metric-skeleton-1', 'proposal-metric-skeleton-2', 'proposal-metric-skeleton-3', 'proposal-metric-skeleton-4'].map((slotKey) => (
-        <Card key={slotKey} className="animate-pulse border-muted">
-          <CardContent className="p-6">
-            <div className="mb-2 h-4 w-24 rounded bg-muted" />
-            <div className="h-8 w-16 rounded bg-muted" />
-          </CardContent>
-        </Card>
+        <div
+          key={slotKey}
+          className="h-[7.5rem] animate-pulse rounded-2xl border border-muted/50 bg-muted/30"
+          aria-hidden
+        />
       ))}
     </div>
   )
 }
 
 export function ProposalMetricCard({ stat }: { stat: ProposalMetricStat }) {
+  const Icon = stat.icon ?? METRIC_ICONS[stat.label] ?? FileText
+
   return (
-    <Card className="overflow-hidden border-muted/50 transition-colors duration-200 hover:border-accent/20">
-      <CardContent className="relative p-6">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-2xl font-bold tracking-tight">{stat.value}</h3>
+    <MotionCard className={cn(DASHBOARD_THEME.stats.card, 'group relative overflow-hidden')}>
+      <CardContent className="relative p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
+            <p className={DASHBOARD_THEME.stats.label}>{stat.label}</p>
+            <p className={cn(DASHBOARD_THEME.stats.value, 'tabular-nums')}>{stat.value}</p>
+            <p className={DASHBOARD_THEME.stats.description}>{stat.description}</p>
           </div>
-          <p className="text-xs text-muted-foreground/80">{stat.description}</p>
+          <div
+            className={cn(
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/50',
+              stat.bg,
+              stat.color,
+            )}
+          >
+            <Icon className="h-5 w-5" aria-hidden />
+          </div>
         </div>
-        <div className={`absolute -bottom-4 -right-4 h-24 w-24 rounded-full opacity-5 blur-2xl ${stat.bg}`} />
+        <div
+          className={cn('pointer-events-none absolute inset-x-0 bottom-0 h-1 opacity-60', stat.bg.replace('/10', '/40'))}
+          aria-hidden
+        />
       </CardContent>
-    </Card>
+    </MotionCard>
   )
 }
 
 export function ProposalMetricsGrid({ stats }: { stats: ProposalMetricStat[] }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className={DASHBOARD_THEME.stats.container}>
       {stats.map((stat) => (
         <ProposalMetricCard key={stat.label} stat={stat} />
       ))}

@@ -10,6 +10,7 @@ import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Progress } from '@/shared/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { cn } from '@/lib/utils'
 import { PROVIDER_INFO, PROVIDER_IDS } from '@/features/dashboard/ads/components/constants'
 
@@ -149,7 +150,7 @@ export function AdSetupPanel({
   const progressValue = totalProviders > 0 ? Math.round((connectedCount / totalProviders) * 100) : 0
 
   return (
-    <Card className="border-primary/15 bg-gradient-to-br from-primary/[0.04] via-background to-background shadow-sm">
+    <Card className={ADS_PAGE_THEME.surfaceCardHighlight}>
       <CardHeader className="space-y-4 pb-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">

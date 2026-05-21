@@ -16,7 +16,8 @@ type ProposalStepNavProps = {
 
 function ProposalStepNavComponent({ steps, currentStep, submitted, onGoToStep }: ProposalStepNavProps) {
   return (
-    <nav aria-label="Proposal steps" className="flex flex-col gap-1">
+    <nav aria-label="Proposal steps" className="relative flex flex-col gap-1 pl-1">
+      <div className="pointer-events-none absolute left-[1.15rem] top-4 bottom-4 w-px bg-border/70" aria-hidden />
       {steps.map((step, index) => (
         <ProposalStepNavItem
           key={step.id}
@@ -59,10 +60,10 @@ function ProposalStepNavItem({
       onClick={handleClick}
       aria-current={isCurrent ? 'step' : undefined}
       className={cn(
-        'flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors',
-        isCurrent && 'border-primary/30 bg-primary/5 shadow-sm',
-        !isCurrent && canNavigate && 'border-transparent hover:border-border/60 hover:bg-muted/30',
-        !canNavigate && 'cursor-default border-transparent opacity-60',
+        'relative z-[1] flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-[border-color,background-color,box-shadow]',
+        isCurrent && 'border-primary/35 bg-primary/[0.06] shadow-sm ring-1 ring-primary/10',
+        !isCurrent && canNavigate && 'border-transparent bg-background/80 hover:border-border/60 hover:bg-muted/40',
+        !canNavigate && 'cursor-default border-transparent bg-transparent opacity-55',
       )}
     >
       <span

@@ -1,8 +1,10 @@
-import { Buffer } from 'node:buffer'
 import { cache } from 'react'
 
 import type { ProposalFormData } from '@/lib/proposals'
-import { geminiAI } from '@/services/gemini'
+import {
+  generateDeckInstructions,
+  generateProposalSuggestions as generateDeckSuggestions,
+} from '@/lib/proposal-deck-ai'
 import { gammaService } from '@/services/gamma'
 import type { GammaGenerationStatus } from '@/services/gamma'
 
@@ -18,8 +20,6 @@ export type GammaDeckPayload = {
   pptStorageId: string | null
   pdfStorageId: string | null
 }
-
-const FALLBACK_GAMMA_INSTRUCTIONS = `Slide 1: Executive Summary\nSlide 2: Objectives & KPIs\nSlide 3: Strategy Overview\nSlide 4: Budget Allocation (distribute 100% across channels and note a testing allowance)\nSlide 5: Execution Roadmap\nSlide 6: Optimization & Testing\nSlide 7: Next Steps & Call-to-Action`
 
 function normalizeGammaFileType(value: string): string {
   const lower = value.toLowerCase()
@@ -61,69 +61,6 @@ export function parseGammaDeckPayload(value: unknown): GammaDeckPayload | null {
     pptStorageId: typeof record.pptStorageId === 'string' ? record.pptStorageId : null,
     pdfStorageId: typeof record.pdfStorageId === 'string' ? record.pdfStorageId : null,
   }
-}
-
-function truncateGammaInstructions(value: string): string {
-  const cleaned = value.trim()
-  if (!cleaned) return ''
-  return cleaned.length > 5000 ? cleaned.slice(0, 5000) : cleaned
-}
-
-async function resolveGammaInstructions(formData: ProposalFormData, candidate?: string | null): Promise<string> {
-  const trimmedCandidate = typeof candidate === 'string' ? truncateGammaInstructions(candidate) : ''
-  if (trimmedCandidate.length > 0) {
-    return trimmedCandidate
-  }
-
-  try {
-    const prompt = buildGammaInstructionPrompt(formData)
-    const raw = await geminiAI.generateContent(prompt)
-    const generated = truncateGammaInstructions(raw)
-    if (generated.length > 0) {
-      return generated
-    }
-  } catch {
-    // Ignore and fall back.
-  }
-
-  return truncateGammaInstructions(FALLBACK_GAMMA_INSTRUCTIONS)
-}
-
-function buildGammaInstructionPrompt(formData: ProposalFormData): string {
-  const company = formData.company?.name?.trim() || 'Client'
-  const industry = formData.company?.industry?.trim()
-  const goals = formData.goals?.objectives?.join(', ')
-  const audience = formData.goals?.audience?.trim()
-  const challenges = [
-    ...(formData.goals?.challenges || []),
-    formData.goals?.customChallenge
-  ].filter(Boolean).join(', ')
-  const scope = [
-    ...(formData.scope?.services || []),
-    formData.scope?.otherService
-  ].filter(Boolean).join(', ')
-  const timeline = formData.timelines?.startTime?.trim()
-
-  const context = [
-    `Company: ${company}`,
-    industry ? `Industry: ${industry}` : null,
-    goals ? `Core Objectives: ${goals}` : null,
-    audience ? `Target Audience: ${audience}` : null,
-    challenges ? `Key Challenges: ${challenges}` : null,
-    scope ? `Scope of Work: ${scope}` : null,
-    timeline ? `Desired Start Date: ${timeline}` : null,
-  ].filter(Boolean).join('\n')
-
-  return `You are a world-class marketing strategist. Create a high-converting, strategic slide-by-slide outline for a marketing proposal deck based on the following context:
-
-${context}
-
-Outline Requirements:
-- Use 7-10 slides.
-- Keep each slide title under 8 words.
-- Provide 2-3 specific, actionable bullet points per slide.
-- Ensure the narrative flows from identifying pain points to presenting a tailored solution and projected ROI.
-- Return plain text only.`
 }
 
 export function buildGammaInputText(formData: ProposalFormData, summary?: string): string {
@@ -182,7 +119,11 @@ async function findGammaFileInternal(args: {
 
 export const findGammaFile = cache(findGammaFileInternal)
 
-export async function downloadGammaPresentation(url: string, retries = 3, backoffMs = 2000): Promise<Buffer> {
+export async function downloadGammaPresentation(
+  url: string,
+  retries = 3,
+  backoffMs = 2000,
+): Promise<Uint8Array> {
   const apiKey = process.env.GAMMA_API_KEY
   if (!apiKey) {
     throw new Error('GAMMA_API_KEY is not configured')
@@ -209,11 +150,11 @@ export async function downloadGammaPresentation(url: string, retries = 3, backof
           continue
         }
 
-        throw new Error(`Gamma file download failed (${response.status}): ${details || 'Unknown error'}`)
+        throw new Error(`Presentation file download failed (${response.status}): ${details || 'Unknown error'}`)
       }
 
       const arrayBuffer = await response.arrayBuffer()
-      return Buffer.from(arrayBuffer)
+      return new Uint8Array(arrayBuffer)
     } catch (error: unknown) {
       lastError = error
       if (attempt > retries) {
@@ -223,41 +164,19 @@ export async function downloadGammaPresentation(url: string, retries = 3, backof
     }
   }
 
-  throw (lastError instanceof Error ? lastError : new Error('Gamma file download failed after retries'))
+  throw (lastError instanceof Error ? lastError : new Error('Presentation file download failed after retries'))
 }
 
-export async function generateGammaInstructions(formData: ProposalFormData, existing?: string | null): Promise<string> {
-  return resolveGammaInstructions(formData, existing)
+export async function generateGammaInstructions(
+  formData: ProposalFormData,
+  existing?: string | null,
+): Promise<string> {
+  return generateDeckInstructions(formData, existing)
 }
 
-export async function generateProposalSuggestions(formData: ProposalFormData, summary: string | null | undefined): Promise<string | null> {
-  try {
-    const baseContext = buildGammaInputText(formData, summary ?? undefined)
-    const prompt = `You are a senior marketing strategist. Based on the client context and AI outline below, produce three concise recommendations the account team should act on next. Each recommendation must:\n- Start with "- "\n- Stay under 120 characters\n- Focus on high-impact actions (budget, messaging, channel, measurement, or collaboration)\n- Reference missing data when appropriate\n\nKeep the tone confident and collaborative. Do not include introductions or conclusions.\n\nClient context:\n${baseContext}\n\nAI outline:\n${summary ?? 'Not available'}`
-
-    const raw = await geminiAI.generateContent(prompt)
-    const cleaned = raw.trim()
-    if (!cleaned) {
-      return null
-    }
-
-    const lines = cleaned
-      .split(/\r?\n+/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-
-    if (!lines.length) {
-      return cleaned
-    }
-
-    return lines
-      .map((line) => {
-        if (line.startsWith('-')) return line
-        const trimmed = line.replace(/^\s*(?:[-•*]|\d+[\.\)])\s*/, '')
-        return `- ${trimmed}`
-      })
-      .join('\n')
-  } catch {
-    return null
-  }
+export async function generateProposalSuggestions(
+  formData: ProposalFormData,
+  summary: string | null | undefined,
+): Promise<string | null> {
+  return generateDeckSuggestions(formData, summary)
 }

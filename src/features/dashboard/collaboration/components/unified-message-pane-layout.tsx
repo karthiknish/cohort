@@ -239,6 +239,7 @@ export function UnifiedMessagePaneConversationLayout({
             editingMessageId={editingMessageId}
             focusMessageId={effectiveFocusMessageId}
             focusThreadId={effectiveFocusThreadId}
+            typingIndicatorText={typingIndicator}
           />
         </MessageListRenderProvider>
       </div>

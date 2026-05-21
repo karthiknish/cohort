@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Card } from '@/shared/ui/card'
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
+import { MotionCard } from '@/shared/ui/motion-primitives'
 import type { PerformanceAnalysis } from '@/lib/ad-algorithms'
 
 import {
@@ -99,7 +100,7 @@ export function InsightsChartsCard({
   const funnelAnalysis = analysis.funnels[activeProvider] ?? null
 
   return (
-    <Card className="border-border/60 shadow-sm">
+    <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
       <InsightsChartsHeader
         onSelectedProviderChange={setSelectedProvider}
         providers={providers}
@@ -167,6 +168,6 @@ export function InsightsChartsCard({
           />
         </InsightsChartPanel>
       </InsightsChartsTabs>
-    </Card>
+    </MotionCard>
   )
 }

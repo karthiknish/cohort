@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * Proxy endpoint for serving PPTX files to the in-app deck viewer.
- * This makes authenticated Storage / Gamma URLs accessible via same-origin
+ * This makes authenticated storage and presentation export URLs accessible via same-origin
  * so the client can fetch (and occasionally HEAD) the file without CORS issues.
  */
 

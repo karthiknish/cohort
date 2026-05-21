@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { Card } from '@/shared/ui/card'
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
+import { MotionCard } from '@/shared/ui/motion-primitives'
 import type { MetricRecord, MetricsSummary } from './types'
 import type { DateRange } from './date-range-picker'
 
@@ -118,7 +119,7 @@ export function CrossChannelOverviewCard({
   }, [canonicalConnected, filteredMetrics.length, selectedProviders, serverSideSummary])
 
   return (
-    <Card className="shadow-sm">
+    <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
       <CrossChannelOverviewHeader
         availableProviders={availableProviders}
         dateRange={dateRange}
@@ -144,6 +145,6 @@ export function CrossChannelOverviewCard({
           hasConnectedAds={hasConnectedAds}
         />
       )}
-    </Card>
+    </MotionCard>
   )
 }

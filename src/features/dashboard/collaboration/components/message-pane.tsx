@@ -335,6 +335,20 @@ export function CollaborationMessagePane({
     }
   }, [channel?.id, isLoading, isSearchActive, latestVisibleMessageId, messagesEndRef])
 
+  useEffect(() => {
+    if (isLoading || isSearchActive || !typingIndicator) {
+      return
+    }
+
+    const frame = requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    })
+
+    return () => {
+      cancelAnimationFrame(frame)
+    }
+  }, [isLoading, isSearchActive, messagesEndRef, typingIndicator])
+
   // Handlers
   const handleStartEdit = useCallback((message: CollaborationMessage) => {
     if (message.isDeleted || messageUpdatingId === message.id || messageDeletingId === message.id) return
@@ -574,6 +588,7 @@ export function CollaborationMessagePane({
         threadMessagesByRootId={threadMessagesByRootId}
         threadNextCursorByRootId={threadNextCursorByRootId}
         visibleMessages={visibleMessages}
+        typingIndicator={typingIndicator || undefined}
       />
 
 

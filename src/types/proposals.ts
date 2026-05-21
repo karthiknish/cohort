@@ -15,6 +15,9 @@ export interface ProposalPresentationDeck {
   pdfStorageUrl?: string | null
   warnings?: string[] | null
   error?: string | null
+  creditsDeducted?: number | null
+  creditsRemaining?: number | null
+  externalDeckId?: string | null
 }
 
 /** @deprecated Use ProposalPresentationDeck instead */

@@ -14,9 +14,9 @@ vi.mock('next/link', () => ({
 
 vi.mock('@/shared/ui/motion', () => ({
   domAnimation: {},
-  LazyMotion: ({ children }: { children: ReactNode }) => children,
+  LazyMotion: ({ children }: { children: ReactNode }) => <div data-lazy-motion="">{children}</div>,
   m: {
-    div: ({ children, ...rest }: { children: ReactNode }) => <div {...rest}>{children}</div>,
+    div: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   },
 }))
 
@@ -25,6 +25,7 @@ function agentMessage(partial: Partial<AgentMessage> & Pick<AgentMessage, 'conte
     id: 'm1',
     type: 'agent',
     timestamp: new Date('2026-01-01T00:00:00.000Z'),
+    clientId: 'client-1',
     ...partial,
   }
 }
@@ -78,6 +79,33 @@ describe('AgentMessageCard', () => {
     )
     expect(markup).toContain('Project action failed')
     expect(markup).toContain('Try again')
+  })
+
+  it('renders ads snapshot with performance chart sections', () => {
+    const markup = renderToStaticMarkup(
+      <AgentMessageCard
+        message={agentMessage({
+          content: 'Meta is pacing ahead this week.',
+          status: 'success',
+          metadata: {
+            action: 'execute',
+            operation: 'summarizeAdsPerformance',
+            success: true,
+            data: {
+              totals: { spend: 1200, revenue: 3600, impressions: 50000, clicks: 900, conversions: 40 },
+              providerBreakdown: [{ providerId: 'facebook', label: 'Meta Ads', totals: { spend: 1200 } }],
+              topCampaigns: [
+                { name: 'Brand', spend: 400 },
+                { name: 'Prospecting', spend: 250 },
+              ],
+            },
+          },
+        })}
+      />,
+    )
+    expect(markup).toContain('Snapshot ready')
+    expect(markup).toContain('Spend vs revenue')
+    expect(markup).toContain('Performance')
   })
 
   it('renders neutral info card for conversational response', () => {

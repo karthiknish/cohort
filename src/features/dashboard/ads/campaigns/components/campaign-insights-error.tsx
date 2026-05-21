@@ -2,6 +2,7 @@
 
 import { AlertCircle, RefreshCw } from 'lucide-react'
 
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -19,14 +20,8 @@ export function CampaignInsightsError({
   className,
 }: CampaignInsightsErrorProps) {
   return (
-    <div
-      className={cn(
-        'flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-muted/60 bg-muted/10 px-6 py-14 text-center',
-        className,
-      )}
-      role="alert"
-    >
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+    <div className={cn(ADS_PAGE_THEME.emptyState, 'px-6 py-14', className)} role="alert">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive ring-1 ring-destructive/20">
         <AlertCircle className="h-6 w-6" aria-hidden />
       </div>
       <div className="max-w-md space-y-1">
@@ -38,7 +33,7 @@ export function CampaignInsightsError({
           type="button"
           variant="outline"
           size="sm"
-          className="gap-1.5"
+          className="gap-1.5 rounded-full"
           onClick={onRetry}
           disabled={retrying}
           aria-busy={retrying}

@@ -135,15 +135,15 @@ const INTEGRATIONS_RIGHT: Integration[] = [
     ],
   },
   {
-    id: 'stripe',
-    label: 'Stripe',
-    brand: 'stripe',
+    id: 'tiktok',
+    label: 'TikTok',
+    brand: 'tiktok',
     iconBg: 'bg-card ring-1 ring-border/70',
-    accentColor: 'text-success',
+    accentColor: 'text-foreground',
     insights: [
-      { stat: '$48.2K', label: 'MRR tracked', trend: '+9% MoM', trendUp: true },
-      { stat: '98.4%', label: 'Payment success rate', trend: 'Above benchmark', trendUp: true },
-      { stat: '3', label: 'Active billing plans', trend: 'Auto-synced', trendUp: true },
+      { stat: '1.8M', label: 'Video views', trend: '+31% MoM', trendUp: true },
+      { stat: '$6.20', label: 'Avg. CPC', trend: '−5% vs last week', trendUp: true },
+      { stat: '4', label: 'Campaigns live', trend: 'Synced live', trendUp: true },
     ],
   },
 ]

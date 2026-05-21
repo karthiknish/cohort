@@ -2,6 +2,15 @@ import { renderToStaticMarkup } from 'react-dom/server'
 
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('../hooks/use-presentation-themes', () => ({
+  usePresentationThemes: () => ({
+    themes: [{ id: 'theme-1', name: 'Executive', description: 'Polished contrast.' }],
+    themeById: new Map([['theme-1', { id: 'theme-1', name: 'Executive', description: 'Polished contrast.' }]]),
+    isLoading: false,
+    loadError: null,
+  }),
+}))
+
 import { ProposalStepContent } from './proposal-step-content'
 
 const baseFormState = {
@@ -82,7 +91,7 @@ describe('ProposalStepContent', () => {
     )
 
     expect(markup).toContain('Estimated Project Value')
-    expect(markup).toContain('Presentation Theme')
+    expect(markup).toContain('Deck style')
     expect(markup).toContain('Proposal summary')
     expect(markup).toContain('Acme')
     expect(markup).toContain('SEO &amp; Content Marketing')

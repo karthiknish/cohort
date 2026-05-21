@@ -19,13 +19,10 @@ A comprehensive Next.js application for marketing agencies to manage clients, tr
 - AI-powered team productivity summaries
 - Automated follow-ups and smart task suggestions
 
-### Finance & Billing
-- Accept payments via Stripe
-- Auto-generate professional invoices
+### Finance
 - Revenue dashboard and analytics
 - Expense tracking per client
 - Financial insights and cash flow predictions
-- Self-serve subscription management with Stripe Checkout & Billing Portal
 
 ### Expense Management (MVP)
 - Expense categories CRUD (Firestore-backed)
@@ -64,7 +61,6 @@ A comprehensive Next.js application for marketing agencies to manage clients, tr
 - **Charts**: Recharts
 - **UI Components**: Radix UI + Custom components
 - **AI**: Google Gemini API
-- **Payments**: Stripe
 - **PDF Generation**: jsPDF
 - **Real-time**: Socket.io
 
@@ -144,20 +140,6 @@ bun run build
 ```bash
 bun run start
 ```
-
-### Stripe Setup
-
-The in-app billing experience (Settings → Billing & Payments) relies on three subscription prices configured in your Stripe account.
-
-1. Create the products and recurring prices you intend to sell (e.g. Starter, Growth, Scale).
-2. Copy each price ID (`price_...`) into the corresponding environment variable:
-	- `STRIPE_PRICE_STARTER_MONTHLY`
-	- `STRIPE_PRICE_GROWTH_MONTHLY`
-	- `STRIPE_PRICE_SCALE_MONTHLY`
-3. Set your Stripe keys locally (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, and optionally `STRIPE_WEBHOOK_SECRET`) and in production.
-4. Ensure `NEXT_PUBLIC_APP_URL` reflects the domain customers should return to after checkout/portal sessions.
-
-Once configured, users can self-manage subscriptions, update payment methods, and download invoices directly from the Settings page.
 
 ### Convex Setup (WIP migration)
 

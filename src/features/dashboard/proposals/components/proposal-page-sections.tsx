@@ -20,6 +20,7 @@ import { ProposalBuilderJourneyBar } from './proposal-builder-journey-bar'
 import { ProposalDraftPanel } from './proposal-draft-panel'
 import { ProposalHistory } from './proposal-history'
 import { ProposalMetrics } from './proposal-metrics'
+import { ProposalStepIndicator } from './proposal-step-indicator'
 import { ProposalStepNav } from './proposal-step-nav'
 import type { ProposalStep } from './proposal-step-indicator'
 import { ProposalSubmittedPanel } from './proposal-submitted-panel'
@@ -55,21 +56,23 @@ export function ProposalPageActions(props: {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <ProposalTemplateSelector currentFormData={currentFormData} onApplyTemplate={onApplyTemplate} />
-      <ProposalVersionHistory
-        proposalId={draftId}
-        currentFormData={currentFormData}
-        onVersionRestored={onVersionRestored}
-        disabled={!draftId || isSubmitting}
-      />
+    <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ProposalTemplateSelector currentFormData={currentFormData} onApplyTemplate={onApplyTemplate} />
+        <ProposalVersionHistory
+          proposalId={draftId}
+          currentFormData={currentFormData}
+          onVersionRestored={onVersionRestored}
+          disabled={!draftId || isSubmitting}
+        />
+      </div>
       <Button
         onClick={onStartProposal}
         disabled={!selectedClientId || isCreatingDraft}
-        className={cn(getButtonClasses('primary'), 'shrink-0 shadow-sm motion-chromatic hover:shadow-md')}
+        className={cn(getButtonClasses('primary'), 'w-full shrink-0 shadow-sm sm:w-auto')}
       >
         <Plus className="mr-2 h-4 w-4" />
-        New Proposal
+        New proposal
       </Button>
     </div>
   )
@@ -90,12 +93,12 @@ export function ProposalStartStateCard(props: {
 
   if (!canManage) {
     return (
-      <Alert className="border-dashed border-muted-foreground/30 bg-muted/20">
-        <AlertTitle className="flex items-center gap-2">
-          <FileText className="h-4 w-4" aria-hidden />
+      <Alert className="rounded-2xl border border-dashed border-muted-foreground/25 bg-muted/15">
+        <AlertTitle className="flex items-center gap-2 text-base">
+          <FileText className="h-4 w-4 text-primary" aria-hidden />
           Shared proposals
         </AlertTitle>
-        <AlertDescription>
+        <AlertDescription className="text-sm leading-relaxed">
           Your agency publishes proposals and decks here. Open a row below to preview or download when ready.
         </AlertDescription>
       </Alert>
@@ -103,12 +106,12 @@ export function ProposalStartStateCard(props: {
   }
 
   return (
-    <Alert className="border-dashed border-muted-foreground/30 bg-muted/20">
-      <AlertTitle className="flex items-center gap-2">
-        <FileText className="h-4 w-4" aria-hidden />
+    <Alert className="rounded-2xl border border-dashed border-warning/25 bg-warning/5">
+      <AlertTitle className="flex items-center gap-2 text-base">
+        <FileText className="h-4 w-4 text-warning" aria-hidden />
         Select a client to create proposals
       </AlertTitle>
-      <AlertDescription>{blockedHint}</AlertDescription>
+      <AlertDescription className="text-sm leading-relaxed">{blockedHint}</AlertDescription>
     </Alert>
   )
 }
@@ -258,14 +261,14 @@ export function ProposalBuilderOverlay(props: {
   )
 
   const builderBody = (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-muted/40 bg-background/95 px-4 py-4 backdrop-blur-md sm:items-center sm:px-6">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-linear-to-b from-muted/15 via-background to-background supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border/50 bg-background/90 px-4 py-4 backdrop-blur-md sm:items-center sm:px-6">
           <div className="min-w-0 space-y-1">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">Proposal builder</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Proposal builder</p>
             <h2 className="text-balance text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
               {submitted ? 'Deck and next steps' : activeStep?.title ?? 'Proposal'}
             </h2>
-            <p className="text-pretty text-sm text-muted-foreground">
+            <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
               {submitted
                 ? 'Review your generated materials or jump back in to adjust inputs.'
                 : (activeStep?.description ?? 'Complete each section—your work saves automatically.')}
@@ -277,7 +280,7 @@ export function ProposalBuilderOverlay(props: {
             size="sm"
             onClick={onClose}
             disabled={isSubmitting}
-            className="shrink-0 gap-2 border-muted-foreground/25"
+            className="shrink-0 gap-2 rounded-full border-muted-foreground/25"
             aria-label={isSubmitting ? 'Close when generation finishes' : 'Close proposal builder'}
           >
             <X className="h-4 w-4" aria-hidden />
@@ -285,7 +288,7 @@ export function ProposalBuilderOverlay(props: {
             <Kbd className="hidden sm:inline">Esc</Kbd>
           </Button>
         </header>
-        <div className="min-h-0 flex-1 overflow-hidden px-4 py-4 sm:px-6 sm:py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <div className="mb-4">
             <ProposalBuilderJourneyBar
               isSubmitting={isSubmitting}
@@ -297,15 +300,15 @@ export function ProposalBuilderOverlay(props: {
               autosaveStatus={autosaveStatus}
             />
           </div>
-          <div className="flex h-full min-h-0 flex-col gap-4">
+          <div className="flex min-h-0 flex-col gap-4">
             {isBootstrapping ? (
-              <Card className="border-muted/60 bg-background">
+              <Card className="border-border/60 bg-background shadow-sm">
                 <CardContent className="p-6">
                   <DashboardSkeleton showStepIndicator />
                 </CardContent>
               </Card>
             ) : submitted ? (
-              <Card className="border-muted/60 bg-background">
+              <Card className="border-border/60 bg-background shadow-sm">
                 <CardContent className="p-6">
                   <ProposalSubmittedPanel
                     summary={summary}
@@ -321,38 +324,42 @@ export function ProposalBuilderOverlay(props: {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(220px,260px)_1fr] lg:gap-6">
-                <aside className="hidden min-h-0 shrink-0 overflow-y-auto lg:block">
-                  <ProposalStepNav
-                    steps={steps}
-                    currentStep={currentStep}
-                    submitted={submitted}
-                    onGoToStep={onGoToStep}
-                  />
-                </aside>
-                <Card className="flex min-h-0 flex-1 flex-col overflow-hidden border-muted/60 bg-background shadow-sm">
-                  <CardContent className="flex min-h-0 flex-1 flex-col p-4 sm:p-6">
-                    <div className="mb-4 lg:hidden">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Step {currentStep + 1} of {steps.length}
-                      </p>
-                      <p className="text-sm font-medium text-foreground">{activeStep?.title}</p>
-                    </div>
-                    <ProposalDraftPanel
-                      draftId={draftId}
-                      autosaveStatus={autosaveStatus}
-                      stepContent={stepContent}
-                      onBack={onBack}
-                      onNext={onNext}
-                      isFirstStep={isFirstStep}
-                      isLastStep={isLastStep}
+              <div className="grid min-h-0 gap-4 lg:grid-cols-[minmax(240px,280px)_1fr] lg:gap-6">
+                <aside className="hidden min-h-0 lg:block">
+                  <div className="sticky top-0 rounded-2xl border border-border/50 bg-card/80 p-3 shadow-sm backdrop-blur-sm">
+                    <p className="mb-3 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Sections
+                    </p>
+                    <ProposalStepNav
+                      steps={steps}
                       currentStep={currentStep}
-                      totalSteps={steps.length}
-                      isSubmitting={isSubmitting}
-                      validationMessages={validationMessages}
+                      submitted={submitted}
+                      onGoToStep={onGoToStep}
                     />
-                  </CardContent>
-                </Card>
+                  </div>
+                </aside>
+                <div className="flex min-h-0 flex-col gap-4">
+                  <div className="lg:hidden">
+                    <ProposalStepIndicator steps={steps} currentStep={currentStep} submitted={submitted} />
+                  </div>
+                  <Card className="flex min-h-0 flex-col overflow-hidden border-border/60 bg-background shadow-sm">
+                    <CardContent className="flex min-h-0 flex-col p-4 sm:p-6">
+                      <ProposalDraftPanel
+                        draftId={draftId}
+                        autosaveStatus={autosaveStatus}
+                        stepContent={stepContent}
+                        onBack={onBack}
+                        onNext={onNext}
+                        isFirstStep={isFirstStep}
+                        isLastStep={isLastStep}
+                        currentStep={currentStep}
+                        totalSteps={steps.length}
+                        isSubmitting={isSubmitting}
+                        validationMessages={validationMessages}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             )}
           </div>

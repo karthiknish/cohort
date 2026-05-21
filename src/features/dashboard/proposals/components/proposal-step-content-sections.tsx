@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Textarea } from '@/shared/ui/textarea'
-import { GAMMA_PRESENTATION_THEMES } from '@/lib/gamma-themes'
+import { usePresentationThemes } from '../hooks/use-presentation-themes'
 import { listItemEnterClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 
@@ -708,6 +708,8 @@ function PresentationThemeButton({
 }
 
 export function ProposalValueStepSection({ formState, summary, validationErrors, onUpdateField }: ProposalStepSectionProps) {
+  const { themes, isLoading: themesLoading, loadError: themesLoadError } = usePresentationThemes()
+
   return (
     <div className={animatedStepClassName}>
       <FieldSection
@@ -741,20 +743,31 @@ export function ProposalValueStepSection({ formState, summary, validationErrors,
       </FieldSection>
 
       <FieldSection
-        title="Presentation Theme"
-        description="Select a visual style for your generated proposal deck."
+        title="Deck style"
+        description="Choose how your strategy deck should look when we generate it."
         className="border-t border-muted/20 pt-4"
       >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {GAMMA_PRESENTATION_THEMES.map((theme) => (
-            <PresentationThemeButton
-              key={theme.id}
-              theme={theme}
-              isSelected={formState.value.presentationTheme === theme.id}
-              onUpdateField={onUpdateField}
-            />
-          ))}
-        </div>
+        {themesLoadError ? (
+          <p className="mb-3 text-xs text-muted-foreground">{themesLoadError}</p>
+        ) : null}
+        {themesLoading ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {['theme-skeleton-1', 'theme-skeleton-2', 'theme-skeleton-3'].map((key) => (
+              <div key={key} className="h-24 animate-pulse rounded-xl border border-muted/40 bg-muted/30" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {themes.map((theme) => (
+              <PresentationThemeButton
+                key={theme.id}
+                theme={theme}
+                isSelected={formState.value.presentationTheme === theme.id}
+                onUpdateField={onUpdateField}
+              />
+            ))}
+          </div>
+        )}
       </FieldSection>
 
       <Card className="border-dashed border-accent/20 bg-accent/5">

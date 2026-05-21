@@ -5,6 +5,7 @@ import type { ChangeEvent, RefObject, ClipboardEvent } from 'react'
 import { FileText, Image as ImageIcon, LoaderCircle, Reply, Send, X } from 'lucide-react'
 import { listItemEnterClass } from '@/lib/motion'
 import { cn } from '@/lib/utils'
+import { ChatTypingIndicator } from '@/shared/ui/chat-typing-indicator'
 import { Button } from '@/shared/ui/button'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationMessage } from '@/types/collaboration'
@@ -240,9 +241,7 @@ export function MessageComposer({
           onChange={onAttachmentInputChange}
         />
 
-        {typingIndicator && (
-          <div className="text-xs text-muted-foreground">{typingIndicator}</div>
-        )}
+        {typingIndicator ? <ChatTypingIndicator label={typingIndicator} variant="composer" /> : null}
       </div>
     </div>
   )

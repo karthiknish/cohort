@@ -25,7 +25,9 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
+import { CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
+import { MotionCard } from '@/shared/ui/motion-primitives'
 import { Badge } from '@/shared/ui/badge'
 import { Input } from '@/shared/ui/input'
 import { Skeleton } from '@/shared/ui/skeleton'
@@ -202,14 +204,15 @@ function CampaignAdsHeader({
   const handleRefresh = useCallback(() => { void fetchAds() }, [fetchAds])
 
   return (
-    <CardHeader className="pb-4">
+    <CardHeader className="border-b border-border/50 pb-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-            <Layers className="h-5 w-5 text-muted-foreground" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/15">
+            <Layers className="h-5 w-5 text-primary" aria-hidden />
           </div>
-          <div>
-            <CardTitle className="text-lg">Ad Creatives</CardTitle>
+          <div className="space-y-0.5">
+            <p className={ADS_PAGE_THEME.sectionEyebrow}>Creative library</p>
+            <CardTitle className="text-lg font-semibold tracking-tight">Ad creatives</CardTitle>
             <CardDescription>
               {isPreviewMode
                 ? 'Ads list is not available in preview mode.'
@@ -943,7 +946,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
   }, [fetchAds, fetchMetrics])
 
   return (
-    <Card className="overflow-hidden border-border/60 shadow-sm">
+    <MotionCard className={ADS_PAGE_THEME.surfaceCard}>
       <CampaignAdsHeader
         availableAdSets={availableAdSets}
         campaignId={campaignId}
@@ -960,7 +963,7 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
         workspaceId={workspaceId}
       />
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-6">
         {loading && !hasLoaded ? (
           <div className="space-y-4">
             <div className="flex gap-2">
@@ -1063,6 +1066,6 @@ export function CampaignAdsSection({ providerId, campaignId, clientId, isPreview
           </>
         )}
       </CardContent>
-    </Card>
+    </MotionCard>
   )
 }

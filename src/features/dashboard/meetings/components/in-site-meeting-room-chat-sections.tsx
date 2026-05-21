@@ -3,9 +3,10 @@
 import { useCallback, useMemo, type ChangeEvent, type KeyboardEvent, type MouseEvent, type RefObject } from 'react'
 
 import type { ReceivedChatMessage } from '@/shared/ui/livekit'
-import { Download, File, ImageIcon, LoaderCircle, MessageSquareText, Paperclip, Send, X } from 'lucide-react'
+import { LoaderCircle, MessageSquareText, Paperclip, Send, X } from 'lucide-react'
 
 import type { PendingAttachment } from '@/features/dashboard/collaboration/hooks/types'
+import { ChatMediaGallery } from '@/shared/ui/chat-media-gallery'
 import { AgentMentionText } from '@/shared/components/agent-mode/mention-highlights'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import { Badge } from '@/shared/ui/badge'
@@ -35,10 +36,6 @@ function formatMessageTime(timestamp: number): string {
     hour: 'numeric',
     minute: '2-digit',
   })
-}
-
-function isImageAttachment(attachment: MeetingChatAttachment): boolean {
-  return attachment.type.startsWith('image/')
 }
 
 function PendingAttachmentPill({
@@ -113,29 +110,24 @@ function MentionResultButton({
 
 export function MeetingChatAttachmentCard({ attachment, isLocal }: { attachment: MeetingChatAttachment; isLocal: boolean }) {
   return (
-    <a
-      href={attachment.url}
-      target="_blank"
-      rel="noreferrer"
+    <div
       className={cn(
-        'flex items-center gap-3 rounded-2xl border px-3 py-2 transition hover:border-border/80 hover:bg-muted/40',
-        isLocal ? 'border-primary-foreground/20 bg-primary-foreground/10' : 'border-border/70 bg-muted/20',
+        'rounded-2xl p-0.5',
+        isLocal ? 'bg-primary-foreground/5' : 'bg-transparent',
       )}
     >
-      <div
-        className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl',
-          isLocal ? 'bg-primary-foreground/15 text-primary-foreground' : 'bg-muted text-foreground',
-        )}
-      >
-        {isImageAttachment(attachment) ? <ImageIcon className="h-4 w-4" /> : <File className="h-4 w-4" />}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className={cn('truncate text-sm font-medium', isLocal ? 'text-primary-foreground' : 'text-foreground')}>{attachment.name}</p>
-        <p className={cn('text-xs', isLocal ? 'text-primary-foreground/75' : 'text-muted-foreground')}>{attachment.size}</p>
-      </div>
-      <Download className={cn('h-4 w-4 shrink-0', isLocal ? 'text-primary-foreground/80' : 'text-muted-foreground')} />
-    </a>
+      <ChatMediaGallery
+        compact
+        attachments={[
+          {
+            name: attachment.name,
+            url: attachment.url,
+            type: attachment.type,
+            size: attachment.size,
+          },
+        ]}
+      />
+    </div>
   )
 }
 

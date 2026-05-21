@@ -1,13 +1,40 @@
 'use client'
 
-import { type ReactNode, useCallback, ViewTransition } from 'react'
-import { Clock, Download, ExternalLink, FileText, Layout, LoaderCircle, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import React, { type ReactNode, useCallback } from 'react'
+import {
+  Clock,
+  Download,
+  ExternalLink,
+  FileText,
+  Layout,
+  LoaderCircle,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react'
 import Link from 'next/link'
 
+import { DASHBOARD_THEME } from '@/lib/dashboard-theme'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { cn } from '@/lib/utils'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu'
+import { cn, formatRelativeTime } from '@/lib/utils'
 import type { ProposalDraft } from '@/types/proposals'
+
+type ViewTransitionComponent = React.ComponentType<{
+  children: ReactNode
+  name: string
+  share: string
+  default?: 'none' | 'auto'
+}>
 
 function MaybeViewTransition({
   children,
@@ -20,6 +47,7 @@ function MaybeViewTransition({
   name: string
   share: string
 }) {
+  const ViewTransition = (React as unknown as { ViewTransition?: ViewTransitionComponent }).ViewTransition
   if (typeof ViewTransition !== 'function') {
     return children
   }
@@ -29,6 +57,26 @@ function MaybeViewTransition({
       {children}
     </ViewTransition>
   )
+}
+
+function proposalStatusBadgeClass(status: ProposalDraft['status']): string {
+  if (status === 'ready') {
+    return cn(DASHBOARD_THEME.badges.base, DASHBOARD_THEME.badges.success)
+  }
+  if (status === 'sent') {
+    return cn(DASHBOARD_THEME.badges.base, 'border-accent/25 bg-accent/10 text-accent-foreground')
+  }
+  if (status === 'in_progress') {
+    return cn(DASHBOARD_THEME.badges.base, DASHBOARD_THEME.badges.warning)
+  }
+  return cn(DASHBOARD_THEME.badges.base, DASHBOARD_THEME.badges.secondary)
+}
+
+function formatProposalUpdatedAt(updatedAt: string | null | undefined): string {
+  if (!updatedAt) return 'Recently updated'
+  const date = new Date(updatedAt)
+  if (Number.isNaN(date.getTime())) return 'Recently updated'
+  return formatRelativeTime(date)
 }
 
 export function ProposalHistoryHeader({
@@ -41,17 +89,23 @@ export function ProposalHistoryHeader({
   proposalCount: number
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-muted/30 pb-2">
-      <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
-        <span className="text-sm font-medium text-foreground">
-          {isLoading ? 'Refreshing proposals…' : `${proposalCount} ${proposalCount === 1 ? 'proposal' : 'proposals'}`}
-        </span>
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/15 px-3 py-2.5">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">
+          {isLoading ? 'Refreshing…' : `${proposalCount} ${proposalCount === 1 ? 'proposal' : 'proposals'}`}
+        </p>
         {!isLoading && proposalCount > 0 ? (
-          <span className="text-xs text-muted-foreground">For the selected client workspace</span>
+          <p className="text-xs text-muted-foreground">For the active client workspace</p>
         ) : null}
       </div>
-      <Button variant="ghost" size="sm" onClick={onRefresh} disabled={isLoading} className="h-8 px-2 text-muted-foreground hover:text-foreground">
-        <RefreshCw className={cn('mr-1.5 h-3.5 w-3.5', isLoading && 'animate-spin')} />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onRefresh}
+        disabled={isLoading}
+        className="h-8 shrink-0 gap-1.5 rounded-full px-3"
+      >
+        <RefreshCw className={cn('h-3.5 w-3.5', isLoading && 'animate-spin')} aria-hidden />
         Refresh
       </Button>
     </div>
@@ -72,23 +126,27 @@ export function ProposalHistoryEmptyState({
   onCreateNew: () => void
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-muted/50 bg-muted/5 p-12 text-center">
-      <div className="mb-4 rounded-full bg-info/10 p-4">
-        <FileText className="h-8 w-8 text-info/60" />
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-muted-foreground/25 bg-linear-to-b from-muted/10 to-transparent px-6 py-14 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/15">
+        <FileText className="h-7 w-7 text-primary/80" aria-hidden />
       </div>
       <h3 className="mb-2 text-lg font-semibold tracking-tight">No proposals yet</h3>
-      <p className="mb-6 max-w-[320px] text-sm text-muted-foreground">
-        {canManage
-          ? (
-              <>
-                Use <span className="font-medium text-foreground">New Proposal</span> in the header to open the guided builder and generate your first deck.
-              </>
-            )
-          : 'When your agency shares a proposal or deck, it will appear here for you to review.'}
+      <p className="mb-6 max-w-sm text-sm leading-relaxed text-muted-foreground">
+        {canManage ? (
+          <>
+            Start the guided builder to capture client context and generate your first strategy deck.
+          </>
+        ) : (
+          'When your agency shares a proposal or deck, it will appear here for you to review.'
+        )}
       </p>
       {canManage ? (
-        <Button onClick={onCreateNew} disabled={!canCreate || isCreating || isGenerating} className="shadow-sm motion-chromatic hover:shadow-md">
-          {isCreating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+        <Button
+          onClick={onCreateNew}
+          disabled={!canCreate || isCreating || isGenerating}
+          className="gap-2 rounded-full shadow-sm"
+        >
+          {isCreating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           New proposal
         </Button>
       ) : null}
@@ -140,97 +198,133 @@ export function ProposalHistoryRow({
     onRequestDelete(proposal)
   }, [onRequestDelete, proposal])
 
+  const updatedLabel = formatProposalUpdatedAt(proposal.updatedAt)
+  const isDeleting = deletingProposalId === proposal.id
+
   return (
-    <div
+    <article
       className={cn(
-        'group relative rounded-xl border bg-card p-5 motion-chromatic hover:border-info/20 hover:shadow-sm',
-        isActiveDraft && 'border-info bg-info/[0.01] ring-1 ring-info/10',
+        'group relative overflow-hidden rounded-2xl border bg-card transition-[border-color,box-shadow]',
+        'hover:border-primary/20 hover:shadow-md',
+        isActiveDraft && 'border-primary/30 bg-primary/[0.03] ring-1 ring-primary/15',
       )}
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1.5">
+      {isActiveDraft ? (
+        <div className="absolute inset-y-0 left-0 w-1 bg-primary" aria-hidden />
+      ) : null}
+
+      <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
+        <div className="min-w-0 space-y-2 pl-0.5">
           <div className="flex flex-wrap items-center gap-2">
             <MaybeViewTransition name={`proposal-title-${proposal.id}`} share="text-morph" defaultType="none">
-              <h4 className="text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">{displayName}</h4>
+              <h4 className="truncate text-base font-semibold tracking-tight text-foreground">{displayName}</h4>
             </MaybeViewTransition>
             <MaybeViewTransition name={`proposal-status-${proposal.id}`} share="morph" defaultType="none">
-              <Badge
-                variant={proposal.status === 'ready' ? 'default' : 'outline'}
-                className={cn(
-                  'h-5 px-2 text-[10px] font-bold uppercase tracking-wider',
-                  proposal.status === 'ready' && 'border-none bg-success hover:bg-success/90',
-                  proposal.status === 'sent' && 'border-none bg-accent text-accent-foreground hover:bg-accent/90',
-                  proposal.status === 'draft' && 'border-muted-foreground/30 text-muted-foreground',
-                )}
-              >
-                {proposal.status}
-              </Badge>
+              <span className={proposalStatusBadgeClass(proposal.status)}>{proposal.status}</span>
             </MaybeViewTransition>
             {isActiveDraft && proposal.status !== 'ready' ? (
-              <Badge variant="secondary" className="h-5 border-none bg-warning/10 px-2 text-[10px] font-bold uppercase tracking-wider text-warning hover:bg-warning/10">
+              <Badge variant="outline" className="rounded-full border-warning/30 bg-warning/10 text-[10px] font-semibold uppercase tracking-wide text-warning">
                 Active draft
               </Badge>
             ) : null}
           </div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5" suppressHydrationWarning>
-              <Clock className="h-3.5 w-3.5" />
-              {proposal.updatedAt ? new Date(proposal.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5" suppressHydrationWarning>
+              <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              {updatedLabel}
             </span>
-            <span className="h-3 w-px bg-muted-foreground/20" />
-            <span className="font-mono text-[10px] tracking-tight">#{proposal.id.slice(0, 8).toUpperCase()}</span>
+            <span className="hidden h-3 w-px bg-border sm:inline" aria-hidden />
+            <span className="font-mono text-[10px] tracking-tight text-muted-foreground/80">
+              #{proposal.id.slice(0, 8).toUpperCase()}
+            </span>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {canManage && proposal.status === 'draft' && !isActiveDraft ? (
-            <Button size="sm" variant="secondary" onClick={handleResumeAsEdit} className="h-9 px-4 font-medium">
-              <Pencil className="mr-2 h-3.5 w-3.5" />
-              Edit
-            </Button>
-          ) : null}
-
-          <Button size="sm" variant={isActiveDraft ? 'default' : 'outline'} onClick={handleResume} disabled={resumeDisabled} className="h-9 px-4 font-medium">
-            {resumeDisabled ? <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Layout className="mr-2 h-3.5 w-3.5" />}
+        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+          <Button
+            size="sm"
+            variant={isActiveDraft ? 'default' : 'secondary'}
+            onClick={handleResume}
+            disabled={resumeDisabled}
+            className="h-9 min-w-[8.5rem] gap-1.5 rounded-full font-medium"
+          >
+            {resumeDisabled ? (
+              <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            ) : (
+              <Layout className="h-3.5 w-3.5" aria-hidden />
+            )}
             {resumeLabel}
           </Button>
 
           {presentationUrl ? (
-            <div className="flex items-center gap-1.5">
-              <Button asChild size="sm" variant="secondary" className="h-9 px-3">
+            <>
+              <Button asChild size="sm" variant="outline" className="h-9 rounded-full px-3">
                 <Link href={`/dashboard/proposals/${proposal.id}/deck`} transitionTypes={['nav-forward']}>
-                  <ExternalLink className="mr-2 h-3.5 w-3.5" />
+                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
                   Preview
                 </Link>
               </Button>
-              <Button asChild size="sm" variant="ghost" className="h-9 px-3 text-muted-foreground hover:text-foreground">
+              <Button asChild size="sm" variant="ghost" className="h-9 rounded-full px-3">
                 <a href={presentationUrl} target="_blank" rel="noopener noreferrer">
-                  <Download className="mr-2 h-3.5 w-3.5" />
+                  <Download className="mr-1.5 h-3.5 w-3.5" aria-hidden />
                   PPT
                 </a>
               </Button>
-            </div>
+            </>
           ) : canManage && deckRequestable ? (
-            <Button size="sm" variant="outline" onClick={handleDownloadDeck} disabled={isDeckPreparing} className="h-9 border-dashed px-4">
-              {isDeckPreparing ? <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" /> : <FileText className="mr-2 h-3.5 w-3.5 text-info" />}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDownloadDeck}
+              disabled={isDeckPreparing}
+              className="h-9 gap-1.5 rounded-full border-dashed px-3"
+            >
+              {isDeckPreparing ? (
+                <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              ) : (
+                <FileText className="h-3.5 w-3.5 text-primary" aria-hidden />
+              )}
               {isDeckPreparing ? 'Preparing…' : 'Generate Deck'}
             </Button>
           ) : null}
 
           {canManage ? (
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleRequestDelete}
-              disabled={Boolean(deletingProposalId)}
-              className="h-9 w-9 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-              aria-label={`Delete ${displayName}`}
-            >
-              {deletingProposalId === proposal.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-9 w-9 rounded-full text-muted-foreground"
+                  aria-label={`More actions for ${displayName}`}
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                {proposal.status === 'draft' && !isActiveDraft ? (
+                  <DropdownMenuItem onClick={handleResumeAsEdit}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit draft
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={handleRequestDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
         </div>
       </div>
-    </div>
+    </article>
   )
 }

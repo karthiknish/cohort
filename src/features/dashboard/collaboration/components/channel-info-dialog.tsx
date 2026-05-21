@@ -3,11 +3,9 @@
 import { notifyFailure } from '@/lib/notifications'
 import { reportConvexFailure } from '@/lib/handle-convex-error'
 import { useCallback, useRef, useState } from 'react'
-import { Camera, LoaderCircle, Trash2 } from 'lucide-react'
 import { useMutation } from 'convex/react'
 
 import { collaborationApi, collaborationChannelAvatarsApi } from '@/lib/convex-api'
-import { asErrorMessage } from '@/lib/convex-errors'
 import { Button } from '@/shared/ui/button'
 import {
   Dialog,
@@ -16,15 +14,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog'
-import { ScrollArea } from '@/shared/ui/scroll-area'
 import { useToast } from '@/shared/ui/use-toast'
 import type { ClientTeamMember } from '@/types/clients'
 import type { CollaborationAttachment } from '@/types/collaboration'
 
 import type { Channel } from '../types'
-import { ChannelAvatar } from './channel-avatar'
-import { CollaborationSidebarContent } from './sidebar-sections'
-import { NotificationSettings } from './notification-settings'
+import {
+  ChannelInfoHero,
+  ChannelInfoTabs,
+} from './channel-info-dialog-sections'
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024
 const ALLOWED_AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -61,6 +59,7 @@ export function ChannelInfoDialog({
   const setChannelAvatar = useMutation(collaborationChannelAvatarsApi.setAvatar)
 
   const displayName = channel.name.startsWith('#') ? channel.name : `#${channel.name}`
+  const memberCount = channelParticipants.length
 
   const handlePickPhoto = useCallback(() => {
     fileInputRef.current?.click()
@@ -74,17 +73,17 @@ export function ChannelInfoDialog({
 
       if (!ALLOWED_AVATAR_TYPES.has(file.type)) {
         notifyFailure({
-        title: 'Unsupported image',
-        message: 'Use a JPEG, PNG, or WebP file.',
-      })
+          title: 'Unsupported image',
+          message: 'Use a JPEG, PNG, or WebP file.',
+        })
         return
       }
 
       if (file.size > MAX_AVATAR_BYTES) {
         notifyFailure({
-        title: 'Image too large',
-        message: 'Channel photos must be 2 MB or smaller.',
-      })
+          title: 'Image too large',
+          message: 'Channel photos must be 2 MB or smaller.',
+        })
         return
       }
 
@@ -120,10 +119,10 @@ export function ChannelInfoDialog({
         })
       } catch (error) {
         reportConvexFailure({
-        error: error,
-        context: 'channel-info-dialog.tsx:catch',
-        title: 'Could not update photo',
-        fallbackMessage: 'Could not update photo',
+          error: error,
+          context: 'channel-info-dialog.tsx:catch',
+          title: 'Could not update photo',
+          fallbackMessage: 'Could not update photo',
         })
       } finally {
         setUploading(false)
@@ -152,7 +151,7 @@ export function ChannelInfoDialog({
         context: 'channel-info-dialog.tsx:catch',
         title: 'Could not remove photo',
         fallbackMessage: 'Could not remove photo',
-        })
+      })
     } finally {
       setRemoving(false)
     }
@@ -162,82 +161,49 @@ export function ChannelInfoDialog({
     void handleRemovePhoto()
   }, [handleRemovePhoto])
 
+  const handleManageMembers = useCallback(() => {
+    onOpenChange(false)
+    onManageMembers?.()
+  }, [onManageMembers, onOpenChange])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[min(90dvh,40rem)] w-[min(100vw-1.5rem,28rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
-        <DialogHeader className="space-y-0 border-b border-muted/40 px-5 pb-4 pt-5 text-left">
-          <DialogTitle className="text-base font-semibold tracking-tight">{displayName}</DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
-            Roster, shared files, and channel settings
+      <DialogContent className="flex max-h-[min(92dvh,44rem)] w-[min(100vw-1.25rem,32rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg [&>button]:top-4 [&>button]:right-4 [&>button]:rounded-full [&>button]:bg-background/80 [&>button]:backdrop-blur-sm">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{displayName} channel info</DialogTitle>
+          <DialogDescription>
+            Members, shared files, and settings for this channel
           </DialogDescription>
-
-          <div className="flex items-center gap-4 pt-4">
-            <div className="relative shrink-0">
-              <ChannelAvatar channel={channel} className="h-16 w-16 ring-2 ring-border/60" />
-              {isAdmin ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="icon"
-                  className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full shadow-md"
-                  onClick={handlePickPhoto}
-                  disabled={uploading || removing}
-                  aria-label="Change channel photo"
-                >
-                  {uploading ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-                </Button>
-              ) : null}
-            </div>
-
-            <div className="min-w-0 flex-1 space-y-2">
-              {isAdmin ? (
-                <p className="text-xs text-muted-foreground">
-                  {channel.avatarUrl ? 'Admins can replace or remove this channel photo.' : 'Admins can add a photo for this channel.'}
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">Channel details and shared workspace files.</p>
-              )}
-              {isAdmin && channel.avatarUrl ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1.5 px-2 text-destructive hover:text-destructive"
-                  onClick={handleRemovePhotoClick}
-                  disabled={uploading || removing}
-                >
-                  {removing ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                  Remove photo
-                </Button>
-              ) : null}
-            </div>
-          </div>
-
-          {isAdmin ? (
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="sr-only"
-              onChange={handleFileChange}
-            />
-          ) : null}
-          <div className="flex justify-end border-t border-border/60 pt-3">
-            <NotificationSettings />
-          </div>
         </DialogHeader>
 
-        <ScrollArea className="min-h-0 flex-1">
-          <CollaborationSidebarContent
-            compact
-            skipChannelCard
-            channel={channel}
-            channelParticipants={channelParticipants}
-            sharedFiles={sharedFiles}
-            canManageMembers={canManageMembers}
-            onManageMembers={onManageMembers}
+        <ChannelInfoHero
+          channel={channel}
+          displayName={displayName}
+          memberCount={memberCount}
+          isAdmin={isAdmin}
+          uploading={uploading}
+          removing={removing}
+          onPickPhoto={handlePickPhoto}
+          onRemovePhoto={handleRemovePhotoClick}
+        />
+
+        {isAdmin ? (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            onChange={handleFileChange}
           />
-        </ScrollArea>
+        ) : null}
+
+        <ChannelInfoTabs
+          channel={channel}
+          channelParticipants={channelParticipants}
+          sharedFiles={sharedFiles}
+          canManageMembers={canManageMembers}
+          onManageMembers={onManageMembers ? handleManageMembers : undefined}
+        />
       </DialogContent>
     </Dialog>
   )

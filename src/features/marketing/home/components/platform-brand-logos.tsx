@@ -3,18 +3,17 @@
  * @see https://react-icons.github.io/react-icons/icons/si/
  */
 import type { IconType } from 'react-icons'
-import { SiGoogleads, SiLinkedin, SiMeta, SiStripe, SiTiktok } from 'react-icons/si'
+import { SiGoogleads, SiLinkedin, SiMeta, SiTiktok } from 'react-icons/si'
 
 import { cn } from '@/lib/utils'
 
-export type PlatformBrandSlug = 'googleads' | 'meta' | 'linkedin' | 'tiktok' | 'stripe'
+export type PlatformBrandSlug = 'googleads' | 'meta' | 'linkedin' | 'tiktok'
 
 const ICONS: Record<PlatformBrandSlug, IconType> = {
   googleads: SiGoogleads,
   meta: SiMeta,
   linkedin: SiLinkedin,
   tiktok: SiTiktok,
-  stripe: SiStripe,
 }
 
 const TITLES: Record<PlatformBrandSlug, string> = {
@@ -22,10 +21,9 @@ const TITLES: Record<PlatformBrandSlug, string> = {
   meta: 'Meta',
   linkedin: 'LinkedIn',
   tiktok: 'TikTok',
-  stripe: 'Stripe',
 }
 
-export const HOME_HERO_BRAND_ORDER: PlatformBrandSlug[] = ['googleads', 'meta', 'linkedin', 'tiktok', 'stripe']
+export const HOME_HERO_BRAND_ORDER: PlatformBrandSlug[] = ['googleads', 'meta', 'linkedin', 'tiktok']
 
 type PlatformBrandLogoProps = {
   brand: PlatformBrandSlug

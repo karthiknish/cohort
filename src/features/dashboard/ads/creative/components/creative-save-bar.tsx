@@ -18,7 +18,7 @@ export function CreativeSaveBar(props: {
   return (
     <div
       className={cn(
-        'sticky bottom-0 z-30 -mx-1 mt-4 border-t bg-background/95 px-4 py-3 backdrop-blur-md supports-[backdrop-filter]:bg-background/80',
+        'sticky bottom-0 z-30 mt-4 rounded-2xl border border-border/60 bg-background/95 px-4 py-3 shadow-lg shadow-primary/5 backdrop-blur-md supports-backdrop-filter:bg-background/80',
         className,
       )}
       role="region"

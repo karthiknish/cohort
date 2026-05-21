@@ -2,8 +2,8 @@
 
 import { formatDistanceToNowStrict } from 'date-fns'
 import { useConvexAuth, useQuery } from 'convex/react'
-import { Info, LoaderCircle, Users } from 'lucide-react'
-import { useMemo } from 'react'
+import { Info, LoaderCircle, TrendingUp } from 'lucide-react'
+import { useCallback, useMemo } from 'react'
 
 import {
   aggregateMetricFinancials,
@@ -13,6 +13,16 @@ import {
 import { buildChartData } from '@/features/dashboard/home/lib/dashboard-calculations'
 import { PerformanceChart } from '@/features/dashboard/home/components/performance-chart'
 import { DashboardDailySnapshotCard } from '@/features/dashboard/home/components/dashboard-daily-snapshot-card'
+import {
+  DashboardEmptyPerformanceCard,
+  DashboardSectionHeading,
+} from '@/features/dashboard/home/components/dashboard-empty-performance-card'
+import { DashboardOverviewHeader } from '@/features/dashboard/home/components/dashboard-overview-header'
+import {
+  DashboardSnapshotMetricGrid,
+  type DashboardSnapshotMetric,
+} from '@/features/dashboard/home/components/dashboard-snapshot-metric-grid'
+import { QuickActions } from '@/features/dashboard/home/components/quick-actions'
 import { StatsCards } from '@/features/dashboard/home/components/stats-cards'
 import { useDashboardData, useDashboardStats } from '@/features/dashboard/home/hooks'
 import { analyticsIntegrationsApi, projectsApi } from '@/lib/convex-api'
@@ -21,10 +31,11 @@ import { formatCurrency, getWorkspaceId } from '@/lib/utils'
 import { useAuth } from '@/shared/contexts/auth-context'
 import { useClientContext } from '@/shared/contexts/client-context'
 import { usePreview } from '@/shared/contexts/preview-context'
+import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
-import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
+import { FadeIn } from '@/shared/ui/animate-in'
 import {
   Card,
   CardContent,
@@ -32,14 +43,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/shared/ui/card'
-import { Skeleton } from '@/shared/ui/skeleton'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/shared/ui/tooltip'
-import type { MetricRecord } from '@/types/dashboard'
 import { TASK_STATUSES, type TaskStatus } from '@/types/tasks'
 import { PROJECT_STATUSES, type ProjectStatus } from '@/types/projects'
 
@@ -53,12 +62,6 @@ type ProjectRow = {
   status?: unknown
 }
 
-type SnapshotMetric = {
-  label: string
-  value: string
-  helper: string
-}
-
 function isProjectStatus(value: unknown): value is ProjectStatus {
   return typeof value === 'string' && (PROJECT_STATUSES as readonly string[]).includes(value)
 }
@@ -66,6 +69,13 @@ function isProjectStatus(value: unknown): value is ProjectStatus {
 function normalizeTaskStatus(value: string | undefined): TaskStatus | null {
   if (typeof value !== 'string') return null
   return (TASK_STATUSES as readonly string[]).includes(value) ? (value as TaskStatus) : null
+}
+
+function formatCompactNumber(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value)
 }
 
 export function DashboardOverviewPage() {
@@ -123,6 +133,7 @@ export function DashboardOverviewPage() {
   const clientName = selectedClient?.name ?? 'Workspace'
   const teamMembersCount = selectedClient?.teamMembers.length ?? 0
   const accountManager = selectedClient?.accountManager?.trim() || null
+  const isClientScoped = Boolean(selectedClient)
 
   const chartMetrics = useMemo(() => buildChartData(metrics), [metrics])
 
@@ -207,7 +218,7 @@ export function DashboardOverviewPage() {
       : 'Google Analytics connected'
   }, [analyticsStatus, isPreviewMode])
 
-  const adsMetricsList = useMemo<SnapshotMetric[]>(() => {
+  const adsMetricsList = useMemo<DashboardSnapshotMetric[]>(() => {
     const formatMoney = (amount: number | null) =>
       formatAggregatedMoney(amount, adsSummary.financialTotals, formatCurrency)
 
@@ -221,11 +232,13 @@ export function DashboardOverviewPage() {
             ? `${adsSummary.providers.size} active channels`
             : 'No ad spend in this period',
         ),
+        accent: 'primary',
       },
       {
         label: 'Clicks',
         value: formatCompactNumber(adsSummary.clicks),
         helper: `${formatCompactNumber(adsSummary.impressions)} impressions`,
+        accent: 'info',
       },
       {
         label: 'Conversions',
@@ -234,26 +247,30 @@ export function DashboardOverviewPage() {
           adsSummary.financialTotals.revenue !== null && adsSummary.financialTotals.revenue > 0
             ? `${formatMoney(adsSummary.financialTotals.revenue)} revenue`
             : 'No attributed revenue',
+        accent: 'success',
       },
     ]
   }, [adsSummary])
 
-  const analyticsMetricsList = useMemo<SnapshotMetric[]>(
+  const analyticsMetricsList = useMemo<DashboardSnapshotMetric[]>(
     () => [
       {
         label: 'Users',
         value: formatCompactNumber(analyticsTotals.users),
         helper: analyticsStatusDetail,
+        accent: 'info',
       },
       {
         label: 'Sessions',
         value: formatCompactNumber(analyticsTotals.sessions),
         helper: 'Site visits in range',
+        accent: 'primary',
       },
       {
         label: 'Conv. rate',
         value: `${analyticsConversionRate.toFixed(2)}%`,
         helper: `${formatCompactNumber(analyticsTotals.conversions)} conversions`,
+        accent: 'success',
       },
     ],
     [analyticsConversionRate, analyticsStatusDetail, analyticsTotals],
@@ -270,6 +287,7 @@ export function DashboardOverviewPage() {
     (adsSummary.financialTotals.spend ?? 0) > 0 ||
     adsSummary.impressions > 0
   const hasAnalyticsData = analyticsMetrics.length > 0 || analyticsTotals.sessions > 0
+  const hasLiveMetrics = hasChartData || hasAdsData || hasAnalyticsData
 
   const isInitialLoading =
     !isPreviewMode &&
@@ -289,173 +307,152 @@ export function DashboardOverviewPage() {
     [orderedStats],
   )
 
+  const handleRefreshClick = useCallback(() => {
+    void handleRefresh()
+  }, [handleRefresh])
+
   return (
-    <BoneyardSkeletonBoundary
-      name="dashboard-overview-page"
-      loading={isInitialLoading}
-    >
-      <div className="mx-auto max-w-7xl space-y-8 pb-10">
-        <header className="space-y-3 border-b border-muted/40 pb-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              {clientName}
-            </h1>
-            {selectedClient ? (
-              <Badge variant="secondary" className="font-normal">
-                Client
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="font-normal">
-                All clients
-              </Badge>
-            )}
-          </div>
-          <p className="max-w-2xl text-sm text-muted-foreground text-pretty">
-            {selectedClient
-              ? 'Summary of delivery, paid media, and site performance for the selected client.'
-              : 'Workspace-wide summary. Select a client in the sidebar for a focused view.'}
-          </p>
-          {selectedClient ? (
-            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-              {teamMembersCount > 0 ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Users className="h-4 w-4" aria-hidden />
-                  {teamMembersCount} team {teamMembersCount === 1 ? 'member' : 'members'}
-                </span>
-              ) : null}
-              {accountManager ? <span>Account manager: {accountManager}</span> : null}
-            </div>
+    <PageMotionShell reveal={false} className="mx-auto max-w-7xl pb-10">
+      <BoneyardSkeletonBoundary name="dashboard-overview-page" loading={isInitialLoading}>
+        <div className="space-y-8">
+          <DashboardOverviewHeader
+            clientName={clientName}
+            isClientScoped={isClientScoped}
+            teamMembersCount={teamMembersCount}
+            accountManager={accountManager}
+            hasLiveMetrics={hasLiveMetrics}
+            isRefreshing={isRefreshing}
+            onRefresh={handleRefreshClick}
+          />
+
+          {dashboardErrors.length > 0 ? (
+            <FadeIn>
+              <Alert variant="destructive">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 space-y-1">
+                    <AlertTitle>Some data could not be loaded</AlertTitle>
+                    <AlertDescription>{dashboardErrors.join(' ')}</AlertDescription>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 border-destructive/40 bg-background hover:bg-destructive/10"
+                    onClick={handleRefreshClick}
+                    disabled={isRefreshing}
+                  >
+                    {isRefreshing ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Try again
+                  </Button>
+                </div>
+              </Alert>
+            </FadeIn>
           ) : null}
-        </header>
 
-        {dashboardErrors.length > 0 ? (
-          <Alert variant="destructive">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 space-y-1">
-                <AlertTitle>Some data could not be loaded</AlertTitle>
-                <AlertDescription>{dashboardErrors.join(' ')}</AlertDescription>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 border-destructive/40 bg-background hover:bg-destructive/10"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-              >
-                {isRefreshing ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Try again
-              </Button>
-            </div>
-          </Alert>
-        ) : null}
+          <FadeIn>
+            <DashboardDailySnapshotCard
+              openTasks={clientStats.openTasks}
+              pendingProposals={clientStats.pendingProposals}
+              activeProjects={clientStats.activeProjects}
+              loading={clientStatsLoading}
+            />
+          </FadeIn>
 
-        <DashboardDailySnapshotCard
-          openTasks={clientStats.openTasks}
-          pendingProposals={clientStats.pendingProposals}
-          activeProjects={clientStats.activeProjects}
-          loading={clientStatsLoading}
-        />
-
-        {hasChartData ? (
-          <Card className="border-muted/40 bg-card shadow-sm">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-lg">Spend & revenue</CardTitle>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 cursor-help text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      Daily ad spend and revenue from synced platforms for the current client.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <CardDescription>Trend over the synced reporting window</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <PerformanceChart
-                metrics={chartMetrics}
-                loading={metricsLoading}
-                currency={displayCurrency ?? undefined}
-                dataSource="ads"
-                showDetailLink={false}
-                hideHeader
-              />
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {(hasAdsData || hasAnalyticsData) && !hasChartData ? (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {hasAdsData ? (
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold text-foreground">Paid media</h2>
-                <SnapshotMetricGrid metrics={adsMetricsList} loading={adsLoading} />
-              </section>
+          <section className="space-y-5" aria-label="Performance metrics">
+            {hasChartData ? (
+              <FadeIn>
+                <Card className="overflow-hidden border-muted/40 bg-card shadow-sm ring-1 ring-muted/20">
+                  <CardHeader className="border-b border-muted/40 bg-muted/[0.02] pb-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
+                            <TrendingUp className="h-4 w-4" aria-hidden />
+                          </span>
+                          <CardTitle className="text-lg tracking-tight">Spend & revenue</CardTitle>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-4 w-4 cursor-help text-muted-foreground" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                Daily ad spend and revenue from synced platforms for the current client.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <CardDescription>Trend over the synced reporting window</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="h-[320px] pt-6 sm:h-[340px]">
+                    <PerformanceChart
+                      metrics={chartMetrics}
+                      loading={metricsLoading}
+                      currency={displayCurrency ?? undefined}
+                      dataSource="ads"
+                      showDetailLink={false}
+                      hideHeader
+                    />
+                  </CardContent>
+                </Card>
+              </FadeIn>
             ) : null}
-            {hasAnalyticsData ? (
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold text-foreground">Site analytics</h2>
-                <SnapshotMetricGrid metrics={analyticsMetricsList} loading={analyticsLoading} />
-              </section>
+
+            {(hasAdsData || hasAnalyticsData) && !hasChartData ? (
+              <div className="grid gap-8 lg:grid-cols-2">
+                {hasAdsData ? (
+                  <FadeIn>
+                    <div className="space-y-4">
+                      <DashboardSectionHeading
+                        eyebrow="Paid media"
+                        title="Ad platforms"
+                        description="Spend, delivery, and conversions from synced channels."
+                      />
+                      <DashboardSnapshotMetricGrid metrics={adsMetricsList} loading={adsLoading} />
+                    </div>
+                  </FadeIn>
+                ) : null}
+                {hasAnalyticsData ? (
+                  <FadeIn>
+                    <div className="space-y-4">
+                      <DashboardSectionHeading
+                        eyebrow="Site traffic"
+                        title="Analytics"
+                        description="Users, sessions, and conversion rate for the selected period."
+                      />
+                      <DashboardSnapshotMetricGrid metrics={analyticsMetricsList} loading={analyticsLoading} />
+                    </div>
+                  </FadeIn>
+                ) : null}
+              </div>
             ) : null}
-          </div>
-        ) : null}
 
-        {!hasChartData && !hasAdsData && !hasAnalyticsData && !metricsLoading ? (
-          <Card className="border-dashed border-muted/60 bg-muted/5">
-            <CardContent className="py-12 text-center text-sm text-muted-foreground">
-              No performance data yet for this view. Connect ad or analytics integrations to see
-              metrics and charts here.
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {displayStats.length > 0 ? (
-          <section className="space-y-4">
-            <h2 className="text-sm font-semibold text-foreground">Summary</h2>
-            <StatsCards stats={displayStats} loading={statsLoading} primaryCount={4} linkless />
+            {!hasChartData && !hasAdsData && !hasAnalyticsData && !metricsLoading ? (
+              <FadeIn>
+                <DashboardEmptyPerformanceCard />
+              </FadeIn>
+            ) : null}
           </section>
-        ) : null}
-      </div>
-    </BoneyardSkeletonBoundary>
-  )
-}
 
-function formatCompactNumber(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(value)
-}
+          <FadeIn>
+            <QuickActions compact />
+          </FadeIn>
 
-function SnapshotMetricGrid({ metrics, loading }: { metrics: SnapshotMetric[]; loading: boolean }) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      {metrics.map((metric) => (
-        <Card key={metric.label} className="border-muted/60 bg-card shadow-sm">
-          <CardHeader className="pb-3">
-            <CardDescription className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
-              {metric.label}
-            </CardDescription>
-            {loading ? (
-              <Skeleton className="h-8 w-28 rounded-md" />
-            ) : (
-              <CardTitle className="text-2xl tracking-tight">{metric.value}</CardTitle>
-            )}
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <Skeleton className="h-4 w-40 rounded-md" />
-            ) : (
-              <p className="text-sm text-muted-foreground">{metric.helper}</p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+          {displayStats.length > 0 ? (
+            <FadeIn>
+              <section className="space-y-4" aria-label="Summary statistics">
+                <DashboardSectionHeading
+                  eyebrow="Signals"
+                  title="Summary"
+                  description="Cross-channel KPIs rolled up for this workspace."
+                />
+                <StatsCards stats={displayStats} loading={statsLoading} primaryCount={4} linkless />
+              </section>
+            </FadeIn>
+          ) : null}
+        </div>
+      </BoneyardSkeletonBoundary>
+    </PageMotionShell>
   )
 }

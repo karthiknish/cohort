@@ -7,7 +7,9 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/shared/ui/button'
 
+import { ADS_PAGE_THEME } from '@/features/dashboard/ads/components/ads-page-theme'
 import { normalizeCurrencyCode } from '@/constants/currencies'
+import { cn } from '@/lib/utils'
 import { Skeleton } from '@/shared/ui/skeleton'
 import { toast } from '@/shared/ui/use-toast'
 import { useClientContext } from '@/shared/contexts/client-context'
@@ -890,16 +892,16 @@ export default function CreativeDetailPageClient({
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl p-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-9 w-9 rounded-full" />
-          <Skeleton className="h-8 w-64" />
+      <div className={ADS_PAGE_THEME.innerContainer}>
+        <div className={cn(ADS_PAGE_THEME.innerHero, 'space-y-4')}>
+          <Skeleton className="h-10 w-10 rounded-xl" />
+          <Skeleton className="h-8 w-64 max-w-full rounded-lg" />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <Skeleton className="aspect-square rounded-3xl" />
           </div>
-          <div className="lg:col-span-7 space-y-4">
+          <div className="space-y-4 lg:col-span-7">
             <Skeleton className="h-[400px] rounded-2xl" />
           </div>
         </div>
@@ -909,11 +911,12 @@ export default function CreativeDetailPageClient({
 
   if (!creative) {
     return (
-      <div className="mx-auto max-w-5xl p-6">
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <p className="text-lg font-medium">Creative Not Found</p>
-          <Button asChild variant="outline" className="mt-4">
-            <Link href={backUrl}>Back to Campaign</Link>
+      <div className={ADS_PAGE_THEME.innerContainer}>
+        <div className={cn(ADS_PAGE_THEME.emptyState, 'mx-auto max-w-md py-16')}>
+          <p className="text-lg font-semibold text-foreground">Creative not found</p>
+          <p className="text-sm text-muted-foreground">This asset may have been removed on the ad platform.</p>
+          <Button asChild variant="outline" className="mt-2 rounded-full">
+            <Link href={backUrl}>Back to campaign</Link>
           </Button>
         </div>
       </div>
@@ -921,7 +924,7 @@ export default function CreativeDetailPageClient({
   }
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className={ADS_PAGE_THEME.innerContainer}>
       <CreativeHeader
         creative={creative}
         backUrl={backUrl}
@@ -934,7 +937,7 @@ export default function CreativeDetailPageClient({
         onRefreshPerformance={fetchMetrics}
       />
 
-      <div className="grid grid-cols-1 gap-8 px-1 pb-8 lg:grid-cols-12 lg:items-start">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
         <CreativeSocialPreview
           creative={previewCreative ?? creative}
           campaignName={campaignName}
