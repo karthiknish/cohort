@@ -1,7 +1,7 @@
 'use client'
 
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ProposalDraft } from '@/types/proposals'
 import type { ProposalFormData } from '@/lib/proposals'
@@ -26,21 +26,12 @@ import { useProposalWizard } from './use-proposal-wizard'
 
 export function useProposalsPageContent() {
   const { push } = useRouter()
-  const { get } = useSearchParams()
   const { toast } = useToast()
   const { user } = useAuth()
-  const { selectedClient, selectedClientId, selectClient } = useClientContext()
+  const { selectedClient, selectedClientId } = useClientContext()
   const { isPreviewMode } = usePreview()
   const canManageProposals = isPreviewMode || can(user?.role, 'proposals.manage')
   const [isWizardOpen, setIsWizardOpen] = useState(false)
-  const clientIdParam = get('clientId')
-
-  // Handle URL params for client selection
-  useEffect(() => {
-    if (clientIdParam) {
-      selectClient(clientIdParam)
-    }
-  }, [clientIdParam, selectClient])
 
   useEffect(() => {
     if (!isWizardOpen) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useMemo } from 'react'
 
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { Card, CardContent } from '@/shared/ui/card'
@@ -34,9 +34,11 @@ function TasksPageContent(props: TasksPageClientProps) {
 }
 
 export default function TasksPageClient(props: TasksPageClientProps) {
+  const suspenseFallback = useMemo(() => <TasksPageFallback />, [])
+
   return (
     <PageMotionShell reveal={false}>
-      <Suspense fallback={<TasksPageFallback />}>
+      <Suspense fallback={suspenseFallback}>
         <TasksPageContent {...props} />
       </Suspense>
     </PageMotionShell>

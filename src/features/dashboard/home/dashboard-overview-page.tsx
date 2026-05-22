@@ -1,5 +1,7 @@
 'use client'
 
+import { useMemo } from 'react'
+
 import { PageMotionShell } from '@/shared/components/page-motion-shell'
 import { BoneyardSkeletonBoundary } from '@/shared/ui/boneyard-skeleton-boundary'
 
@@ -35,6 +37,28 @@ export function DashboardOverviewPage() {
     statsLoading,
   } = useDashboardOverviewPage()
 
+  const availability = useMemo(
+    () => ({
+      hasLiveMetrics,
+      hasChartData,
+      hasAdsData,
+      hasAnalyticsData,
+    }),
+    [hasLiveMetrics, hasChartData, hasAdsData, hasAnalyticsData],
+  )
+
+  const loading = useMemo(
+    () => ({
+      isRefreshing,
+      clientStatsLoading,
+      metricsLoading,
+      adsLoading,
+      analyticsLoading,
+      statsLoading,
+    }),
+    [isRefreshing, clientStatsLoading, metricsLoading, adsLoading, analyticsLoading, statsLoading],
+  )
+
   return (
     <PageMotionShell reveal={false} className="mx-auto max-w-7xl pb-10">
       <BoneyardSkeletonBoundary name="dashboard-overview-page" loading={isInitialLoading}>
@@ -43,20 +67,8 @@ export function DashboardOverviewPage() {
           isClientScoped={isClientScoped}
           teamMembersCount={teamMembersCount}
           accountManager={accountManager}
-          availability={{
-            hasLiveMetrics,
-            hasChartData,
-            hasAdsData,
-            hasAnalyticsData,
-          }}
-          loading={{
-            isRefreshing,
-            clientStatsLoading,
-            metricsLoading,
-            adsLoading,
-            analyticsLoading,
-            statsLoading,
-          }}
+          availability={availability}
+          loading={loading}
           onRefresh={handleRefreshClick}
           dashboardErrors={dashboardErrors}
           clientStats={clientStats}

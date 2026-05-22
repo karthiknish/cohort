@@ -250,21 +250,17 @@ export function useCreativeDetailPageClient(props: CreativeDetailPageClientProps
     dispatch({ type: 'syncFromCreative', creative })
   }, [creative])
 
-  const runMetricsFetch = useEffectEvent(() => {
-    void fetchMetrics()
-  })
-
   useEffect(() => {
     if (!creative) return
 
     const frameId = requestAnimationFrame(() => {
-      runMetricsFetch()
+      void fetchMetrics()
     })
 
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [creative, days, runMetricsFetch])
+  }, [creative, days, fetchMetrics])
 
   const handleCopy = useCallback((text: string, field: string) => {
     const canUseClipboardApi =

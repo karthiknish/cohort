@@ -42,6 +42,10 @@ import { isFeatureEnabled } from '@/lib/features'
 import { cn, exportToCsv } from '@/lib/utils'
 import type { TaskStatus } from '@/types/tasks'
 
+import { useTasksDocumentImport } from './use-tasks-document-import'
+import { TasksDocumentImportOverlay } from './tasks-document-import-overlay'
+import { TasksDocumentImportReviewSheet } from './tasks-document-import-review-sheet'
+
 
 const TaskList = dynamic(() => import('@/features/dashboard/tasks/task-list').then((mod) => mod.TaskList), {
   loading: () => <div className="p-6 text-sm text-muted-foreground">Loading tasks…</div>,
@@ -469,13 +473,48 @@ export function useTasksPageContent({ initialAction, initialClientId, initialCli
     [filters],
   )
 
+  const documentImport = useTasksDocumentImport({
+    workspaceId: user?.agencyId ? String(user.agencyId) : null,
+    userId: user?.id,
+    clientId: taskFormClientId,
+    clientName: taskFormClient?.name ?? undefined,
+    projectId: projectFilter.id ?? undefined,
+    projectName: projectFilter.name ?? undefined,
+    disabledReason: newTaskDisabledReason,
+    isPreviewMode,
+    onCreateTask: handleCreateTask,
+  })
+
   return (
     <TooltipProvider>
       <BoneyardSkeletonBoundary
         name="dashboard-tasks-page"
         loading={initialLoading}
       >
-      <div className={cn(DASHBOARD_THEME.layout.container, TASKS_THEME.page)}>
+      <div
+        className={cn(DASHBOARD_THEME.layout.container, TASKS_THEME.page, 'relative')}
+        {...documentImport.importDragHandlers}
+      >
+        <TasksDocumentImportOverlay
+          phase={documentImport.phase}
+          statusMessage={documentImport.statusMessage}
+          errorMessage={documentImport.errorMessage}
+          visible={documentImport.overlayVisible}
+          onCancel={documentImport.handleCancel}
+        />
+
+        <TasksDocumentImportReviewSheet
+          open={documentImport.reviewOpen}
+          documentSummary={documentImport.documentSummary}
+          proposedTasks={documentImport.proposedTasks}
+          participants={taskParticipants}
+          attachSourceDocuments={documentImport.attachSourceDocuments}
+          onAttachSourceDocumentsChange={documentImport.setAttachSourceDocuments}
+          onUpdateTask={documentImport.updateProposedTask}
+          onConfirm={documentImport.handleConfirmReview}
+          onDiscard={documentImport.handleDismissReview}
+        />
+
         <TasksHeader
           loading={loading}
           retryCount={retryCount}

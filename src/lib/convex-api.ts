@@ -61,6 +61,10 @@ export const tasksApi = {
   bulkSoftDeleteTasks: looseApi.tasks.bulkSoftDeleteTasks,
 }
 
+export const tasksDocumentImportApi = {
+  extractTasksFromDocument: looseApi.taskDocumentImport.extractTasksFromDocument,
+}
+
 export const projectsApi = {
   list: looseApi.projects.list,
   getByLegacyId: looseApi.projects.getByLegacyId,

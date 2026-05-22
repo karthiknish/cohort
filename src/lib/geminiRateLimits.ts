@@ -9,6 +9,7 @@ export const GEMINI_RATE_LIMITS = {
   proposalGeneration: { maxRequests: 6, windowMs: 30 * 60_000 },
   adminFeatureAssist: { maxRequests: 12, windowMs: 10 * 60_000 },
   agentMessage: { maxRequests: 30, windowMs: 10 * 60_000 },
+  taskDocumentImport: { maxRequests: 10, windowMs: 10 * 60_000 },
 } satisfies Record<string, RateLimitConfig>
 
 export type GeminiRateLimitName = keyof typeof GEMINI_RATE_LIMITS

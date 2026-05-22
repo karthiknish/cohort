@@ -102,7 +102,7 @@ function extractAssignmentQueries(text: string, labels: string[]): string[] {
   return uniqueStrings(results)
 }
 
-async function listWorkspaceMembers(
+export async function listWorkspaceMembers(
   ctx: ActionCtx,
   workspaceId: string,
 ): Promise<WorkspaceMember[]> {
