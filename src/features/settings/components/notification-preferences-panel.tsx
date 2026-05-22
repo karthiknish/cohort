@@ -246,7 +246,7 @@ export function NotificationPreferencesPanel() {
         <CardContent className="py-10 text-sm text-muted-foreground">
           <output aria-live="polite" className="flex items-center gap-2">
             <LoaderCircle className="size-4 animate-spin" aria-hidden />
-            Loading notification preferences…
+          Loading notification preferences…
           </output>
         </CardContent>
       </Card>

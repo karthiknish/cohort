@@ -146,27 +146,27 @@ function ProposalHistoryComponent({
               </CardDescription>
             </div>
           </div>
-        </CardHeader>
+      </CardHeader>
         <CardContent className="space-y-4">
-          <ProposalHistoryHeader isLoading={isLoading} onRefresh={onRefresh} proposalCount={proposals.length} />
-          <div className="space-y-3">
-            {proposals.length === 0 && !isLoading ? (
+        <ProposalHistoryHeader isLoading={isLoading} onRefresh={onRefresh} proposalCount={proposals.length} />
+        <div className="space-y-3">
+          {proposals.length === 0 && !isLoading ? (
               <ProposalHistoryEmptyState actions={emptyStateActions} onCreateNew={onCreateNew} />
-            ) : (
-              rows.map((row) => (
-                <ProposalHistoryRow
-                  key={row.proposal.id}
+          ) : (
+            rows.map((row) => (
+              <ProposalHistoryRow
+                key={row.proposal.id}
                   canManage={canManage}
-                  deletingProposalId={deletingProposalId}
-                  onDownloadDeck={onDownloadDeck}
-                  onRequestDelete={onRequestDelete}
-                  onResume={onResume}
-                  row={row}
-                />
-              ))
-            )}
-          </div>
-        </CardContent>
+                deletingProposalId={deletingProposalId}
+                onDownloadDeck={onDownloadDeck}
+                onRequestDelete={onRequestDelete}
+                onResume={onResume}
+                row={row}
+              />
+            ))
+          )}
+        </div>
+      </CardContent>
       </MotionCard>
     </FadeIn>
   )

@@ -250,8 +250,8 @@ export function TaskCreationModal({
                   <span className="text-success">Pre-filled from your current workspace context.</span>
                 ) : (
                   'Add a task without leaving this screen.'
-                )}
-              </DialogDescription>
+            )}
+          </DialogDescription>
             </div>
           </div>
         </DialogHeader>

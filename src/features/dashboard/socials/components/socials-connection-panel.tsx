@@ -230,7 +230,7 @@ export function SocialsConnectionPanel({
             {connected ? (
               <Badge variant="outline" className={cn(DASHBOARD_THEME.badges.base, 'font-normal tabular-nums')}>
                 {syncLabel}
-              </Badge>
+            </Badge>
             ) : null}
           </div>
 
@@ -256,34 +256,34 @@ export function SocialsConnectionPanel({
 
           {connected ? (
             <div className="flex flex-wrap items-center gap-2 border-t border-muted/40 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onRequestSync}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRequestSync}
                 disabled={!canSync}
-                className={getButtonClasses('outline')}
-              >
+              className={getButtonClasses('outline')}
+            >
                 <RefreshCw className={cn('mr-2 size-4', syncPending && 'animate-spin')} aria-hidden />
-                Sync now
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleDisconnect}
+              Sync now
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleDisconnect}
                 disabled={oauthPending}
                 className={cn(getButtonClasses('outline'), 'text-destructive hover:bg-destructive/5 hover:text-destructive')}
-              >
+            >
                 <Unplug className="mr-2 size-4" aria-hidden />
                 Disconnect
-              </Button>
+            </Button>
               {!setupComplete ? (
                 <p className="w-full text-xs text-muted-foreground sm:w-auto sm:ml-auto">
                   Confirm a Page before syncing.
                 </p>
               ) : null}
-            </div>
+          </div>
           ) : (
             <p className="border-t border-muted/40 pt-4 text-xs text-muted-foreground">
               Connect with Meta to authorize Pages and start syncing organic metrics.

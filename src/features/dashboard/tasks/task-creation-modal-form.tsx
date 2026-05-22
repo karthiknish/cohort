@@ -110,8 +110,8 @@ export function TaskCreationModalFormFields({
 
   const handleFilesChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      onAddAttachments(event.target.files)
-      event.currentTarget.value = ''
+    onAddAttachments(event.target.files)
+    event.currentTarget.value = ''
     },
     [onAddAttachments],
   )
@@ -120,25 +120,25 @@ export function TaskCreationModalFormFields({
     <>
       <TaskFormSection title="Essentials">
         <TaskFormField id="quick-task-title" label="Title" required>
-          <Input
+        <Input
             id="quick-task-title"
             placeholder="What needs to get done?"
-            value={title}
-            onChange={handleTitleChange}
-            required
-            disabled={isLoading}
+          value={title}
+          onChange={handleTitleChange}
+          required
+          disabled={isLoading}
             className={TASKS_THEME.input}
-          />
+        />
         </TaskFormField>
 
         <TaskFormField id="quick-task-description" label="Description">
-          <Textarea
+        <Textarea
             id="quick-task-description"
             placeholder="Optional context or next steps"
-            value={description}
-            onChange={handleDescriptionChange}
-            rows={3}
-            disabled={isLoading}
+          value={description}
+          onChange={handleDescriptionChange}
+          rows={3}
+          disabled={isLoading}
             className={TASKS_THEME.textarea}
           />
         </TaskFormField>
@@ -147,11 +147,11 @@ export function TaskCreationModalFormFields({
       <TaskFormSection title="Scheduling">
         <div className="grid grid-cols-2 gap-3.5">
           <TaskFormField id="quick-task-priority" label="Priority">
-            <Select value={priority} onValueChange={handlePriorityChange} disabled={isLoading}>
+          <Select value={priority} onValueChange={handlePriorityChange} disabled={isLoading}>
               <SelectTrigger id="quick-task-priority" className={TASKS_THEME.selectTrigger} disabled={isLoading}>
                 <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
+            </SelectTrigger>
+            <SelectContent>
                 <SelectItem value="low">
                   <PrioritySelectItem value="low" />
                 </SelectItem>
@@ -164,39 +164,39 @@ export function TaskCreationModalFormFields({
                 <SelectItem value="urgent">
                   <PrioritySelectItem value="urgent" />
                 </SelectItem>
-              </SelectContent>
-            </Select>
+            </SelectContent>
+          </Select>
           </TaskFormField>
 
           <TaskFormField id="quick-task-due" label="Due date">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
                   id="quick-task-due"
-                  type="button"
-                  variant="outline"
+                type="button"
+                variant="outline"
                   className={cn(
                     TASKS_THEME.selectTrigger,
                     'w-full justify-start text-left font-normal',
                     !dueDate && 'text-muted-foreground',
                   )}
-                  disabled={isLoading}
-                  aria-label="Due date, open calendar"
-                >
+                disabled={isLoading}
+                aria-label="Due date, open calendar"
+              >
                   <CalendarIcon className="mr-2 size-4 shrink-0" />
-                  {dueDate ? format(parseISO(dueDate), 'PPP') : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dueDate ? parseISO(dueDate) : undefined}
-                  disabled={isTaskDueDateDisabled}
-                  onSelect={onDateSelect}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+                {dueDate ? format(parseISO(dueDate), 'PPP') : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={dueDate ? parseISO(dueDate) : undefined}
+                disabled={isTaskDueDateDisabled}
+                onSelect={onDateSelect}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
           </TaskFormField>
         </div>
       </TaskFormSection>
@@ -250,7 +250,7 @@ export function TaskCreationModalFormFields({
             uploading={isLoading}
             onRemove={onRemoveAttachment}
           />
-        ) : null}
+      ) : null}
       </TaskFormSection>
 
       {error ? <TaskModalError message={error} /> : null}

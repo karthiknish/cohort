@@ -39,7 +39,7 @@ export function CommandMenu({ onOpenHelp, onOpenShortcuts }: CommandMenuProps) {
         navigationItems={navigationItems}
         onOpenChange={handleOpenChange}
         onQueryChange={setQuery}
-        onNavigate={handleNavigate}
+                      onNavigate={handleNavigate}
         onSettingsSelect={handleSettingsSelect}
         onHelpSelect={handleHelpSelect}
         onKeyboardShortcutsSelect={handleKeyboardShortcutsSelect}

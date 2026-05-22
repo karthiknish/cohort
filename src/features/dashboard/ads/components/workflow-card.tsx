@@ -55,8 +55,8 @@ export function WorkflowCard({
         {ADS_WORKFLOW_STEPS.map((step, index) => {
           const done = stepDone[index] ?? false
           return (
-            <div
-              key={step.title}
+          <div
+            key={step.title}
               className={cn(
                 'space-y-2.5 rounded-2xl border p-4',
                 done
@@ -76,10 +76,10 @@ export function WorkflowCard({
                 ) : (
                   `Step ${index + 1}`
                 )}
-              </Badge>
-              <p className="text-sm font-semibold text-foreground">{step.title}</p>
-              <p className="text-xs leading-relaxed text-muted-foreground">{step.description}</p>
-            </div>
+            </Badge>
+            <p className="text-sm font-semibold text-foreground">{step.title}</p>
+            <p className="text-xs leading-relaxed text-muted-foreground">{step.description}</p>
+          </div>
           )
         })}
       </CardContent>

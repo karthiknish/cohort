@@ -255,7 +255,7 @@ export default function AdsPage() {
       reportConvexFailure({
         error: error,
         context: 'AdsPage:Effect',
-      })
+        })
       shownErrorsRef.current.add(error)
     })
   }, [connections.connectionErrors, metrics.loadMoreError, metrics.metricError, suppressMetricsErrors, toast])

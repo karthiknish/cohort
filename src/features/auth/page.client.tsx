@@ -185,9 +185,9 @@ function HomeAuthPageContent() {
     if (!oauthError) return
 
     notifyFailure({
-      title: 'Google sign-in failed',
+        title: 'Google sign-in failed',
       message: getFriendlyAuthErrorMessage(oauthError),
-    })
+      })
 
     params.delete('error')
     params.delete('error_description')
@@ -271,8 +271,8 @@ function HomeAuthPageContent() {
             if (signUpData.password !== signUpData.confirmPassword) {
               notifyFailure({
                 title: "Passwords don't match",
-                message: 'Please make sure both passwords are identical.',
-              })
+        message: 'Please make sure both passwords are identical.',
+      })
               return
             }
 
@@ -322,7 +322,7 @@ function HomeAuthPageContent() {
           notifyFailure({
             error,
             fallbackMessage: 'Sign in failed. Please try again.',
-          })
+      })
         })
         .finally(() => {
           dispatch({ type: 'setIsSubmitting', value: false })

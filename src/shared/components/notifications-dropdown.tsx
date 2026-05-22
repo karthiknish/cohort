@@ -46,7 +46,7 @@ export function NotificationsDropdown() {
   const inboxPanel = (
     <>
       <QueryErrorAlert error={inboxQueryError} title="Unable to load notifications" />
-      <NotificationsInboxPanel
+    <NotificationsInboxPanel
       unreadCount={unreadCount}
       ackInFlight={ackInFlight}
       isLoadingInitial={isLoadingInitial}

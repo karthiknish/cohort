@@ -375,19 +375,19 @@ export function CollaborationMessageItem({
 
         {!isReply && !message.isDeleted ? (
           <CollaborationThreadReplyContext.Provider value={threadReplyContext}>
-            <ThreadSection
-              threadRootId={threadRootId}
-              replyCount={replyCount}
-              lastReplyIso={lastReplyIso}
+          <ThreadSection
+            threadRootId={threadRootId}
+            replyCount={replyCount}
+            lastReplyIso={lastReplyIso}
               panel={threadPanel}
-              error={threadError}
-              replies={threadReplies}
-              onToggle={handleThreadToggle}
-              onRetry={handleRetryThreadLoad}
-              onLoadMore={handleLoadMoreThread}
-              onReply={handleReply}
+            error={threadError}
+            replies={threadReplies}
+            onToggle={handleThreadToggle}
+            onRetry={handleRetryThreadLoad}
+            onLoadMore={handleLoadMoreThread}
+            onReply={handleReply}
               ReplyRenderer={CollaborationThreadReplyRenderer}
-            />
+          />
           </CollaborationThreadReplyContext.Provider>
         ) : null}
       </div>
@@ -681,19 +681,19 @@ function SearchThreadSection({
 
   return (
     <SearchThreadReplyContext.Provider value={searchThreadReplyContext}>
-      <ThreadSection
-        threadRootId={threadRootId}
-        replyCount={replyCount}
-        lastReplyIso={lastReplyIso}
+    <ThreadSection
+      threadRootId={threadRootId}
+      replyCount={replyCount}
+      lastReplyIso={lastReplyIso}
         panel={searchThreadPanel}
-        error={threadError}
-        replies={threadReplies}
-        onToggle={handleToggle}
-        onRetry={handleRetry}
-        onLoadMore={handleLoadMore}
-        onReply={handleReply}
+      error={threadError}
+      replies={threadReplies}
+      onToggle={handleToggle}
+      onRetry={handleRetry}
+      onLoadMore={handleLoadMore}
+      onReply={handleReply}
         ReplyRenderer={SearchThreadReplyRenderer}
-      />
+    />
     </SearchThreadReplyContext.Provider>
   )
 }
