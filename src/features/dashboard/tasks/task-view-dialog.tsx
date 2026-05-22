@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
 
 import type { TaskRecord, TaskStatus } from '@/types/tasks'
 import { Dialog, DialogContent } from '@/shared/ui/dialog'
-import { ScrollArea } from '@/shared/ui/scroll-area'
 import { Tabs } from '@/shared/ui/tabs'
 import { TASKS_THEME } from './tasks-theme'
 import type { TaskParticipant } from './task-types'
@@ -141,26 +140,24 @@ export function TaskViewDialog({
         <Tabs
           value={activeTab}
           onValueChange={handleTabChange}
-          className="flex min-h-0 flex-1 flex-col"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
           <div className={TASKS_THEME.viewDialog.tabsRail}>
             <TaskViewDialogTabsList commentCount={liveCommentCount} />
           </div>
 
-          <ScrollArea className={TASKS_THEME.viewDialog.body}>
-            <div className={TASKS_THEME.viewDialog.scroll}>
-              <TaskViewDetailsTab task={task} />
-              <TaskViewCommentsTab
-                onCommentCountChange={handleCommentCountChange}
-                participants={participants}
-                taskId={task.id}
-                userId={userId}
-                userName={userName}
-                userRole={userRole}
-                workspaceId={workspaceId}
-              />
-            </div>
-          </ScrollArea>
+          <div className={TASKS_THEME.viewDialog.body}>
+            <TaskViewDetailsTab task={task} />
+            <TaskViewCommentsTab
+              onCommentCountChange={handleCommentCountChange}
+              participants={participants}
+              taskId={task.id}
+              userId={userId}
+              userName={userName}
+              userRole={userRole}
+              workspaceId={workspaceId}
+            />
+          </div>
         </Tabs>
 
         <TaskViewDialogFooter

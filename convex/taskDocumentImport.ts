@@ -9,13 +9,15 @@ import { enforceGeminiActionRateLimit } from './geminiRateLimit'
 import { Errors, withErrorHandling } from './errors'
 import {
   listWorkspaceMembers,
-  resolveWorkspaceAssignments,
 } from './agentActions/helpers/context'
 import { resolveAgentDueDateMs } from './agentActions/helpers/dates'
 import { asNonEmptyString, asStringArray } from './agentActions/helpers/values'
 import {
-  normalizePriority,
+  assessDocumentImportDueDate,
+  enrichExtractedTasksWithDocumentAssignees,
   parseExtractedTasksResponse,
+  resolveDocumentImportAssignees,
+  resolveDocumentImportPriority,
   type RawExtractedTask,
 } from './taskDocumentImportParsing'
 
@@ -30,6 +32,8 @@ const visualDocumentValidator = v.object({
 
 export type TaskAssignmentStatus = 'resolved' | 'ambiguous' | 'unassigned'
 
+export type TaskDueDateStatus = 'resolved' | 'missing' | 'unclear'
+
 export type ProposedImportTask = {
   title: string
   description: string | null
@@ -37,6 +41,8 @@ export type ProposedImportTask = {
   assignedTo: string[]
   dueDateMs: number | null
   assignmentStatus: TaskAssignmentStatus
+  dueDateStatus: TaskDueDateStatus
+  dueDateHint: string | null
   suggestions: string[]
   sourceExcerpt: string | null
 }
@@ -50,7 +56,7 @@ function requireIdentity(identity: { subject: string } | null): asserts identity
 function buildTaskExtractionRules(memberNames: string[]): string {
   const memberBlock =
     memberNames.length > 0
-      ? `Workspace members (use exact names when possible): ${memberNames.join(', ')}`
+      ? `Workspace members (reference only — never substitute them for document assignees): ${memberNames.join(', ')}`
       : 'No workspace member list was provided.'
 
   return `You extract actionable tasks from meeting notes, briefs, planning documents, and handwritten notes.
@@ -69,10 +75,14 @@ Return ONLY valid JSON: an array of objects with this shape:
 
 Rules:
 - Extract distinct tasks only; merge duplicates.
-- Infer assignees from phrases like "owner", "assigned to", "@name", or section headers.
+- Infer assignees from phrases like "owner", "assigned to", "@name", section headers, or names above task tables.
+- For allocation sheets and tables grouped under a person's name, assign every task in that section to that person until the next person or table section.
+- If a document has multiple task tables and a person name appears after the second table (common in two-column PDFs), assign the later table's tasks to that trailing name.
+- assignedToNames must use people named in the document as task owners. Do NOT assign tasks to the reader/uploader unless the document explicitly assigns them.
+- Use names exactly as written in the document. The import system will match them to workspace profiles by first name, last name, or email when possible.
 - If no assignee is mentioned, use an empty assignedToNames array.
-- Prefer ${memberNames.length > 0 ? 'names from the workspace member list when they match' : 'names exactly as written in the document'}.
-- For handwriting, whiteboards, or photos, do your best to read messy text and still extract clear tasks.
+- Omit the priority field when the document does not state one. Do not guess priority.
+- If a deadline is missing, unreadable, or ambiguous (for example "TBD", "soon", "next week"), set dueDate to null rather than guessing.
 - Maximum 25 tasks.
 
 ${memberBlock}`
@@ -163,43 +173,64 @@ async function loadVisualGeminiParts(
 }
 
 async function resolveTaskAssignment(
-  ctx: Parameters<typeof resolveWorkspaceAssignments>[0],
+  ctx: Parameters<typeof listWorkspaceMembers>[0],
   workspaceId: string,
   rawTask: RawExtractedTask,
 ): Promise<Pick<ProposedImportTask, 'assignedTo' | 'assignmentStatus' | 'suggestions'>> {
   const assignedToNames = asStringArray(rawTask.assignedToNames)
-  const description = asNonEmptyString(rawTask.description)
+  const members = await listWorkspaceMembers(ctx, workspaceId)
 
-  if (assignedToNames.length === 0 && !description) {
-    return { assignedTo: [], assignmentStatus: 'unassigned', suggestions: [] }
-  }
+  return resolveDocumentImportAssignees(assignedToNames, members)
+}
 
-  const assignmentResolution = await resolveWorkspaceAssignments(ctx, workspaceId, {
-    rawMessage: description ?? undefined,
-    params: {
-      assignedTo: assignedToNames,
-      description,
-    },
-    mode: 'task',
+async function resolveTaskDueDate(
+  rawTask: RawExtractedTask,
+  nowMs: number,
+): Promise<Pick<ProposedImportTask, 'dueDateMs' | 'dueDateStatus' | 'dueDateHint'>> {
+  const assessment = assessDocumentImportDueDate({
+    dueDate: asNonEmptyString(rawTask.dueDate),
+    description: asNonEmptyString(rawTask.description),
+    sourceExcerpt: asNonEmptyString(rawTask.sourceExcerpt),
   })
 
-  if (assignmentResolution.status === 'ambiguous') {
+  if (assessment.status !== 'resolved') {
     return {
-      assignedTo: [],
-      assignmentStatus: 'ambiguous',
-      suggestions: assignmentResolution.suggestions,
+      dueDateMs: null,
+      dueDateStatus: assessment.status,
+      dueDateHint: assessment.hint,
+    }
+  }
+
+  const dueDateMs = resolveAgentDueDateMs({
+    dueDateMs: null,
+    dueDate: assessment.candidate,
+    rawMessage: [
+      asNonEmptyString(rawTask.dueDate),
+      asNonEmptyString(rawTask.sourceExcerpt),
+      asNonEmptyString(rawTask.description),
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    nowMs,
+  })
+
+  if (dueDateMs === null) {
+    return {
+      dueDateMs: null,
+      dueDateStatus: 'unclear',
+      dueDateHint: assessment.hint ?? assessment.candidate,
     }
   }
 
   return {
-    assignedTo: assignmentResolution.names,
-    assignmentStatus: assignmentResolution.names.length > 0 ? 'resolved' : 'unassigned',
-    suggestions: [],
+    dueDateMs,
+    dueDateStatus: 'resolved',
+    dueDateHint: null,
   }
 }
 
 async function mapRawTasksToProposals(
-  ctx: Parameters<typeof resolveWorkspaceAssignments>[0],
+  ctx: Parameters<typeof listWorkspaceMembers>[0],
   workspaceId: string,
   rawTasks: RawExtractedTask[],
 ): Promise<ProposedImportTask[]> {
@@ -211,20 +242,21 @@ async function mapRawTasksToProposals(
       if (!title) return null
 
       const assignment = await resolveTaskAssignment(ctx, workspaceId, rawTask)
-      const dueDateMs = resolveAgentDueDateMs({
-        dueDateMs: null,
-        dueDate: rawTask.dueDate,
-        rawMessage: asNonEmptyString(rawTask.description) ?? title,
-        nowMs,
-      })
+      const dueDate = await resolveTaskDueDate(rawTask, nowMs)
 
       return {
         title,
         description: asNonEmptyString(rawTask.description) ?? null,
-        priority: normalizePriority(rawTask.priority),
+        priority: resolveDocumentImportPriority({
+          explicitPriority: rawTask.priority,
+          dueDateMs: dueDate.dueDateMs,
+          nowMs,
+        }),
         assignedTo: assignment.assignedTo,
-        dueDateMs,
+        dueDateMs: dueDate.dueDateMs,
         assignmentStatus: assignment.assignmentStatus,
+        dueDateStatus: dueDate.dueDateStatus,
+        dueDateHint: dueDate.dueDateHint,
         suggestions: assignment.suggestions,
         sourceExcerpt: asNonEmptyString(rawTask.sourceExcerpt) ?? null,
       } satisfies ProposedImportTask
@@ -294,7 +326,10 @@ export const extractTasksFromDocument = action({
         raw = await geminiAI.generateContent(prompt)
       }
 
-      const rawTasks = parseExtractedTasksResponse(raw)
+      const rawTasks = enrichExtractedTasksWithDocumentAssignees(
+        extractedText,
+        parseExtractedTasksResponse(raw),
+      )
       const proposedTasks = await mapRawTasksToProposals(ctx, workspaceId, rawTasks)
 
       if (proposedTasks.length === 0) {

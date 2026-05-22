@@ -1,59 +1,74 @@
 import { describe, expect, it } from 'vitest'
 
 import type { ProposedImportTask } from './tasks-document-import-types'
+import { needsImportReview } from './tasks-document-import-review'
 
-function needsImportReview(tasks: ProposedImportTask[]): boolean {
-  return tasks.some((task) => task.assignmentStatus === 'ambiguous')
+function buildTask(overrides: Partial<ProposedImportTask>): ProposedImportTask {
+  return {
+    localId: '1',
+    title: 'Task',
+    description: '',
+    priority: 'medium',
+    assignedTo: '',
+    dueDate: '',
+    assignmentStatus: 'resolved',
+    dueDateStatus: 'resolved',
+    dueDateHint: null,
+    suggestions: [],
+    sourceExcerpt: null,
+    include: true,
+    ...overrides,
+  }
 }
 
 describe('tasks document import hybrid routing', () => {
-  it('skips review when every assignee is resolved or unassigned', () => {
+  it('skips review when every assignee and due date is resolved', () => {
     const tasks: ProposedImportTask[] = [
-      {
+      buildTask({
         localId: '1',
-        title: 'Task A',
-        description: '',
-        priority: 'medium',
         assignedTo: '@[Alex]',
-        dueDate: '',
-        assignmentStatus: 'resolved',
-        suggestions: [],
-        sourceExcerpt: null,
-        include: true,
-      },
-      {
+        dueDate: '2026-05-28',
+      }),
+      buildTask({
         localId: '2',
-        title: 'Task B',
-        description: '',
-        priority: 'low',
-        assignedTo: '',
-        dueDate: '',
         assignmentStatus: 'unassigned',
-        suggestions: [],
-        sourceExcerpt: null,
-        include: true,
-      },
+        dueDateStatus: 'resolved',
+      }),
     ]
 
     expect(needsImportReview(tasks)).toBe(false)
   })
 
   it('opens review when any assignee is ambiguous', () => {
-    const tasks: ProposedImportTask[] = [
-      {
-        localId: '1',
-        title: 'Task A',
-        description: '',
-        priority: 'medium',
-        assignedTo: '',
-        dueDate: '',
-        assignmentStatus: 'ambiguous',
-        suggestions: ['Alex Kim', 'Alex Johnson'],
-        sourceExcerpt: null,
-        include: true,
-      },
-    ]
+    expect(
+      needsImportReview([
+        buildTask({
+          assignmentStatus: 'ambiguous',
+          suggestions: ['Alex Kim', 'Alex Johnson'],
+        }),
+      ]),
+    ).toBe(true)
+  })
 
-    expect(needsImportReview(tasks)).toBe(true)
+  it('opens review when assignees need profile matching', () => {
+    expect(
+      needsImportReview([
+        buildTask({
+          assignmentStatus: 'unassigned',
+          suggestions: ['Deepak Sharma'],
+        }),
+      ]),
+    ).toBe(true)
+  })
+
+  it('opens review when due dates need clarification', () => {
+    expect(
+      needsImportReview([
+        buildTask({
+          dueDateStatus: 'unclear',
+          dueDateHint: 'TBD',
+        }),
+      ]),
+    ).toBe(true)
   })
 })

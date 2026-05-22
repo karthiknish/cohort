@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
 import { TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
+import { ScrollArea } from '@/shared/ui/scroll-area'
 import { buildProjectRoute, buildProjectTasksRoute } from '@/lib/project-routes'
 import { cn } from '@/lib/utils'
 import type { TaskPriority, TaskRecord, TaskStatus } from '@/types/tasks'
@@ -213,11 +214,16 @@ export function TaskViewDialogHeader({
 
 export function TaskViewDialogTabsList({ commentCount }: { commentCount: number }) {
   return (
-    <TabsList className={cn(TASKS_THEME.tabList, 'w-full max-w-xs')}>
-      <TabsTrigger value="details" className={TASKS_THEME.tabTrigger}>
+    <TabsList className={cn(TASKS_THEME.tabList, TASKS_THEME.viewDialog.tabList)}>
+      <TabsTrigger value="details" className={cn(TASKS_THEME.tabTrigger, TASKS_THEME.viewDialog.tabTrigger)}>
+        <ListChecks className="size-3.5 shrink-0" aria-hidden />
         Details
       </TabsTrigger>
-      <TabsTrigger value="comments" className={cn(TASKS_THEME.tabTrigger, 'gap-1.5')}>
+      <TabsTrigger
+        value="comments"
+        className={cn(TASKS_THEME.tabTrigger, TASKS_THEME.viewDialog.tabTrigger, 'gap-1.5')}
+      >
+        <MessageCircle className="size-3.5 shrink-0" aria-hidden />
         Comments
         <span
           className={cn(
@@ -243,8 +249,13 @@ function DetailBlock({ label, children }: { label: string; children: ReactNode }
 
 export function TaskViewDetailsTab({ task }: { task: TaskRecord }) {
   return (
-    <TabsContent value="details" className="mt-0 space-y-4 focus-visible:outline-none">
-      <DetailBlock label="Description">
+    <TabsContent
+      value="details"
+      className="mt-0 flex h-full min-h-0 flex-col overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden"
+    >
+      <ScrollArea className="h-full max-h-[min(52vh,32rem)]">
+        <div className={cn(TASKS_THEME.viewDialog.scroll, 'space-y-4')}>
+          <DetailBlock label="Description">
         <p className={cn(taskInfoPanelClasses.value, 'font-normal leading-relaxed')}>
           {task.description?.trim() ? task.description : (
             <span className="text-muted-foreground">No description provided.</span>
@@ -327,6 +338,8 @@ export function TaskViewDetailsTab({ task }: { task: TaskRecord }) {
       <p className="pt-1 text-[11px] text-muted-foreground">
         Created {formatDate(task.createdAt)} · Updated {formatDate(task.updatedAt)}
       </p>
+        </div>
+      </ScrollArea>
     </TabsContent>
   )
 }
@@ -349,16 +362,23 @@ export function TaskViewCommentsTab({
   workspaceId: string | null
 }) {
   return (
-    <TabsContent value="comments" className="mt-0 focus-visible:outline-none">
-      <TaskCommentsPanel
-        taskId={taskId}
-        workspaceId={workspaceId}
-        userId={userId}
-        userName={userName}
-        userRole={userRole}
-        participants={participants}
-        onCommentCountChange={onCommentCountChange}
-      />
+    <TabsContent
+      value="comments"
+      className="mt-0 flex h-full min-h-0 flex-col overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden"
+    >
+      <ScrollArea className="h-full max-h-[min(52vh,32rem)]">
+        <div className={cn(TASKS_THEME.viewDialog.scroll, 'space-y-4')}>
+          <TaskCommentsPanel
+            taskId={taskId}
+            workspaceId={workspaceId}
+            userId={userId}
+            userName={userName}
+            userRole={userRole}
+            participants={participants}
+            onCommentCountChange={onCommentCountChange}
+          />
+        </div>
+      </ScrollArea>
     </TabsContent>
   )
 }

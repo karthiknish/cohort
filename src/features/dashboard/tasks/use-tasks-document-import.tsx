@@ -27,6 +27,10 @@ import type {
   ProposedImportTaskFromServer,
   TaskDocumentImportPhase,
 } from './tasks-document-import-types'
+import {
+  getImportReviewBlocker,
+  needsImportReview,
+} from './tasks-document-import-review'
 
 function formatDueDateInput(dueDateMs: number | null): string {
   if (dueDateMs == null) return ''
@@ -48,14 +52,12 @@ function mapServerProposal(task: ProposedImportTaskFromServer, index: number): P
     assignedTo: formatAssigneeDraft(task.assignedTo),
     dueDate: formatDueDateInput(task.dueDateMs),
     assignmentStatus: task.assignmentStatus,
+    dueDateStatus: task.dueDateStatus,
+    dueDateHint: task.dueDateHint,
     suggestions: task.suggestions,
     sourceExcerpt: task.sourceExcerpt,
     include: true,
   }
-}
-
-function needsImportReview(tasks: ProposedImportTask[]): boolean {
-  return tasks.some((task) => task.assignmentStatus === 'ambiguous')
 }
 
 export type UseTasksDocumentImportArgs = {
@@ -167,6 +169,11 @@ export function useTasksDocumentImport({
       }
 
       const selected = tasks.filter((task) => task.include && task.title.trim())
+      const reviewBlocker = getImportReviewBlocker(tasks)
+      if (reviewBlocker) {
+        throw new Error(reviewBlocker)
+      }
+
       if (selected.length === 0) {
         throw new Error('Select at least one task to create.')
       }

@@ -11,6 +11,10 @@ import { cn } from '@/lib/utils'
 import { teamMembersToMentionable, type TaskParticipant } from './task-types'
 import { TASKS_THEME } from './tasks-theme'
 import type { ProposedImportTask } from './tasks-document-import-types'
+import {
+  buildImportReviewDescription,
+  getImportReviewBlocker,
+} from './tasks-document-import-review'
 import { ImportReviewTaskRow } from './tasks-document-import-review-sheet-sections'
 
 type TasksDocumentImportReviewSheetProps = {
@@ -38,6 +42,8 @@ export function TasksDocumentImportReviewSheet({
 }: TasksDocumentImportReviewSheetProps) {
   const mentionableUsers = useMemo(() => teamMembersToMentionable(participants), [participants])
   const selectedCount = proposedTasks.filter((task) => task.include).length
+  const reviewBlocker = getImportReviewBlocker(proposedTasks)
+  const reviewDescription = buildImportReviewDescription(documentSummary, proposedTasks)
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -58,10 +64,7 @@ export function TasksDocumentImportReviewSheet({
       <SheetContent side="right" className={cn(TASKS_THEME.sheet.content, 'overflow-y-auto')}>
         <SheetHeader className="border-b border-border/60 pb-4 text-left">
           <SheetTitle>Review imported tasks</SheetTitle>
-          <SheetDescription>
-            {documentSummary ??
-              'Some assignees need your input. Edit tasks below, then create the ones you want to keep.'}
-          </SheetDescription>
+          <SheetDescription>{reviewDescription}</SheetDescription>
         </SheetHeader>
 
         <div className="flex flex-1 flex-col gap-4 py-4">
@@ -88,7 +91,10 @@ export function TasksDocumentImportReviewSheet({
         </div>
 
         <div className={TASKS_THEME.sheet.footer}>
-          <Button type="button" onClick={onConfirm} disabled={selectedCount === 0}>
+          {reviewBlocker ? (
+            <p className="text-sm text-warning">{reviewBlocker}</p>
+          ) : null}
+          <Button type="button" onClick={onConfirm} disabled={selectedCount === 0 || Boolean(reviewBlocker)}>
             Create {selectedCount} task{selectedCount === 1 ? '' : 's'}
           </Button>
           <Button type="button" variant="outline" onClick={onDiscard}>

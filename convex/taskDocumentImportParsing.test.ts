@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  assessDocumentImportDueDate,
+  enrichExtractedTasksWithDocumentAssignees,
   normalizePriority,
+  parseExplicitDocumentPriority,
   parseExtractedTasksResponse,
+  resolveDocumentImportAssignees,
+  resolveDocumentImportPriority,
   stripMarkdownFences,
 } from './taskDocumentImportParsing'
 
@@ -40,12 +45,253 @@ describe('normalizePriority', () => {
   it('normalizes known priorities and defaults to medium', () => {
     expect(normalizePriority('low')).toBe('low')
     expect(normalizePriority('HIGH')).toBe('high')
-    expect(normalizePriority('urgent')).toBe('medium')
+    expect(normalizePriority('urgent')).toBe('high')
+    expect(normalizePriority('unknown')).toBe('medium')
+  })
+})
+
+describe('resolveDocumentImportPriority', () => {
+  const nowMs = Date.parse('2026-05-22T12:00:00.000Z')
+
+  it('keeps explicit document priorities', () => {
+    expect(
+      resolveDocumentImportPriority({
+        explicitPriority: 'high',
+        dueDateMs: Date.parse('2026-06-01T00:00:00.000Z'),
+        nowMs,
+      }),
+    ).toBe('high')
+  })
+
+  it('defaults to low when no priority or due date is available', () => {
+    expect(
+      resolveDocumentImportPriority({
+        explicitPriority: null,
+        dueDateMs: null,
+        nowMs,
+      }),
+    ).toBe('low')
+  })
+
+  it('infers high priority for deadlines within three days', () => {
+    expect(
+      resolveDocumentImportPriority({
+        explicitPriority: undefined,
+        dueDateMs: Date.parse('2026-05-24T00:00:00.000Z'),
+        nowMs,
+      }),
+    ).toBe('high')
+  })
+
+  it('infers medium priority for deadlines within two weeks', () => {
+    expect(
+      resolveDocumentImportPriority({
+        explicitPriority: undefined,
+        dueDateMs: Date.parse('2026-05-30T00:00:00.000Z'),
+        nowMs,
+      }),
+    ).toBe('medium')
+  })
+
+  it('infers low priority for distant deadlines', () => {
+    expect(
+      resolveDocumentImportPriority({
+        explicitPriority: undefined,
+        dueDateMs: Date.parse('2026-06-22T00:00:00.000Z'),
+        nowMs,
+      }),
+    ).toBe('low')
+  })
+
+  it('maps urgent explicit labels to high', () => {
+    expect(parseExplicitDocumentPriority('urgent')).toBe('high')
   })
 })
 
 describe('stripMarkdownFences', () => {
   it('removes markdown code fences', () => {
     expect(stripMarkdownFences('```json\n[]\n```')).toBe('[]')
+  })
+})
+
+const MARKETING_TASK_ALLOCATION_TEXT = `Marketing Task Allocation
+Deepak
+Task
+
+Priority
+
+Deadline
+
+Prepare Q3 social media content calendar
+
+High
+
+28 May 2026
+
+Research competitor ad creatives for UK SaaS brands
+
+Medium
+
+31 May 2026
+
+Task
+
+Priority
+
+Deadline
+
+Design banner concepts for summer campaign
+
+High
+
+29 May 2026
+
+Schedule and publish weekly LinkedIn posts
+
+Medium
+
+1 June 2026
+
+Archana`
+
+describe('enrichExtractedTasksWithDocumentAssignees', () => {
+  it('infers section assignees for allocation tables with trailing names', () => {
+    const rawTasks = [
+      { title: 'Prepare Q3 social media content calendar', priority: 'high' },
+      { title: 'Research competitor ad creatives for UK SaaS brands', priority: 'medium' },
+      { title: 'Design banner concepts for summer campaign', priority: 'high' },
+      { title: 'Schedule and publish weekly LinkedIn posts', priority: 'medium' },
+    ]
+
+    const enriched = enrichExtractedTasksWithDocumentAssignees(
+      MARKETING_TASK_ALLOCATION_TEXT,
+      rawTasks,
+    )
+
+    expect(enriched[0]?.assignedToNames).toEqual(['Deepak'])
+    expect(enriched[1]?.assignedToNames).toEqual(['Deepak'])
+    expect(enriched[2]?.assignedToNames).toEqual(['Archana'])
+    expect(enriched[3]?.assignedToNames).toEqual(['Archana'])
+  })
+
+  it('does not overwrite assignees already extracted by the model', () => {
+    const rawTasks = [{ title: 'Ship creative', assignedToNames: ['Alex Kim'] }]
+
+    const enriched = enrichExtractedTasksWithDocumentAssignees(
+      MARKETING_TASK_ALLOCATION_TEXT,
+      rawTasks,
+    )
+
+    expect(enriched[0]?.assignedToNames).toEqual(['Alex Kim'])
+  })
+})
+
+describe('resolveDocumentImportAssignees', () => {
+  const members = [
+    { id: 'user-deepak', name: 'Deepak Sharma', email: 'deepak.sharma@example.com' },
+    { id: 'user-archana', name: 'Archana Patel', email: 'archana@example.com' },
+    { id: 'user-karthik', name: 'Karthik User', email: 'karthik@example.com' },
+  ]
+
+  it('links first-name document assignees to workspace profiles', () => {
+    const result = resolveDocumentImportAssignees(['Deepak'], members)
+
+    expect(result).toEqual({
+      assignedTo: ['Deepak Sharma'],
+      assignmentStatus: 'resolved',
+      suggestions: [],
+    })
+  })
+
+  it('links trailing-name document assignees to workspace profiles', () => {
+    const result = resolveDocumentImportAssignees(['Patel'], members)
+
+    expect(result).toEqual({
+      assignedTo: ['Archana Patel'],
+      assignmentStatus: 'resolved',
+      suggestions: [],
+    })
+  })
+
+  it('does not store raw names when no workspace profile matches', () => {
+    const result = resolveDocumentImportAssignees(['Arch'], members)
+
+    expect(result.assignedTo).toEqual([])
+    expect(result.assignmentStatus).toBe('unassigned')
+    expect(result.suggestions).toContain('Archana Patel')
+  })
+
+  it('marks duplicate workspace matches as ambiguous', () => {
+    const result = resolveDocumentImportAssignees(['Deepak'], [
+      { id: '1', name: 'Deepak Sharma' },
+      { id: '2', name: 'Deepak Singh' },
+    ])
+
+    expect(result).toEqual({
+      assignedTo: [],
+      assignmentStatus: 'ambiguous',
+      suggestions: ['Deepak Sharma', 'Deepak Singh'],
+    })
+  })
+
+  it('does not match middle names inside a workspace profile', () => {
+    const result = resolveDocumentImportAssignees(['Deepak'], [{ id: '1', name: 'Karthik Deepak Singh' }])
+
+    expect(result).toEqual({
+      assignedTo: [],
+      assignmentStatus: 'unassigned',
+      suggestions: [],
+    })
+  })
+})
+
+describe('assessDocumentImportDueDate', () => {
+  it('marks clear document dates as resolved', () => {
+    expect(
+      assessDocumentImportDueDate({
+        dueDate: '28 May 2026',
+      }),
+    ).toEqual({
+      status: 'resolved',
+      hint: null,
+      candidate: '28 May 2026',
+    })
+  })
+
+  it('marks vague deadlines as unclear', () => {
+    expect(
+      assessDocumentImportDueDate({
+        dueDate: 'next week',
+      }),
+    ).toEqual({
+      status: 'unclear',
+      hint: 'next week',
+      candidate: 'next week',
+    })
+  })
+
+  it('marks missing deadlines when nothing is present', () => {
+    expect(
+      assessDocumentImportDueDate({
+        dueDate: null,
+        description: 'Prepare the launch checklist',
+      }),
+    ).toEqual({
+      status: 'missing',
+      hint: null,
+      candidate: null,
+    })
+  })
+
+  it('reads deadline mentions from source excerpts', () => {
+    expect(
+      assessDocumentImportDueDate({
+        sourceExcerpt: 'Deadline: 31 May 2026',
+      }),
+    ).toEqual({
+      status: 'resolved',
+      hint: null,
+      candidate: '31 May 2026',
+    })
   })
 })

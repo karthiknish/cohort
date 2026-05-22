@@ -24,8 +24,11 @@ export const TASKS_THEME = {
     shell: 'flex max-h-[90vh] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl',
     header:
       'shrink-0 space-y-3 border-b border-border/60 bg-gradient-to-br from-card via-card to-muted/20 px-6 pb-4 pt-5 pr-14',
-    tabsRail: 'shrink-0 border-b border-border/50 px-6 py-3',
-    body: 'min-h-0 flex-1',
+    tabsRail: 'shrink-0 border-b border-border/50 bg-muted/10 px-6 py-3',
+    tabList: 'grid h-10 w-full grid-cols-2 gap-0.5',
+    tabTrigger:
+      'h-9 w-full gap-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50',
+    body: 'min-h-0 flex-1 overflow-hidden',
     scroll: 'px-6 pb-5 pt-4',
     footer: 'shrink-0 flex-col gap-3 border-t border-border/60 bg-muted/15 px-6 py-4 sm:flex-row sm:items-center sm:justify-between',
   },

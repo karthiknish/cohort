@@ -9,6 +9,8 @@ export type TaskDocumentImportPhase =
 
 export type TaskAssignmentStatus = 'resolved' | 'ambiguous' | 'unassigned'
 
+export type TaskDueDateStatus = 'resolved' | 'missing' | 'unclear'
+
 export type ProposedImportTask = {
   localId: string
   title: string
@@ -17,6 +19,8 @@ export type ProposedImportTask = {
   assignedTo: string
   dueDate: string
   assignmentStatus: TaskAssignmentStatus
+  dueDateStatus: TaskDueDateStatus
+  dueDateHint: string | null
   suggestions: string[]
   sourceExcerpt: string | null
   include: boolean
@@ -29,6 +33,8 @@ export type ProposedImportTaskFromServer = {
   assignedTo: string[]
   dueDateMs: number | null
   assignmentStatus: TaskAssignmentStatus
+  dueDateStatus: TaskDueDateStatus
+  dueDateHint: string | null
   suggestions: string[]
   sourceExcerpt: string | null
 }

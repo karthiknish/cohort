@@ -11,6 +11,7 @@ import { Textarea } from '@/shared/ui/textarea'
 import { cn } from '@/lib/utils'
 
 import type { ProposedImportTask } from './tasks-document-import-types'
+import { taskNeedsAssigneeReview, taskNeedsDueDateReview } from './tasks-document-import-review'
 
 type ImportReviewTaskRowProps = {
   task: ProposedImportTask
@@ -57,7 +58,13 @@ export function ImportReviewTaskRow({
 
   const handleDueDateChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      onUpdateTask(task.localId, { dueDate: event.target.value })
+      const value = event.target.value
+      onUpdateTask(task.localId, {
+        dueDate: value,
+        ...(value
+          ? { dueDateStatus: 'resolved' as const, dueDateHint: null }
+          : {}),
+      })
     },
     [onUpdateTask, task.localId],
   )
@@ -69,13 +76,15 @@ export function ImportReviewTaskRow({
     [onUpdateTask, task.localId],
   )
 
+  const needsAssigneeReview = taskNeedsAssigneeReview(task)
+  const needsDueDateReview = taskNeedsDueDateReview(task)
+  const needsReview = needsAssigneeReview || needsDueDateReview
+
   return (
     <div
       className={cn(
         'space-y-3 rounded-2xl border p-4',
-        task.assignmentStatus === 'ambiguous'
-          ? 'border-warning/50 bg-warning/5'
-          : 'border-border/60 bg-muted/20',
+        needsReview ? 'border-warning/50 bg-warning/5' : 'border-border/60 bg-muted/20',
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -83,17 +92,37 @@ export function ImportReviewTaskRow({
           <Checkbox checked={task.include} onCheckedChange={handleIncludeChange} />
           Task {index + 1}
         </label>
-        {task.assignmentStatus === 'ambiguous' ? (
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-warning">
-            <AlertTriangle className="size-3.5" />
-            Assignee unclear
-          </span>
+        {needsReview ? (
+          <div className="flex flex-col items-end gap-1">
+            {needsAssigneeReview ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-warning">
+                <AlertTriangle className="size-3.5" />
+                {task.assignmentStatus === 'ambiguous' ? 'Assignee unclear' : 'Pick a teammate'}
+              </span>
+            ) : null}
+            {needsDueDateReview ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-warning">
+                <AlertTriangle className="size-3.5" />
+                {task.dueDateStatus === 'missing' ? 'Due date missing' : 'Due date unclear'}
+              </span>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
-      {task.assignmentStatus === 'ambiguous' && task.suggestions.length > 0 ? (
+      {needsAssigneeReview && task.suggestions.length > 0 ? (
         <p className="text-xs text-muted-foreground">
-          Did you mean: {task.suggestions.join(', ')}?
+          {task.assignmentStatus === 'ambiguous'
+            ? `Did you mean: ${task.suggestions.join(', ')}?`
+            : `Match to a workspace profile: ${task.suggestions.join(', ')}`}
+        </p>
+      ) : null}
+
+      {needsDueDateReview ? (
+        <p className="text-xs text-muted-foreground">
+          {task.dueDateHint
+            ? `The document says "${task.dueDateHint}" — pick the correct due date.`
+            : 'No clear deadline was found in the document. Add one before creating this task.'}
         </p>
       ) : null}
 
@@ -137,6 +166,8 @@ export function ImportReviewTaskRow({
             type="date"
             value={task.dueDate}
             onChange={handleDueDateChange}
+            className={needsDueDateReview ? 'border-warning/60 bg-warning/5' : undefined}
+            aria-invalid={needsDueDateReview}
           />
         </div>
       </div>
