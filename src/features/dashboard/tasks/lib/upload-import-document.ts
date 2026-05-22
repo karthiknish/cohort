@@ -1,9 +1,11 @@
+import type { Id } from '/_generated/dataModel'
+
 const MAX_TASK_IMPORT_BYTES = 15 * 1024 * 1024
 
 export async function uploadTaskImportDocument(args: {
   file: File
   generateUploadUrl: () => Promise<{ url: string }>
-}): Promise<string> {
+}): Promise<Id<'_storage'>> {
   const { file, generateUploadUrl } = args
 
   if (file.size > MAX_TASK_IMPORT_BYTES) {
@@ -25,7 +27,7 @@ export async function uploadTaskImportDocument(args: {
     throw new Error(`Failed to upload file (${uploadResponse.status}).`)
   }
 
-  const json = (await uploadResponse.json().catch(() => null)) as { storageId?: string } | null
+  const json = (await uploadResponse.json().catch(() => null)) as { storageId?: Id<'_storage'> } | null
   if (!json?.storageId) {
     throw new Error('Upload did not return a storage id.')
   }
